@@ -208,15 +208,12 @@ struct MessageEntry: View {
                             .fill(Theme.inputBg)
                     )
             } else {
-                // Agent messages: plain text, markdown-like
+                // Agent messages: rendered markdown
                 if isStreaming {
-                    StreamingText(text: message.text, onDone: onStreamingDone)
+                    StreamingMarkdownText(text: message.text, onDone: onStreamingDone)
                 } else {
-                    Text(message.text)
-                        .font(Theme.body)
+                    MarkdownView(text: message.text)
                         .foregroundStyle(Theme.textPrimary)
-                        .lineSpacing(5)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                         .textSelection(.enabled)
                 }
             }
@@ -264,30 +261,37 @@ struct ThinkingEntry: View {
     }
 }
 
-// MARK: - Streaming Text
+// MARK: - Streaming Markdown Text
 
-struct StreamingText: View {
+struct StreamingMarkdownText: View {
     let text: String
     var onDone: (() -> Void)?
     @State private var displayLen: Int = 0
     @State private var timer: Timer?
 
+    private var visibleText: String {
+        String(text.prefix(displayLen))
+    }
+
     var body: some View {
-        Text(text.prefix(displayLen))
-            .font(Theme.body)
+        MarkdownView(text: visibleText)
             .foregroundStyle(Theme.textPrimary)
-            .lineSpacing(5)
-            .frame(maxWidth: .infinity, alignment: .leading)
             .onAppear { startStreaming() }
             .onDisappear { timer?.invalidate(); timer = nil }
+            .onChange(of: text) { _, newValue in
+                if displayLen >= newValue.count { return }
+                if timer == nil { startStreaming() }
+            }
     }
 
     private func startStreaming() {
+        timer?.invalidate()
         displayLen = 0
         timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { t in
             displayLen = min(displayLen + 2, text.count)
             if displayLen >= text.count {
                 t.invalidate()
+                timer = nil
                 onDone?()
             }
         }

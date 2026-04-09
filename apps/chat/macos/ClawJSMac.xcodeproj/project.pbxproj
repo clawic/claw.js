@@ -28,6 +28,8 @@
 		BF000013 /* TopicDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR000013 /* TopicDetailView.swift */; };
 		BF000014 /* CreateAgentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR000014 /* CreateAgentView.swift */; };
 		BF000015 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR000015 /* SettingsView.swift */; };
+		BF000018 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR000020 /* Theme.swift */; };
+		BF000021 /* MarkdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR000021 /* MarkdownView.swift */; };
 		BF000016 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FR000016 /* Assets.xcassets */; };
 		BF000017 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = VG000001 /* Localizable.strings */; };
 /* End PBXBuildFile section */
@@ -54,6 +56,8 @@
 		FR000013 /* TopicDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopicDetailView.swift; sourceTree = "<group>"; };
 		FR000014 /* CreateAgentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateAgentView.swift; sourceTree = "<group>"; };
 		FR000015 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		FR000020 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		FR000021 /* MarkdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownView.swift; sourceTree = "<group>"; };
 		FR000016 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		FR000017 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		FR000018 /* ClawJSMac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClawJSMac.entitlements; sourceTree = "<group>"; };
@@ -140,6 +144,8 @@
 				FR000013 /* TopicDetailView.swift */,
 				FR000014 /* CreateAgentView.swift */,
 				FR000015 /* SettingsView.swift */,
+				FR000020 /* Theme.swift */,
+				FR000021 /* MarkdownView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -281,6 +287,8 @@
 				BF000013 /* TopicDetailView.swift in Sources */,
 				BF000014 /* CreateAgentView.swift in Sources */,
 				BF000015 /* SettingsView.swift in Sources */,
+				BF000018 /* Theme.swift in Sources */,
+				BF000021 /* MarkdownView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
