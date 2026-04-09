@@ -10,6 +10,7 @@ import { WorkspaceCompatStore } from "./compat-store.ts";
 export interface RelayConnectorOptions {
   relayUrl: string;
   enrollmentToken: string;
+  connectorId: string;
   agentId: string;
   workspaceRoot: string;
   runtimeAdapter: string;

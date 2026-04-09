@@ -7,6 +7,7 @@ export type AuthState = {
   role: string;
   email: string;
   scopes: string[];
+  deviceId?: string;
 };
 
 type LoginResponse = {
@@ -15,6 +16,7 @@ type LoginResponse = {
   tenantId: string;
   role: string;
   scopes: string[];
+  deviceId?: string;
 };
 
 type AuthContextValue = {
@@ -35,6 +37,7 @@ function readAuthFromStorage(): AuthState | null {
     role: sessionStorage.getItem("role") ?? "",
     email: sessionStorage.getItem("email") ?? "",
     scopes: JSON.parse(sessionStorage.getItem("scopes") ?? "[]"),
+    deviceId: sessionStorage.getItem("deviceId") ?? undefined,
   };
 }
 
@@ -49,12 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.setItem("role", data.role);
     sessionStorage.setItem("scopes", JSON.stringify(data.scopes));
     sessionStorage.setItem("email", email);
+    if (data.deviceId) sessionStorage.setItem("deviceId", data.deviceId);
     setAuth({
       accessToken: data.accessToken,
       tenantId: data.tenantId,
       role: data.role,
       email,
       scopes: data.scopes,
+      deviceId: data.deviceId,
     });
   }, []);
 

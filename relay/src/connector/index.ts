@@ -19,18 +19,16 @@ function parseArgs(argv: string[]): RelayConnectorOptions {
   }
 
   const relayUrl = values.get("relay-url") ?? process.env.RELAY_URL ?? "http://127.0.0.1:4410";
-  const enrollmentToken = values.get("enrollment-token") ?? process.env.RELAY_ENROLLMENT_TOKEN ?? "";
   const agentId = values.get("agent-id") ?? process.env.RELAY_AGENT_ID ?? "demo-agent";
+  const connectorId = values.get("connector-id") ?? process.env.RELAY_CONNECTOR_ID ?? agentId;
+  const enrollmentToken = values.get("enrollment-token") ?? process.env.RELAY_ENROLLMENT_TOKEN ?? "";
   const workspaceRoot = values.get("workspace-root") ?? process.env.RELAY_WORKSPACE_ROOT ?? "./relay-workspaces";
   const runtimeAdapter = values.get("runtime-adapter") ?? process.env.RELAY_RUNTIME_ADAPTER ?? "openclaw";
-
-  if (!enrollmentToken) {
-    throw new Error("Missing relay enrollment token. Pass --enrollment-token or RELAY_ENROLLMENT_TOKEN.");
-  }
 
   return {
     relayUrl,
     enrollmentToken,
+    connectorId,
     agentId,
     workspaceRoot,
     runtimeAdapter,
@@ -51,6 +49,67 @@ async function enroll(options: RelayConnectorOptions): Promise<EnrollmentResult>
   return await response.json() as EnrollmentResult;
 }
 
+async function startDevicePairing(options: RelayConnectorOptions): Promise<{
+  pairingId: string;
+  deviceCode: string;
+  userCode: string;
+  verificationUriComplete: string;
+  qrPayload: string;
+  intervalSec: number;
+}> {
+  const response = await fetch(new URL("/v1/connectors/device/start", options.relayUrl), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      connectorId: options.connectorId,
+      agentId: options.agentId,
+      displayName: options.connectorId,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Connector pairing start failed: ${response.status}`);
+  }
+  return await response.json() as {
+    pairingId: string;
+    deviceCode: string;
+    userCode: string;
+    verificationUriComplete: string;
+    qrPayload: string;
+    intervalSec: number;
+  };
+}
+
+async function pollDevicePairing(options: RelayConnectorOptions, deviceCode: string, intervalSec: number): Promise<EnrollmentResult> {
+  for (;;) {
+    const response = await fetch(new URL("/v1/connectors/device/poll", options.relayUrl), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceCode }),
+    });
+    const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+    if (response.ok && payload.status === "approved") {
+      return payload as unknown as EnrollmentResult;
+    }
+    if (response.status === 200 && payload.status === "authorization_pending") {
+      await delay(intervalSec * 1000);
+      continue;
+    }
+    throw new Error(`Connector pairing poll failed: ${response.status} ${String(payload.status ?? response.statusText)}`);
+  }
+}
+
+async function bootstrapConnector(options: RelayConnectorOptions): Promise<EnrollmentResult> {
+  if (options.enrollmentToken) {
+    return await enroll(options);
+  }
+  const pairing = await startDevicePairing(options);
+  console.error(`[relay-connector] approve connector ${options.connectorId}`);
+  console.error(`[relay-connector] user code: ${pairing.userCode}`);
+  console.error(`[relay-connector] verification uri: ${pairing.verificationUriComplete}`);
+  console.error(`[relay-connector] qr payload: ${pairing.qrPayload}`);
+  return await pollDevicePairing(options, pairing.deviceCode, pairing.intervalSec || 5);
+}
+
 function toWebSocketUrl(relayUrl: string): string {
   const url = new URL("/v1/connector/connect", relayUrl);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
@@ -58,7 +117,7 @@ function toWebSocketUrl(relayUrl: string): string {
 }
 
 async function runOnce(options: RelayConnectorOptions): Promise<void> {
-  const enrollment = await enroll(options);
+  const enrollment = await bootstrapConnector(options);
   const runtime = new RelayConnectorRuntime(options);
   const socket = new WebSocket(toWebSocketUrl(options.relayUrl), {
     headers: {
@@ -71,6 +130,7 @@ async function runOnce(options: RelayConnectorOptions): Promise<void> {
       type: "hello",
       payload: {
         tenantId: enrollment.tenantId,
+        connectorId: enrollment.connectorId,
         agentId: enrollment.agentId,
         version: "0.1.0",
         capabilities: [

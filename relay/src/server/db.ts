@@ -5,6 +5,7 @@ import Database from "better-sqlite3";
 import type { ActivityRecord, ConnectorAuthContext, ConnectorWorkspaceDescriptor, UsageRecord } from "../shared/protocol.ts";
 import { generateOpaqueToken, parseOpaqueToken } from "../shared/protocol.ts";
 import { buildEffectiveAccessPolicy, type EffectiveAccessPolicy, type ProjectResourceRef, type ProjectSecretRef } from "../shared/project-model.ts";
+import { randomCode, verifyPasswordHash } from "./security.ts";
 
 interface MembershipRow {
   user_id: string;
@@ -22,6 +23,11 @@ interface UserRow {
 interface TableColumnRow {
   name: string;
 }
+
+const SEEDED_PASSWORD_HASHES = {
+  admin: "$argon2id$v=19$m=65536,t=3,p=4$YTbT6cgvfjxPmilhTzj9Ug$zTKomDhj/v0KBLMQy42glrgABL2ptwhTCV8PCrNOB8U",
+  user: "$argon2id$v=19$m=65536,t=3,p=4$iGARd9UUspBceQ3IohaTig$DqtKkxl29XpQxPqvz8g9ZY4MeQ6vadyBGpfcO1Uu/pY",
+} as const;
 
 function hashSecret(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -91,6 +97,7 @@ export class RelayDatabase {
         user_id TEXT NOT NULL,
         tenant_id TEXT NOT NULL,
         scopes_json TEXT NOT NULL,
+        device_id TEXT,
         agent_id TEXT,
         workspace_id TEXT,
         expires_at INTEGER NOT NULL,
@@ -100,6 +107,7 @@ export class RelayDatabase {
       CREATE TABLE IF NOT EXISTS connector_enrollments (
         token_id TEXT PRIMARY KEY,
         tenant_id TEXT NOT NULL,
+        connector_id TEXT,
         agent_id TEXT NOT NULL,
         description TEXT,
         token_hash TEXT NOT NULL,
@@ -110,12 +118,63 @@ export class RelayDatabase {
       CREATE TABLE IF NOT EXISTS connector_credentials (
         token_id TEXT PRIMARY KEY,
         tenant_id TEXT NOT NULL,
+        connector_id TEXT,
         agent_id TEXT NOT NULL,
         description TEXT,
         token_hash TEXT NOT NULL,
         created_at INTEGER NOT NULL,
         last_rotated_at INTEGER NOT NULL,
         revoked_at INTEGER
+      );
+      CREATE TABLE IF NOT EXISTS connectors (
+        id TEXT NOT NULL,
+        tenant_id TEXT NOT NULL,
+        agent_id TEXT NOT NULL,
+        display_name TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        last_seen_at INTEGER,
+        PRIMARY KEY (tenant_id, id)
+      );
+      CREATE TABLE IF NOT EXISTS devices (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        tenant_id TEXT NOT NULL,
+        label TEXT NOT NULL,
+        platform TEXT,
+        created_at INTEGER NOT NULL,
+        last_seen_at INTEGER NOT NULL,
+        revoked_at INTEGER
+      );
+      CREATE TABLE IF NOT EXISTS workspace_grants (
+        tenant_id TEXT NOT NULL,
+        device_id TEXT NOT NULL,
+        agent_id TEXT NOT NULL,
+        workspace_id TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        PRIMARY KEY (tenant_id, device_id, agent_id, workspace_id)
+      );
+      CREATE TABLE IF NOT EXISTS pairing_sessions (
+        id TEXT PRIMARY KEY,
+        device_code_id TEXT NOT NULL UNIQUE,
+        device_code_hash TEXT NOT NULL,
+        user_code TEXT NOT NULL,
+        requested_connector_id TEXT NOT NULL,
+        requested_agent_id TEXT NOT NULL,
+        requested_display_name TEXT,
+        tenant_id TEXT,
+        connector_id TEXT,
+        agent_id TEXT,
+        approved_by_user_id TEXT,
+        connector_token_id TEXT,
+        status TEXT NOT NULL,
+        expires_at INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        last_polled_at INTEGER,
+        approved_at INTEGER,
+        denied_at INTEGER,
+        consumed_at INTEGER
       );
       CREATE TABLE IF NOT EXISTS agents (
         id TEXT NOT NULL,
@@ -229,6 +288,10 @@ export class RelayDatabase {
     this.ensureColumn("project_agents", "resource_refs_json", "TEXT");
     this.ensureColumn("project_agents", "secret_refs_json", "TEXT");
     this.ensureColumn("project_agents", "display_name", "TEXT");
+    this.ensureColumn("refresh_tokens", "device_id", "TEXT");
+    this.ensureColumn("connector_enrollments", "connector_id", "TEXT");
+    this.ensureColumn("connector_credentials", "connector_id", "TEXT");
+    this.ensureColumn("connector_sessions", "connector_id", "TEXT");
   }
 
   private ensureColumn(tableName: string, columnName: string, columnDefinition: string): void {
@@ -257,9 +320,17 @@ export class RelayDatabase {
 
   private ensureUser(email: string, password: string, role: "admin" | "user", scopes: string[]): void {
     const userId = `${role}-user`;
+    const passwordHash = role === "admin" ? SEEDED_PASSWORD_HASHES.admin : SEEDED_PASSWORD_HASHES.user;
     this.sqlite.prepare(
       "INSERT OR IGNORE INTO users (id, email, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?)",
-    ).run(userId, email, hashSecret(password), role, now());
+    ).run(userId, email, passwordHash, role, now());
+    if (password) {
+      this.sqlite.prepare("UPDATE users SET password_hash = ? WHERE id = ? AND password_hash = ?").run(
+        passwordHash,
+        userId,
+        hashSecret(password),
+      );
+    }
     this.sqlite.prepare(
       "INSERT OR IGNORE INTO memberships (user_id, tenant_id, scopes_json) VALUES (?, ?, ?)",
     ).run(userId, "demo-tenant", JSON.stringify(scopes));
@@ -276,8 +347,23 @@ export class RelayDatabase {
     };
   }
 
-  verifyPassword(user: { passwordHash: string }, password: string): boolean {
-    return user.passwordHash === hashSecret(password);
+  getUserById(userId: string): { id: string; email: string; role: "admin" | "user"; passwordHash: string } | null {
+    const row = this.sqlite.prepare("SELECT id, email, role, password_hash FROM users WHERE id = ?").get(userId) as UserRow | undefined;
+    if (!row) return null;
+    return {
+      id: row.id,
+      email: row.email,
+      role: row.role,
+      passwordHash: row.password_hash,
+    };
+  }
+
+  async verifyPassword(user: { id: string; passwordHash: string }, password: string): Promise<boolean> {
+    const result = await verifyPasswordHash(user.passwordHash, password);
+    if (result.valid && result.upgradedHash) {
+      this.sqlite.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(result.upgradedHash, user.id);
+    }
+    return result.valid;
   }
 
   getMembership(userId: string, tenantId: string): { tenantId: string; scopes: string[] } | null {
@@ -296,6 +382,7 @@ export class RelayDatabase {
     userId: string;
     tenantId: string;
     scopes: string[];
+    deviceId?: string;
     agentId?: string;
     workspaceId?: string;
     ttlSec: number;
@@ -303,14 +390,15 @@ export class RelayDatabase {
     const generated = generateOpaqueToken("rfr");
     this.sqlite.prepare(`
       INSERT INTO refresh_tokens (
-        token_id, token_hash, user_id, tenant_id, scopes_json, agent_id, workspace_id, expires_at, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        token_id, token_hash, user_id, tenant_id, scopes_json, device_id, agent_id, workspace_id, expires_at, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       generated.tokenId,
       hashSecret(generated.secret),
       input.userId,
       input.tenantId,
       JSON.stringify(input.scopes),
+      input.deviceId ?? null,
       input.agentId ?? null,
       input.workspaceId ?? null,
       now() + input.ttlSec * 1000,
@@ -323,19 +411,21 @@ export class RelayDatabase {
     userId: string;
     tenantId: string;
     scopes: string[];
+    deviceId?: string;
     agentId?: string;
     workspaceId?: string;
   } | null {
     const parsed = parseOpaqueToken("rfr", token);
     if (!parsed) return null;
     const row = this.sqlite.prepare(`
-      SELECT token_hash, user_id, tenant_id, scopes_json, agent_id, workspace_id, expires_at, revoked_at
+      SELECT token_hash, user_id, tenant_id, scopes_json, device_id, agent_id, workspace_id, expires_at, revoked_at
       FROM refresh_tokens WHERE token_id = ?
     `).get(parsed.tokenId) as {
       token_hash: string;
       user_id: string;
       tenant_id: string;
       scopes_json: string;
+      device_id: string | null;
       agent_id: string | null;
       workspace_id: string | null;
       expires_at: number;
@@ -349,6 +439,7 @@ export class RelayDatabase {
       userId: row.user_id,
       tenantId: row.tenant_id,
       scopes: parseJsonArray(row.scopes_json),
+      ...(row.device_id ? { deviceId: row.device_id } : {}),
       ...(row.agent_id ? { agentId: row.agent_id } : {}),
       ...(row.workspace_id ? { workspaceId: row.workspace_id } : {}),
     };
@@ -360,14 +451,438 @@ export class RelayDatabase {
     this.sqlite.prepare("UPDATE refresh_tokens SET revoked_at = ? WHERE token_id = ?").run(now(), parsed.tokenId);
   }
 
+  createDevice(input: {
+    userId: string;
+    tenantId: string;
+    label: string;
+    platform?: string;
+  }): { deviceId: string; label: string; platform?: string | null; createdAt: number; lastSeenAt: number } {
+    const deviceId = randomUUID();
+    const timestamp = now();
+    this.sqlite.prepare(`
+      INSERT INTO devices (id, user_id, tenant_id, label, platform, created_at, last_seen_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(deviceId, input.userId, input.tenantId, input.label, input.platform ?? null, timestamp, timestamp);
+    return {
+      deviceId,
+      label: input.label,
+      platform: input.platform ?? null,
+      createdAt: timestamp,
+      lastSeenAt: timestamp,
+    };
+  }
+
+  touchDevice(deviceId: string): void {
+    this.sqlite.prepare("UPDATE devices SET last_seen_at = ? WHERE id = ? AND revoked_at IS NULL").run(now(), deviceId);
+  }
+
+  listDevices(userId: string, tenantId: string): Array<{
+    deviceId: string;
+    label: string;
+    platform?: string | null;
+    createdAt: number;
+    lastSeenAt: number;
+    revokedAt?: number | null;
+  }> {
+    const rows = this.sqlite.prepare(`
+      SELECT id, label, platform, created_at, last_seen_at, revoked_at
+      FROM devices
+      WHERE user_id = ? AND tenant_id = ?
+      ORDER BY created_at DESC
+    `).all(userId, tenantId) as Array<{
+      id: string;
+      label: string;
+      platform: string | null;
+      created_at: number;
+      last_seen_at: number;
+      revoked_at: number | null;
+    }>;
+    return rows.map((row) => ({
+      deviceId: row.id,
+      label: row.label,
+      platform: row.platform,
+      createdAt: row.created_at,
+      lastSeenAt: row.last_seen_at,
+      revokedAt: row.revoked_at,
+    }));
+  }
+
+  createWorkspaceGrant(input: {
+    tenantId: string;
+    deviceId: string;
+    agentId: string;
+    workspaceId: string;
+  }): void {
+    this.sqlite.prepare(`
+      INSERT OR IGNORE INTO workspace_grants (tenant_id, device_id, agent_id, workspace_id, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(input.tenantId, input.deviceId, input.agentId, input.workspaceId, now());
+  }
+
+  deviceHasWorkspaceAccess(tenantId: string, deviceId: string, agentId: string, workspaceId: string): boolean {
+    const total = this.sqlite.prepare(`
+      SELECT COUNT(*) as count
+      FROM workspace_grants
+      WHERE tenant_id = ? AND device_id = ?
+    `).get(tenantId, deviceId) as { count: number };
+    if ((total.count ?? 0) === 0) return true;
+
+    const match = this.sqlite.prepare(`
+      SELECT COUNT(*) as count
+      FROM workspace_grants
+      WHERE tenant_id = ? AND device_id = ? AND agent_id = ? AND workspace_id = ?
+    `).get(tenantId, deviceId, agentId, workspaceId) as { count: number };
+    return (match.count ?? 0) > 0;
+  }
+
+  listGrantedWorkspacesForDevice(tenantId: string, deviceId: string): Array<{ agentId: string; workspaceId: string; displayName: string }> {
+    const total = this.sqlite.prepare(`
+      SELECT COUNT(*) as count
+      FROM workspace_grants
+      WHERE tenant_id = ? AND device_id = ?
+    `).get(tenantId, deviceId) as { count: number };
+
+    if ((total.count ?? 0) === 0) {
+      const rows = this.sqlite.prepare(`
+        SELECT agent_id, id, display_name
+        FROM workspaces
+        WHERE tenant_id = ?
+        ORDER BY agent_id, id
+      `).all(tenantId) as Array<{ agent_id: string; id: string; display_name: string }>;
+      return rows.map((row) => ({
+        agentId: row.agent_id,
+        workspaceId: row.id,
+        displayName: row.display_name,
+      }));
+    }
+
+    const rows = this.sqlite.prepare(`
+      SELECT wg.agent_id, wg.workspace_id, w.display_name
+      FROM workspace_grants wg
+      LEFT JOIN workspaces w
+        ON w.tenant_id = wg.tenant_id AND w.agent_id = wg.agent_id AND w.id = wg.workspace_id
+      WHERE wg.tenant_id = ? AND wg.device_id = ?
+      ORDER BY wg.agent_id, wg.workspace_id
+    `).all(tenantId, deviceId) as Array<{
+      agent_id: string;
+      workspace_id: string;
+      display_name: string | null;
+    }>;
+    return rows.map((row) => ({
+      agentId: row.agent_id,
+      workspaceId: row.workspace_id,
+      displayName: row.display_name ?? row.workspace_id,
+    }));
+  }
+
+  upsertConnector(tenantId: string, connectorId: string, agentId: string, displayName?: string): void {
+    const timestamp = now();
+    this.sqlite.prepare(`
+      INSERT INTO connectors (id, tenant_id, agent_id, display_name, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, 'pending', ?, ?)
+      ON CONFLICT(tenant_id, id) DO UPDATE SET
+        agent_id = excluded.agent_id,
+        display_name = excluded.display_name,
+        updated_at = excluded.updated_at
+    `).run(connectorId, tenantId, agentId, displayName ?? agentId, timestamp, timestamp);
+  }
+
+  getConnector(tenantId: string, connectorId: string): {
+    connectorId: string;
+    agentId: string;
+    displayName: string;
+    status: string;
+    lastSeenAt?: number | null;
+  } | null {
+    const row = this.sqlite.prepare(`
+      SELECT id, agent_id, display_name, status, last_seen_at
+      FROM connectors
+      WHERE tenant_id = ? AND id = ?
+    `).get(tenantId, connectorId) as {
+      id: string;
+      agent_id: string;
+      display_name: string;
+      status: string;
+      last_seen_at: number | null;
+    } | undefined;
+    if (!row) return null;
+    return {
+      connectorId: row.id,
+      agentId: row.agent_id,
+      displayName: row.display_name,
+      status: row.status,
+      lastSeenAt: row.last_seen_at,
+    };
+  }
+
+  getConnectorByAgentId(tenantId: string, agentId: string): {
+    connectorId: string;
+    agentId: string;
+    displayName: string;
+    status: string;
+    lastSeenAt?: number | null;
+  } | null {
+    const row = this.sqlite.prepare(`
+      SELECT id, agent_id, display_name, status, last_seen_at
+      FROM connectors
+      WHERE tenant_id = ? AND agent_id = ?
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `).get(tenantId, agentId) as {
+      id: string;
+      agent_id: string;
+      display_name: string;
+      status: string;
+      last_seen_at: number | null;
+    } | undefined;
+    if (!row) return null;
+    return {
+      connectorId: row.id,
+      agentId: row.agent_id,
+      displayName: row.display_name,
+      status: row.status,
+      lastSeenAt: row.last_seen_at,
+    };
+  }
+
+  private createConnectorCredential(input: {
+    tenantId: string;
+    connectorId: string;
+    agentId: string;
+    description?: string | null;
+  }): { tokenId: string; connectorToken: string } {
+    const connector = generateOpaqueToken("con");
+    this.sqlite.prepare(`
+      INSERT INTO connector_credentials (
+        token_id, tenant_id, connector_id, agent_id, description, token_hash, created_at, last_rotated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      connector.tokenId,
+      input.tenantId,
+      input.connectorId,
+      input.agentId,
+      input.description ?? null,
+      hashSecret(connector.secret),
+      now(),
+      now(),
+    );
+    return { tokenId: connector.tokenId, connectorToken: connector.token };
+  }
+
+  createPairingSession(input: {
+    connectorId: string;
+    agentId: string;
+    displayName?: string;
+    expiresSec: number;
+  }): {
+    pairingId: string;
+    deviceCode: string;
+    userCode: string;
+    expiresAt: number;
+  } {
+    const pairingId = randomUUID();
+    const generated = generateOpaqueToken("dvc");
+    const expiresAt = now() + input.expiresSec * 1000;
+    const userCode = `${randomCode(4)}-${randomCode(4)}`;
+    this.sqlite.prepare(`
+      INSERT INTO pairing_sessions (
+        id, device_code_id, device_code_hash, user_code, requested_connector_id, requested_agent_id, requested_display_name,
+        status, expires_at, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+    `).run(
+      pairingId,
+      generated.tokenId,
+      hashSecret(generated.secret),
+      userCode,
+      input.connectorId,
+      input.agentId,
+      input.displayName ?? null,
+      expiresAt,
+      now(),
+    );
+    return {
+      pairingId,
+      deviceCode: generated.token,
+      userCode,
+      expiresAt,
+    };
+  }
+
+  getPairingSession(pairingId: string): {
+    pairingId: string;
+    userCode: string;
+    requestedConnectorId: string;
+    requestedAgentId: string;
+    requestedDisplayName?: string | null;
+    tenantId?: string | null;
+    connectorId?: string | null;
+    agentId?: string | null;
+    status: string;
+    expiresAt: number;
+  } | null {
+    const row = this.sqlite.prepare(`
+      SELECT id, user_code, requested_connector_id, requested_agent_id, requested_display_name,
+        tenant_id, connector_id, agent_id, status, expires_at
+      FROM pairing_sessions WHERE id = ?
+    `).get(pairingId) as {
+      id: string;
+      user_code: string;
+      requested_connector_id: string;
+      requested_agent_id: string;
+      requested_display_name: string | null;
+      tenant_id: string | null;
+      connector_id: string | null;
+      agent_id: string | null;
+      status: string;
+      expires_at: number;
+    } | undefined;
+    if (!row) return null;
+    return {
+      pairingId: row.id,
+      userCode: row.user_code,
+      requestedConnectorId: row.requested_connector_id,
+      requestedAgentId: row.requested_agent_id,
+      requestedDisplayName: row.requested_display_name,
+      tenantId: row.tenant_id,
+      connectorId: row.connector_id,
+      agentId: row.agent_id,
+      status: row.status,
+      expiresAt: row.expires_at,
+    };
+  }
+
+  approvePairing(pairingId: string, input: {
+    tenantId: string;
+    approvedByUserId: string;
+  }): {
+    pairingId: string;
+    tenantId: string;
+    connectorId: string;
+    agentId: string;
+  } | null {
+    const row = this.sqlite.prepare(`
+      SELECT requested_connector_id, requested_agent_id, requested_display_name, status, expires_at
+      FROM pairing_sessions
+      WHERE id = ?
+    `).get(pairingId) as {
+      requested_connector_id: string;
+      requested_agent_id: string;
+      requested_display_name: string | null;
+      status: string;
+      expires_at: number;
+    } | undefined;
+    if (!row || row.status !== "pending" || row.expires_at <= now()) return null;
+    this.upsertConnector(input.tenantId, row.requested_connector_id, row.requested_agent_id, row.requested_display_name ?? row.requested_agent_id);
+    this.upsertAgent(input.tenantId, row.requested_agent_id, row.requested_agent_id);
+    this.sqlite.prepare(`
+      UPDATE pairing_sessions
+      SET status = 'approved',
+          tenant_id = ?,
+          connector_id = ?,
+          agent_id = ?,
+          approved_by_user_id = ?,
+          approved_at = ?
+      WHERE id = ?
+    `).run(
+      input.tenantId,
+      row.requested_connector_id,
+      row.requested_agent_id,
+      input.approvedByUserId,
+      now(),
+      pairingId,
+    );
+    return {
+      pairingId,
+      tenantId: input.tenantId,
+      connectorId: row.requested_connector_id,
+      agentId: row.requested_agent_id,
+    };
+  }
+
+  denyPairing(pairingId: string): boolean {
+    const changed = this.sqlite.prepare(`
+      UPDATE pairing_sessions
+      SET status = 'denied',
+          denied_at = ?
+      WHERE id = ? AND status = 'pending'
+    `).run(now(), pairingId);
+    return changed.changes > 0;
+  }
+
+  consumeApprovedPairing(deviceCode: string): {
+    pairingId: string;
+    tenantId: string;
+    connectorId: string;
+    agentId: string;
+    connectorToken: string;
+  } | { status: "pending" | "denied" | "expired" | "already_used" | "invalid" } {
+    const parsed = parseOpaqueToken("dvc", deviceCode);
+    if (!parsed) return { status: "invalid" };
+    const row = this.sqlite.prepare(`
+      SELECT id, device_code_hash, tenant_id, connector_id, agent_id, connector_token_id, status, expires_at, consumed_at
+      FROM pairing_sessions
+      WHERE device_code_id = ?
+    `).get(parsed.tokenId) as {
+      id: string;
+      device_code_hash: string;
+      tenant_id: string | null;
+      connector_id: string | null;
+      agent_id: string | null;
+      connector_token_id: string | null;
+      status: string;
+      expires_at: number;
+      consumed_at: number | null;
+    } | undefined;
+    if (!row || row.device_code_hash !== hashSecret(parsed.secret)) return { status: "invalid" };
+    this.sqlite.prepare("UPDATE pairing_sessions SET last_polled_at = ? WHERE id = ?").run(now(), row.id);
+    if (row.expires_at <= now()) return { status: "expired" };
+    if (row.status === "pending") return { status: "pending" };
+    if (row.status === "denied") return { status: "denied" };
+    if (row.consumed_at) return { status: "already_used" };
+    if (row.status !== "approved" || !row.tenant_id || !row.connector_id || !row.agent_id) {
+      return { status: "invalid" };
+    }
+    const credential = this.createConnectorCredential({
+      tenantId: row.tenant_id,
+      connectorId: row.connector_id,
+      agentId: row.agent_id,
+      description: null,
+    });
+    this.sqlite.prepare("UPDATE pairing_sessions SET consumed_at = ? WHERE id = ?").run(now(), row.id);
+    return {
+      pairingId: row.id,
+      tenantId: row.tenant_id,
+      connectorId: row.connector_id,
+      agentId: row.agent_id,
+      connectorToken: credential.connectorToken,
+    };
+  }
+
+  revokeConnector(tenantId: string, connectorId: string): boolean {
+    this.sqlite.prepare(`
+      UPDATE connector_credentials
+      SET revoked_at = COALESCE(revoked_at, ?)
+      WHERE tenant_id = ? AND COALESCE(connector_id, agent_id) = ?
+    `).run(now(), tenantId, connectorId);
+    const changed = this.sqlite.prepare(`
+      UPDATE connectors
+      SET status = 'revoked', updated_at = ?
+      WHERE tenant_id = ? AND id = ?
+    `).run(now(), tenantId, connectorId);
+    return changed.changes > 0;
+  }
+
   createEnrollment(tenantId: string, agentId: string, description?: string, ttlSec = 3600): string {
     const generated = generateOpaqueToken("enr");
+    const connectorId = agentId;
+    this.upsertConnector(tenantId, connectorId, agentId, description ?? agentId);
     this.sqlite.prepare(`
-      INSERT INTO connector_enrollments (token_id, tenant_id, agent_id, description, token_hash, expires_at, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO connector_enrollments (token_id, tenant_id, connector_id, agent_id, description, token_hash, expires_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       generated.tokenId,
       tenantId,
+      connectorId,
       agentId,
       description ?? null,
       hashSecret(generated.secret),
@@ -378,14 +893,15 @@ export class RelayDatabase {
     return generated.token;
   }
 
-  consumeEnrollment(token: string): { tenantId: string; agentId: string; connectorToken: string } | null {
+  consumeEnrollment(token: string): { tenantId: string; connectorId: string; agentId: string; connectorToken: string } | null {
     const parsed = parseOpaqueToken("enr", token);
     if (!parsed) return null;
     const row = this.sqlite.prepare(`
-      SELECT tenant_id, agent_id, token_hash, expires_at, used_at, description
+      SELECT tenant_id, connector_id, agent_id, token_hash, expires_at, used_at, description
       FROM connector_enrollments WHERE token_id = ?
     `).get(parsed.tokenId) as {
       tenant_id: string;
+      connector_id: string | null;
       agent_id: string;
       token_hash: string;
       expires_at: number;
@@ -397,25 +913,19 @@ export class RelayDatabase {
     if (row.token_hash !== hashSecret(parsed.secret)) return null;
 
     this.sqlite.prepare("UPDATE connector_enrollments SET used_at = ? WHERE token_id = ?").run(now(), parsed.tokenId);
-    const connector = generateOpaqueToken("con");
-    this.sqlite.prepare(`
-      INSERT INTO connector_credentials (
-        token_id, tenant_id, agent_id, description, token_hash, created_at, last_rotated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      connector.tokenId,
-      row.tenant_id,
-      row.agent_id,
-      row.description ?? null,
-      hashSecret(connector.secret),
-      now(),
-      now(),
-    );
+    const connectorId = row.connector_id ?? row.agent_id;
+    const connector = this.createConnectorCredential({
+      tenantId: row.tenant_id,
+      connectorId,
+      agentId: row.agent_id,
+      description: row.description,
+    });
 
     return {
       tenantId: row.tenant_id,
+      connectorId,
       agentId: row.agent_id,
-      connectorToken: connector.token,
+      connectorToken: connector.connectorToken,
     };
   }
 
@@ -423,11 +933,12 @@ export class RelayDatabase {
     const parsed = parseOpaqueToken("con", token);
     if (!parsed) return null;
     const row = this.sqlite.prepare(`
-      SELECT token_id, tenant_id, agent_id, token_hash, revoked_at
+      SELECT token_id, tenant_id, connector_id, agent_id, token_hash, revoked_at
       FROM connector_credentials WHERE token_id = ?
     `).get(parsed.tokenId) as {
       token_id: string;
       tenant_id: string;
+      connector_id: string | null;
       agent_id: string;
       token_hash: string;
       revoked_at: number | null;
@@ -437,6 +948,7 @@ export class RelayDatabase {
     return {
       credentialId: row.token_id,
       tenantId: row.tenant_id,
+      connectorId: row.connector_id ?? row.agent_id,
       agentId: row.agent_id,
     };
   }
@@ -445,14 +957,15 @@ export class RelayDatabase {
     sessionId: string;
     credentialId: string;
     tenantId: string;
+    connectorId: string;
     agentId: string;
     capabilities: string[];
     version: string;
   }): void {
     this.sqlite.prepare(`
       INSERT INTO connector_sessions (
-        id, credential_token_id, tenant_id, agent_id, status, connected_at, last_seen_at, capabilities_json, version
-      ) VALUES (?, ?, ?, ?, 'online', ?, ?, ?, ?)
+        id, credential_token_id, tenant_id, connector_id, agent_id, status, connected_at, last_seen_at, capabilities_json, version
+      ) VALUES (?, ?, ?, ?, ?, 'online', ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         status = 'online',
         last_seen_at = excluded.last_seen_at,
@@ -462,18 +975,24 @@ export class RelayDatabase {
       input.sessionId,
       input.credentialId,
       input.tenantId,
+      input.connectorId,
       input.agentId,
       now(),
       now(),
       JSON.stringify(input.capabilities),
       input.version,
     );
+    this.sqlite.prepare(`
+      UPDATE connectors
+      SET status = 'online', updated_at = ?, last_seen_at = ?
+      WHERE tenant_id = ? AND id = ?
+    `).run(now(), now(), input.tenantId, input.connectorId);
     this.appendActivity({
       tenantId: input.tenantId,
       agentId: input.agentId,
       capability: "connector",
       status: "info",
-      detail: `Connector online for ${input.agentId}`,
+      detail: `Connector ${input.connectorId} online for ${input.agentId}`,
     });
   }
 
@@ -482,18 +1001,24 @@ export class RelayDatabase {
   }
 
   markConnectorOffline(sessionId: string): void {
-    const row = this.sqlite.prepare("SELECT tenant_id, agent_id FROM connector_sessions WHERE id = ?").get(sessionId) as {
+    const row = this.sqlite.prepare("SELECT tenant_id, connector_id, agent_id FROM connector_sessions WHERE id = ?").get(sessionId) as {
       tenant_id: string;
+      connector_id: string | null;
       agent_id: string;
     } | undefined;
     this.sqlite.prepare("UPDATE connector_sessions SET status = 'offline', last_seen_at = ? WHERE id = ?").run(now(), sessionId);
     if (row) {
+      this.sqlite.prepare(`
+        UPDATE connectors
+        SET status = 'offline', updated_at = ?, last_seen_at = ?
+        WHERE tenant_id = ? AND id = ?
+      `).run(now(), now(), row.tenant_id, row.connector_id ?? row.agent_id);
       this.appendActivity({
         tenantId: row.tenant_id,
         agentId: row.agent_id,
         capability: "connector",
         status: "info",
-        detail: `Connector offline for ${row.agent_id}`,
+        detail: `Connector ${row.connector_id ?? row.agent_id} offline for ${row.agent_id}`,
       });
     }
   }

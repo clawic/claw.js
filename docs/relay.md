@@ -20,8 +20,9 @@ Use it when you need:
 The current v1 design is intentionally small:
 
 - JWT access tokens plus revocable refresh tokens for API clients
-- one active reverse connector session per `tenantId + agentId`
-- explicit routing by `tenantId`, `agentId`, and `workspaceId`
+- device-code pairing for remote connectors plus legacy enrollment tokens as fallback
+- one active reverse connector session per `tenantId + connectorId`
+- explicit routing by `tenantId`, `connectorId`, `agentId`, and `workspaceId`
 - first-class `project + agent + assignment` routing on top of materialized workspaces
 - fail-fast `503` responses when a connector is offline
 - admin-only runtime, config, workspace-file, and enrollment APIs
@@ -32,11 +33,12 @@ The current v1 design is intentionally small:
 The relay separates public control-plane concerns from remote workspace execution:
 
 1. A client authenticates against the relay over HTTPS.
-2. An admin creates a one-time enrollment token for an agent.
-3. The remote connector exchanges that enrollment token for a connector credential.
-4. The connector opens `/v1/connector/connect` over WebSocket and sends `hello`.
-5. The relay records the agent, advertised workspaces, and connection state.
-6. Client API requests are routed to that active connector and answered synchronously.
+2. A remote connector starts a device-code pairing session or uses a legacy enrollment token.
+3. An authenticated relay user approves or denies that pairing.
+4. The connector exchanges the approved device code for a connector credential.
+5. The connector opens `/v1/connector/connect` over WebSocket and sends `hello`.
+6. The relay records the connector, logical agent, advertised workspaces, and connection state.
+7. Client API requests are routed to that active connector and answered synchronously.
 
 The relay does not queue work for offline agents. If no active connector exists for the requested `tenantId + agentId`, the request fails immediately.
 
@@ -47,7 +49,7 @@ The relay persists control-plane metadata only:
 - tenants
 - users and memberships
 - refresh tokens
-- connector enrollments and connector credentials
+- devices, workspace grants, connector pairings, connector enrollments, and connector credentials
 - logical agents, projects, and project-agent assignments
 - registered workspaces discovered from connector `hello` or created as assignments
 - connector connection state
@@ -69,6 +71,11 @@ The relay now distinguishes three layers:
 - `project`: shared product or business context
 - `agent`: reusable role definition and connector identity
 - `assignment`: the concrete `projectId + agentId` runtime instance
+
+Relay v2 also distinguishes:
+
+- `device`: one authenticated mobile, web, or desktop client session
+- `connector`: one reverse WebSocket OpenClaw process behind NAT
 
 The public product routes are project-scoped. The low-level workspace routes remain available for compatibility.
 
@@ -140,7 +147,19 @@ The response includes:
 - `role`
 - `scopes`
 
-### 2. Create a connector enrollment
+### 2. Preferred connector pairing
+
+The preferred bootstrap is device-code pairing:
+
+1. The connector calls `POST /v1/connectors/device/start`
+2. The relay returns `deviceCode`, `userCode`, `verificationUri`, and `verificationUriComplete`
+3. A signed-in relay user opens the verification URI and approves the pairing
+4. The connector polls `POST /v1/connectors/device/poll`
+5. On approval the relay returns a connector credential scoped to one `tenantId + connectorId`
+
+Legacy enrollment tokens still exist as an admin fallback.
+
+### 3. Legacy connector enrollment
 
 ```bash
 curl -s http://127.0.0.1:4410/v1/admin/connectors/enrollments \
@@ -155,7 +174,7 @@ curl -s http://127.0.0.1:4410/v1/admin/connectors/enrollments \
 
 This returns a one-time `enrollmentToken`.
 
-### 3. Start the remote connector
+### 4. Start the remote connector
 
 ```bash
 RELAY_ENROLLMENT_TOKEN=<enrollment-token> \
@@ -166,16 +185,20 @@ npm --prefix relay run connector -- \
   --runtime-adapter openclaw
 ```
 
-On startup the connector:
+On startup the connector either:
 
-1. POSTs `/v1/connector/enroll`
-2. receives a connector credential
-3. opens `/v1/connector/connect`
-4. sends a `hello` frame with capabilities and workspaces
-5. keeps the socket alive with heartbeats every 10 seconds
-6. reconnects in a loop after disconnection
+1. completes the device-code pairing flow, or
+2. POSTs `/v1/connector/enroll` in legacy mode
 
-### 4. Call a workspace route
+Then it:
+
+1. receives a connector credential
+2. opens `/v1/connector/connect`
+3. sends a `hello` frame with `connectorId`, `agentId`, capabilities, and workspaces
+4. keeps the socket alive with heartbeats every 10 seconds
+5. reconnects in a loop after disconnection
+
+### 5. Call a workspace route
 
 ```bash
 curl -s http://127.0.0.1:4410/v1/tenants/demo-tenant/agents/demo-agent/workspaces/main/status \
@@ -204,9 +227,11 @@ Client auth is relay-local and independent from the remote runtime.
 ### Connector credentials
 
 - created only by consuming an enrollment token
+- or by consuming an approved device-code pairing
 - stored hashed in SQLite
 - used only for `/v1/connector/connect`
-- scoped to a single `tenantId + agentId`
+- revocable
+- scoped to a single `tenantId + connectorId`
 
 ### Scopes
 
@@ -235,9 +260,19 @@ The public surface is grouped by concern.
 
 ### Connector setup
 
+- `POST /v1/connectors/device/start`
+- `POST /v1/connectors/device/poll`
+- `POST /v1/pairings/:pairingId/approve`
+- `POST /v1/pairings/:pairingId/deny`
 - `POST /v1/connector/enroll`
 - `GET /v1/connector/connect` as WebSocket
 - `POST /v1/admin/connectors/enrollments`
+- `POST /v1/admin/connectors/:connectorId/revoke`
+
+### Current user
+
+- `GET /v1/me/devices`
+- `GET /v1/me/workspaces`
 
 ### Tenant and workspace discovery
 
@@ -332,6 +367,7 @@ There are also specialized routes for:
 
 ### Admin-only workspace and runtime routes
 
+- `POST /v1/admin/tenants/:tenantId/workspace-grants`
 - `POST /v1/admin/tenants/:tenantId/agents/:agentId/workspaces`
 - `DELETE /v1/admin/tenants/:tenantId/agents/:agentId`
 - `DELETE /v1/admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId`
@@ -386,6 +422,7 @@ The relay connector protocol is JSON over WebSocket.
 ### Connector to relay frames
 
 - `hello`: identifies `tenantId`, `agentId`, version, capabilities, and workspaces
+- `hello`: identifies `tenantId`, `connectorId`, `agentId`, version, capabilities, and workspaces
 - `heartbeat`: updates connector liveness
 - `stream`: pushes streamed events for an in-flight invocation
 - `result`: completes a request successfully
@@ -476,7 +513,7 @@ The current relay implementation is useful, but deliberately narrow:
 - no horizontal connector fan-out for the same agent
 - no per-request load balancing
 - no production-ready user management beyond the local seeded demo accounts
-- no production-safe secret bootstrap by default
+- no production-safe secret bootstrap beyond the device-code and admin enrollment flows
 - no persisted copy of remote workspace data inside the relay database
 - no formal billing or metering model beyond estimated usage telemetry
 

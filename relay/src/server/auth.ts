@@ -5,15 +5,16 @@ import { SignJWT, jwtVerify } from "jose";
 import type { AuthClaims, TokenPair } from "../shared/protocol.ts";
 import type { RelayConfig } from "./config.ts";
 import type { RelayDatabase } from "./db.ts";
+import { generateJwtId } from "./security.ts";
 
 export class RelayAuthService {
-  private readonly secret: Uint8Array;
+  private readonly secrets: Uint8Array[];
 
   constructor(
     private readonly config: RelayConfig,
     private readonly db: RelayDatabase,
   ) {
-    this.secret = createSecretKey(Buffer.from(config.jwtSecret)).export() as Uint8Array;
+    this.secrets = config.jwtSecrets.map((secret) => createSecretKey(Buffer.from(secret)).export() as Uint8Array);
   }
 
   async issueTokenPair(input: {
@@ -24,6 +25,7 @@ export class RelayAuthService {
     scopes: string[];
     agentId?: string;
     workspaceId?: string;
+    deviceId?: string;
   }): Promise<TokenPair> {
     const claims: AuthClaims = {
       sub: input.userId,
@@ -33,13 +35,17 @@ export class RelayAuthService {
       scopes: input.scopes,
       ...(input.agentId ? { agentId: input.agentId } : {}),
       ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}),
+      ...(input.deviceId ? { deviceId: input.deviceId } : {}),
     };
 
     const accessToken = await new SignJWT(claims as unknown as Record<string, unknown>)
-      .setProtectedHeader({ alg: "HS256" })
+      .setProtectedHeader({ alg: "HS256", kid: "0" })
+      .setIssuer(this.config.jwtIssuer)
+      .setAudience(this.config.jwtAudience)
+      .setJti(generateJwtId())
       .setIssuedAt()
       .setExpirationTime(`${this.config.accessTokenTtlSec}s`)
-      .sign(this.secret);
+      .sign(this.secrets[0]!);
 
     const refreshToken = this.db.createRefreshToken({
       userId: input.userId,
@@ -47,6 +53,7 @@ export class RelayAuthService {
       scopes: input.scopes,
       ...(input.agentId ? { agentId: input.agentId } : {}),
       ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}),
+      ...(input.deviceId ? { deviceId: input.deviceId } : {}),
       ttlSec: this.config.refreshTokenTtlSec,
     });
 
@@ -58,7 +65,17 @@ export class RelayAuthService {
   }
 
   async verifyAccessToken(token: string): Promise<AuthClaims> {
-    const verified = await jwtVerify(token, this.secret);
-    return verified.payload as unknown as AuthClaims;
+    for (const secret of this.secrets) {
+      try {
+        const verified = await jwtVerify(token, secret, {
+          issuer: this.config.jwtIssuer,
+          audience: this.config.jwtAudience,
+        });
+        return verified.payload as unknown as AuthClaims;
+      } catch {
+        continue;
+      }
+    }
+    throw new Error("Invalid bearer token.");
   }
 }

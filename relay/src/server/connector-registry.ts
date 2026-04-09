@@ -45,8 +45,8 @@ export class ConnectorRegistry {
     private readonly requestTimeoutMs: number,
   ) {}
 
-  private key(tenantId: string, agentId: string): string {
-    return `${tenantId}:${agentId}`;
+  private key(tenantId: string, connectorId: string): string {
+    return `${tenantId}:${connectorId}`;
   }
 
   attach(socket: WebSocket, auth: ConnectorAuthContext): void {
@@ -121,23 +121,29 @@ export class ConnectorRegistry {
   }
 
   private handleHello(socket: WebSocket, sessionId: string, auth: ConnectorAuthContext, message: HelloEnvelope): void {
-    if (message.payload.tenantId !== auth.tenantId || message.payload.agentId !== auth.agentId) {
-      this.logger.error(`Connector hello mismatch for ${auth.agentId}`);
+    if (
+      message.payload.tenantId !== auth.tenantId
+      || message.payload.connectorId !== auth.connectorId
+      || message.payload.agentId !== auth.agentId
+    ) {
+      this.logger.error(`Connector hello mismatch for ${auth.connectorId}`);
       socket.close();
       return;
     }
 
     this.db.upsertAgent(auth.tenantId, auth.agentId, auth.agentId);
+    this.db.upsertConnector(auth.tenantId, auth.connectorId, auth.agentId, auth.agentId);
     this.db.upsertWorkspaces(auth.tenantId, auth.agentId, message.payload.workspaces);
     this.db.markConnectorOnline({
       sessionId,
       credentialId: auth.credentialId,
       tenantId: auth.tenantId,
+      connectorId: auth.connectorId,
       agentId: auth.agentId,
       capabilities: message.payload.capabilities,
       version: message.payload.version,
     });
-    this.connections.set(this.key(auth.tenantId, auth.agentId), {
+    this.connections.set(this.key(auth.tenantId, auth.connectorId), {
       sessionId,
       socket,
       auth,
@@ -149,7 +155,7 @@ export class ConnectorRegistry {
   }
 
   private teardown(sessionId: string, auth: ConnectorAuthContext): void {
-    const key = this.key(auth.tenantId, auth.agentId);
+    const key = this.key(auth.tenantId, auth.connectorId);
     const current = this.connections.get(key);
     if (current?.sessionId === sessionId) {
       this.connections.delete(key);
@@ -164,15 +170,16 @@ export class ConnectorRegistry {
 
   async invoke(input: {
     tenantId: string;
+    connectorId: string;
     agentId: string;
     workspaceId?: string;
     operation: string;
     payload?: Record<string, unknown>;
     onStream?: (payload: StreamEnvelope) => void;
   }): Promise<Record<string, unknown>> {
-    const connection = this.connections.get(this.key(input.tenantId, input.agentId));
+    const connection = this.connections.get(this.key(input.tenantId, input.connectorId));
     if (!connection) {
-      throw new OfflineError(`No active connector for ${input.agentId}`);
+      throw new OfflineError(`No active connector for ${input.connectorId}`);
     }
 
     const requestId = randomUUID();
@@ -206,5 +213,12 @@ export class ConnectorRegistry {
         reject(error);
       });
     });
+  }
+
+  revoke(tenantId: string, connectorId: string): void {
+    const connection = this.connections.get(this.key(tenantId, connectorId));
+    if (!connection) return;
+    this.connections.delete(this.key(tenantId, connectorId));
+    connection.socket.close();
   }
 }

@@ -48,8 +48,9 @@ The repository also includes `relay/`, a standalone relay backend for remote cli
 Relay v1 adds:
 
 - `/v1` JWT-based client auth
+- device-code pairing for reverse connectors
 - reverse WebSocket connector sessions for agents behind NAT
-- explicit routing by `tenantId`, `agentId`, and `workspaceId`
+- explicit routing by `tenantId`, `connectorId`, `agentId`, and `workspaceId`
 - first-class `project + agent + assignment` routing on top of materialized workspaces
 - an admin-only surface for runtime setup, config, and connector enrollment
 

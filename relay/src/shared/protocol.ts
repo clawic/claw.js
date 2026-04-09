@@ -7,6 +7,7 @@ export interface ConnectorWorkspaceDescriptor {
 
 export interface ConnectorHelloPayload {
   tenantId: string;
+  connectorId: string;
   agentId: string;
   version: string;
   capabilities: string[];
@@ -91,11 +92,13 @@ export interface AuthClaims {
   scopes: string[];
   agentId?: string;
   workspaceId?: string;
+  deviceId?: string;
 }
 
 export interface ConnectorAuthContext {
   credentialId: string;
   tenantId: string;
+  connectorId: string;
   agentId: string;
 }
 
@@ -107,6 +110,7 @@ export interface TokenPair {
 
 export interface EnrollmentResult {
   tenantId: string;
+  connectorId: string;
   agentId: string;
   connectorToken: string;
 }

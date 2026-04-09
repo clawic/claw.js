@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Copy, Plus, Trash2 } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -37,7 +37,10 @@ const CODE_CLS =
 
 export function SettingsPage() {
   const { auth, isAdmin } = useAuth();
+  const [searchParams] = useSearchParams();
   const tenantId = auth!.tenantId;
+  const pairingId = searchParams.get("pairingId");
+  const userCode = searchParams.get("user_code");
 
   if (!isAdmin) {
     return (
@@ -61,12 +64,65 @@ export function SettingsPage() {
         </span>
       </PageHeader>
       <PageBody>
+        {pairingId ? <PairingApprovalCard pairingId={pairingId} userCode={userCode} /> : null}
         <EnrollmentCard tenantId={tenantId} />
         <CreateWorkspaceCard tenantId={tenantId} />
         <RuntimeCard tenantId={tenantId} />
         <DeleteDataCard tenantId={tenantId} />
       </PageBody>
     </>
+  );
+}
+
+function PairingApprovalCard({
+  pairingId,
+  userCode,
+}: {
+  pairingId: string;
+  userCode: string | null;
+}) {
+  const [pending, setPending] = useState(false);
+  const [status, setStatus] = useState<"idle" | "approved" | "denied">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async (action: "approve" | "deny") => {
+    setPending(true);
+    setError(null);
+    try {
+      await api.post(`/pairings/${pairingId}/${action}`, {});
+      setStatus(action === "approve" ? "approved" : "denied");
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <Card
+      title="Connector pairing request"
+      subtitle="Approve or deny the pending OpenClaw connector bootstrap."
+    >
+      <div className="flex gap-3 flex-wrap items-end">
+        <Field label="Pairing ID">
+          <input value={pairingId} readOnly className={INPUT_CLS} />
+        </Field>
+        <Field label="User code">
+          <input value={userCode ?? ""} readOnly className={INPUT_CLS} />
+        </Field>
+      </div>
+      <div className="flex gap-2 mt-3">
+        <Button variant="primary" onClick={() => run("approve")} disabled={pending || status !== "idle"}>
+          <Plus size={12} /> Approve
+        </Button>
+        <Button onClick={() => run("deny")} disabled={pending || status !== "idle"}>
+          <Trash2 size={12} /> Deny
+        </Button>
+      </div>
+      {status === "approved" ? <div className="text-xs text-green-700 mt-3">Pairing approved.</div> : null}
+      {status === "denied" ? <div className="text-xs text-text-muted mt-3">Pairing denied.</div> : null}
+      {error ? <div className="text-xs text-red bg-red-bg rounded-sm px-2 py-1 mt-3">{error}</div> : null}
+    </Card>
   );
 }
 

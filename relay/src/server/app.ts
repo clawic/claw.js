@@ -2,6 +2,7 @@ import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
 import websocket from "@fastify/websocket";
+import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,6 +19,7 @@ import { loadRelayConfig, type RelayConfig } from "./config.ts";
 import { ConnectorRegistry, OfflineError } from "./connector-registry.ts";
 import { RelayDatabase } from "./db.ts";
 import { RelayLogger } from "./logger.ts";
+import { MemoryRateLimiter } from "./rate-limit.ts";
 
 interface RelayAppOptions {
   config?: Partial<RelayConfig>;
@@ -66,6 +68,64 @@ function authorizeWorkspace(claims: AuthClaims, params: WorkspaceParams): void {
   if (claims.workspaceId && claims.workspaceId !== params.workspaceId) {
     throw new Error("Forbidden: workspace mismatch");
   }
+}
+
+function ensureWorkspaceAccess(claims: AuthClaims, params: WorkspaceParams, db: RelayDatabase): void {
+  authorizeWorkspace(claims, params);
+  if (claims.deviceId && !db.deviceHasWorkspaceAccess(params.tenantId, claims.deviceId, params.agentId, params.workspaceId)) {
+    throw new Error("Forbidden: workspace grant mismatch");
+  }
+}
+
+function requestKey(request: FastifyRequest): string {
+  const forwarded = request.headers["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.trim()) {
+    return forwarded.split(",")[0]?.trim() ?? request.ip;
+  }
+  return request.ip;
+}
+
+function isLoopbackHost(host: string): boolean {
+  return host.includes("localhost") || host.includes("127.0.0.1");
+}
+
+function isSecureRequest(request: FastifyRequest): boolean {
+  const forwardedProto = request.headers["x-forwarded-proto"];
+  if (typeof forwardedProto === "string") return forwardedProto.split(",")[0]?.trim() === "https";
+  return (request.protocol ?? "").toLowerCase() === "https";
+}
+
+async function requireSecureTransport(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  config: RelayConfig,
+): Promise<boolean> {
+  const host = request.headers.host ?? new URL(config.publicBaseUrl).host;
+  if (isLoopbackHost(host) || isSecureRequest(request)) return true;
+  await reply.code(400).send({ error: "https_required", message: "HTTPS is required outside localhost." });
+  return false;
+}
+
+async function requireRateLimit(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  limiter: MemoryRateLimiter,
+  bucket: string,
+  windowMs: number,
+  limit: number,
+): Promise<boolean> {
+  const allowed = limiter.consume(`${bucket}:${requestKey(request)}`, windowMs, limit);
+  if (allowed) return true;
+  await reply.code(429).send({ error: "rate_limited", message: "Too many requests." });
+  return false;
+}
+
+function resolveConnectorId(db: RelayDatabase, tenantId: string, agentId: string): string {
+  const connector = db.getConnectorByAgentId(tenantId, agentId);
+  if (!connector) {
+    throw new OfflineError(`No active connector for ${agentId}`);
+  }
+  return connector.connectorId;
 }
 
 async function requireClaims(
@@ -174,7 +234,7 @@ async function invokeWorkspace(
   if (!claims) return null;
   const params = paramsOverride ?? request.params;
   try {
-    authorizeWorkspace(claims, params);
+    ensureWorkspaceAccess(claims, params, db);
   } catch (error) {
     await reply.code(403).send({ error: "Forbidden", message: error instanceof Error ? error.message : String(error) });
     return null;
@@ -183,6 +243,7 @@ async function invokeWorkspace(
   try {
     const result = await registry.invoke({
       tenantId: params.tenantId,
+      connectorId: resolveConnectorId(db, params.tenantId, params.agentId),
       agentId: params.agentId,
       workspaceId: params.workspaceId,
       operation,
@@ -265,7 +326,7 @@ async function requireProjectAssignmentAccess(
     return null;
   }
   try {
-    authorizeWorkspace(claims, assignmentWorkspaceParams(params, assignment.workspaceId));
+    ensureWorkspaceAccess(claims, assignmentWorkspaceParams(params, assignment.workspaceId), db);
   } catch (error) {
     await reply.code(403).send({ error: "Forbidden", message: error instanceof Error ? error.message : String(error) });
     return null;
@@ -279,6 +340,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
   const db = new RelayDatabase(config.dbPath);
   const auth = new RelayAuthService(config, db);
   const registry = new ConnectorRegistry(db, logger, config.requestTimeoutMs);
+  const rateLimiter = new MemoryRateLimiter();
   const app = Fastify({ logger: false });
 
   const materializeProjectAssignment = async (input: {
@@ -305,6 +367,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
 
     const result = await registry.invoke({
       tenantId: input.tenantId,
+      connectorId: resolveConnectorId(db, input.tenantId, input.agentId),
       agentId: input.agentId,
       workspaceId,
       operation: "admin.workspace.create",
@@ -367,13 +430,15 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
   }));
 
   app.post("/v1/auth/login", async (request, reply) => {
+    if (!await requireSecureTransport(request, reply, config)) return;
+    if (!await requireRateLimit(request, reply, rateLimiter, "login", config.loginRateLimitWindowMs, config.loginRateLimitMax)) return;
     const body = await readRequestBody(request);
     const email = typeof body.email === "string" ? body.email.trim() : "";
     const password = typeof body.password === "string" ? body.password : "";
     const tenantId = typeof body.tenantId === "string" && body.tenantId.trim() ? body.tenantId.trim() : "demo-tenant";
 
     const user = db.getUserByEmail(email);
-    if (!user || !db.verifyPassword(user, password)) {
+    if (!user || !await db.verifyPassword(user, password)) {
       return await reply.code(401).send({ error: "invalid_credentials" });
     }
 
@@ -382,40 +447,49 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       return await reply.code(403).send({ error: "no_membership" });
     }
 
+    const device = db.createDevice({
+      userId: user.id,
+      tenantId,
+      label: typeof body.deviceLabel === "string" && body.deviceLabel.trim() ? body.deviceLabel.trim() : `${email} device`,
+      ...(typeof body.devicePlatform === "string" && body.devicePlatform.trim() ? { platform: body.devicePlatform.trim() } : {}),
+    });
     const tokens = await auth.issueTokenPair({
       userId: user.id,
       email: user.email,
       role: user.role,
       tenantId,
       scopes: membership.scopes,
+      deviceId: device.deviceId,
     });
     return {
       tenantId,
       role: user.role,
       scopes: membership.scopes,
+      deviceId: device.deviceId,
       ...tokens,
     };
   });
 
   app.post("/v1/auth/refresh", async (request, reply) => {
+    if (!await requireSecureTransport(request, reply, config)) return;
     const body = await readRequestBody(request);
     const refreshToken = typeof body.refreshToken === "string" ? body.refreshToken : "";
     const consumed = db.consumeRefreshToken(refreshToken);
     if (!consumed) {
       return await reply.code(401).send({ error: "invalid_refresh_token" });
     }
-    const user = consumed.userId === "admin-user"
-      ? db.getUserByEmail("admin@relay.local")
-      : db.getUserByEmail("user@relay.local");
+    const user = db.getUserById(consumed.userId);
     if (!user) {
       return await reply.code(401).send({ error: "invalid_refresh_token" });
     }
+    if (consumed.deviceId) db.touchDevice(consumed.deviceId);
     const tokens = await auth.issueTokenPair({
       userId: consumed.userId,
       email: user.email,
       role: user.role,
       tenantId: consumed.tenantId,
       scopes: consumed.scopes,
+      ...(consumed.deviceId ? { deviceId: consumed.deviceId } : {}),
       ...(consumed.agentId ? { agentId: consumed.agentId } : {}),
       ...(consumed.workspaceId ? { workspaceId: consumed.workspaceId } : {}),
     });
@@ -423,15 +497,125 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       tenantId: consumed.tenantId,
       role: user.role,
       scopes: consumed.scopes,
+      ...(consumed.deviceId ? { deviceId: consumed.deviceId } : {}),
       ...tokens,
     };
   });
 
   app.post("/v1/auth/logout", async (request, reply) => {
+    if (!await requireSecureTransport(request, reply, config)) return;
     const body = await readRequestBody(request);
     const refreshToken = typeof body.refreshToken === "string" ? body.refreshToken : "";
     db.revokeRefreshToken(refreshToken);
     return await reply.send({ ok: true });
+  });
+
+  app.get("/v1/me/devices", async (request, reply) => {
+    const claims = await requireClaims(request, reply, auth, "tenant:read");
+    if (!claims) return;
+    return {
+      devices: db.listDevices(claims.sub, claims.tenantId),
+    };
+  });
+
+  app.get("/v1/me/workspaces", async (request, reply) => {
+    const claims = await requireClaims(request, reply, auth, "workspace:read");
+    if (!claims) return;
+    if (claims.deviceId) {
+      return { workspaces: db.listGrantedWorkspacesForDevice(claims.tenantId, claims.deviceId) };
+    }
+    return {
+      workspaces: db.listAgents(claims.tenantId).flatMap((agent) => db.listWorkspaces(claims.tenantId, agent.agentId).map((workspace) => ({
+        agentId: agent.agentId,
+        workspaceId: workspace.workspaceId,
+        displayName: workspace.displayName,
+      }))),
+    };
+  });
+
+  app.post("/v1/connectors/device/start", async (request, reply) => {
+    if (!await requireSecureTransport(request, reply, config)) return;
+    if (!await requireRateLimit(request, reply, rateLimiter, "pairing-start", config.pairingStartRateLimitWindowMs, config.pairingStartRateLimitMax)) return;
+    const body = await readRequestBody(request);
+    const requestedConnectorId = typeof body.connectorId === "string" && body.connectorId.trim()
+      ? body.connectorId.trim()
+      : randomUUID();
+    const requestedAgentId = typeof body.agentId === "string" && body.agentId.trim()
+      ? body.agentId.trim()
+      : requestedConnectorId;
+    const started = db.createPairingSession({
+      connectorId: requestedConnectorId,
+      agentId: requestedAgentId,
+      ...(typeof body.displayName === "string" && body.displayName.trim() ? { displayName: body.displayName.trim() } : {}),
+      expiresSec: config.pairingExpiresSec,
+    });
+    const verificationUri = new URL("/settings", config.publicBaseUrl).toString();
+    const verificationUriComplete = new URL(`/settings?pairingId=${started.pairingId}&user_code=${encodeURIComponent(started.userCode)}`, config.publicBaseUrl).toString();
+    return {
+      pairingId: started.pairingId,
+      connectorId: requestedConnectorId,
+      agentId: requestedAgentId,
+      deviceCode: started.deviceCode,
+      userCode: started.userCode,
+      verificationUri,
+      verificationUriComplete,
+      qrPayload: JSON.stringify({
+        relayUrl: config.publicBaseUrl,
+        pairingId: started.pairingId,
+        userCode: started.userCode,
+        verificationUriComplete,
+      }),
+      intervalSec: config.pairingPollIntervalSec,
+      expiresInSec: Math.max(1, Math.round((started.expiresAt - Date.now()) / 1000)),
+    };
+  });
+
+  app.post("/v1/connectors/device/poll", async (request, reply) => {
+    if (!await requireSecureTransport(request, reply, config)) return;
+    if (!await requireRateLimit(request, reply, rateLimiter, "pairing-poll", config.pairingPollRateLimitWindowMs, config.pairingPollRateLimitMax)) return;
+    const body = await readRequestBody(request);
+    const deviceCode = typeof body.deviceCode === "string" ? body.deviceCode : "";
+    const result = db.consumeApprovedPairing(deviceCode);
+    if ("status" in result) {
+      if (result.status === "pending") return await reply.code(200).send({ status: "authorization_pending" });
+      if (result.status === "denied") return await reply.code(403).send({ status: "access_denied" });
+      if (result.status === "expired") return await reply.code(410).send({ status: "expired_token" });
+      if (result.status === "already_used") return await reply.code(409).send({ status: "already_used" });
+      return await reply.code(400).send({ status: "invalid_device_code" });
+    }
+    return {
+      status: "approved",
+      pairingId: result.pairingId,
+      tenantId: result.tenantId,
+      connectorId: result.connectorId,
+      agentId: result.agentId,
+      connectorToken: result.connectorToken,
+    };
+  });
+
+  app.post("/v1/pairings/:pairingId/approve", async (request, reply) => {
+    const claims = await requireClaims(request, reply, auth, "tenant:read");
+    if (!claims) return;
+    const { pairingId } = request.params as { pairingId: string };
+    const approved = db.approvePairing(pairingId, {
+      tenantId: claims.tenantId,
+      approvedByUserId: claims.sub,
+    });
+    if (!approved) {
+      return await reply.code(404).send({ error: "pairing_not_pending" });
+    }
+    return { pairing: approved };
+  });
+
+  app.post("/v1/pairings/:pairingId/deny", async (request, reply) => {
+    const claims = await requireClaims(request, reply, auth, "tenant:read");
+    if (!claims) return;
+    const { pairingId } = request.params as { pairingId: string };
+    const denied = db.denyPairing(pairingId);
+    if (!denied) {
+      return await reply.code(404).send({ error: "pairing_not_pending" });
+    }
+    return { ok: true };
   });
 
   app.post("/v1/connector/enroll", async (request, reply) => {
@@ -445,6 +629,12 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
   });
 
   app.get("/v1/connector/connect", { websocket: true }, async (socket, request) => {
+    const fastifyRequest = request as unknown as FastifyRequest;
+    const host = fastifyRequest.headers.host ?? new URL(config.publicBaseUrl).host;
+    if (!isLoopbackHost(host) && !isSecureRequest(fastifyRequest)) {
+      socket.close();
+      return;
+    }
     const token = parseBearerToken(request as unknown as FastifyRequest);
     if (!token) {
       socket.close();
@@ -474,6 +664,25 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       agentId,
       enrollmentToken,
     };
+  });
+
+  app.post("/v1/admin/connectors/:connectorId/revoke", async (request, reply) => {
+    const claims = await requireClaims(request, reply, auth, "admin:*");
+    if (!claims) return;
+    const { connectorId } = request.params as { connectorId: string };
+    const body = await readRequestBody(request);
+    const tenantId = typeof body.tenantId === "string" && body.tenantId.trim() ? body.tenantId.trim() : claims.tenantId;
+    try {
+      authorizeTenant(claims, tenantId);
+    } catch (error) {
+      return await reply.code(403).send({ error: "Forbidden", message: error instanceof Error ? error.message : String(error) });
+    }
+    const revoked = db.revokeConnector(tenantId, connectorId);
+    registry.revoke(tenantId, connectorId);
+    if (!revoked) {
+      return await reply.code(404).send({ error: "connector_not_found" });
+    }
+    return { ok: true, connectorId };
   });
 
   app.get("/v1/tenants/:tenantId/agents", async (request, reply) => {
@@ -682,6 +891,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     try {
       await registry.invoke({
         tenantId: params.tenantId,
+        connectorId: resolveConnectorId(db, params.tenantId, params.agentId),
         agentId: params.agentId,
         workspaceId: assignment.workspaceId,
         operation: "workspace.delete",
@@ -702,7 +912,10 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     if (claims.tenantId !== params.tenantId || (claims.agentId && claims.agentId !== params.agentId)) {
       return await reply.code(403).send({ error: "Forbidden", message: "scope mismatch" });
     }
-    return { workspaces: db.listWorkspaces(params.tenantId, params.agentId) };
+    const workspaces = db.listWorkspaces(params.tenantId, params.agentId).filter((workspace) => (
+      !claims.deviceId || db.deviceHasWorkspaceAccess(params.tenantId, claims.deviceId, params.agentId, workspace.workspaceId)
+    ));
+    return { workspaces };
   });
 
   app.get("/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/status", async (request, reply) => {
@@ -745,6 +958,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     try {
       const result = await registry.invoke({
         tenantId: params.tenantId,
+        connectorId: resolveConnectorId(db, params.tenantId, params.agentId),
         agentId: params.agentId,
         workspaceId,
         operation: "admin.workspace.create",
@@ -775,6 +989,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     try {
       const result = await registry.invoke({
         tenantId: params.tenantId,
+        connectorId: resolveConnectorId(db, params.tenantId, params.agentId),
         agentId: params.agentId,
         operation: `admin.runtime.${action}`,
         payload: action === "status" ? {} : await readRequestBody(request),
@@ -784,6 +999,26 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       const message = error instanceof Error ? error.message : String(error);
       return await reply.code(error instanceof OfflineError ? 503 : 502).send({ error: "admin_runtime_failed", message });
     }
+  });
+
+  app.post("/v1/admin/tenants/:tenantId/workspace-grants", async (request, reply) => {
+    const claims = await requireClaims(request, reply, auth, "admin:*");
+    if (!claims) return;
+    const { tenantId } = request.params as { tenantId: string };
+    try {
+      authorizeTenant(claims, tenantId);
+    } catch (error) {
+      return await reply.code(403).send({ error: "Forbidden", message: error instanceof Error ? error.message : String(error) });
+    }
+    const body = await readRequestBody(request);
+    const deviceId = typeof body.deviceId === "string" ? body.deviceId.trim() : "";
+    const agentId = typeof body.agentId === "string" ? body.agentId.trim() : "";
+    const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId.trim() : "";
+    if (!deviceId || !agentId || !workspaceId) {
+      return await reply.code(400).send({ error: "deviceId, agentId and workspaceId are required" });
+    }
+    db.createWorkspaceGrant({ tenantId, deviceId, agentId, workspaceId });
+    return { ok: true };
   });
 
   // --- Admin data deletion endpoints ---
@@ -833,6 +1068,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     try {
       await registry.invoke({
         tenantId: params.tenantId,
+        connectorId: resolveConnectorId(db, params.tenantId, params.agentId),
         agentId: params.agentId,
         workspaceId: params.workspaceId,
         operation: "workspace.delete",
@@ -930,7 +1166,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     const claims = await requireClaims(request, reply, auth, "workspace:read");
     if (!claims) return;
     const params = request.params as WorkspaceParams;
-    authorizeWorkspace(claims, params);
+    ensureWorkspaceAccess(claims, params, db);
     return {
       activity: db.listActivity(params.tenantId, params.agentId, params.workspaceId),
     };
@@ -954,7 +1190,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     const claims = await requireClaims(request, reply, auth, "workspace:read");
     if (!claims) return;
     const params = request.params as WorkspaceParams;
-    authorizeWorkspace(claims, params);
+    ensureWorkspaceAccess(claims, params, db);
     return {
       usage: db.listUsage(params.tenantId, params.agentId, params.workspaceId),
     };
@@ -1259,7 +1495,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     if (!claims) return;
     const params = request.params as WorkspaceParams;
     try {
-      authorizeWorkspace(claims, params);
+      ensureWorkspaceAccess(claims, params, db);
     } catch (error) {
       await reply.code(403).send({ error: "Forbidden", message: error instanceof Error ? error.message : String(error) });
       return;
@@ -1280,6 +1516,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     try {
       await registry.invoke({
         tenantId: params.tenantId,
+        connectorId: resolveConnectorId(db, params.tenantId, params.agentId),
         agentId: params.agentId,
         workspaceId: params.workspaceId,
         operation: "sessions.stream",
@@ -1320,7 +1557,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       return await reply.code(404).send({ error: "project_agent_assignment_not_found" });
     }
     try {
-      authorizeWorkspace(claims, assignmentWorkspaceParams(params, assignment.workspaceId));
+      ensureWorkspaceAccess(claims, assignmentWorkspaceParams(params, assignment.workspaceId), db);
     } catch (error) {
       await reply.code(403).send({ error: "Forbidden", message: error instanceof Error ? error.message : String(error) });
       return;
@@ -1341,6 +1578,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     try {
       await registry.invoke({
         tenantId: params.tenantId,
+        connectorId: resolveConnectorId(db, params.tenantId, params.agentId),
         agentId: params.agentId,
         workspaceId: assignment.workspaceId,
         operation: "sessions.stream",
@@ -1377,7 +1615,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     if (!claims) return;
     const params = request.params as WorkspaceParams;
     try {
-      authorizeWorkspace(claims, params);
+      ensureWorkspaceAccess(claims, params, db);
     } catch (error) {
       await reply.code(403).send({ error: "Forbidden", message: error instanceof Error ? error.message : String(error) });
       return;
@@ -1398,6 +1636,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     try {
       await registry.invoke({
         tenantId: params.tenantId,
+        connectorId: resolveConnectorId(db, params.tenantId, params.agentId),
         agentId: params.agentId,
         workspaceId: params.workspaceId,
         operation: "sessions.stream",
@@ -1439,7 +1678,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       return await reply.code(404).send({ error: "project_agent_assignment_not_found" });
     }
     try {
-      authorizeWorkspace(claims, assignmentWorkspaceParams(params, assignment.workspaceId));
+      ensureWorkspaceAccess(claims, assignmentWorkspaceParams(params, assignment.workspaceId), db);
     } catch (error) {
       await reply.code(403).send({ error: "Forbidden", message: error instanceof Error ? error.message : String(error) });
       return;
@@ -1460,6 +1699,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     try {
       await registry.invoke({
         tenantId: params.tenantId,
+        connectorId: resolveConnectorId(db, params.tenantId, params.agentId),
         agentId: params.agentId,
         workspaceId: assignment.workspaceId,
         operation: "sessions.stream",

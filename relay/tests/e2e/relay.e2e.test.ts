@@ -107,7 +107,7 @@ function documentRef(document: RelayDocumentRecord) {
   };
 }
 
-function startFakeConnector(url: string, connectorToken: string, agentId = "demo-agent") {
+function startFakeConnector(url: string, connectorToken: string, agentId = "demo-agent", connectorId = agentId) {
   const socket = new WebSocket(url.replace(/^http/, "ws") + "/v1/connector/connect", {
     headers: { Authorization: `Bearer ${connectorToken}` },
   });
@@ -117,6 +117,7 @@ function startFakeConnector(url: string, connectorToken: string, agentId = "demo
       type: "hello",
       payload: {
         tenantId: "demo-tenant",
+        connectorId,
         agentId,
         version: "test",
         capabilities: ["sessions", "workspace", "crud"],
@@ -623,7 +624,9 @@ before(async () => {
       port: 0,
       host: "127.0.0.1",
       dbPath: path.join(tempDir, "relay.sqlite"),
-      jwtSecret: "relay-e2e-secret",
+      jwtSecrets: ["relay-e2e-secret"],
+      publicBaseUrl: "http://127.0.0.1:4410",
+      loginRateLimitMax: 100,
     },
   });
   await appRef.app.listen({ host: "127.0.0.1", port: 0 });
@@ -648,12 +651,20 @@ async function login(email: string, password: string) {
   return await response.json() as {
     accessToken: string;
     refreshToken: string;
+    deviceId: string;
   };
 }
 
 describe("relay e2e", () => {
   test("login, refresh, logout, connector enrollment, routing, CRUD, SSE, offline and admin protection", async () => {
     const userTokens = await login("user@relay.local", "relay-user");
+
+    const myDevices = await fetch(`${baseUrl}/v1/me/devices`, {
+      headers: { Authorization: `Bearer ${userTokens.accessToken}` },
+    });
+    assert.equal(myDevices.status, 200);
+    const devicesPayload = await myDevices.json() as { devices: Array<{ deviceId: string }> };
+    assert.equal(devicesPayload.devices[0]?.deviceId, userTokens.deviceId);
 
     const refreshResponse = await fetch(`${baseUrl}/v1/auth/refresh`, {
       method: "POST",
@@ -715,6 +726,13 @@ describe("relay e2e", () => {
     });
     const workspacesPayload = await workspacesResponse.json() as { workspaces: Array<{ workspaceId: string }> };
     assert.equal(workspacesPayload.workspaces[0]?.workspaceId, "main");
+
+    const myWorkspaces = await fetch(`${baseUrl}/v1/me/workspaces`, {
+      headers: { Authorization: `Bearer ${userTokens.accessToken}` },
+    });
+    assert.equal(myWorkspaces.status, 200);
+    const myWorkspacesPayload = await myWorkspaces.json() as { workspaces: Array<{ workspaceId: string }> };
+    assert.equal(myWorkspacesPayload.workspaces[0]?.workspaceId, "main");
 
     const workspaceFileWrite = await fetch(`${baseUrl}/v1/admin/tenants/demo-tenant/agents/demo-agent/workspaces/main/workspace-files/SOUL.md`, {
       method: "PUT",
@@ -1019,6 +1037,146 @@ describe("relay e2e", () => {
       headers: { Authorization: `Bearer ${userTokens.accessToken}` },
     });
     assert.equal(offlineAfter.status, 503);
+  });
+
+  test("device pairing boots a connector, grants restrict one device, replay is blocked, and revoke disconnects the connector", async () => {
+    const adminTokens = await login("admin@relay.local", "relay-admin");
+    const userPrimary = await login("user@relay.local", "relay-user");
+    const userRestricted = await login("user@relay.local", "relay-user");
+
+    const startPairing = await fetch(`${baseUrl}/v1/connectors/device/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ connectorId: "pairing-connector", agentId: "pairing-agent", displayName: "Pairing Connector" }),
+    });
+    assert.equal(startPairing.status, 200);
+    const pairing = await startPairing.json() as {
+      pairingId: string;
+      deviceCode: string;
+      connectorId: string;
+      agentId: string;
+    };
+    assert.equal(pairing.connectorId, "pairing-connector");
+    assert.equal(pairing.agentId, "pairing-agent");
+
+    const approvePairing = await fetch(`${baseUrl}/v1/pairings/${pairing.pairingId}/approve`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${adminTokens.accessToken}` },
+    });
+    assert.equal(approvePairing.status, 200);
+
+    const pollApproved = await fetch(`${baseUrl}/v1/connectors/device/poll`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceCode: pairing.deviceCode }),
+    });
+    assert.equal(pollApproved.status, 200);
+    const approvedPayload = await pollApproved.json() as {
+      status: string;
+      connectorToken: string;
+      connectorId: string;
+      agentId: string;
+    };
+    assert.equal(approvedPayload.status, "approved");
+    assert.equal(approvedPayload.connectorId, "pairing-connector");
+    assert.equal(approvedPayload.agentId, "pairing-agent");
+
+    const pollReplay = await fetch(`${baseUrl}/v1/connectors/device/poll`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceCode: pairing.deviceCode }),
+    });
+    assert.equal(pollReplay.status, 409);
+
+    const socket = startFakeConnector(baseUrl, approvedPayload.connectorToken, "pairing-agent", "pairing-connector");
+    await new Promise((resolve) => socket.once("message", () => resolve(null)));
+
+    const createWorkspace = await fetch(`${baseUrl}/v1/admin/tenants/demo-tenant/agents/pairing-agent/workspaces`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${adminTokens.accessToken}`,
+      },
+      body: JSON.stringify({ workspaceId: "restricted", displayName: "Restricted" }),
+    });
+    assert.equal(createWorkspace.status, 200);
+
+    const grantWorkspace = await fetch(`${baseUrl}/v1/admin/tenants/demo-tenant/workspace-grants`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${adminTokens.accessToken}`,
+      },
+      body: JSON.stringify({
+        deviceId: userRestricted.deviceId,
+        agentId: "pairing-agent",
+        workspaceId: "restricted",
+      }),
+    });
+    assert.equal(grantWorkspace.status, 200);
+
+    const restrictedVisibleWorkspaces = await fetch(`${baseUrl}/v1/me/workspaces`, {
+      headers: { Authorization: `Bearer ${userRestricted.accessToken}` },
+    });
+    assert.equal(restrictedVisibleWorkspaces.status, 200);
+    const restrictedVisiblePayload = await restrictedVisibleWorkspaces.json() as { workspaces: Array<{ workspaceId: string }> };
+    assert.deepEqual(restrictedVisiblePayload.workspaces.map((workspace) => workspace.workspaceId), ["restricted"]);
+
+    const forbiddenMain = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/pairing-agent/workspaces/main/status`, {
+      headers: { Authorization: `Bearer ${userRestricted.accessToken}` },
+    });
+    assert.equal(forbiddenMain.status, 403);
+
+    const allowedRestricted = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/pairing-agent/workspaces/restricted/status`, {
+      headers: { Authorization: `Bearer ${userRestricted.accessToken}` },
+    });
+    assert.equal(allowedRestricted.status, 200);
+
+    const unrestrictedMain = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/pairing-agent/workspaces/main/status`, {
+      headers: { Authorization: `Bearer ${userPrimary.accessToken}` },
+    });
+    assert.equal(unrestrictedMain.status, 200);
+
+    const revokeConnector = await fetch(`${baseUrl}/v1/admin/connectors/pairing-connector/revoke`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${adminTokens.accessToken}`,
+      },
+      body: JSON.stringify({ tenantId: "demo-tenant" }),
+    });
+    assert.equal(revokeConnector.status, 200);
+
+    await new Promise((resolve) => socket.once("close", () => resolve(null)));
+
+    const offlineAfterRevoke = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/pairing-agent/workspaces/restricted/status`, {
+      headers: { Authorization: `Bearer ${userPrimary.accessToken}` },
+    });
+    assert.equal(offlineAfterRevoke.status, 503);
+  });
+
+  test("denied pairings are blocked", async () => {
+    const adminTokens = await login("admin@relay.local", "relay-admin");
+    const startPairing = await fetch(`${baseUrl}/v1/connectors/device/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ connectorId: "deny-connector", agentId: "deny-agent" }),
+    });
+    assert.equal(startPairing.status, 200);
+    const pairing = await startPairing.json() as { pairingId: string; deviceCode: string };
+
+    const denyPairing = await fetch(`${baseUrl}/v1/pairings/${pairing.pairingId}/deny`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${adminTokens.accessToken}` },
+    });
+    assert.equal(denyPairing.status, 200);
+
+    const deniedPoll = await fetch(`${baseUrl}/v1/connectors/device/poll`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceCode: pairing.deviceCode }),
+    });
+    assert.equal(deniedPoll.status, 403);
   });
 
   test("logs redact secrets from connector errors", async () => {
@@ -1368,5 +1526,39 @@ describe("relay e2e", () => {
 
     socket.close();
     await new Promise((resolve) => socket.once("close", () => resolve(null)));
+  });
+
+  test("login rate limiting eventually rejects repeated bad credentials", async () => {
+    const isolatedDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-relay-rate-limit-"));
+    const isolated = await buildRelayApp({
+      logger: new RelayLogger(),
+      config: {
+        port: 0,
+        host: "127.0.0.1",
+        dbPath: path.join(isolatedDir, "relay.sqlite"),
+        jwtSecrets: ["relay-rate-limit-secret"],
+        publicBaseUrl: "http://127.0.0.1:4410",
+        loginRateLimitMax: 3,
+      },
+    });
+    await isolated.app.listen({ host: "127.0.0.1", port: 0 });
+    const address = isolated.app.server.address();
+    assert.ok(address && typeof address !== "string");
+    const isolatedBaseUrl = `http://127.0.0.1:${address.port}`;
+    try {
+      let lastStatus = 0;
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const response = await fetch(`${isolatedBaseUrl}/v1/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: "user@relay.local", password: "wrong-password", tenantId: "demo-tenant" }),
+        });
+        lastStatus = response.status;
+        if (lastStatus === 429) break;
+      }
+      assert.equal(lastStatus, 429);
+    } finally {
+      await isolated.app.close();
+    }
   });
 });
