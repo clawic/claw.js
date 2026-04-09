@@ -114,27 +114,31 @@ final class APIService {
             ))
 
             for agentId in agentIds {
-                let projectSessionsResponse: RelaySessionsResponse = try await requestJSON(
-                    path: tenantPath(
-                        config.tenantId,
-                        suffix: "/projects/\(encode(projectId))/agents/\(encode(agentId))/sessions"
-                    ),
-                    token: token,
-                    config: config
-                )
-
-                sessions.append(contentsOf: projectSessionsResponse.sessions.map { session in
-                    SessionSummary(
-                        sessionId: session.sessionId,
-                        title: session.title,
-                        agentId: agentId,
-                        projectId: projectId,
-                        createdAt: session.createdAt,
-                        updatedAt: session.updatedAt,
-                        messageCount: session.messageCount,
-                        preview: session.preview
+                do {
+                    let projectSessionsResponse: RelaySessionsResponse = try await requestJSON(
+                        path: tenantPath(
+                            config.tenantId,
+                            suffix: "/projects/\(encode(projectId))/agents/\(encode(agentId))/sessions"
+                        ),
+                        token: token,
+                        config: config
                     )
-                })
+
+                    sessions.append(contentsOf: projectSessionsResponse.sessions.map { session in
+                        SessionSummary(
+                            sessionId: session.sessionId,
+                            title: session.title,
+                            agentId: agentId,
+                            projectId: projectId,
+                            createdAt: session.createdAt,
+                            updatedAt: session.updatedAt,
+                            messageCount: session.messageCount,
+                            preview: session.preview
+                        )
+                    })
+                } catch {
+                    print("[APIService] Skipping sessions for \(agentId): \(error.localizedDescription)")
+                }
             }
         }
 
@@ -248,7 +252,7 @@ final class APIService {
                         switch currentEvent {
                         case "chunk":
                             if let payload = try? JSONDecoder().decode(RelayStreamChunk.self, from: data),
-                               let delta = payload.delta,
+                               let delta = payload.resolvedDelta,
                                !delta.isEmpty {
                                 continuation.yield(delta)
                             }
@@ -369,7 +373,7 @@ final class APIService {
     private func relayConfig() -> RelayConfig {
         let defaults = UserDefaults.standard
         return RelayConfig(
-            baseURL: defaults.string(forKey: "relayBaseURL") ?? "http://127.0.0.1:4410",
+            baseURL: defaults.string(forKey: "relayBaseURL") ?? "http://localhost:4410",
             tenantId: defaults.string(forKey: "relayTenantId") ?? "demo-tenant",
             email: defaults.string(forKey: "relayEmail") ?? "user@relay.local",
             password: defaults.string(forKey: "relayPassword") ?? "relay-user"
@@ -453,6 +457,15 @@ private struct RelaySessionMessage: Codable {
 
 private struct RelayStreamChunk: Codable {
     let delta: String?
+    let chunk: RelayStreamChunkPayload?
+
+    struct RelayStreamChunkPayload: Codable {
+        let delta: String?
+    }
+
+    var resolvedDelta: String? {
+        delta ?? chunk?.delta
+    }
 }
 
 private struct RelayStreamError: Codable {

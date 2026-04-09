@@ -7,6 +7,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import type { BrowserActor, BrowserFrameEvent, BrowserInputCommand, BrowserSessionSnapshot } from "../../../browser/shared/types.ts";
 import type { AuthClaims } from "../shared/protocol.ts";
 import {
   deriveAssignmentWorkspaceId,
@@ -59,6 +60,12 @@ function parseBearerToken(request: FastifyRequest): string | null {
   const [scheme, token] = header.split(" ");
   if (scheme?.toLowerCase() !== "bearer" || !token) return null;
   return token;
+}
+
+function parseWebSocketAccessToken(request: FastifyRequest): string | null {
+  const queryToken = new URL(request.url, "http://relay.local").searchParams.get("access_token");
+  if (queryToken?.trim()) return queryToken.trim();
+  return parseBearerToken(request);
 }
 
 function ensureScope(claims: AuthClaims, scope: string): boolean {
@@ -232,6 +239,22 @@ function assignmentWorkspaceParams(params: ProjectAgentParams, workspaceId: stri
     workspaceId,
     ...(params.sessionId ? { sessionId: params.sessionId } : {}),
   };
+}
+
+function browserActorFromClaims(claims: AuthClaims): BrowserActor {
+  return {
+    deviceId: claims.deviceId ?? claims.sub,
+    userId: claims.sub,
+    email: claims.email,
+  };
+}
+
+function browserSharePath(params: WorkspaceParams): string {
+  return `/workspace/${params.tenantId}/${params.agentId}/${params.workspaceId}/browser`;
+}
+
+function browserShareUrl(config: RelayConfig, params: WorkspaceParams): string {
+  return new URL(browserSharePath(params), config.publicBaseUrl).toString();
 }
 
 async function invokeWorkspace(
@@ -443,6 +466,122 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     service: "clawjs-relay",
     uptimeSeconds: Math.round(process.uptime()),
   }));
+
+  /* -------------------------------------------------------
+     Monitor consolidated status endpoint.
+     Designed to be polled by the standalone monitor service.
+     No auth required (intended for same-network access).
+     ------------------------------------------------------- */
+  app.get("/v1/monitor/status", async () => {
+    const tenants = db.sqlite.prepare("SELECT id FROM tenants").all() as Array<{ id: string }>;
+
+    const allConnectors: Array<{
+      id: string;
+      agentId: string;
+      displayName: string;
+      status: "online" | "offline";
+      lastSeenAt: number | null;
+      version: string | null;
+    }> = [];
+
+    const allAgents: Array<{
+      id: string;
+      tenantId: string;
+      displayName: string;
+      workspaces: Array<{ id: string; displayName: string; status: string }>;
+    }> = [];
+
+    let sessionsLast24h = 0;
+    let tokensInLast24h = 0;
+    let tokensOutLast24h = 0;
+    let errorsLast24h = 0;
+    let estimatedCostLast24h = 0;
+    const since24h = Date.now() - 86_400_000;
+
+    for (const tenant of tenants) {
+      // Connectors
+      const connectors = db.sqlite.prepare(`
+        SELECT id, agent_id, display_name, status, last_seen_at
+        FROM connectors WHERE tenant_id = ?
+      `).all(tenant.id) as Array<{
+        id: string; agent_id: string; display_name: string;
+        status: string; last_seen_at: number | null;
+      }>;
+
+      for (const c of connectors) {
+        // Get version from latest connector session
+        const session = db.sqlite.prepare(`
+          SELECT version FROM connector_sessions
+          WHERE tenant_id = ? AND agent_id = ?
+          ORDER BY last_seen_at DESC LIMIT 1
+        `).get(tenant.id, c.agent_id) as { version: string | null } | undefined;
+
+        allConnectors.push({
+          id: c.id,
+          agentId: c.agent_id,
+          displayName: c.display_name,
+          status: c.status === "online" ? "online" : "offline",
+          lastSeenAt: c.last_seen_at,
+          version: session?.version ?? null,
+        });
+      }
+
+      // Agents + workspaces
+      const agents = db.listAgents(tenant.id);
+      for (const agent of agents) {
+        const workspaces = db.listWorkspaces(tenant.id, agent.agentId);
+        allAgents.push({
+          id: agent.agentId,
+          tenantId: tenant.id,
+          displayName: agent.displayName,
+          workspaces: workspaces.map((ws) => ({
+            id: ws.workspaceId,
+            displayName: ws.displayName,
+            status: agent.status === "online" ? "active" : "idle",
+          })),
+        });
+      }
+
+      // Usage aggregates
+      const usageRows = db.sqlite.prepare(`
+        SELECT COALESCE(SUM(tokens_in), 0) as tin,
+               COALESCE(SUM(tokens_out), 0) as tout,
+               COALESCE(SUM(estimated_cost_usd), 0) as cost,
+               COUNT(*) as cnt
+        FROM usage_records
+        WHERE tenant_id = ? AND created_at >= ?
+      `).get(tenant.id, since24h) as { tin: number; tout: number; cost: number; cnt: number };
+
+      tokensInLast24h += usageRows.tin;
+      tokensOutLast24h += usageRows.tout;
+      estimatedCostLast24h += usageRows.cost;
+      sessionsLast24h += usageRows.cnt;
+
+      // Error count
+      const errorRow = db.sqlite.prepare(`
+        SELECT COUNT(*) as cnt FROM activity_events
+        WHERE tenant_id = ? AND status = 'error' AND created_at >= ?
+      `).get(tenant.id, since24h) as { cnt: number };
+      errorsLast24h += errorRow.cnt;
+    }
+
+    return {
+      relay: {
+        status: "up" as const,
+        uptimeSeconds: Math.round(process.uptime()),
+        version: "0.1.0",
+      },
+      connectors: allConnectors,
+      agents: allAgents,
+      usage: {
+        sessionsLast24h,
+        tokensInLast24h,
+        tokensOutLast24h,
+        errorsLast24h,
+        estimatedCostLast24h: Math.round(estimatedCostLast24h * 100) / 100,
+      },
+    };
+  });
 
   app.post("/v1/auth/login", async (request, reply) => {
     if (!await requireSecureTransport(request, reply, config)) return;
@@ -945,6 +1084,353 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     );
     if (!result) return;
     return result;
+  });
+
+  app.get("/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/session", async (request, reply) => {
+    const params = request.params as WorkspaceParams;
+    const claims = await requireClaims(request, reply, auth, "workspace:read");
+    if (!claims) return;
+    try {
+      ensureWorkspaceAccess(claims, params, db);
+    } catch (error) {
+      return await reply.code(403).send({ error: "Forbidden", message: error instanceof Error ? error.message : String(error) });
+    }
+
+    const result = await invokeWorkspace(
+      request as FastifyRequest<{ Params: WorkspaceParams }>,
+      reply,
+      auth,
+      registry,
+      db,
+      "workspace:read",
+      "browser.session.status",
+    );
+    if (!result) return;
+    if (result.session) {
+      registry.cacheBrowserState({
+        tenantId: params.tenantId,
+        agentId: params.agentId,
+        workspaceId: params.workspaceId,
+        session: result.session as BrowserSessionSnapshot,
+      });
+    }
+    return {
+      ...result,
+      sharePath: browserSharePath(params),
+      shareUrl: browserShareUrl(config, params),
+    };
+  });
+
+  app.post("/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/session", async (request, reply) => {
+    const params = request.params as WorkspaceParams;
+    const claims = await requireClaims(request, reply, auth, "workspace:data");
+    if (!claims) return;
+    try {
+      ensureWorkspaceAccess(claims, params, db);
+    } catch (error) {
+      return await reply.code(403).send({ error: "Forbidden", message: error instanceof Error ? error.message : String(error) });
+    }
+
+    const body = await readRequestBody(request);
+    const result = await invokeWorkspace(
+      request as FastifyRequest<{ Params: WorkspaceParams }>,
+      reply,
+      auth,
+      registry,
+      db,
+      "workspace:data",
+      "browser.session.ensure",
+      {
+        ...(typeof body.initialUrl === "string" ? { initialUrl: body.initialUrl } : {}),
+      },
+    );
+    if (!result) return;
+    if (result.session) {
+      registry.cacheBrowserState({
+        tenantId: params.tenantId,
+        agentId: params.agentId,
+        workspaceId: params.workspaceId,
+        session: result.session as BrowserSessionSnapshot,
+      });
+    }
+    db.appendActivity({
+      tenantId: params.tenantId,
+      agentId: params.agentId,
+      workspaceId: params.workspaceId,
+      capability: "browser.session.ensure",
+      status: "success",
+      detail: claims.email,
+    });
+    return {
+      ...result,
+      sharePath: browserSharePath(params),
+      shareUrl: browserShareUrl(config, params),
+    };
+  });
+
+  app.post("/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/control/acquire", async (request, reply) => {
+    const params = request.params as WorkspaceParams;
+    const claims = await requireClaims(request, reply, auth, "workspace:data");
+    if (!claims) return;
+    try {
+      ensureWorkspaceAccess(claims, params, db);
+    } catch (error) {
+      return await reply.code(403).send({ error: "Forbidden", message: error instanceof Error ? error.message : String(error) });
+    }
+    const result = await invokeWorkspace(
+      request as FastifyRequest<{ Params: WorkspaceParams }>,
+      reply,
+      auth,
+      registry,
+      db,
+      "workspace:data",
+      "browser.control.acquire",
+      { actor: browserActorFromClaims(claims) },
+    );
+    if (!result) return;
+    if (result.session) {
+      registry.cacheBrowserState({
+        tenantId: params.tenantId,
+        agentId: params.agentId,
+        workspaceId: params.workspaceId,
+        session: result.session as BrowserSessionSnapshot,
+      });
+    }
+    db.appendActivity({
+      tenantId: params.tenantId,
+      agentId: params.agentId,
+      workspaceId: params.workspaceId,
+      capability: "browser.control.acquire",
+      status: "success",
+      detail: claims.email,
+    });
+    return result;
+  });
+
+  app.post("/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/control/release", async (request, reply) => {
+    const params = request.params as WorkspaceParams;
+    const claims = await requireClaims(request, reply, auth, "workspace:data");
+    if (!claims) return;
+    try {
+      ensureWorkspaceAccess(claims, params, db);
+    } catch (error) {
+      return await reply.code(403).send({ error: "Forbidden", message: error instanceof Error ? error.message : String(error) });
+    }
+    const result = await invokeWorkspace(
+      request as FastifyRequest<{ Params: WorkspaceParams }>,
+      reply,
+      auth,
+      registry,
+      db,
+      "workspace:data",
+      "browser.control.release",
+      { actor: browserActorFromClaims(claims) },
+    );
+    if (!result) return;
+    if (result.session) {
+      registry.cacheBrowserState({
+        tenantId: params.tenantId,
+        agentId: params.agentId,
+        workspaceId: params.workspaceId,
+        session: result.session as BrowserSessionSnapshot,
+      });
+    }
+    db.appendActivity({
+      tenantId: params.tenantId,
+      agentId: params.agentId,
+      workspaceId: params.workspaceId,
+      capability: "browser.control.release",
+      status: "success",
+      detail: claims.email,
+    });
+    return result;
+  });
+
+  app.post("/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/navigate", async (request, reply) => {
+    const params = request.params as WorkspaceParams;
+    const claims = await requireClaims(request, reply, auth, "workspace:data");
+    if (!claims) return;
+    try {
+      ensureWorkspaceAccess(claims, params, db);
+    } catch (error) {
+      return await reply.code(403).send({ error: "Forbidden", message: error instanceof Error ? error.message : String(error) });
+    }
+    const body = await readRequestBody(request);
+    const url = typeof body.url === "string" ? body.url.trim() : "";
+    if (!url) {
+      return await reply.code(400).send({ error: "url is required" });
+    }
+    const result = await invokeWorkspace(
+      request as FastifyRequest<{ Params: WorkspaceParams }>,
+      reply,
+      auth,
+      registry,
+      db,
+      "workspace:data",
+      "browser.navigate",
+      {
+        actor: browserActorFromClaims(claims),
+        url,
+      },
+    );
+    if (!result) return;
+    if (result.session) {
+      registry.cacheBrowserState({
+        tenantId: params.tenantId,
+        agentId: params.agentId,
+        workspaceId: params.workspaceId,
+        session: result.session as BrowserSessionSnapshot,
+      });
+    }
+    db.appendActivity({
+      tenantId: params.tenantId,
+      agentId: params.agentId,
+      workspaceId: params.workspaceId,
+      capability: "browser.navigate",
+      status: "success",
+      detail: claims.email,
+    });
+    return result;
+  });
+
+  app.get("/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/ws", { websocket: true }, async (socket, request) => {
+    const fastifyRequest = request as unknown as FastifyRequest<{ Params: WorkspaceParams }>;
+    const host = fastifyRequest.headers.host ?? new URL(config.publicBaseUrl).host;
+    if (!isLoopbackHost(host) && !isSecureRequest(fastifyRequest)) {
+      socket.close();
+      return;
+    }
+    const token = parseWebSocketAccessToken(fastifyRequest);
+    if (!token) {
+      socket.close();
+      return;
+    }
+
+    let claims: AuthClaims;
+    try {
+      claims = await auth.verifyAccessToken(token);
+    } catch {
+      socket.close();
+      return;
+    }
+    if (!ensureScope(claims, "workspace:read")) {
+      socket.close();
+      return;
+    }
+
+    const params = fastifyRequest.params as WorkspaceParams;
+    try {
+      ensureWorkspaceAccess(claims, params, db);
+    } catch {
+      socket.close();
+      return;
+    }
+
+    const unsubscribe = registry.subscribeBrowser({
+      tenantId: params.tenantId,
+      agentId: params.agentId,
+      workspaceId: params.workspaceId,
+      socket: socket as any,
+    });
+    const cached = registry.getBrowserState({
+      tenantId: params.tenantId,
+      agentId: params.agentId,
+      workspaceId: params.workspaceId,
+    });
+    if (cached.session) {
+      socket.send(JSON.stringify({
+        type: "browser.state",
+        reason: "cached",
+        session: cached.session,
+      }));
+    }
+    if (cached.frame) {
+      socket.send(JSON.stringify({
+        type: "browser.frame",
+        frame: cached.frame,
+      }));
+    }
+    db.appendActivity({
+      tenantId: params.tenantId,
+      agentId: params.agentId,
+      workspaceId: params.workspaceId,
+      capability: "browser.viewer.join",
+      status: "info",
+      detail: claims.email,
+    });
+
+    socket.on("message", async (buffer) => {
+      try {
+        const message = JSON.parse(buffer.toString()) as {
+          type?: string;
+          url?: string;
+          command?: BrowserInputCommand;
+        };
+        if (message.type === "browser.input" && message.command) {
+          const result = await registry.invoke({
+            tenantId: params.tenantId,
+            connectorId: resolveConnectorId(db, params.tenantId, params.agentId),
+            agentId: params.agentId,
+            workspaceId: params.workspaceId,
+            operation: "browser.input",
+            payload: {
+              actor: browserActorFromClaims(claims),
+              command: message.command,
+            },
+          });
+          if (result.session) {
+            const session = result.session as BrowserSessionSnapshot;
+            registry.cacheBrowserState({
+              tenantId: params.tenantId,
+              agentId: params.agentId,
+              workspaceId: params.workspaceId,
+              session,
+            });
+            socket.send(JSON.stringify({
+              type: "browser.state",
+              reason: "input-applied",
+              session,
+            }));
+          }
+          return;
+        }
+        if (message.type === "browser.navigate" && typeof message.url === "string") {
+          const result = await registry.invoke({
+            tenantId: params.tenantId,
+            connectorId: resolveConnectorId(db, params.tenantId, params.agentId),
+            agentId: params.agentId,
+            workspaceId: params.workspaceId,
+            operation: "browser.navigate",
+            payload: {
+              actor: browserActorFromClaims(claims),
+              url: message.url,
+            },
+          });
+          if (result.session) {
+            const session = result.session as BrowserSessionSnapshot;
+            registry.cacheBrowserState({
+              tenantId: params.tenantId,
+              agentId: params.agentId,
+              workspaceId: params.workspaceId,
+              session,
+            });
+            socket.send(JSON.stringify({
+              type: "browser.state",
+              reason: "navigate-applied",
+              session,
+            }));
+          }
+        }
+      } catch (error) {
+        socket.send(JSON.stringify({
+          type: "browser.error",
+          message: error instanceof Error ? error.message : String(error),
+        }));
+      }
+    });
+
+    socket.on("close", unsubscribe);
+    socket.on("error", unsubscribe);
   });
 
   app.get("/v1/tenants/:tenantId/projects/:projectId/agents/:agentId/status", async (request, reply) => {
