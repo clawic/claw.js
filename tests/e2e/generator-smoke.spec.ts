@@ -71,3 +71,28 @@ test("create-claw-app scaffolds a runnable app", async ({ request }) => {
     server.kill("SIGTERM");
   }
 });
+
+test("create-claw-agent scaffolds Claude Code redirect instructions safely", async () => {
+  test.setTimeout(120_000);
+
+  const rootDir = process.cwd();
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-agent-"));
+  const targetDir = path.join(tempRoot, "support-agent");
+
+  await execFileAsync("npm", ["run", "build", "--workspace", "create-claw-agent"], { cwd: rootDir });
+
+  await execFileAsync("node", [
+    path.join(rootDir, "packages", "create-claw-agent", "bin", "create-claw-agent.mjs"),
+    targetDir,
+    "--skip-install",
+    "--use-npm",
+  ], { cwd: rootDir });
+
+  expect(fs.existsSync(path.join(targetDir, "CLAUDE.md"))).toBeTruthy();
+  expect(fs.readFileSync(path.join(targetDir, "CLAUDE.md"), "utf8")).toContain("AGENTS.md");
+
+  const agents = fs.readFileSync(path.join(targetDir, "AGENTS.md"), "utf8");
+  expect(agents).toContain("Prompt safety");
+  expect(agents).toContain("text-only");
+  expect(agents).toContain("reading files");
+});

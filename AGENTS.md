@@ -5,6 +5,7 @@ Instructions for humans and coding agents working in this repository.
 ## Purpose
 
 - Treat this file as the operational entrypoint for the repo.
+- Treat `AGENTS.md` as the canonical repository instruction file. If a tool such as Claude Code looks for `CLAUDE.md`, that file must redirect back here and remain aligned with this file.
 - Treat `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `RELEASING.md`, `docs/git-workflow.md`, and `tests/e2e/README.md` as source-of-truth references for deeper detail.
 - For agent-specific operational knowledge, review `agents/wiki/README.md` and the relevant pages under `agents/wiki/` before changing behavior or debugging repeated issues.
 - For host-dependent OpenClaw work, read `agents/wiki/openclaw.md` before changing runtime detection, installation, auth, or onboarding flows.
@@ -103,6 +104,11 @@ Never run real smoke coverage automatically:
 - Do not point smoke tests at production by default.
 - Do not touch paid APIs, real user data, or production services without explicit user approval in the current thread.
 
+Prompt-based test safety:
+
+- When a test evaluates an AI prompt or asks a model to do something, keep the prompt non-operative by default. Ask for bounded informational or text-only output, not host actions.
+- Do not use prompts that imply inspecting the local machine, reading workspace files, executing commands, editing configuration, deleting data, or exploring the environment unless the test is explicitly about that capability and runs inside an isolated, approved harness.
+
 ## Branches, Commits, And Pull Requests
 
 Long-lived branches:
@@ -171,7 +177,7 @@ Pull request rules:
 - Read before changing: inspect the affected package, tests, and docs before editing.
 - Prefer small, surgical patches over broad refactors unless the task explicitly asks for structural change.
 - Do not overwrite unrelated user changes in a dirty worktree.
-- Shared brand assets and shared UI fonts live in the repo-root `public/` directory; treat `public/logo.png`, `public/favicon.ico`, `public/fonts/source-sans-3/*`, and `public/fonts/ubuntu-mono/*` as the source of truth and do not commit duplicate app-local copies.
+- Shared brand assets and shared UI fonts live in the repo-root `public/` directory for internal dashboards and operational web UIs; treat `public/logo.png`, `public/favicon.ico`, `public/fonts/source-sans-3/*`, and `public/fonts/ubuntu-mono/*` as the source of truth there, but keep `website/` and chat/mobile clients on their own visual systems.
 - For every change, review the relevant docs, README files, examples, templates, and website content to confirm they still match the current behavior, APIs, and workflows; update them in the same patch whenever they are stale.
 - When you touch a package, verify whether corresponding docs, templates, smoke coverage, and repository surface checks also need updates.
 - When you add or rename public packages, commands, or scaffolding behavior, update docs and package-surface coverage.

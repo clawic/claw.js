@@ -72,7 +72,7 @@ The current Playwright specs are:
   Covers browser journeys for notes, tasks/goals, memory, and inbox with persistence and destructive flows.
 
 - [generator-smoke.spec.ts](./generator-smoke.spec.ts)
-  Scaffolds a `create-claw-app` project into a temp directory, installs dependencies, builds it, boots it, and performs a smoke request.
+  Scaffolds `create-claw-app` and `create-claw-agent` projects into temp directories, verifies the app can boot, and verifies the agent scaffold keeps the Claude Code instruction redirect plus safe prompt-testing guidance.
 
 - [sdk-openclaw-binary-path.spec.ts](./sdk-openclaw-binary-path.spec.ts)
   Verifies the published SDK can target an explicit OpenClaw binary path even when the binary is not available on `PATH`, and captures a final validation screenshot.
@@ -97,6 +97,9 @@ The current Playwright specs are:
 
 - [website-docs.spec.ts](./website-docs.spec.ts)
   Builds the VitePress docs site from Markdown in `docs/`, serves the generated output locally, and captures a final screenshot of the public docs UI.
+
+- [website-home.spec.ts](./website-home.spec.ts)
+  Builds the landing site, verifies it keeps its own website typography while still using the public logo/favicon, and captures a final screenshot.
 
 ## How hermetic mode works
 

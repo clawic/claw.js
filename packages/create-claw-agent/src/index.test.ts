@@ -62,6 +62,14 @@ test("runCreateClawAgent scaffolds an agent repository without installing depend
   assert.match(soul, /Support Agent/);
   assert.doesNotMatch(soul, /__APP_/);
 
+  const agents = fs.readFileSync(path.join(appDir, "AGENTS.md"), "utf8");
+  assert.match(agents, /CLAUDE\.md/);
+  assert.match(agents, /prompt-based tests bounded and text-only/i);
+
+  const claude = fs.readFileSync(path.join(appDir, "CLAUDE.md"), "utf8");
+  assert.match(claude, /AGENTS\.md/);
+  assert.match(claude, /canonical/i);
+
   const heartbeat = fs.readFileSync(path.join(appDir, "HEARTBEAT.md"), "utf8");
   assert.match(heartbeat, /heartbeat/i);
 

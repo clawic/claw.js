@@ -14,6 +14,7 @@ npm run agent:reply -- "Say hello"
 ## What is included
 
 - Agent-first runtime files such as `SOUL.md`, `AGENTS.md`, `TOOLS.md`, `IDENTITY.md`, and `HEARTBEAT.md`
+- A `CLAUDE.md` shim that redirects Claude Code back to the canonical `AGENTS.md` instructions
 - A base memory convention in `MEMORY.md`
 - Skill placeholders under `skills/`
 - `@clawjs/claw` helper code in `src/claw.ts`

@@ -12,6 +12,7 @@ The generated repo includes:
 
 - a dedicated ClawJS agent workspace
 - seeded runtime-facing files such as `SOUL.md`, `AGENTS.md`, `TOOLS.md`, `IDENTITY.md`, and `HEARTBEAT.md`
+- a `CLAUDE.md` shim that redirects Claude Code back to the canonical `AGENTS.md` instructions
 - memory and skills placeholders
 - `@clawjs/claw` helper code for agent inspection and session demos
 - `claw` CLI scripts for local workspace bootstrap
