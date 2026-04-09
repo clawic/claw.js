@@ -3,7 +3,6 @@ import SwiftUI
 struct ChatView: View {
     @EnvironmentObject private var chatService: ChatService
     let conversation: Conversation
-    @Binding var navigationPath: NavigationPath
     @State private var messageText = ""
     @State private var activeConversationId: UUID?
 
@@ -29,92 +28,110 @@ struct ChatView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
-            Divider()
-            messagesView
+            headerBar
+            Divider().background(Theme.border)
+            messagesArea
             ChatInputBar(
                 text: $messageText,
-                placeholder: isBusy ? L10n.Chat.waiting : L10n.Chat.messagePlaceholder,
+                placeholder: isBusy ? L10n.Chat.waiting : "Pedir cambios de seguimiento",
                 isDisabled: isBusy,
+                isGenerating: isBusy,
                 autofocus: true,
-                onSend: sendMessage
+                agentName: agent?.name,
+                projectName: project?.name,
+                onSend: sendMessage,
+                onStop: cancelGeneration
             )
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Theme.bg)
         .onAppear {
             chatService.markAsRead(conversationId: conversationId)
             chatService.loadMessages(for: conversationId)
         }
     }
 
-    // MARK: - Header
+    // MARK: - Header (Codex-style)
 
-    private var header: some View {
-        HStack(spacing: 14) {
-            Image(systemName: agent?.icon ?? "brain.head.profile")
-                .font(.system(size: 20, weight: .medium))
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 42, height: 42)
-                .background(Color.accentColor.opacity(0.12), in: Circle())
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(agent?.name ?? "Agent")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                HStack(spacing: 6) {
-                    if let project {
-                        Image(systemName: "folder")
-                            .font(.system(size: 10))
-                        Text(project.name)
-                    }
-                    if isThinking {
-                        Text(" . " + L10n.Chat.thinking.lowercased())
-                            .foregroundStyle(Color.accentColor)
-                    } else if isStreaming {
-                        Text(" . " + L10n.Chat.thinking.lowercased())
-                            .foregroundStyle(Color.accentColor)
-                    }
-                }
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
+    private var headerBar: some View {
+        HStack(spacing: 12) {
+            // Title + project tag
+            Text(currentConversation.title)
+                .font(Theme.header)
+                .foregroundStyle(Theme.textPrimary)
                 .lineLimit(1)
+
+            if let project {
+                Text(project.name.lowercased())
+                    .font(Theme.caption)
+                    .foregroundStyle(Theme.textMuted)
             }
+
+            // Three-dot menu
+            Button(action: {}) {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.textMuted)
+            }
+            .buttonStyle(.plain)
 
             Spacer()
 
-            Button {
-                guard let agentId = agent?.id ?? chatService.agents.first?.id,
-                      let projectId = currentConversation.projectId ?? chatService.defaultProject(for: agentId)?.id,
-                      let newId = chatService.createConversation(agentId: agentId, projectId: projectId) else { return }
-                messageText = ""
-                activeConversationId = newId
-            } label: {
-                Image(systemName: "square.and.pencil")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.primary)
-                    .frame(width: 32, height: 32)
-                    .background(.regularMaterial, in: Circle())
-                    .overlay(Circle().strokeBorder(Color.primary.opacity(0.08), lineWidth: 1))
+            // Play / stop
+            if isBusy {
+                Button(action: cancelGeneration) {
+                    Image(systemName: "stop.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 28, height: 28)
+                        .background(Theme.hoverBg, in: RoundedRectangle(cornerRadius: 6))
+                        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Theme.border, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            } else {
+                Button(action: {}) {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 28, height: 28)
+                        .background(Theme.hoverBg, in: RoundedRectangle(cornerRadius: 6))
+                        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Theme.border, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Confirmar button
+            Button(action: {}) {
+                HStack(spacing: 4) {
+                    Image(systemName: "diamond")
+                        .font(.system(size: 9))
+                    Text("Confirmar")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .foregroundStyle(Theme.confirmGreen)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(Theme.confirmGreen.opacity(0.4), lineWidth: 1)
+                )
             }
             .buttonStyle(.plain)
-            .help(L10n.Home.newChat)
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 16)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
     }
 
-    // MARK: - Messages
+    // MARK: - Messages area
 
-    private var messagesView: some View {
+    private var messagesArea: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 18) {
+            ScrollView(.vertical, showsIndicators: true) {
+                LazyVStack(alignment: .leading, spacing: 16) {
                     ForEach(currentConversation.messages) { message in
                         let isStreamingMsg = isStreaming
                             && message.id == currentConversation.messages.last?.id
                             && message.role == .agent
-                        MessageRow(
+                        MessageEntry(
                             message: message,
                             agent: agent,
                             isStreaming: isStreamingMsg,
@@ -126,11 +143,11 @@ struct ChatView: View {
                     }
 
                     if isThinking {
-                        ThinkingRow(agent: agent)
+                        ThinkingEntry()
                             .id("thinking")
                     }
                 }
-                .padding(.horizontal, 28)
+                .padding(.horizontal, 24)
                 .padding(.vertical, 20)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -142,7 +159,7 @@ struct ChatView: View {
     }
 
     private func scrollToBottom(_ proxy: ScrollViewProxy) {
-        withAnimation(.easeOut(duration: 0.25)) {
+        withAnimation(.easeOut(duration: 0.2)) {
             if isThinking {
                 proxy.scrollTo("thinking", anchor: .bottom)
             } else if let lastId = currentConversation.messages.last?.id {
@@ -153,6 +170,10 @@ struct ChatView: View {
 
     // MARK: - Actions
 
+    private func cancelGeneration() {
+        chatService.cancelGeneration(in: conversationId)
+    }
+
     private func sendMessage() {
         let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
@@ -161,9 +182,9 @@ struct ChatView: View {
     }
 }
 
-// MARK: - Message Row
+// MARK: - Message Entry (Codex-style: user = dark card, agent = plain text)
 
-struct MessageRow: View {
+struct MessageEntry: View {
     let message: Message
     var agent: Agent?
     var isStreaming: Bool = false
@@ -172,85 +193,74 @@ struct MessageRow: View {
     private var isUser: Bool { message.role == .user }
 
     var body: some View {
-        if isUser {
-            HStack(alignment: .top) {
-                Spacer(minLength: 60)
+        VStack(alignment: .leading, spacing: 8) {
+            if isUser {
+                // User messages shown as a dark card (like Codex shows user prompts)
                 Text(message.text)
-                    .font(.system(size: 14))
-                    .foregroundStyle(.primary)
+                    .font(Theme.body)
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineSpacing(4)
                     .textSelection(.enabled)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color.accentColor.opacity(0.18))
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Theme.inputBg)
                     )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .strokeBorder(Color.accentColor.opacity(0.25), lineWidth: 1)
-                    )
-                    .frame(maxWidth: 560, alignment: .trailing)
-            }
-        } else {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: agent?.icon ?? "brain.head.profile")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.accentColor)
-                    .frame(width: 28, height: 28)
-                    .background(Color.accentColor.opacity(0.12), in: Circle())
-
-                VStack(alignment: .leading, spacing: 8) {
-                    if isStreaming {
-                        StreamingText(text: message.text, onDone: onStreamingDone)
-                    } else {
-                        Text(message.text)
-                            .font(.system(size: 14))
-                            .foregroundStyle(.primary)
-                            .lineSpacing(4)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .textSelection(.enabled)
-                    }
-
-                    if !isStreaming && !message.text.isEmpty {
-                        MessageActions()
-                    }
+            } else {
+                // Agent messages: plain text, markdown-like
+                if isStreaming {
+                    StreamingText(text: message.text, onDone: onStreamingDone)
+                } else {
+                    Text(message.text)
+                        .font(Theme.body)
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineSpacing(5)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
                 }
             }
         }
     }
 }
 
-// MARK: - Thinking row
+// MARK: - Thinking entry
 
-struct ThinkingRow: View {
-    var agent: Agent?
-    @State private var pulse = false
+struct ThinkingEntry: View {
+    @State private var elapsed: Int = 0
+    @State private var timer: Timer?
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: agent?.icon ?? "brain.head.profile")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 28, height: 28)
-                .background(Color.accentColor.opacity(0.12), in: Circle())
-
-            HStack(spacing: 5) {
-                ForEach(0..<3) { i in
-                    Circle()
-                        .fill(Color.secondary)
-                        .frame(width: 7, height: 7)
-                        .opacity(pulse ? 0.3 : 1.0)
-                        .animation(
-                            .easeInOut(duration: 0.6)
-                                .repeatForever()
-                                .delay(Double(i) * 0.15),
-                            value: pulse
-                        )
-                }
-            }
-            .padding(.top, 6)
+        HStack(spacing: 6) {
+            ProgressView()
+                .scaleEffect(0.5)
+                .frame(width: 14, height: 14)
+            Text("Ha trabajado durante \(formatElapsed(elapsed))")
+                .font(Theme.caption)
+                .foregroundStyle(Theme.textMuted)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 8))
+                .foregroundStyle(Theme.textMuted)
         }
-        .onAppear { pulse = true }
+        .padding(.vertical, 4)
+        .onAppear { startTimer() }
+        .onDisappear { timer?.invalidate(); timer = nil }
+    }
+
+    private func startTimer() {
+        elapsed = 0
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+            elapsed += 1
+        }
+    }
+
+    private func formatElapsed(_ seconds: Int) -> String {
+        let m = seconds / 60
+        let s = seconds % 60
+        if m > 0 {
+            return "\(m)m \(s)s"
+        }
+        return "\(s)s"
     }
 }
 
@@ -264,9 +274,9 @@ struct StreamingText: View {
 
     var body: some View {
         Text(text.prefix(displayLen))
-            .font(.system(size: 14))
-            .foregroundStyle(.primary)
-            .lineSpacing(4)
+            .font(Theme.body)
+            .foregroundStyle(Theme.textPrimary)
+            .lineSpacing(5)
             .frame(maxWidth: .infinity, alignment: .leading)
             .onAppear { startStreaming() }
             .onDisappear { timer?.invalidate(); timer = nil }
@@ -284,25 +294,22 @@ struct StreamingText: View {
     }
 }
 
-// MARK: - Message Actions
+// MARK: - Message Actions (kept for compatibility)
 
 struct MessageActions: View {
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 2) {
             actionButton("doc.on.doc")
-            actionButton("hand.thumbsup")
-            actionButton("hand.thumbsdown")
             actionButton("arrow.clockwise")
-            actionButton("square.and.arrow.up")
         }
     }
 
     private func actionButton(_ systemName: String) -> some View {
         Button(action: {}) {
             Image(systemName: systemName)
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .frame(width: 24, height: 24)
+                .font(.system(size: 10))
+                .foregroundStyle(Theme.textMuted)
+                .frame(width: 22, height: 22)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

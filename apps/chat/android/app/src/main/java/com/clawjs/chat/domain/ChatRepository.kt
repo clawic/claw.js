@@ -11,6 +11,7 @@ import com.clawjs.chat.data.model.Project
 import com.clawjs.chat.data.model.Topic
 import com.clawjs.chat.data.remote.ApiClient
 import com.clawjs.chat.data.remote.SessionRecord
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,6 +61,7 @@ class ChatRepository(
     private val reverseProjectMap = mutableMapOf<String, UUID>()
     private val projectAgents = mutableMapOf<UUID, List<UUID>>()
     private val agentProjects = mutableMapOf<UUID, List<UUID>>()
+    private var activeStreamJob: Job? = null
 
     // ---- Computed (filtered) views ------------------------------------------
 
@@ -311,7 +313,7 @@ class ChatRepository(
         val remoteProjectId = conv.projectId?.let { projectMap[it] }
         val existingSessionId = sessionMap[conversationId]
 
-        scope.launch(Dispatchers.IO) {
+        activeStreamJob = scope.launch(Dispatchers.IO) {
             try {
                 val sessionId = existingSessionId ?: run {
                     if (remoteAgentId == null || remoteProjectId == null) {
@@ -377,6 +379,14 @@ class ChatRepository(
                     status = ConversationStatus.Unread,
                 )
             }
+        }
+    }
+
+    fun cancelGeneration(conversationId: UUID) {
+        activeStreamJob?.cancel()
+        activeStreamJob = null
+        updateConversation(conversationId) {
+            it.copy(status = ConversationStatus.Read)
         }
     }
 

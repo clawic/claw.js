@@ -1,5 +1,12 @@
 import { randomUUID } from "node:crypto";
 
+import type {
+  BrowserActor,
+  BrowserFrameEvent,
+  BrowserInputCommand,
+  BrowserSessionSnapshot,
+} from "../../../browser/shared/types.ts";
+
 export interface ConnectorWorkspaceDescriptor {
   workspaceId: string;
   displayName: string;
@@ -15,7 +22,7 @@ export interface ConnectorHelloPayload {
 }
 
 export interface ConnectorEnvelopeBase {
-  type: "hello" | "heartbeat" | "invoke" | "stream" | "result" | "error" | "event" | "ack";
+  type: "hello" | "heartbeat" | "invoke" | "stream" | "result" | "error" | "event" | "ack" | "cancel";
   requestId?: string;
   subscriptionId?: string;
 }
@@ -73,6 +80,11 @@ export interface HelloEnvelope extends ConnectorEnvelopeBase {
   payload: ConnectorHelloPayload;
 }
 
+export interface CancelEnvelope extends ConnectorEnvelopeBase {
+  type: "cancel";
+  requestId: string;
+}
+
 export type ConnectorInboundEnvelope =
   | HelloEnvelope
   | HeartbeatEnvelope
@@ -82,7 +94,7 @@ export type ConnectorInboundEnvelope =
   | AckEnvelope
   | EventEnvelope;
 
-export type ConnectorOutboundEnvelope = InvokeEnvelope | AckEnvelope;
+export type ConnectorOutboundEnvelope = InvokeEnvelope | AckEnvelope | CancelEnvelope;
 
 export interface AuthClaims {
   sub: string;
@@ -125,6 +137,32 @@ export interface ActivityRecord {
   detail: string;
   createdAt: number;
 }
+
+export interface ConnectorBrowserEnsurePayload {
+  initialUrl?: string;
+}
+
+export interface ConnectorBrowserControlPayload {
+  actor: BrowserActor;
+}
+
+export interface ConnectorBrowserNavigatePayload {
+  actor: BrowserActor;
+  url: string;
+}
+
+export interface ConnectorBrowserInputPayload {
+  actor: BrowserActor;
+  command: BrowserInputCommand;
+}
+
+export interface ConnectorBrowserStatePayload {
+  workspaceId: string;
+  session: BrowserSessionSnapshot;
+  reason: string;
+}
+
+export interface ConnectorBrowserFramePayload extends BrowserFrameEvent {}
 
 export interface UsageRecord {
   id: string;

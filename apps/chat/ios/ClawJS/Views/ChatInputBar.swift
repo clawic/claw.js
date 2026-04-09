@@ -4,8 +4,11 @@ struct ChatInputBar: View {
     @Binding var text: String
     var placeholder: String = "Message"
     var isDisabled: Bool = false
+    var isGenerating: Bool = false
     var autofocus: Bool = false
     var onSend: () -> Void
+    var onStop: (() -> Void)? = nil
+    var onVoiceRecord: (() -> Void)? = nil
     @FocusState private var isInputFocused: Bool
 
     private var canSend: Bool {
@@ -31,10 +34,23 @@ struct ChatInputBar: View {
             .disabled(isDisabled)
             .font(.system(size: 16))
             .foregroundColor(.primary)
+            .onSubmit { if canSend { onSend() } }
 
             Spacer(minLength: 0)
 
-            if canSend {
+            if isGenerating {
+                Button {
+                    onStop?()
+                } label: {
+                    Image(systemName: "stop.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.black)
+                        .frame(width: 34, height: 34)
+                        .background(Color.white)
+                        .clipShape(Circle())
+                }
+                .transition(.scale.combined(with: .opacity))
+            } else if canSend {
                 Button {
                     onSend()
                 } label: {
@@ -48,6 +64,7 @@ struct ChatInputBar: View {
                 .transition(.scale.combined(with: .opacity))
             } else {
                 Button {
+                    onVoiceRecord?()
                 } label: {
                     Image(systemName: "mic")
                         .font(.system(size: 17))
@@ -55,6 +72,7 @@ struct ChatInputBar: View {
                 }
 
                 Button {
+                    onVoiceRecord?()
                 } label: {
                     HStack(spacing: 1.5) {
                         Capsule()
@@ -89,6 +107,7 @@ struct ChatInputBar: View {
         .padding(.horizontal, 14)
         .padding(.bottom, 10)
         .padding(.top, 6)
+        .animation(.easeInOut(duration: 0.15), value: isGenerating)
         .animation(.easeInOut(duration: 0.15), value: canSend)
         .onAppear {
             if autofocus {

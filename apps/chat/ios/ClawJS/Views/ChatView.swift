@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 struct ChatView: View {
     @EnvironmentObject private var chatService: ChatService
@@ -6,6 +7,7 @@ struct ChatView: View {
     @Binding var navigationPath: NavigationPath
     @State private var messageText = ""
     @State private var activeConversationId: UUID?
+    @StateObject private var audioService = AudioService()
 
     private var conversationId: UUID {
         activeConversationId ?? conversation.id
@@ -39,7 +41,7 @@ struct ChatView: View {
         ZStack(alignment: .bottom) {
             messagesView
                 .padding(.bottom, 60)
-            inputBar
+            inputArea
         }
         .safeAreaInset(edge: .top) {
             customNavBar
@@ -49,8 +51,14 @@ struct ChatView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
-            chatService.markAsRead(conversationId: conversationId)
+            chatService.startViewing(conversationId: conversationId)
             chatService.loadMessages(for: conversationId)
+        }
+        .onDisappear {
+            chatService.stopViewing(conversationId: conversationId)
+            if audioService.isRecording {
+                audioService.cancelRecording()
+            }
         }
     }
 
@@ -175,16 +183,42 @@ struct ChatView: View {
         }
     }
 
-    // MARK: - Input Bar
+    // MARK: - Input Area
 
-    private var inputBar: some View {
-        ChatInputBar(
-            text: $messageText,
-            placeholder: isBusy ? L10n.Chat.waiting : L10n.Chat.messagePlaceholder,
-            isDisabled: isBusy,
-            autofocus: true,
-            onSend: sendMessage
-        )
+    private var inputArea: some View {
+        Group {
+            if audioService.isRecording {
+                VoiceRecordingOverlay(
+                    audioService: audioService,
+                    onCancel: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            audioService.cancelRecording()
+                        }
+                    },
+                    onSend: {
+                        sendVoiceMessage()
+                    }
+                )
+            } else {
+                ChatInputBar(
+                    text: $messageText,
+                    placeholder: isBusy ? L10n.Chat.waiting : L10n.Chat.messagePlaceholder,
+                    isDisabled: isBusy,
+                    isGenerating: isBusy,
+                    autofocus: true,
+                    onSend: sendMessage,
+                    onStop: cancelGeneration,
+                    onVoiceRecord: startRecording
+                )
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: audioService.isRecording)
+    }
+
+    // MARK: - Actions
+
+    private func cancelGeneration() {
+        chatService.cancelGeneration(in: conversationId)
     }
 
     private func sendMessage() {
@@ -192,6 +226,51 @@ struct ChatView: View {
         guard !text.isEmpty else { return }
         messageText = ""
         chatService.sendMessage(in: conversationId, text: text)
+    }
+
+    private func startRecording() {
+        AVAudioApplication.requestRecordPermission { granted in
+            DispatchQueue.main.async {
+                guard granted else {
+                    print("[ChatView] Microphone permission denied")
+                    return
+                }
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    audioService.startRecording()
+                }
+            }
+        }
+    }
+
+    private func sendVoiceMessage() {
+        guard let result = audioService.finishRecording() else { return }
+
+        let fileURL = result.url
+        let duration = result.duration
+        let waveformSamples = result.waveformSamples
+
+        // Read file data for storage and playback
+        guard let audioData = try? Data(contentsOf: fileURL) else {
+            print("[ChatView] Failed to read recorded audio file")
+            return
+        }
+
+        let attachment = Attachment(
+            name: "voice-\(formatDuration(duration)).m4a",
+            mimeType: "audio/mp4",
+            data: audioData,
+            fileURL: fileURL,
+            duration: duration,
+            waveformSamples: waveformSamples
+        )
+
+        chatService.sendVoiceMessage(in: conversationId, attachment: attachment)
+    }
+
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let mins = Int(seconds) / 60
+        let secs = Int(seconds) % 60
+        return String(format: "%02d-%02d", mins, secs)
     }
 }
 
@@ -208,24 +287,28 @@ struct MessageRow: View {
         if isUser {
             HStack {
                 Spacer()
-                Text(message.text)
-                    .font(.system(size: 15))
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(Color(.systemGray5))
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                VStack(alignment: .trailing, spacing: 6) {
+                    if let audio = message.audioAttachment {
+                        VoiceNotePlayerView(attachment: audio)
+                    }
+                    if !message.text.isEmpty && message.text != "[Voice message]" {
+                        Text(message.text)
+                            .font(.system(size: 15))
+                            .foregroundColor(.primary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(Color(.systemGray5))
+                            .clipShape(RoundedRectangle(cornerRadius: 18))
+                    }
+                }
             }
         } else {
             VStack(alignment: .leading, spacing: 12) {
                 if isStreaming {
-                    StreamingText(text: message.text, onDone: onStreamingDone)
+                    StreamingMarkdownText(text: message.text, onDone: onStreamingDone)
                 } else {
-                    Text(message.text)
-                        .font(.system(size: 16))
+                    MarkdownView(text: message.text)
                         .foregroundColor(.primary)
-                        .lineSpacing(4)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 if !isStreaming && !message.text.isEmpty {
@@ -238,32 +321,41 @@ struct MessageRow: View {
     }
 }
 
-// MARK: - Streaming Text
+// MARK: - Streaming Markdown Text
 
-struct StreamingText: View {
+struct StreamingMarkdownText: View {
     let text: String
     var onDone: (() -> Void)?
     @State private var displayLen: Int = 0
     @State private var timer: Timer?
 
+    private var visibleText: String {
+        String(text.prefix(displayLen))
+    }
+
     var body: some View {
-        Text(text.prefix(displayLen))
-            .font(.system(size: 16))
+        MarkdownView(text: visibleText)
             .foregroundColor(.primary)
-            .lineSpacing(4)
-            .frame(maxWidth: .infinity, alignment: .leading)
             .onAppear { startStreaming() }
             .onDisappear { timer?.invalidate(); timer = nil }
+            .onChange(of: text) { _, newValue in
+                if displayLen >= newValue.count {
+                    return
+                }
+                if timer == nil {
+                    startStreaming()
+                }
+            }
     }
 
     private func startStreaming() {
+        timer?.invalidate()
         displayLen = 0
-        // Constant speed: ~2 characters per tick at 60fps = ~120 chars/sec
-        // A 300-char response takes ~2.5 seconds to animate
         timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { t in
             displayLen = min(displayLen + 2, text.count)
             if displayLen >= text.count {
                 t.invalidate()
+                timer = nil
                 onDone?()
             }
         }

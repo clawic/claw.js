@@ -345,6 +345,91 @@ async function invokeProjectAssignment(
   );
 }
 
+async function forwardIotJson(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  auth: RelayAuthService,
+  config: RelayConfig,
+  scope: string,
+  input: {
+    tenantId: string;
+    method?: "GET" | "POST";
+    path: string;
+    body?: Record<string, unknown>;
+  },
+): Promise<Record<string, unknown> | null> {
+  const claims = await requireClaims(request, reply, auth, scope);
+  if (!claims) return null;
+  try {
+    authorizeTenant(claims, input.tenantId);
+  } catch (error) {
+    await reply.code(403).send({ error: "Forbidden", message: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+  if (!config.iotBaseUrl?.trim()) {
+    await reply.code(503).send({ error: "iot_unavailable", message: "Relay IoT base URL is not configured." });
+    return null;
+  }
+  const response = await fetch(`${config.iotBaseUrl.replace(/\/$/, "")}${input.path}`, {
+    method: input.method ?? "GET",
+    headers: input.body ? { "content-type": "application/json" } : undefined,
+    ...(input.body ? { body: JSON.stringify(input.body) } : {}),
+  });
+  const contentType = response.headers.get("content-type") ?? "";
+  const payload = contentType.includes("application/json")
+    ? await response.json() as Record<string, unknown>
+    : { text: await response.text() };
+  if (!response.ok) {
+    await reply.code(response.status).send(payload);
+    return null;
+  }
+  return payload;
+}
+
+async function forwardIotEventStream(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  auth: RelayAuthService,
+  config: RelayConfig,
+  input: {
+    tenantId: string;
+    path: string;
+  },
+): Promise<FastifyReply | null> {
+  const claims = await requireClaims(request, reply, auth, "workspace:read");
+  if (!claims) return null;
+  try {
+    authorizeTenant(claims, input.tenantId);
+  } catch (error) {
+    await reply.code(403).send({ error: "Forbidden", message: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+  if (!config.iotBaseUrl?.trim()) {
+    await reply.code(503).send({ error: "iot_unavailable", message: "Relay IoT base URL is not configured." });
+    return null;
+  }
+  const response = await fetch(`${config.iotBaseUrl.replace(/\/$/, "")}${input.path}`);
+  if (!response.ok || !response.body) {
+    await reply.code(response.status || 502).send({ error: "iot_stream_unavailable" });
+    return null;
+  }
+  reply.raw.writeHead(200, {
+    "content-type": "text/event-stream",
+    "cache-control": "no-cache, no-transform",
+    connection: "keep-alive",
+  });
+  const reader = response.body.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      reply.raw.write(Buffer.from(value));
+    }
+  }
+  reply.raw.end();
+  return reply;
+}
+
 async function requireProjectAssignmentAccess(
   request: FastifyRequest<{ Params: ProjectAgentParams }>,
   reply: FastifyReply,
@@ -1660,6 +1745,130 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return result;
   });
 
+  app.get("/v1/tenants/:tenantId/homes", async (request, reply) => {
+    const params = request.params as { tenantId: string };
+    const result = await forwardIotJson(request, reply, auth, config, "tenant:read", {
+      tenantId: params.tenantId,
+      path: "/v1/homes",
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.get("/v1/tenants/:tenantId/homes/:homeId/areas", async (request, reply) => {
+    const params = request.params as { tenantId: string; homeId: string };
+    const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
+      tenantId: params.tenantId,
+      path: `/v1/homes/${params.homeId}/areas`,
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.get("/v1/tenants/:tenantId/homes/:homeId/things", async (request, reply) => {
+    const params = request.params as { tenantId: string; homeId: string };
+    const query = request.raw.url?.split("?")[1];
+    const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
+      tenantId: params.tenantId,
+      path: `/v1/homes/${params.homeId}/things${query ? `?${query}` : ""}`,
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.get("/v1/tenants/:tenantId/homes/:homeId/state", async (request, reply) => {
+    const params = request.params as { tenantId: string; homeId: string };
+    const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
+      tenantId: params.tenantId,
+      path: `/v1/homes/${params.homeId}/state`,
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.post("/v1/tenants/:tenantId/homes/:homeId/actions", async (request, reply) => {
+    const params = request.params as { tenantId: string; homeId: string };
+    const result = await forwardIotJson(request, reply, auth, config, "workspace:data", {
+      tenantId: params.tenantId,
+      method: "POST",
+      path: `/v1/homes/${params.homeId}/actions`,
+      body: await readRequestBody(request),
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.get("/v1/tenants/:tenantId/homes/:homeId/scenes", async (request, reply) => {
+    const params = request.params as { tenantId: string; homeId: string };
+    const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
+      tenantId: params.tenantId,
+      path: `/v1/homes/${params.homeId}/scenes`,
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.post("/v1/tenants/:tenantId/homes/:homeId/scenes/:sceneId/activate", async (request, reply) => {
+    const params = request.params as { tenantId: string; homeId: string; sceneId: string };
+    const result = await forwardIotJson(request, reply, auth, config, "workspace:data", {
+      tenantId: params.tenantId,
+      method: "POST",
+      path: `/v1/homes/${params.homeId}/scenes/${params.sceneId}/activate`,
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.get("/v1/tenants/:tenantId/homes/:homeId/automations", async (request, reply) => {
+    const params = request.params as { tenantId: string; homeId: string };
+    const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
+      tenantId: params.tenantId,
+      path: `/v1/homes/${params.homeId}/automations`,
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.post("/v1/tenants/:tenantId/homes/:homeId/automations/:automationId/run", async (request, reply) => {
+    const params = request.params as { tenantId: string; homeId: string; automationId: string };
+    const result = await forwardIotJson(request, reply, auth, config, "workspace:data", {
+      tenantId: params.tenantId,
+      method: "POST",
+      path: `/v1/homes/${params.homeId}/automations/${params.automationId}/run`,
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.get("/v1/tenants/:tenantId/homes/:homeId/approvals", async (request, reply) => {
+    const params = request.params as { tenantId: string; homeId: string };
+    const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
+      tenantId: params.tenantId,
+      path: `/v1/homes/${params.homeId}/approvals`,
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.post("/v1/tenants/:tenantId/homes/:homeId/approvals/:approvalId/approve", async (request, reply) => {
+    const params = request.params as { tenantId: string; homeId: string; approvalId: string };
+    const result = await forwardIotJson(request, reply, auth, config, "workspace:data", {
+      tenantId: params.tenantId,
+      method: "POST",
+      path: `/v1/homes/${params.homeId}/approvals/${params.approvalId}/approve`,
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.get("/v1/tenants/:tenantId/homes/:homeId/events/stream", async (request, reply) => {
+    const params = request.params as { tenantId: string; homeId: string };
+    return await forwardIotEventStream(request, reply, auth, config, {
+      tenantId: params.tenantId,
+      path: `/v1/homes/${params.homeId}/events/stream`,
+    });
+  });
+
   const workspacePrefix = "/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId";
   const projectWorkspacePrefix = "/v1/tenants/:tenantId/projects/:projectId/agents/:agentId";
 
@@ -1709,6 +1918,48 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return {
       usage: db.listUsage(access.params.tenantId, access.params.agentId, access.assignment.workspaceId),
     };
+  });
+
+  app.get(`${workspacePrefix}/iot/state`, async (request, reply) => {
+    const params = request.params as WorkspaceParams;
+    const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
+      tenantId: params.tenantId,
+      path: "/v1/state",
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.post(`${workspacePrefix}/iot/actions`, async (request, reply) => {
+    const params = request.params as WorkspaceParams;
+    const result = await forwardIotJson(request, reply, auth, config, "workspace:data", {
+      tenantId: params.tenantId,
+      method: "POST",
+      path: "/v1/actions",
+      body: await readRequestBody(request),
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/iot/scenes`, async (request, reply) => {
+    const params = request.params as WorkspaceParams;
+    const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
+      tenantId: params.tenantId,
+      path: "/v1/scenes",
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/iot/approvals`, async (request, reply) => {
+    const params = request.params as WorkspaceParams;
+    const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
+      tenantId: params.tenantId,
+      path: "/v1/approvals",
+    });
+    if (!result) return;
+    return result;
   });
 
   app.get(`${workspacePrefix}/integrations/status`, async (request, reply) => {
@@ -2008,14 +2259,18 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     reply.raw.setHeader("cache-control", "no-cache, no-transform");
     reply.raw.setHeader("connection", "keep-alive");
 
+    const abortController = new AbortController();
+    request.raw.on("close", () => abortController.abort("client_disconnect"));
+
     let streamedText = "";
     const writeEvent = (event: string, payload: Record<string, unknown>) => {
+      if (reply.raw.destroyed) return;
       reply.raw.write(`event: ${event}\n`);
       reply.raw.write(`data: ${JSON.stringify(payload)}\n\n`);
     };
 
     try {
-      await registry.invoke({
+      const result = await registry.invoke({
         tenantId: params.tenantId,
         connectorId: resolveConnectorId(db, params.tenantId, params.agentId),
         agentId: params.agentId,
@@ -2032,6 +2287,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
           if (typeof payload.delta === "string") streamedText += payload.delta;
           writeEvent(stream.event, payload);
         },
+        signal: abortController.signal,
       });
       db.recordUsage({
         tenantId: params.tenantId,
@@ -2040,12 +2296,16 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
         tokensIn: tokensFromText(query.message ?? ""),
         tokensOut: tokensFromText(streamedText),
       });
-      writeEvent("complete", { ok: true });
+      if (result.cancelled) {
+        writeEvent("cancelled", {});
+      } else {
+        writeEvent("complete", { ok: true });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       writeEvent("error", { error: message });
     } finally {
-      reply.raw.end();
+      if (!reply.raw.destroyed) reply.raw.end();
     }
   });
 
@@ -2070,14 +2330,18 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     reply.raw.setHeader("cache-control", "no-cache, no-transform");
     reply.raw.setHeader("connection", "keep-alive");
 
+    const abortController = new AbortController();
+    request.raw.on("close", () => abortController.abort("client_disconnect"));
+
     let streamedText = "";
     const writeEvent = (event: string, payload: Record<string, unknown>) => {
+      if (reply.raw.destroyed) return;
       reply.raw.write(`event: ${event}\n`);
       reply.raw.write(`data: ${JSON.stringify(payload)}\n\n`);
     };
 
     try {
-      await registry.invoke({
+      const result = await registry.invoke({
         tenantId: params.tenantId,
         connectorId: resolveConnectorId(db, params.tenantId, params.agentId),
         agentId: params.agentId,
@@ -2094,6 +2358,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
           if (typeof streamPayload.delta === "string") streamedText += streamPayload.delta;
           writeEvent(stream.event, streamPayload);
         },
+        signal: abortController.signal,
       });
       db.recordUsage({
         tenantId: params.tenantId,
@@ -2102,12 +2367,16 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
         tokensIn: tokensFromText(query.message ?? ""),
         tokensOut: tokensFromText(streamedText),
       });
-      writeEvent("complete", { ok: true });
+      if (result.cancelled) {
+        writeEvent("cancelled", {});
+      } else {
+        writeEvent("complete", { ok: true });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       writeEvent("error", { error: message });
     } finally {
-      reply.raw.end();
+      if (!reply.raw.destroyed) reply.raw.end();
     }
   });
 
@@ -2128,14 +2397,18 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     reply.raw.setHeader("cache-control", "no-cache, no-transform");
     reply.raw.setHeader("connection", "keep-alive");
 
+    const abortController = new AbortController();
+    request.raw.on("close", () => abortController.abort("client_disconnect"));
+
     let streamedText = "";
     const writeEvent = (event: string, payload: Record<string, unknown>) => {
+      if (reply.raw.destroyed) return;
       reply.raw.write(`event: ${event}\n`);
       reply.raw.write(`data: ${JSON.stringify(payload)}\n\n`);
     };
 
     try {
-      await registry.invoke({
+      const result = await registry.invoke({
         tenantId: params.tenantId,
         connectorId: resolveConnectorId(db, params.tenantId, params.agentId),
         agentId: params.agentId,
@@ -2153,6 +2426,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
           if (typeof payload.delta === "string") streamedText += payload.delta;
           writeEvent(stream.event, payload);
         },
+        signal: abortController.signal,
       });
       db.recordUsage({
         tenantId: params.tenantId,
@@ -2161,12 +2435,16 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
         tokensIn: tokensFromText(typeof body.message === "string" ? body.message : ""),
         tokensOut: tokensFromText(streamedText),
       });
-      writeEvent("complete", { ok: true });
+      if (result.cancelled) {
+        writeEvent("cancelled", {});
+      } else {
+        writeEvent("complete", { ok: true });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       writeEvent("error", { error: message });
     } finally {
-      reply.raw.end();
+      if (!reply.raw.destroyed) reply.raw.end();
     }
   });
 
@@ -2191,14 +2469,18 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     reply.raw.setHeader("cache-control", "no-cache, no-transform");
     reply.raw.setHeader("connection", "keep-alive");
 
+    const abortController = new AbortController();
+    request.raw.on("close", () => abortController.abort("client_disconnect"));
+
     let streamedText = "";
     const writeEvent = (event: string, payload: Record<string, unknown>) => {
+      if (reply.raw.destroyed) return;
       reply.raw.write(`event: ${event}\n`);
       reply.raw.write(`data: ${JSON.stringify(payload)}\n\n`);
     };
 
     try {
-      await registry.invoke({
+      const result = await registry.invoke({
         tenantId: params.tenantId,
         connectorId: resolveConnectorId(db, params.tenantId, params.agentId),
         agentId: params.agentId,
@@ -2216,6 +2498,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
           if (typeof payload.delta === "string") streamedText += payload.delta;
           writeEvent(stream.event, payload);
         },
+        signal: abortController.signal,
       });
       db.recordUsage({
         tenantId: params.tenantId,
@@ -2224,12 +2507,16 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
         tokensIn: tokensFromText(typeof body.message === "string" ? body.message : ""),
         tokensOut: tokensFromText(streamedText),
       });
-      writeEvent("complete", { ok: true });
+      if (result.cancelled) {
+        writeEvent("cancelled", {});
+      } else {
+        writeEvent("complete", { ok: true });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       writeEvent("error", { error: message });
     } finally {
-      reply.raw.end();
+      if (!reply.raw.destroyed) reply.raw.end();
     }
   });
 
@@ -2580,6 +2867,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     { path: "inbox", scope: "workspace:data" },
     { path: "people", scope: "workspace:data" },
     { path: "events", scope: "workspace:data" },
+    { path: "time", scope: "workspace:data" },
     { path: "personas", scope: "workspace:data" },
     { path: "plugins", scope: "workspace:data" },
     { path: "routines", scope: "workspace:data" },

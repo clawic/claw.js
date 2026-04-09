@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.animation.Crossfade
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -39,8 +41,10 @@ fun ChatInputBar(
     onTextChange: (String) -> Unit,
     placeholder: String,
     isDisabled: Boolean,
+    isGenerating: Boolean = false,
     autofocus: Boolean,
     onSend: () -> Unit,
+    onStop: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -92,19 +96,37 @@ fun ChatInputBar(
             )
         }
 
-        IconButton(
-            onClick = onSend,
-            enabled = !isDisabled && text.isNotBlank(),
-            modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.Send,
-                contentDescription = "Send",
-                tint = MaterialTheme.colorScheme.onPrimary,
-            )
+        Crossfade(targetState = isGenerating, label = "send-stop") { generating ->
+            if (generating) {
+                IconButton(
+                    onClick = onStop,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Stop,
+                        contentDescription = "Stop",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                    )
+                }
+            } else {
+                IconButton(
+                    onClick = onSend,
+                    enabled = !isDisabled && text.isNotBlank(),
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Send,
+                        contentDescription = "Send",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                    )
+                }
+            }
         }
     }
 }

@@ -511,6 +511,7 @@ function ChatContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const fullResponseRef = useRef("");
+  const abortControllerRef = useRef<AbortController | null>(null);
   const confirmedTranscriptRef = useRef("");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recorderMimeTypeRef = useRef("audio/webm");
@@ -1104,6 +1105,13 @@ function ChatContent() {
     setListening(false);
   }, []);
 
+  const stopGeneration = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setStreaming(false);
+    if (listening) stopListening();
+  }, [listening, stopListening]);
+
   const toggleListening = () => {
     if (listening) stopListening();
     else startListening();
@@ -1424,6 +1432,9 @@ function ChatContent() {
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
     setChatTrace(null);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -1437,6 +1448,7 @@ function ChatContent() {
           starterPrompt,
           debugTrace: chatDebugEnabled,
         }),
+        signal: controller.signal,
       });
       if (!res.ok) {
         const err = await res.json();
@@ -1530,11 +1542,17 @@ function ChatContent() {
         }
       }
     } catch (e) {
-      setMessages((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1] = { role: "assistant", content: t.chat.connectionError(String(e)) };
-        return updated;
-      });
+      if (e instanceof DOMException && e.name === "AbortError") {
+        // User cancelled, keep partial text as-is
+      } else {
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { role: "assistant", content: t.chat.connectionError(String(e)) };
+          return updated;
+        });
+      }
+    } finally {
+      abortControllerRef.current = null;
     }
 
     setStreaming(false);
@@ -2225,19 +2243,24 @@ function ChatContent() {
                       disabled={streaming || !openClawReady} rows={1}
                     />
 
-                    {/* Mic / Send toggle button */}
+                    {/* Stop / Mic / Send toggle button */}
                     <button
                       data-testid="chat-send-button"
-                      onClick={input.trim() || attachments.length > 0 ? sendMessage : startVoiceRecording}
-                      disabled={streaming || !openClawReady}
+                      onClick={streaming ? stopGeneration : input.trim() || attachments.length > 0 ? sendMessage : startVoiceRecording}
+                      disabled={!streaming && !openClawReady}
                       className={`shrink-0 w-7 h-7 flex items-center justify-center relative transition-all active:scale-90 disabled:opacity-30 ${
                         listening ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                       }`}
-                      title={input.trim() || attachments.length > 0 ? t.chat.send : t.chat.voiceInput}>
+                      title={streaming ? "Stop" : input.trim() || attachments.length > 0 ? t.chat.send : t.chat.voiceInput}>
+                      {/* Stop icon */}
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"
+                        className={`absolute transition-all duration-200 ${streaming ? "opacity-100 scale-100" : "opacity-0 scale-75"}`}>
+                        <rect x="4" y="4" width="16" height="16" rx="2" />
+                      </svg>
                       {/* Mic icon */}
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-                        className={`absolute transition-all duration-200 ${input.trim() || attachments.length > 0 ? "opacity-0 scale-75" : "opacity-100 scale-100"}`}>
+                        className={`absolute transition-all duration-200 ${!streaming && !(input.trim() || attachments.length > 0) ? "opacity-100 scale-100" : "opacity-0 scale-75"}`}>
                         <path d="M12 15.5C14.21 15.5 16 13.71 16 11.5V6C16 3.79 14.21 2 12 2C9.79 2 8 3.79 8 6V11.5C8 13.71 9.79 15.5 12 15.5Z" />
                         <path d="M4.35 9.65V11.35C4.35 15.57 7.78 19 12 19C16.22 19 19.65 15.57 19.65 11.35V9.65" />
                         <path d="M12 19V22" />
@@ -2245,7 +2268,7 @@ function ChatContent() {
                       {/* Send icon */}
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-                        className={`absolute transition-all duration-200 ${input.trim() || attachments.length > 0 ? "opacity-100 scale-100" : "opacity-0 scale-75"}`}>
+                        className={`absolute transition-all duration-200 ${!streaming && (input.trim() || attachments.length > 0) ? "opacity-100 scale-100" : "opacity-0 scale-75"}`}>
                         <path d="M9.51 4.23L18.07 8.51C21.91 10.43 21.91 13.57 18.07 15.49L9.51 19.77C3.89 22.58 1.42 20.11 4.23 14.49L5.12 12.68C5.32 12.28 5.32 11.72 5.12 11.32L4.23 9.51C1.42 3.89 3.89 1.42 9.51 4.23Z" />
                         <path d="M5.44 12H10.84" />
                       </svg>

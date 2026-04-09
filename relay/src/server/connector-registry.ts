@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 
 import type { WebSocket } from "ws";
 
+import type { BrowserFrameEvent, BrowserSessionSnapshot } from "../../../browser/shared/types.ts";
 import type {
+  CancelEnvelope,
   ConnectorAuthContext,
   ConnectorInboundEnvelope,
   ConnectorOutboundEnvelope,
@@ -38,6 +40,9 @@ interface PendingInvocation {
 export class ConnectorRegistry {
   private readonly connections = new Map<string, ActiveConnection>();
   private readonly pending = new Map<string, PendingInvocation>();
+  private readonly browserWatchers = new Map<string, Set<WebSocket>>();
+  private readonly browserSessions = new Map<string, BrowserSessionSnapshot>();
+  private readonly browserFrames = new Map<string, BrowserFrameEvent>();
 
   constructor(
     private readonly db: RelayDatabase,
@@ -47,6 +52,10 @@ export class ConnectorRegistry {
 
   private key(tenantId: string, connectorId: string): string {
     return `${tenantId}:${connectorId}`;
+  }
+
+  private browserKey(tenantId: string, agentId: string, workspaceId: string): string {
+    return `${tenantId}:${agentId}:${workspaceId}`;
   }
 
   attach(socket: WebSocket, auth: ConnectorAuthContext): void {
@@ -104,6 +113,38 @@ export class ConnectorRegistry {
         return;
       }
       case "event":
+        if (message.event === "browser.state") {
+          const workspaceId = typeof message.payload.workspaceId === "string" ? message.payload.workspaceId : undefined;
+          const session = message.payload.session as BrowserSessionSnapshot | undefined;
+          if (workspaceId && session) {
+            this.browserSessions.set(this.browserKey(auth.tenantId, auth.agentId, workspaceId), session);
+            this.broadcastBrowser(auth.tenantId, auth.agentId, workspaceId, {
+              type: "browser.state",
+              reason: message.payload.reason,
+              session,
+            });
+            this.db.appendActivity({
+              tenantId: auth.tenantId,
+              agentId: auth.agentId,
+              workspaceId,
+              capability: "browser.state",
+              status: "info",
+              detail: typeof message.payload.reason === "string" ? message.payload.reason : "browser update",
+            });
+            return;
+          }
+        }
+        if (message.event === "browser.frame") {
+          const frame = message.payload as BrowserFrameEvent;
+          if (typeof frame.workspaceId === "string") {
+            this.browserFrames.set(this.browserKey(auth.tenantId, auth.agentId, frame.workspaceId), frame);
+            this.broadcastBrowser(auth.tenantId, auth.agentId, frame.workspaceId, {
+              type: "browser.frame",
+              frame,
+            });
+            return;
+          }
+        }
         this.db.appendActivity({
           tenantId: auth.tenantId,
           agentId: auth.agentId,
@@ -176,6 +217,7 @@ export class ConnectorRegistry {
     operation: string;
     payload?: Record<string, unknown>;
     onStream?: (payload: StreamEnvelope) => void;
+    signal?: AbortSignal;
   }): Promise<Record<string, unknown>> {
     const connection = this.connections.get(this.key(input.tenantId, input.connectorId));
     if (!connection) {
@@ -206,8 +248,41 @@ export class ConnectorRegistry {
         onStream: input.onStream,
       });
 
+      const onAbort = () => {
+        const pending = this.pending.get(requestId);
+        if (!pending) return;
+        clearTimeout(pending.timer);
+        this.pending.delete(requestId);
+        const cancelEnvelope: CancelEnvelope = { type: "cancel", requestId };
+        connection.socket.send(JSON.stringify(cancelEnvelope));
+        pending.resolve({ cancelled: true, requestId });
+      };
+
+      if (input.signal) {
+        if (input.signal.aborted) {
+          clearTimeout(timer);
+          this.pending.delete(requestId);
+          resolve({ cancelled: true, requestId });
+          return;
+        }
+        input.signal.addEventListener("abort", onAbort, { once: true });
+      }
+
+      const cleanup = () => {
+        if (input.signal) input.signal.removeEventListener("abort", onAbort);
+      };
+
+      const originalResolve = this.pending.get(requestId)!.resolve;
+      const originalReject = this.pending.get(requestId)!.reject;
+      this.pending.set(requestId, {
+        ...this.pending.get(requestId)!,
+        resolve: (value) => { cleanup(); originalResolve(value); },
+        reject: (reason) => { cleanup(); originalReject(reason); },
+      });
+
       connection.socket.send(JSON.stringify(envelope), (error) => {
         if (!error) return;
+        cleanup();
         clearTimeout(timer);
         this.pending.delete(requestId);
         reject(error);
@@ -220,5 +295,67 @@ export class ConnectorRegistry {
     if (!connection) return;
     this.connections.delete(this.key(tenantId, connectorId));
     connection.socket.close();
+  }
+
+  subscribeBrowser(input: {
+    tenantId: string;
+    agentId: string;
+    workspaceId: string;
+    socket: WebSocket;
+  }): () => void {
+    const key = this.browserKey(input.tenantId, input.agentId, input.workspaceId);
+    const watchers = this.browserWatchers.get(key) ?? new Set<WebSocket>();
+    watchers.add(input.socket);
+    this.browserWatchers.set(key, watchers);
+    return () => {
+      const current = this.browserWatchers.get(key);
+      if (!current) return;
+      current.delete(input.socket);
+      if (current.size === 0) {
+        this.browserWatchers.delete(key);
+      }
+    };
+  }
+
+  getBrowserState(input: {
+    tenantId: string;
+    agentId: string;
+    workspaceId: string;
+  }): {
+    session?: BrowserSessionSnapshot;
+    frame?: BrowserFrameEvent;
+  } {
+    const key = this.browserKey(input.tenantId, input.agentId, input.workspaceId);
+    return {
+      ...(this.browserSessions.has(key) ? { session: this.browserSessions.get(key) } : {}),
+      ...(this.browserFrames.has(key) ? { frame: this.browserFrames.get(key) } : {}),
+    };
+  }
+
+  cacheBrowserState(input: {
+    tenantId: string;
+    agentId: string;
+    workspaceId: string;
+    session?: BrowserSessionSnapshot;
+    frame?: BrowserFrameEvent;
+  }): void {
+    const key = this.browserKey(input.tenantId, input.agentId, input.workspaceId);
+    if (input.session) this.browserSessions.set(key, input.session);
+    if (input.frame) this.browserFrames.set(key, input.frame);
+  }
+
+  private broadcastBrowser(
+    tenantId: string,
+    agentId: string,
+    workspaceId: string,
+    payload: Record<string, unknown>,
+  ): void {
+    const watchers = this.browserWatchers.get(this.browserKey(tenantId, agentId, workspaceId));
+    if (!watchers || watchers.size === 0) return;
+    const raw = JSON.stringify(payload);
+    for (const watcher of watchers) {
+      if (watcher.readyState !== 1) continue;
+      watcher.send(raw);
+    }
   }
 }

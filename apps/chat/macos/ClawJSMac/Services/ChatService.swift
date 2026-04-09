@@ -19,6 +19,7 @@ final class ChatService: ObservableObject {
     private var reverseProjectMap: [String: UUID] = [:]
     private var projectAgents: [UUID: [UUID]] = [:]
     private var agentProjects: [UUID: [UUID]] = [:]
+    private var activeStreamTask: Task<Void, Never>?
 
     var filteredProjects: [Project] {
         if searchText.isEmpty { return projects }
@@ -350,9 +351,9 @@ final class ChatService: ObservableObject {
         let remoteProjectId = projectId.flatMap { projectMap[$0] }
 
         if let sessionId = sessionMap[conversationId] {
-            Task { await streamReply(conversationId: conversationId, sessionId: sessionId, agentId: remoteAgentId, projectId: remoteProjectId, text: text) }
+            activeStreamTask = Task { await streamReply(conversationId: conversationId, sessionId: sessionId, agentId: remoteAgentId, projectId: remoteProjectId, text: text) }
         } else {
-            Task {
+            activeStreamTask = Task {
                 do {
                     guard let remoteAgentId, let remoteProjectId else {
                         throw APIService.APIError.badResponse
@@ -403,6 +404,14 @@ final class ChatService: ObservableObject {
                     self.conversations[idx].status = .unread
                 }
             }
+        }
+    }
+
+    func cancelGeneration(in conversationId: UUID) {
+        activeStreamTask?.cancel()
+        activeStreamTask = nil
+        if let idx = conversations.firstIndex(where: { $0.id == conversationId }) {
+            conversations[idx].status = .read
         }
     }
 

@@ -2,7 +2,7 @@ import { setTimeout as delay } from "node:timers/promises";
 
 import WebSocket from "ws";
 
-import type { ConnectorInboundEnvelope, ConnectorOutboundEnvelope, EnrollmentResult, InvokeEnvelope } from "../shared/protocol.ts";
+import type { CancelEnvelope, ConnectorInboundEnvelope, ConnectorOutboundEnvelope, EnrollmentResult, InvokeEnvelope } from "../shared/protocol.ts";
 import { RelayConnectorRuntime, type RelayConnectorOptions } from "./runtime.ts";
 
 function parseArgs(argv: string[]): RelayConnectorOptions {
@@ -118,11 +118,18 @@ function toWebSocketUrl(relayUrl: string): string {
 
 async function runOnce(options: RelayConnectorOptions): Promise<void> {
   const enrollment = await bootstrapConnector(options);
-  const runtime = new RelayConnectorRuntime(options);
   const socket = new WebSocket(toWebSocketUrl(options.relayUrl), {
     headers: {
       Authorization: `Bearer ${enrollment.connectorToken}`,
     },
+  });
+  const runtime = new RelayConnectorRuntime(options, (event, payload) => {
+    if (socket.readyState !== WebSocket.OPEN) return;
+    socket.send(JSON.stringify({
+      type: "event",
+      event,
+      payload,
+    }));
   });
 
   socket.on("open", () => {
@@ -142,6 +149,7 @@ async function runOnce(options: RelayConnectorOptions): Promise<void> {
           "inbox",
           "people",
           "events",
+          "time",
           "personas",
           "plugins",
           "routines",
@@ -149,6 +157,7 @@ async function runOnce(options: RelayConnectorOptions): Promise<void> {
           "images",
           "integrations",
           "admin",
+          "browser",
         ],
         workspaces: runtime.listWorkspaces(),
       },
@@ -164,15 +173,29 @@ async function runOnce(options: RelayConnectorOptions): Promise<void> {
     socket.once("close", () => clearInterval(heartbeat));
   });
 
+  const activeRequests = new Map<string, AbortController>();
+
   socket.on("message", async (buffer) => {
-    const message = JSON.parse(buffer.toString()) as ConnectorInboundEnvelope | InvokeEnvelope;
+    const message = JSON.parse(buffer.toString()) as ConnectorInboundEnvelope | InvokeEnvelope | CancelEnvelope;
+
+    if (message.type === "cancel") {
+      const controller = activeRequests.get(message.requestId);
+      if (controller) controller.abort("cancelled_by_client");
+      return;
+    }
+
     if (message.type !== "invoke") return;
+
+    const controller = new AbortController();
+    activeRequests.set(message.requestId, controller);
+
     try {
       const result = await runtime.execute(
         message.operation,
         message.workspaceId,
         message.payload,
         (event, payload) => {
+          if (socket.readyState !== WebSocket.OPEN) return;
           socket.send(JSON.stringify({
             type: "stream",
             requestId: message.requestId,
@@ -180,6 +203,7 @@ async function runOnce(options: RelayConnectorOptions): Promise<void> {
             payload,
           }));
         },
+        controller.signal,
       );
       socket.send(JSON.stringify({
         type: "result",
@@ -193,6 +217,8 @@ async function runOnce(options: RelayConnectorOptions): Promise<void> {
         code: "connector_operation_failed",
         message: error instanceof Error ? error.message : String(error),
       }));
+    } finally {
+      activeRequests.delete(message.requestId);
     }
   });
 

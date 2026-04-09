@@ -5,6 +5,8 @@ import path from "node:path";
 import { applyTextMutation, createClaw } from "@clawjs/claw";
 import { extendClawWithWorkspace } from "@clawjs/workspace";
 
+import { BrowserSessionManager } from "../../../browser/host/session-manager.ts";
+import type { BrowserActor, BrowserInputCommand } from "../../../browser/shared/types.ts";
 import { WorkspaceCompatStore } from "./compat-store.ts";
 
 export interface RelayConnectorOptions {
@@ -15,6 +17,8 @@ export interface RelayConnectorOptions {
   workspaceRoot: string;
   runtimeAdapter: string;
 }
+
+type RelayConnectorEventEmitter = (event: string, payload: Record<string, unknown>) => void;
 
 interface RuntimeContext {
   claw: Awaited<ReturnType<typeof createClaw>>;
@@ -42,7 +46,7 @@ const DEFAULT_PERSONAS = [
     avatar: "bot",
     role: "General Purpose",
     systemPrompt: "You are a helpful assistant.",
-    skills: ["conversation"],
+    skills: ["session"],
     channels: ["Chat"],
     isDefault: true,
     createdAt: Date.now(),
@@ -154,8 +158,17 @@ function upsertManagedBlocks(filePath: string, title: string, blocks: Array<{ bl
 
 export class RelayConnectorRuntime {
   private readonly contexts = new Map<string, Promise<RuntimeContext>>();
+  private readonly browser: BrowserSessionManager;
 
-  constructor(private readonly options: RelayConnectorOptions) {}
+  constructor(
+    private readonly options: RelayConnectorOptions,
+    private readonly emitEvent?: RelayConnectorEventEmitter,
+  ) {
+    this.browser = new BrowserSessionManager({
+      onState: (event) => this.emitEvent?.("browser.state", event as unknown as Record<string, unknown>),
+      onFrame: (event) => this.emitEvent?.("browser.frame", event as unknown as Record<string, unknown>),
+    });
+  }
 
   listWorkspaces(): Array<{ workspaceId: string; displayName: string }> {
     ensureDir(this.options.workspaceRoot);
@@ -221,6 +234,14 @@ export class RelayConnectorRuntime {
         materializationVersion: metadata.materializationVersion,
         rootDir: metadata.workspaceDir,
       },
+      ...(process.env.CLAWJS_TIME_URL
+        ? {
+            time: {
+              baseUrl: process.env.CLAWJS_TIME_URL,
+              token: process.env.CLAWJS_TIME_TOKEN,
+            },
+          }
+        : {}),
     });
     await claw.workspace.init();
     const workspaceClaw = await extendClawWithWorkspace(claw, { workspaceDir: metadata.workspaceDir });
@@ -478,6 +499,7 @@ export class RelayConnectorRuntime {
     workspaceId: string | undefined,
     payload: Record<string, unknown> | undefined,
     emitStream: (event: string, payload: Record<string, unknown>) => void,
+    signal?: AbortSignal,
   ): Promise<Record<string, unknown>> {
     const targetWorkspaceId = workspaceId ?? "main";
     if (operation === "admin.workspace.create") {
@@ -496,8 +518,10 @@ export class RelayConnectorRuntime {
     }
 
     const { claw, workspaceClaw, compat } = await this.getContext(targetWorkspaceId);
+    const metadata = this.resolveWorkspaceMaterialization(targetWorkspaceId);
     const compatRead = <T>(name: string, fallback: T[] = []) => compat.readCollection<T>(name, fallback);
     const compatWrite = <T>(name: string, entries: T[]) => compat.writeCollection(name, entries);
+    const actor = this.readBrowserActor(payload?.actor);
 
     switch (operation) {
       case "workspace.status": {
@@ -519,39 +543,104 @@ export class RelayConnectorRuntime {
         const channels = await claw.channels.list().catch(() => []);
         return { integrations: { runtime, channels } };
       }
+      case "browser.session.status": {
+        return {
+          session: await this.browser.getSessionStatus({
+            workspaceId: targetWorkspaceId,
+            workspaceDir: this.resolveWorkspaceMaterialization(targetWorkspaceId).workspaceDir,
+          }),
+        };
+      }
+      case "browser.session.ensure": {
+        return {
+          session: await this.browser.ensureSession({
+            workspaceId: targetWorkspaceId,
+            workspaceDir: this.resolveWorkspaceMaterialization(targetWorkspaceId).workspaceDir,
+            ...(typeof payload?.initialUrl === "string" ? { initialUrl: payload.initialUrl } : {}),
+          }),
+        };
+      }
+      case "browser.control.acquire": {
+        if (!actor) throw new Error("browser actor is required");
+        return {
+          session: await this.browser.acquireControl({
+            workspaceId: targetWorkspaceId,
+            workspaceDir: this.resolveWorkspaceMaterialization(targetWorkspaceId).workspaceDir,
+            actor,
+          }),
+        };
+      }
+      case "browser.control.release": {
+        if (!actor) throw new Error("browser actor is required");
+        return {
+          session: await this.browser.releaseControl({
+            workspaceId: targetWorkspaceId,
+            workspaceDir: this.resolveWorkspaceMaterialization(targetWorkspaceId).workspaceDir,
+            actor,
+          }),
+        };
+      }
+      case "browser.navigate": {
+        if (!actor) throw new Error("browser actor is required");
+        const url = typeof payload?.url === "string" ? payload.url : "";
+        if (!url.trim()) throw new Error("browser url is required");
+        return {
+          session: await this.browser.navigate({
+            workspaceId: targetWorkspaceId,
+            workspaceDir: this.resolveWorkspaceMaterialization(targetWorkspaceId).workspaceDir,
+            actor,
+            url,
+          }),
+        };
+      }
+      case "browser.input": {
+        if (!actor) throw new Error("browser actor is required");
+        const command = payload?.command as BrowserInputCommand | undefined;
+        if (!command || typeof command.type !== "string") {
+          throw new Error("browser command is required");
+        }
+        return {
+          session: await this.browser.dispatchInput({
+            workspaceId: targetWorkspaceId,
+            workspaceDir: this.resolveWorkspaceMaterialization(targetWorkspaceId).workspaceDir,
+            actor,
+            command,
+          }),
+        };
+      }
       case "sessions.list":
-        return { sessions: claw.conversations.listSessions() };
+        return { sessions: claw.sessions.listSessions() };
       case "sessions.create": {
         const title = typeof payload?.title === "string" ? payload.title : undefined;
         const message = typeof payload?.message === "string" ? payload.message : undefined;
-        const session = claw.conversations.createSession(title);
+        const session = claw.sessions.createSession(title);
         const documentIds = Array.isArray(payload?.documentIds)
           ? payload.documentIds.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
           : [];
         const documents = documentIds.length > 0 ? await claw.documents.resolveRefs(documentIds) : undefined;
         if (message || documents?.length) {
-          claw.conversations.appendMessage(session.sessionId, {
+          claw.sessions.appendMessage(session.sessionId, {
             role: "user",
             content: message ?? "",
             ...(documents?.length ? { documents } : {}),
           });
         }
-        return { session: claw.conversations.getSession(session.sessionId) };
+        return { session: claw.sessions.getSession(session.sessionId) };
       }
       case "sessions.get": {
         const sessionId = String(payload?.sessionId ?? "");
-        return { session: claw.conversations.getSession(sessionId) };
+        return { session: claw.sessions.getSession(sessionId) };
       }
       case "sessions.update": {
         const sessionId = String(payload?.sessionId ?? "");
         const title = String(payload?.title ?? "");
-        const updated = claw.conversations.updateSessionTitle(sessionId, title);
+        const updated = claw.sessions.updateSessionTitle(sessionId, title);
         return { ok: !!updated, title };
       }
       case "sessions.search": {
         const query = String(payload?.q ?? "");
         const limit = typeof payload?.limit === "number" ? payload.limit : undefined;
-        const sessions = await claw.conversations.searchSessions({ query, limit });
+        const sessions = await claw.sessions.searchSessions({ query, limit });
         return { sessions };
       }
       case "sessions.append-message": {
@@ -562,7 +651,7 @@ export class RelayConnectorRuntime {
           ? payload.documentIds.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
           : [];
         const documents = documentIds.length > 0 ? await claw.documents.resolveRefs(documentIds) : undefined;
-        const session = claw.conversations.appendMessage(sessionId, {
+        const session = claw.sessions.appendMessage(sessionId, {
           role,
           content,
           ...(documents?.length ? { documents } : {}),
@@ -571,7 +660,7 @@ export class RelayConnectorRuntime {
       }
       case "sessions.generate-title": {
         const sessionId = String(payload?.sessionId ?? "");
-        const title = await claw.conversations.generateTitle({ sessionId, transport: "auto" });
+        const title = await claw.sessions.generateTitle({ sessionId, transport: "auto" });
         return { title };
       }
       case "sessions.reply": {
@@ -582,23 +671,24 @@ export class RelayConnectorRuntime {
           : [];
         const documents = documentIds.length > 0 ? await claw.documents.resolveRefs(documentIds) : undefined;
         if (message || documents?.length) {
-          claw.conversations.appendMessage(sessionId, {
+          claw.sessions.appendMessage(sessionId, {
             role: "user",
             content: message ?? "",
             ...(documents?.length ? { documents } : {}),
           });
         }
         let reply = "";
-        for await (const chunk of claw.conversations.streamAssistantReply({
+        for await (const chunk of claw.sessions.streamAssistantReply({
           sessionId,
           ...(typeof payload?.systemPrompt === "string" ? { systemPrompt: payload.systemPrompt } : {}),
           ...(typeof payload?.transport === "string" ? { transport: payload.transport as "auto" | "cli" | "gateway" } : {}),
+          signal,
         })) {
           if (!chunk.done) reply += chunk.delta;
         }
         return {
           reply: reply.trim(),
-          session: claw.conversations.getSession(sessionId),
+          session: claw.sessions.getSession(sessionId),
         };
       }
       case "sessions.stream": {
@@ -609,16 +699,17 @@ export class RelayConnectorRuntime {
           : [];
         const documents = documentIds.length > 0 ? await claw.documents.resolveRefs(documentIds) : undefined;
         if (message || documents?.length) {
-          claw.conversations.appendMessage(sessionId, {
+          claw.sessions.appendMessage(sessionId, {
             role: "user",
             content: message ?? "",
             ...(documents?.length ? { documents } : {}),
           });
         }
-        for await (const event of claw.conversations.streamAssistantReplyEvents({
+        for await (const event of claw.sessions.streamAssistantReplyEvents({
           sessionId,
           ...(typeof payload?.systemPrompt === "string" ? { systemPrompt: payload.systemPrompt } : {}),
           ...(typeof payload?.transport === "string" ? { transport: payload.transport as "auto" | "cli" | "gateway" } : {}),
+          signal,
         })) {
           emitStream(
             event.type,
@@ -629,7 +720,7 @@ export class RelayConnectorRuntime {
         }
         return {
           ok: true,
-          session: claw.conversations.getSession(sessionId),
+          session: claw.sessions.getSession(sessionId),
         };
       }
       case "documents.list": {
@@ -696,12 +787,12 @@ export class RelayConnectorRuntime {
       }
       case "sessions.delete-all": {
         const metadata = this.resolveWorkspaceMaterialization(targetWorkspaceId);
-        const conversationsDir = path.join(metadata.workspaceDir, ".clawjs", "conversations");
+        const sessionsDir = path.join(metadata.workspaceDir, ".clawjs", "sessions");
         let deleted = 0;
-        if (fs.existsSync(conversationsDir)) {
-          for (const entry of fs.readdirSync(conversationsDir)) {
+        if (fs.existsSync(sessionsDir)) {
+          for (const entry of fs.readdirSync(sessionsDir)) {
             try {
-              fs.rmSync(path.join(conversationsDir, entry), { recursive: true, force: true });
+              fs.rmSync(path.join(sessionsDir, entry), { recursive: true, force: true });
               deleted += 1;
             } catch {}
           }
@@ -827,16 +918,65 @@ export class RelayConnectorRuntime {
         return { ok: true };
       }
       case "events.list":
+        if (claw.time.configured) {
+          return await claw.time.legacyEvents();
+        }
         return { events: await workspaceClaw.events.list({ limit: 100 }) };
       case "events.create":
+        if (claw.time.configured) {
+          const created = await claw.time.create({
+            kind: "event",
+            title: String(payload?.title ?? "Untitled event"),
+            description: typeof payload?.description === "string" ? payload.description : undefined,
+            location: typeof payload?.location === "string" ? payload.location : undefined,
+            startsAt: typeof payload?.startsAt === "string" ? payload.startsAt : undefined,
+            endsAt: typeof payload?.endsAt === "string" ? payload.endsAt : undefined,
+            workspaceId: targetWorkspaceId,
+            ...(metadata.projectId ? { projectId: metadata.projectId } : {}),
+            agentId: metadata.logicalAgentId,
+          });
+          return { event: created.item };
+        }
         return { event: await workspaceClaw.events.create(payload as Record<string, unknown>) };
       case "events.update": {
         const id = String(payload?.id ?? "");
+        if (claw.time.configured) {
+          const updated = await claw.time.update(id, payload as Record<string, unknown>);
+          return { event: updated.item };
+        }
         return { event: await workspaceClaw.events.update(id, payload as Record<string, unknown>) };
       }
       case "events.delete": {
         const id = String(payload?.id ?? "");
+        if (claw.time.configured) {
+          await claw.time.delete(id);
+          return { ok: true };
+        }
         await workspaceClaw.events.remove(id);
+        return { ok: true };
+      }
+      case "time.list":
+        return await claw.time.list({
+          workspaceId: targetWorkspaceId,
+          ...(metadata.projectId ? { projectId: metadata.projectId } : {}),
+          agentId: metadata.logicalAgentId,
+          ...(typeof payload?.kind === "string" ? { kind: payload.kind as any } : {}),
+          ...(typeof payload?.status === "string" ? { status: payload.status as any } : {}),
+        });
+      case "time.create":
+        return await claw.time.create({
+          ...(payload as Record<string, unknown>),
+          workspaceId: targetWorkspaceId,
+          ...(metadata.projectId ? { projectId: metadata.projectId } : {}),
+          agentId: metadata.logicalAgentId,
+        } as Record<string, unknown>);
+      case "time.update": {
+        const id = String(payload?.id ?? "");
+        return await claw.time.update(id, payload as Record<string, unknown>);
+      }
+      case "time.delete": {
+        const id = String(payload?.id ?? "");
+        await claw.time.delete(id);
         return { ok: true };
       }
       case "personas.list":
@@ -886,8 +1026,25 @@ export class RelayConnectorRuntime {
         return { ok: true };
       }
       case "routines.list":
+        if (claw.time.configured) {
+          return await claw.time.legacyRoutines();
+        }
         return { routines: compatRead("routines"), executions: compatRead("routine-executions") };
       case "routines.create": {
+        if (claw.time.configured) {
+          const created = await claw.time.create({
+            kind: "routine",
+            title: String(payload?.label ?? payload?.title ?? "Routine"),
+            description: typeof payload?.description === "string" ? payload.description : undefined,
+            workspaceId: targetWorkspaceId,
+            ...(metadata.projectId ? { projectId: metadata.projectId } : {}),
+            agentId: metadata.logicalAgentId,
+            ...(typeof payload?.schedule === "string"
+              ? { schedule: { mode: "cron", timezone: "UTC", cron: payload.schedule } }
+              : {}),
+          });
+          return { routine: created.item };
+        }
         const routines = compatRead<any>("routines");
         const routine = { id: randomUUID(), enabled: true, createdAt: Date.now(), updatedAt: Date.now(), ...payload };
         routines.push(routine);
@@ -895,6 +1052,14 @@ export class RelayConnectorRuntime {
         return { routine };
       }
       case "routines.update": {
+        if (claw.time.configured) {
+          const id = String(payload?.id ?? "");
+          if (payload?.runNow) {
+            return await claw.time.runNow(id);
+          }
+          const updated = await claw.time.update(id, payload as Record<string, unknown>);
+          return { routine: updated.item };
+        }
         const routines = compatRead<any>("routines");
         const executions = compatRead<any>("routine-executions");
         const id = String(payload?.id ?? "");
@@ -919,6 +1084,10 @@ export class RelayConnectorRuntime {
       }
       case "routines.delete": {
         const id = String(payload?.id ?? "");
+        if (claw.time.configured) {
+          await claw.time.delete(id);
+          return { ok: true };
+        }
         compatWrite("routines", compatRead<any>("routines").filter((entry: any) => entry.id !== id));
         compatWrite("routine-executions", compatRead<any>("routine-executions").filter((entry: any) => entry.routineId !== id));
         return { ok: true };
@@ -961,5 +1130,18 @@ export class RelayConnectorRuntime {
       default:
         throw new Error(`Unsupported relay operation: ${operation}`);
     }
+  }
+
+  private readBrowserActor(input: unknown): BrowserActor | null {
+    if (!input || typeof input !== "object") return null;
+    const actor = input as Record<string, unknown>;
+    if (typeof actor.deviceId !== "string" || typeof actor.userId !== "string") {
+      return null;
+    }
+    return {
+      deviceId: actor.deviceId,
+      userId: actor.userId,
+      ...(typeof actor.email === "string" ? { email: actor.email } : {}),
+    };
   }
 }

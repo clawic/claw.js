@@ -133,6 +133,7 @@ fun ChatScreen(
             else
                 stringResourceOf(R.string.chat_message_placeholder),
             isDisabled = isBusy,
+            isGenerating = isBusy,
             autofocus = true,
             onSend = {
                 val text = messageText.trim()
@@ -140,6 +141,7 @@ fun ChatScreen(
                 messageText = ""
                 repo.sendMessage(conversationId, text)
             },
+            onStop = { repo.cancelGeneration(conversationId) },
             modifier = Modifier.navigationBarsPadding(),
         )
     }
