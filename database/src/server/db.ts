@@ -309,6 +309,151 @@ function builtInCollections(): Array<{
       ],
       indexes: [{ name: "notes_title_idx", fields: ["title"] }],
     },
+    // ── Company app collections ─────────────────────────────────────
+    // Models a virtual company where the human (board) hires AI agents
+    // into roles and collaborates with them via issues and an inbox.
+    {
+      name: "companies",
+      displayName: "Companies",
+      coreFieldNames: ["name", "issuePrefix", "status"],
+      fields: [
+        { name: "name", type: "text", required: true },
+        { name: "issuePrefix", type: "text", required: true },
+        { name: "issueCounter", type: "number", required: true },
+        { name: "status", type: "select", required: true, options: ["active", "archived"] },
+        { name: "description", type: "text" },
+        { name: "brandColor", type: "text" },
+        { name: "budgetMonthlyCents", type: "number" },
+        { name: "spentMonthlyCents", type: "number" },
+        { name: "requireBoardApprovalForNewAgents", type: "boolean" },
+      ],
+      indexes: [{ name: "companies_prefix_unique", fields: ["issuePrefix"], unique: true }],
+    },
+    {
+      name: "goals",
+      displayName: "Goals",
+      coreFieldNames: ["companyId", "title", "status"],
+      fields: [
+        { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+        { name: "title", type: "text", required: true },
+        { name: "level", type: "select", required: true, options: ["company", "team", "personal"] },
+        { name: "status", type: "select", required: true, options: ["active", "paused", "done"] },
+        { name: "description", type: "text" },
+        { name: "parentId", type: "relation", relation: { collectionName: "goals" } },
+        { name: "ownerAgentId", type: "relation", relation: { collectionName: "company_agents" } },
+      ],
+      indexes: [{ name: "goals_company_idx", fields: ["companyId"] }],
+    },
+    {
+      name: "projects",
+      displayName: "Projects",
+      coreFieldNames: ["companyId", "name", "status"],
+      fields: [
+        { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+        { name: "name", type: "text", required: true },
+        { name: "status", type: "select", required: true, options: ["draft", "in_progress", "paused", "done", "archived"] },
+        { name: "goalId", type: "relation", relation: { collectionName: "goals" } },
+        { name: "description", type: "text" },
+        { name: "leadAgentId", type: "relation", relation: { collectionName: "company_agents" } },
+        { name: "color", type: "text" },
+      ],
+      indexes: [{ name: "projects_company_idx", fields: ["companyId"] }],
+    },
+    {
+      name: "company_agents",
+      displayName: "Company Agents",
+      coreFieldNames: ["companyId", "name", "role", "status"],
+      fields: [
+        { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+        { name: "name", type: "text", required: true },
+        { name: "role", type: "text", required: true },
+        { name: "title", type: "text", required: true },
+        { name: "status", type: "select", required: true, options: ["pending_approval", "active", "paused", "fired"] },
+        { name: "adapterType", type: "select", required: true, options: ["human", "clawjs_local"] },
+        { name: "icon", type: "text" },
+        { name: "reportsTo", type: "relation", relation: { collectionName: "company_agents" } },
+        { name: "capabilities", type: "text" },
+        { name: "adapterConfig", type: "json" },
+        { name: "instructionsMarkdown", type: "text" },
+        { name: "clawAppId", type: "text" },
+        { name: "clawWorkspaceId", type: "text" },
+        { name: "clawAgentId", type: "text" },
+        { name: "workspaceDir", type: "text" },
+      ],
+      indexes: [{ name: "company_agents_company_idx", fields: ["companyId"] }],
+    },
+    {
+      name: "issues",
+      displayName: "Issues",
+      coreFieldNames: ["companyId", "identifier", "title", "status"],
+      fields: [
+        { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+        { name: "identifier", type: "text", required: true },
+        { name: "issueNumber", type: "number", required: true },
+        { name: "title", type: "text", required: true },
+        { name: "status", type: "select", required: true, options: ["todo", "in_progress", "blocked", "in_review", "done", "cancelled"] },
+        { name: "priority", type: "select", required: true, options: ["low", "medium", "high", "urgent"] },
+        { name: "description", type: "text" },
+        { name: "projectId", type: "relation", relation: { collectionName: "projects" } },
+        { name: "goalId", type: "relation", relation: { collectionName: "goals" } },
+        { name: "parentId", type: "relation", relation: { collectionName: "issues" } },
+        { name: "assigneeAgentId", type: "relation", relation: { collectionName: "company_agents" } },
+        { name: "createdByAgentId", type: "relation", relation: { collectionName: "company_agents" } },
+        { name: "createdByUserId", type: "text" },
+        { name: "executionRunId", type: "text" },
+      ],
+      indexes: [
+        { name: "issues_company_idx", fields: ["companyId"] },
+        { name: "issues_identifier_unique", fields: ["companyId", "identifier"], unique: true },
+      ],
+    },
+    {
+      name: "issue_comments",
+      displayName: "Issue Comments",
+      coreFieldNames: ["companyId", "issueId", "body"],
+      fields: [
+        { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+        { name: "issueId", type: "relation", required: true, relation: { collectionName: "issues" } },
+        { name: "body", type: "text", required: true },
+        { name: "authorAgentId", type: "relation", relation: { collectionName: "company_agents" } },
+        { name: "authorUserId", type: "text" },
+        { name: "createdByRunId", type: "text" },
+      ],
+      indexes: [{ name: "issue_comments_issue_idx", fields: ["issueId"] }],
+    },
+    {
+      name: "approvals",
+      displayName: "Approvals",
+      coreFieldNames: ["companyId", "type", "status"],
+      fields: [
+        { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+        { name: "type", type: "select", required: true, options: ["hire_agent", "fire_agent", "budget_change", "policy_change"] },
+        { name: "status", type: "select", required: true, options: ["pending", "approved", "rejected"] },
+        { name: "payload", type: "json" },
+        { name: "requestedByAgentId", type: "relation", relation: { collectionName: "company_agents" } },
+        { name: "requestedByUserId", type: "text" },
+        { name: "decidedAt", type: "date" },
+        { name: "decidedByUserId", type: "text" },
+      ],
+      indexes: [{ name: "approvals_company_idx", fields: ["companyId"] }],
+    },
+    {
+      name: "runs",
+      displayName: "Runs",
+      coreFieldNames: ["companyId", "agentId", "status"],
+      fields: [
+        { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+        { name: "agentId", type: "relation", required: true, relation: { collectionName: "company_agents" } },
+        { name: "status", type: "select", required: true, options: ["queued", "running", "succeeded", "failed", "cancelled"] },
+        { name: "issueId", type: "relation", relation: { collectionName: "issues" } },
+        { name: "clawSessionId", type: "text" },
+        { name: "startedAt", type: "date" },
+        { name: "finishedAt", type: "date" },
+        { name: "errorMessage", type: "text" },
+        { name: "metrics", type: "json" },
+      ],
+      indexes: [{ name: "runs_company_idx", fields: ["companyId"] }],
+    },
   ];
 }
 
@@ -405,6 +550,27 @@ export class DatabaseServiceStore {
     `).run("admin-main", "admin@database.local", hashSecret("database-admin"), now);
     if (this.listNamespaces().length === 0) {
       this.createNamespace({ id: "main", displayName: "Main" });
+    }
+    // Ensure builtin collections exist on every namespace, so newly added
+    // builtins (e.g. the company app collections) are migrated into existing
+    // databases without requiring a manual reset.
+    for (const namespace of this.listNamespaces()) {
+      this.ensureBuiltinCollections(namespace.id);
+    }
+  }
+
+  ensureBuiltinCollections(namespaceId: string): void {
+    for (const builtIn of builtInCollections()) {
+      if (this.getCollection(namespaceId, builtIn.name)) continue;
+      this.createCollection(namespaceId, {
+        name: builtIn.name,
+        displayName: builtIn.displayName,
+        fields: builtIn.fields,
+        indexes: builtIn.indexes,
+        builtin: true,
+        protected: true,
+        coreFieldNames: builtIn.coreFieldNames,
+      });
     }
   }
 
