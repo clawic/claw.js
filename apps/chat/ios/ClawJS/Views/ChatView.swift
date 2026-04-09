@@ -186,33 +186,26 @@ struct ChatView: View {
     // MARK: - Input Area
 
     private var inputArea: some View {
-        Group {
-            if audioService.isRecording {
-                VoiceRecordingOverlay(
-                    audioService: audioService,
-                    onCancel: {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            audioService.cancelRecording()
-                        }
-                    },
-                    onSend: {
-                        sendVoiceMessage()
-                    }
-                )
-            } else {
-                ChatInputBar(
-                    text: $messageText,
-                    placeholder: isBusy ? L10n.Chat.waiting : L10n.Chat.messagePlaceholder,
-                    isDisabled: isBusy,
-                    isGenerating: isBusy,
-                    autofocus: true,
-                    onSend: sendMessage,
-                    onStop: cancelGeneration,
-                    onVoiceRecord: startRecording
-                )
+        ChatInputBar(
+            text: $messageText,
+            placeholder: isBusy ? L10n.Chat.waiting : L10n.Chat.messagePlaceholder,
+            isDisabled: isBusy,
+            isGenerating: isBusy,
+            isRecording: audioService.isRecording,
+            recordingLevels: audioService.currentLevels,
+            autofocus: true,
+            onSend: sendMessage,
+            onStop: cancelGeneration,
+            onVoiceRecord: startRecording,
+            onCancelRecording: {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    audioService.cancelRecording()
+                }
+            },
+            onSendRecording: {
+                sendVoiceMessage()
             }
-        }
-        .animation(.easeInOut(duration: 0.2), value: audioService.isRecording)
+        )
     }
 
     // MARK: - Actions

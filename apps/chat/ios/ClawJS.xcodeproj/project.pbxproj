@@ -27,7 +27,12 @@
 		A1000014000000000000000E /* ProjectDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000014000000000000000E; };
 		A1000015000000000000000F /* CreateAgentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015000000000000000F; };
 		D4A1B72E8F3C09E1A5B60010 /* PhosphorIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A1B72E8F3C09E1A5B60020 /* PhosphorIcon.swift */; };
+		QR0000010000000000000001 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = QR0000020000000000000001 /* QRScannerView.swift */; };
+		MD0000010000000000000001 /* MarkdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MD0000020000000000000001 /* MarkdownView.swift */; };
 		L10N00030000000000000001 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = L10N00010000000000000001 /* Localizable.strings */; };
+		VC0000010000000000000001 /* AudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = VC0000020000000000000001 /* AudioService.swift */; };
+		VC0000010000000000000002 /* VoiceNotePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = VC0000020000000000000002 /* VoiceNotePlayerView.swift */; };
+		VC0000010000000000000003 /* VoiceRecordingOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = VC0000020000000000000003 /* VoiceRecordingOverlay.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -52,6 +57,11 @@
 		A2000014000000000000000E /* ProjectDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDetailView.swift; sourceTree = "<group>"; };
 		A2000015000000000000000F /* CreateAgentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateAgentView.swift; sourceTree = "<group>"; };
 		D4A1B72E8F3C09E1A5B60020 /* PhosphorIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhosphorIcon.swift; sourceTree = "<group>"; };
+		QR0000020000000000000001 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
+		MD0000020000000000000001 /* MarkdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownView.swift; sourceTree = "<group>"; };
+		VC0000020000000000000001 /* AudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioService.swift; sourceTree = "<group>"; };
+		VC0000020000000000000002 /* VoiceNotePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceNotePlayerView.swift; sourceTree = "<group>"; };
+		VC0000020000000000000003 /* VoiceRecordingOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceRecordingOverlay.swift; sourceTree = "<group>"; };
 		L10N00020000000000000001 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		L10N00020000000000000002 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/Localizable.strings; sourceTree = "<group>"; };
 		L10N00020000000000000003 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -110,6 +120,7 @@
 				A20000030000000000000003 /* MockData.swift */,
 				A20000040000000000000004 /* ChatService.swift */,
 				A20000160000000000000010 /* APIService.swift */,
+				VC0000020000000000000001 /* AudioService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -130,6 +141,10 @@
 				A2000014000000000000000E /* ProjectDetailView.swift */,
 				A2000015000000000000000F /* CreateAgentView.swift */,
 				D4A1B72E8F3C09E1A5B60020 /* PhosphorIcon.swift */,
+				QR0000020000000000000001 /* QRScannerView.swift */,
+				VC0000020000000000000002 /* VoiceNotePlayerView.swift */,
+				VC0000020000000000000003 /* VoiceRecordingOverlay.swift */,
+				MD0000020000000000000001 /* MarkdownView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -269,6 +284,11 @@
 				A1000015000000000000000F /* CreateAgentView.swift in Sources */,
 				D4A1B72E8F3C09E1A5B60010 /* PhosphorIcon.swift in Sources */,
 				A10000160000000000000010 /* APIService.swift in Sources */,
+				QR0000010000000000000001 /* QRScannerView.swift in Sources */,
+				VC0000010000000000000001 /* AudioService.swift in Sources */,
+				VC0000010000000000000002 /* VoiceNotePlayerView.swift in Sources */,
+				VC0000010000000000000003 /* VoiceRecordingOverlay.swift in Sources */,
+				MD0000010000000000000001 /* MarkdownView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
