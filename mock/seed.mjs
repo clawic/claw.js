@@ -4,7 +4,7 @@
  *
  * Generates rich, realistic mock data for the demo showcase mode.
  * Writes directly to the filesystem in the same format the demo-store
- * and ConversationStore expect — no demo code modifications required.
+ * and SessionStore expect — no demo code modifications required.
  *
  * Usage:
  *   MOCK_DATA_DIR=/tmp/clawjs-mock/data \

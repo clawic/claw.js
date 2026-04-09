@@ -12,7 +12,7 @@ import type {
   CommandRunner,
   RuntimeAdapter,
   RuntimeAdapterOptions,
-  RuntimeConversationAdapter,
+  RuntimeSessionAdapter,
   RuntimeProbeStatus,
 } from "./contracts.ts";
 import { buildRuntimeCapabilityMap } from "./adapters/shared.ts";
@@ -151,9 +151,9 @@ export async function getRuntimeResourceCatalogs(
   };
 }
 
-export function normalizeRuntimeConversationAdapter(
-  adapter: RuntimeConversationAdapter,
-): RuntimeConversationAdapter {
+export function normalizeRuntimeSessionAdapter(
+  adapter: RuntimeSessionAdapter,
+): RuntimeSessionAdapter {
   const primaryTransport = adapter.primaryTransport
     ?? adapter.transport.primaryTransport
     ?? (adapter.transport.kind === "cli" ? "cli" : "gateway");
@@ -187,12 +187,12 @@ export function normalizeRuntimeConversationAdapter(
   };
 }
 
-export function getRuntimeConversationDescriptor(
+export function getRuntimeSessionDescriptor(
   adapter: RuntimeAdapter,
   options: RuntimeAdapterOptions,
-): RuntimeConversationAdapter {
-  const conversation = adapter.conversation?.create(options) ?? adapter.createConversationAdapter(options);
-  return normalizeRuntimeConversationAdapter(conversation);
+): RuntimeSessionAdapter {
+  const session = adapter.session?.create(options) ?? adapter.createSessionAdapter(options);
+  return normalizeRuntimeSessionAdapter(session);
 }
 
 export function getRuntimeOperationHandlers(adapter: RuntimeAdapter) {

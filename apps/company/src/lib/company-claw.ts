@@ -209,7 +209,7 @@ export async function getOrCreateIssueSession(input: {
   const title = `${COMPANY_SESSION_PREFIX}${input.companyId}::${input.agent.id}::${input.issue.id}`;
   let existing: Array<{ sessionId: string; title?: string }> = [];
   try {
-    existing = claw.conversations.listSessions() as Array<{ sessionId: string; title?: string }>;
+    existing = claw.sessions.listSessions() as Array<{ sessionId: string; title?: string }>;
   } catch {
     existing = [];
   }
@@ -217,7 +217,7 @@ export async function getOrCreateIssueSession(input: {
   if (found) {
     return { sessionId: found.sessionId, title };
   }
-  const created = claw.conversations.createSession(title);
+  const created = claw.sessions.createSession(title);
   return { sessionId: created.sessionId, title };
 }
 
@@ -234,12 +234,12 @@ export async function streamAgentReply(input: {
   signal?: AbortSignal;
 }): Promise<{ text: string; sessionId: string }> {
   const claw = await getCompanyClaw();
-  claw.conversations.appendMessage(input.sessionId, {
+  claw.sessions.appendMessage(input.sessionId, {
     role: "user",
     content: input.userMessage,
   });
   let fullText = "";
-  for await (const event of claw.conversations.streamAssistantReplyEvents({
+  for await (const event of claw.sessions.streamAssistantReplyEvents({
     sessionId: input.sessionId,
     systemPrompt: input.systemPrompt,
     transport: "auto",

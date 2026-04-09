@@ -1,10 +1,10 @@
 import { watchWorkspaceFile, type WatchCallback, type WatchOptions } from "./index.ts";
 
-export function watchConversationTranscript(
+export function watchSessionTranscript(
   workspaceDir: string,
   sessionId: string,
   callback: WatchCallback,
   options?: WatchOptions,
 ): () => void {
-  return watchWorkspaceFile(workspaceDir, `.clawjs/conversations/${sessionId}.jsonl`, callback, options);
+  return watchWorkspaceFile(workspaceDir, `.clawjs/sessions/${sessionId}.jsonl`, callback, options);
 }

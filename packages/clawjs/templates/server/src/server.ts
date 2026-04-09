@@ -11,8 +11,8 @@ import {
 } from "./http.js";
 
 const port = Number(process.env.PORT || "3001");
-type ConversationTransport = "auto" | "cli" | "gateway";
-type ConversationRole = "user" | "system" | "assistant" | "tool";
+type SessionTransport = "auto" | "cli" | "gateway";
+type SessionRole = "user" | "system" | "assistant" | "tool";
 
 function normalizeString(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
@@ -20,7 +20,7 @@ function normalizeString(value: unknown): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-function normalizeRole(value: unknown): ConversationRole {
+function normalizeRole(value: unknown): SessionRole {
   return value === "system" || value === "assistant" || value === "tool" ? value : "user";
 }
 
@@ -77,7 +77,7 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     if (method === "GET") {
       sendJson(response, 200, {
         ok: true,
-        sessions: ready.claw.conversations.listSessions(),
+        sessions: ready.claw.sessions.listSessions(),
       });
       return;
     }
@@ -88,9 +88,9 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
         const title = normalizeString(body.title);
         const message = normalizeString(body.message);
 
-        const session = ready.claw.conversations.createSession(title);
+        const session = ready.claw.sessions.createSession(title);
         if (message) {
-          ready.claw.conversations.appendMessage(session.sessionId, {
+          ready.claw.sessions.appendMessage(session.sessionId, {
             role: "user",
             content: message,
           });
@@ -98,7 +98,7 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
 
         sendJson(response, 201, {
           ok: true,
-          session: ready.claw.conversations.getSession(session.sessionId),
+          session: ready.claw.sessions.getSession(session.sessionId),
         });
       } catch (error) {
         sendJson(response, 400, {
@@ -118,7 +118,7 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       return;
     }
 
-    const session = ready.claw.conversations.getSession(sessionMatch[1] ?? "");
+    const session = ready.claw.sessions.getSession(sessionMatch[1] ?? "");
     if (!session) {
       sendJson(response, 404, { ok: false, error: "Session not found." });
       return;
@@ -146,7 +146,7 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
         return;
       }
 
-      const session = ready.claw.conversations.appendMessage(messageMatch[1] ?? "", {
+      const session = ready.claw.sessions.appendMessage(messageMatch[1] ?? "", {
         role,
         content,
       });
@@ -172,18 +172,18 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       const body = await readJsonBody(request);
       const message = normalizeString(body.message);
       const systemPrompt = normalizeString(body.systemPrompt);
-      const transport = normalizeString(body.transport) as ConversationTransport | undefined;
+      const transport = normalizeString(body.transport) as SessionTransport | undefined;
       const sessionId = replyMatch[1] ?? "";
 
       if (message) {
-        ready.claw.conversations.appendMessage(sessionId, {
+        ready.claw.sessions.appendMessage(sessionId, {
           role: "user",
           content: message,
         });
       }
 
       let reply = "";
-      for await (const chunk of ready.claw.conversations.streamAssistantReply({
+      for await (const chunk of ready.claw.sessions.streamAssistantReply({
         sessionId,
         systemPrompt,
         transport,
@@ -196,7 +196,7 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       sendJson(response, 200, {
         ok: true,
         reply: reply.trim(),
-        session: ready.claw.conversations.getSession(sessionId),
+        session: ready.claw.sessions.getSession(sessionId),
       });
     } catch (error) {
       sendJson(response, 400, {
@@ -219,11 +219,11 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       const body = await readJsonBody(request);
       const message = normalizeString(body.message);
       const systemPrompt = normalizeString(body.systemPrompt);
-      const transport = normalizeString(body.transport) as ConversationTransport | undefined;
+      const transport = normalizeString(body.transport) as SessionTransport | undefined;
       const sessionId = streamMatch[1] ?? "";
 
       if (message) {
-        ready.claw.conversations.appendMessage(sessionId, {
+        ready.claw.sessions.appendMessage(sessionId, {
           role: "user",
           content: message,
         });
@@ -235,7 +235,7 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       sendSseHeaders(response);
       writeSseEvent(response, "ready", { ok: true, sessionId });
 
-      for await (const event of ready.claw.conversations.streamAssistantReplyEvents({
+      for await (const event of ready.claw.sessions.streamAssistantReplyEvents({
         sessionId,
         systemPrompt,
         transport,

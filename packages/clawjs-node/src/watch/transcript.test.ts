@@ -4,18 +4,18 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { watchConversationTranscript } from "./transcript.ts";
+import { watchSessionTranscript } from "./transcript.ts";
 
-test("watchConversationTranscript observes transcript changes", async () => {
+test("watchSessionTranscript observes transcript changes", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-watch-transcript-"));
-  const transcriptDir = path.join(workspaceDir, ".clawjs", "conversations");
+  const transcriptDir = path.join(workspaceDir, ".clawjs", "sessions");
   fs.mkdirSync(transcriptDir, { recursive: true });
   const sessionId = "session-1";
   const transcriptPath = path.join(transcriptDir, `${sessionId}.jsonl`);
   fs.writeFileSync(transcriptPath, "");
 
   const event = await new Promise<{ filePath: string }>((resolve) => {
-    const stop = watchConversationTranscript(workspaceDir, sessionId, (payload) => {
+    const stop = watchSessionTranscript(workspaceDir, sessionId, (payload) => {
       stop();
       resolve(payload);
     });

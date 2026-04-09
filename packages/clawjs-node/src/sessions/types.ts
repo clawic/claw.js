@@ -2,24 +2,24 @@ import type {
   Attachment,
   ContextChip,
   DocumentRef,
-  ConversationSearchInput,
-  ConversationSearchResult,
+  SessionSearchInput,
+  SessionSearchResult,
   Message,
   SessionRecord,
   SessionSummary,
 } from "@clawjs/core";
 
-export type ConversationMessage = Message;
-export type ConversationAttachment = Attachment;
-export type ConversationDocumentRef = DocumentRef;
-export type ConversationContextChip = ContextChip;
-export type ConversationSessionRecord = SessionRecord;
-export type ConversationSessionSummary = SessionSummary;
-export type ConversationSessionSearchInput = ConversationSearchInput;
-export type ConversationSessionSearchResult = ConversationSearchResult;
+export type SessionMessage = Message;
+export type SessionAttachment = Attachment;
+export type SessionDocumentRef = DocumentRef;
+export type SessionContextChip = ContextChip;
+export type SessionRecordAlias = SessionRecord;
+export type SessionSummaryAlias = SessionSummary;
+export type SessionSearchInputAlias = SessionSearchInput;
+export type SessionSearchResultAlias = SessionSearchResult;
 
 export interface TranscriptMessageInput {
-  role?: ConversationMessage["role"] | string;
+  role?: SessionMessage["role"] | string;
   content?: unknown;
   attachments?: unknown;
   documents?: unknown;

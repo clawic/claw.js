@@ -7,7 +7,8 @@ description: Runtime-facing instance namespaces, options, and public methods in 
 
 This page documents the runtime-facing `@clawjs/claw` surface you use in
 application code. The exhaustive export inventory for `@clawjs/claw` and
-`@clawjs/core` lives in [Public Surface](/surface).
+`@clawjs/core` lives in [Public Surface](/surface). For the side-by-side
+SDK, CLI, and Relay comparison, use [Interface Matrix](/interface-matrix).
 
 ## Factories
 
@@ -78,11 +79,25 @@ const same = await createClaw({
 | `claw.whatsapp` | connection lifecycle, status, send, disconnect |
 | `claw.inference` | `generateText` |
 | `claw.secrets` | `list`, `describe`, `doctorKeychain`, `ensureHttpReference`, `ensureTelegramBotReference` |
-| `claw.conversations` | session CRUD, title generation, structured reply streaming, chunk streaming |
+| `claw.sessions` | session CRUD, title generation, structured reply streaming, chunk streaming |
 | `claw.documents` | list, get, search, upload, register, chunked upload, download, ref resolution |
 | `claw.data` | `document`, `collection`, `asset`, `rootDir` |
 | `claw.orchestration` | `snapshot` |
 | `claw.watch` | `file`, `transcript`, `runtimeStatus`, `providerStatus`, `events`, `eventsIterator` |
+
+The public surface is intentionally tiered:
+
+- `SDK core`: product primitives such as workspace setup, sessions, documents, providers, files, and inference.
+- `SDK advanced public`: intent/observed state, watch APIs, orchestration, secrets, generations, speech, and adapter-adjacent helpers.
+- `workspace extension public`: `@clawjs/workspace` namespaces layered on top of the base SDK.
+
+Visibility markers used elsewhere in the docs:
+
+- `stable`: normal product surface.
+- `advanced`: public but more programmatic or specialized.
+- `local-only`: valid in local SDK/CLI flows, not mirrored remotely.
+- `remote-only`: Relay-only contract.
+- `internal`: intentionally outside the public contract.
 
 ## Runtime
 
@@ -135,8 +150,8 @@ await claw.workspace.init();
 const manifest = await claw.workspace.attach();
 const validation = await claw.workspace.validate();
 const repaired = await claw.workspace.repair();
-const resetPlan = await claw.workspace.previewReset({ removeConversations: true });
-const resetResult = await claw.workspace.reset({ removeConversations: true });
+const resetPlan = await claw.workspace.previewReset({ removeSessions: true });
+const resetResult = await claw.workspace.reset({ removeSessions: true });
 const inspection = await claw.workspace.inspect();
 ```
 `inspect()` returns both resolved workspace file paths and the parsed
@@ -339,6 +354,28 @@ await claw.secrets.ensureTelegramBotReference({
 });
 ```
 
+You can also route those same `secretName` references through the Vault
+sidecar:
+
+```ts
+const claw = await createClaw({
+  runtime: { adapter: "openclaw" },
+  workspace: {
+    appId: "demo",
+    workspaceId: "demo-main",
+    agentId: "demo-main",
+    rootDir: "./workspace",
+  },
+  secrets: {
+    backend: "vault",
+    baseUrl: "http://127.0.0.1:4610",
+    credential: "<sidecar-principal-token>",
+    tenantId: "demo-tenant",
+    sidecarPath: "/absolute/path/to/vault/dist/sidecar.js",
+  },
+});
+```
+
 Slack and WhatsApp currently live on the same instance when the adapter
 supports them:
 
@@ -356,7 +393,26 @@ await claw.whatsapp.status();
 
 The CLI does not expose these namespaces yet. Use the SDK when you need
 them.
-## Inference and Conversations
+
+## OpenClaw Native Gateway
+
+When the selected adapter is `openclaw`, the SDK also exposes a native
+gateway namespace for runtime-specific session and chat operations:
+
+```ts
+await claw.runtime.openclaw.sessions.list({ limit: 10 });
+await claw.runtime.openclaw.sessions.preview({ sessionKey: "alpha" });
+await claw.runtime.openclaw.sessions.resolve({ sessionKey: "alpha" });
+await claw.runtime.openclaw.chat.history({ sessionKey: "alpha" });
+await claw.runtime.openclaw.chat.send({ sessionKey: "alpha", message: "hello" });
+await claw.runtime.openclaw.chat.inject({ sessionKey: "alpha", message: "system note" });
+await claw.runtime.openclaw.chat.abort({ sessionKey: "alpha" });
+```
+
+Use `claw.sessions` for product chat stored in the workspace. Use
+`claw.runtime.openclaw` when you need native OpenClaw gateway semantics.
+
+## Inference and Sessions
 
 ```ts
 const result = await claw.inference.generateText({
@@ -364,16 +420,16 @@ const result = await claw.inference.generateText({
   transport: "auto",
 });
 
-const session = claw.conversations.createSession("Repo tour");
-claw.conversations.appendMessage(session.sessionId, {
+const session = claw.sessions.createSession("Repo tour");
+claw.sessions.appendMessage(session.sessionId, {
   role: "user",
   content: "Explain the runtime layout.",
 });
 
-const loaded = claw.conversations.getSession(session.sessionId);
-const sessions = claw.conversations.listSessions();
-claw.conversations.updateSessionTitle(session.sessionId, "Runtime layout");
-await claw.conversations.generateTitle({ sessionId: session.sessionId });
+const loaded = claw.sessions.getSession(session.sessionId);
+const sessions = claw.sessions.listSessions();
+claw.sessions.updateSessionTitle(session.sessionId, "Runtime layout");
+await claw.sessions.generateTitle({ sessionId: session.sessionId });
 
 const document = await claw.documents.upload({
   name: "brief.txt",
@@ -382,7 +438,7 @@ const document = await claw.documents.upload({
   sessionId: session.sessionId,
 });
 
-claw.conversations.appendMessage(session.sessionId, {
+claw.sessions.appendMessage(session.sessionId, {
   role: "user",
   content: "Use the attached brief.",
   documents: [{
@@ -395,23 +451,29 @@ claw.conversations.appendMessage(session.sessionId, {
 
 const hits = await claw.documents.search({ query: "alpha", sessionId: session.sessionId });
 
-for await (const event of claw.conversations.streamAssistantReplyEvents({
+for await (const event of claw.sessions.streamAssistantReplyEvents({
   sessionId: session.sessionId,
   transport: "auto",
 })) {
   if (event.type === "chunk") process.stdout.write(event.chunk.delta);
 }
 
-for await (const chunk of claw.conversations.streamAssistantReply({
+for await (const chunk of claw.sessions.streamAssistantReply({
   sessionId: session.sessionId,
 })) {
   if (!chunk.done) process.stdout.write(chunk.delta);
 }
 ```
 
-Conversation messages now normalize persisted file references into `message.documents`.
+Session messages now normalize persisted file references into `message.documents`.
 Legacy `attachments` are still accepted as input, but persisted transcripts and relay
 responses expose document refs instead of embedding file payloads in the transcript.
+
+On the `openclaw` adapter, session routing is capability-based:
+
+- `streamAssistantReply*()` prefers `/v1/responses`
+- text-only fallback can use `/v1/chat/completions`
+- title generation keeps using the lighter text path when appropriate
 ## Data Store and Orchestration
 
 ```ts
@@ -431,6 +493,20 @@ const orchestration = await claw.orchestration.snapshot();
 The workspace data store is a simple file-backed storage layer for JSON
 documents, keyed collections, and raw assets rooted under the current
 workspace.
+
+## Workspace Extension Namespaces
+
+When you instantiate `@clawjs/workspace`, the extension adds:
+
+- `workspace.tasks`
+- `workspace.notes`
+- `workspace.people`
+- `workspace.inbox`
+- `workspace.events`
+- `workspace.search`
+- `workspace.workspaceIndex`
+- `workspace.context`
+- `workspace.ui`
 
 ## Watchers
 

@@ -33,7 +33,7 @@ export interface ResetWorkspaceOptions {
   removeProjections?: boolean;
   removeObserved?: boolean;
   removeIntents?: boolean;
-  removeConversations?: boolean;
+  removeSessions?: boolean;
   removeAudit?: boolean;
   removeBackups?: boolean;
   removeLocks?: boolean;
@@ -48,7 +48,7 @@ export interface WorkspaceResetTarget {
     | "projections"
     | "observed"
     | "intents"
-    | "conversations"
+    | "sessions"
     | "audit"
     | "backups"
     | "locks"
@@ -223,7 +223,7 @@ export function initializeWorkspace(
     filesystem.ensureDir(path.join(config.rootDir, CLAWJS_DIR, "observed"));
     filesystem.ensureDir(path.join(config.rootDir, CLAWJS_DIR, "backups"));
     filesystem.ensureDir(path.join(config.rootDir, CLAWJS_DIR, "locks"));
-    filesystem.ensureDir(path.join(config.rootDir, CLAWJS_DIR, "conversations"));
+    filesystem.ensureDir(path.join(config.rootDir, CLAWJS_DIR, "sessions"));
     for (const descriptor of normalizeRuntimeDescriptors(runtimeFiles)) {
       if (descriptor.seedPolicy === "never") continue;
       const filePath = resolveRuntimeFilePath(config.rootDir, descriptor.path);
@@ -261,7 +261,7 @@ export function repairWorkspace(
     ensureDir(filesystem, path.join(config.rootDir, CLAWJS_DIR, "observed"), createdDirectories);
     ensureDir(filesystem, path.join(config.rootDir, CLAWJS_DIR, "backups"), createdDirectories);
     ensureDir(filesystem, path.join(config.rootDir, CLAWJS_DIR, "locks"), createdDirectories);
-    ensureDir(filesystem, path.join(config.rootDir, CLAWJS_DIR, "conversations"), createdDirectories);
+    ensureDir(filesystem, path.join(config.rootDir, CLAWJS_DIR, "sessions"), createdDirectories);
 
     const manifest = readWorkspaceManifest(config.rootDir, filesystem) ?? initializeWorkspaceManifest(config, runtimeAdapter, filesystem, templatePackPath);
 
@@ -299,7 +299,7 @@ export function buildWorkspaceResetPlan(
     removeProjections: true,
     removeObserved: true,
     removeIntents: true,
-    removeConversations: true,
+    removeSessions: true,
     removeAudit: true,
     removeBackups: false,
     removeLocks: false,
@@ -328,9 +328,9 @@ export function buildWorkspaceResetPlan(
     const targetPath = path.join(workspaceDir, CLAWJS_DIR, "intents");
     targets.push({ path: targetPath, category: "intents", exists: filesystem.exists(targetPath) });
   }
-  if (effective.removeConversations) {
-    const targetPath = path.join(workspaceDir, CLAWJS_DIR, "conversations");
-    targets.push({ path: targetPath, category: "conversations", exists: filesystem.exists(targetPath) });
+  if (effective.removeSessions) {
+    const targetPath = path.join(workspaceDir, CLAWJS_DIR, "sessions");
+    targets.push({ path: targetPath, category: "sessions", exists: filesystem.exists(targetPath) });
   }
   if (effective.removeAudit) {
     const targetPath = path.join(workspaceDir, CLAWJS_DIR, "audit");

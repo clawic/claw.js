@@ -7,7 +7,7 @@ export type CapabilityName =
   | "providers"
   | "models"
   | "auth"
-  | "conversations"
+  | "sessions"
   | "watchers"
   | "compat"
   | "doctor"
@@ -69,8 +69,8 @@ export type RuntimeCapabilityKey =
   | "workspace"
   | "auth"
   | "models"
-  | "conversation_cli"
-  | "conversation_gateway"
+  | "session_cli"
+  | "session_gateway"
   | "streaming"
   | "scheduler"
   | "memory"
@@ -95,7 +95,7 @@ export interface CapabilityState {
 export interface RuntimeCapabilityDiagnostics {
   source?: "runtime" | "config" | "derived" | "fixture" | "workspace" | "gateway";
   probeMethod?: "cli" | "gateway" | "config" | "filesystem" | "derived" | "fixture" | "none";
-  transport?: ConversationTransport["kind"] | "none";
+  transport?: SessionTransport["kind"] | "none";
   sessionModel?: "ephemeral" | "workspace" | "runtime" | "agent";
   inventoryFreshness?: "live" | "cached" | "derived" | "static";
   [key: string]: unknown;
@@ -184,6 +184,66 @@ export interface ProjectAgentAssignment {
   effectiveAccessPolicy?: EffectiveAccessPolicy;
   createdAt: string;
   updatedAt: string;
+}
+
+export type NotificationDeliveryMode = "alert" | "silent" | "glance";
+export type NotificationPriority = "passive" | "normal" | "time-sensitive" | "critical";
+export type DeliveryState = "queued" | "delivered" | "read" | "acked" | "cancelled" | "expired" | "failed";
+
+export interface NotificationContext {
+  tenantId: string;
+  projectId?: string;
+  agentId?: string;
+  workspaceId?: string;
+  threadId?: string;
+  automationId?: string;
+  eventType?: string;
+  severity?: string;
+}
+
+export interface NotificationAudience {
+  userIds?: string[];
+  installationIds?: string[];
+  useSubscriptions?: boolean;
+}
+
+export interface NotificationDeepLink {
+  targetClientAppId?: string;
+  route?: string;
+  params?: Record<string, string>;
+  fallbackUrl?: string;
+}
+
+export interface NotificationReceiptPolicy {
+  kind: "none" | "critical";
+  retrySec?: number;
+  expireSec?: number;
+}
+
+export interface SubscriptionFilter {
+  sourceAppId?: string;
+  clientAppId?: string;
+  projectId?: string;
+  agentId?: string;
+  workspaceId?: string;
+  eventType?: string;
+  severity?: string;
+  minPriority?: NotificationPriority;
+  action?: "allow" | "mute";
+}
+
+export interface DeviceInstallation {
+  id: string;
+  tenantId: string;
+  userId: string;
+  clientAppId: string;
+  platform: "ios" | "android";
+  deviceName: string;
+  pushToken: string | null;
+  pushTokenUpdatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lastSeenAt: string | null;
 }
 
 /**
@@ -310,7 +370,7 @@ export type IntentDomain =
   | "skills"
   | "plugins"
   | "files"
-  | "conversations"
+  | "sessions"
   | "speech";
 
 export type ObservedDomain =
@@ -323,10 +383,10 @@ export type ObservedDomain =
   | "plugins"
   | "memory"
   | "scheduler"
-  | "conversations";
+  | "sessions";
 
 export type FeatureOwnership = "sdk-owned" | "runtime-owned" | "mirrored";
-export type ConversationPolicy = "managed" | "mirror" | "native";
+export type SessionPolicy = "managed" | "mirror" | "native";
 
 export interface RuntimeIntentState {
   schemaVersion: number;
@@ -405,10 +465,10 @@ export interface FilesIntentState {
   values: Record<string, unknown>;
 }
 
-export interface ConversationsIntentState {
+export interface SessionsIntentState {
   schemaVersion: number;
   updatedAt: string;
-  policy?: ConversationPolicy | null;
+  policy?: SessionPolicy | null;
 }
 
 export interface SpeechIntentState {
@@ -451,10 +511,10 @@ export interface PluginsObservedState {
   diagnostics?: string[];
 }
 
-export interface ConversationsObservedState {
+export interface SessionsObservedState {
   schemaVersion: number;
   updatedAt: string;
-  policy: ConversationPolicy;
+  policy: SessionPolicy;
   sessionCount: number;
   runtimePath?: string | null;
 }
@@ -463,7 +523,7 @@ export interface RuntimeFeatureDescriptor {
   featureId: string;
   ownership: FeatureOwnership;
   supported: boolean;
-  conversationPolicy?: ConversationPolicy;
+  sessionPolicy?: SessionPolicy;
   limitations?: string[];
 }
 
@@ -764,7 +824,7 @@ export interface AuthState {
   diagnostics?: Record<string, unknown>;
 }
 
-export interface ConversationTransport {
+export interface SessionTransport {
   kind: "cli" | "gateway" | "hybrid";
   streaming: boolean;
   gatewayKind?: "openai-chat-completions" | "openai-responses" | "openclaw-gateway" | "sse" | "ws";
@@ -1111,23 +1171,23 @@ export interface SessionRecord extends SessionSummary {
   messages: Message[];
 }
 
-export type ConversationSearchStrategy = "auto" | "local" | "openclaw-memory";
-export type ConversationSearchField = "title" | "preview" | "message" | "memory";
+export type SessionSearchStrategy = "auto" | "local" | "openclaw-memory";
+export type SessionSearchField = "title" | "preview" | "message" | "memory";
 
-export interface ConversationSearchInput {
+export interface SessionSearchInput {
   query: string;
-  strategy?: ConversationSearchStrategy;
+  strategy?: SessionSearchStrategy;
   limit?: number;
   includeMessages?: boolean;
   fallbackToLocal?: boolean;
   minScore?: number;
 }
 
-export interface ConversationSearchResult extends SessionSummary {
+export interface SessionSearchResult extends SessionSummary {
   snippet: string;
   score: number;
-  strategy: Exclude<ConversationSearchStrategy, "auto">;
-  matchedFields: ConversationSearchField[];
+  strategy: Exclude<SessionSearchStrategy, "auto">;
+  matchedFields: SessionSearchField[];
   sourcePath?: string;
   startLine?: number;
   endLine?: number;

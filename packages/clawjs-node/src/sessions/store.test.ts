@@ -5,11 +5,11 @@ import os from "os";
 import path from "path";
 import childProcess from "child_process";
 
-import { ConversationStore, resolveConversationPath } from "./store.ts";
+import { SessionStore, resolveSessionPath } from "./store.ts";
 
 function createStore() {
-  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-conversations-"));
-  return { workspaceDir, store: new ConversationStore(workspaceDir) };
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-sessions-"));
+  return { workspaceDir, store: new SessionStore(workspaceDir) };
 }
 
 test("createSession writes a new transcript and listSessions returns it", () => {
@@ -18,7 +18,7 @@ test("createSession writes a new transcript and listSessions returns it", () => 
 
   assert.match(session.sessionId, /^clawjs-/);
   assert.equal(session.title, "my new session");
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "conversations", `${session.sessionId}.jsonl`)), true);
+  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "sessions", `${session.sessionId}.jsonl`)), true);
 
   const sessions = store.listSessions();
   assert.equal(sessions.length, 1);
@@ -109,16 +109,16 @@ test("updateSessionTitle rewrites the transcript header", () => {
   const ok = store.updateSessionTitle(session.sessionId, "  updated title  ");
 
   assert.equal(ok, true);
-  const raw = fs.readFileSync(path.join(workspaceDir, ".clawjs", "conversations", `${session.sessionId}.jsonl`), "utf8");
+  const raw = fs.readFileSync(path.join(workspaceDir, ".clawjs", "sessions", `${session.sessionId}.jsonl`), "utf8");
   assert.match(raw, /updated title/);
 });
 
-test("ConversationStore instances share the same workspace transcript without leaking into other workspaces", () => {
-  const workspaceA = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-conversations-a-"));
-  const workspaceB = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-conversations-b-"));
-  const storeA1 = new ConversationStore(workspaceA);
-  const storeA2 = new ConversationStore(workspaceA);
-  const storeB = new ConversationStore(workspaceB);
+test("SessionStore instances share the same workspace transcript without leaking into other workspaces", () => {
+  const workspaceA = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-sessions-a-"));
+  const workspaceB = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-sessions-b-"));
+  const storeA1 = new SessionStore(workspaceA);
+  const storeA2 = new SessionStore(workspaceA);
+  const storeB = new SessionStore(workspaceB);
 
   const sessionA = storeA1.createSession("shared");
   storeA1.appendMessage(sessionA.sessionId, {
@@ -138,10 +138,10 @@ test("ConversationStore instances share the same workspace transcript without le
   assert.equal(storeA1.getSession(sessionA.sessionId)?.messageCount, 2);
   assert.equal(storeB.listSessions().length, 0);
   assert.equal(storeB.getSession(sessionA.sessionId), null);
-  assert.equal(fs.existsSync(resolveConversationPath(workspaceB, sessionA.sessionId)), false);
+  assert.equal(fs.existsSync(resolveSessionPath(workspaceB, sessionA.sessionId)), false);
 });
 
-test("ConversationStore preserves every message across cross-process append contention", async () => {
+test("SessionStore preserves every message across cross-process append contention", async () => {
   const { store, workspaceDir } = createStore();
   const session = store.createSession("contention");
   const moduleUrl = new URL("./store.ts", import.meta.url).href;
@@ -152,8 +152,8 @@ test("ConversationStore preserves every message across cross-process append cont
         "--input-type=module",
         "-e",
         `
-          const { ConversationStore } = await import(process.argv[1]);
-          const store = new ConversationStore(process.argv[2]);
+          const { SessionStore } = await import(process.argv[1]);
+          const store = new SessionStore(process.argv[2]);
           const sessionId = process.argv[3];
           const prefix = process.argv[4];
           for (let index = 0; index < 25; index += 1) {
@@ -175,7 +175,7 @@ test("ConversationStore preserves every message across cross-process append cont
           resolve();
           return;
         }
-        reject(new Error(`Conversation child exited with code ${code ?? -1}`));
+        reject(new Error(`Session child exited with code ${code ?? -1}`));
       });
       child.once("error", reject);
     })),
@@ -192,7 +192,7 @@ test("ConversationStore preserves every message across cross-process append cont
   }
 });
 
-test("ConversationStore serializes append and title updates across processes", async () => {
+test("SessionStore serializes append and title updates across processes", async () => {
   const { store, workspaceDir } = createStore();
   const session = store.createSession("initial");
   const moduleUrl = new URL("./store.ts", import.meta.url).href;
@@ -201,8 +201,8 @@ test("ConversationStore serializes append and title updates across processes", a
     "--input-type=module",
     "-e",
     `
-      const { ConversationStore } = await import(process.argv[1]);
-      const store = new ConversationStore(process.argv[2]);
+      const { SessionStore } = await import(process.argv[1]);
+      const store = new SessionStore(process.argv[2]);
       const sessionId = process.argv[3];
       for (let index = 0; index < 30; index += 1) {
         store.appendMessage(sessionId, {
@@ -227,7 +227,7 @@ test("ConversationStore serializes append and title updates across processes", a
         resolve();
         return;
       }
-      reject(new Error(`Conversation title child exited with code ${code ?? -1}`));
+      reject(new Error(`Session title child exited with code ${code ?? -1}`));
     });
     child.once("error", reject);
   });

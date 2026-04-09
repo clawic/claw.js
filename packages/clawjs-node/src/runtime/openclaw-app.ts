@@ -23,7 +23,7 @@ export interface DetachOpenClawAppContextOptions extends ResolveOpenClawContextO
   clearDefaultWorkspaceIfMatches?: boolean;
   removeWorkspaceDir?: boolean;
   removeAgentDir?: boolean;
-  removeConversationsDir?: boolean;
+  removeSessionsDir?: boolean;
   filesystem?: NodeFileSystemHost;
 }
 
@@ -152,9 +152,9 @@ export function detachOpenClawAppContext(options: DetachOpenClawAppContextOption
   }
 
   const removedPaths: string[] = [];
-  if (options.removeConversationsDir) {
-    filesystem.remove(context.conversationsDir);
-    removedPaths.push(context.conversationsDir);
+  if (options.removeSessionsDir) {
+    filesystem.remove(context.sessionsDir);
+    removedPaths.push(context.sessionsDir);
   }
   if (options.removeAgentDir) {
     filesystem.remove(context.agentDir);

@@ -2,6 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
+const surfaceContract = JSON.parse(
+  fs.readFileSync(path.join(rootDir, "docs", "surface-contract.json"), "utf8"),
+);
 
 const docRoots = [
   path.join(rootDir, "README.md"),
@@ -15,14 +18,17 @@ const publicDocPages = [
   "runtime.md",
   "workspace.md",
   "authentication.md",
+  "relay.md",
+  "vault.md",
   "models.md",
-  "conversations.md",
+  "sessions.md",
   "files.md",
   "watchers.md",
   "diagnostics.md",
   "cli.md",
   "api.md",
   "surface.md",
+  "interface-matrix.md",
 ];
 
 const forbiddenPatterns = [
@@ -59,12 +65,8 @@ const forbiddenPatterns = [
     pattern: /\bclaw\.watch\.watchProviderStatus\b/g,
   },
   {
-    label: "stale conversations.create example",
-    pattern: /\bclaw\.conversations\.create\(/g,
-  },
-  {
-    label: "stale conversations.stream example",
-    pattern: /\bclaw\.conversations\.stream\(/g,
+    label: "stale conversations namespace example",
+    pattern: /\bclaw\.conversations\./g,
   },
   {
     label: "stale FileSyncConflictError example",
@@ -81,6 +83,7 @@ const requiredSnippets = [
       "claw.inference",
       "claw.data",
       "claw.orchestration",
+      "claw.providers",
       "eventsIterator",
     ],
   },
@@ -91,6 +94,10 @@ const requiredSnippets = [
       "telegram webhook set",
       "telegram polling start",
       "sessions generate-title",
+      "documents upload",
+      "providers auth-state",
+      "inference generate-text",
+      "tts synthesize",
       "workspace repair",
       "channels status",
     ],
@@ -112,6 +119,23 @@ const requiredSnippets = [
       "ClawEventBus",
       "watchPolledValue",
       "eventsIterator",
+    ],
+  },
+  {
+    file: path.join(rootDir, "docs", "interface-matrix.md"),
+    snippets: [
+      "SDK core",
+      "Relay control plane",
+      "stable",
+      "local-only",
+      "WS/chat/feedback",
+      "/v1/me/devices",
+      "/v1/pairings/:pairingId/approve",
+      "/v1/admin/tenants/:tenantId/workspace-grants",
+      "providers auth-state",
+      "documents upload",
+      "inference generate-text",
+      "tts synthesize",
     ],
   },
 ];
@@ -149,6 +173,23 @@ function extractExports(filePath) {
     .map((part) => part.replace(/^type\s+/, "").replace(/^(.*?)\s+as\s+(.*)$/, "$2"));
 }
 
+function extractSurfaceEntries(filePath) {
+  return read(filePath)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(line));
+}
+
+function routeSnippet(route) {
+  if (route.path.startsWith("WS/")) {
+    return `app.${route.method.toLowerCase()}(\`${"${workspacePrefix}"}/${route.path.slice(3)}\``;
+  }
+  if (route.path.startsWith("PROJECT/")) {
+    return `app.${route.method.toLowerCase()}(\`${"${projectWorkspacePrefix}"}/${route.path.slice(8)}\``;
+  }
+  return `app.${route.method.toLowerCase()}("${route.path}"`;
+}
+
 const docFiles = docRoots.flatMap((targetPath) => listFiles(targetPath))
   .filter((filePath) => /\.(md|html)$/.test(filePath));
 
@@ -180,18 +221,78 @@ for (const requirement of requiredSnippets) {
   }
 }
 
-const surfacePath = path.join(rootDir, "docs", "surface.md");
-const surfaceRaw = read(surfacePath);
-
-for (const exportName of extractExports(path.join(rootDir, "packages", "clawjs-node", "dist", "index.d.ts"))) {
-  if (!surfaceRaw.includes(exportName)) {
-    violations.push(`docs/surface.md is missing @clawjs/claw export ${exportName}`);
+const apiRaw = read(path.join(rootDir, "docs", "api.md"));
+for (const namespace of surfaceContract.sdk.namespaces) {
+  if (!apiRaw.includes(`\`${namespace.name}\``)) {
+    violations.push(`docs/api.md is missing SDK namespace ${namespace.name}`);
+  }
+}
+for (const namespace of surfaceContract.sdk.workspaceNamespaces) {
+  if (!apiRaw.includes(`\`${namespace.name}\``)) {
+    violations.push(`docs/api.md is missing workspace namespace ${namespace.name}`);
   }
 }
 
-for (const exportName of extractExports(path.join(rootDir, "packages", "clawjs-core", "dist", "index.d.ts"))) {
-  if (!surfaceRaw.includes(exportName)) {
-    violations.push(`docs/surface.md is missing @clawjs/core export ${exportName}`);
+const interfaceMatrixRaw = read(path.join(rootDir, "docs", "interface-matrix.md"));
+for (const tier of surfaceContract.taxonomy.tiers) {
+  if (!interfaceMatrixRaw.includes(tier)) {
+    violations.push(`docs/interface-matrix.md is missing taxonomy tier ${tier}`);
+  }
+}
+for (const marker of surfaceContract.taxonomy.visibility) {
+  if (!interfaceMatrixRaw.includes(marker)) {
+    violations.push(`docs/interface-matrix.md is missing visibility marker ${marker}`);
+  }
+}
+
+const cliSourceRaw = read(path.join(rootDir, "packages", "clawjs", "src", "index.ts"));
+const cliDocRaw = read(path.join(rootDir, "docs", "cli.md"));
+for (const group of surfaceContract.cli.groups) {
+  const sourceGroupSnippet = group.name === "new" || group.name === "generate" || group.name === "add" || group.name === "info" || group.name === "doctor" || group.name === "compat"
+    ? `group === "${group.name}"`
+    : `group === "${group.name}"`;
+  if (!cliSourceRaw.includes(sourceGroupSnippet)) {
+    violations.push(`packages/clawjs/src/index.ts is missing CLI group ${group.name}`);
+  }
+  if (!cliDocRaw.includes(`claw ${group.name}`)) {
+    violations.push(`docs/cli.md is missing CLI group ${group.name}`);
+  }
+  for (const command of group.commands) {
+    const snippet = `claw ${group.name} ${command}`;
+    if (!cliDocRaw.includes(snippet) && !cliSourceRaw.includes(`"${command}"`)) {
+      violations.push(`CLI surface is missing command ${snippet}`);
+    }
+  }
+}
+
+const relayRaw = read(path.join(rootDir, "relay", "src", "server", "app.ts"));
+for (const route of surfaceContract.relay.routes) {
+  const snippet = routeSnippet(route);
+  if (!relayRaw.includes(snippet)) {
+    violations.push(`relay/src/server/app.ts is missing route ${route.method} ${route.path}`);
+  }
+}
+for (const resource of surfaceContract.relay.resources) {
+  if (!relayRaw.includes(`{ path: "${resource}"`)) {
+    violations.push(`relay/src/server/app.ts is missing relay resource ${resource}`);
+  }
+}
+
+const surfacePath = path.join(rootDir, "docs", "surface.md");
+const surfaceEntries = new Set(extractSurfaceEntries(surfacePath));
+const sdkExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-node", "dist", "index.d.ts")));
+const coreExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-core", "dist", "index.d.ts")));
+const expectedSurfaceEntries = new Set([...sdkExports, ...coreExports]);
+
+for (const exportName of expectedSurfaceEntries) {
+  if (!surfaceEntries.has(exportName)) {
+    violations.push(`docs/surface.md is missing export ${exportName}`);
+  }
+}
+
+for (const exportName of surfaceEntries) {
+  if (!expectedSurfaceEntries.has(exportName)) {
+    violations.push(`docs/surface.md contains stale export ${exportName}`);
   }
 }
 

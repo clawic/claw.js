@@ -1,11 +1,11 @@
 import path from "path";
 
 import type {
-  ConversationsObservedState,
   ModelsObservedState,
   ObservedDomain,
   PluginsObservedState,
   RuntimeObservedState,
+  SessionsObservedState,
 } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
@@ -20,7 +20,7 @@ export type ObservedStateByDomain = {
   plugins: PluginsObservedState;
   memory: unknown;
   scheduler: unknown;
-  conversations: ConversationsObservedState;
+  sessions: SessionsObservedState;
 };
 
 export const OBSERVED_DOMAINS: ObservedDomain[] = [
@@ -33,7 +33,7 @@ export const OBSERVED_DOMAINS: ObservedDomain[] = [
   "plugins",
   "memory",
   "scheduler",
-  "conversations",
+  "sessions",
 ];
 
 function nowIso(): string {

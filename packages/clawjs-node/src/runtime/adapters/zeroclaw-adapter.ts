@@ -8,7 +8,7 @@ import type {
   RuntimeAdapter,
   RuntimeAdapterOptions,
   RuntimeCompatReport,
-  RuntimeConversationAdapter,
+  RuntimeSessionAdapter,
   RuntimeProbeStatus,
   RuntimeSetupInput,
   SaveApiKeyResult,
@@ -30,7 +30,7 @@ import type {
 } from "@clawjs/core";
 import { maskCredential } from "@clawjs/core";
 
-import { buildProgressStep, buildRuntimeCapabilityMap, buildRuntimeCompatReport, defaultManagedConversationFeatures, runRuntimeProgressPlan, runtimeOperationCapability } from "./shared.ts";
+import { buildProgressStep, buildRuntimeCapabilityMap, buildRuntimeCompatReport, defaultManagedSessionFeatures, runRuntimeProgressPlan, runtimeOperationCapability } from "./shared.ts";
 import {
   normalizeProviderAuthSummary,
   parseTomlStringValue,
@@ -196,7 +196,7 @@ export const zeroclawAdapter: RuntimeAdapter = {
   supportLevel: "experimental",
   workspaceFiles: ZEROCLAW_WORKSPACE_FILES,
   describeFeatures() {
-    return defaultManagedConversationFeatures({
+    return defaultManagedSessionFeatures({
       channelsSupported: true,
       skillsSupported: true,
       pluginsSupported: false,
@@ -240,8 +240,8 @@ export const zeroclawAdapter: RuntimeAdapter = {
           workspace: { supported: true, status: "ready", strategy: "native" },
           auth: { supported: true, status: "degraded", strategy: "config" },
           models: { supported: true, status: "degraded", strategy: "config" },
-          conversation_cli: { supported: true, status: "error", strategy: "cli" },
-          conversation_gateway: { supported: true, status: "unsupported", strategy: "unsupported" },
+          session_cli: { supported: true, status: "error", strategy: "cli" },
+          session_gateway: { supported: true, status: "unsupported", strategy: "unsupported" },
           streaming: { supported: true, status: "degraded", strategy: "cli" },
           scheduler: { supported: true, status: "degraded", strategy: "native" },
           memory: { supported: true, status: "ready", strategy: "config" },
@@ -293,8 +293,8 @@ export const zeroclawAdapter: RuntimeAdapter = {
         workspace: { supported: true, status: "ready", strategy: "native" },
         auth: { supported: true, status: "ready", strategy: "config" },
         models: { supported: true, status: "ready", strategy: "config" },
-        conversation_cli: { supported: true, status: "ready", strategy: "cli" },
-        conversation_gateway: { supported: capabilities.gateway, status: capabilities.gateway ? "ready" : "unsupported", strategy: capabilities.gateway ? "gateway" : "unsupported" },
+        session_cli: { supported: true, status: "ready", strategy: "cli" },
+        session_gateway: { supported: capabilities.gateway, status: capabilities.gateway ? "ready" : "unsupported", strategy: capabilities.gateway ? "gateway" : "unsupported" },
         streaming: { supported: true, status: "ready", strategy: capabilities.gateway ? "gateway" : "cli" },
         scheduler: { supported: true, status: capabilities.daemon ? "ready" : "degraded", strategy: "native" },
         memory: { supported: true, status: "ready", strategy: "config" },
@@ -565,7 +565,7 @@ export const zeroclawAdapter: RuntimeAdapter = {
   async listChannels(_runner, _options): Promise<ChannelDescriptor[]> {
     return [];
   },
-  createConversationAdapter(_options): RuntimeConversationAdapter {
+  createSessionAdapter(_options): RuntimeSessionAdapter {
     return {
       transport: {
         kind: "cli",

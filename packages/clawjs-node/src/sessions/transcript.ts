@@ -221,7 +221,7 @@ export function summarizePreview(message?: Message | null): string {
   return normalized.length > 96 ? `${normalized.slice(0, 96).trim()}...` : normalized;
 }
 
-export function suggestConversationTitle(messages: Array<Pick<Message, "role" | "content">>): string {
+export function suggestSessionTitle(messages: Array<Pick<Message, "role" | "content">>): string {
   const firstUser = messages.find((message) => message.role === "user" && normalizeWhitespace(message.content))?.content;
   const firstAssistant = messages.find((message) => message.role === "assistant" && normalizeWhitespace(message.content))?.content;
   return summarizeTitle(firstUser || firstAssistant || DEFAULT_SESSION_TITLE);
@@ -232,5 +232,5 @@ export function resolveSessionTitle(sessionRecord: Partial<SessionRecord> & { me
     return summarizeTitle(sessionRecord.title);
   }
 
-  return suggestConversationTitle(sessionRecord.messages ?? []);
+  return suggestSessionTitle(sessionRecord.messages ?? []);
 }

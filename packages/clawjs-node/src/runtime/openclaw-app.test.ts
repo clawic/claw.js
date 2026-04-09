@@ -37,11 +37,11 @@ test("detachOpenClawAppContext unregisters agent ids and removes requested paths
   const configPath = path.join(stateDir, "openclaw.json");
   const workspaceDir = path.join(stateDir, "workspaces", "clawjs-demo");
   const agentDir = path.join(stateDir, "agents", "clawjs-demo", "agent");
-  const conversationsDir = path.join(workspaceDir, ".clawjs", "conversations");
+  const sessionsDir = path.join(workspaceDir, ".clawjs", "sessions");
 
   fs.mkdirSync(workspaceDir, { recursive: true });
   fs.mkdirSync(agentDir, { recursive: true });
-  fs.mkdirSync(conversationsDir, { recursive: true });
+  fs.mkdirSync(sessionsDir, { recursive: true });
   fs.writeFileSync(path.join(configPath), JSON.stringify({
     agents: {
       defaults: {
@@ -65,16 +65,16 @@ test("detachOpenClawAppContext unregisters agent ids and removes requested paths
     agentIds: ["demo-alias"],
     workspaceDir,
     agentDir,
-    conversationsDir,
+    sessionsDir,
     removeWorkspaceDir: true,
     removeAgentDir: true,
-    removeConversationsDir: true,
+    removeSessionsDir: true,
   });
 
   assert.deepEqual(result.removedAgentIds.sort(), ["clawjs-demo", "demo-alias"]);
   assert.equal(result.updatedConfig, true);
   assert.equal(fs.existsSync(workspaceDir), false);
   assert.equal(fs.existsSync(agentDir), false);
-  assert.equal(fs.existsSync(conversationsDir), false);
+  assert.equal(fs.existsSync(sessionsDir), false);
   assert.deepEqual(result.config?.agents?.list ?? [], []);
 });

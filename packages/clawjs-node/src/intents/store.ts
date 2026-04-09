@@ -2,13 +2,13 @@ import path from "path";
 
 import type {
   ChannelsIntentState,
-  ConversationsIntentState,
   FilesIntentState,
   IntentDomain,
   ModelsIntentState,
   PluginsIntentState,
   ProvidersIntentState,
   RuntimeIntentState,
+  SessionsIntentState,
   SpeechIntentState,
   SkillsIntentState,
 } from "@clawjs/core";
@@ -23,7 +23,7 @@ export type IntentStateByDomain = {
   skills: SkillsIntentState;
   plugins: PluginsIntentState;
   files: FilesIntentState;
-  conversations: ConversationsIntentState;
+  sessions: SessionsIntentState;
   speech: SpeechIntentState;
 };
 
@@ -35,7 +35,7 @@ export const INTENT_DOMAINS: IntentDomain[] = [
   "skills",
   "plugins",
   "files",
-  "conversations",
+  "sessions",
   "speech",
 ];
 

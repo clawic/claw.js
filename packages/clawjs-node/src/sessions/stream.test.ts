@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { extractOpenClawCliText, splitTextIntoChunks, streamOpenClawConversation, streamOpenClawConversationEvents, type StreamConversationDependencies } from "./stream.ts";
+import { extractOpenClawCliText, splitTextIntoChunks, streamOpenClawSession, streamOpenClawSessionEvents, type StreamSessionDependencies } from "./stream.ts";
 
 test("extractOpenClawCliText and splitTextIntoChunks normalize CLI output", () => {
   const text = extractOpenClawCliText(JSON.stringify({
@@ -30,9 +30,9 @@ Gateway target: ws://127.0.0.1:18789
   assert.equal(text, "Hi. What can I help you with?");
 });
 
-test("streamOpenClawConversation streams via gateway SSE when available", async () => {
+test("streamOpenClawSession streams via OpenAI responses when available", async () => {
   const encoder = new TextEncoder();
-  const dependencies: StreamConversationDependencies = {
+  const dependencies: StreamSessionDependencies = {
     gatewayConfig: {
       url: "http://127.0.0.1:18789",
       port: 18789,
@@ -40,16 +40,15 @@ test("streamOpenClawConversation streams via gateway SSE when available", async 
     },
     fetchImpl: async () => new Response(new ReadableStream({
       start(controller) {
-        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"ho"}}]}\n'));
-        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"la"}}]}\n'));
-        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.enqueue(encoder.encode('event: response.output_text.delta\ndata: {"delta":"ho"}\n\n'));
+        controller.enqueue(encoder.encode('event: response.output_text.delta\ndata: {"delta":"la"}\n\n'));
         controller.close();
       },
     }), { status: 200 }),
   };
 
   const chunks: string[] = [];
-  for await (const chunk of streamOpenClawConversation({
+  for await (const chunk of streamOpenClawSession({
     sessionId: "session-1",
     messages: [{ role: "user", content: "hello" }],
   }, dependencies)) {
@@ -59,9 +58,9 @@ test("streamOpenClawConversation streams via gateway SSE when available", async 
   assert.deepEqual(chunks, ["ho", "la"]);
 });
 
-test("streamOpenClawConversation falls back to CLI when gateway is unavailable", async () => {
+test("streamOpenClawSession falls back to CLI when gateway is unavailable", async () => {
   const chunks: string[] = [];
-  for await (const chunk of streamOpenClawConversation({
+  for await (const chunk of streamOpenClawSession({
     sessionId: "session-1",
     agentId: "agent-1",
     messages: [{ role: "user", content: "hello" }],
@@ -93,9 +92,61 @@ test("streamOpenClawConversation falls back to CLI when gateway is unavailable",
   assert.deepEqual(chunks, ["hel", "lo ", "wor", "ld"]);
 });
 
-test("streamOpenClawConversation parses CLI fallback output with preamble logs", async () => {
+test("streamOpenClawSession falls back from responses to chat completions for text-only payloads", async () => {
+  let calls = 0;
   const chunks: string[] = [];
-  for await (const chunk of streamOpenClawConversation({
+  const adapter: StreamSessionDependencies["sessionAdapter"] = {
+    transport: {
+      kind: "hybrid",
+      streaming: true,
+      gatewayKind: "openai-responses",
+    },
+    gateway: {
+      kind: "openai-responses",
+      url: "http://127.0.0.1:18789",
+    },
+    fallbackGateway: {
+      kind: "openai-chat-completions",
+      url: "http://127.0.0.1:18789",
+    },
+    buildCliInvocation() {
+      throw new Error("not used");
+    },
+    supportsGateway: true,
+  };
+
+  for await (const chunk of streamOpenClawSession({
+    sessionId: "session-responses-fallback",
+    messages: [{ role: "user", content: "hello" }],
+  }, {
+    sessionAdapter: adapter,
+    fetchImpl: async (_url, init) => {
+      calls += 1;
+      const body = JSON.parse(String(init?.body ?? "{}")) as { stream?: boolean };
+      if (calls === 1) {
+        return new Response("responses failed", { status: 500 });
+      }
+      if (body.stream) {
+        return new Response([
+          'data: {"choices":[{"delta":{"content":"fallback"}}]}\n',
+          "data: [DONE]\n",
+        ].join(""), {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        });
+      }
+      return new Response("{}", { status: 200 });
+    },
+  })) {
+    if (!chunk.done) chunks.push(chunk.delta);
+  }
+
+  assert.deepEqual(chunks, ["fallback"]);
+});
+
+test("streamOpenClawSession parses CLI fallback output with preamble logs", async () => {
+  const chunks: string[] = [];
+  for await (const chunk of streamOpenClawSession({
     sessionId: "session-cli-preamble",
     agentId: "agent-1",
     messages: [{ role: "user", content: "hello" }],
@@ -124,8 +175,8 @@ Gateway target: ws://127.0.0.1:18789
   assert.deepEqual(chunks, ["hello ", "world"]);
 });
 
-test("streamOpenClawConversationEvents emits chunk and title events", async () => {
-  const dependencies: StreamConversationDependencies = {
+test("streamOpenClawSessionEvents emits chunk and title events", async () => {
+  const dependencies: StreamSessionDependencies = {
     gatewayConfig: {
       url: "http://127.0.0.1:18789",
       port: 18789,
@@ -133,16 +184,15 @@ test("streamOpenClawConversationEvents emits chunk and title events", async () =
     },
     fetchImpl: async () => new Response(new ReadableStream({
       start(controller) {
-        controller.enqueue(new TextEncoder().encode('data: {"choices":[{"delta":{"content":"Plan"}}]}\n'));
-        controller.enqueue(new TextEncoder().encode('data: {"choices":[{"delta":{"content":" a launch checklist"}}]}\n'));
-        controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
+        controller.enqueue(new TextEncoder().encode('event: response.output_text.delta\ndata: {"delta":"Plan"}\n\n'));
+        controller.enqueue(new TextEncoder().encode('event: response.output_text.delta\ndata: {"delta":" a launch checklist"}\n\n'));
         controller.close();
       },
     }), { status: 200 }),
   };
 
   const events: Array<{ type: string; value?: string }> = [];
-  for await (const event of streamOpenClawConversationEvents({
+  for await (const event of streamOpenClawSessionEvents({
     sessionId: "session-2",
     messages: [{ role: "user", content: "Plan a launch checklist" }],
   }, dependencies)) {
@@ -166,10 +216,10 @@ test("streamOpenClawConversationEvents emits chunk and title events", async () =
   ]);
 });
 
-test("streamOpenClawConversation retries gateway failures and emits aborted/error events", async () => {
+test("streamOpenClawSession retries gateway failures and emits aborted/error events", async () => {
   let attempts = 0;
   const retryChunks: string[] = [];
-  for await (const chunk of streamOpenClawConversation({
+  for await (const chunk of streamOpenClawSession({
     sessionId: "session-retry",
     messages: [{ role: "user", content: "hello" }],
     transport: "gateway",
@@ -187,8 +237,7 @@ test("streamOpenClawConversation retries gateway failures and emits aborted/erro
       }
       return new Response(new ReadableStream({
         start(controller) {
-          controller.enqueue(new TextEncoder().encode('data: {"choices":[{"delta":{"content":"ok"}}]}\n'));
-          controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
+          controller.enqueue(new TextEncoder().encode('event: response.output_text.delta\ndata: {"delta":"ok"}\n\n'));
           controller.close();
         },
       }), { status: 200 });
@@ -200,7 +249,7 @@ test("streamOpenClawConversation retries gateway failures and emits aborted/erro
 
   attempts = 0;
   const retryEvents: string[] = [];
-  for await (const event of streamOpenClawConversationEvents({
+  for await (const event of streamOpenClawSessionEvents({
     sessionId: "session-retry-events",
     messages: [{ role: "user", content: "hello" }],
     transport: "gateway",
@@ -218,8 +267,7 @@ test("streamOpenClawConversation retries gateway failures and emits aborted/erro
       }
       return new Response(new ReadableStream({
         start(controller) {
-          controller.enqueue(new TextEncoder().encode('data: {"choices":[{"delta":{"content":"ok"}}]}\n'));
-          controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
+          controller.enqueue(new TextEncoder().encode('event: response.output_text.delta\ndata: {"delta":"ok"}\n\n'));
           controller.close();
         },
       }), { status: 200 });
@@ -232,7 +280,7 @@ test("streamOpenClawConversation retries gateway failures and emits aborted/erro
   const abortController = new AbortController();
   abortController.abort("user_cancelled");
   const abortedEvents: Array<{ type: string; reason?: string }> = [];
-  for await (const event of streamOpenClawConversationEvents({
+  for await (const event of streamOpenClawSessionEvents({
     sessionId: "session-abort",
     messages: [{ role: "user", content: "hello" }],
     signal: abortController.signal,
@@ -252,7 +300,7 @@ test("streamOpenClawConversation retries gateway failures and emits aborted/erro
   assert.deepEqual(abortedEvents, [{ type: "aborted", reason: "user_cancelled" }]);
 
   const errorEvents: Array<{ type: string; partialText?: string }> = [];
-  for await (const event of streamOpenClawConversationEvents({
+  for await (const event of streamOpenClawSessionEvents({
     sessionId: "session-error",
     messages: [{ role: "user", content: "hello" }],
     transport: "gateway",
@@ -272,9 +320,55 @@ test("streamOpenClawConversation retries gateway failures and emits aborted/erro
   assert.deepEqual(errorEvents, [{ type: "transport" }, { type: "error" }]);
 });
 
-test("streamOpenClawConversationEvents falls back from gateway to CLI with transport events", async () => {
+test("streamOpenClawSession resolves persisted documents for responses payloads", async () => {
+  let requestBody: Record<string, unknown> | null = null;
+  const dependencies: StreamSessionDependencies = {
+    gatewayConfig: {
+      url: "http://127.0.0.1:18789",
+      port: 18789,
+      source: "explicit",
+    },
+    documentResolver: async () => [{
+      name: "budget.pdf",
+      mimeType: "application/pdf",
+      data: "YmFkZ2V0",
+    }],
+    fetchImpl: async (_url, init) => {
+      requestBody = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+      return new Response(new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('event: response.output_text.delta\ndata: {"delta":"ok"}\n\n'));
+          controller.close();
+        },
+      }), { status: 200 });
+    },
+  };
+
+  const chunks: string[] = [];
+  for await (const chunk of streamOpenClawSession({
+    sessionId: "session-docs",
+    messages: [{
+      role: "user",
+      content: "Review the budget",
+      documents: [{
+        documentId: "doc-1",
+        name: "budget.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 12,
+      }],
+    }],
+  }, dependencies)) {
+    if (!chunk.done) chunks.push(chunk.delta);
+  }
+
+  assert.deepEqual(chunks, ["ok"]);
+  assert.match(JSON.stringify(requestBody), /input_file/);
+  assert.match(JSON.stringify(requestBody), /budget\.pdf/);
+});
+
+test("streamOpenClawSessionEvents falls back from gateway to CLI with transport events", async () => {
   const events: string[] = [];
-  for await (const event of streamOpenClawConversationEvents({
+  for await (const event of streamOpenClawSessionEvents({
     sessionId: "session-fallback",
     agentId: "agent-1",
     messages: [{ role: "user", content: "hello" }],
@@ -303,5 +397,5 @@ test("streamOpenClawConversationEvents falls back from gateway to CLI with trans
     events.push(event.type === "transport" ? `${event.type}:${event.transport}:${String(event.fallback)}` : event.type);
   }
 
-  assert.deepEqual(events, ["transport:gateway:false", "transport:cli:true", "chunk", "done", "title"]);
+  assert.deepEqual(events, ["transport:gateway:false", "transport:gateway:true", "transport:cli:true", "chunk", "done", "title"]);
 });

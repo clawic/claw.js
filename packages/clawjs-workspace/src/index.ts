@@ -5,7 +5,7 @@ import {
   WorkspaceAuditLog,
   createClaw,
   type ClawInstance,
-  type ConversationStreamEvent,
+  type SessionStreamEvent,
   type CreateClawOptions,
 } from "@clawjs/claw";
 import type {
@@ -202,20 +202,20 @@ export interface InboxThreadView {
 
 export interface WorkspaceConversationContextOption extends WorkspaceContextRequest {}
 
-type BaseWorkspaceConversationInput = Parameters<ClawInstance["conversations"]["streamAssistantReplyEvents"]>[0];
+type BaseWorkspaceConversationInput = Parameters<ClawInstance["sessions"]["streamAssistantReplyEvents"]>[0];
 
 export interface WorkspaceConversationInput extends BaseWorkspaceConversationInput {
   workspaceContext?: "off" | "auto" | WorkspaceConversationContextOption;
 }
 
-export interface WorkspaceClawInstance extends Omit<ClawInstance, "workspace" | "conversations"> {
+export interface WorkspaceClawInstance extends Omit<ClawInstance, "workspace" | "sessions"> {
   workspace: ClawInstance["workspace"] & {
     tools: {
       describe: () => WorkspaceToolDescriptor[];
     };
   };
-  conversations: Omit<ClawInstance["conversations"], "streamAssistantReplyEvents" | "streamAssistantReply"> & {
-    streamAssistantReplyEvents: (input: WorkspaceConversationInput) => AsyncGenerator<ConversationStreamEvent>;
+  sessions: Omit<ClawInstance["sessions"], "streamAssistantReplyEvents" | "streamAssistantReply"> & {
+    streamAssistantReplyEvents: (input: WorkspaceConversationInput) => AsyncGenerator<SessionStreamEvent>;
     streamAssistantReply: (input: WorkspaceConversationInput) => AsyncGenerator<{ sessionId: string; messageId?: string; delta: string; done: boolean }>;
   };
   tasks: {
@@ -772,7 +772,7 @@ async function createWorkspaceExtension(
   async function buildContext(input: WorkspaceContextRequest = {}): Promise<WorkspaceContextBundle> {
     const queryText = input.query?.trim()
       || (input.threadId ? (inboxThreadsCollection.get(input.threadId)?.preview ?? "") : "")
-      || (input.sessionId ? claw.conversations.getSession(input.sessionId)?.messages.at(-1)?.content ?? "" : "");
+      || (input.sessionId ? claw.sessions.getSession(input.sessionId)?.messages.at(-1)?.content ?? "" : "");
     const request: WorkspaceContextRequest = {
       strategy: "auto",
       limit: DEFAULT_CONTEXT_LIMIT,
@@ -1379,8 +1379,8 @@ async function createWorkspaceExtension(
     },
   };
 
-  const conversations: WorkspaceClawInstance["conversations"] = {
-    ...claw.conversations,
+  const sessions: WorkspaceClawInstance["sessions"] = {
+    ...claw.sessions,
     streamAssistantReplyEvents: async function* (input) {
       const workspaceContext = input.workspaceContext ?? "off";
       const baseContextBlocks = input.contextBlocks ?? [];
@@ -1390,7 +1390,7 @@ async function createWorkspaceExtension(
           ? { sessionId: input.sessionId, strategy: "auto", limit: DEFAULT_CONTEXT_LIMIT }
           : workspaceContext);
       const { workspaceContext: _ignored, ...baseInput } = input;
-      yield* claw.conversations.streamAssistantReplyEvents({
+      yield* claw.sessions.streamAssistantReplyEvents({
         ...baseInput,
         contextBlocks: [...baseContextBlocks, ...(generatedContext?.blocks ?? [])],
       });
@@ -1404,7 +1404,7 @@ async function createWorkspaceExtension(
           ? { sessionId: input.sessionId, strategy: "auto", limit: DEFAULT_CONTEXT_LIMIT }
           : workspaceContext);
       const { workspaceContext: _ignored, ...baseInput } = input;
-      yield* claw.conversations.streamAssistantReply({
+      yield* claw.sessions.streamAssistantReply({
         ...baseInput,
         contextBlocks: [...baseContextBlocks, ...(generatedContext?.blocks ?? [])],
       });
@@ -1419,7 +1419,7 @@ async function createWorkspaceExtension(
         describe: () => [...TOOL_DESCRIPTORS],
       },
     },
-    conversations,
+    sessions,
     tasks: tasksApi,
     notes: notesApi,
     people: peopleApi,

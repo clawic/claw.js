@@ -2,8 +2,8 @@ import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import type {
-  ConversationSearchField,
-  ConversationSearchResult,
+  SessionSearchField,
+  SessionSearchResult,
   Message,
   SessionRecord,
   SessionSummary,
@@ -20,7 +20,7 @@ import {
 } from "./transcript.ts";
 import { resolveFileLockPath } from "../host/filesystem.ts";
 
-export interface ConversationStoreOptions {
+export interface SessionStoreOptions {
   filesystem?: NodeFileSystemHost;
 }
 
@@ -29,21 +29,21 @@ export interface AppendMessageInput extends Omit<Message, "id" | "createdAt"> {
   createdAt?: number;
 }
 
-export interface ConversationStoreSearchOptions {
+export interface SessionStoreSearchOptions {
   limit?: number;
   includeMessages?: boolean;
 }
 
-export function resolveConversationsDir(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "conversations");
+export function resolveSessionsDir(workspaceDir: string): string {
+  return path.join(workspaceDir, ".clawjs", "sessions");
 }
 
-export function resolveConversationPath(workspaceDir: string, sessionId: string): string {
-  return path.join(resolveConversationsDir(workspaceDir), `${sessionId}${SESSION_FILE_EXTENSION}`);
+export function resolveSessionPath(workspaceDir: string, sessionId: string): string {
+  return path.join(resolveSessionsDir(workspaceDir), `${sessionId}${SESSION_FILE_EXTENSION}`);
 }
 
-export function resolveConversationLockPath(workspaceDir: string, sessionId: string): string {
-  return resolveFileLockPath(resolveConversationPath(workspaceDir, sessionId));
+export function resolveSessionLockPath(workspaceDir: string, sessionId: string): string {
+  return resolveFileLockPath(resolveSessionPath(workspaceDir, sessionId));
 }
 
 function sessionHeaderLine(sessionId: string, createdAt: number, title?: string): string {
@@ -84,8 +84,8 @@ function buildSearchResult(
   session: SessionRecord,
   snippet: string,
   score: number,
-  matchedFields: ConversationSearchField[],
-): ConversationSearchResult {
+  matchedFields: SessionSearchField[],
+): SessionSearchResult {
   return {
     sessionId: session.sessionId,
     title: session.title,
@@ -125,23 +125,23 @@ function readSessionHeader(raw: string): { sessionId: string; createdAt: number;
   return null;
 }
 
-export class ConversationStore {
+export class SessionStore {
   private readonly filesystem: NodeFileSystemHost;
   private readonly workspaceDir: string;
 
-  constructor(workspaceDir: string, options: ConversationStoreOptions = {}) {
+  constructor(workspaceDir: string, options: SessionStoreOptions = {}) {
     this.workspaceDir = workspaceDir;
     this.filesystem = options.filesystem ?? new NodeFileSystemHost();
   }
 
-  private ensureConversationsDir(): string {
-    const dir = resolveConversationsDir(this.workspaceDir);
+  private ensureSessionsDir(): string {
+    const dir = resolveSessionsDir(this.workspaceDir);
     this.filesystem.ensureDir(dir);
     return dir;
   }
 
   private readTranscript(sessionId: string): string {
-    return readTranscriptRaw(resolveConversationPath(this.workspaceDir, sessionId));
+    return readTranscriptRaw(resolveSessionPath(this.workspaceDir, sessionId));
   }
 
   createSession(title?: string): SessionRecord {
@@ -157,17 +157,17 @@ export class ConversationStore {
       preview: "",
     };
 
-    this.ensureConversationsDir();
-    const filePath = resolveConversationPath(this.workspaceDir, sessionId);
-    this.filesystem.withLockRetry(resolveConversationLockPath(this.workspaceDir, sessionId), () => {
+    this.ensureSessionsDir();
+    const filePath = resolveSessionPath(this.workspaceDir, sessionId);
+    this.filesystem.withLockRetry(resolveSessionLockPath(this.workspaceDir, sessionId), () => {
       this.filesystem.writeTextAtomic(filePath, sessionHeaderLine(sessionId, now, title));
     });
     return record;
   }
 
   appendMessage(sessionId: string, message: AppendMessageInput): SessionRecord {
-    const filePath = resolveConversationPath(this.workspaceDir, sessionId);
-    this.ensureConversationsDir();
+    const filePath = resolveSessionPath(this.workspaceDir, sessionId);
+    this.ensureSessionsDir();
 
     const createdAt = message.createdAt ?? Date.now();
     const event = {
@@ -183,7 +183,7 @@ export class ConversationStore {
       ...(Array.isArray(message.contextChips) && message.contextChips.length > 0 ? { contextChips: message.contextChips } : {}),
     };
 
-    this.filesystem.withLockRetry(resolveConversationLockPath(this.workspaceDir, sessionId), () => {
+    this.filesystem.withLockRetry(resolveSessionLockPath(this.workspaceDir, sessionId), () => {
       if (!fs.existsSync(filePath)) {
         this.filesystem.writeTextAtomic(filePath, sessionHeaderLine(sessionId, createdAt, message.role === "user" ? message.content : undefined));
       }
@@ -217,9 +217,9 @@ export class ConversationStore {
   }
 
   updateSessionTitle(sessionId: string, title: string): boolean {
-    const filePath = resolveConversationPath(this.workspaceDir, sessionId);
+    const filePath = resolveSessionPath(this.workspaceDir, sessionId);
     if (!fs.existsSync(filePath)) return false;
-    return this.filesystem.withLockRetry(resolveConversationLockPath(this.workspaceDir, sessionId), () => {
+    return this.filesystem.withLockRetry(resolveSessionLockPath(this.workspaceDir, sessionId), () => {
       const raw = this.readTranscript(sessionId);
       const lines = splitTranscript(raw);
       let replaced = false;
@@ -277,8 +277,8 @@ export class ConversationStore {
   }
 
   listSessions(): SessionSummary[] {
-    this.ensureConversationsDir();
-    const entries = fs.readdirSync(resolveConversationsDir(this.workspaceDir));
+    this.ensureSessionsDir();
+    const entries = fs.readdirSync(resolveSessionsDir(this.workspaceDir));
 
     const sessions = entries
       .filter((entry) => entry.endsWith(SESSION_FILE_EXTENSION))
@@ -302,7 +302,7 @@ export class ConversationStore {
       }));
   }
 
-  searchSessions(query: string, options: ConversationStoreSearchOptions = {}): ConversationSearchResult[] {
+  searchSessions(query: string, options: SessionStoreSearchOptions = {}): SessionSearchResult[] {
     const normalizedQuery = normalizeSearchText(query.trim());
     if (!normalizedQuery) return [];
 
@@ -314,7 +314,7 @@ export class ConversationStore {
       .filter(Boolean)
       .map((session) => {
         const record = session as SessionRecord;
-        const matchedFields: ConversationSearchField[] = [];
+        const matchedFields: SessionSearchField[] = [];
         let score = 0;
         let snippet = "";
 
@@ -351,7 +351,7 @@ export class ConversationStore {
         if (score <= 0) return null;
         return buildSearchResult(record, snippet || record.preview || record.title, score, matchedFields);
       })
-      .filter(Boolean) as ConversationSearchResult[];
+      .filter(Boolean) as SessionSearchResult[];
 
     return results
       .sort((left, right) => (

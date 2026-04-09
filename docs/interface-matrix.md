@@ -27,14 +27,42 @@ Use this page when you need to answer questions like:
 | CLI | `claw ...` | Local shell surface shipped by `@clawjs/cli`. |
 | Relay API | `relay/` HTTP `/v1` routes | Public remote API routed through the relay connector. |
 
+## Surface Contract
+
+ClawJS now treats surface classification as a product contract, not as
+an after-the-fact documentation exercise.
+
+### Tiers
+
+| Tier | Meaning |
+| --- | --- |
+| `SDK core` | Primary application-facing SDK surface. |
+| `SDK advanced public` | Public but more specialized or infrastructure-oriented SDK surface. |
+| `workspace extension public` | Namespaces added by `@clawjs/workspace`. |
+| `CLI project/scaffolding` | Project creation and resource generation flows. |
+| `CLI local/runtime ops` | Local operator workflows over the same SDK primitives. |
+| `Relay control plane` | Tenant, connector, pairing, auth, and admin routes. |
+| `Relay data plane` | Remote workspace and project resource routes. |
+| `adapter-specific` | Runtime-specific surfaces such as `claw.runtime.openclaw.*`. |
+
+### Visibility Markers
+
+| Marker | Meaning |
+| --- | --- |
+| `stable` | Normal public product surface. |
+| `advanced` | Public but intentionally lower-level or more specialized. |
+| `local-only` | Public in SDK or CLI, but not mirrored to Relay. |
+| `remote-only` | Public only through Relay. |
+| `internal` | Not part of the public contract. |
+
 ## Naming Differences
 
 The same product concept does not always use the same name across surfaces.
 
 | Product concept | SDK name | CLI name | Relay API name |
 | --- | --- | --- | --- |
-| chat / conversation | `conversations` | `sessions` | `sessions` |
-| message send / reply stream | `conversations.appendMessage()` and `streamAssistantReply*()` | `sessions stream` | `/sessions/:sessionId/messages`, `/reply`, `/stream` |
+| chat / session | `sessions` | `sessions` | `sessions` |
+| message send / reply stream | `sessions.appendMessage()` and `streamAssistantReply*()` | `sessions stream` | `/sessions/:sessionId/messages`, `/reply`, `/stream` |
 | file attachment | `documents` | `-` | `documents` |
 | generated image asset | `image` | `image` | `images` |
 
@@ -83,7 +111,7 @@ The Relay also exposes equivalent project-scoped routes under:
 | Workspace file write | `claw.files.writeWorkspaceFile()` | `claw files write` | `PUT /v1/admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/workspace-files/:fileName` |
 | File inspect / diff / sync | `claw.files.inspectWorkspaceFile()`, `diffBinding()`, `syncBinding()` | `claw files inspect`, `diff`, `sync` | `-` |
 
-### Models, Auth, Scheduler, Memory, Skills, Channels
+### Models, Providers, Auth, Scheduler, Memory, Skills, Channels
 
 | Capability | SDK | CLI | Relay API |
 | --- | --- | --- | --- |
@@ -93,6 +121,9 @@ The Relay also exposes equivalent project-scoped routes under:
 | Models list | `claw.models.list()` | `claw models list` | `-` |
 | Default model get | `claw.models.getDefault()` | `claw models default` | `-` |
 | Default model set | `claw.models.setDefault()` | `claw models set-default` | `-` |
+| Providers list | `claw.providers.list()` | `claw providers list` | `-` |
+| Providers catalog | `claw.providers.catalog()` | `claw providers catalog` | `-` |
+| Providers auth state | `claw.providers.authState()` | `claw providers auth-state` | `-` |
 | Scheduler list | `claw.scheduler.list()` | `claw scheduler list` | `-` |
 | Scheduler run / enable / disable | `claw.scheduler.run()`, `enable()`, `disable()` | `claw scheduler run`, `enable`, `disable` | `-` |
 | Memory list | `claw.memory.list()` | `claw memory list` | `-` |
@@ -104,31 +135,34 @@ The Relay also exposes equivalent project-scoped routes under:
 | Skills install | `claw.skills.install()` | `claw skills install` | `-` |
 | Channels list | `claw.channels.list()` | `claw channels list`, `claw channels status` | `GET WS/integrations/status` |
 
-### Conversations, Sessions, and Documents
+### Sessions, Inference, TTS, and Documents
 
 | Capability | SDK | CLI | Relay API |
 | --- | --- | --- | --- |
-| Create conversation / session | `claw.conversations.createSession()` | `claw sessions create` | `POST WS/sessions` |
-| List conversations / sessions | `claw.conversations.listSessions()` | `claw sessions list` | `GET WS/sessions` |
-| Read conversation / session | `claw.conversations.getSession()` | `claw sessions read` | `GET WS/sessions/:sessionId` |
-| Search conversations / sessions | `claw.conversations.searchSessions()` | `claw sessions search` | `GET WS/sessions:search` |
-| Rename session | `claw.conversations.updateSessionTitle()` | `-` | `PATCH WS/sessions/:sessionId` |
-| Append a message | `claw.conversations.appendMessage()` | `-` | `POST WS/sessions/:sessionId/messages` |
-| Generate title | `claw.conversations.generateTitle()` | `claw sessions generate-title` | `POST WS/sessions/:sessionId/generate-title` |
-| Stream assistant text | `claw.conversations.streamAssistantReply()` | `claw sessions stream` | `GET WS/sessions/:sessionId/stream`, `POST WS/sessions/:sessionId/stream` |
-| Stream structured assistant events | `claw.conversations.streamAssistantReplyEvents()` | `claw sessions stream --events` | `GET WS/sessions/:sessionId/stream`, `POST WS/sessions/:sessionId/stream` |
+| Create session / session | `claw.sessions.createSession()` | `claw sessions create` | `POST WS/sessions` |
+| List sessions / sessions | `claw.sessions.listSessions()` | `claw sessions list` | `GET WS/sessions` |
+| Read session / session | `claw.sessions.getSession()` | `claw sessions read` | `GET WS/sessions/:sessionId` |
+| Search sessions / sessions | `claw.sessions.searchSessions()` | `claw sessions search` | `GET WS/sessions:search` |
+| Rename session | `claw.sessions.updateSessionTitle()` | `-` | `PATCH WS/sessions/:sessionId` |
+| Append a message | `claw.sessions.appendMessage()` | `-` | `POST WS/sessions/:sessionId/messages` |
+| Generate title | `claw.sessions.generateTitle()` | `claw sessions generate-title` | `POST WS/sessions/:sessionId/generate-title` |
+| Stream assistant text | `claw.sessions.streamAssistantReply()` | `claw sessions stream` | `GET WS/sessions/:sessionId/stream`, `POST WS/sessions/:sessionId/stream` |
+| Stream structured assistant events | `claw.sessions.streamAssistantReplyEvents()` | `claw sessions stream --events` | `GET WS/sessions/:sessionId/stream`, `POST WS/sessions/:sessionId/stream` |
+| Direct text inference | `claw.inference.generateText()` | `claw inference generate-text` | `-` |
+| TTS synthesize | `claw.tts.synthesize()` | `claw tts synthesize` | `-` |
+| TTS config / providers / catalog | `claw.tts.config()`, `setConfig()`, `providers()`, `catalog()` | `claw tts config`, `set-config`, `providers`, `catalog` | `-` |
 | Non-stream reply helper | `-` | `-` | `POST WS/sessions/:sessionId/reply` |
 | Clear all sessions | `-` | `-` | `POST /v1/admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/sessions/clear` |
 | Delete one session | `-` | `-` | `-` |
 | Update one message | `-` | `-` | `-` |
 | Delete one message | `-` | `-` | `-` |
-| List documents | `claw.documents.list()` | `-` | `GET WS/documents` |
-| Get document metadata | `claw.documents.get()` | `-` | `GET WS/documents/:documentId` |
-| Search documents | `claw.documents.search()` | `-` | `GET WS/documents:search` |
-| Upload document | `claw.documents.upload()` | `-` | `POST WS/documents/upload` |
-| Register existing file path | `claw.documents.register()` | `-` | `POST WS/documents/register` |
+| List documents | `claw.documents.list()` | `claw documents list` | `GET WS/documents` |
+| Get document metadata | `claw.documents.get()` | `claw documents read` | `GET WS/documents/:documentId` |
+| Search documents | `claw.documents.search()` | `claw documents search` | `GET WS/documents:search` |
+| Upload document | `claw.documents.upload()` | `claw documents upload` | `POST WS/documents/upload` |
+| Register existing file path | `claw.documents.register()` | `claw documents register` | `POST WS/documents/register` |
 | Chunked upload primitives | `claw.documents.beginUpload()`, `appendUploadChunk()`, `commitUpload()` | `-` | used internally by `POST WS/documents/upload` |
-| Download document | `claw.documents.download()` | `-` | `GET WS/documents/:documentId/download` |
+| Download document | `claw.documents.download()` | `claw documents download` | `GET WS/documents/:documentId/download` |
 | Resolve document refs | `claw.documents.resolveRefs()` | `-` | indirect via session routes |
 | Delete one document | `-` | `-` | `-` |
 
@@ -207,13 +241,32 @@ local CLI or the SDK instance surface.
 | --- | --- | --- | --- |
 | Health | `-` | `-` | `GET /v1/health` |
 | Relay auth login / refresh / logout | `-` | `-` | `POST /v1/auth/login`, `/refresh`, `/logout` |
+| Current user devices | `-` | `-` | `GET /v1/me/devices` |
+| Current user workspaces | `-` | `-` | `GET /v1/me/workspaces` |
+| Device start / poll | `-` | `-` | `POST /v1/connectors/device/start`, `POST /v1/connectors/device/poll` |
+| Pairing approve / deny | `-` | `-` | `POST /v1/pairings/:pairingId/approve`, `POST /v1/pairings/:pairingId/deny` |
 | Connector enrollment exchange | `-` | `-` | `POST /v1/connector/enroll` |
 | Connector websocket connect | `-` | `-` | `GET /v1/connector/connect` |
 | Create connector enrollment | `-` | `-` | `POST /v1/admin/connectors/enrollments` |
+| Revoke connector enrollment | `-` | `-` | `POST /v1/admin/connectors/:connectorId/revoke` |
 | Tenant agents list | `-` | `-` | `GET /v1/tenants/:tenantId/agents` |
 | Project list / create / get / update | `-` | `-` | `GET`, `POST`, `GET by id`, `PATCH` under `/v1/tenants/:tenantId/projects...` |
 | Project-agent assignments | `-` | `-` | `POST`, `GET`, `DELETE` under `/v1/tenants/:tenantId/projects/:projectId/agents/:agentId...` |
+| Reverse agent-project lookup | `-` | `-` | `GET /v1/tenants/:tenantId/agents/:agentId/projects` |
+| Workspace grants | `-` | `-` | `POST /v1/admin/tenants/:tenantId/workspace-grants` |
 | Activity / usage telemetry | `-` | `-` | `GET WS/activity`, `GET WS/usage`, admin delete routes |
+
+### Relay Resource Routes
+
+The generic resource loop currently publishes:
+
+- `tasks`, `notes`, `memory`, `inbox`, `people`, `events`
+- `personas`, `plugins`, `routines`
+- `images`
+
+Each resource exists on both workspace-scoped `WS/...` routes and
+project-scoped routes under `/v1/tenants/:tenantId/projects/:projectId/agents/:agentId/...`.
+`WS/chat/feedback` is also a first-class public remote route.
 
 ## Practical Rule Of Thumb
 

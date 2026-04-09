@@ -8,7 +8,7 @@ import type {
   RuntimeAdapter,
   RuntimeAdapterOptions,
   RuntimeCompatReport,
-  RuntimeConversationAdapter,
+  RuntimeSessionAdapter,
   RuntimeProbeStatus,
   RuntimeSetupInput,
   SaveApiKeyResult,
@@ -30,7 +30,7 @@ import type {
 } from "@clawjs/core";
 import { maskCredential } from "@clawjs/core";
 
-import { buildProgressStep, buildRuntimeCapabilityMap, buildRuntimeCompatReport, defaultManagedConversationFeatures, runRuntimeProgressPlan, runtimeOperationCapability } from "./shared.ts";
+import { buildProgressStep, buildRuntimeCapabilityMap, buildRuntimeCompatReport, defaultManagedSessionFeatures, runRuntimeProgressPlan, runtimeOperationCapability } from "./shared.ts";
 import {
   normalizeProviderAuthSummary,
   readJsonFile,
@@ -237,7 +237,7 @@ export const picoclawAdapter: RuntimeAdapter = {
   supportLevel: "experimental",
   workspaceFiles: PICOCLAW_WORKSPACE_FILES,
   describeFeatures() {
-    return defaultManagedConversationFeatures({
+    return defaultManagedSessionFeatures({
       channelsSupported: false,
       skillsSupported: true,
       pluginsSupported: false,
@@ -279,8 +279,8 @@ export const picoclawAdapter: RuntimeAdapter = {
           workspace: { supported: true, status: "ready", strategy: "native" },
           auth: { supported: true, status: "degraded", strategy: "config" },
           models: { supported: true, status: "degraded", strategy: "config" },
-          conversation_cli: { supported: true, status: "error", strategy: "cli" },
-          conversation_gateway: { supported: false, status: "unsupported", strategy: "unsupported" },
+          session_cli: { supported: true, status: "error", strategy: "cli" },
+          session_gateway: { supported: false, status: "unsupported", strategy: "unsupported" },
           streaming: { supported: true, status: "degraded", strategy: "cli" },
           scheduler: { supported: false, status: "unsupported", strategy: "unsupported" },
           memory: { supported: true, status: "ready", strategy: "config" },
@@ -330,8 +330,8 @@ export const picoclawAdapter: RuntimeAdapter = {
         workspace: { supported: true, status: "ready", strategy: "native" },
         auth: { supported: true, status: capabilities.authLogin ? "ready" : "degraded", strategy: "config" },
         models: { supported: true, status: capabilities.modelList ? "ready" : "degraded", strategy: "cli" },
-        conversation_cli: { supported: true, status: "ready", strategy: "cli" },
-        conversation_gateway: { supported: false, status: "unsupported", strategy: "unsupported" },
+        session_cli: { supported: true, status: "ready", strategy: "cli" },
+        session_gateway: { supported: false, status: "unsupported", strategy: "unsupported" },
         streaming: { supported: true, status: "ready", strategy: "cli" },
         scheduler: { supported: false, status: "unsupported", strategy: "unsupported" },
         memory: { supported: true, status: "ready", strategy: "config" },
@@ -616,7 +616,7 @@ export const picoclawAdapter: RuntimeAdapter = {
   async listChannels(_runner, _options): Promise<ChannelDescriptor[]> {
     return [];
   },
-  createConversationAdapter(_options): RuntimeConversationAdapter {
+  createSessionAdapter(_options): RuntimeSessionAdapter {
     return {
       transport: {
         kind: "cli",

@@ -11,23 +11,24 @@ test("generateRuntimeText uses gateway transport when available", async () => {
   }, {
     fetchImpl: async () => new Response(
       [
-        "data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}\n",
-        "data: {\"choices\":[{\"delta\":{\"content\":\" world\"}}]}\n",
-        "data: [DONE]\n",
+        "event: response.output_text.delta\n",
+        "data: {\"delta\":\"Hello\"}\n\n",
+        "event: response.output_text.delta\n",
+        "data: {\"delta\":\" world\"}\n\n",
       ].join(""),
       {
         status: 200,
         headers: { "Content-Type": "text/event-stream" },
       },
     ),
-    conversationAdapter: {
+    sessionAdapter: {
       transport: {
         kind: "hybrid",
         streaming: true,
-        gatewayKind: "openai-chat-completions",
+        gatewayKind: "openai-responses",
       },
       gateway: {
-        kind: "openai-chat-completions",
+        kind: "openai-responses",
         url: "http://127.0.0.1:18789",
       },
       buildCliInvocation() {
@@ -61,13 +62,17 @@ test("generateRuntimeText falls back to CLI when gateway fails in auto mode", as
         exitCode: 0,
       }),
     },
-    conversationAdapter: {
+    sessionAdapter: {
       transport: {
         kind: "hybrid",
         streaming: true,
-        gatewayKind: "openai-chat-completions",
+        gatewayKind: "openai-responses",
       },
       gateway: {
+        kind: "openai-responses",
+        url: "http://127.0.0.1:18789",
+      },
+      fallbackGateway: {
         kind: "openai-chat-completions",
         url: "http://127.0.0.1:18789",
       },

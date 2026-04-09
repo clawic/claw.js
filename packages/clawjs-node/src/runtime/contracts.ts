@@ -3,7 +3,7 @@ import type {
   CapabilityName,
   ChannelCatalog,
   ChannelDescriptor,
-  ConversationTransport,
+  SessionTransport,
   DefaultModelRef,
   MemoryCatalog,
   MemoryDescriptor,
@@ -185,7 +185,7 @@ export interface SaveApiKeyResult {
   mode: "runtime" | "store";
 }
 
-export interface ConversationCliInvocation {
+export interface SessionCliInvocation {
   command: string;
   args: string[];
   env?: NodeJS.ProcessEnv;
@@ -193,7 +193,7 @@ export interface ConversationCliInvocation {
   parser: "json-payloads" | "stdout-text";
 }
 
-export interface ConversationGatewayDescriptor {
+export interface SessionGatewayDescriptor {
   kind: "openai-chat-completions" | "openai-responses" | "openclaw-gateway";
   url: string;
   token?: string;
@@ -202,10 +202,10 @@ export interface ConversationGatewayDescriptor {
   configPath?: string;
 }
 
-export interface RuntimeConversationAdapter {
-  gateway?: ConversationGatewayDescriptor | null;
-  fallbackGateway?: ConversationGatewayDescriptor | null;
-  transport: ConversationTransport;
+export interface RuntimeSessionAdapter {
+  gateway?: SessionGatewayDescriptor | null;
+  fallbackGateway?: SessionGatewayDescriptor | null;
+  transport: SessionTransport;
   primaryTransport?: "cli" | "gateway";
   fallbackTransport?: "cli" | "gateway" | "none";
   sessionPersistence?: "ephemeral" | "workspace" | "runtime" | "agent";
@@ -216,7 +216,7 @@ export interface RuntimeConversationAdapter {
     agentId?: string;
     prompt: string;
     model?: string;
-  }): ConversationCliInvocation;
+  }): SessionCliInvocation;
   supportsGateway?: boolean;
 }
 
@@ -264,11 +264,11 @@ export interface RuntimeResourceHandlers {
   getPluginCatalog?(runner: CommandRunner, options: RuntimeAdapterOptions): Promise<PluginCatalog>;
 }
 
-export interface RuntimeConversationHandlers {
-  describe(options: RuntimeAdapterOptions): Omit<RuntimeConversationAdapter, "buildCliInvocation"> & {
+export interface RuntimeSessionHandlers {
+  describe(options: RuntimeAdapterOptions): Omit<RuntimeSessionAdapter, "buildCliInvocation"> & {
     sessionPath?: string;
   };
-  create(options: RuntimeAdapterOptions): RuntimeConversationAdapter;
+  create(options: RuntimeAdapterOptions): RuntimeSessionAdapter;
 }
 
 export interface RuntimeWorkspaceHandlers {
@@ -286,7 +286,7 @@ export interface RuntimeAdapter {
   capabilities?: RuntimeCapabilityHandlers;
   operations?: RuntimeOperationHandlers;
   resources?: RuntimeResourceHandlers;
-  conversation?: RuntimeConversationHandlers;
+  session?: RuntimeSessionHandlers;
   workspace?: RuntimeWorkspaceHandlers;
   describeFeatures(options: RuntimeAdapterOptions): RuntimeFeatureDescriptor[];
   resolveLocations(options: RuntimeAdapterOptions): RuntimeLocations;
@@ -333,5 +333,5 @@ export interface RuntimeAdapter {
   listSkills(runner: CommandRunner, options: RuntimeAdapterOptions): Promise<SkillDescriptor[]>;
   syncSkills(runner: CommandRunner, options: RuntimeAdapterOptions): Promise<SkillDescriptor[]>;
   listChannels(runner: CommandRunner, options: RuntimeAdapterOptions): Promise<ChannelDescriptor[]>;
-  createConversationAdapter(options: RuntimeAdapterOptions): RuntimeConversationAdapter;
+  createSessionAdapter(options: RuntimeAdapterOptions): RuntimeSessionAdapter;
 }

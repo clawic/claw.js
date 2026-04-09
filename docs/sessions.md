@@ -1,23 +1,23 @@
 ---
-title: Conversations
+title: Sessions
 description: Session storage, normalized stream events, and adapter-aware transport behavior.
 ---
 
-# Conversations
+# Sessions
 
-Conversation data lives in `.clawjs/conversations/<session-id>.jsonl`. The store keeps session headers and message events in a line-delimited format, independent of the selected runtime adapter.
+Session data lives in `.clawjs/sessions/<session-id>.jsonl`. The store keeps session headers and message events in a line-delimited format, independent of the selected runtime adapter.
 
 ## Listing sessions
 
 The Node API exposes:
 
-- `claw.conversations.createSession(title?)`
-- `claw.conversations.appendMessage(sessionId, message)`
-- `claw.conversations.listSessions()`
-- `claw.conversations.searchSessions({ query, strategy?, ... })`
-- `claw.conversations.getSession(sessionId)`
-- `claw.conversations.updateSessionTitle(sessionId, title)`
-- `claw.conversations.generateTitle({ sessionId, transport? })`
+- `claw.sessions.createSession(title?)`
+- `claw.sessions.appendMessage(sessionId, message)`
+- `claw.sessions.listSessions()`
+- `claw.sessions.searchSessions({ query, strategy?, ... })`
+- `claw.sessions.getSession(sessionId)`
+- `claw.sessions.updateSessionTitle(sessionId, title)`
+- `claw.sessions.generateTitle({ sessionId, transport? })`
 
 Messages can now include `documents`, which are lightweight refs:
 
@@ -33,7 +33,7 @@ type DocumentRef = {
 
 Use `claw.documents.upload()` or `claw.documents.register()` first, then attach the
 returned refs to the message. ClawJS keeps the canonical blob in the workspace and
-persists only document refs in `.clawjs/conversations/<session-id>.jsonl`.
+persists only document refs in `.clawjs/sessions/<session-id>.jsonl`.
 
 CLI equivalents:
 
@@ -83,7 +83,7 @@ The normalized event union is:
 Example:
 
 ```ts
-for await (const event of claw.conversations.streamAssistantReplyEvents({
+for await (const event of claw.sessions.streamAssistantReplyEvents({
   sessionId: "clawjs-123",
   transport: "auto",
 })) {
@@ -106,7 +106,7 @@ claw \
 
 ## Transport behavior
 
-The conversation core is adapter-driven. An adapter can expose:
+The session core is adapter-driven. An adapter can expose:
 
 - CLI prompt transport
 - HTTP transport
@@ -114,12 +114,22 @@ The conversation core is adapter-driven. An adapter can expose:
 - WebSocket
 - hybrid gateway + CLI fallback
 
+For `openclaw`, the default policy is capability-based:
+
+- normal product chat goes through `/v1/responses`
+- document refs are materialized into OpenAI-style `input_file` and
+  `input_image` parts when the payload supports them
+- `chat/completions` stays as a text-only fallback path for simple
+  compatibility and title-style flows
+- native OpenClaw session and chat operations are exposed separately
+  under `claw.runtime.openclaw`
+
 If the preferred transport fails and the adapter supports fallback, ClawJS falls back automatically and emits a `transport` event.
 
 That matters for consumers that want deterministic logs:
 
 - watch `transport` to see whether gateway, SSE, WS, or CLI was used
 - watch `retry` when a gateway/SSE/WS transport is retried
-- watch `title` if you want the session title synchronized with the conversation
+- watch `title` if you want the session title synchronized with the session
 
 The transcript parser remains runtime-agnostic and can derive a title from the first meaningful user or assistant message when no explicit title is present.

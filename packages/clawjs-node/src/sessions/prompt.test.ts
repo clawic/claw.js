@@ -1,7 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildOpenAIMessages, buildOpenClawCliPrompt, buildSystemPromptWithContext, formatOpenClawConversation } from "./prompt.ts";
+import {
+  buildOpenAIMessages,
+  buildOpenAIResponseMessages,
+  buildOpenClawCliPrompt,
+  buildSystemPromptWithContext,
+  formatOpenClawConversation,
+} from "./prompt.ts";
 
 test("buildSystemPromptWithContext merges one-shot context blocks", () => {
   const prompt = buildSystemPromptWithContext("Base rules", [
@@ -49,4 +55,25 @@ test("buildOpenClawCliPrompt and buildOpenAIMessages keep context and multimodal
   assert.equal(openaiMessages[0]?.role, "system");
   assert.equal(Array.isArray(openaiMessages[1]?.content), true);
   assert.match(JSON.stringify(openaiMessages[1]), /data:image\/png;base64,abcd/);
+});
+
+test("buildOpenAIResponseMessages prefers rich inputs and falls back to attachment summaries", () => {
+  const responseMessages = buildOpenAIResponseMessages({
+    systemPrompt: "Behave.",
+    messages: [{
+      role: "user",
+      content: "Review these",
+      assets: [
+        { name: "image.png", mimeType: "image/png", data: "abcd" },
+        { name: "budget.pdf", mimeType: "application/pdf", data: "efgh" },
+        { name: "notes.docx", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", data: "ijkl" },
+      ],
+    }],
+  });
+
+  assert.equal(responseMessages[0]?.role, "system");
+  assert.equal(Array.isArray(responseMessages[1]?.content), true);
+  assert.match(JSON.stringify(responseMessages[1]), /input_image/);
+  assert.match(JSON.stringify(responseMessages[1]), /input_file/);
+  assert.match(JSON.stringify(responseMessages[1]), /Attachments: notes\.docx/);
 });

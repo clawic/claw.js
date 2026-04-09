@@ -5,12 +5,12 @@ import type {
   AuthDiagnostics,
   AuthLoginResult,
   CommandRunner,
-  ConversationCliInvocation,
-  ConversationGatewayDescriptor,
+  SessionCliInvocation,
+  SessionGatewayDescriptor,
   RuntimeAdapter,
   RuntimeAdapterOptions,
   RuntimeCompatReport,
-  RuntimeConversationAdapter,
+  RuntimeSessionAdapter,
   RuntimeProbeStatus,
   RuntimeSetupInput,
   SaveApiKeyResult,
@@ -37,7 +37,7 @@ import type {
 } from "@clawjs/core";
 import { maskCredential } from "@clawjs/core";
 
-import { buildProgressStep, buildRuntimeCapabilityMap, buildRuntimeCompatReport, defaultManagedConversationFeatures, runRuntimeProgressPlan, runtimeOperationCapability } from "./shared.ts";
+import { buildProgressStep, buildRuntimeCapabilityMap, buildRuntimeCompatReport, defaultManagedSessionFeatures, runRuntimeProgressPlan, runtimeOperationCapability } from "./shared.ts";
 import { ensureParentDir, normalizeProviderAuthSummary, readJsonFile, resolveHomeDir } from "./config-utils.ts";
 
 interface SimpleAuthStore {
@@ -70,9 +70,9 @@ interface SimpleRuntimeAdapterSpec {
   modelListCommand?: string[];
   setDefaultModelArgs?: (model: string) => string[];
   loginArgs?: (provider: string) => string[];
-  conversationCli: (input: { sessionId: string; agentId?: string; prompt: string; model?: string }) => ConversationCliInvocation;
+  conversationCli: (input: { sessionId: string; agentId?: string; prompt: string; model?: string }) => SessionCliInvocation;
   gatewaySupport?: boolean;
-  gatewayKind?: ConversationGatewayDescriptor["kind"];
+  gatewayKind?: SessionGatewayDescriptor["kind"];
   conversationDetails?: (options: RuntimeAdapterOptions, locations: RuntimeLocations) => {
     primaryTransport?: "cli" | "gateway";
     fallbackTransport?: "cli" | "gateway" | "none";
@@ -211,13 +211,13 @@ function buildDeclaredCapabilityMap(spec: SimpleRuntimeAdapterSpec, options: Run
       strategy: spec.modelListCommand ? "cli" : "config",
       diagnostics: { source: spec.modelListCommand ? "runtime" : "config", probeMethod: spec.modelListCommand ? "cli" : "config", inventoryFreshness: spec.modelListCommand ? "live" : "cached" },
     },
-    conversation_cli: {
+    session_cli: {
       supported: true,
       status: "detected",
       strategy: "cli",
       diagnostics: { source: "runtime", probeMethod: "cli", transport: "cli", inventoryFreshness: "live" },
     },
-    conversation_gateway: {
+    session_gateway: {
       supported: !!spec.gatewaySupport,
       status: spec.gatewaySupport ? "detected" : "unsupported",
       strategy: spec.gatewaySupport ? "gateway" : "unsupported",
@@ -322,8 +322,8 @@ async function probeSimpleRuntime(
         runtime: { ...declared.runtime, supported: true, status: "error", strategy: "cli", diagnostics: { ...(declared.runtime.diagnostics ?? {}), source: "runtime", probeMethod: "cli" } },
         auth: { ...declared.auth, supported: true, status: "degraded", strategy: "config" },
         models: { ...declared.models, supported: true, status: "degraded", strategy: declared.models.strategy },
-        conversation_cli: { ...declared.conversation_cli, supported: true, status: "error", strategy: "cli" },
-        conversation_gateway: { ...declared.conversation_gateway, supported: !!spec.gatewaySupport, status: spec.gatewaySupport ? "degraded" : "unsupported", strategy: spec.gatewaySupport ? "gateway" : "unsupported" },
+        session_cli: { ...declared.session_cli, supported: true, status: "error", strategy: "cli" },
+        session_gateway: { ...declared.session_gateway, supported: !!spec.gatewaySupport, status: spec.gatewaySupport ? "degraded" : "unsupported", strategy: spec.gatewaySupport ? "gateway" : "unsupported" },
         streaming: { ...declared.streaming, supported: true, status: "degraded", strategy: spec.gatewaySupport ? "gateway" : "cli" },
         scheduler: { ...declared.scheduler, supported: declared.scheduler.supported, status: declared.scheduler.supported ? "degraded" : "unsupported" },
         memory: { ...declared.memory, supported: true, status: "ready", strategy: declared.memory.strategy },
@@ -377,8 +377,8 @@ async function probeSimpleRuntime(
       runtime: { ...declared.runtime, supported: true, status: "ready", strategy: "cli" },
       auth: { ...declared.auth, supported: true, status: "ready", strategy: declared.auth.strategy },
       models: { ...declared.models, supported: true, status: capabilities.modelList ? "ready" : "degraded", strategy: declared.models.strategy },
-      conversation_cli: { ...declared.conversation_cli, supported: true, status: "ready", strategy: "cli" },
-      conversation_gateway: { ...declared.conversation_gateway, supported: !!spec.gatewaySupport, status: gatewayAvailable ? "ready" : spec.gatewaySupport ? "degraded" : "unsupported", strategy: spec.gatewaySupport ? "gateway" : "unsupported" },
+      session_cli: { ...declared.session_cli, supported: true, status: "ready", strategy: "cli" },
+      session_gateway: { ...declared.session_gateway, supported: !!spec.gatewaySupport, status: gatewayAvailable ? "ready" : spec.gatewaySupport ? "degraded" : "unsupported", strategy: spec.gatewaySupport ? "gateway" : "unsupported" },
       streaming: { ...declared.streaming, supported: true, status: "ready", strategy: gatewayAvailable ? "gateway" : "cli" },
       scheduler: { ...declared.scheduler, supported: declared.scheduler.supported, status: declared.scheduler.supported ? (capabilities.scheduler ? "ready" : "degraded") : "unsupported", strategy: declared.scheduler.strategy },
       memory: { ...declared.memory, supported: true, status: "ready", strategy: declared.memory.strategy },
@@ -693,7 +693,7 @@ export function createSimpleRuntimeAdapter(spec: SimpleRuntimeAdapterSpec): Runt
         return { plugins: [] };
       },
     },
-    conversation: {
+    session: {
       describe(options) {
         const locations = resolveLocations(spec, options);
         const details = spec.conversationDetails?.(options, locations) ?? {};
@@ -764,7 +764,7 @@ export function createSimpleRuntimeAdapter(spec: SimpleRuntimeAdapterSpec): Runt
     },
     describeFeatures(options) {
       const locations = resolveLocations(spec, options);
-      return defaultManagedConversationFeatures({
+      return defaultManagedSessionFeatures({
         channelsSupported: resolveDescriptors(spec.defaultChannels, locations).length > 0 || !!spec.gatewaySupport,
         skillsSupported: true,
         pluginsSupported: false,
@@ -1091,7 +1091,7 @@ export function createSimpleRuntimeAdapter(spec: SimpleRuntimeAdapterSpec): Runt
       }
       return resolveDescriptors(spec.defaultChannels, resolveLocations(spec, options));
     },
-    createConversationAdapter(options): RuntimeConversationAdapter {
+    createSessionAdapter(options): RuntimeSessionAdapter {
       const locations = resolveLocations(spec, options);
       const details = spec.conversationDetails?.(options, locations) ?? {};
       const gatewayKind = spec.gatewayKind ?? "openai-chat-completions";

@@ -63,6 +63,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} files read|write|inspect|diff|sync|apply-template-pack`,
     `  ${binName} auth status|login|remove`,
     `  ${binName} models list|default|set-default`,
+    `  ${binName} providers list|catalog|auth-state`,
     `  ${binName} scheduler list|run|enable|disable`,
     `  ${binName} memory list|status|inspect|search`,
     `  ${binName} tasks list|get|create|update|complete|search`,
@@ -76,10 +77,14 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} channels list|status`,
     `  ${binName} telegram connect|status|webhook set|clear|polling start|stop|commands set|get|chats list|inspect|send`,
     `  ${binName} sessions create|list|search|read|stream|generate-title`,
+    `  ${binName} documents list|read|search|upload|register|download`,
+    `  ${binName} inference generate-text`,
+    `  ${binName} tts synthesize|config|set-config|providers|catalog`,
     `  ${binName} image generate|list|read|delete|backends`,
     `  ${binName} audio generate|list|read|delete|backends`,
     `  ${binName} video generate|list|read|delete|backends`,
     `  ${binName} generations backends|register-command|remove-backend|create|list|read|delete`,
+    `  ${binName} notify send|cancel|subscriptions upsert|delete`,
     `  ${binName} database serve|login|namespace|collection|record|token|file`,
     `  ${binName} compat [--refresh] [--json]`,
     "",
@@ -192,6 +197,50 @@ function resolveRuntimeAdapterId(flags: Record<string, string>): RuntimeAdapterI
 
 type MediaKind = "image" | "audio" | "video";
 
+function inferMimeTypeFromPath(filePath: string): string {
+  switch (path.extname(filePath).toLowerCase()) {
+    case ".txt":
+      return "text/plain";
+    case ".md":
+      return "text/markdown";
+    case ".json":
+      return "application/json";
+    case ".csv":
+      return "text/csv";
+    case ".pdf":
+      return "application/pdf";
+    case ".docx":
+      return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    default:
+      return "application/octet-stream";
+  }
+}
+
+function inferAudioExtension(mimeType: string): string {
+  switch (mimeType) {
+    case "audio/mpeg":
+      return ".mp3";
+    case "audio/wav":
+      return ".wav";
+    default:
+      return ".bin";
+  }
+}
+
+function parseInferenceMessages(
+  flags: Record<string, string>,
+): Array<{ role: "user" | "system" | "assistant" | "tool"; content: string }> | null {
+  const parsed = parseJsonFlag<Array<{ role: "user" | "system" | "assistant" | "tool"; content: string }>>(flags["messages-json"], "--messages-json");
+  if (parsed?.length) {
+    return parsed;
+  }
+  const prompt = flags.prompt ?? flags.message ?? flags.text;
+  if (!prompt?.trim()) {
+    return null;
+  }
+  return [{ role: "user", content: prompt.trim() }];
+}
+
 function buildMediaMetadata(
   kind: MediaKind,
   flags: Record<string, string>,
@@ -250,6 +299,13 @@ async function createCliClaw(
     templates: {
       pack: flags["template-pack"],
     },
+    notify: flags["notify-url"]
+      ? {
+        baseUrl: flags["notify-url"],
+        sourceToken: flags["notify-source-token"],
+        clientToken: flags["notify-client-token"],
+      }
+      : undefined,
   });
 }
 
@@ -459,6 +515,116 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
   if (group === "database") {
     try {
       return await runDelegatedDatabaseCli(argv, flags, context);
+    } catch (error) {
+      context.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+      return CLI_EXIT_FAILURE;
+    }
+  }
+
+  if (group === "notify" && command === "send") {
+    try {
+      const claw = await createCliClaw(resolveRuntimeAdapterId(flags), flags, context.cwd, "notify-cli", "notify-cli", "notify-cli");
+      const input = {
+        ...(flags["idempotency-key"] ? { idempotencyKey: flags["idempotency-key"] } : {}),
+        ...(flags.priority ? { priority: flags.priority as "passive" | "normal" | "time-sensitive" | "critical" } : {}),
+        ...(parseJsonFlag<Record<string, unknown>>(flags["audience-json"], "--audience-json") ? { audience: parseJsonFlag<Record<string, unknown>>(flags["audience-json"], "--audience-json") } : {}),
+        context: parseJsonFlag<Record<string, unknown>>(flags["context-json"], "--context-json")
+          ?? {
+            tenantId: flags["tenant-id"] ?? "",
+            ...(flags["project-id"] ? { projectId: flags["project-id"] } : {}),
+            ...(flags["agent-id"] ? { agentId: flags["agent-id"] } : {}),
+            ...(flags["workspace-id"] ? { workspaceId: flags["workspace-id"] } : {}),
+            ...(flags["event-type"] ? { eventType: flags["event-type"] } : {}),
+            ...(flags.severity ? { severity: flags.severity } : {}),
+          },
+        delivery: parseJsonFlag<Record<string, unknown>>(flags["delivery-json"], "--delivery-json")
+          ?? {
+            ...(flags.mode ? { mode: flags.mode } : {}),
+            ...(flags.title ? { title: flags.title } : {}),
+            ...(flags.body ? { body: flags.body } : {}),
+            ...(flags["target-client-app-id"] ? { targetClientAppId: flags["target-client-app-id"] } : {}),
+          },
+        ...(parseJsonFlag<Record<string, unknown>>(flags["receipt-policy-json"], "--receipt-policy-json")
+          ? { receiptPolicy: parseJsonFlag<Record<string, unknown>>(flags["receipt-policy-json"], "--receipt-policy-json") }
+          : {}),
+      } as unknown as Parameters<typeof claw.notify.send>[0];
+      const payload = await claw.notify.send(input);
+      if (wantsJson) {
+        writeJson(context.stdout, payload);
+      } else {
+        context.stdout.write(`${payload.notification.id}\n`);
+      }
+      return CLI_EXIT_OK;
+    } catch (error) {
+      context.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+      return CLI_EXIT_FAILURE;
+    }
+  }
+
+  if (group === "notify" && command === "cancel") {
+    try {
+      const notificationId = subcommand || flags["notification-id"];
+      if (!notificationId) {
+        context.stderr.write(`Usage: ${binName} notify cancel <notification-id> --notify-url URL --notify-source-token TOKEN\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const claw = await createCliClaw(resolveRuntimeAdapterId(flags), flags, context.cwd, "notify-cli", "notify-cli", "notify-cli");
+      const payload = await claw.notify.cancel(notificationId);
+      if (wantsJson) {
+        writeJson(context.stdout, payload);
+      } else {
+        context.stdout.write(`${payload.notification.status}\n`);
+      }
+      return CLI_EXIT_OK;
+    } catch (error) {
+      context.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+      return CLI_EXIT_FAILURE;
+    }
+  }
+
+  if (group === "notify" && command === "subscriptions" && subcommand === "upsert") {
+    try {
+      const claw = await createCliClaw(resolveRuntimeAdapterId(flags), flags, context.cwd, "notify-cli", "notify-cli", "notify-cli");
+      const payload = await claw.notify.subscriptions.upsert({
+        ...(flags.id ? { id: flags.id } : {}),
+        ...(flags["source-app-id"] ? { sourceAppId: flags["source-app-id"] } : {}),
+        ...(flags["client-app-id"] ? { clientAppId: flags["client-app-id"] } : {}),
+        ...(flags["project-id"] ? { projectId: flags["project-id"] } : {}),
+        ...(flags["agent-id"] ? { agentId: flags["agent-id"] } : {}),
+        ...(flags["workspace-id"] ? { workspaceId: flags["workspace-id"] } : {}),
+        ...(flags["event-type"] ? { eventType: flags["event-type"] } : {}),
+        ...(flags.severity ? { severity: flags.severity } : {}),
+        ...(flags["min-priority"] ? { minPriority: flags["min-priority"] as "passive" | "normal" | "time-sensitive" | "critical" } : {}),
+        ...(flags.action ? { action: flags.action as "allow" | "mute" } : {}),
+        ...(readBooleanFlag(argv, flags, "installation-scoped", false) ? { installationScoped: true } : {}),
+      });
+      if (wantsJson) {
+        writeJson(context.stdout, payload);
+      } else {
+        context.stdout.write(`${payload.subscription.id}\n`);
+      }
+      return CLI_EXIT_OK;
+    } catch (error) {
+      context.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+      return CLI_EXIT_FAILURE;
+    }
+  }
+
+  if (group === "notify" && command === "subscriptions" && subcommand === "delete") {
+    try {
+      const id = extractPositionals(argv)[3] || flags.id;
+      if (!id) {
+        context.stderr.write(`Usage: ${binName} notify subscriptions delete <id> --notify-url URL --notify-client-token TOKEN\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const claw = await createCliClaw(resolveRuntimeAdapterId(flags), flags, context.cwd, "notify-cli", "notify-cli", "notify-cli");
+      const payload = await claw.notify.subscriptions.remove(id);
+      if (wantsJson) {
+        writeJson(context.stdout, payload);
+      } else {
+        context.stdout.write(`${payload.ok}\n`);
+      }
+      return CLI_EXIT_OK;
     } catch (error) {
       context.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
       return CLI_EXIT_FAILURE;
@@ -890,7 +1056,7 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
       removeProjections: readBooleanFlag(argv, flags, "remove-projections", readBooleanFlag(argv, flags, "remove-bindings", true)),
       removeObserved: readBooleanFlag(argv, flags, "remove-observed", readBooleanFlag(argv, flags, "remove-state", true)),
       removeIntents: readBooleanFlag(argv, flags, "remove-intents", true),
-      removeConversations: readBooleanFlag(argv, flags, "remove-conversations", true),
+      removeSessions: readBooleanFlag(argv, flags, "remove-sessions", true),
       removeAudit: readBooleanFlag(argv, flags, "remove-audit", true),
       removeBackups: readBooleanFlag(argv, flags, "remove-backups", false),
       removeLocks: readBooleanFlag(argv, flags, "remove-locks", false),
@@ -986,6 +1152,39 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
       context.stdout.write(`${modelId}\n`);
     }
     return CLI_EXIT_OK;
+  }
+
+  if (group === "providers" && command === "list") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const providers = await claw.providers.list();
+    if (wantsJson) {
+      writeJson(context.stdout, providers);
+    } else {
+      context.stdout.write(`${providers.map((provider) => `${provider.id}:${provider.local ? "local" : "remote"}`).join("\n")}\n`);
+    }
+    return providers.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "providers" && command === "catalog") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const catalog = await claw.providers.catalog();
+    if (wantsJson) {
+      writeJson(context.stdout, catalog);
+    } else {
+      context.stdout.write(`${catalog.providers.map((provider) => provider.id).join("\n")}\n`);
+    }
+    return catalog.providers.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "providers" && command === "auth-state") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const state = await claw.providers.authState();
+    if (wantsJson) {
+      writeJson(context.stdout, state);
+    } else {
+      context.stdout.write(`${Object.entries(state.providers).map(([provider, summary]) => `${provider}:${summary.hasAuth ? "ready" : "missing"}`).join("\n")}\n`);
+    }
+    return Object.keys(state.providers).length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   }
 
   if (group === "auth" && command === "status") {
@@ -1918,7 +2117,7 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
   if (group === "sessions" && command === "create") {
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const title = flags.title;
-    const session = claw.conversations.createSession(title);
+    const session = claw.sessions.createSession(title);
     if (wantsJson) {
       writeJson(context.stdout, session);
     } else {
@@ -1934,7 +2133,7 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
       return CLI_EXIT_USAGE;
     }
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
-    const session = claw.conversations.getSession(sessionId);
+    const session = claw.sessions.getSession(sessionId);
     if (wantsJson) {
       writeJson(context.stdout, session);
     } else {
@@ -1950,7 +2149,7 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
       return CLI_EXIT_USAGE;
     }
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
-    const title = await claw.conversations.generateTitle({
+    const title = await claw.sessions.generateTitle({
       sessionId,
       transport: (flags.transport as "auto" | "gateway" | "cli" | undefined) ?? "auto",
     });
@@ -1964,7 +2163,7 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
 
   if (group === "sessions" && command === "list") {
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
-    const sessions = claw.conversations.listSessions();
+    const sessions = claw.sessions.listSessions();
     if (wantsJson) {
       writeJson(context.stdout, sessions);
     } else {
@@ -1980,7 +2179,7 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
       return CLI_EXIT_USAGE;
     }
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
-    const results = await claw.conversations.searchSessions({
+    const results = await claw.sessions.searchSessions({
       query: query.trim(),
       strategy: (flags.strategy as "auto" | "local" | "openclaw-memory" | undefined) ?? "auto",
       ...(flags.limit ? { limit: Number(flags.limit) } : {}),
@@ -2016,7 +2215,7 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
     if (argv.includes("--events")) {
       const events: unknown[] = [];
       let exitCode = 0;
-      for await (const event of claw.conversations.streamAssistantReplyEvents(baseInput)) {
+      for await (const event of claw.sessions.streamAssistantReplyEvents(baseInput)) {
         if (event.type === "error" || event.type === "aborted") {
           exitCode = 1;
         }
@@ -2037,7 +2236,7 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
     }
 
     const chunks: string[] = [];
-    for await (const chunk of claw.conversations.streamAssistantReply(baseInput)) {
+    for await (const chunk of claw.sessions.streamAssistantReply(baseInput)) {
       if (chunk.done) continue;
       chunks.push(chunk.delta);
       if (!wantsJson) {
@@ -2051,6 +2250,248 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
         text: chunks.join(""),
         chunks,
       });
+    }
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "documents" && command === "list") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const documents = await claw.documents.list(flags["session-id"] ? { sessionId: flags["session-id"] } : undefined);
+    if (wantsJson) {
+      writeJson(context.stdout, documents);
+    } else {
+      context.stdout.write(`${documents.map((document) => `${document.documentId} ${document.name}`).join("\n")}\n`);
+    }
+    return documents.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "documents" && command === "read") {
+    const documentId = flags["document-id"] ?? flags.id;
+    if (!documentId) {
+      context.stderr.write("--document-id is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const document = await claw.documents.get(documentId);
+    if (wantsJson) {
+      writeJson(context.stdout, document);
+    } else {
+      context.stdout.write(`${document?.name ?? "missing"}\n`);
+    }
+    return document ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
+  }
+
+  if (group === "documents" && command === "search") {
+    const query = flags.query || subcommand;
+    if (!query?.trim()) {
+      context.stderr.write("--query is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const results = await claw.documents.search({
+      query: query.trim(),
+      ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+      ...(flags["session-id"] ? { sessionId: flags["session-id"] } : {}),
+    });
+    if (wantsJson) {
+      writeJson(context.stdout, results);
+    } else {
+      context.stdout.write(`${results.map((document) => `${document.documentId} ${document.name}`).join("\n")}\n`);
+    }
+    return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "documents" && command === "upload") {
+    const sourceFile = flags.file;
+    if (!sourceFile) {
+      context.stderr.write("--file is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const filePath = path.resolve(context.cwd, sourceFile);
+    const data = fs.readFileSync(filePath);
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const document = await claw.documents.upload({
+      name: flags.name || path.basename(filePath),
+      mimeType: flags["mime-type"] || inferMimeTypeFromPath(filePath),
+      data: data.toString("base64"),
+      ...(flags["session-id"] ? { sessionId: flags["session-id"] } : {}),
+    });
+    if (wantsJson) {
+      writeJson(context.stdout, document);
+    } else {
+      context.stdout.write(`${document.documentId}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "documents" && command === "register") {
+    const sourceFile = flags.file;
+    if (!sourceFile) {
+      context.stderr.write("--file is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const filePath = path.resolve(context.cwd, sourceFile);
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const document = await claw.documents.register({
+      filePath,
+      ...(flags.name ? { name: flags.name } : {}),
+      ...(flags["mime-type"] ? { mimeType: flags["mime-type"] } : {}),
+      ...(flags["session-id"] ? { sessionId: flags["session-id"] } : {}),
+    });
+    if (wantsJson) {
+      writeJson(context.stdout, document);
+    } else {
+      context.stdout.write(`${document.documentId}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "documents" && command === "download") {
+    const documentId = flags["document-id"] ?? flags.id;
+    if (!documentId) {
+      context.stderr.write("--document-id is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const download = await claw.documents.download(documentId);
+    if (!download) {
+      if (wantsJson) {
+        writeJson(context.stdout, null);
+      } else {
+        context.stdout.write("missing\n");
+      }
+      return CLI_EXIT_FAILURE;
+    }
+    const outputPath = path.resolve(
+      context.cwd,
+      flags.out || flags.output || download.document.name,
+    );
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, download.buffer);
+    if (wantsJson) {
+      writeJson(context.stdout, {
+        document: download.document,
+        outputPath,
+        sizeBytes: download.buffer.length,
+      });
+    } else {
+      context.stdout.write(`${outputPath}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "inference" && command === "generate-text") {
+    const messages = parseInferenceMessages(flags);
+    if (!messages) {
+      context.stderr.write("--prompt, --message, --text, or --messages-json is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const result = await claw.inference.generateText({
+      messages,
+      sessionId: flags["session-id"],
+      systemPrompt: flags["system-prompt"],
+      contextBlocks: parseContextBlock(flags.context),
+      transport: (flags.transport as "auto" | "gateway" | "cli" | undefined) ?? "auto",
+      ...(flags.model ? { model: flags.model } : {}),
+      ...(flags["chunk-size"] ? { chunkSize: Number(flags["chunk-size"]) } : {}),
+      ...(flags["gateway-retries"] ? { gatewayRetries: Number(flags["gateway-retries"]) } : {}),
+    });
+    if (wantsJson) {
+      writeJson(context.stdout, result);
+    } else {
+      context.stdout.write(`${result.text}\n`);
+    }
+    return result.text ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "tts" && command === "providers") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const providers = claw.tts.providers();
+    if (wantsJson) {
+      writeJson(context.stdout, providers);
+    } else {
+      context.stdout.write(`${providers.map((provider) => provider.id).join("\n")}\n`);
+    }
+    return providers.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "tts" && command === "catalog") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const catalog = claw.tts.catalog();
+    if (wantsJson) {
+      writeJson(context.stdout, catalog);
+    } else {
+      context.stdout.write(`${catalog.providers.map((provider) => provider.id).join("\n")}\n`);
+    }
+    return catalog.providers.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "tts" && command === "config") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const config = claw.tts.config();
+    if (wantsJson) {
+      writeJson(context.stdout, config);
+    } else {
+      context.stdout.write(`${config.provider ?? "local"}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "tts" && command === "set-config") {
+    const config = parseJsonFlag<Record<string, unknown>>(flags["config-json"], "--config-json") ?? {
+      ...(flags.provider ? { provider: flags.provider } : {}),
+      ...(flags.enabled !== undefined || argv.includes("--enabled") ? { enabled: readBooleanFlag(argv, flags, "enabled", false) } : {}),
+      ...(flags["auto-read"] !== undefined || argv.includes("--auto-read") ? { autoRead: readBooleanFlag(argv, flags, "auto-read", false) } : {}),
+      ...(flags["api-key"] ? { apiKey: flags["api-key"] } : {}),
+      ...(flags.voice ? { voice: flags.voice } : {}),
+      ...(flags.model ? { model: flags.model } : {}),
+      ...(flags.speed ? { speed: Number(flags.speed) } : {}),
+      ...(flags.stability ? { stability: Number(flags.stability) } : {}),
+      ...(flags["similarity-boost"] ? { similarityBoost: Number(flags["similarity-boost"]) } : {}),
+    };
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const next = claw.tts.setConfig(config);
+    if (wantsJson) {
+      writeJson(context.stdout, next);
+    } else {
+      context.stdout.write(`${next.provider ?? "local"}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "tts" && command === "synthesize") {
+    const text = flags.text ?? flags.prompt ?? subcommand;
+    if (!text?.trim()) {
+      context.stderr.write("--text is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const result = await claw.tts.synthesize({
+      text: text.trim(),
+      ...(flags.lang ? { lang: flags.lang } : {}),
+      ...(flags.provider ? { provider: flags.provider as "local" | "openai" | "elevenlabs" | "deepgram" } : {}),
+      ...(flags["api-key"] ? { apiKey: flags["api-key"] } : {}),
+      ...(flags.voice ? { voice: flags.voice } : {}),
+      ...(flags.model ? { model: flags.model } : {}),
+      ...(flags.speed ? { speed: Number(flags.speed) } : {}),
+      ...(flags.stability ? { stability: Number(flags.stability) } : {}),
+      ...(flags["similarity-boost"] ? { similarityBoost: Number(flags["similarity-boost"]) } : {}),
+    });
+    const outputPath = path.resolve(
+      context.cwd,
+      flags.out || flags.output || `tts-${Date.now()}${inferAudioExtension(result.mimeType)}`,
+    );
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, result.audio);
+    if (wantsJson) {
+      writeJson(context.stdout, {
+        outputPath,
+        mimeType: result.mimeType,
+        sizeBytes: result.audio.length,
+      });
+    } else {
+      context.stdout.write(`${outputPath}\n`);
     }
     return CLI_EXIT_OK;
   }

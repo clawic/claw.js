@@ -126,10 +126,13 @@ report.
 ## Database Bridge
 
 ```bash
+claw database serve --url http://127.0.0.1:4510
 claw database login --url http://127.0.0.1:4510 --email admin@database.local --password database-admin
 claw database namespace list --url http://127.0.0.1:4510 --token <admin-token>
 claw database collection create --namespace main --name leads --fields '[{"name":"name","type":"text","required":true}]' --url http://127.0.0.1:4510 --token <admin-token>
 claw database record create --namespace main --collection leads --data '{"name":"Ada"}' --url http://127.0.0.1:4510 --token <admin-token>
+claw database token mint --url http://127.0.0.1:4510 --token <admin-token>
+claw database file upload --namespace main --collection leads --record rec_123 --file ./avatar.png --url http://127.0.0.1:4510 --token <admin-token>
 ```
 
 `claw database ...` delegates to the standalone CLI shipped inside the
@@ -151,7 +154,7 @@ claw workspace repair
 |----|----|
 | `workspace init` | `--workspace`, `--app-id`, `--workspace-id`, `--agent-id`, optional `--template-pack` |
 | `workspace discover` | `--root`, `--max-depth` |
-| `workspace reset` | `--remove-manifest`, `--remove-compat`, `--remove-bindings`, `--remove-state`, `--remove-conversations`, `--remove-audit`, `--remove-backups`, `--remove-locks`, `--remove-runtime-files` |
+| `workspace reset` | `--remove-manifest`, `--remove-compat`, `--remove-bindings`, `--remove-state`, `--remove-sessions`, `--remove-audit`, `--remove-backups`, `--remove-locks`, `--remove-runtime-files` |
 
 ## Files Commands
 
@@ -177,6 +180,10 @@ claw auth remove --provider openai
 claw models list
 claw models default
 claw models set-default --model openai/gpt-4.1
+
+claw providers list
+claw providers catalog
+claw providers auth-state
 ```
 `auth login` supports `--set-default=false`. `models set-default`
 supports `--dry-run` and prints the adapter-specific command that would
@@ -242,6 +249,37 @@ claw sessions stream --session-id clawjs-123 --events
 `sessions stream` supports `--transport`, `--system-prompt`,
 `--context`, `--chunk-size`, and `--gateway-retries`. With `--events`,
 the command emits the structured event stream used by the SDK.
+
+## Documents
+
+```bash
+claw documents list
+claw documents read --document-id doc_123
+claw documents search --query budget
+claw documents upload --file ./brief.txt
+claw documents register --file ./existing.pdf
+claw documents download --document-id doc_123 --out ./brief.txt
+```
+Use `upload` when the CLI should ingest file bytes into the workspace
+document store. Use `register` when the file already exists on disk and
+should be indexed in place.
+
+## Inference and TTS
+
+```bash
+claw inference generate-text --prompt "Summarize the repo"
+claw inference generate-text --messages-json '[{"role":"user","content":"Explain the runtime layout"}]'
+
+claw tts providers
+claw tts catalog
+claw tts config
+claw tts set-config --config-json '{"provider":"openai","enabled":true,"voice":"nova"}'
+claw tts synthesize --text "Hello world" --provider openai --api-key sk-test --out ./speech.mp3
+```
+`inference generate-text` accepts `--prompt`, `--message`, `--text`, or
+`--messages-json`, plus the same `--transport`, `--system-prompt`,
+`--context`, `--model`, `--chunk-size`, and `--gateway-retries` knobs as
+the SDK.
 
 ## SDK-Only And Relay-Only Areas
 

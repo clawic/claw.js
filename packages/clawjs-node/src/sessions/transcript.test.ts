@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { normalizeTranscriptEvents, normalizeTranscriptMessage, resolveSessionTitle, suggestConversationTitle, summarizePreview, summarizeTitle } from "./transcript.ts";
+import { normalizeTranscriptEvents, normalizeTranscriptMessage, resolveSessionTitle, suggestSessionTitle, summarizePreview, summarizeTitle } from "./transcript.ts";
 
 test("normalizeTranscriptMessage keeps attachments and chips", () => {
   const message = normalizeTranscriptMessage({
@@ -54,12 +54,12 @@ test("summarizeTitle and summarizePreview trim and truncate content", () => {
   assert.equal(summarizePreview({ id: "1", role: "assistant", content: "Hello world", createdAt: Date.now() }), "Hello world");
 });
 
-test("suggestConversationTitle and resolveSessionTitle prefer the first user message", () => {
+test("suggestSessionTitle and resolveSessionTitle prefer the first user message", () => {
   const messages = [
     { id: "1", role: "assistant" as const, content: "This is an answer", createdAt: 1_000 },
-    { id: "2", role: "user" as const, content: "Build a compact title from this conversation", createdAt: 2_000 },
+    { id: "2", role: "user" as const, content: "Build a compact title from this session", createdAt: 2_000 },
   ];
 
-  assert.equal(suggestConversationTitle(messages), "Build a compact title from this conversation");
-  assert.equal(resolveSessionTitle({ messages }), "Build a compact title from this conversation");
+  assert.equal(suggestSessionTitle(messages), "Build a compact title from this session");
+  assert.equal(resolveSessionTitle({ messages }), "Build a compact title from this session");
 });

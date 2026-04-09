@@ -7,10 +7,10 @@ import type {
   BindingDefinition,
   ChannelDescriptor,
   ClawManifest,
-  ConversationPolicy,
-  ConversationSearchInput,
-  ConversationSearchResult,
-  ConversationTransport,
+  SessionPolicy,
+  SessionSearchInput,
+  SessionSearchResult,
+  SessionTransport,
   DefaultModelRef,
   DocumentRecord,
   DocumentRef,
@@ -34,12 +34,19 @@ import type {
   SkillInstallResult,
   SkillSearchResult,
   SkillSourceDescriptor,
+  SubscriptionFilter,
   SlackChannelSummary,
   TelegramChatSummary,
   TelegramCommand,
   TelegramMemberSummary,
   TelegramUpdateEnvelope,
   WorkspaceConfig,
+  NotificationAudience,
+  NotificationContext,
+  NotificationDeepLink,
+  NotificationDeliveryMode,
+  NotificationPriority,
+  NotificationReceiptPolicy,
 } from "@clawjs/core";
 import {
   createTtsPlaybackPlan,
@@ -100,12 +107,12 @@ import {
   writeWorkspaceStateSnapshot,
 } from "./state/store.ts";
 import { watchWorkspaceFile } from "./watch/index.ts";
-import { watchConversationTranscript } from "./watch/transcript.ts";
+import { watchSessionTranscript } from "./watch/transcript.ts";
 import { ClawEventBus, type ClawEvent, type EventListener } from "./watch/events.ts";
 import { watchProviderStatus, watchRuntimeStatus, type PollWatchOptions } from "./watch/status.ts";
-import { ConversationStore } from "./conversations/store.ts";
-import { streamRuntimeConversation, streamRuntimeConversationEvents, type ConversationStreamEvent } from "./conversations/stream.ts";
-import { generateRuntimeConversationTitle } from "./conversations/title.ts";
+import { SessionStore } from "./sessions/store.ts";
+import { streamRuntimeSession, streamRuntimeSessionEvents, type SessionStreamEvent } from "./sessions/stream.ts";
+import { generateRuntimeSessionTitle } from "./sessions/title.ts";
 import { createWorkspaceDataStore, type WorkspaceDataStore } from "./data/store.ts";
 import { createDocumentStore, resolveLegacyDocumentRefs } from "./documents/store.ts";
 import { generateRuntimeText, type GenerateTextInput, type GenerateTextResult } from "./inference/generate-text.ts";
@@ -216,6 +223,7 @@ import {
   resolveObservedDomainPath,
   writeObservedDomain,
 } from "./observed/store.ts";
+import { NotifyClient, type SendNotificationInput, type UpsertSubscriptionInput } from "./notify/index.ts";
 
 export interface CreateClawOptions {
   runtime: {
@@ -244,6 +252,19 @@ export interface CreateClawOptions {
   workspace: WorkspaceConfig;
   templates?: {
     pack?: string;
+  };
+  secrets?: {
+    backend?: "local_proxy" | "vault";
+    baseUrl?: string;
+    credential?: string;
+    tenantId?: string;
+    sidecarPath?: string;
+    env?: NodeJS.ProcessEnv;
+  };
+  notify?: {
+    baseUrl: string;
+    sourceToken?: string;
+    clientToken?: string;
   };
 }
 
@@ -340,6 +361,19 @@ export interface ClawInstance {
         doctor: () => Promise<unknown>;
       };
     };
+    openclaw: {
+      sessions: {
+        list: (input?: Record<string, unknown>) => Promise<unknown>;
+        preview: (input?: Record<string, unknown>) => Promise<unknown>;
+        resolve: (input?: Record<string, unknown>) => Promise<unknown>;
+      };
+      chat: {
+        history: (input: Record<string, unknown>) => Promise<unknown>;
+        send: (input: Record<string, unknown>) => Promise<unknown>;
+        inject: (input: Record<string, unknown>) => Promise<unknown>;
+        abort: (input: Record<string, unknown>) => Promise<unknown>;
+      };
+    };
     install: (installer?: "npm" | "pnpm", onProgress?: RuntimeProgressSink) => Promise<void>;
     uninstall: (installer?: "npm" | "pnpm", onProgress?: RuntimeProgressSink) => Promise<void>;
     repair: (onProgress?: RuntimeProgressSink) => Promise<void>;
@@ -352,8 +386,8 @@ export interface ClawInstance {
       uninstallPlan: (installer?: "npm" | "pnpm") => RuntimeProgressPlan;
       repairPlan: () => RuntimeProgressPlan;
       setupWorkspacePlan: () => RuntimeProgressPlan;
-      discoverContext: (options?: Omit<DiscoverOpenClawAppContextOptions, "configPath" | "stateDir" | "workspaceDir" | "agentDir" | "conversationsDir" | "env">) => OpenClawAppContext | null;
-      detachWorkspace: (options?: Omit<DetachOpenClawAppContextOptions, "configPath" | "stateDir" | "workspaceDir" | "agentDir" | "conversationsDir" | "env">) => Promise<Awaited<ReturnType<typeof detachOpenClawAppContext>> | null>;
+      discoverContext: (options?: Omit<DiscoverOpenClawAppContextOptions, "configPath" | "stateDir" | "workspaceDir" | "agentDir" | "sessionsDir" | "env">) => OpenClawAppContext | null;
+      detachWorkspace: (options?: Omit<DetachOpenClawAppContextOptions, "configPath" | "stateDir" | "workspaceDir" | "agentDir" | "sessionsDir" | "env">) => Promise<Awaited<ReturnType<typeof detachOpenClawAppContext>> | null>;
     };
   workspace: {
     init: () => Promise<void>;
@@ -638,13 +672,46 @@ export interface ClawInstance {
     ensureHttpReference: (input: EnsureSecretReferenceInput) => Promise<EnsureSecretReferenceResult>;
     ensureTelegramBotReference: (input: { name: string; apiBaseUrl?: string; notes?: string; readOnly?: boolean }) => Promise<EnsureSecretReferenceResult>;
   };
-  conversations: {
-    createSession: (title?: string) => ReturnType<ConversationStore["createSession"]>;
-    appendMessage: (sessionId: string, message: Parameters<ConversationStore["appendMessage"]>[1]) => ReturnType<ConversationStore["appendMessage"]>;
-    listSessions: ConversationStore["listSessions"];
-    searchSessions: (input: ConversationSearchInput) => Promise<ConversationSearchResult[]>;
-    getSession: ConversationStore["getSession"];
-    updateSessionTitle: ConversationStore["updateSessionTitle"];
+  notify: {
+    send: (input: SendNotificationInput) => Promise<{
+      created: boolean;
+      notification: { id: string };
+      deliveries: Array<{ id: string; installationId: string; state: string }>;
+      receipt: { id: string; status: string } | null;
+    }>;
+    cancel: (notificationId: string) => Promise<{
+      notification: { id: string; status: string };
+      deliveries: Array<{ id: string; state: string }>;
+    }>;
+    receipt: (receiptId: string) => Promise<{
+      receipt: { id: string; status: string };
+      notification: { id: string } | null;
+    }>;
+    feed: (limit?: number) => Promise<{
+      installation: { id: string } | null;
+      items: Array<{
+        delivery: { state: string };
+        notification: { id: string };
+        receipt: { id: string; status: string } | null;
+      }>;
+      glances: Array<{ scope: string; data: Record<string, unknown> }>;
+    }>;
+    markRead: (notificationId: string) => Promise<{ delivery: { state: string } }>;
+    acknowledgeReceipt: (receiptId: string) => Promise<{ receipt: { id: string; status: string } }>;
+    updatePushToken: (installationId: string, pushToken: string) => Promise<{ installation: { id: string; pushToken: string } }>;
+    putGlance: (scope: string, input: { tenantId?: string; userId?: string; clientAppId?: string; data: Record<string, unknown> }) => Promise<{ glance: { id: string; scope: string } }>;
+    subscriptions: {
+      upsert: (input: UpsertSubscriptionInput) => Promise<{ subscription: { id: string } }>;
+      remove: (id: string) => Promise<{ ok: boolean }>;
+    };
+  };
+  sessions: {
+    createSession: (title?: string) => ReturnType<SessionStore["createSession"]>;
+    appendMessage: (sessionId: string, message: Parameters<SessionStore["appendMessage"]>[1]) => ReturnType<SessionStore["appendMessage"]>;
+    listSessions: SessionStore["listSessions"];
+    searchSessions: (input: SessionSearchInput) => Promise<SessionSearchResult[]>;
+    getSession: SessionStore["getSession"];
+    updateSessionTitle: SessionStore["updateSessionTitle"];
     generateTitle: (input: {
       sessionId: string;
       transport?: "auto" | "gateway" | "cli";
@@ -657,7 +724,7 @@ export interface ClawInstance {
       chunkSize?: number;
       gatewayRetries?: number;
       signal?: AbortSignal;
-    }) => AsyncGenerator<ConversationStreamEvent>;
+    }) => AsyncGenerator<SessionStreamEvent>;
     streamAssistantReply: (input: {
       sessionId: string;
       systemPrompt?: string;
@@ -667,6 +734,9 @@ export interface ClawInstance {
       gatewayRetries?: number;
       signal?: AbortSignal;
     }) => AsyncGenerator<{ sessionId: string; messageId?: string; delta: string; done: boolean }>;
+  };
+  conversations: {
+    searchSessions: (input: SessionSearchInput) => Promise<SessionSearchResult[]>;
   };
   documents: {
     list: (options?: { sessionId?: string }) => Promise<DocumentRecord[]>;
@@ -712,9 +782,9 @@ export interface ClawInstance {
     ) => ReturnType<typeof watchWorkspaceFile>;
     transcript: (
       sessionId: string,
-      callback: Parameters<typeof watchConversationTranscript>[2],
-      options?: Parameters<typeof watchConversationTranscript>[3],
-    ) => ReturnType<typeof watchConversationTranscript>;
+      callback: Parameters<typeof watchSessionTranscript>[2],
+      options?: Parameters<typeof watchSessionTranscript>[3],
+    ) => ReturnType<typeof watchSessionTranscript>;
     runtimeStatus: (
       callback: (status: RuntimeProbeStatus) => void,
       options?: PollWatchOptions,
@@ -762,7 +832,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   const workspaceDir = options.workspace.rootDir;
   const logicalAgentId = options.workspace.logicalAgentId ?? options.workspace.agentId;
   const runtimeAgentId = options.workspace.runtimeAgentId ?? logicalAgentId;
-  const conversationStore = new ConversationStore(workspaceDir, { filesystem });
+  const sessionStore = new SessionStore(workspaceDir, { filesystem });
   const dataStore = createWorkspaceDataStore(workspaceDir, filesystem);
   const documentStore = createDocumentStore(workspaceDir, filesystem);
   const adapter = getRuntimeAdapter(options.runtime.adapter);
@@ -773,6 +843,15 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         configPath: options.runtime.configPath,
       })
     : options.runtime.env;
+  const secretsEnv: NodeJS.ProcessEnv = {
+    ...(runtimeEnv ?? {}),
+    ...(options.secrets?.env ?? {}),
+    ...(options.secrets?.backend ? { CLAWJS_SECRETS_BACKEND: options.secrets.backend } : {}),
+    ...(options.secrets?.baseUrl ? { VAULT_BASE_URL: options.secrets.baseUrl } : {}),
+    ...(options.secrets?.credential ? { VAULT_TOKEN: options.secrets.credential } : {}),
+    ...(options.secrets?.tenantId ? { VAULT_TENANT_ID: options.secrets.tenantId } : {}),
+    ...(options.secrets?.sidecarPath ? { CLAWJS_VAULT_SIDECAR_PATH: options.secrets.sidecarPath } : {}),
+  };
   const processHost = adapter.id === "openclaw"
     ? withOpenClawCommandRunner(baseProcessHost, {
         binaryPath: options.runtime.binaryPath,
@@ -815,7 +894,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     },
   };
   const pluginBridgePolicy = resolveOpenClawPluginBridgePolicy(adapter.id, options.runtime.pluginBridge);
-  const conversationAdapter = adapter.createConversationAdapter(resolvedRuntimeOptions);
+  const sessionAdapter = adapter.createSessionAdapter(resolvedRuntimeOptions);
   const runtimeContext = adapter.id === "openclaw"
     ? resolveOpenClawContext({
         agentId: runtimeAgentId,
@@ -830,27 +909,39 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   const telegram = createTelegramService({
     workspaceDir,
     dataStore,
-    conversationStore,
+    sessionStore,
     runner: processHost,
-    env: resolvedRuntimeOptions.env,
+    env: secretsEnv,
     filesystem,
   });
   const slack = createSlackService({
     workspaceDir,
     dataStore,
-    conversationStore,
+    sessionStore,
     runner: processHost,
-    env: resolvedRuntimeOptions.env,
+    env: secretsEnv,
     filesystem,
   });
   const whatsapp = createWhatsAppService({
     workspaceDir,
     dataStore,
-    conversationStore,
+    sessionStore,
     runner: processHost,
-    env: resolvedRuntimeOptions.env,
+    env: secretsEnv,
     filesystem,
   });
+  const sourceNotifyClient = options.notify?.baseUrl
+    ? new NotifyClient({
+      baseUrl: options.notify.baseUrl,
+      token: options.notify.sourceToken,
+    })
+    : null;
+  const clientNotifyClient = options.notify?.baseUrl
+    ? new NotifyClient({
+      baseUrl: options.notify.baseUrl,
+      token: options.notify.clientToken,
+    })
+    : null;
 
   function registerGenerationBackend(input: RegisterCommandGenerationBackendInput): GenerationBackendDescriptor {
     const backend = generationStore.registerCommandBackend(input);
@@ -938,6 +1029,14 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       capability,
       detail,
     });
+  }
+
+  function requireNotifyClient(kind: "source" | "client"): NotifyClient {
+    const client = kind === "source" ? sourceNotifyClient : clientNotifyClient;
+    if (!client) {
+      throw new Error(`notify ${kind} client is not configured. Set CreateClawOptions.notify with baseUrl and the required token.`);
+    }
+    return client;
   }
 
   function listWorkspaceSkillPaths(): string[] {
@@ -1268,8 +1367,8 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     }
   }
 
-  function searchSessionsLocally(input: ConversationSearchInput): ConversationSearchResult[] {
-    return conversationStore.searchSessions(input.query, {
+  function searchSessionsLocally(input: SessionSearchInput): SessionSearchResult[] {
+    return sessionStore.searchSessions(input.query, {
       limit: input.limit,
       includeMessages: input.includeMessages,
     });
@@ -1277,8 +1376,8 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
 
   function prepareMessageDocuments(
     sessionId: string,
-    message: Parameters<ConversationStore["appendMessage"]>[1],
-  ): Parameters<ConversationStore["appendMessage"]>[1] {
+    message: Parameters<SessionStore["appendMessage"]>[1],
+  ): Parameters<SessionStore["appendMessage"]>[1] {
     const directDocuments = Array.isArray(message.documents) ? [...message.documents] : [];
     const attachments = Array.isArray(message.attachments) ? message.attachments : [];
     if (attachments.length === 0) {
@@ -1324,6 +1423,24 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       ...(legacyAttachments.length > 0 ? { attachments: legacyAttachments } : {}),
       documents: [...directDocuments, ...uploadedDocuments, ...legacyDocuments],
     };
+  }
+
+  async function resolveSessionDocumentAssets(documents: DocumentRef[]): Promise<Array<{
+    name: string;
+    mimeType: string;
+    data: string;
+  }>> {
+    const assets: Array<{ name: string; mimeType: string; data: string }> = [];
+    for (const document of documents) {
+      const downloaded = documentStore.download(document.documentId);
+      if (!downloaded) continue;
+      assets.push({
+        name: downloaded.document.name,
+        mimeType: downloaded.document.mimeType,
+        data: downloaded.buffer.toString("base64"),
+      });
+    }
+    return assets;
   }
 
   function searchDocumentsLocally(input: { query: string; limit?: number; sessionId?: string }): DocumentSearchResult[] {
@@ -1383,7 +1500,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     return searchDocumentsLocally({ ...input, query: normalizedQuery });
   }
 
-  async function searchSessionsWithOpenClawMemory(input: ConversationSearchInput): Promise<ConversationSearchResult[]> {
+  async function searchSessionsWithOpenClawMemory(input: SessionSearchInput): Promise<SessionSearchResult[]> {
     const hits = await runOpenClawMemorySearch(input.query, processHost, {
       agentId: runtimeAgentId,
       limit: input.limit,
@@ -1391,14 +1508,14 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       env: resolvedRuntimeOptions.env,
     });
 
-    const bestHitBySession = new Map<string, ConversationSearchResult>();
+    const bestHitBySession = new Map<string, SessionSearchResult>();
     for (const hit of hits) {
       const sessionId = extractSessionIdFromSourcePath(hit.path);
       if (!sessionId) continue;
-      const session = conversationStore.getSession(sessionId);
+      const session = sessionStore.getSession(sessionId);
       if (!session) continue;
 
-      const candidate: ConversationSearchResult = {
+      const candidate: SessionSearchResult = {
         sessionId: session.sessionId,
         title: session.title,
         createdAt: session.createdAt,
@@ -1430,8 +1547,8 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       .slice(0, Math.max(1, input.limit ?? 20));
   }
 
-  async function searchConversationSessions(input: ConversationSearchInput): Promise<ConversationSearchResult[]> {
-    const normalizedInput: ConversationSearchInput = {
+  async function searchSessions(input: SessionSearchInput): Promise<SessionSearchResult[]> {
+    const normalizedInput: SessionSearchInput = {
       strategy: "auto",
       includeMessages: true,
       fallbackToLocal: true,
@@ -1743,7 +1860,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       stateDir: resolvedRuntimeOptions.homeDir,
       workspaceDir,
       agentDir: resolvedRuntimeOptions.agentDir,
-      conversationsDir: runtimeContext?.conversationsDir,
+      sessionsDir: runtimeContext?.sessionsDir,
       env: resolvedRuntimeOptions.env,
       ...(resolvedRuntimeOptions.gateway ?? {}),
     };
@@ -1838,8 +1955,8 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     return adapter.describeFeatures(resolvedRuntimeOptions);
   }
 
-  function defaultConversationPolicy(): ConversationPolicy {
-    return describeFeatures().find((feature) => feature.featureId === "conversations")?.conversationPolicy ?? "managed";
+  function defaultSessionPolicy(): SessionPolicy {
+    return describeFeatures().find((feature) => feature.featureId === "sessions")?.sessionPolicy ?? "managed";
   }
 
   function featureForDomain(domain: IntentDomain): RuntimeFeatureDescriptor {
@@ -1872,8 +1989,8 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         return { plugins: {}, slots: {} };
       case "files":
         return { values: {} };
-      case "conversations":
-        return { policy: defaultConversationPolicy() };
+      case "sessions":
+        return { policy: defaultSessionPolicy() };
       case "speech":
         return { tts: {}, stt: {} };
     }
@@ -1977,18 +2094,18 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           diagnostics: [],
         }, filesystem);
       }
-      case "conversations": {
-        return writeObservedDomain(workspaceDir, "conversations", {
-          policy: defaultConversationPolicy(),
-          sessionCount: conversationStore.listSessions().length,
-          runtimePath: runtimeContext?.conversationsDir ?? null,
+      case "sessions": {
+        return writeObservedDomain(workspaceDir, "sessions", {
+          policy: defaultSessionPolicy(),
+          sessionCount: sessionStore.listSessions().length,
+          runtimePath: runtimeContext?.sessionsDir ?? null,
         }, filesystem);
       }
     }
   }
 
   async function refreshObserved(options: { domains?: ObservedDomain[] } = {}): Promise<Record<string, unknown>> {
-    const domains = options.domains ?? ["runtime", "workspace", "models", "providers", "channels", "skills", "plugins", "memory", "scheduler", "conversations"];
+    const domains = options.domains ?? ["runtime", "workspace", "models", "providers", "channels", "skills", "plugins", "memory", "scheduler", "sessions"];
     const result: Record<string, unknown> = {};
     for (const domain of domains) {
       result[domain] = await refreshObservedDomain(domain);
@@ -1997,7 +2114,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   }
 
   async function diffIntent(options: { domains?: IntentDomain[] } = {}) {
-    const domains = options.domains ?? ["runtime", "models", "providers", "channels", "skills", "plugins", "files", "conversations", "speech"];
+    const domains = options.domains ?? ["runtime", "models", "providers", "channels", "skills", "plugins", "files", "sessions", "speech"];
     const issues: Array<{ domain: IntentDomain; path: string; message: string; expected?: unknown; actual?: unknown }> = [];
 
     for (const domain of domains) {
@@ -2113,12 +2230,12 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           }
           break;
         }
-        case "conversations": {
-          const observed = readObservedDomain(workspaceDir, "conversations", filesystem) as { policy?: ConversationPolicy } | null;
-          const expected = (intent.policy as ConversationPolicy | undefined) ?? defaultConversationPolicy();
-          const actual = observed?.policy ?? defaultConversationPolicy();
+        case "sessions": {
+          const observed = readObservedDomain(workspaceDir, "sessions", filesystem) as { policy?: SessionPolicy } | null;
+          const expected = (intent.policy as SessionPolicy | undefined) ?? defaultSessionPolicy();
+          const actual = observed?.policy ?? defaultSessionPolicy();
           if (expected !== actual) {
-            issues.push({ domain, path: "policy", message: "Conversation policy differs from observed policy.", expected, actual });
+            issues.push({ domain, path: "policy", message: "Session policy differs from observed policy.", expected, actual });
           }
           break;
         }
@@ -2150,7 +2267,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   }
 
   async function applyIntent(options: { domains?: IntentDomain[]; dryRun?: boolean } = {}) {
-    const domains = options.domains ?? ["runtime", "models", "providers", "channels", "skills", "plugins", "files", "conversations", "speech"];
+    const domains = options.domains ?? ["runtime", "models", "providers", "channels", "skills", "plugins", "files", "sessions", "speech"];
     const dryRun = options.dryRun === true;
     const actions: Array<{
       domain: IntentDomain;
@@ -2251,8 +2368,8 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           break;
         case "files":
           break;
-        case "conversations":
-          await refreshObservedDomain("conversations");
+        case "sessions":
+          await refreshObservedDomain("sessions");
           break;
         case "speech":
           writeSpeechConfig((intent.tts ?? {}) as TtsProviderConfig | null);
@@ -2423,6 +2540,61 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           doctor: async () => callManagedClawJsBridge("clawjs.doctor"),
         },
       },
+      openclaw: {
+        sessions: {
+          list: async (input = {}) => {
+            assertOpenClawGatewaySupport();
+            return callOpenClawGateway("sessions.list", input, {
+              runner: processHost,
+              ...gatewayConfigOptions(),
+            });
+          },
+          preview: async (input = {}) => {
+            assertOpenClawGatewaySupport();
+            return callOpenClawGateway("sessions.preview", input, {
+              runner: processHost,
+              ...gatewayConfigOptions(),
+            });
+          },
+          resolve: async (input = {}) => {
+            assertOpenClawGatewaySupport();
+            return callOpenClawGateway("sessions.resolve", input, {
+              runner: processHost,
+              ...gatewayConfigOptions(),
+            });
+          },
+        },
+        chat: {
+          history: async (input) => {
+            assertOpenClawGatewaySupport();
+            return callOpenClawGateway("chat.history", input, {
+              runner: processHost,
+              ...gatewayConfigOptions(),
+            });
+          },
+          send: async (input) => {
+            assertOpenClawGatewaySupport();
+            return callOpenClawGateway("chat.send", input, {
+              runner: processHost,
+              ...gatewayConfigOptions(),
+            });
+          },
+          inject: async (input) => {
+            assertOpenClawGatewaySupport();
+            return callOpenClawGateway("chat.inject", input, {
+              runner: processHost,
+              ...gatewayConfigOptions(),
+            });
+          },
+          abort: async (input) => {
+            assertOpenClawGatewaySupport();
+            return callOpenClawGateway("chat.abort", input, {
+              runner: processHost,
+              ...gatewayConfigOptions(),
+            });
+          },
+        },
+      },
       install: async (installer = "npm", onProgress) => {
         await adapter.install(processHost, installer, handleRuntimeProgress(onProgress));
         appendAuditEvent("runtime.installed", "runtime", { installer, runtimeAdapter: adapter.id });
@@ -2550,7 +2722,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           skills: resolveIntentDomainPath(workspaceDir, "skills"),
           plugins: resolveIntentDomainPath(workspaceDir, "plugins"),
           files: resolveIntentDomainPath(workspaceDir, "files"),
-          conversations: resolveIntentDomainPath(workspaceDir, "conversations"),
+          sessions: resolveIntentDomainPath(workspaceDir, "sessions"),
           speech: resolveIntentDomainPath(workspaceDir, "speech"),
         },
         observedPaths: {
@@ -2563,7 +2735,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           plugins: resolveObservedDomainPath(workspaceDir, "plugins"),
           memory: resolveObservedDomainPath(workspaceDir, "memory"),
           scheduler: resolveObservedDomainPath(workspaceDir, "scheduler"),
-          conversations: resolveObservedDomainPath(workspaceDir, "conversations"),
+          sessions: resolveObservedDomainPath(workspaceDir, "sessions"),
         },
         manifest: readWorkspaceManifest(workspaceDir, filesystem),
         compatSnapshot: readCompatSnapshot(workspaceDir, filesystem),
@@ -3176,7 +3348,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         apiBaseUrl: input.apiBaseUrl,
         notes: input.notes,
         readOnly: input.readOnly,
-      }, { env: resolvedRuntimeOptions.env }),
+      }, { env: secretsEnv }),
       connectBot: async (input) => {
         patchTelegramChannelIntent({
           enabled: true,
@@ -3371,26 +3543,47 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       }, {
         fetchImpl: input.transport === "cli" ? undefined : globalThis.fetch,
         runner: input.transport === "gateway" ? undefined : processHost,
-        conversationAdapter: input.transport === "cli"
-          ? { ...conversationAdapter, gateway: null }
-          : conversationAdapter,
+        documentResolver: resolveSessionDocumentAssets,
+        sessionAdapter: input.transport === "cli"
+          ? { ...sessionAdapter, gateway: null }
+          : sessionAdapter,
       }),
     },
     secrets: {
-      list: async (search) => listSecrets(processHost, { search, env: resolvedRuntimeOptions.env }),
-      describe: async (name) => describeSecret(processHost, { name, env: resolvedRuntimeOptions.env }),
-      doctorKeychain: async () => doctorKeychain(processHost, { env: resolvedRuntimeOptions.env }),
-      ensureHttpReference: async (input) => ensureHttpSecretReference(processHost, input, { env: resolvedRuntimeOptions.env }),
-      ensureTelegramBotReference: async (input) => ensureTelegramBotSecretReference(processHost, input, { env: resolvedRuntimeOptions.env }),
+      list: async (search) => listSecrets(processHost, { search, env: secretsEnv }),
+      describe: async (name) => describeSecret(processHost, { name, env: secretsEnv }),
+      doctorKeychain: async () => doctorKeychain(processHost, { env: secretsEnv }),
+      ensureHttpReference: async (input) => ensureHttpSecretReference(processHost, input, { env: secretsEnv }),
+      ensureTelegramBotReference: async (input) => ensureTelegramBotSecretReference(processHost, input, { env: secretsEnv }),
     },
-    conversations: {
+    notify: {
+      send: async (input) => requireNotifyClient("source").send(input),
+      cancel: async (notificationId) => requireNotifyClient("source").cancel(notificationId),
+      receipt: async (receiptId) => {
+        const client = sourceNotifyClient ?? clientNotifyClient;
+        if (!client) {
+          throw new Error("notify client is not configured. Set CreateClawOptions.notify with baseUrl and a token.");
+        }
+        return await client.receipt(receiptId);
+      },
+      feed: async (limit) => requireNotifyClient("client").feed(limit),
+      markRead: async (notificationId) => requireNotifyClient("client").markRead(notificationId),
+      acknowledgeReceipt: async (receiptId) => requireNotifyClient("client").acknowledgeReceipt(receiptId),
+      updatePushToken: async (installationId, pushToken) => requireNotifyClient("client").updatePushToken(installationId, pushToken),
+      putGlance: async (scope, input) => requireNotifyClient("source").putGlance(scope, input),
+      subscriptions: {
+        upsert: async (input) => requireNotifyClient("client").upsertSubscription(input),
+        remove: async (id) => requireNotifyClient("client").deleteSubscription(id),
+      },
+    },
+    sessions: {
       createSession: (title) => {
-        const session = conversationStore.createSession(title);
-        appendAuditEvent("conversations.session_created", "conversations", {
+        const session = sessionStore.createSession(title);
+        appendAuditEvent("sessions.session_created", "sessions", {
           sessionId: session.sessionId,
           title: session.title,
         });
-        eventBus.emit("conversations.session_created", {
+        eventBus.emit("sessions.session_created", {
           sessionId: session.sessionId,
           title: session.title,
         });
@@ -3398,28 +3591,28 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       },
       appendMessage: (sessionId, message) => {
         const preparedMessage = prepareMessageDocuments(sessionId, message);
-        const session = conversationStore.appendMessage(sessionId, preparedMessage);
-        appendAuditEvent("conversations.message_appended", "conversations", {
+        const session = sessionStore.appendMessage(sessionId, preparedMessage);
+        appendAuditEvent("sessions.message_appended", "sessions", {
           sessionId,
           role: message.role,
         });
-        eventBus.emit("conversations.message_appended", {
+        eventBus.emit("sessions.message_appended", {
           sessionId,
           role: message.role,
         });
         return session;
       },
-      listSessions: conversationStore.listSessions.bind(conversationStore),
-      searchSessions: searchConversationSessions,
-      getSession: conversationStore.getSession.bind(conversationStore),
+      listSessions: sessionStore.listSessions.bind(sessionStore),
+      searchSessions: searchSessions,
+      getSession: sessionStore.getSession.bind(sessionStore),
       updateSessionTitle: (sessionId, title) => {
-        const updated = conversationStore.updateSessionTitle(sessionId, title);
+        const updated = sessionStore.updateSessionTitle(sessionId, title);
         if (updated) {
-          appendAuditEvent("conversations.title_updated", "conversations", {
+          appendAuditEvent("sessions.title_updated", "sessions", {
             sessionId,
             title,
           });
-          eventBus.emit("conversations.title_updated", {
+          eventBus.emit("sessions.title_updated", {
             sessionId,
             title,
           });
@@ -3427,29 +3620,29 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         return updated;
       },
       generateTitle: async (input) => {
-        const session = conversationStore.getSession(input.sessionId);
+        const session = sessionStore.getSession(input.sessionId);
         if (!session) {
           throw new Error(`Session not found: ${input.sessionId}`);
         }
-        const title = await generateRuntimeConversationTitle({
+        const title = await generateRuntimeSessionTitle({
           messages: session.messages,
-          conversationAdapter: input.transport === "cli" ? { ...conversationAdapter, gateway: null } : conversationAdapter,
+          sessionAdapter: input.transport === "cli" ? { ...sessionAdapter, gateway: null } : sessionAdapter,
           ...(input.transport === "gateway" ? { runner: undefined } : { agentId: runtimeAgentId, runner: processHost }),
           ...(input.transport === "cli" ? { fetchImpl: undefined } : { fetchImpl: globalThis.fetch }),
         });
-        conversationStore.updateSessionTitle(input.sessionId, title);
-        appendAuditEvent("conversations.title_generated", "conversations", {
+        sessionStore.updateSessionTitle(input.sessionId, title);
+        appendAuditEvent("sessions.title_generated", "sessions", {
           sessionId: input.sessionId,
           title,
         });
-        eventBus.emit("conversations.title_generated", {
+        eventBus.emit("sessions.title_generated", {
           sessionId: input.sessionId,
           title,
         });
         return title;
       },
       streamAssistantReplyEvents: async function* (input) {
-        const session = conversationStore.getSession(input.sessionId);
+        const session = sessionStore.getSession(input.sessionId);
         if (!session) {
           throw new Error(`Session not found: ${input.sessionId}`);
         }
@@ -3461,7 +3654,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         let completed = false;
         let failed = false;
 
-        for await (const event of streamRuntimeConversationEvents({
+        for await (const event of streamRuntimeSessionEvents({
           sessionId: input.sessionId,
           agentId: runtimeAgentId,
           systemPrompt: input.systemPrompt,
@@ -3472,8 +3665,9 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           gatewayRetries: input.gatewayRetries,
           signal: input.signal,
         }, {
-          conversationAdapter,
+          sessionAdapter,
           runner: processHost,
+          documentResolver: resolveSessionDocumentAssets,
         })) {
           if (event.type === "chunk") {
             fullText += event.chunk.delta;
@@ -3485,13 +3679,13 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
             failed = true;
           }
           if (event.type === "title") {
-            conversationStore.updateSessionTitle(input.sessionId, event.title);
-            appendAuditEvent("conversations.title_suggested", "conversations", {
+            sessionStore.updateSessionTitle(input.sessionId, event.title);
+            appendAuditEvent("sessions.title_suggested", "sessions", {
               sessionId: input.sessionId,
               title: event.title,
               source: event.source,
             });
-            eventBus.emit("conversations.title_suggested", {
+            eventBus.emit("sessions.title_suggested", {
               sessionId: input.sessionId,
               title: event.title,
               source: event.source,
@@ -3501,22 +3695,22 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         }
 
         if (completed && !failed && fullText.trim()) {
-          conversationStore.appendMessage(input.sessionId, {
+          sessionStore.appendMessage(input.sessionId, {
             role: "assistant",
             content: fullText.trim(),
           });
-          appendAuditEvent("conversations.assistant_stream_persisted", "conversations", {
+          appendAuditEvent("sessions.assistant_stream_persisted", "sessions", {
             sessionId: input.sessionId,
             length: fullText.trim().length,
           });
-          eventBus.emit("conversations.assistant_stream_persisted", {
+          eventBus.emit("sessions.assistant_stream_persisted", {
             sessionId: input.sessionId,
             length: fullText.trim().length,
           });
         }
       },
       streamAssistantReply: async function* (input) {
-        const session = conversationStore.getSession(input.sessionId);
+        const session = sessionStore.getSession(input.sessionId);
         if (!session) {
           throw new Error(`Session not found: ${input.sessionId}`);
         }
@@ -3526,7 +3720,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
 
         let fullText = "";
 
-        for await (const chunk of streamRuntimeConversation({
+        for await (const chunk of streamRuntimeSession({
           sessionId: input.sessionId,
           agentId: runtimeAgentId,
           systemPrompt: input.systemPrompt,
@@ -3537,8 +3731,9 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           gatewayRetries: input.gatewayRetries,
           signal: input.signal,
         }, {
-          conversationAdapter,
+          sessionAdapter,
           runner: processHost,
+          documentResolver: resolveSessionDocumentAssets,
         })) {
           if (!chunk.done) {
             fullText += chunk.delta;
@@ -3547,20 +3742,23 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         }
 
         if (fullText.trim()) {
-          conversationStore.appendMessage(input.sessionId, {
+          sessionStore.appendMessage(input.sessionId, {
             role: "assistant",
             content: fullText.trim(),
           });
-          appendAuditEvent("conversations.assistant_stream_persisted", "conversations", {
+          appendAuditEvent("sessions.assistant_stream_persisted", "sessions", {
             sessionId: input.sessionId,
             length: fullText.trim().length,
           });
-          eventBus.emit("conversations.assistant_stream_persisted", {
+          eventBus.emit("sessions.assistant_stream_persisted", {
             sessionId: input.sessionId,
             length: fullText.trim().length,
           });
         }
       },
+    },
+    conversations: {
+      searchSessions,
     },
     documents: {
       list: async (options) => documentStore.list(options),
@@ -3614,7 +3812,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     },
     watch: {
       file: (fileName, callback, watchOptions) => watchWorkspaceFile(workspaceDir, fileName, callback, watchOptions),
-      transcript: (sessionId, callback, watchOptions) => watchConversationTranscript(workspaceDir, sessionId, callback, watchOptions),
+      transcript: (sessionId, callback, watchOptions) => watchSessionTranscript(workspaceDir, sessionId, callback, watchOptions),
       runtimeStatus: (callback, watchOptions) => watchRuntimeStatus(
         () => adapter.getStatus(processHost, resolvedRuntimeOptions),
         callback,

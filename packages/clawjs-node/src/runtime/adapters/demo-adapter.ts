@@ -8,7 +8,7 @@ import type {
   RuntimeAdapter,
   RuntimeAdapterOptions,
   RuntimeCompatReport,
-  RuntimeConversationAdapter,
+  RuntimeSessionAdapter,
   RuntimeProgressPlan,
   RuntimeProbeStatus,
   RuntimeSetupInput,
@@ -35,7 +35,7 @@ import {
   buildRuntimeCapabilityMap,
   buildRuntimeCompatReport,
   capabilityBooleansFromMap,
-  defaultManagedConversationFeatures,
+  defaultManagedSessionFeatures,
   runRuntimeProgressPlan,
   runtimeOperationCapability,
 } from "./shared.ts";
@@ -175,8 +175,8 @@ function getCapabilityMap() {
     workspace: { supported: true, status: "ready", strategy: "native" },
     auth: { supported: true, status: "ready", strategy: "config" },
     models: { supported: true, status: "ready", strategy: "config" },
-    conversation_cli: { supported: true, status: "ready", strategy: "cli" },
-    conversation_gateway: { supported: true, status: "ready", strategy: "gateway" },
+    session_cli: { supported: true, status: "ready", strategy: "cli" },
+    session_gateway: { supported: true, status: "ready", strategy: "gateway" },
     streaming: { supported: true, status: "ready", strategy: "gateway" },
     scheduler: { supported: true, status: "ready", strategy: "config" },
     memory: { supported: true, status: "ready", strategy: "config" },
@@ -196,7 +196,7 @@ export const demoAdapter: RuntimeAdapter = {
   supportLevel: "demo",
   workspaceFiles: DEMO_WORKSPACE_FILES,
   describeFeatures() {
-    return defaultManagedConversationFeatures({
+    return defaultManagedSessionFeatures({
       channelsSupported: true,
       skillsSupported: true,
       pluginsSupported: false,
@@ -423,7 +423,7 @@ export const demoAdapter: RuntimeAdapter = {
   async listChannels(_runner, options): Promise<ChannelDescriptor[]> {
     return getScenario(options).channels;
   },
-  createConversationAdapter(options): RuntimeConversationAdapter {
+  createSessionAdapter(options): RuntimeSessionAdapter {
     const scenario = getScenario(options);
     const reply = scenario.chat?.assistantResponse
       ?? `${scenario.title}: ${scenario.summary}`;

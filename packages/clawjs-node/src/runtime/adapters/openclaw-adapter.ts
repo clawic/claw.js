@@ -7,7 +7,7 @@ import type {
   CommandRunner,
   RuntimeAdapter,
   RuntimeAdapterOptions,
-  RuntimeConversationAdapter,
+  RuntimeSessionAdapter,
   RuntimeProbeStatus,
   RuntimeSetupInput,
   RuntimeCompatReport,
@@ -174,8 +174,15 @@ export const openclawAdapter: RuntimeAdapter = {
       workspace: { supported: true, status: "ready", strategy: "native" },
       auth: { supported: true, status: "ready", strategy: "cli" },
       models: { supported: true, status: "ready", strategy: "cli" },
-      conversation_cli: { supported: true, status: "ready", strategy: "cli" },
-      conversation_gateway: { supported: true, status: options.gateway?.url ? "ready" : "degraded", strategy: "gateway" },
+      session_cli: { supported: true, status: "ready", strategy: "cli" },
+      session_gateway: {
+        supported: true,
+        status: options.gateway?.url ? "ready" : "degraded",
+        strategy: "gateway",
+        diagnostics: options.gateway?.url
+          ? { primaryTransport: "openai-responses", fallbackTransport: "openai-chat-completions" }
+          : undefined,
+      },
       streaming: { supported: true, status: "ready", strategy: options.gateway?.url ? "gateway" : "cli" },
       memory: { supported: true, status: "degraded", strategy: "derived", limitations: ["OpenClaw memory is workspace-file based in ClawJS."] },
       skills: { supported: true, status: "degraded", strategy: "derived", limitations: ["Skills inventory is inferred from workspace/runtime files."] },
@@ -204,8 +211,15 @@ export const openclawAdapter: RuntimeAdapter = {
       workspace: { supported: true, status: "ready", strategy: "native" },
       auth: { supported: true, status: status.capabilities.modelsStatus ? "ready" : "degraded", strategy: "cli" },
       models: { supported: true, status: status.capabilities.modelsStatus ? "ready" : "degraded", strategy: "cli" },
-      conversation_cli: { supported: true, status: status.cliAvailable ? "ready" : "error", strategy: "cli" },
-      conversation_gateway: { supported: true, status: status.capabilities.gatewayCall ? "ready" : "degraded", strategy: "gateway" },
+      session_cli: { supported: true, status: status.cliAvailable ? "ready" : "error", strategy: "cli" },
+      session_gateway: {
+        supported: true,
+        status: status.capabilities.gatewayCall ? "ready" : "degraded",
+        strategy: "gateway",
+        diagnostics: status.capabilities.gatewayCall
+          ? { primaryTransport: "openai-responses", fallbackTransport: "openai-chat-completions" }
+          : undefined,
+      },
       streaming: { supported: true, status: "ready", strategy: status.capabilities.gatewayCall ? "gateway" : "cli" },
       memory: { supported: true, status: "degraded", strategy: "derived", limitations: ["OpenClaw memory is workspace-file based in ClawJS."] },
       skills: { supported: true, status: "degraded", strategy: "derived", limitations: ["Skills inventory is inferred from workspace/runtime files."] },
@@ -383,22 +397,27 @@ export const openclawAdapter: RuntimeAdapter = {
       env: options.env,
     });
   },
-  createConversationAdapter(options): RuntimeConversationAdapter {
+  createSessionAdapter(options): RuntimeSessionAdapter {
     const gatewayConfig = readOpenClawGatewayConfig(options.gateway ?? {});
     return {
       transport: {
         kind: gatewayConfig ? "hybrid" : "cli",
         streaming: true,
-        ...(gatewayConfig ? { gatewayKind: "openai-chat-completions" as const } : {}),
+        ...(gatewayConfig ? { gatewayKind: "openai-responses" as const } : {}),
       },
       gateway: gatewayConfig ? {
+        kind: "openai-responses",
+        url: gatewayConfig.url,
+        ...(gatewayConfig.token ? { token: gatewayConfig.token } : {}),
+      } : null,
+      fallbackGateway: gatewayConfig ? {
         kind: "openai-chat-completions",
         url: gatewayConfig.url,
         ...(gatewayConfig.token ? { token: gatewayConfig.token } : {}),
       } : null,
       buildCliInvocation(input) {
         if (!input.agentId) {
-          throw new Error("agentId is required for OpenClaw CLI conversations");
+          throw new Error("agentId is required for OpenClaw CLI sessions");
         }
         return {
           ...buildOpenClawCommand([

@@ -780,7 +780,7 @@ test("runCli redacts inline secrets from streamed error payloads in json mode", 
       rootDir: workspaceRoot,
     },
   });
-  claw.conversations.appendMessage(created.sessionId, {
+  claw.sessions.appendMessage(created.sessionId, {
     role: "user",
     content: "hello",
   });
@@ -1284,9 +1284,13 @@ test("runCli smokes the required command surface in dry-run or headless mode", a
     { argv: ["auth", "remove", "--workspace", workspaceRoot, `--agent-dir=${agentDir}`, "--provider=openai", "--json"], expected: [CLI_EXIT_OK, CLI_EXIT_FAILURE] },
     { argv: ["models", "list", "--workspace", workspaceRoot, `--agent-dir=${agentDir}`, "--json"], expected: [CLI_EXIT_OK] },
     { argv: ["models", "set-default", "--workspace", workspaceRoot, "--model", "openai", "--dry-run", "--json"], expected: [CLI_EXIT_OK] },
+    { argv: ["providers", "list", "--workspace", workspaceRoot, "--json"], expected: [CLI_EXIT_OK, CLI_EXIT_DEGRADED] },
+    { argv: ["providers", "auth-state", "--workspace", workspaceRoot, "--json"], expected: [CLI_EXIT_OK, CLI_EXIT_DEGRADED] },
     { argv: ["sessions", "list", "--workspace", workspaceRoot, "--json"], expected: [CLI_EXIT_OK] },
     { argv: ["sessions", "search", "--workspace", workspaceRoot, "--query", "hello", "--json"], expected: [CLI_EXIT_OK] },
     { argv: ["sessions", "create", "--workspace", workspaceRoot, "--json"], expected: [CLI_EXIT_OK] },
+    { argv: ["documents", "list", "--workspace", workspaceRoot, "--json"], expected: [CLI_EXIT_OK, CLI_EXIT_DEGRADED] },
+    { argv: ["tts", "providers", "--workspace", workspaceRoot, "--json"], expected: [CLI_EXIT_OK] },
   ];
 
   for (const command of commands) {
@@ -1311,8 +1315,8 @@ test("runCli can search sessions through OpenClaw memory search", async () => {
       rootDir: workspaceRoot,
     },
   });
-  const session = claw.conversations.createSession("Budget review");
-  claw.conversations.appendMessage(session.sessionId, {
+  const session = claw.sessions.createSession("Budget review");
+  claw.sessions.appendMessage(session.sessionId, {
     role: "user",
     content: "Need to review the quarterly budget with finance",
   });
@@ -1470,8 +1474,8 @@ test("runCli can stream a session reply through gateway config", async () => {
       rootDir: workspaceRoot,
     },
   });
-  const session = claw.conversations.createSession("Hello");
-  claw.conversations.appendMessage(session.sessionId, {
+  const session = claw.sessions.createSession("Hello");
+  claw.sessions.appendMessage(session.sessionId, {
     role: "user",
     content: "say hi",
   });
@@ -1528,8 +1532,8 @@ test("runCli can emit structured stream events in json mode", async () => {
       rootDir: workspaceRoot,
     },
   });
-  const session = claw.conversations.createSession("Hello");
-  claw.conversations.appendMessage(session.sessionId, {
+  const session = claw.sessions.createSession("Hello");
+  claw.sessions.appendMessage(session.sessionId, {
     role: "user",
     content: "say hi",
   });
@@ -1589,15 +1593,15 @@ test("runCli can use a real local gateway server with retry events", async () =>
       rootDir: workspaceRoot,
     },
   });
-  const session = claw.conversations.createSession("Hello");
-  claw.conversations.appendMessage(session.sessionId, {
+  const session = claw.sessions.createSession("Hello");
+  claw.sessions.appendMessage(session.sessionId, {
     role: "user",
     content: "say hi",
   });
 
   let attempts = 0;
   const server = http.createServer((request, response) => {
-    if (request.url !== "/v1/chat/completions") {
+    if (request.url !== "/v1/chat/completions" && request.url !== "/v1/responses") {
       response.writeHead(404).end();
       return;
     }
@@ -1657,8 +1661,8 @@ test("runCli falls back from a real local gateway server to the fake CLI runtime
       rootDir: workspaceRoot,
     },
   });
-  const session = claw.conversations.createSession("Hello");
-  claw.conversations.appendMessage(session.sessionId, {
+  const session = claw.sessions.createSession("Hello");
+  claw.sessions.appendMessage(session.sessionId, {
     role: "user",
     content: "say hi",
   });
@@ -1718,8 +1722,8 @@ test("runCli can generate a session title through gateway config", async () => {
       rootDir: workspaceRoot,
     },
   });
-  const session = claw.conversations.createSession("Hello");
-  claw.conversations.appendMessage(session.sessionId, {
+  const session = claw.sessions.createSession("Hello");
+  claw.sessions.appendMessage(session.sessionId, {
     role: "user",
     content: "I want to talk about anxiety at work",
   });
@@ -1747,6 +1751,213 @@ test("runCli can generate a session title through gateway config", async () => {
 
     assert.equal(exitCode, CLI_EXIT_OK);
     assert.match(stdout.getOutput(), /Work anxiety/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("runCli exposes provider catalog and auth state commands", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-providers-"));
+
+  const listStdout = captureStream();
+  const listExitCode = await runCli([
+    "--runtime", "demo",
+    "providers",
+    "list",
+    "--workspace", workspaceRoot,
+    "--json",
+  ], {
+    stdout: listStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(listExitCode), true);
+  assert.match(listStdout.getOutput(), /"id": "openai"/);
+
+  const stateStdout = captureStream();
+  const stateExitCode = await runCli([
+    "--runtime", "demo",
+    "providers",
+    "auth-state",
+    "--workspace", workspaceRoot,
+    "--json",
+  ], {
+    stdout: stateStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(stateExitCode), true);
+  assert.match(stateStdout.getOutput(), /"providers"/);
+});
+
+test("runCli can upload, search, read, and download documents", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-documents-"));
+  const sourceFile = path.join(workspaceRoot, "brief.txt");
+  const downloadFile = path.join(workspaceRoot, "downloaded.txt");
+  fs.writeFileSync(sourceFile, "alpha notes for document search");
+
+  const uploadStdout = captureStream();
+  const uploadExitCode = await runCli([
+    "documents",
+    "upload",
+    "--workspace", workspaceRoot,
+    "--file", sourceFile,
+    "--json",
+  ], {
+    stdout: uploadStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  assert.equal(uploadExitCode, CLI_EXIT_OK);
+  const uploaded = JSON.parse(uploadStdout.getOutput()) as { documentId: string; name: string };
+  assert.match(uploaded.documentId, /^[0-9a-f-]{36}$/);
+  assert.equal(uploaded.name, "brief.txt");
+
+  const listStdout = captureStream();
+  const listExitCode = await runCli([
+    "documents",
+    "list",
+    "--workspace", workspaceRoot,
+    "--json",
+  ], {
+    stdout: listStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  assert.equal(listExitCode, CLI_EXIT_OK);
+  assert.match(listStdout.getOutput(), new RegExp(uploaded.documentId));
+
+  const searchStdout = captureStream();
+  const searchExitCode = await runCli([
+    "documents",
+    "search",
+    "--workspace", workspaceRoot,
+    "--query", "alpha",
+    "--json",
+  ], {
+    stdout: searchStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  assert.equal(searchExitCode, CLI_EXIT_OK);
+  assert.match(searchStdout.getOutput(), /alpha/);
+
+  const readStdout = captureStream();
+  const readExitCode = await runCli([
+    "documents",
+    "read",
+    "--workspace", workspaceRoot,
+    "--document-id", uploaded.documentId,
+    "--json",
+  ], {
+    stdout: readStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  assert.equal(readExitCode, CLI_EXIT_OK);
+  assert.match(readStdout.getOutput(), /"name": "brief\.txt"/);
+
+  const downloadStdout = captureStream();
+  const downloadExitCode = await runCli([
+    "documents",
+    "download",
+    "--workspace", workspaceRoot,
+    "--document-id", uploaded.documentId,
+    "--out", downloadFile,
+    "--json",
+  ], {
+    stdout: downloadStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  assert.equal(downloadExitCode, CLI_EXIT_OK);
+  assert.equal(fs.readFileSync(downloadFile, "utf8"), "alpha notes for document search");
+});
+
+test("runCli can generate text through the inference command", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-inference-"));
+  const { binDir, openclawLog } = createFakeOpenClawToolchain();
+
+  await withPatchedEnv({
+    PATH: `${binDir}:${process.env.PATH ?? ""}`,
+    FAKE_OPENCLAW_AGENT_TEXT: "hello from inference",
+  }, async () => {
+    const stdout = captureStream();
+    const exitCode = await runCli([
+      "inference",
+      "generate-text",
+      "--workspace", workspaceRoot,
+      "--workspace-id", "demo-inference",
+      "--agent-id", "demo-inference",
+      "--prompt", "Summarize this",
+      "--transport", "cli",
+      "--json",
+    ], {
+      stdout: stdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    assert.equal(exitCode, CLI_EXIT_OK);
+    assert.match(stdout.getOutput(), /hello from inference/);
+  });
+
+  assert.match(fs.readFileSync(openclawLog, "utf8"), /agent --agent demo-inference/);
+});
+
+test("runCli can manage TTS config and synthesize audio", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-tts-"));
+  const outputPath = path.join(workspaceRoot, "speech.mp3");
+
+  const configStdout = captureStream();
+  const configExitCode = await runCli([
+    "tts",
+    "set-config",
+    "--workspace", workspaceRoot,
+    "--config-json", JSON.stringify({ provider: "openai", enabled: true, autoRead: true, voice: "nova", model: "tts-1" }),
+    "--json",
+  ], {
+    stdout: configStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  assert.equal(configExitCode, CLI_EXIT_OK);
+  assert.match(configStdout.getOutput(), /"provider": "openai"/);
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => new Response(Buffer.from("fake-mp3"), {
+    status: 200,
+    headers: { "content-type": "audio/mpeg" },
+  })) as typeof fetch;
+
+  try {
+    const synthStdout = captureStream();
+    const synthExitCode = await runCli([
+      "tts",
+      "synthesize",
+      "--workspace", workspaceRoot,
+      "--text", "Hello world",
+      "--provider", "openai",
+      "--api-key", "test-key",
+      "--out", outputPath,
+      "--json",
+    ], {
+      stdout: synthStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    assert.equal(synthExitCode, CLI_EXIT_OK);
+    assert.equal(fs.readFileSync(outputPath, "utf8"), "fake-mp3");
+    assert.match(synthStdout.getOutput(), /"mimeType": "audio\/mpeg"/);
   } finally {
     globalThis.fetch = originalFetch;
   }

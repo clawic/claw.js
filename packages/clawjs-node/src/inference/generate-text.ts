@@ -1,10 +1,11 @@
 import type { Message, PromptContextBlock } from "@clawjs/core";
 
 import {
-  streamRuntimeConversationEvents,
-  type ConversationStreamEvent,
-} from "../conversations/stream.ts";
-import type { CommandRunner, RuntimeConversationAdapter } from "../runtime/contracts.ts";
+  streamRuntimeSessionEvents,
+  type SessionStreamEvent,
+  type StreamSessionDependencies,
+} from "../sessions/stream.ts";
+import type { CommandRunner, RuntimeSessionAdapter } from "../runtime/contracts.ts";
 
 export interface GenerateTextInput {
   sessionId?: string;
@@ -22,7 +23,8 @@ export interface GenerateTextInput {
 export interface GenerateTextDependencies {
   fetchImpl?: typeof fetch;
   runner?: CommandRunner;
-  conversationAdapter?: RuntimeConversationAdapter;
+  sessionAdapter?: RuntimeSessionAdapter;
+  documentResolver?: StreamSessionDependencies["documentResolver"];
 }
 
 export interface GenerateTextResult {
@@ -37,7 +39,7 @@ function normalizeSessionId(sessionId?: string): string {
   return sessionId?.trim() || "clawjs-inference";
 }
 
-function throwStreamEvent(event: ConversationStreamEvent): never {
+function throwStreamEvent(event: SessionStreamEvent): never {
   if (event.type === "aborted") {
     throw new Error(event.reason ? `Inference aborted: ${event.reason}` : "Inference aborted");
   }
@@ -57,7 +59,7 @@ export async function generateRuntimeText(
   let retries = 0;
   let title: string | undefined;
 
-  for await (const event of streamRuntimeConversationEvents({
+  for await (const event of streamRuntimeSessionEvents({
     sessionId: normalizeSessionId(input.sessionId),
     agentId: input.agentId,
     systemPrompt: input.systemPrompt,
