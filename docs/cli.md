@@ -7,6 +7,8 @@ description: Command reference for the claw CLI across scaffolding, workspace ma
 
 The `claw` binary is shipped by `@clawjs/cli`. It is the primary project
 entrypoint for ClawJS, while `clawjs` remains as a compatibility alias.
+For the side-by-side SDK, CLI, and Relay comparison, use
+[Interface Matrix](/interface-matrix).
 
 ```bash
 npm install -g @clawjs/cli
@@ -240,6 +242,13 @@ claw sessions stream --session-id clawjs-123 --events
 `sessions stream` supports `--transport`, `--system-prompt`,
 `--context`, `--chunk-size`, and `--gateway-retries`. With `--events`,
 the command emits the structured event stream used by the SDK.
+
+## SDK-Only And Relay-Only Areas
+
+The CLI mirrors a large subset of the local SDK surface, but not all of
+it. The Relay mirrors a different remote-safe subset again. Use
+[Interface Matrix](/interface-matrix) when you need the exact
+cross-surface comparison.
 
 ## Media And Generations
 

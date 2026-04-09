@@ -7,6 +7,9 @@ description: Public HTTPS relay and reverse connector for remote ClawJS and Open
 
 `relay/` is a standalone Node.js service that gives remote clients a public HTTPS `/v1` API while the real ClawJS or OpenClaw runtime stays behind a reverse WebSocket connector.
 
+For the side-by-side SDK, CLI, and Relay comparison, use
+[Interface Matrix](/interface-matrix).
+
 Use it when you need:
 
 - browser or mobile clients that cannot talk to a local runtime directly

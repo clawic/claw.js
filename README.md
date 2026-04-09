@@ -13,6 +13,16 @@
 
 ClawJS is an open-source Node.js SDK and CLI for building local applications on top of multiple runtimes through one runtime-adapter contract.
 
+You can use the same system in three ways:
+
+| Surface | Best for | Example |
+| --- | --- | --- |
+| SDK | application code running locally in Node.js | `claw.conversations.listSessions()` |
+| CLI | local operator and automation flows in a shell | `claw sessions list --json` |
+| Relay API | remote browser, mobile, or server clients over HTTPS | `GET /v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/sessions` |
+
+Full comparison: [docs/interface-matrix.md](docs/interface-matrix.md)
+
 Maintainer: Iván González Dávila ([`@ivangdavila`](https://github.com/ivangdavila)).
 Repository ownership, issue tracking, and package publishing live under [`@clawic`](https://github.com/clawic).
 
@@ -153,6 +163,35 @@ console.log(status.capabilityMap);
 
 If the OpenClaw CLI is installed outside the current `PATH`, set `runtime.binaryPath` in code or export `CLAWJS_OPENCLAW_PATH`.
 
+## One Capability, Three Surfaces
+
+The same capability can usually be reached through the SDK, the CLI, or
+the Relay API:
+
+`WS = /v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId`
+
+| Task | SDK | CLI | Relay API |
+| --- | --- | --- | --- |
+| List conversations | `claw.conversations.listSessions()` | `claw sessions list` | `GET WS/sessions` |
+| Create a conversation | `claw.conversations.createSession()` | `claw sessions create --title "Support"` | `POST WS/sessions` |
+| Read one conversation | `claw.conversations.getSession(sessionId)` | `claw sessions read --session-id <id>` | `GET WS/sessions/:sessionId` |
+| Search conversations | `claw.conversations.searchSessions({ query: "invoice" })` | `claw sessions search --query "invoice"` | `GET WS/sessions:search?q=invoice` |
+| Stream a reply | `for await (const ev of claw.conversations.streamAssistantReplyEvents(...))` | `claw sessions stream --session-id <id> --events` | `POST WS/sessions/:sessionId/stream` |
+| Generate a title | `claw.conversations.generateTitle({ sessionId })` | `claw sessions generate-title --session-id <id>` | `POST WS/sessions/:sessionId/generate-title` |
+| List skills | `await claw.skills.list()` | `claw skills list` | `GET WS/skills/list` |
+| Search skills | `await claw.skills.search({ query: "calendar" })` | `claw skills search --query "calendar"` | `GET WS/skills/search?q=calendar` |
+| List tasks | `await workspace.tasks.list()` | `claw tasks list` | `GET WS/tasks` |
+| Generate an image | `await claw.image.generate(...)` | `claw image generate --prompt "..."` | `POST WS/images` |
+
+In the rows that use `workspace.*`, that surface comes from
+`@clawjs/workspace` on top of the base SDK.
+
+That split is intentional:
+
+- use the SDK when you are writing app code
+- use the CLI when you are driving a local workspace from scripts or a shell
+- use the Relay API when you need remote clients to call the same agent over HTTPS
+
 ## Project scaffolding
 
 The official project entrypoint is now `claw new`.
@@ -258,6 +297,7 @@ ClawJS does not pretend unsupported subsystems exist.
 - [CLI reference](docs/cli.md)
 - [Database service](docs/database.md)
 - [API reference](docs/api.md)
+- [Interface matrix](docs/interface-matrix.md)
 - [Workspace model and productivity layer](docs/workspace.md)
 - [Terminology](docs/terminology.md)
 - [Setup and first workspace checklist](docs/setup.md)

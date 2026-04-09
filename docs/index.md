@@ -75,6 +75,7 @@ ClawJS keeps a stable internal layer under `.clawjs/` even when runtimes disagre
 - [Runtime](/runtime) for the adapter contract and capability model.
 - [Workspace](/workspace) for the stable `.clawjs` layout and the `@clawjs/workspace` productivity layer.
 - [Relay](/relay) for the public HTTPS relay, reverse connector flow, and remote workspace routing model.
+- [Interface Matrix](/interface-matrix) for the side-by-side SDK, CLI, and Relay API comparison.
 - [Files & Templates](/files) for template packs, bindings, and managed blocks.
 - [Conversations](/conversations) for session storage and stream events.
 - [Diagnostics & Repair](/diagnostics) for compat refresh and doctor flows.
