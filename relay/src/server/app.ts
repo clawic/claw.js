@@ -26,6 +26,19 @@ interface RelayAppOptions {
   logger?: RelayLogger;
 }
 
+function resolveBrandRoot(): string {
+  const candidates = [
+    fileURLToPath(new URL("../../../public", import.meta.url)),
+    fileURLToPath(new URL("../../public", import.meta.url)),
+    path.join(process.cwd(), "../public"),
+    path.join(process.cwd(), "public"),
+  ];
+  return candidates.find((candidate) => (
+    existsSync(path.join(candidate, "logo.png")) &&
+    existsSync(path.join(candidate, "favicon.ico"))
+  )) ?? candidates[0];
+}
+
 type WorkspaceParams = {
   tenantId: string;
   agentId: string;
@@ -86,7 +99,9 @@ function requestKey(request: FastifyRequest): string {
 }
 
 function isLoopbackHost(host: string): boolean {
-  return host.includes("localhost") || host.includes("127.0.0.1");
+  if (host.includes("localhost") || host.includes("127.0.0.1")) return true;
+  const bare = host.replace(/:\d+$/, "");
+  return bare.startsWith("192.168.") || bare.startsWith("10.") || /^172\.(1[6-9]|2\d|3[01])\./.test(bare);
 }
 
 function isSecureRequest(request: FastifyRequest): boolean {
@@ -2380,7 +2395,14 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
   // routes in that case.
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const publicDir = path.resolve(__dirname, "../../ui/dist");
+  const brandRoot = resolveBrandRoot();
   const hasStaticBuild = existsSync(path.join(publicDir, "index.html"));
+
+  await app.register(fastifyStatic, {
+    root: brandRoot,
+    prefix: "/brand/",
+    decorateReply: false,
+  });
 
   if (hasStaticBuild) {
     await app.register(fastifyStatic, {

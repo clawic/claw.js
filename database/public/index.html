@@ -4,162 +4,544 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Claw Database</title>
+    <link rel="icon" href="/brand/favicon.ico" />
+    <link rel="stylesheet" href="/static/remixicon.css" />
     <link rel="stylesheet" href="/static/app.css" />
   </head>
   <body>
-    <div class="shell">
-      <aside class="sidebar" data-testid="sidebar">
-        <div class="brand">
-          <span class="eyebrow">ClawJS</span>
-          <h1>Database</h1>
-          <p>Schema-first namespaces with namespace-first operations.</p>
+    <!-- ============== LOGIN ============== -->
+    <section id="login-view" class="page-wrapper full-page center-content">
+      <div class="login-wrapper">
+        <div class="login-logo">
+          <img src="/brand/logo.png" alt="ClawJS" width="44" height="44" />
+          <span class="login-brand">Claw<strong>Base</strong></span>
         </div>
-
-        <section class="panel" data-testid="namespace-panel">
-          <div class="panel-header">
-            <h2>Databases</h2>
+        <h4 class="login-title">Superuser login</h4>
+        <form id="login-form" data-testid="login-form" class="login-form">
+          <div class="form-field required">
+            <label for="login-email">Email</label>
+            <input id="login-email" type="email" value="admin@database.local" autocomplete="username" />
           </div>
-          <div id="namespace-list" class="list"></div>
-          <form id="namespace-form" class="stack" data-testid="namespace-form">
-            <input id="namespace-id" type="text" placeholder="namespace-id" />
-            <input id="namespace-display-name" type="text" placeholder="Display name" />
-            <button type="submit">Create database</button>
-          </form>
-        </section>
-
-        <section class="panel" data-testid="collection-panel">
-          <div class="panel-header">
-            <h2>Collections</h2>
+          <div class="form-field required">
+            <label for="login-password">Password</label>
+            <input id="login-password" type="password" value="database-admin" autocomplete="current-password" />
           </div>
-          <div id="collection-list" class="list"></div>
-          <form id="collection-form" class="stack" data-testid="collection-form">
-            <input id="collection-name" type="text" placeholder="collection_name" />
-            <input id="collection-display-name" type="text" placeholder="Display name" />
-            <textarea id="collection-fields" rows="7"></textarea>
-            <button type="submit">Create collection</button>
-          </form>
-        </section>
+          <a class="login-forgot link-hint" href="#" tabindex="-1">Forgotten password?</a>
+          <button type="submit" data-testid="login-submit" class="btn btn-lg btn-block btn-next">
+            <span class="txt">Login</span>
+            <i class="ri-arrow-right-line"></i>
+          </button>
+          <p id="login-error" class="error"></p>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============== APP SHELL ============== -->
+    <div id="app-view" class="page-wrapper hidden" data-testid="admin-console">
+      <!-- Narrow icon rail -->
+      <aside class="app-sidebar" aria-label="Primary">
+        <a class="app-sidebar-logo" href="#" title="ClawBase">
+          <img src="/brand/logo.png" alt="ClawJS" width="32" height="32" />
+        </a>
+        <nav class="main-menu">
+          <button type="button" class="menu-item current-route" data-view="collections" data-testid="nav-collections" title="Collections" aria-label="Collections">
+            <i class="ri-database-2-line"></i>
+          </button>
+          <button type="button" class="menu-item" data-view="logs" data-testid="nav-logs" title="Logs" aria-label="Logs">
+            <i class="ri-pulse-line"></i>
+          </button>
+          <button type="button" class="menu-item" data-view="files" data-testid="nav-files" title="Files" aria-label="Files">
+            <i class="ri-folder-line"></i>
+          </button>
+          <button type="button" class="menu-item" data-view="tokens" data-testid="nav-tokens" title="Tokens" aria-label="Tokens">
+            <i class="ri-key-2-line"></i>
+          </button>
+          <button type="button" class="menu-item" data-view="settings" data-testid="nav-settings" title="Settings" aria-label="Settings">
+            <i class="ri-tools-line"></i>
+          </button>
+        </nav>
+        <button type="button" id="logout-btn" class="menu-item menu-item-muted" title="Sign out" aria-label="Sign out">
+          <i class="ri-logout-box-r-line"></i>
+        </button>
       </aside>
 
-      <main class="content">
-        <section id="login-view" class="hero">
-          <div class="hero-card">
-            <span class="eyebrow">Admin console</span>
-            <h2>Sign in</h2>
-            <p>Default local credentials are pre-seeded for development.</p>
-            <form id="login-form" class="stack" data-testid="login-form">
-              <input id="login-email" type="email" value="admin@database.local" />
-              <input id="login-password" type="password" value="database-admin" />
-              <button type="submit" data-testid="login-submit">Open console</button>
-            </form>
-            <p id="login-error" class="error"></p>
+      <!-- Contextual sidebar -->
+      <aside class="page-sidebar" data-testid="sidebar">
+        <div class="sidebar-content" data-view-only="collections" data-testid="collection-panel">
+          <div class="search">
+            <i class="ri-search-line"></i>
+            <input id="collection-search" type="text" placeholder="Search collections..." />
           </div>
-        </section>
+          <div id="collection-list" class="sidebar-list"></div>
+        </div>
 
-        <section id="app-view" class="hidden" data-testid="admin-console">
-          <header class="topbar">
-            <div>
-              <span class="eyebrow">Active database</span>
-              <h2 id="active-namespace-name">Main</h2>
+        <div class="sidebar-content" data-view-only="settings">
+          <h5 class="sidebar-title">System</h5>
+          <div class="sidebar-list">
+            <button type="button" class="sidebar-list-item active">
+              <i class="ri-home-4-line"></i>
+              <span class="txt">Application</span>
+            </button>
+            <button type="button" class="sidebar-list-item">
+              <i class="ri-hard-drive-2-line"></i>
+              <span class="txt">Files storage</span>
+            </button>
+            <button type="button" class="sidebar-list-item">
+              <i class="ri-mail-settings-line"></i>
+              <span class="txt">Mail settings</span>
+            </button>
+            <button type="button" class="sidebar-list-item">
+              <i class="ri-shield-keyhole-line"></i>
+              <span class="txt">Token options</span>
+            </button>
+          </div>
+          <h5 class="sidebar-title">Sync</h5>
+          <div class="sidebar-list">
+            <button type="button" class="sidebar-list-item">
+              <i class="ri-import-line"></i>
+              <span class="txt">Import collections</span>
+            </button>
+            <button type="button" class="sidebar-list-item">
+              <i class="ri-export-line"></i>
+              <span class="txt">Export collections</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sidebar-content" data-view-only="logs">
+          <h5 class="sidebar-title">Logs</h5>
+          <div class="sidebar-list">
+            <button type="button" class="sidebar-list-item active">
+              <i class="ri-pulse-line"></i>
+              <span class="txt">Realtime feed</span>
+            </button>
+            <button type="button" class="sidebar-list-item">
+              <i class="ri-server-line"></i>
+              <span class="txt">Request logs</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sidebar-content" data-view-only="files">
+          <h5 class="sidebar-title">Storage</h5>
+          <div class="sidebar-list">
+            <button type="button" class="sidebar-list-item active">
+              <i class="ri-folder-line"></i>
+              <span class="txt">Files</span>
+            </button>
+            <button type="button" class="sidebar-list-item">
+              <i class="ri-upload-cloud-2-line"></i>
+              <span class="txt">Upload</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sidebar-content" data-view-only="tokens">
+          <h5 class="sidebar-title">Access control</h5>
+          <div class="sidebar-list">
+            <button type="button" class="sidebar-list-item active">
+              <i class="ri-key-2-line"></i>
+              <span class="txt">API tokens</span>
+            </button>
+            <button type="button" class="sidebar-list-item">
+              <i class="ri-shield-user-line"></i>
+              <span class="txt">Admin access</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sidebar-footer" data-view-only="collections">
+          <button type="button" id="new-collection-btn" class="btn btn-block btn-outline">
+            <i class="ri-add-line"></i>
+            <span class="txt">New collection</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main content -->
+      <main class="page-main">
+        <!-- ==== Collections pane ==== -->
+        <section class="page-content" data-pane="collections">
+          <header class="page-header">
+            <div class="db-switcher-wrap" data-testid="namespace-panel">
+              <button type="button" id="db-switcher" class="db-switcher-chip" aria-expanded="false">
+                <i class="ri-database-2-line"></i>
+                <span class="db-label" id="active-namespace-name">Main</span>
+                <i class="ri-arrow-down-s-line db-caret"></i>
+              </button>
+              <div id="db-menu" class="db-menu hidden">
+                <div class="db-menu-head">Databases</div>
+                <div id="namespace-list" class="db-list"></div>
+                <form id="namespace-form" class="db-form" data-testid="namespace-form">
+                  <div class="form-field form-field-sm required">
+                    <label for="namespace-id">Database ID</label>
+                    <input id="namespace-id" type="text" placeholder="namespace-id" />
+                  </div>
+                  <div class="form-field form-field-sm required">
+                    <label for="namespace-display-name">Display name</label>
+                    <input id="namespace-display-name" type="text" placeholder="Display name" />
+                  </div>
+                  <button type="submit" class="btn btn-sm btn-primary btn-block">Create database</button>
+                </form>
+              </div>
             </div>
-            <div class="meta-grid">
-              <div class="pill">
-                <span>Collection</span>
-                <strong id="active-collection-name">Select one</strong>
-              </div>
-              <div class="pill">
-                <span>Live feed</span>
-                <strong id="live-status">offline</strong>
-              </div>
+            <nav class="breadcrumbs">
+              <div class="breadcrumb-item">Collections</div>
+              <div class="breadcrumb-item" id="schema-title">Select a collection</div>
+            </nav>
+            <div class="inline-flex gap-5">
+              <button type="button" id="schema-edit-btn" class="btn btn-transparent btn-circle" title="Edit collection" aria-label="Edit collection">
+                <i class="ri-settings-4-line"></i>
+              </button>
+              <button type="button" id="records-refresh" class="btn btn-transparent btn-circle" title="Refresh" aria-label="Refresh">
+                <i class="ri-refresh-line"></i>
+              </button>
+            </div>
+            <span id="active-collection-name" class="sr-only">Select one</span>
+            <div class="btns-group">
+              <button type="button" class="btn btn-outline">
+                <i class="ri-code-s-slash-line"></i>
+                <span class="txt">API Preview</span>
+              </button>
+              <button type="button" id="new-record-btn" class="btn btn-expanded">
+                <i class="ri-add-line"></i>
+                <span class="txt">New record</span>
+              </button>
             </div>
           </header>
 
-          <section class="grid">
-            <article class="card" data-testid="schema-card">
-              <div class="card-header">
-                <div>
-                  <span class="eyebrow">Schema editor</span>
-                  <h3 id="schema-title">Collection schema</h3>
-                </div>
-                <button id="schema-save">Save schema</button>
-              </div>
-              <textarea id="schema-editor" rows="14"></textarea>
-            </article>
+          <div class="searchbar">
+            <i class="ri-search-line searchbar-icon"></i>
+            <input id="records-filter" type="text" placeholder='Search term or filter like created &gt; "2022-01-01"...' />
+            <input id="records-sort" type="hidden" />
+          </div>
 
-            <article class="card" data-testid="record-card">
-              <div class="card-header">
-                <div>
-                  <span class="eyebrow">Records</span>
-                  <h3>Data browser</h3>
+          <div class="clearfix m-b-sm"></div>
+          <div id="records-table" class="table-wrapper" data-testid="records-table"></div>
+        </section>
+
+        <!-- ==== Logs pane ==== -->
+        <section class="page-content hidden" data-pane="logs" data-testid="activity-card">
+          <header class="page-header">
+            <nav class="breadcrumbs">
+              <div class="breadcrumb-item">Logs</div>
+              <div class="breadcrumb-item">Realtime feed</div>
+            </nav>
+            <div class="flex-fill"></div>
+            <span class="label label-base live-dot" id="live-status">offline</span>
+            <div class="btns-group">
+              <button type="button" class="btn btn-outline">
+                <i class="ri-filter-3-line"></i>
+                <span class="txt">Filter</span>
+              </button>
+              <button type="button" class="btn btn-outline" id="logs-clear">
+                <i class="ri-delete-bin-line"></i>
+                <span class="txt">Clear</span>
+              </button>
+            </div>
+          </header>
+          <div class="wrapper-lg m-auto">
+            <div class="panel-card">
+              <h5 class="panel-card-title">Realtime feed</h5>
+              <div id="event-list" class="log-list">
+                <div class="empty-state">
+                  <i class="ri-pulse-line"></i>
+                  <p>Listening for realtime events. Create, update, or delete a record to see events stream in here.</p>
                 </div>
-                <button id="records-refresh">Refresh</button>
               </div>
-              <div id="records-table" class="table-wrap"></div>
-              <form id="record-form" class="stack" data-testid="record-form">
-                <input id="record-id" type="text" placeholder="record id for update" />
-                <textarea id="record-data" rows="8"></textarea>
-                <div class="row">
-                  <button type="submit" id="record-save">Save record</button>
-                  <button type="button" id="record-reset" class="secondary">Reset</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==== Files pane ==== -->
+        <section class="page-content hidden" data-pane="files" data-testid="file-card">
+          <header class="page-header">
+            <nav class="breadcrumbs">
+              <div class="breadcrumb-item">Storage</div>
+              <div class="breadcrumb-item">Files</div>
+            </nav>
+            <div class="flex-fill"></div>
+            <div class="btns-group">
+              <button type="button" id="files-refresh" class="btn btn-transparent btn-circle" title="Refresh" aria-label="Refresh">
+                <i class="ri-refresh-line"></i>
+              </button>
+            </div>
+          </header>
+          <div class="wrapper-lg m-auto">
+            <div class="panel-card">
+              <h5 class="panel-card-title">Upload a new file</h5>
+              <form id="file-form" data-testid="file-form">
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="file-input">File</label>
+                    <input id="file-input" type="file" />
+                  </div>
+                  <div class="form-field">
+                    <label for="file-record-id">Record ID (optional)</label>
+                    <input id="file-record-id" type="text" placeholder="record id" />
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-sm btn-primary">
+                    <i class="ri-upload-cloud-2-line"></i>
+                    <span>Upload file</span>
+                  </button>
                 </div>
               </form>
-            </article>
+            </div>
+            <div class="panel-card">
+              <h5 class="panel-card-title">Stored files</h5>
+              <div id="file-list" class="file-grid"></div>
+            </div>
+          </div>
+        </section>
 
-            <article class="card" data-testid="token-card">
-              <div class="card-header">
-                <div>
-                  <span class="eyebrow">Roles and tokens</span>
-                  <h3>Scoped access</h3>
+        <!-- ==== Tokens pane ==== -->
+        <section class="page-content hidden" data-pane="tokens" data-testid="token-card">
+          <header class="page-header">
+            <nav class="breadcrumbs">
+              <div class="breadcrumb-item">Access control</div>
+              <div class="breadcrumb-item">API tokens</div>
+            </nav>
+            <div class="flex-fill"></div>
+            <div class="btns-group">
+              <button type="button" id="tokens-refresh" class="btn btn-transparent btn-circle" title="Refresh" aria-label="Refresh">
+                <i class="ri-refresh-line"></i>
+              </button>
+            </div>
+          </header>
+          <div class="wrapper-lg m-auto">
+            <div class="panel-card">
+              <h5 class="panel-card-title">Issue a new token</h5>
+              <form id="token-form" data-testid="token-form">
+                <div class="form-row">
+                  <div class="form-field required">
+                    <label for="token-label">Label</label>
+                    <input id="token-label" type="text" placeholder="my-service" />
+                  </div>
+                  <div class="form-field">
+                    <label for="token-collection">Collection scope</label>
+                    <input id="token-collection" type="text" placeholder="optional collection name" />
+                  </div>
                 </div>
-              </div>
-              <form id="token-form" class="stack" data-testid="token-form">
-                <input id="token-label" type="text" placeholder="Token label" />
-                <input id="token-collection" type="text" placeholder="Optional collection scope" />
-                <input id="token-operations" type="text" value="schema:read,records:list,records:read,records:create,records:update,records:delete,files:read,files:write,realtime:subscribe" />
-                <button type="submit">Issue token</button>
+                <div class="form-field">
+                  <label for="token-operations">Operations</label>
+                  <input id="token-operations" type="text" value="schema:read,records:list,records:read,records:create,records:update,records:delete,files:read,files:write,realtime:subscribe" />
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-sm btn-primary">
+                    <i class="ri-key-2-line"></i>
+                    <span>Issue token</span>
+                  </button>
+                </div>
               </form>
-              <pre id="token-output" class="output"></pre>
-              <div id="token-list" class="list"></div>
-            </article>
+              <pre id="token-output" class="code-block"></pre>
+            </div>
+            <div class="panel-card">
+              <h5 class="panel-card-title">Active tokens</h5>
+              <div id="token-list" class="token-list"></div>
+            </div>
+          </div>
+        </section>
 
-            <article class="card" data-testid="file-card">
-              <div class="card-header">
-                <div>
-                  <span class="eyebrow">Files</span>
-                  <h3>Assets</h3>
+        <!-- ==== Settings pane ==== -->
+        <section class="page-content hidden" data-pane="settings" data-testid="settings-card">
+          <header class="page-header">
+            <nav class="breadcrumbs">
+              <div class="breadcrumb-item">Settings</div>
+              <div class="breadcrumb-item">Application</div>
+            </nav>
+            <div class="btns-group">
+              <button type="button" id="settings-refresh" class="btn btn-transparent btn-circle" title="Refresh" aria-label="Refresh">
+                <i class="ri-refresh-line"></i>
+              </button>
+            </div>
+          </header>
+          <div class="wrapper-lg m-auto">
+            <div class="panel-card">
+              <h5 class="panel-card-title">Application</h5>
+              <div class="form-row">
+                <div class="form-field readonly">
+                  <label>Application name</label>
+                  <input id="settings-name" type="text" value="ClawBase" readonly />
+                </div>
+                <div class="form-field readonly">
+                  <label>Application URL</label>
+                  <input id="settings-url" type="text" value="http://127.0.0.1:4510" readonly />
                 </div>
               </div>
-              <form id="file-form" class="stack" data-testid="file-form">
-                <input id="file-input" type="file" />
-                <input id="file-record-id" type="text" placeholder="Optional record id" />
-                <button type="submit">Upload file</button>
-              </form>
-              <div id="file-list" class="list"></div>
-            </article>
 
-            <article class="card" data-testid="activity-card">
-              <div class="card-header">
-                <div>
-                  <span class="eyebrow">Realtime</span>
-                  <h3>Change feed</h3>
-                </div>
-              </div>
-              <div id="event-list" class="list event-list"></div>
-            </article>
+              <h5 class="panel-card-title">Service state</h5>
+              <div id="settings-rows" class="settings-rows"></div>
 
-            <article class="card" data-testid="settings-card">
-              <div class="card-header">
-                <div>
-                  <span class="eyebrow">Settings and health</span>
-                  <h3>Service state</h3>
-                </div>
-                <button id="settings-refresh">Refresh</button>
-              </div>
-              <pre id="settings-output" class="output"></pre>
-            </article>
-          </section>
+              <h5 class="panel-card-title">Raw output</h5>
+              <pre id="settings-output" class="code-block"></pre>
+            </div>
+          </div>
         </section>
       </main>
+
+      <!-- ==== Record editor drawer ==== -->
+      <div id="record-drawer" class="overlay-panel-container hidden" role="dialog" aria-label="Record editor">
+        <div class="overlay-backdrop" id="record-drawer-backdrop"></div>
+        <div class="overlay-panel overlay-panel-lg">
+          <div class="overlay-panel-section panel-header">
+            <button type="button" id="drawer-close" class="overlay-close" aria-label="Close">
+              <i class="ri-close-line"></i>
+            </button>
+            <h4 id="drawer-title">New record</h4>
+          </div>
+          <form id="record-form" data-testid="record-form">
+            <div class="overlay-panel-section panel-content">
+              <div id="record-fields" class="record-fields"></div>
+              <div class="raw-json-section">
+                <div class="raw-json-divider">
+                  <span>Raw JSON (advanced)</span>
+                </div>
+                <div class="form-field">
+                  <label for="record-id">Record ID (leave empty to create)</label>
+                  <input id="record-id" type="text" placeholder="empty = create new" />
+                </div>
+                <div class="form-field">
+                  <label for="record-data">Payload (JSON)</label>
+                  <textarea id="record-data" rows="10"></textarea>
+                </div>
+              </div>
+            </div>
+            <div class="overlay-panel-section panel-footer">
+              <button type="button" id="record-reset" class="btn btn-transparent">
+                <span class="txt">Reset</span>
+              </button>
+              <button type="submit" id="record-save" class="btn btn-expanded-sm">
+                <span class="txt">Save record</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ==== Schema editor drawer (matches PB CollectionUpsertPanel) ==== -->
+      <div id="schema-drawer" class="overlay-panel-container hidden" role="dialog" aria-label="Edit collection" data-testid="schema-card">
+        <div class="overlay-backdrop" id="schema-drawer-backdrop"></div>
+        <div class="overlay-panel overlay-panel-lg colored-header collection-panel">
+          <div class="overlay-panel-section panel-header">
+            <button type="button" id="schema-drawer-close" class="overlay-close" aria-label="Close">
+              <i class="ri-close-line"></i>
+            </button>
+            <h4 class="upsert-panel-title">Edit collection</h4>
+            <div class="flex-fill"></div>
+            <form class="block" onsubmit="return false;">
+              <div class="form-field collection-field-name required m-b-0">
+                <label for="schema-coll-name">Name</label>
+                <input id="schema-coll-name" type="text" spellcheck="false" placeholder='eg. "posts"' />
+                <div class="form-field-addon">
+                  <div class="btn btn-sm btn-transparent btn-disabled p-r-10 p-l-10">
+                    <span class="txt">Type: Base</span>
+                  </div>
+                </div>
+              </div>
+              <input type="submit" class="hidden" tabindex="-1" />
+            </form>
+            <div class="tabs-header stretched">
+              <button type="button" class="tab-item active" data-schema-tab="fields">
+                <span class="txt">Fields</span>
+              </button>
+              <button type="button" class="tab-item" data-schema-tab="rules">
+                <span class="txt">API Rules</span>
+              </button>
+              <button type="button" class="tab-item" data-schema-tab="options">
+                <span class="txt">Options</span>
+              </button>
+            </div>
+          </div>
+          <div class="overlay-panel-section panel-content tabs-content">
+            <div class="tab-item active" data-schema-tab-content="fields">
+              <div id="schema-fields-builder" class="schema-fields"></div>
+              <button type="button" id="schema-add-field" class="btn btn-block btn-outline">
+                <i class="ri-add-line"></i>
+                <span class="txt">New field</span>
+              </button>
+              <hr class="hr-muted" />
+              <h6 class="section-title section-title-indexes">
+                Unique constraints and indexes <span class="section-count" id="schema-index-count">(0)</span>
+              </h6>
+              <div class="schema-indexes-row">
+                <div id="schema-indexes-list" class="schema-indexes-list"></div>
+                <button type="button" id="schema-add-index" class="btn btn-xs btn-outline btn-pill">
+                  <i class="ri-add-line"></i>
+                  <span class="txt">New index</span>
+                </button>
+              </div>
+              <details class="raw-json-details">
+                <summary>Raw JSON (advanced)</summary>
+                <div class="form-field">
+                  <label for="schema-editor">Fields (JSON array)</label>
+                  <textarea id="schema-editor" rows="10"></textarea>
+                </div>
+              </details>
+            </div>
+            <div class="tab-item" data-schema-tab-content="rules" hidden>
+              <p class="help-block">API rules let you restrict who can list, view, create, update or delete records in this collection. Leave empty to allow everyone, or use <code>@request.auth.id != ""</code> to require a signed-in user.</p>
+              <div class="form-field"><label>List/Search rule</label><input type="text" placeholder='@request.auth.id != ""' /></div>
+              <div class="form-field"><label>View rule</label><input type="text" placeholder='@request.auth.id != ""' /></div>
+              <div class="form-field"><label>Create rule</label><input type="text" placeholder='@request.auth.id != ""' /></div>
+              <div class="form-field"><label>Update rule</label><input type="text" placeholder='@request.auth.id != ""' /></div>
+              <div class="form-field"><label>Delete rule</label><input type="text" placeholder='@request.auth.id != ""' /></div>
+            </div>
+            <div class="tab-item" data-schema-tab-content="options" hidden>
+              <p class="help-block">Collection level options. More settings (auth, identity fields, etc.) are available on auth collections.</p>
+              <div class="form-field"><label>System collection</label><input type="text" value="false" readonly /></div>
+            </div>
+          </div>
+          <div class="overlay-panel-section panel-footer">
+            <button type="button" id="schema-drawer-cancel" class="btn btn-transparent">
+              <span class="txt">Cancel</span>
+            </button>
+            <button type="button" id="schema-save" class="btn btn-expanded-sm">
+              <span class="txt">Save changes</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==== New collection modal ==== -->
+      <div id="collection-modal" class="overlay-panel-container hidden" role="dialog" aria-label="New collection">
+        <div class="overlay-backdrop" data-close-modal></div>
+        <div class="overlay-panel popup">
+          <div class="overlay-panel-section panel-header">
+            <h4>New collection</h4>
+            <button type="button" class="btn btn-sm btn-circle btn-transparent btn-close m-l-auto" data-close-modal aria-label="Close">
+              <i class="ri-close-line txt-lg"></i>
+            </button>
+          </div>
+          <form id="collection-form" data-testid="collection-form">
+            <div class="overlay-panel-section panel-content">
+              <div class="form-row">
+                <div class="form-field required">
+                  <label for="collection-name">Name</label>
+                  <input id="collection-name" type="text" placeholder="collection_name" />
+                </div>
+                <div class="form-field required">
+                  <label for="collection-display-name">Display name</label>
+                  <input id="collection-display-name" type="text" placeholder="Display name" />
+                </div>
+              </div>
+              <div class="form-field">
+                <label for="collection-fields">Fields (JSON)</label>
+                <textarea id="collection-fields" rows="10"></textarea>
+              </div>
+            </div>
+            <div class="overlay-panel-section panel-footer">
+              <button type="button" class="btn btn-transparent" data-close-modal>
+                <span class="txt">Cancel</span>
+              </button>
+              <button type="submit" class="btn btn-expanded">
+                <span class="txt">Create collection</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
     <script type="module" src="/static/app.js"></script>

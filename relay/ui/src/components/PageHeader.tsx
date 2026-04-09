@@ -8,8 +8,8 @@ export function PageHeader({
   children?: ReactNode;
 }) {
   return (
-    <header className="h-12 px-4 flex items-center gap-3 border-b border-border bg-bg shrink-0">
-      <h1 className="text-sm font-semibold">{title}</h1>
+    <header className="h-14 px-6 flex items-center gap-3 border-b border-border bg-bg shrink-0">
+      <h1 className="text-[18px] font-normal text-text">{title}</h1>
       <div className="flex-1" />
       <div className="flex items-center gap-2">{children}</div>
     </header>

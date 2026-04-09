@@ -23,7 +23,21 @@ function resolvePublicRoot(): string {
   return candidates.find((candidate) => fs.existsSync(candidate)) ?? candidates[0];
 }
 
+function resolveBrandRoot(): string {
+  const candidates = [
+    fileURLToPath(new URL("../../../public", import.meta.url)),
+    fileURLToPath(new URL("../../public", import.meta.url)),
+    path.join(process.cwd(), "../public"),
+    path.join(process.cwd(), "public"),
+  ];
+  return candidates.find((candidate) => (
+    fs.existsSync(path.join(candidate, "logo.png")) &&
+    fs.existsSync(path.join(candidate, "favicon.ico"))
+  )) ?? candidates[0];
+}
+
 const publicRoot = resolvePublicRoot();
+const brandRoot = resolveBrandRoot();
 
 function parseBearerToken(request: FastifyRequest): string | null {
   const header = request.headers.authorization;
@@ -193,6 +207,11 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
   app.register(fastifyStatic, {
     root: publicRoot,
     prefix: "/static/",
+  });
+  app.register(fastifyStatic, {
+    root: brandRoot,
+    prefix: "/brand/",
+    decorateReply: false,
   });
   app.register(async (wsApp) => {
     await wsApp.register(websocket, {

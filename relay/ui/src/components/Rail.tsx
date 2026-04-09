@@ -47,9 +47,14 @@ export function Rail() {
   return (
     <nav
       aria-label="Primary"
-      className="flex flex-col items-center w-16 shrink-0 bg-bg-rail text-text-on-dark border-r border-border"
+      className="flex flex-col items-center w-[75px] shrink-0 bg-bg-rail border-r border-border py-5 gap-5"
     >
-      <div className="flex-1 flex flex-col items-center gap-1 pt-3">
+      {/* Brand mark */}
+      <div className="mt-[14px] mb-[6px] grid place-items-center">
+        <img src="/brand/logo.png" alt="ClawJS" width="32" height="32" />
+      </div>
+
+      <div className="flex-1 flex flex-col items-center gap-2">
         {visible.map(({ to, label, icon: Icon, match }) => (
           <NavLink
             key={to}
@@ -57,37 +62,37 @@ export function Rail() {
             title={label}
             aria-label={label}
             className={({ isActive }) => {
-              const active =
-                match?.(window.location.pathname) ?? isActive;
+              const active = match?.(window.location.pathname) ?? isActive;
               return [
-                "w-10 h-10 flex items-center justify-center rounded-sm transition-colors",
-                "text-text-on-dark-muted hover:bg-bg-rail-hover hover:text-text-on-dark",
-                active ? "bg-bg-rail-active text-text-on-dark" : "",
+                "w-11 h-11 flex items-center justify-center rounded transition-colors",
+                "text-text-muted hover:bg-bg-hover hover:text-text",
+                active ? "bg-bg-hover text-text" : "",
               ].join(" ");
             }}
           >
-            <Icon size={18} strokeWidth={1.75} />
+            <Icon size={20} strokeWidth={1.75} />
           </NavLink>
         ))}
       </div>
-      <div className="flex flex-col items-center gap-1 pb-3">
+
+      <div className="flex flex-col items-center gap-2">
         <button
           type="button"
           onClick={toggle}
           title={theme === "dark" ? "Light mode" : "Dark mode"}
           aria-label="Toggle theme"
-          className="w-10 h-10 flex items-center justify-center rounded-sm text-text-on-dark-muted hover:bg-bg-rail-hover hover:text-text-on-dark"
+          className="w-11 h-11 flex items-center justify-center rounded text-text-muted hover:bg-bg-hover hover:text-text"
         >
-          {theme === "dark" ? <Sun size={18} strokeWidth={1.75} /> : <Moon size={18} strokeWidth={1.75} />}
+          {theme === "dark" ? <Sun size={20} strokeWidth={1.75} /> : <Moon size={20} strokeWidth={1.75} />}
         </button>
         <button
           type="button"
           onClick={handleLogout}
           title="Sign out"
           aria-label="Sign out"
-          className="w-10 h-10 flex items-center justify-center rounded-sm text-text-on-dark-muted hover:bg-bg-rail-hover hover:text-text-on-dark"
+          className="w-11 h-11 flex items-center justify-center rounded text-text-muted hover:bg-bg-hover hover:text-text"
         >
-          <LogOut size={18} strokeWidth={1.75} />
+          <LogOut size={20} strokeWidth={1.75} />
         </button>
       </div>
     </nav>

@@ -3,9 +3,9 @@ import { Rail } from "./Rail";
 
 export function AppShell() {
   return (
-    <div className="flex h-full w-full bg-bg text-text">
+    <div className="flex h-full w-full bg-bg-panel text-text">
       <Rail />
-      <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
+      <main className="flex-1 min-w-0 flex flex-col overflow-hidden bg-bg-panel">
         <Outlet />
       </main>
     </div>

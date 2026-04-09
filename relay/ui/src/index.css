@@ -1,38 +1,81 @@
 @import "tailwindcss";
 
+/* =====================================================
+   Self-hosted fonts (Source Sans 3 + Ubuntu Mono)
+   Same files shipped with ClawBase so the relay UI
+   inherits the exact typography.
+   ===================================================== */
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/brand/fonts/source-sans-3/source-sans-3-v18-cyrillic_latin_latin-ext-regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/brand/fonts/source-sans-3/source-sans-3-v18-cyrillic_latin_latin-ext-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/brand/fonts/source-sans-3/source-sans-3-v18-cyrillic_latin_latin-ext-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Ubuntu Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/brand/fonts/ubuntu-mono/ubuntu-mono-v17-cyrillic_latin_latin-ext-regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Ubuntu Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/brand/fonts/ubuntu-mono/ubuntu-mono-v17-cyrillic_latin_latin-ext-700.woff2") format("woff2");
+}
+
 /*
  * Manual light/dark theme toggled via [data-theme="dark"] on <html>.
- * CSS vars are defined in :root / [data-theme="dark"] and then re-exposed
- * to Tailwind through @theme inline so utilities stay in sync with the
- * current theme when the attribute changes.
+ * Light theme now mirrors the ClawBase / Claw Database design tokens so
+ * the whole relay UI picks up the same palette + typography.
  */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
-  --color-bg: #ffffff;
-  --color-bg-panel: #fafbfc;
-  --color-bg-hover: #f4f5f7;
-  --color-bg-input: #ffffff;
-  --color-bg-rail: #16161a;
-  --color-bg-rail-hover: #23272e;
-  --color-bg-rail-active: #2e333b;
+  color-scheme: light;
 
-  --color-border: #e4e9ec;
-  --color-border-strong: #c9d0d6;
+  /* ClawBase palette mapped onto the relay's existing tokens */
+  --color-bg: #ffffff;            /* baseColor */
+  --color-bg-panel: #f8f9fa;      /* bodyColor */
+  --color-bg-hover: #e3e8ed;      /* baseAlt1 */
+  --color-bg-input: #e3e8ed;      /* ClawBase inputs live on the filled card */
+  --color-bg-rail: #ffffff;       /* rail is white with border-right */
+  --color-bg-rail-hover: #e3e8ed;
+  --color-bg-rail-active: #d7dde3;
 
-  --color-text: #16161a;
-  --color-text-muted: #666f75;
-  --color-text-faint: #8b949e;
-  --color-text-on-dark: #e4e6eb;
-  --color-text-on-dark-muted: #8b949e;
+  --color-border: #e3e8ed;        /* baseAlt1 */
+  --color-border-strong: #c9d0da; /* baseAlt3 */
 
-  --color-red: #e04f4f;
-  --color-red-bg: #fcebeb;
-  --color-green: #2f9e44;
-  --color-green-bg: #e6f6ea;
-  --color-yellow: #b8860b;
-  --color-yellow-bg: #fbf3e0;
-  --color-blue-bg: #eef3f8;
+  --color-text: #1a1a24;          /* primaryColor */
+  --color-text-muted: #617079;    /* txtHint */
+  --color-text-faint: #a0a6ac;    /* txtDisabled */
+  --color-text-on-dark: #1a1a24;  /* rail is light now */
+  --color-text-on-dark-muted: #617079;
+
+  --color-red: #e34562;
+  --color-red-bg: #f7cad2;
+  --color-green: #32ad84;
+  --color-green-bg: #c4eedc;
+  --color-yellow: #ff944d;
+  --color-yellow-bg: #ffd4b8;
+  --color-blue-bg: #cee2f8;
 
   --shadow-drawer: -8px 0 32px rgba(0, 0, 0, 0.08);
 }
@@ -43,6 +86,8 @@
   --color-bg-hover: #2a2f37;
   --color-bg-input: #1c1f24;
   --color-bg-rail: #16181d;
+  --color-bg-rail-hover: #23272e;
+  --color-bg-rail-active: #2e333b;
 
   --color-border: #2e333b;
   --color-border-strong: #3b4049;
@@ -50,6 +95,8 @@
   --color-text: #e4e6eb;
   --color-text-muted: #8b949e;
   --color-text-faint: #666f75;
+  --color-text-on-dark: #e4e6eb;
+  --color-text-on-dark-muted: #8b949e;
 
   --color-red: #f26767;
   --color-red-bg: #3b1f22;
@@ -91,8 +138,8 @@
   --radius-sm: 3px;
   --radius: 4px;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "Ubuntu Mono", "SFMono-Regular", ui-monospace, Menlo, Monaco, Consolas, monospace;
 }
 
 html,
@@ -103,14 +150,184 @@ body,
 
 body {
   margin: 0;
-  font-family: var(--font-sans);
-  background: var(--color-bg);
+  font-family: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--color-bg-panel);
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
-  font-size: 13px;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 14.5px;
+  line-height: 22px;
 }
 
-/* Tight scrollbar in dark mode to match relay look */
+/* Tailwind v4's @theme inline does NOT expose --font-sans as a :root
+   custom property, so form controls and a few other elements can fall
+   back to the UA serif default. Force inheritance here. */
+* { font-family: inherit; }
+code, pre, kbd, samp, .font-mono {
+  font-family: "Ubuntu Mono", "SFMono-Regular", ui-monospace, Menlo, Monaco, Consolas, monospace;
+}
+
+/* =====================================================
+   ClawBase-style login page
+   ===================================================== */
+.cb-login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background: #ffffff;
+  color: #1a1a24;
+  font-size: 14.5px;
+}
+.cb-login-wrapper {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.cb-login-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 30px;
+  user-select: none;
+  color: #1a1a24;
+}
+.cb-login-brand {
+  font-size: 23px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.2px;
+}
+.cb-login-brand strong { font-weight: 700; }
+.cb-login-title {
+  margin: 0 0 30px;
+  font-size: 20px;
+  font-weight: 400;
+  text-align: center;
+  color: #1a1a24;
+}
+.cb-login-form { width: 100%; display: block; }
+
+/* =====================================================
+   ClawBase-style stacked form field (label + input as
+   one filled card). Reusable across the app.
+   ===================================================== */
+.cb-field {
+  display: block;
+  position: relative;
+  margin: 0 0 18px;
+}
+.cb-field > span,
+.cb-field > label {
+  display: block;
+  width: 100%;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.1px;
+  color: #617079;
+  line-height: 1;
+  padding: 12px 15px 3px;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  background: #e3e8ed;
+  cursor: text;
+  transition: color .15s, background .15s;
+  box-sizing: border-box;
+}
+.cb-field.required > span::after,
+.cb-field.required > label::after {
+  content: "*";
+  color: #e34562;
+  margin-left: 2px;
+}
+.cb-field > input,
+.cb-field > textarea,
+.cb-field > select {
+  display: block;
+  width: 100%;
+  background: #e3e8ed;
+  border: 0;
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+  outline: 0;
+  padding: 2px 15px 10px;
+  font-size: 14.5px;
+  line-height: 20px;
+  color: #1a1a24;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: color .15s, background .15s;
+}
+.cb-field:focus-within > span,
+.cb-field:focus-within > label,
+.cb-field:focus-within > input,
+.cb-field:focus-within > textarea,
+.cb-field:focus-within > select {
+  background: #d7dde3;
+}
+.cb-field > input::placeholder,
+.cb-field > textarea::placeholder {
+  color: #a0a6ac;
+}
+
+.cb-login-forgot {
+  display: inline-block;
+  margin: -6px 0 24px;
+  font-size: 13px;
+  color: #617079;
+  text-decoration: none;
+  align-self: flex-start;
+}
+.cb-login-forgot:hover { color: #1a1a24; }
+.cb-login-error {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: #e34562;
+  background: #f7cad2;
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+
+/* =====================================================
+   ClawBase-style button (shared with login + anywhere
+   that wants the dark primary CTA).
+   ===================================================== */
+.cb-btn {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 45px;
+  padding: 5px 30px;
+  background: #1a1a24;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  font-family: inherit;
+  transition: background .15s, opacity .15s;
+}
+.cb-btn:hover { background: #2a2a36; }
+.cb-btn:active { background: #0f0f17; }
+.cb-btn:disabled {
+  background: #e3e8ed;
+  color: #a0a6ac;
+  cursor: not-allowed;
+}
+.cb-btn-arrow { display: inline-block; transition: transform .15s; }
+.cb-btn:hover:not(:disabled) .cb-btn-arrow { transform: translateX(3px); }
+
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;

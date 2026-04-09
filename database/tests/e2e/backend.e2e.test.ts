@@ -38,6 +38,43 @@ function authHeaders(token: string) {
   };
 }
 
+test("shared brand assets and fonts are served from repo public and referenced by the admin console html", async () => {
+  const server = await boot();
+  const sharedPublicDir = path.resolve(process.cwd(), "..", "public");
+
+  const indexResponse = await fetch(`${server.baseUrl}/`);
+  assert.equal(indexResponse.status, 200);
+  const indexHtml = await indexResponse.text();
+  assert.match(indexHtml, /href="\/brand\/favicon\.ico"/);
+  assert.match(indexHtml, /src="\/brand\/logo\.png"/);
+
+  const cssResponse = await fetch(`${server.baseUrl}/static/app.css`);
+  assert.equal(cssResponse.status, 200);
+  const cssText = await cssResponse.text();
+  assert.match(cssText, /\/brand\/fonts\/source-sans-3\/source-sans-3-v18-cyrillic_latin_latin-ext-regular\.woff2/);
+
+  const logoResponse = await fetch(`${server.baseUrl}/brand/logo.png`);
+  assert.equal(logoResponse.status, 200);
+  assert.deepEqual(
+    Buffer.from(await logoResponse.arrayBuffer()),
+    fs.readFileSync(path.join(sharedPublicDir, "logo.png")),
+  );
+
+  const faviconResponse = await fetch(`${server.baseUrl}/brand/favicon.ico`);
+  assert.equal(faviconResponse.status, 200);
+  assert.deepEqual(
+    Buffer.from(await faviconResponse.arrayBuffer()),
+    fs.readFileSync(path.join(sharedPublicDir, "favicon.ico")),
+  );
+
+  const fontResponse = await fetch(`${server.baseUrl}/brand/fonts/source-sans-3/source-sans-3-v18-cyrillic_latin_latin-ext-regular.woff2`);
+  assert.equal(fontResponse.status, 200);
+  assert.deepEqual(
+    Buffer.from(await fontResponse.arrayBuffer()),
+    fs.readFileSync(path.join(sharedPublicDir, "fonts", "source-sans-3", "source-sans-3-v18-cyrillic_latin_latin-ext-regular.woff2")),
+  );
+});
+
 test("namespace creation seeds protected built-ins and custom schemas keep index metadata", async () => {
   const server = await boot();
 

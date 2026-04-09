@@ -4,8 +4,8 @@ React + Vite + TypeScript + Tailwind v4 frontend for the clawjs relay.
 
 The Fastify backend in `relay/src/` serves this app's production build from
 `relay/ui/dist/` as static assets via `@fastify/static`. In development,
-`vite dev` runs on port `5180` and proxies `/v1/*` requests to the Fastify
-server on `127.0.0.1:8787`.
+`vite dev` runs on port `5180` and proxies `/v1/*` plus `/brand/*` requests
+to the Fastify server on `127.0.0.1:8787`.
 
 ## Stack
 

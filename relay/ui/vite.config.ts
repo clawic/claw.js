@@ -18,6 +18,10 @@ export default defineConfig({
   server: {
     port: 5180,
     proxy: {
+      "/brand": {
+        target: BACKEND,
+        changeOrigin: true,
+      },
       "/v1": {
         target: BACKEND,
         changeOrigin: true,
