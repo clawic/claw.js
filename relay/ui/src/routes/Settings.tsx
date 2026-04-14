@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Copy, Plus, Trash2 } from "lucide-react";
+import { Copy, Plus, Trash2, Smartphone } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { PageBody, PageHeader } from "../components/PageHeader";
@@ -65,6 +65,7 @@ export function SettingsPage() {
       </PageHeader>
       <PageBody>
         {pairingId ? <PairingApprovalCard pairingId={pairingId} userCode={userCode} /> : null}
+        <MobileSetupCard tenantId={tenantId} />
         <EnrollmentCard tenantId={tenantId} />
         <CreateWorkspaceCard tenantId={tenantId} />
         <RuntimeCard tenantId={tenantId} />
@@ -122,6 +123,371 @@ function PairingApprovalCard({
       {status === "approved" ? <div className="text-xs text-green-700 mt-3">Pairing approved.</div> : null}
       {status === "denied" ? <div className="text-xs text-text-muted mt-3">Pairing denied.</div> : null}
       {error ? <div className="text-xs text-red bg-red-bg rounded-sm px-2 py-1 mt-3">{error}</div> : null}
+    </Card>
+  );
+}
+
+// ---------- Mobile Setup QR ----------
+
+function QRCode({ value, size = 200 }: { value: string; size?: number }) {
+  const modules = useMemo(() => encodeQR(value), [value]);
+  if (!modules.length) return null;
+  const n = modules.length;
+  const cellSize = size / n;
+  const rects: React.ReactNode[] = [];
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      if (modules[y][x]) {
+        rects.push(
+          <rect key={`${x}-${y}`} x={x * cellSize} y={y * cellSize} width={cellSize} height={cellSize} fill="#1a1a24" />
+        );
+      }
+    }
+  }
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} style={{ background: "#fff", borderRadius: 8 }}>
+      {rects}
+    </svg>
+  );
+}
+
+/**
+ * Minimal QR encoder (Mode Byte, ECC L, Version 1-4).
+ * Returns a 2D boolean matrix. Good enough for short JSON payloads.
+ */
+function encodeQR(text: string): boolean[][] {
+  // Delegate to a tiny inline implementation using the alphanumeric/byte encoding
+  // For simplicity we use the well-tested approach of rendering via SVG path
+  // This is a stripped-down QR encoder for version 2-4, ECC L
+  const data = new TextEncoder().encode(text);
+  const len = data.length;
+
+  // Pick version
+  let version: number, ecCodewords: number, groups: [number,number][];
+  if (len <= 17) {
+    version = 1; ecCodewords = 7; groups = [[1,19]];
+  } else if (len <= 32) {
+    version = 2; ecCodewords = 10; groups = [[1,34]];
+  } else if (len <= 53) {
+    version = 3; ecCodewords = 15; groups = [[1,55]];
+  } else if (len <= 78) {
+    version = 4; ecCodewords = 20; groups = [[1,80]];
+  } else if (len <= 106) {
+    version = 5; ecCodewords = 26; groups = [[1,108]];
+  } else if (len <= 134) {
+    version = 6; ecCodewords = 18; groups = [[2,68]];
+  } else if (len <= 154) {
+    version = 7; ecCodewords = 20; groups = [[2,78]];
+  } else if (len <= 192) {
+    version = 8; ecCodewords = 24; groups = [[2,97]];
+  } else if (len <= 230) {
+    version = 9; ecCodewords = 30; groups = [[2,116]];
+  } else if (len <= 271) {
+    version = 10; ecCodewords = 18; groups = [[2,68],[2,69]];
+  } else {
+    return [];
+  }
+
+  const dataCapacity = groups.reduce((s, [count, cw]) => s + count * cw, 0);
+  const size = version * 4 + 17;
+
+  // Build data stream
+  const bits: number[] = [];
+  const pushBits = (val: number, count: number) => {
+    for (let i = count - 1; i >= 0; i--) bits.push((val >> i) & 1);
+  };
+  pushBits(0b0100, 4); // byte mode
+  pushBits(len, version <= 9 ? 8 : 16);
+  for (const b of data) pushBits(b, 8);
+  pushBits(0, Math.min(4, dataCapacity * 8 - bits.length));
+  while (bits.length % 8 !== 0) bits.push(0);
+  const pad = [0xec, 0x11];
+  let pi = 0;
+  while (bits.length < dataCapacity * 8) {
+    pushBits(pad[pi % 2], 8);
+    pi++;
+  }
+
+  // Convert to codewords
+  const codewords: number[] = [];
+  for (let i = 0; i < bits.length; i += 8) {
+    let v = 0;
+    for (let j = 0; j < 8; j++) v = (v << 1) | (bits[i + j] || 0);
+    codewords.push(v);
+  }
+
+  // RS error correction
+  const allDataBlocks: number[][] = [];
+  const allEcBlocks: number[][] = [];
+  let offset = 0;
+  for (const [count, cwPerBlock] of groups) {
+    for (let b = 0; b < count; b++) {
+      const block = codewords.slice(offset, offset + cwPerBlock);
+      offset += cwPerBlock;
+      allDataBlocks.push(block);
+      allEcBlocks.push(rsEncode(block, ecCodewords));
+    }
+  }
+
+  // Interleave
+  const finalData: number[] = [];
+  const maxDataLen = Math.max(...allDataBlocks.map(b => b.length));
+  for (let i = 0; i < maxDataLen; i++) {
+    for (const block of allDataBlocks) {
+      if (i < block.length) finalData.push(block[i]);
+    }
+  }
+  for (let i = 0; i < ecCodewords; i++) {
+    for (const block of allEcBlocks) {
+      if (i < block.length) finalData.push(block[i]);
+    }
+  }
+
+  // Build matrix
+  const matrix: (boolean | null)[][] = Array.from({ length: size }, () => Array(size).fill(null));
+  const reserved: boolean[][] = Array.from({ length: size }, () => Array(size).fill(false));
+
+  const setModule = (x: number, y: number, val: boolean, res = true) => {
+    if (x >= 0 && x < size && y >= 0 && y < size) {
+      matrix[y][x] = val;
+      if (res) reserved[y][x] = true;
+    }
+  };
+
+  // Finder patterns
+  const drawFinder = (cx: number, cy: number) => {
+    for (let dy = -4; dy <= 4; dy++) {
+      for (let dx = -4; dx <= 4; dx++) {
+        const x = cx + dx, y = cy + dy;
+        if (x < 0 || x >= size || y < 0 || y >= size) continue;
+        const adx = Math.abs(dx), ady = Math.abs(dy);
+        const on = (adx <= 3 && ady <= 3) && !(adx === 2 && ady === 2) && !(adx === 2 && ady === 1) && !(adx === 1 && ady === 2);
+        setModule(x, y, on);
+      }
+    }
+  };
+  drawFinder(3, 3);
+  drawFinder(size - 4, 3);
+  drawFinder(3, size - 4);
+
+  // Timing patterns
+  for (let i = 8; i < size - 8; i++) {
+    setModule(i, 6, i % 2 === 0);
+    setModule(6, i, i % 2 === 0);
+  }
+
+  // Alignment patterns (version >= 2)
+  if (version >= 2) {
+    const positions = getAlignmentPositions(version);
+    for (const ay of positions) {
+      for (const ax of positions) {
+        if (reserved[ay]?.[ax]) continue;
+        for (let dy = -2; dy <= 2; dy++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            const on = Math.abs(dx) === 2 || Math.abs(dy) === 2 || (dx === 0 && dy === 0);
+            setModule(ax + dx, ay + dy, on);
+          }
+        }
+      }
+    }
+  }
+
+  // Reserve format info areas
+  for (let i = 0; i < 8; i++) {
+    if (!reserved[8]?.[i]) { reserved[8][i] = true; }
+    if (!reserved[i]?.[8]) { reserved[i][8] = true; }
+    if (i < 8 && !reserved[8]?.[size - 1 - i]) { reserved[8][size - 1 - i] = true; }
+    if (i < 8 && !reserved[size - 1 - i]?.[8]) { reserved[size - 1 - i][8] = true; }
+  }
+  reserved[8][8] = true;
+  // Dark module
+  setModule(8, size - 8, true);
+
+  // Version info (version >= 7)
+  if (version >= 7) {
+    const versionBits = getVersionBits(version);
+    for (let i = 0; i < 18; i++) {
+      const bit = ((versionBits >> i) & 1) === 1;
+      const x = Math.floor(i / 3), y = (size - 11) + (i % 3);
+      setModule(x, y, bit);
+      setModule(y, x, bit);
+    }
+  }
+
+  // Place data bits
+  const allBits: number[] = [];
+  for (const byte of finalData) {
+    for (let i = 7; i >= 0; i--) allBits.push((byte >> i) & 1);
+  }
+  // Remainder bits
+  const remainderBits = [0,0,7,7,7,7,7,0,0,0,0,0,0,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0];
+  const rem = version < remainderBits.length ? remainderBits[version] : 0;
+  for (let i = 0; i < rem; i++) allBits.push(0);
+
+  let bitIdx = 0;
+  let upward = true;
+  for (let right = size - 1; right >= 1; right -= 2) {
+    if (right === 6) right = 5; // skip timing column
+    const colRange = upward ? Array.from({ length: size }, (_, i) => size - 1 - i) : Array.from({ length: size }, (_, i) => i);
+    for (const row of colRange) {
+      for (const col of [right, right - 1]) {
+        if (col < 0 || col >= size) continue;
+        if (!reserved[row][col] && bitIdx < allBits.length) {
+          matrix[row][col] = allBits[bitIdx++] === 1;
+        }
+      }
+    }
+    upward = !upward;
+  }
+
+  // Apply mask (mask 0: (row + col) % 2 === 0)
+  const mask = 0;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      if (!reserved[y][x] && matrix[y][x] !== null) {
+        if ((y + x) % 2 === 0) {
+          matrix[y][x] = !matrix[y][x];
+        }
+      }
+    }
+  }
+
+  // Write format info
+  const formatBits = getFormatBits(0, mask); // ECC L = 0, mask 0
+  const FORMAT_POS_A = [
+    [0,8],[1,8],[2,8],[3,8],[4,8],[5,8],[7,8],[8,8],
+    [8,7],[8,5],[8,4],[8,3],[8,2],[8,1],[8,0],
+  ];
+  const FORMAT_POS_B = [
+    [8, size-1],[8, size-2],[8, size-3],[8, size-4],[8, size-5],[8, size-6],[8, size-7],
+    [size-8, 8],[size-7, 8],[size-6, 8],[size-5, 8],[size-4, 8],[size-3, 8],[size-2, 8],[size-1, 8],
+  ];
+  for (let i = 0; i < 15; i++) {
+    const bit = ((formatBits >> (14 - i)) & 1) === 1;
+    const [ay, ax] = FORMAT_POS_A[i];
+    matrix[ay][ax] = bit;
+    const [by, bx] = FORMAT_POS_B[i];
+    matrix[by][bx] = bit;
+  }
+
+  return matrix.map(row => row.map(v => v === true));
+}
+
+function getAlignmentPositions(version: number): number[] {
+  if (version === 1) return [];
+  const table: Record<number, number[]> = {
+    2:[6,18],3:[6,22],4:[6,26],5:[6,30],6:[6,34],7:[6,22,38],8:[6,24,42],9:[6,26,46],10:[6,28,50],
+  };
+  return table[version] || [];
+}
+
+function getVersionBits(version: number): number {
+  const table: Record<number, number> = {
+    7:0x07C94,8:0x085BC,9:0x09A99,10:0x0A4D3,
+  };
+  return table[version] || 0;
+}
+
+function getFormatBits(ecLevel: number, mask: number): number {
+  // ECC L=1, M=0, Q=3, H=2 in QR spec format indicator
+  const eccTable = [1, 0, 3, 2];
+  const data = (eccTable[ecLevel] << 3) | mask;
+  // BCH(15,5) encoding
+  let bits = data << 10;
+  const gen = 0b10100110111;
+  for (let i = 14; i >= 10; i--) {
+    if ((bits >> i) & 1) bits ^= gen << (i - 10);
+  }
+  bits = (data << 10) | bits;
+  bits ^= 0b101010000010010; // XOR mask
+  return bits;
+}
+
+function rsEncode(data: number[], ecCount: number): number[] {
+  const gf256 = { exp: new Uint8Array(512), log: new Uint8Array(256) };
+  let x = 1;
+  for (let i = 0; i < 255; i++) {
+    gf256.exp[i] = x;
+    gf256.log[x] = i;
+    x = (x << 1) ^ (x & 0x80 ? 0x11d : 0);
+  }
+  for (let i = 255; i < 512; i++) gf256.exp[i] = gf256.exp[i - 255];
+
+  const mul = (a: number, b: number) => a === 0 || b === 0 ? 0 : gf256.exp[gf256.log[a] + gf256.log[b]];
+
+  // Generator polynomial
+  let gen = [1];
+  for (let i = 0; i < ecCount; i++) {
+    const next = new Array(gen.length + 1).fill(0);
+    const factor = gf256.exp[i];
+    for (let j = 0; j < gen.length; j++) {
+      next[j] ^= gen[j];
+      next[j + 1] ^= mul(gen[j], factor);
+    }
+    gen = next;
+  }
+
+  const msg = [...data, ...new Array(ecCount).fill(0)];
+  for (let i = 0; i < data.length; i++) {
+    const coeff = msg[i];
+    if (coeff !== 0) {
+      for (let j = 0; j < gen.length; j++) {
+        msg[i + j] ^= mul(gen[j], coeff);
+      }
+    }
+  }
+  return msg.slice(data.length);
+}
+
+function MobileSetupCard({ tenantId }: { tenantId: string }) {
+  const { auth } = useAuth();
+  const [showQR, setShowQR] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const relayUrl = window.location.origin;
+  const payload = JSON.stringify({
+    relayUrl,
+    tenantId,
+    email: auth?.email ?? "user@relay.local",
+  });
+
+  return (
+    <Card
+      title="Mobile setup"
+      subtitle="Show a QR code for the iOS app to scan and connect to this relay."
+    >
+      <div className="flex gap-2">
+        <Button
+          variant="primary"
+          onClick={() => setShowQR((v) => !v)}
+        >
+          <Smartphone size={12} /> {showQR ? "Hide QR" : "Show QR code"}
+        </Button>
+        <Button
+          size="sm"
+          onClick={async () => {
+            const ok = await copyToClipboard(payload);
+            if (ok) {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            }
+          }}
+        >
+          <Copy size={12} /> {copied ? "Copied" : "Copy payload"}
+        </Button>
+      </div>
+      {showQR ? (
+        <div className="mt-4 flex flex-col items-center gap-3">
+          <div className="p-4 bg-white rounded-lg inline-block">
+            <QRCode value={payload} size={220} />
+          </div>
+          <p className="text-[11px] text-text-muted text-center max-w-xs">
+            Open the ClawJS app on your iPhone, go to Settings, and tap "Scan QR Code".
+            The app will configure itself automatically.
+          </p>
+          <pre className={CODE_CLS + " text-[10px] max-w-xs"}>{payload}</pre>
+        </div>
+      ) : null}
     </Card>
   );
 }

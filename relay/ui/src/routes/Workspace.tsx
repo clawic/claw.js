@@ -7,12 +7,14 @@ import { UsageTab } from "./workspace/UsageTab";
 import { SessionsTab } from "./workspace/SessionsTab";
 import { ResourcesTab } from "./workspace/ResourcesTab";
 import { StatusTab } from "./workspace/StatusTab";
+import { BrowserTab } from "./workspace/BrowserTab";
 
-type Tab = "activity" | "usage" | "sessions" | "resources" | "status";
+type Tab = "activity" | "usage" | "sessions" | "resources" | "status" | "browser";
 const TABS: { key: Tab; label: string }[] = [
   { key: "activity", label: "Activity" },
   { key: "usage", label: "Usage" },
   { key: "sessions", label: "Sessions" },
+  { key: "browser", label: "Browser" },
   { key: "resources", label: "Resources" },
   { key: "status", label: "Status" },
 ];
@@ -84,6 +86,7 @@ export function WorkspacePage() {
           {activeTab === "activity" && <ActivityTab prefix={prefix} />}
           {activeTab === "usage" && <UsageTab prefix={prefix} />}
           {activeTab === "sessions" && <SessionsTab prefix={prefix} />}
+          {activeTab === "browser" && <BrowserTab prefix={prefix} />}
           {activeTab === "resources" && <ResourcesTab prefix={prefix} />}
           {activeTab === "status" && <StatusTab prefix={prefix} />}
         </div>

@@ -84,6 +84,7 @@ src/
 | Path | View |
 | --- | --- |
 | `/login` | Email + password + tenant sign-in |
+| `/browser/:tenantId/:agentId/:workspaceId` | Standalone shared-browser view without the Relay dashboard shell |
 | `/agents` | Tenant agents list, click to pick a workspace |
 | `/workspaces` | Flat list of all workspaces across agents |
 | `/workspace/:tenantId/:agentId/:workspaceId/:tab` | Workspace detail. `:tab` is one of `activity`, `usage`, `sessions`, `resources`, `status` |

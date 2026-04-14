@@ -1,3 +1,4 @@
+import { networkInterfaces } from "node:os";
 import path from "node:path";
 
 export interface RelayConfig {
@@ -21,6 +22,7 @@ export interface RelayConfig {
   pairingExpiresSec: number;
   pairingPollIntervalSec: number;
   publicBaseUrl: string;
+  iotBaseUrl?: string;
 }
 
 export function loadRelayConfig(overrides: Partial<RelayConfig> = {}): RelayConfig {
@@ -30,10 +32,11 @@ export function loadRelayConfig(overrides: Partial<RelayConfig> = {}): RelayConf
     .split(",")
     .map((entry) => entry.trim())
     .filter(Boolean);
-  const publicBaseUrl = process.env.RELAY_PUBLIC_BASE_URL ?? `http://${process.env.RELAY_HOST ?? "127.0.0.1"}:${process.env.PORT ?? "4410"}`;
+  const defaultPublicHost = process.env.RELAY_HOST ?? localIPv4() ?? "127.0.0.1";
+  const publicBaseUrl = process.env.RELAY_PUBLIC_BASE_URL ?? `http://${defaultPublicHost}:${process.env.PORT ?? "4410"}`;
 
   return {
-    host: overrides.host ?? process.env.RELAY_HOST ?? "127.0.0.1",
+    host: overrides.host ?? process.env.RELAY_HOST ?? "0.0.0.0",
     port: overrides.port ?? Number(process.env.PORT ?? "4410"),
     dbPath: overrides.dbPath ?? process.env.RELAY_DB_PATH ?? path.join(cwd, "relay.sqlite"),
     jwtSecrets: overrides.jwtSecrets ?? jwtSecrets,
@@ -53,5 +56,19 @@ export function loadRelayConfig(overrides: Partial<RelayConfig> = {}): RelayConf
     pairingExpiresSec: overrides.pairingExpiresSec ?? Number(process.env.RELAY_PAIRING_EXPIRES_SEC ?? "900"),
     pairingPollIntervalSec: overrides.pairingPollIntervalSec ?? Number(process.env.RELAY_PAIRING_POLL_INTERVAL_SEC ?? "5"),
     publicBaseUrl: overrides.publicBaseUrl ?? publicBaseUrl,
+    iotBaseUrl: overrides.iotBaseUrl ?? process.env.RELAY_IOT_BASE_URL ?? process.env.CLAWJS_IOT_BASE_URL,
   };
+}
+
+function localIPv4(): string | null {
+  const interfaces = networkInterfaces();
+  for (const entries of Object.values(interfaces)) {
+    if (!entries) continue;
+    for (const entry of entries) {
+      if (!entry.internal && entry.family === "IPv4") {
+        return entry.address;
+      }
+    }
+  }
+  return null;
 }

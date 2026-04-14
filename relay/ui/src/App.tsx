@@ -4,6 +4,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LoginPage } from "./routes/Login";
 import { AgentsPage } from "./routes/Agents";
 import { WorkspacesPage } from "./routes/Workspaces";
+import { ImmersiveBrowserPage } from "./routes/ImmersiveBrowser";
 import { WorkspacePage } from "./routes/Workspace";
 import { LogsPage } from "./routes/Logs";
 import { SettingsPage } from "./routes/Settings";
@@ -12,6 +13,14 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/browser/:tenantId/:agentId/:workspaceId"
+        element={
+          <ProtectedRoute>
+            <ImmersiveBrowserPage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         element={
           <ProtectedRoute>

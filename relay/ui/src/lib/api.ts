@@ -67,7 +67,11 @@ async function request<T = unknown>(
   const opts = (): RequestInit => ({
     method,
     headers: authHeaders(),
-    body: body != null ? JSON.stringify(body) : null,
+    body: body != null
+      ? JSON.stringify(body)
+      : method === "GET"
+        ? null
+        : JSON.stringify({}),
   });
 
   let res = await fetch(`${BASE}${path}`, opts());

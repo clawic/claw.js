@@ -38,9 +38,7 @@ export function LoginPage() {
       <div className="cb-login-wrapper">
         <div className="cb-login-logo">
           <img src="/brand/logo.png" alt="ClawJS" width="44" height="44" />
-          <span className="cb-login-brand">
-            Claw<strong>Relay</strong>
-          </span>
+          <span className="cb-login-brand">Relay</span>
         </div>
 
         <h4 className="cb-login-title">Superuser login</h4>
