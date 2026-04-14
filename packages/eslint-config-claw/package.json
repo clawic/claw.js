@@ -1,6 +1,6 @@
 {
   "name": "eslint-config-claw",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Shared ESLint flat config for Claw projects.",
   "type": "module",
   "license": "MIT",

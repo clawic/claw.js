@@ -1,6 +1,6 @@
 {
   "name": "@clawjs/claw",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Official SDK for Claw.",
   "type": "module",
   "license": "MIT",
@@ -39,7 +39,7 @@
     "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20"
   },
   "dependencies": {
-    "@clawjs/core": "0.1.0",
+    "@clawjs/core": "0.1.2",
     "better-sqlite3": "^11.10.0"
   },
   "devDependencies": {

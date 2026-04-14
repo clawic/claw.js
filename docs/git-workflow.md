@@ -25,12 +25,14 @@ Delete them after merge.
 - Protect `main`, `next`, and `release/*`.
 - Require pull requests for those branches.
 - Require the `CI` and `Release Gate` workflows to pass before merge.
+- Require a changeset entry for PRs that change published packages, generated template output, or public package surface unless the change is docs-only, test-only, or internal-only.
 - Prefer squash merges so the public history stays readable while individual commits can still follow `type(scope): description`.
 - Keep release prep changes explicit: changelog, docs, versioning, and packaging checks in the same pull request.
 
 ## Tag policy
 
 - Release tags use `v<semver>`, for example `v0.1.0`.
+- Published npm packages move in lockstep under one shared version.
 - Create tags from `main` for normal releases.
 - Create tags from `release/0.x` only for patch releases that must not include everything currently in `next`.
 

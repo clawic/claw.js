@@ -1,6 +1,6 @@
 {
   "name": "create-claw-app",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Create a Next.js app prewired for Claw.",
   "type": "module",
   "license": "MIT",

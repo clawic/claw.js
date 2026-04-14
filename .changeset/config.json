@@ -1,0 +1,26 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
+  "changelog": false,
+  "commit": false,
+  "fixed": [
+    [
+      "@clawjs/core",
+      "@clawjs/claw",
+      "@clawjs/workspace",
+      "@clawjs/node",
+      "@clawjs/cli",
+      "@clawjs/openclaw-plugin",
+      "@clawjs/openclaw-context-engine",
+      "create-claw-app",
+      "create-claw-agent",
+      "create-claw-server",
+      "create-claw-plugin",
+      "eslint-config-claw"
+    ]
+  ],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": []
+}

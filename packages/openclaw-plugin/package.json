@@ -1,6 +1,6 @@
 {
   "name": "@clawjs/openclaw-plugin",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "OpenClaw bridge plugin for ClawJS.",
   "type": "module",
   "license": "MIT",

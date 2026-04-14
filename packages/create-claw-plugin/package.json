@@ -1,6 +1,6 @@
 {
   "name": "create-claw-plugin",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Create a distributed plugin package scaffold for Claw.",
   "type": "module",
   "license": "MIT",

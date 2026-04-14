@@ -1,6 +1,6 @@
 {
   "name": "@clawjs/openclaw-context-engine",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Experimental OpenClaw context engine for ClawJS.",
   "type": "module",
   "license": "MIT",

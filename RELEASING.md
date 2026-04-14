@@ -3,10 +3,22 @@
 ## Release policy
 
 - Follow semver, but treat all `0.x` releases as potentially fast-moving.
-- Update [CHANGELOG.md](CHANGELOG.md) in the same change that prepares a release.
+- Published npm packages move in lockstep under one shared version managed by Changesets.
+- Every PR that changes a published package, generated template output, or public package surface must include a `.changeset/*.md` entry unless it is docs-only, test-only, or internal-only.
+- Update [CHANGELOG.md](CHANGELOG.md) in the release PR before merge so the top-level repository changelog stays curated.
 - Do not publish if `npm run ci` fails.
 - Treat `main` as the normal tag source. Use `release/0.x` only when patching the current public line without merging all queued work from `next`.
 - Keep the Git workflow in sync with [docs/git-workflow.md](docs/git-workflow.md).
+
+## Versioning workflow
+
+1. Add a changeset in the feature PR with `npm run changeset`.
+2. Merge feature PRs into `main` or `next` as usual.
+3. The release workflow opens or updates a release PR from pending changesets.
+4. Review the generated version bump, update the root changelog entry if needed, and merge the release PR into `main`.
+5. After merge, GitHub Actions runs the full release gate, publishes changed packages to npm, and tags the repository as `v<semver>`.
+
+For preview builds from `next`, run prereleases with the npm dist-tag `next` instead of publishing to `latest`.
 
 ## Release checklist
 
@@ -15,21 +27,11 @@
 3. Run `npm run ci`.
 4. Run `npm run publish:dry-run`.
 5. Verify adapter support/stability metadata and docs support matrix are current.
-6. Publish packages in this order:
-   - `@clawjs/core`
-   - `@clawjs/claw`
-   - `@clawjs/workspace`
-   - `@clawjs/node`
-   - `@clawjs/cli`
-   - `@clawjs/openclaw-plugin`
-   - `@clawjs/openclaw-context-engine`
-   - `create-claw-app`
-   - `create-claw-agent`
-   - `create-claw-server`
-   - `create-claw-plugin`
-   - `eslint-config-claw`
-7. Tag the release as `v<semver>` from `main` unless this is an intentional patch from `release/0.x`.
-8. Copy the changelog entry into the GitHub release notes.
+6. Review the pending release PR created from changesets.
+7. Update [CHANGELOG.md](CHANGELOG.md) in that release PR if the top-level note needs curation.
+8. Merge the release PR into `main`.
+9. Confirm the `Release` workflow publishes successfully and creates the `v<semver>` tag.
+10. Copy the changelog entry into the GitHub release notes if you want a manually curated GitHub release body.
 
 ## Package map
 
@@ -48,6 +50,26 @@
 
 The release order matters because `@clawjs/claw` depends on `@clawjs/core`, `@clawjs/workspace` depends on the SDK, the compatibility wrapper depends on `@clawjs/claw`, the CLI depends on `@clawjs/claw`, and the scaffolder templates depend on the published runtime packages.
 
+## Changeset commands
+
+Create a changeset:
+
+```bash
+npm run changeset
+```
+
+Inspect the pending release plan:
+
+```bash
+npm run release:status
+```
+
+Apply version bumps locally:
+
+```bash
+npm run release:version
+```
+
 ## Publish commands
 
 Dry run the full release from the workspace root:
@@ -59,5 +81,5 @@ npm run publish:dry-run
 Publish for real from the workspace root after authentication:
 
 ```bash
-npm run publish:packages
+npm run release:publish
 ```

@@ -144,11 +144,16 @@ Pull request rules:
 - Prefer squash merges.
 - Treat `main`, `next`, and `release/*` as protected branches.
 - Keep `CI` and `Release Gate` green before merge.
+- If a PR changes a published package, generated template output, or public package surface, add a `.changeset/*.md` entry unless the change is docs-only, test-only, or internal-only.
 - If a PR changes onboarding, installation, imports, CLI usage, support tiers, docs, or templates, update the related documentation in the same PR.
 - Keep release-prep changes explicit: changelog, docs, versioning, packaging, and validation should land together.
 
 ## Release Notes
 
+- Published npm packages are versioned with Changesets in one shared lockstep version.
+- Do not hand-edit versions in published package manifests outside the release workflow.
+- Release PRs are generated from `.changeset/*.md` entries and must be merged into `main` before publishing `latest`.
+- Use prereleases from `next` with the npm dist-tag `next` only when you intentionally want a preview channel.
 - Do not publish if `npm run ci` fails.
 - Before release, run `npm run publish:dry-run`.
 - Create release tags as `v<semver>`.

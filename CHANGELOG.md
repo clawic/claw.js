@@ -4,10 +4,15 @@ All notable changes to ClawJS should be recorded in this file.
 
 ## Unreleased
 
-- Packaging hardening for published `dist` artifacts and tarball smoke validation
-- Capability contract hardening and adapter support metadata
-- OSS baseline files, CI, and public docs reconciliation
-- Git/GitHub release baseline with branch policy, PR template, CODEOWNERS, and release dry-run workflow
+## 0.1.2 - 2026-04-14
+
+- Packaging hardening for published `dist` artifacts and tarball smoke validation.
+- Capability contract hardening and adapter support metadata.
+- OSS baseline reconciliation for public docs and package surface.
+- Standardized npm package versioning with Changesets in one shared lockstep release flow.
+- Added automated release PR and publish workflow support for `main`, including release tag creation.
+- Documented the release policy in the repository instructions, release guide, Git workflow, and PR template.
+- Realigned all published npm packages on `0.1.2` after the out-of-band `@clawjs/core@0.1.1` publish on 2026-03-21.
 
 ## 0.1.0 - 2026-03-25
 
