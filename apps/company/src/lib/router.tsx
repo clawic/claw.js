@@ -71,7 +71,7 @@ export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(function Link
   );
 });
 
-export interface NavLinkProps extends Omit<LinkProps, "className"> {
+export interface NavLinkProps extends Omit<LinkProps, "className" | "children"> {
   className?:
     | string
     | ((args: { isActive: boolean; isPending: boolean }) => string | undefined);

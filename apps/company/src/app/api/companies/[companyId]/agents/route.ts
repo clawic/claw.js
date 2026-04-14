@@ -28,6 +28,11 @@ export async function POST(request: Request, context: { params: Promise<{ compan
       capabilities?: string;
       reportsTo?: string;
       icon?: string;
+      scopeType?: "company" | "portfolio" | "portfolio_item" | "project";
+      scopeId?: string;
+      autonomyLevel?: "observe" | "suggest" | "act_limited" | "act_full";
+      approvalPolicy?: Record<string, unknown>;
+      watchDomains?: string[];
     };
     if (!body.name?.trim() || !body.role?.trim() || !body.title?.trim()) {
       return NextResponse.json({ error: "name, role and title are required" }, { status: 400 });
@@ -40,6 +45,11 @@ export async function POST(request: Request, context: { params: Promise<{ compan
       capabilities: body.capabilities,
       reportsTo: body.reportsTo,
       icon: body.icon,
+      scopeType: body.scopeType,
+      scopeId: body.scopeId,
+      autonomyLevel: body.autonomyLevel,
+      approvalPolicy: body.approvalPolicy,
+      watchDomains: body.watchDomains,
     });
     const hire = await requestHire({
       companyId,

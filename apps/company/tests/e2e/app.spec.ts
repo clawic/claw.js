@@ -1,0 +1,170 @@
+import path from "node:path";
+
+import { expect, test, saveBrowserScreenshot } from "./helpers.ts";
+
+type CompanyRecord = { id: string; name: string };
+type AgentRecord = { id: string; title: string };
+type IssueRecord = { id: string; status: string };
+type ReleaseRecord = { id: string; status: string };
+type FeedbackRecord = { id: string; status: string; linkedIssueId?: string };
+type IncidentRecord = { id: string; status: string };
+
+async function getSelectedCompany(page: import("@playwright/test").Page): Promise<CompanyRecord> {
+  const response = await page.request.get("/api/companies");
+  expect(response.ok()).toBeTruthy();
+  const payload = await response.json() as { companies: CompanyRecord[] };
+  expect(payload.companies.length).toBeGreaterThan(0);
+  return payload.companies[0]!;
+}
+
+test("organization cockpit backend flows work end-to-end", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.getByTestId("onboarding-dialog")).toBeVisible();
+  await page.getByTestId("onboarding-get-started").click();
+  await page.getByTestId("company-name-input").fill("Northstar Studio");
+  await page.getByTestId("company-description-input").fill("Portfolio cockpit e2e test organization.");
+  await page.getByTestId("create-company-button").click();
+  await expect(page.getByTestId("onboarding-finish")).toBeVisible();
+  await page.getByTestId("onboarding-finish").click();
+
+  await expect(page.getByTestId("dashboard-page")).toBeVisible();
+  await expect(page.getByTestId("metric-active-goals")).toContainText("1");
+  await expect(page.getByTestId("metric-open-incidents")).toContainText("0");
+
+  const company = await getSelectedCompany(page);
+
+  const detailResponse = await page.request.get(`/api/companies/${company.id}`);
+  expect(detailResponse.ok()).toBeTruthy();
+  const detail = await detailResponse.json() as {
+    company: CompanyRecord;
+    portfolioItems: Array<{ id: string }>;
+  };
+  const portfolioItemId = detail.portfolioItems[0]?.id;
+  expect(portfolioItemId).toBeTruthy();
+
+  const agentResponse = await page.request.post(`/api/companies/${company.id}/agents`, {
+    data: {
+      name: "Ops Runner",
+      role: "operator",
+      title: "Operations Runner",
+      capabilities: "Triage feedback and execute assigned work.",
+      autonomyLevel: "act_limited",
+      watchDomains: ["feedback", "operations"],
+    },
+  });
+  expect(agentResponse.ok()).toBeTruthy();
+  const agentPayload = await agentResponse.json() as { agent: AgentRecord };
+  const agentId = agentPayload.agent.id;
+
+  const feedbackResponse = await page.request.post(`/api/companies/${company.id}/feedback`, {
+    data: {
+      portfolioItemId,
+      title: "Users report slower checkout after the latest update",
+      body: "Several users mention regressions during payment on mobile.",
+      sourceType: "review",
+      priority: "high",
+    },
+  });
+  expect(feedbackResponse.ok()).toBeTruthy();
+  const feedbackPayload = await feedbackResponse.json() as { feedback: FeedbackRecord };
+
+  const triageResponse = await page.request.post(`/api/feedback/${feedbackPayload.feedback.id}/triage`, {
+    data: {
+      actorAgentId: agentId,
+      createIssueFromFeedback: true,
+    },
+  });
+  expect(triageResponse.ok()).toBeTruthy();
+  const triagePayload = await triageResponse.json() as {
+    feedback: FeedbackRecord;
+    issue: IssueRecord | null;
+    run: { id: string } | null;
+    comment: { id: string } | null;
+  };
+  expect(triagePayload.feedback.status).toBe("triaged");
+  expect(triagePayload.issue?.id).toBeTruthy();
+  expect(triagePayload.run?.id).toBeTruthy();
+  expect(triagePayload.comment?.id).toBeTruthy();
+
+  const releaseResponse = await page.request.post(`/api/companies/${company.id}/releases`, {
+    data: {
+      portfolioItemId,
+      name: "Checkout stability patch",
+      releaseType: "update",
+      status: "planned",
+      plannedAt: new Date().toISOString(),
+    },
+  });
+  expect(releaseResponse.ok()).toBeTruthy();
+  const releasePayload = await releaseResponse.json() as { release: ReleaseRecord };
+  const shipResponse = await page.request.post(`/api/releases/${releasePayload.release.id}/ship`);
+  expect(shipResponse.ok()).toBeTruthy();
+  const shipped = await shipResponse.json() as { release: ReleaseRecord };
+  expect(shipped.release.status).toBe("released");
+
+  const incidentResponse = await page.request.post(`/api/companies/${company.id}/operational-incidents`, {
+    data: {
+      portfolioItemId,
+      title: "Checkout error spike",
+      severity: "sev2",
+      summary: "Transient backend failures after deploy.",
+    },
+  });
+  expect(incidentResponse.ok()).toBeTruthy();
+  const incidentPayload = await incidentResponse.json() as { operationalIncident: IncidentRecord };
+  const resolveResponse = await page.request.post(`/api/incidents/${incidentPayload.operationalIncident.id}/resolve`, {
+    data: { resolution: "Rollback completed and alerts cleared.", force: true },
+  });
+  expect(resolveResponse.ok()).toBeTruthy();
+  const resolved = await resolveResponse.json() as { incident: IncidentRecord; approval: null };
+  expect(resolved.incident.status).toBe("resolved");
+
+  const criticalIncidentResponse = await page.request.post(`/api/companies/${company.id}/operational-incidents`, {
+    data: {
+      portfolioItemId,
+      title: "Critical payment outage",
+      severity: "sev1",
+      summary: "Requires explicit approval to close.",
+    },
+  });
+  expect(criticalIncidentResponse.ok()).toBeTruthy();
+  const criticalIncidentPayload = await criticalIncidentResponse.json() as { operationalIncident: IncidentRecord };
+  const gatedResolveResponse = await page.request.post(`/api/incidents/${criticalIncidentPayload.operationalIncident.id}/resolve`, {
+    data: { resolution: "Attempted close without approval." },
+  });
+  expect(gatedResolveResponse.ok()).toBeTruthy();
+  const gatedResolve = await gatedResolveResponse.json() as { incident: IncidentRecord; approval: { id: string } | null };
+  expect(gatedResolve.approval?.id).toBeTruthy();
+  expect(gatedResolve.incident.status).toBe("open");
+
+  const issueRunResponse = await page.request.post(`/api/issues/${triagePayload.issue!.id}/run`);
+  expect(issueRunResponse.ok()).toBeTruthy();
+  const issueRunText = await issueRunResponse.text();
+  expect(issueRunText).toContain("\"done\":true");
+  expect(issueRunText).toContain("STATUS: in_review");
+
+  const summaryResponse = await page.request.post(`/api/companies/${company.id}/summary/recompute`);
+  expect(summaryResponse.ok()).toBeTruthy();
+
+  await page.reload();
+  await expect(page.getByTestId("metric-open-incidents")).toContainText("1");
+  await expect(page.getByTestId("metric-untriaged-feedback")).toContainText("0");
+  await expect(page.getByTestId("metric-planned-releases")).toContainText("0");
+  await expect(page.getByTestId("metric-pending-approvals")).toContainText("1");
+  await expect(page.getByTestId("portfolio-watch-list")).toContainText("Northstar Studio primary initiative");
+
+  const issueDetailResponse = await page.request.get(`/api/issues/${triagePayload.issue!.id}`);
+  expect(issueDetailResponse.ok()).toBeTruthy();
+  const issueDetail = await issueDetailResponse.json() as { issue: IssueRecord; comments: Array<{ body: string }> };
+  expect(issueDetail.issue.status).toBe("in_review");
+  expect(issueDetail.comments.some((comment) => comment.body.includes("STATUS: in_review"))).toBeTruthy();
+
+  const fixturesResponse = await page.request.get(`/api/companies/${company.id}/fixtures`);
+  expect(fixturesResponse.ok()).toBeTruthy();
+  const fixtures = await fixturesResponse.json() as { detail: { summary: { openIncidents: { value: number } } } };
+  expect(fixtures.detail.summary.openIncidents.value).toBe(1);
+
+  const screenshotPath = await saveBrowserScreenshot(page, "company-cockpit-dashboard.png");
+  expect(path.basename(screenshotPath)).toBe("company-cockpit-dashboard.png");
+});

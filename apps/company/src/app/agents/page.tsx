@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users, UserPlus } from "lucide-react";
+import { Bot, UserPlus } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { PageSkeleton } from "@/components/PageSkeleton";
 import { PageTabBar } from "@/components/PageTabBar";
@@ -27,7 +27,7 @@ export default function AgentsPage() {
     setBreadcrumbs([{ label: "Agents" }]);
   }, [setBreadcrumbs]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["agents", selectedCompanyId],
     queryFn: async (): Promise<{ agents: CompanyAgent[] }> => {
       const res = await fetch(`/api/companies/${selectedCompanyId}/agents`);
@@ -48,15 +48,26 @@ export default function AgentsPage() {
 
   if (isLoading) return <PageSkeleton />;
 
+  if (isError) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-between gap-3 rounded-md border border-red-500/30 bg-red-500/5 px-4 py-3" data-testid="agents-error">
+          <p className="text-sm text-red-300">Failed to load agents.</p>
+          <button type="button" onClick={() => refetch()} className="text-sm font-medium text-red-300 underline underline-offset-2 hover:text-red-200">Retry</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col" data-testid="agents-page">
       <header className="flex items-center justify-between border-b border-border px-6 py-3">
         <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-muted-foreground" />
+          <Bot className="h-4 w-4 text-muted-foreground" />
           <h1 className="text-sm font-medium text-foreground">Agents</h1>
           <span className="text-[11px] text-muted-foreground">({agents.length})</span>
         </div>
-        <Button size="sm" onClick={openNewAgent}>
+        <Button size="sm" onClick={openNewAgent} data-testid="hire-agent-cta">
           <UserPlus className="h-3 w-3" /> Hire
         </Button>
       </header>
@@ -79,7 +90,7 @@ export default function AgentsPage() {
             <TabsContent key={t} value={t} className="mt-0">
               {filtered.length === 0 ? (
                 <EmptyState
-                  icon={Users}
+                  icon={Bot}
                   message="No agents in this bucket."
                   action="Hire a new agent"
                   onAction={openNewAgent}
@@ -92,20 +103,35 @@ export default function AgentsPage() {
                       <div
                         key={agent.id}
                         className="rounded-lg border border-border bg-card p-4 transition-colors hover:border-foreground/30"
+                        data-testid={`agent-card-${agent.id}`}
                       >
                         <div className="mb-2 flex items-start justify-between gap-2">
                           <Identity name={agent.title} />
                           <StatusBadge status={agent.status} />
                         </div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {agent.name} · {agent.role}
+
+                        {/* Core fields per spec */}
+                        <div className="space-y-1 text-[11px] text-muted-foreground">
+                          <div><span className="text-muted-foreground/70">Name:</span> {agent.name}</div>
+                          <div><span className="text-muted-foreground/70">Role:</span> {agent.role}</div>
+                          <div><span className="text-muted-foreground/70">Adapter:</span> {agent.adapterType}</div>
+                          {agent.scopeType && (
+                            <div>
+                              <span className="text-muted-foreground/70">Scope:</span> {agent.scopeType}
+                              {agent.scopeId && <span className="ml-1 font-mono text-[10px]">({agent.scopeId})</span>}
+                            </div>
+                          )}
+                          {agent.autonomyLevel && (
+                            <div><span className="text-muted-foreground/70">Autonomy:</span> {agent.autonomyLevel.replace(/_/g, " ")}</div>
+                          )}
+                          {agent.watchDomains && agent.watchDomains.length > 0 && (
+                            <div><span className="text-muted-foreground/70">Watch:</span> {agent.watchDomains.join(", ")}</div>
+                          )}
                           {manager && (
-                            <>
-                              {" · reports to "}
-                              <span className="text-foreground">{manager.title}</span>
-                            </>
+                            <div><span className="text-muted-foreground/70">Reports to:</span> {manager.title}</div>
                           )}
                         </div>
+
                         {agent.capabilities && (
                           <p className="mt-2 line-clamp-3 text-[12px] text-muted-foreground">
                             {agent.capabilities}

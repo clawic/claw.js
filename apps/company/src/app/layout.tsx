@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   description: "Hire AI agents into roles and let them ship issues for you.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>

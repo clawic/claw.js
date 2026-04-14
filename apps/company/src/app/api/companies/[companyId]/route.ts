@@ -1,15 +1,9 @@
 import { NextResponse } from "next/server";
 import {
   deleteCompany,
-  getCompany,
-  listAgents,
-  listApprovals,
-  listGoals,
-  listIssues,
-  listProjects,
-  listRuns,
   updateCompany,
 } from "@/lib/company-service";
+import { buildCompanyDetail } from "@/lib/company-summary";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,18 +11,12 @@ export const revalidate = 0;
 export async function GET(_request: Request, context: { params: Promise<{ companyId: string }> }) {
   try {
     const { companyId } = await context.params;
-    const company = await getCompany(companyId);
-    if (!company) return NextResponse.json({ error: "company_not_found" }, { status: 404 });
-    const [agents, issues, approvals, goals, projects, runs] = await Promise.all([
-      listAgents(companyId),
-      listIssues(companyId),
-      listApprovals(companyId),
-      listGoals(companyId),
-      listProjects(companyId),
-      listRuns(companyId),
-    ]);
-    return NextResponse.json({ company, agents, issues, approvals, goals, projects, runs });
+    const detail = await buildCompanyDetail(companyId);
+    return NextResponse.json(detail);
   } catch (error) {
+    if (error instanceof Error && error.message.includes("not found")) {
+      return NextResponse.json({ error: "company_not_found" }, { status: 404 });
+    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : String(error) },
       { status: 500 },

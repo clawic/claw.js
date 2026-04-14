@@ -1,20 +1,20 @@
 "use client";
 
 /**
- * Second column: per-company sidebar with Work/Team/Company sections.
+ * Second column: per-organization sidebar with cockpit navigation.
  */
 
 import {
-  Inbox,
-  CircleDot,
-  Target,
   LayoutDashboard,
-  Network,
-  SquarePen,
-  Settings,
+  BriefcaseBusiness,
+  FolderKanban,
+  Activity,
+  MessageSquareText,
+  Bot,
   ShieldCheck,
+  Settings,
   Search,
-  Users,
+  SquarePen,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { SidebarSection } from "./SidebarSection";
@@ -27,6 +27,7 @@ interface CompanyPayload {
   agents: Array<{ id: string; status: string }>;
   issues: Array<{ id: string; status: string; assigneeAgentId?: string }>;
   approvals: Array<{ id: string; status: string }>;
+  feedbackItems: Array<{ id: string; status: string }>;
 }
 
 export function Sidebar() {
@@ -45,11 +46,10 @@ export function Sidebar() {
   });
 
   const pendingApprovals = data?.approvals.filter((a) => a.status === "pending").length ?? 0;
-  const openIssues = data?.issues.filter((i) => i.status !== "done" && i.status !== "cancelled").length ?? 0;
-  const activeAgents = data?.agents.filter((a) => a.status === "active").length ?? 0;
+  const untriagedFeedback = data?.feedbackItems?.filter((f) => f.status === "new").length ?? 0;
 
   return (
-    <aside className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-background">
+    <aside className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-background" data-testid="sidebar">
       <div className="flex h-12 shrink-0 items-center gap-1 px-3">
         {selectedCompany?.brandColor && (
           <div
@@ -58,14 +58,14 @@ export function Sidebar() {
           />
         )}
         <span className="flex-1 truncate pl-1 text-sm font-bold text-foreground">
-          {selectedCompany?.name ?? "Select company"}
+          {selectedCompany?.name ?? "Select organization"}
         </span>
         <Button
           variant="ghost"
           size="icon-sm"
           className="shrink-0 text-muted-foreground"
           onClick={openCommandPalette}
-          title="Search (⌘K)"
+          title="Search"
         >
           <Search className="h-4 w-4" />
         </Button>
@@ -81,28 +81,34 @@ export function Sidebar() {
             <SquarePen className="h-4 w-4 shrink-0" />
             <span className="truncate">New Issue</span>
           </button>
-          <SidebarNavItem to="/dashboard" label="Dashboard" icon={LayoutDashboard} />
+          <SidebarNavItem to="/dashboard" label="Overview" icon={LayoutDashboard} />
+        </div>
+
+        <SidebarSection label="Portfolio">
+          <SidebarNavItem to="/portfolio" label="Portfolio" icon={BriefcaseBusiness} />
+        </SidebarSection>
+
+        <SidebarSection label="Execution">
+          <SidebarNavItem to="/work" label="Work" icon={FolderKanban} />
+          <SidebarNavItem to="/operations" label="Operations" icon={Activity} />
           <SidebarNavItem
-            to="/inbox"
-            label="Inbox"
-            icon={Inbox}
+            to="/feedback"
+            label="Feedback"
+            icon={MessageSquareText}
+            badge={untriagedFeedback || undefined}
+            badgeTone={untriagedFeedback > 0 ? "danger" : "default"}
+          />
+        </SidebarSection>
+
+        <SidebarSection label="Organization">
+          <SidebarNavItem to="/agents" label="Agents" icon={Bot} />
+          <SidebarNavItem
+            to="/approvals"
+            label="Approvals"
+            icon={ShieldCheck}
             badge={pendingApprovals || undefined}
             badgeTone={pendingApprovals > 0 ? "danger" : "default"}
           />
-        </div>
-
-        <SidebarSection label="Work">
-          <SidebarNavItem to="/issues" label="Issues" icon={CircleDot} badge={openIssues || undefined} />
-          <SidebarNavItem to="/goals" label="Goals" icon={Target} />
-          <SidebarNavItem to="/approvals" label="Approvals" icon={ShieldCheck} badge={pendingApprovals || undefined} />
-        </SidebarSection>
-
-        <SidebarSection label="Team">
-          <SidebarNavItem to="/agents" label="Agents" icon={Users} badge={activeAgents || undefined} />
-          <SidebarNavItem to="/org" label="Org chart" icon={Network} />
-        </SidebarSection>
-
-        <SidebarSection label="Company">
           <SidebarNavItem to="/settings" label="Settings" icon={Settings} />
         </SidebarSection>
       </nav>

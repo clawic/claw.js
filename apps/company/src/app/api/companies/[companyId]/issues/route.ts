@@ -27,8 +27,15 @@ export async function POST(request: Request, context: { params: Promise<{ compan
       priority?: "low" | "medium" | "high" | "urgent";
       assigneeAgentId?: string;
       projectId?: string;
+      portfolioId?: string;
+      portfolioItemId?: string;
       goalId?: string;
       parentId?: string;
+      workType?: "feature" | "bug" | "ops" | "support" | "research" | "launch" | "maintenance";
+      sourceDomain?: "strategy" | "execution" | "operations" | "feedback";
+      autonomous?: boolean;
+      approvalState?: "not_required" | "pending" | "approved" | "rejected";
+      dueAt?: string;
     };
     if (!body.title?.trim()) {
       return NextResponse.json({ error: "title is required" }, { status: 400 });
@@ -40,9 +47,16 @@ export async function POST(request: Request, context: { params: Promise<{ compan
       priority: body.priority,
       assigneeAgentId: body.assigneeAgentId,
       projectId: body.projectId,
+      portfolioId: body.portfolioId,
+      portfolioItemId: body.portfolioItemId,
       goalId: body.goalId,
       parentId: body.parentId,
       createdByUserId: LOCAL_BOARD_USER_ID,
+      workType: body.workType,
+      sourceDomain: body.sourceDomain,
+      autonomous: body.autonomous,
+      approvalState: body.approvalState,
+      dueAt: body.dueAt,
     });
     return NextResponse.json({ issue }, { status: 201 });
   } catch (error) {

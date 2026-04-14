@@ -70,7 +70,7 @@ export function OnboardingWizard() {
 
   return (
     <Dialog open={onboardingOpen} onOpenChange={(open) => !open && finish()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg" data-testid="onboarding-dialog">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {step === 0 ? (
@@ -119,6 +119,7 @@ export function OnboardingWizard() {
               <Input
                 autoFocus
                 placeholder="Acme Robotics"
+                data-testid="company-name-input"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
@@ -130,6 +131,7 @@ export function OnboardingWizard() {
               <Textarea
                 rows={3}
                 placeholder="What does this company do?"
+                data-testid="company-description-input"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -155,7 +157,7 @@ export function OnboardingWizard() {
 
         <DialogFooter>
           {step === 0 && (
-            <Button onClick={() => setStep(1)}>Get started</Button>
+            <Button onClick={() => setStep(1)} data-testid="onboarding-get-started">Get started</Button>
           )}
           {step === 1 && (
             <>
@@ -165,13 +167,14 @@ export function OnboardingWizard() {
               <Button
                 disabled={!name.trim() || create.isPending}
                 onClick={() => create.mutate()}
+                data-testid="create-company-button"
               >
                 {create.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
                 Create company
               </Button>
             </>
           )}
-          {step === 2 && <Button onClick={finish}>Done</Button>}
+          {step === 2 && <Button onClick={finish} data-testid="onboarding-finish">Done</Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>

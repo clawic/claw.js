@@ -1,0 +1,54 @@
+{
+  "company": {
+    "id": "org_1",
+    "name": "Northstar Studio",
+    "issuePrefix": "NOR",
+    "issueCounter": 12,
+    "status": "active",
+    "description": "Multi-product studio running client work and internal bets.",
+    "createdAt": "2026-04-09T10:00:00.000Z",
+    "updatedAt": "2026-04-09T10:00:00.000Z"
+  },
+  "summary": {
+    "activeGoals": { "label": "Active goals", "value": 3, "href": "/goals", "tone": "neutral" },
+    "projectsInProgress": { "label": "Projects in progress", "value": 4, "href": "/work", "tone": "neutral" },
+    "itemsAtRisk": { "label": "Items at risk", "value": 1, "href": "/portfolio", "tone": "warning" },
+    "openIncidents": { "label": "Open incidents", "value": 2, "href": "/operations", "tone": "critical" },
+    "pendingApprovals": { "label": "Pending approvals", "value": 1, "href": "/approvals", "tone": "warning" },
+    "untriagedFeedback": { "label": "Untriaged feedback", "value": 5, "href": "/feedback", "tone": "warning" },
+    "runningRuns": { "label": "Running runs", "value": 2, "href": "/agents", "tone": "neutral" },
+    "plannedReleases": { "label": "Planned releases", "value": 3, "href": "/work", "tone": "neutral" },
+    "healthByItem": [
+      {
+        "portfolioItemId": "item_app",
+        "name": "Northstar Mobile",
+        "itemType": "app",
+        "healthStatus": "red",
+        "openIncidents": 2,
+        "openIssues": 4,
+        "availableActions": ["open_incident", "create_issue"]
+      }
+    ],
+    "goalProgress": [
+      {
+        "goalId": "goal_1",
+        "title": "Stabilize launch quality",
+        "status": "active",
+        "currentValue": 91,
+        "targetValue": 99,
+        "unit": "%",
+        "healthStatus": "yellow"
+      }
+    ],
+    "recentActivity": [
+      {
+        "type": "incident",
+        "id": "incident_1",
+        "title": "Checkout degraded for iOS users",
+        "status": "investigating",
+        "timestamp": "2026-04-09T10:05:00.000Z",
+        "href": "/operations"
+      }
+    ]
+  }
+}

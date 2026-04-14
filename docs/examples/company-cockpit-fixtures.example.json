@@ -1,0 +1,73 @@
+{
+  "portfolioList": [
+    {
+      "portfolio": {
+        "id": "portfolio_1",
+        "companyId": "org_1",
+        "name": "Core products",
+        "slug": "core-products",
+        "status": "active",
+        "priority": "high",
+        "createdAt": "2026-04-09T10:00:00.000Z",
+        "updatedAt": "2026-04-09T10:00:00.000Z"
+      },
+      "itemCount": 2,
+      "activeProjects": 2,
+      "atRiskItems": 1
+    }
+  ],
+  "portfolioItemOverview": {
+    "portfolioItem": {
+      "id": "item_app",
+      "companyId": "org_1",
+      "portfolioId": "portfolio_1",
+      "name": "Northstar Mobile",
+      "slug": "northstar-mobile",
+      "itemType": "app",
+      "status": "active",
+      "lifecycleStage": "launched",
+      "healthStatus": "red",
+      "priority": "high",
+      "createdAt": "2026-04-09T10:00:00.000Z",
+      "updatedAt": "2026-04-09T10:00:00.000Z"
+    },
+    "projects": [],
+    "goals": [],
+    "releases": [],
+    "incidents": [],
+    "checks": [],
+    "feedback": [],
+    "metrics": [],
+    "availableActions": ["create_issue", "open_incident", "request_approval"]
+  },
+  "operations": {
+    "openIncidents": [],
+    "checksByStatus": {
+      "ok": [],
+      "degraded": [],
+      "failed": [],
+      "unknown": []
+    },
+    "atRiskItems": []
+  },
+  "feedbackQueue": {
+    "items": [],
+    "counts": {
+      "new": 0,
+      "triaged": 0,
+      "planned": 0,
+      "closed": 0,
+      "ignored": 0
+    }
+  },
+  "releaseBoard": {
+    "items": [],
+    "counts": {
+      "planned": 0,
+      "in_progress": 0,
+      "blocked": 0,
+      "released": 0,
+      "cancelled": 0
+    }
+  }
+}
