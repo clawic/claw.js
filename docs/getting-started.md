@@ -114,7 +114,7 @@ This command creates the stable ClawJS layer:
 - `.clawjs/backups/`
 - `.clawjs/locks/`
 - `.clawjs/compat/`
-- `.clawjs/conversations/`
+- `.clawjs/sessions/`
 
 It also seeds the runtime-facing files defined by the selected adapter.
 
@@ -243,12 +243,12 @@ console.log(providerCatalog.providers);
 console.log(modelCatalog.defaultModel);
 ```
 
-## Start a Conversation
+## Start a Session
 
 ```ts
-const session = await claw.conversations.createSession("Hello");
+const session = await claw.sessions.createSession("Hello");
 
-for await (const event of claw.conversations.streamAssistantReplyEvents({
+for await (const event of claw.sessions.streamAssistantReplyEvents({
   sessionId: session.sessionId,
   transport: "auto",
 })) {

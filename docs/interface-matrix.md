@@ -103,6 +103,11 @@ The Relay also exposes equivalent project-scoped routes under:
 | Workspace repair | `claw.workspace.repair()` | `claw workspace repair` | `-` |
 | Workspace list | `-` | `-` | `GET /v1/tenants/:tenantId/agents/:agentId/workspaces` |
 | Workspace status | `-` | `-` | `GET WS/status` |
+| Shared browser status | `-` | `claw browser status --relay-url ...` | `GET WS/browser/session` |
+| Shared browser ensure/share | `-` | `claw browser ensure`, `claw browser share` | `POST WS/browser/session` |
+| Shared browser takeover | `-` | `-` | `POST WS/browser/control/acquire`, `POST WS/browser/control/release` |
+| Shared browser navigate | `-` | `-` | `POST WS/browser/navigate` |
+| Shared browser live stream | `-` | `-` | `GET WS/browser/ws` |
 | Admin create workspace | `-` | `-` | `POST /v1/admin/tenants/:tenantId/agents/:agentId/workspaces` |
 | Admin delete workspace | `-` | `-` | `DELETE /v1/admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId` |
 | Settings read | `claw.files.readSettingsValues()` | `-` | `GET /v1/admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/config` |
@@ -124,6 +129,18 @@ The Relay also exposes equivalent project-scoped routes under:
 | Providers list | `claw.providers.list()` | `claw providers list` | `-` |
 | Providers catalog | `claw.providers.catalog()` | `claw providers catalog` | `-` |
 | Providers auth state | `claw.providers.authState()` | `claw providers auth-state` | `-` |
+| IoT homes / things / state | `claw.iot.inventory.*`, `claw.iot.state.get()` | `claw iot homes|things|state ...` | `GET /v1/tenants/:tenantId/homes...` |
+| IoT semantic actions | `claw.iot.actions.run()`, `lights.off()`, `climate.set()` | `claw iot lights ...`, `claw iot climate ...` | `POST /v1/tenants/:tenantId/homes/:homeId/actions` |
+| IoT scenes / automations / approvals | `claw.iot.scenes.*`, `claw.iot.automations.*`, `claw.iot.policies.*` | `claw iot scenes ...`, `automations ...`, `approvals ...` | `GET/POST /v1/tenants/:tenantId/homes/:homeId/...` |
+| Content brands / destinations / campaigns | `claw.content.brands.*`, `claw.content.destinations.*`, `claw.content.campaigns.*` | `claw content brand ...`, `destination ...`, `campaign ...` | `GET/POST WS/content/brands`, `GET/POST WS/content/destinations`, `GET/POST WS/content/campaigns` |
+| Content entries / variants / assets | `claw.content.entries.*`, `claw.content.variants.*` | `claw content entry ...`, `variant ...` | `GET/POST WS/content/entries`, `PUT WS/content/entries/:entryId`, `POST WS/content/entries/:entryId/assets`, `POST WS/content/entries/:entryId/variants:generate`, `GET/POST WS/content/variants` |
+| Content approvals / plans / publications | `claw.content.approvals.*`, `claw.content.publish.*` | `claw content approval ...`, `publish ...` | `GET/POST WS/content/approvals`, `POST WS/content/approvals/:approvalId/approve|reject|cancel`, `GET/POST WS/content/plans`, `POST WS/content/plans/:planId/run`, `GET WS/content/publications` |
+| Content frontend contracts and read models | `claw.content.app.*`, `claw.content.calendar.view()` | `-` | `GET WS/content/app/*`, `GET WS/content/calendar` |
+| Time items list / get | `claw.time.list()`, `get()` | `claw time list`, `get` | `GET WS/time`, `GET WS/time/:id` |
+| Time item create / update / delete | `claw.time.create()`, `update()`, `delete()` | `claw time create`, `update`, `delete` | `POST WS/time`, `PUT WS/time`, `DELETE WS/time` |
+| Time item pause / resume / run | `claw.time.pause()`, `resume()`, `runNow()` | `claw time pause`, `resume`, `run` | `PUT WS/time` |
+| Time executions / calendar / timeline | `claw.time.listExecutions()`, `calendarView()`, `timelineView()` | `claw time executions`, `calendar`, `timeline` | `GET WS/time/executions`, `GET WS/time/calendar`, `GET WS/time/timeline` |
+| Natural scheduling sugar | `claw.time.create({ natural })` | `claw schedule at|every|after ...` | `POST WS/time` |
 | Scheduler list | `claw.scheduler.list()` | `claw scheduler list` | `-` |
 | Scheduler run / enable / disable | `claw.scheduler.run()`, `enable()`, `disable()` | `claw scheduler run`, `enable`, `disable` | `-` |
 | Memory list | `claw.memory.list()` | `claw memory list` | `-` |
@@ -201,6 +218,7 @@ These methods come from the `@clawjs/workspace` extension, not from the base
 | Events update | `workspace.events.update()` | `claw events update` | `PUT WS/events` |
 | Events remove | `workspace.events.remove()` | `-` | `DELETE WS/events` |
 | Events search | `workspace.events.search()` | `claw events search` | `-` |
+| Events temporal projection | `workspace.events.*` via configured `claw.time` | same commands | same routes, backed by `TemporalItem(kind=event)` when available |
 | Workspace search | `workspace.search.query()` | `claw workspace-search query` | `-` |
 | Workspace index rebuild | `workspace.workspaceIndex.rebuild()` | `claw workspace-index rebuild` | `-` |
 
@@ -253,6 +271,7 @@ local CLI or the SDK instance surface.
 | Project list / create / get / update | `-` | `-` | `GET`, `POST`, `GET by id`, `PATCH` under `/v1/tenants/:tenantId/projects...` |
 | Project-agent assignments | `-` | `-` | `POST`, `GET`, `DELETE` under `/v1/tenants/:tenantId/projects/:projectId/agents/:agentId...` |
 | Reverse agent-project lookup | `-` | `-` | `GET /v1/tenants/:tenantId/agents/:agentId/projects` |
+| IoT homes / state / actions | `-` | `-` | `GET /v1/tenants/:tenantId/homes`, `GET /v1/tenants/:tenantId/homes/:homeId/state`, `POST /v1/tenants/:tenantId/homes/:homeId/actions` |
 | Workspace grants | `-` | `-` | `POST /v1/admin/tenants/:tenantId/workspace-grants` |
 | Activity / usage telemetry | `-` | `-` | `GET WS/activity`, `GET WS/usage`, admin delete routes |
 

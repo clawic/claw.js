@@ -37,7 +37,7 @@ ClawJS gives you one place to solve the hard parts that show up across runtimes:
 | Package | Description |
 | --- | --- |
 | `@clawjs/core` | Shared types, schemas, capability maps, manifests, and snapshot shapes. |
-| `@clawjs/claw` | Runtime adapters, workspace management, conversations, auth, compat, doctor, media generation, secrets, watchers, and state persistence. |
+| `@clawjs/claw` | Runtime adapters, workspace management, sessions, auth, compat, doctor, media generation, secrets, watchers, and state persistence. |
 | `@clawjs/workspace` | Productivity extension for tasks, notes, people, inbox, events, search, context, and UI descriptors on top of the base SDK. |
 | `@clawjs/node` | Compatibility wrapper that reexports the primary SDK surface for existing integrations that still import `@clawjs/node`. |
 | `@clawjs/cli` | Official CLI with `claw` and `clawjs` binaries for scaffolding, runtime management, workspace ops, productivity commands, sessions, media, and package-aware project generation. |
@@ -52,7 +52,7 @@ See [Terminology](/terminology) for the canonical naming used across ClawJS docs
 
 ### Runtime adapters
 
-A runtime adapter is the boundary between ClawJS and a concrete runtime. It owns probing, locations, workspace contracts, auth, models, conversations, doctor or compat, and optional subsystems.
+A runtime adapter is the boundary between ClawJS and a concrete runtime. It owns probing, locations, workspace contracts, auth, models, sessions, doctor or compat, and optional subsystems.
 
 ### Workspaces and agents
 
@@ -71,13 +71,16 @@ ClawJS keeps a stable internal layer under `.clawjs/` even when runtimes disagre
 - [Getting Started](/getting-started) for the official scaffold and workspace flow.
 - [CLI](/cli) for the current command surface, including productivity and media commands.
 - [Database service](/database) for the standalone namespace-based data service and admin console.
+- [Time service](/time) for the standalone calendar and scheduler control plane.
+- [ERP backend](https://github.com/clawic/clawjs/tree/main/erp) for the standalone ledger-first ERP backend, CLI bridge, and frontend contract package in this repo.
+- [Execution Plane](/execution-plane) for the standalone control plane that manages agent-authored code, workers, runs, notebooks, and deployments.
 - [Terminology](/terminology) for the canonical product vocabulary.
 - [Runtime](/runtime) for the adapter contract and capability model.
 - [Workspace](/workspace) for the stable `.clawjs` layout and the `@clawjs/workspace` productivity layer.
 - [Relay](/relay) for the public HTTPS relay, reverse connector flow, and remote workspace routing model.
 - [Interface Matrix](/interface-matrix) for the side-by-side SDK, CLI, and Relay API comparison.
 - [Files & Templates](/files) for template packs, bindings, and managed blocks.
-- [Conversations](/conversations) for session storage and stream events.
+- [Sessions](/sessions) for session storage and stream events.
 - [Diagnostics & Repair](/diagnostics) for compat refresh and doctor flows.
 - [API Reference](/api) for the instance namespaces and runtime-facing methods.
 - [Public Surface](/surface) for the exhaustive package export inventory.

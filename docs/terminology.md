@@ -14,7 +14,7 @@ It owns:
 - install/setup/repair flows
 - runtime-specific workspace contracts
 - auth and provider/model integration
-- conversation transport selection
+- session transport selection
 
 ### Workspace
 
@@ -24,7 +24,7 @@ It combines:
 
 - the stable `.clawjs/` layer
 - the runtime-facing files declared by the selected runtime adapter
-- the persisted state and conversations associated with that isolated context
+- the persisted state and sessions associated with that isolated context
 
 ### Agent
 

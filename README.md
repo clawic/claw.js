@@ -17,7 +17,7 @@ You can use the same system in three ways:
 
 | Surface | Best for | Example |
 | --- | --- | --- |
-| SDK | application code running locally in Node.js | `claw.conversations.listSessions()` |
+| SDK | application code running locally in Node.js | `claw.sessions.listSessions()` |
 | CLI | local operator and automation flows in a shell | `claw sessions list --json` |
 | Relay API | remote browser, mobile, or server clients over HTTPS | `GET /v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/sessions` |
 
@@ -50,6 +50,7 @@ Relay v1 adds:
 - `/v1` JWT-based client auth
 - device-code pairing for reverse connectors
 - reverse WebSocket connector sessions for agents behind NAT
+- shared browser sessions per workspace with human takeover over the same persisted Chromium profile
 - explicit routing by `tenantId`, `connectorId`, `agentId`, and `workspaceId`
 - first-class `project + agent + assignment` routing on top of materialized workspaces
 - an admin-only surface for runtime setup, config, and connector enrollment
@@ -69,6 +70,112 @@ Database v1 adds:
 - local file storage plus a built-in admin console
 
 Docs: [docs/database.md](docs/database.md)
+
+## Time
+
+The repository also includes `time/`, a standalone temporal control plane for calendar events, routines, reminders, deadlines, and conditional follow-ups.
+
+Time v1 adds:
+
+- one canonical temporal model for `event`, `routine`, `reminder`, `deadline`, and `follow_up`
+- one-off, cron, RRULE, and relative scheduling semantics with timezone-aware normalization
+- execution history plus projection records for workspace, relay, runtime scheduler, notify, and calendar sync targets
+- a dedicated operator UI plus `claw time ...` and `claw schedule ...` bridges
+
+Docs: [docs/time.md](docs/time.md)
+
+## ERP
+
+The repository also includes `erp/`, a standalone ERP backend with its own transactional SQLite store, CLI, domain API, app read-model API, frontend contract fixtures, and a reserved SPA mount for a future `erp/ui/`.
+
+ERP v1 adds:
+
+- multi-tenant and legal-entity bootstrap
+- ledger-first document posting for sales, purchases, inventory, projects, manufacturing, payroll, approvals, and audit
+- a dedicated `erp ...` CLI plus `claw erp ...` bridge
+- `/v1/app/*` read models, OpenAPI, fixtures, and an exhaustive frontend checklist for the future SPA
+
+Docs: [erp/README.md](erp/README.md)
+
+## Content
+
+The repository also includes `content/`, a standalone CMS + social publishing control plane for authoring, variants, approvals, scheduling, and publication.
+
+Content v1 adds:
+
+- brands, campaigns, destinations, and capability maps
+- canonical entries plus immutable revisions
+- Drive-backed asset references instead of local binary storage
+- destination-specific variants with validation and approval flows
+- publish plans, publication runs, retries, and a dedicated placeholder mount for the future SPA
+
+Docs: [docs/content.md](docs/content.md)
+
+## Notify
+
+The repository also includes `notify/`, a standalone notification delivery backend for source apps, mobile client apps, device installations, subscriptions, receipts, and sync feeds.
+
+Notify v1 adds:
+
+- source app tokens for trusted emitters
+- separate client app registration for iOS and Android delivery targets
+- device-installation registration plus authenticated client feed sync
+- subscription-based routing by `project`, `agent`, `workspace`, `eventType`, and severity
+- critical receipts with ack, cancel, expiration, and idempotent notification ingest
+- glance/status updates alongside normal alert delivery
+
+Docs: [docs/notify.md](docs/notify.md)
+
+## IoT
+
+The repository also includes `iot/`, a standalone local-first IoT control plane for homes, areas, things, connectors, scenes, automations, approvals, and event timelines.
+
+IoT v1 adds:
+
+- one canonical home/area/thing/capability model for agents
+- semantic actions such as lights, climate, scenes, and approvals
+- deterministic automation records plus manual execution
+- approval-required flows for restricted devices like locks
+- a dedicated operator console plus `claw iot ...` CLI bridge
+
+Docs: [docs/iot.md](docs/iot.md)
+
+## Vault
+
+The repository also includes `vault/`, a standalone multitenant secret broker for agents and trusted local sidecars.
+
+Vault v1 adds:
+
+- non-exportable secret storage by default with envelope encryption per version
+- a typed secret catalog with structured metadata for common providers such as npm, Telegram, Slack, and RevenueCat
+- policy-based brokered HTTP execution so callers use `secretName` references instead of raw credentials
+- explicit secret capability and typed action discovery for SDK, CLI, sidecars, and operators
+- short-lived `process` and `browser` leases for host-bound login flows through a trusted local sidecar
+- a compatibility sidecar that preserves the `{{secretName}}` contract used by the current secrets proxy
+- a built-in admin console plus a native macOS operator app for secrets, policies, principals, audit, and active leases
+
+Docs: [docs/vault.md](docs/vault.md)
+
+## Drive
+
+The repository also includes `drive/`, a standalone Google Drive-style local-first product for folders, native Docs/Sheets/Slides, uploads, previews, revisions, comments, share links, and agent tokens.
+
+Docs: [docs/drive.md](docs/drive.md)
+
+## Execution Plane
+
+The repository also includes `execution-plane/`, a standalone control plane for agent-authored code, remote workers, runs, artifacts, notebooks, review flows, and deployments.
+
+The current implementation ships as a self-contained top-level service with:
+
+- a multitenant Fastify + SQLite control plane
+- reverse-connected workers over WebSocket
+- Git-native repositories, revisions, and change requests
+- scripts and notebooks on one shared run model
+- run artifacts, workflows, and deployment promotion
+- a bundled React UI for operators
+
+Docs: [execution-plane/README.md](execution-plane/README.md)
 
 ## Install
 
@@ -173,15 +280,17 @@ the Relay API:
 
 | Task | SDK | CLI | Relay API |
 | --- | --- | --- | --- |
-| List conversations | `claw.conversations.listSessions()` | `claw sessions list` | `GET WS/sessions` |
-| Create a conversation | `claw.conversations.createSession()` | `claw sessions create --title "Support"` | `POST WS/sessions` |
-| Read one conversation | `claw.conversations.getSession(sessionId)` | `claw sessions read --session-id <id>` | `GET WS/sessions/:sessionId` |
-| Search conversations | `claw.conversations.searchSessions({ query: "invoice" })` | `claw sessions search --query "invoice"` | `GET WS/sessions:search?q=invoice` |
-| Stream a reply | `for await (const ev of claw.conversations.streamAssistantReplyEvents(...))` | `claw sessions stream --session-id <id> --events` | `POST WS/sessions/:sessionId/stream` |
-| Generate a title | `claw.conversations.generateTitle({ sessionId })` | `claw sessions generate-title --session-id <id>` | `POST WS/sessions/:sessionId/generate-title` |
+| List sessions | `claw.sessions.listSessions()` | `claw sessions list` | `GET WS/sessions` |
+| Create a session | `claw.sessions.createSession()` | `claw sessions create --title "Support"` | `POST WS/sessions` |
+| Ensure shared browser | `-` | `claw browser ensure --relay-url ...` | `POST WS/browser/session` |
+| Read one session | `claw.sessions.getSession(sessionId)` | `claw sessions read --session-id <id>` | `GET WS/sessions/:sessionId` |
+| Search sessions | `claw.sessions.searchSessions({ query: "invoice" })` | `claw sessions search --query "invoice"` | `GET WS/sessions:search?q=invoice` |
+| Stream a reply | `for await (const ev of claw.sessions.streamAssistantReplyEvents(...))` | `claw sessions stream --session-id <id> --events` | `POST WS/sessions/:sessionId/stream` |
+| Generate a title | `claw.sessions.generateTitle({ sessionId })` | `claw sessions generate-title --session-id <id>` | `POST WS/sessions/:sessionId/generate-title` |
 | List skills | `await claw.skills.list()` | `claw skills list` | `GET WS/skills/list` |
 | Search skills | `await claw.skills.search({ query: "calendar" })` | `claw skills search --query "calendar"` | `GET WS/skills/search?q=calendar` |
 | List tasks | `await workspace.tasks.list()` | `claw tasks list` | `GET WS/tasks` |
+| List temporal items | `await claw.time.list()` | `claw time list` | `GET WS/time` |
 | Generate an image | `await claw.image.generate(...)` | `claw image generate --prompt "..."` | `POST WS/images` |
 
 In the rows that use `workspace.*`, that surface comes from
@@ -257,7 +366,7 @@ If you want to evaluate ClawJS with `openclaw`, give your guide one of these pro
 - Use ClawJS to build a local-first chat app on top of `openclaw` with session history, streaming replies, retry visibility, and searchable transcripts.
 - Use ClawJS to build a workspace assistant that turns natural language requests into tasks, notes, inbox items, and follow-up reminders.
 - Use ClawJS to build a support triage console that reads incoming tickets, suggests replies, groups similar issues, and stores the decision trail in the workspace.
-- Use ClawJS to build a meeting copilot that captures notes, extracts action items, assigns owners, and keeps a searchable memory of every conversation.
+- Use ClawJS to build a meeting copilot that captures notes, extracts action items, assigns owners, and keeps a searchable memory of every session.
 - Use ClawJS to build a release control room that summarizes commits, open issues, docs gaps, and risk signals before we ship.
 - Use ClawJS to build a sales copilot that keeps account notes, call summaries, next steps, and a daily briefing for each customer.
 - Use ClawJS to build a research workspace that ingests documents, lets me chat with them, and saves the useful findings back into project memory.
@@ -297,13 +406,14 @@ ClawJS does not pretend unsupported subsystems exist.
 - [Getting started](docs/getting-started.md)
 - [CLI reference](docs/cli.md)
 - [Database service](docs/database.md)
+- [IoT control plane](docs/iot.md)
 - [API reference](docs/api.md)
 - [Interface matrix](docs/interface-matrix.md)
 - [Workspace model and productivity layer](docs/workspace.md)
 - [Terminology](docs/terminology.md)
 - [Setup and first workspace checklist](docs/setup.md)
 - [Files and templates](docs/files.md)
-- [Conversations and streaming](docs/conversations.md)
+- [Sessions and streaming](docs/sessions.md)
 - [Authentication](docs/authentication.md)
 - [Diagnostics and repair](docs/diagnostics.md)
 - [Template packs and bindings](docs/template-packs-and-bindings.md)
@@ -327,3 +437,9 @@ npm run ci
 The release gate intentionally includes tests, typechecks, package builds, website build, docs validation, tarball smoke tests, and the blocking hermetic Playwright suite.
 
 Git and release branch policy: [docs/git-workflow.md](docs/git-workflow.md)
+
+## Sponsors
+
+<a href="https://apps.apple.com/app/id6745303581">
+  <img src="./public/sponsors/landscape-ai.png" alt="Landscape AI" width="44" />
+</a>

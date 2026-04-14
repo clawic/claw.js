@@ -12,5 +12,5 @@ Use this folder for operational learnings that should survive across debugging s
 
 ## Current Pages
 
-- `brand-assets.md`: shared logo, favicon, and UI font source-of-truth plus serving rules for app UIs.
+- `brand-assets.md`: shared logo, favicon, and UI font source-of-truth for internal dashboards, plus exclusions for `website/` and chat/mobile clients.
 - `openclaw.md`: host-dependent OpenClaw runtime, auth, cleanup, and validation learnings.

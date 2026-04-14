@@ -11,6 +11,6 @@ Run [`../examples/chat-streaming-example.ts`](../examples/chat-streaming-example
 
 Key API surface:
 
-- `claw.conversations.createSession()`
-- `claw.conversations.appendMessage()`
-- `claw.conversations.streamAssistantReplyEvents()`
+- `claw.sessions.createSession()`
+- `claw.sessions.appendMessage()`
+- `claw.sessions.streamAssistantReplyEvents()`

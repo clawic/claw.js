@@ -48,7 +48,7 @@ The stable SDK-owned layer lives under `.clawjs/`:
 - `.clawjs/intents/`
 - `.clawjs/observed/`
 - `.clawjs/projections/`
-- `.clawjs/conversations/`
+- `.clawjs/sessions/`
 - `.clawjs/data/` when the productivity layer is enabled
 
 The selected adapter also seeds its own runtime-facing files such as

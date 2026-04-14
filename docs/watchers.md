@@ -15,7 +15,7 @@ The watcher surface has two layers:
 | Method | Description |
 |----|----|
 | `file(fileName, callback, options?)` | Watches one workspace-relative file. |
-| `transcript(sessionId, callback, options?)` | Watches `.clawjs/conversations/<session-id>.jsonl` for changes. |
+| `transcript(sessionId, callback, options?)` | Watches `.clawjs/sessions/<session-id>.jsonl` for changes. |
 | `runtimeStatus(callback, options?)` | Polls `claw.runtime.status()` and emits changed values. |
 | `providerStatus(callback, options?)` | Polls provider auth summaries and emits changed values. |
 | `events(type, listener)` | Subscribes to the internal event bus for one event type or `*`. |
@@ -40,7 +40,7 @@ const stopFile = claw.watch.file("SOUL.md", (event) => {
 });
 
 const stopTranscript = claw.watch.transcript("clawjs-123", async () => {
-  const session = claw.conversations.getSession("clawjs-123");
+  const session = claw.sessions.getSession("clawjs-123");
   console.log(session?.messageCount);
 });
 
@@ -48,7 +48,7 @@ stopFile();
 stopTranscript();
 ```
 `transcript()` does not parse messages for you. It is just a watcher
-over the transcript file; call `claw.conversations.getSession()` or read
+over the transcript file; call `claw.sessions.getSession()` or read
 the JSONL file yourself inside the callback if you need structured
 transcript data.
 
@@ -151,12 +151,12 @@ telegram.commands_set
 telegram.updates_synced
 telegram.update_ingested
 
-conversations.session_created
-conversations.message_appended
-conversations.title_updated
-conversations.title_generated
-conversations.title_suggested
-conversations.assistant_stream_persisted
+sessions.session_created
+sessions.message_appended
+sessions.title_updated
+sessions.title_generated
+sessions.title_suggested
+sessions.assistant_stream_persisted
 ```
 The payload shape depends on the event. Subscribe once with `*` and
 inspect the observed payloads if you need to build a typed wrapper for

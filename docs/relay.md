@@ -23,6 +23,8 @@ The current v1 design is intentionally small:
 - device-code pairing for remote connectors plus legacy enrollment tokens as fallback
 - one active reverse connector session per `tenantId + connectorId`
 - explicit routing by `tenantId`, `connectorId`, `agentId`, and `workspaceId`
+- shared browser sessions per workspace backed by a persisted Chromium profile on the connector host
+- human takeover with one controller at a time plus read-only viewers over the same live browser stream
 - first-class `project + agent + assignment` routing on top of materialized workspaces
 - fail-fast `503` responses when a connector is offline
 - admin-only runtime, config, workspace-file, and enrollment APIs
@@ -57,7 +59,7 @@ The relay persists control-plane metadata only:
 
 The relay does not persist workspace source-of-truth data such as:
 
-- conversation transcripts
+- session transcripts
 - tasks, notes, people, inbox, or events
 - runtime settings files
 - remote agent workspace files
@@ -256,7 +258,45 @@ The public surface is grouped by concern.
 - `GET /v1/health`
 - `POST /v1/auth/login`
 - `POST /v1/auth/refresh`
+
+### IoT home routes
+
+When `RELAY_IOT_BASE_URL` is configured, Relay also exposes home-scoped IoT routes for remote operators:
+
+- `GET /v1/tenants/:tenantId/homes`
+- `GET /v1/tenants/:tenantId/homes/:homeId/areas`
+- `GET /v1/tenants/:tenantId/homes/:homeId/things`
+- `GET /v1/tenants/:tenantId/homes/:homeId/state`
+- `POST /v1/tenants/:tenantId/homes/:homeId/actions`
+- `GET /v1/tenants/:tenantId/homes/:homeId/scenes`
+- `POST /v1/tenants/:tenantId/homes/:homeId/scenes/:sceneId/activate`
+- `GET /v1/tenants/:tenantId/homes/:homeId/automations`
+- `POST /v1/tenants/:tenantId/homes/:homeId/automations/:automationId/run`
+- `GET /v1/tenants/:tenantId/homes/:homeId/approvals`
+- `POST /v1/tenants/:tenantId/homes/:homeId/approvals/:approvalId/approve`
+- `GET /v1/tenants/:tenantId/homes/:homeId/events/stream`
+
+Workspace-scoped convenience routes also exist under `WS/iot/*` for agents that want the default home without switching surface.
 - `POST /v1/auth/logout`
+
+### Shared browser
+
+Workspace-scoped browser routes now expose the connector-hosted shared Chromium session:
+
+- `GET /v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/session`
+- `POST /v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/session`
+- `POST /v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/control/acquire`
+- `POST /v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/control/release`
+- `POST /v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/navigate`
+- `GET /v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/ws`
+
+The browser route family is Relay-first:
+
+- the browser process lives on the connector host
+- the relay streams frames and session state over the existing reverse-connector channel
+- humans authenticate through Relay before they can join the shared session
+- localhost previews stay inside the shared browser instead of exposing raw remote ports
+- shared links should open the immersive browser route `/browser/:tenantId/:agentId/:workspaceId`, while the workspace browser tab remains the operator view inside Relay
 
 ### Connector setup
 
@@ -297,7 +337,7 @@ Project-scoped runtime routes mirror the workspace routes under:
 That includes:
 
 - `GET /status`
-- conversations and streaming routes under `/sessions`
+- sessions and streaming routes under `/sessions`
 - resource CRUD for `tasks`, `notes`, `memory`, `inbox`, `people`, `events`, `personas`, `plugins`, `routines`, and `images`
 - `GET /integrations/status`
 - `GET /skills/list`
@@ -306,7 +346,7 @@ That includes:
 - `GET /activity`
 - `GET /usage`
 
-### Conversations
+### Sessions
 
 - `GET /sessions`
 - `POST /sessions`
@@ -349,6 +389,7 @@ For each of these resources, the relay exposes list/create/update/delete over th
 - `inbox`
 - `people`
 - `events`
+- `time`
 - `personas`
 - `plugins`
 - `routines`
@@ -362,6 +403,9 @@ There are also specialized routes for:
 - `GET /skills/search`
 - `GET /skills/sources`
 - `GET /integrations/status`
+- `GET /time/executions`
+- `GET /time/calendar`
+- `GET /time/timeline`
 - `GET /activity`
 - `GET /usage`
 
@@ -463,7 +507,7 @@ For legacy routes, the connector still supports simple lazy workspace creation u
 - agent template files
 - one isolated runtime workspace per assignment
 
-The materialized workspace writes `projectId`, `logicalAgentId`, `runtimeAgentId`, and `materializationVersion` into the ClawJS manifest and workspace state snapshots so OpenClaw setup and CLI conversations target the derived runtime agent id instead of the reusable logical agent id.
+The materialized workspace writes `projectId`, `logicalAgentId`, `runtimeAgentId`, and `materializationVersion` into the ClawJS manifest and workspace state snapshots so OpenClaw setup and CLI sessions target the derived runtime agent id instead of the reusable logical agent id.
 
 For some resources it also keeps compatibility data under:
 

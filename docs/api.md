@@ -51,6 +51,10 @@ const same = await createClaw({
 | `workspace.agentId` | Stable agent id for runtime-specific state. |
 | `workspace.rootDir` | Workspace root on disk. |
 | `templates.pack` | Optional template-pack path applied during workspace initialization. |
+| `secrets.backend` | Optional secrets backend. Defaults to `vault` when `VAULT_BASE_URL`, `VAULT_TOKEN`, and `VAULT_TENANT_ID` are configured, otherwise `local_proxy`. |
+| `secrets.baseUrl`, `secrets.credential`, `secrets.tenantId` | Vault connection used by `claw.secrets`, typed actions, and brokered HTTP execution. |
+| `secrets.sidecarPath` | Optional Vault sidecar path used for proxy-compatible `{{secretName}}` flows and lease-backed process/browser injection. |
+| `time.baseUrl`, `time.token` | Optional standalone time-service endpoint used for calendar, routines, reminders, deadlines, and follow-ups. |
 
 ## Instance Namespaces
 
@@ -78,7 +82,9 @@ const same = await createClaw({
 | `claw.slack` | bot connection, status, channel lookup, message send |
 | `claw.whatsapp` | connection lifecycle, status, send, disconnect |
 | `claw.inference` | `generateText` |
-| `claw.secrets` | `list`, `describe`, `doctorKeychain`, `ensureHttpReference`, `ensureTelegramBotReference` |
+| `claw.secrets` | `list`, `describe`, `types`, `capabilities`, `actions`, `brokerHttp`, `runAction`, `leases`, `doctorKeychain`, `ensureHttpReference`, `ensureTelegramBotReference` |
+| `claw.time` | temporal item CRUD, pause/resume/run, execution history, calendar/timeline views, and anchor signals |
+| `claw.iot` | inventory, state, actions, scenes, automations, approvals, and raw connector invocations |
 | `claw.sessions` | session CRUD, title generation, structured reply streaming, chunk streaming |
 | `claw.documents` | list, get, search, upload, register, chunked upload, download, ref resolution |
 | `claw.data` | `document`, `collection`, `asset`, `rootDir` |
@@ -157,6 +163,44 @@ const inspection = await claw.workspace.inspect();
 `inspect()` returns both resolved workspace file paths and the parsed
 manifest, compat snapshot, observed snapshots, and the current
 intent/observed stores currently persisted in the workspace.
+
+## Time
+
+Configure the standalone temporal service through `CreateClawOptions.time`
+when you want one source of truth for calendar events, routines,
+reminders, deadlines, and conditional follow-ups:
+
+```ts
+const claw = await createClaw({
+  runtime: { adapter: "openclaw" },
+  workspace: {
+    appId: "demo",
+    workspaceId: "demo-main",
+    agentId: "demo-main",
+    rootDir: "./workspace",
+  },
+  time: {
+    baseUrl: "http://127.0.0.1:4730",
+  },
+});
+
+await claw.time.create({
+  kind: "routine",
+  title: "Review pull requests",
+  natural: {
+    command: "every",
+    expression: "3h",
+    timezone: "Europe/Madrid",
+  },
+});
+
+const calendar = await claw.time.calendarView();
+const executions = await claw.time.listExecutions();
+```
+
+Use `claw.time` when the schedule itself is the product object. The
+workspace `events` surface remains available as a compatibility view and
+projects into the temporal system when the time service is configured.
 
 ## Intent, Observed, and Features
 
@@ -240,8 +284,9 @@ requested provider or whether an interactive flow still needs to be
 launched. `login()` returns the same distinction plus the launch mode when
 an interactive flow starts.
 
-For real secrets, prefer the `claw.secrets` helpers plus your
-provider-specific wrapper rather than hardcoding credentials in source.
+For real secrets, prefer the `claw.secrets` helpers plus brokered
+execution rather than hardcoding credentials in source. Vault is now the
+default backend whenever its `VAULT_*` connection settings are present.
 
 ## Speech / TTS
 
@@ -257,6 +302,29 @@ claw.tts.setConfig({
 });
 
 await claw.intent.apply({ domains: ["speech"] });
+```
+
+## IoT
+
+Configure the standalone IoT service through `CreateClawOptions.iot` when you want SDK access to homes, things, scenes, approvals, and automations:
+
+```ts
+const claw = await Claw({
+  runtime: { adapter: "openclaw" },
+  workspace: {
+    appId: "demo",
+    workspaceId: "demo-main",
+    agentId: "demo-main",
+    rootDir: "./workspace",
+  },
+  iot: {
+    baseUrl: "http://127.0.0.1:4520",
+  },
+});
+
+const homes = await claw.iot.inventory.homes.list();
+await claw.iot.actions.lights.off("office");
+const approvals = await claw.iot.policies.listApprovals();
 ```
 ## Optional Runtime Subsystems
 
@@ -342,6 +410,18 @@ await claw.telegram.ingestUpdate(updatePayload);
 
 await claw.secrets.list("telegram");
 await claw.secrets.describe("my_bot_token");
+await claw.secrets.types("revenuecat");
+await claw.secrets.capabilities("my_bot_token");
+await claw.secrets.actions("my_bot_token");
+await claw.secrets.brokerHttp({
+  method: "POST",
+  url: "https://slack.com/api/auth.test",
+  headers: {
+    Authorization: "Bearer {{slack_bot_token}}",
+  },
+});
+await claw.secrets.runAction("revenuecat_admin", "revenuecat.projects.list");
+await claw.secrets.leases();
 await claw.secrets.doctorKeychain();
 await claw.secrets.ensureHttpReference({
   name: "service_token",
@@ -354,8 +434,9 @@ await claw.secrets.ensureTelegramBotReference({
 });
 ```
 
-You can also route those same `secretName` references through the Vault
-sidecar:
+Use explicit Vault settings when you want the SDK to treat Vault as the
+canonical backend and still keep sidecar compatibility for
+`{{secretName}}` references:
 
 ```ts
 const claw = await createClaw({
@@ -375,6 +456,12 @@ const claw = await createClaw({
   },
 });
 ```
+
+`types()` returns the typed secret catalog, `capabilities()` returns the
+effective allow/deny view for the current principal, `actions()` exposes
+brokered typed actions for the selected secret type, and `brokerHttp()`
+or `runAction()` keeps execution inside Vault without exposing plaintext
+credentials to the caller.
 
 Slack and WhatsApp currently live on the same instance when the adapter
 supports them:

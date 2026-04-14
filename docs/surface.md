@@ -86,6 +86,7 @@ The docs check script validates that every current export from
     CreateTelegramServiceOptions
     createTemplateRenderer
     createTemporaryDownloadPath
+    CreateTemporalItemInput
     createWhatsAppService
     CreateWhatsAppServiceOptions
     CreateWikiPageInput
@@ -184,6 +185,8 @@ The docs check script validates that every current export from
     IntentStateByDomain
     ironclawAdapter
     isOpenClawProviderEnabled
+    IotClient
+    IotClientOptions
     launchOpenClawAuthLogin
     listDemoScenarios
     listManagedBlockProblems
@@ -455,6 +458,8 @@ The docs check script validates that every current export from
     syncBinding
     SyncBindingOptions
     synthesize
+    TimeClient
+    TimeClientOptions
     TELEGRAM_STATE_FILE
     TelegramBanOrRestrictInput
     TelegramConnectBotInput
@@ -483,6 +488,8 @@ The docs check script validates that every current export from
     updateBindingSettings
     UpdateBindingSettingsOptions
     UpdateBindingSettingsResult
+    UpdateTemporalItemInput
+    UpdateUserPreferencesInput
     UpsertSubscriptionInput
     UpdateWikiPageInput
     UploadDocumentInput
@@ -551,10 +558,18 @@ The docs check script validates that every current export from
     auditEventSchema
     AuthProfileSummary
     AuthState
+    ApprovalRecord
+    approvalRecordSchema
+    AreaDescriptor
+    areaDescriptorSchema
+    AutomationRecord
+    automationRecordSchema
     BindingDefinition
     bindingDefinitionSchema
+    CapabilityDescriptor
     CapabilityName
     CapabilityReport
+    capabilityDescriptorSchema
     capabilityReportSchema
     CapabilityState
     CapabilityStatus
@@ -575,6 +590,8 @@ The docs check script validates that every current export from
     ClawManifest
     CompatSnapshot
     compatSnapshotSchema
+    ConnectorDescriptor
+    connectorDescriptorSchema
     ContextChip
     createManifest
     createTtsPlaybackPlan
@@ -598,11 +615,25 @@ The docs check script validates that every current export from
     featureOwnershipSchema
     FileMutationMode
     FilesIntentState
+    HomeDescriptor
+    homeDescriptorSchema
     InboxMessageRecord
     InboxReplyTarget
     InboxThreadRecord
     IntentDomain
     intentDomainSchema
+    IoTActionRequest
+    iotActionRequestSchema
+    IoTActionResult
+    iotActionResultSchema
+    IoTEventRecord
+    iotEventRecordSchema
+    IoTPolicyEvaluation
+    iotPolicyEvaluationSchema
+    IoTRiskLevel
+    IoTStateSnapshot
+    iotStateSnapshotSchema
+    IoTThingKind
     KnownRuntimeAdapterId
     LinkedEntityDomain
     LinkedEntityRef
@@ -654,6 +685,11 @@ The docs check script validates that every current export from
     ProvidersIntentState
     ProviderStateSnapshot
     providerStateSnapshotSchema
+    PolicyRecord
+    policyRecordSchema
+    QuietHoursPolicy
+    RawIoTInvocation
+    rawIotInvocationSchema
     RuntimeAdapterId
     RuntimeAdapterStability
     RuntimeAdapterSupportLevel
@@ -678,6 +714,8 @@ The docs check script validates that every current export from
     SchedulerDescriptor
     SchedulerStateSnapshot
     schedulerStateSnapshotSchema
+    SceneRecord
+    sceneRecordSchema
     segmentTextForTts
     SessionPolicy
     sessionPolicySchema
@@ -718,6 +756,22 @@ The docs check script validates that every current export from
     stripMarkdownForTts
     SubscriptionFilter
     summarizeReadiness
+    TemporalAction
+    temporalActionSchema
+    TemporalExecution
+    temporalExecutionSchema
+    TemporalItem
+    temporalItemSchema
+    TemporalNaturalInput
+    temporalNaturalInputSchema
+    TemporalOccurrenceOverride
+    temporalOccurrenceOverrideSchema
+    TemporalParticipant
+    temporalParticipantSchema
+    TemporalProjection
+    temporalProjectionSchema
+    TemporalSchedule
+    temporalScheduleSchema
     TaskChecklistItem
     taskChecklistItemSchema
     TaskRecord
@@ -738,10 +792,13 @@ The docs check script validates that every current export from
     telegramUpdateEnvelopeSchema
     TelegramWebhookStatus
     telegramWebhookStatusSchema
+    UserNotificationPreferences
     TemplateMutation
     templateMutationSchema
     TemplatePack
     templatePackSchema
+    ThingDescriptor
+    thingDescriptorSchema
     toClawError
     TtsPlaybackPlan
     TtsPlaybackPlanInput

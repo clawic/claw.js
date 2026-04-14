@@ -45,8 +45,8 @@ summary. \`capabilityMap\` gives the typed version with:
 - \`workspace\`
 - \`auth\`
 - \`models\`
-- \`conversation_cli\`
-- \`conversation_gateway\`
+- \`session_cli\`
+- \`session_gateway\`
 - \`streaming\`
 - \`scheduler\`
 - \`memory\`
@@ -136,9 +136,9 @@ This helper keeps the OpenClaw setup semantics in the SDK so screens can
 reliably treat agent/workspace registration as complete before provider
 auth is finished.
 
-## Conversation transport
+## Session transport
 
-Conversation transport is adapter-defined. Depending on the runtime,
+Session transport is adapter-defined. Depending on the runtime,
 ClawJS may use:
 
 - CLI prompt transport
@@ -146,6 +146,35 @@ ClawJS may use:
 - SSE transport
 - WebSocket transport
 - hybrid gateway + CLI fallback
+
+For the `openclaw` adapter, ClawJS now routes by capability instead of
+treating one HTTP endpoint as the whole runtime:
+
+- product sessions default to `POST /v1/responses`
+- text-only fallback remains available through `POST /v1/chat/completions`
+- native runtime chat and session operations stay on the OpenClaw
+  gateway surface through `claw.runtime.openclaw`
+
+The `session_gateway` capability diagnostics expose the current
+primary and fallback transports so apps can surface that policy in
+settings or diagnostics views.
+
+## OpenClaw native gateway extension
+
+When a workflow needs real OpenClaw session or chat semantics instead of
+the generic session store, use the explicit `runtime.openclaw`
+namespace:
+
+```ts
+const sessions = await claw.runtime.openclaw.sessions.list({ limit: 10 });
+const history = await claw.runtime.openclaw.chat.history({ sessionKey: "alpha" });
+await claw.runtime.openclaw.chat.send({ sessionKey: "alpha", message: "hello" });
+```
+
+This extension is intentionally adapter-specific. It is the right place
+for native gateway methods such as session inspection, native chat
+history, or other OpenClaw-only operations that should not be forced
+into the generic `claw.sessions` contract.
 
 ## Location overrides
 

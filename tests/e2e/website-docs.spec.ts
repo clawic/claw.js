@@ -24,11 +24,11 @@ async function waitForServer(url: string) {
   throw new Error(`Timed out waiting for website server at ${url}`);
 }
 
-test("website landing page builds and renders publicly", async ({ page }) => {
+test("docs site builds and renders the relay guide publicly", async ({ page }) => {
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1600, height: 1000 });
 
-  execFileSync("npm", ["run", "build:website"], {
+  execFileSync("npm", ["--prefix", "website", "run", "docs:build"], {
     cwd: process.cwd(),
     env: process.env,
     stdio: "inherit",
@@ -42,17 +42,13 @@ test("website landing page builds and renders publicly", async ({ page }) => {
   try {
     await waitForServer(`http://127.0.0.1:${WEBSITE_PORT}/`);
 
-    await page.goto(`http://127.0.0.1:${WEBSITE_PORT}/`, { waitUntil: "networkidle" });
-    await expect(page.getByRole("heading", { name: "Build AI Agent Apps with Any Runtime" })).toBeVisible();
-    await expect(page.locator(".hero__subtitle")).toContainText("Node.js SDK");
-    await expect(page.locator(".hero__actions")).toContainText("Get Started");
-    await expect(page.locator(".install-bar")).toContainText("npm install -g @clawjs/cli");
-    await expect(page.locator(".runtime-marquee")).toContainText("Supported Runtimes");
-    await expect(page.locator(".capabilities")).toContainText("Skills");
-    await expect(page.locator(".capabilities")).toContainText("Providers & Models");
-    await expect(page.getByRole("link", { name: "Get Started" }).first()).toHaveAttribute("href", /docs\.clawjs\.ai\/getting-started/);
-    await expect(page.getByRole("link", { name: "API" }).first()).toHaveAttribute("href", /docs\.clawjs\.ai\/api/);
-    await saveArtifactScreenshot(page, "website-docs-home.png");
+    await page.goto(`http://127.0.0.1:${WEBSITE_PORT}/relay.html`, { waitUntil: "networkidle" });
+    await expect(page.locator("main h1").first()).toContainText("Relay");
+    await expect(page.locator(".VPSidebar").getByRole("link", { name: "Relay" }).first()).toHaveAttribute("href", /\/relay$/);
+    await expect(page.locator("main")).toContainText("Quick Start");
+    await expect(page.locator("main")).toContainText("/v1/connector/connect");
+    await expect(page.locator("main")).toContainText("sessions:search");
+    await saveArtifactScreenshot(page, "website-docs-relay.png");
   } finally {
     server.kill("SIGTERM");
   }
