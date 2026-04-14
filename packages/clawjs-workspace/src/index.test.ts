@@ -16,6 +16,13 @@ function embedText(text: string): number[] {
   return alphabet.split("").map((letter) => normalized.split(letter).length - 1);
 }
 
+function daysFromNow(days: number, hour = 9, minute = 0): string {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + days);
+  date.setUTCHours(hour, minute, 0, 0);
+  return date.toISOString();
+}
+
 test("createWorkspaceClaw manages tasks, notes, people, inbox, events, and badges locally", async () => {
   const workspaceDir = createWorkspaceDir("crud");
   const claw = await createWorkspaceClaw({
@@ -40,13 +47,46 @@ test("createWorkspaceClaw manages tasks, notes, people, inbox, events, and badge
     identities: [{ channel: "telegram", handle: "@alice" }],
   });
 
+  const project = await claw.projects.create({
+    name: "Workspace product core",
+    status: "in_progress",
+    ownerPersonId: person.id,
+  });
+
+  const goal = await claw.goals.create({
+    title: "Ship workspace productivity",
+    status: "active",
+    projectId: project.id,
+    ownerPersonId: person.id,
+    metricKey: "cli_crud",
+    targetValue: 1,
+    currentValue: 0.5,
+  });
+
   const task = await claw.tasks.create({
     title: "Ship workspace package",
     description: "Implement the local-first productivity layer.",
     priority: "high",
     assigneePersonId: person.id,
     labels: ["sdk", "workspace"],
-    dueAt: "2026-03-25T12:00:00.000Z",
+    dueAt: daysFromNow(1, 12, 0),
+    projectId: project.id,
+    goalId: goal.id,
+    dependsOnTaskIds: [],
+  });
+
+  const reminder = await claw.reminders.create({
+    title: "Nudge launch owner",
+    triggerAt: daysFromNow(1, 10, 0),
+    anchorType: "task",
+    anchorId: task.id,
+  });
+
+  const deadline = await claw.deadlines.create({
+    title: "Launch deadline",
+    dueAt: daysFromNow(3, 18, 0),
+    anchorType: "project",
+    anchorId: project.id,
   });
 
   const note = await claw.notes.create({
@@ -58,7 +98,7 @@ test("createWorkspaceClaw manages tasks, notes, people, inbox, events, and badge
 
   const event = await claw.events.create({
     title: "Workspace review",
-    startsAt: "2026-03-26T09:00:00.000Z",
+    startsAt: daysFromNow(2, 9, 0),
     attendeePersonIds: [person.id],
     linkedTaskIds: [task.id],
     linkedNoteIds: [note.id],
@@ -79,6 +119,19 @@ test("createWorkspaceClaw manages tasks, notes, people, inbox, events, and badge
 
   assert.equal(incoming.thread.status, "read");
   assert.equal((await claw.inbox.getThread(incoming.thread.id))?.channel, "telegram");
+  assert.equal((await claw.goals.get(goal.id))?.projectId, project.id);
+  assert.equal((await claw.projects.get(project.id))?.ownerPersonId, person.id);
+  assert.equal((await claw.time.get(reminder.id)).item.nextRunAt, reminder.triggerAt);
+  assert.equal((await claw.time.get(deadline.id)).item.nextRunAt, deadline.dueAt);
+  assert.deepEqual((await claw.events.get(event.id))?.linkedTaskIds, [task.id]);
+  assert.deepEqual((await claw.events.get(event.id))?.linkedNoteIds, [note.id]);
+  assert.equal((await claw.reminders.pause(reminder.id)).status, "paused");
+  assert.equal((await claw.reminders.resume(reminder.id)).status, "active");
+  assert.equal((await claw.deadlines.pause(deadline.id)).status, "paused");
+  assert.equal((await claw.deadlines.resume(deadline.id)).status, "active");
+  assert.equal((await claw.tasks.complete(task.id)).status, "done");
+  assert.equal((await claw.reminders.get(reminder.id))?.status, "cancelled");
+  assert.equal((await claw.deadlines.get(deadline.id))?.status, "active");
 
   const reply = await claw.inbox.routeReply(incoming.thread.id, {
     content: "Shared. The checklist is updated.",
@@ -88,25 +141,106 @@ test("createWorkspaceClaw manages tasks, notes, people, inbox, events, and badge
   assert.deepEqual(await claw.inbox.resolveReplyTarget(incoming.thread.id), { channel: "telegram", threadId: "thread-42" });
 
   const results = await claw.search.query({
-    query: "launch checklist",
-    domains: ["notes", "inbox", "tasks"],
+    query: "workspace",
+    domains: ["notes", "inbox", "tasks", "goals", "projects", "reminders", "deadlines"],
     strategy: "hybrid",
   });
-  assert.equal(results[0]?.domain, "notes");
+  assert.equal(results.some((result) => result.domain === "notes"), true);
   assert.equal(results.some((result) => result.domain === "inbox"), true);
+  assert.equal(results.some((result) => result.domain === "goals"), true);
+  assert.equal(results.some((result) => result.domain === "projects"), true);
 
   const badges = await claw.ui.badges();
   assert.equal(badges.find((badge) => badge.id === "inbox_unread")?.value, 0);
   assert.equal(badges.find((badge) => badge.id === "events_upcoming")?.value, 1);
 
   const rebuilt = await claw.workspaceIndex.rebuild();
-  assert.ok(rebuilt.reindexed >= 4);
+  assert.ok(rebuilt.reindexed >= 8);
   assert.ok(rebuilt.embeddings >= 1);
 
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "collections", "tasks")), true);
+  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite")), true);
 });
 
-test("createWorkspaceClaw builds context blocks and augments conversation streaming", async () => {
+test("createWorkspaceClaw migrates legacy JSON productivity collections into sqlite", async () => {
+  const workspaceDir = createWorkspaceDir("migration");
+  const legacyTasksDir = path.join(workspaceDir, ".clawjs", "data", "collections", "tasks");
+  const legacyGoalsDir = path.join(workspaceDir, ".clawjs", "data", "collections", "goals");
+  const legacyRemindersDir = path.join(workspaceDir, ".clawjs", "data", "collections", "reminders");
+  const legacyEventsDir = path.join(workspaceDir, ".clawjs", "data", "collections", "events");
+  fs.mkdirSync(legacyTasksDir, { recursive: true });
+  fs.mkdirSync(legacyGoalsDir, { recursive: true });
+  fs.mkdirSync(legacyRemindersDir, { recursive: true });
+  fs.mkdirSync(legacyEventsDir, { recursive: true });
+
+  fs.writeFileSync(path.join(legacyTasksDir, "task-legacy.json"), JSON.stringify({
+    id: "task-legacy",
+    createdAt: "2026-04-01T09:00:00.000Z",
+    updatedAt: "2026-04-01T09:00:00.000Z",
+    source: { kind: "local" },
+    title: "Imported task",
+    status: "todo",
+    priority: "medium",
+    labels: [],
+    watcherPersonIds: [],
+    childTaskIds: [],
+    dependsOnTaskIds: [],
+    checklist: [],
+  }, null, 2));
+  fs.writeFileSync(path.join(legacyGoalsDir, "goal-legacy.json"), JSON.stringify({
+    id: "goal-legacy",
+    createdAt: "2026-04-01T09:00:00.000Z",
+    updatedAt: "2026-04-01T09:00:00.000Z",
+    source: { kind: "local" },
+    title: "Imported goal",
+    status: "active",
+  }, null, 2));
+  fs.writeFileSync(path.join(legacyRemindersDir, "reminder-legacy.json"), JSON.stringify({
+    id: "reminder-legacy",
+    createdAt: "2026-04-01T09:00:00.000Z",
+    updatedAt: "2026-04-01T09:00:00.000Z",
+    source: { kind: "local" },
+    title: "Imported reminder",
+    status: "active",
+    triggerAt: "2026-04-18T09:00:00.000Z",
+    anchorType: "task",
+    anchorId: "task-legacy",
+  }, null, 2));
+  fs.writeFileSync(path.join(legacyEventsDir, "event-legacy.json"), JSON.stringify({
+    id: "event-legacy",
+    createdAt: "2026-04-01T09:00:00.000Z",
+    updatedAt: "2026-04-01T09:00:00.000Z",
+    source: { kind: "local" },
+    title: "Imported event",
+    startsAt: "2026-04-19T09:00:00.000Z",
+    attendeePersonIds: [],
+    linkedTaskIds: ["task-legacy"],
+    linkedNoteIds: [],
+    reminders: [],
+  }, null, 2));
+
+  const claw = await createWorkspaceClaw({
+    runtime: { adapter: "demo" },
+    workspace: {
+      appId: "demo",
+      workspaceId: "workspace-migration",
+      agentId: "agent-migration",
+      rootDir: workspaceDir,
+    },
+  });
+
+  const task = await claw.tasks.get("task-legacy");
+  const goal = await claw.goals.get("goal-legacy");
+  const reminder = await claw.reminders.get("reminder-legacy");
+  const event = await claw.events.get("event-legacy");
+
+  assert.equal(task?.title, "Imported task");
+  assert.equal(goal?.title, "Imported goal");
+  assert.equal(reminder?.anchorId, "task-legacy");
+  assert.deepEqual(event?.linkedTaskIds, ["task-legacy"]);
+  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite")), true);
+});
+
+test("createWorkspaceClaw builds context blocks and augments session streaming", async () => {
   const workspaceDir = createWorkspaceDir("context");
   const claw = await createWorkspaceClaw({
     runtime: {
@@ -132,11 +266,11 @@ test("createWorkspaceClaw builds context blocks and augments conversation stream
   });
   await claw.events.create({
     title: "Launch call",
-    startsAt: "2026-03-26T11:00:00.000Z",
+    startsAt: daysFromNow(2, 11, 0),
   });
 
-  const session = claw.conversations.createSession("Workspace help");
-  claw.conversations.appendMessage(session.sessionId, {
+  const session = claw.sessions.createSession("Workspace help");
+  claw.sessions.appendMessage(session.sessionId, {
     role: "user",
     content: "Please summarize the workspace launch checklist",
   });
@@ -162,7 +296,7 @@ test("createWorkspaceClaw builds context blocks and augments conversation stream
 
   try {
     const seen: string[] = [];
-    for await (const event of claw.conversations.streamAssistantReplyEvents({
+    for await (const event of claw.sessions.streamAssistantReplyEvents({
       sessionId: session.sessionId,
       transport: "gateway",
       workspaceContext: "auto",
@@ -172,7 +306,7 @@ test("createWorkspaceClaw builds context blocks and augments conversation stream
       }
     }
     assert.deepEqual(seen, ["Workspace", " summary"]);
-    assert.equal(claw.conversations.getSession(session.sessionId)?.messages.at(-1)?.content, "Workspace summary");
+    assert.equal(claw.sessions.getSession(session.sessionId)?.messages.at(-1)?.content, "Workspace summary");
   } finally {
     globalThis.fetch = originalFetch;
   }

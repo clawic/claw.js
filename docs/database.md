@@ -6,14 +6,15 @@ description: Standalone namespace-based data service for remote agents, apps, an
 # Database
 
 `database/` is a standalone Fastify service in this repository. It is
-designed for a compact self-hosted deployment shape:
-one HTTPS-facing service, one SQLite database, one admin console, and
-scoped API access for agents or apps.
+designed for a compact self-hosted deployment shape: one HTTPS-facing
+service, one SQLite database, one admin console, and scoped API access
+for agents or apps.
 
 ## What v1 includes
 
 - namespaces that behave like separate logical databases
-- built-in protected collections for `people`, `tasks`, `events`, and `notes`
+- built-in protected productivity collections for `people`, `tasks`, `goals`, `projects`, `events`, `reminders`, `deadlines`, `notes`, `inbox_threads`, and `inbox_messages`
+- additional protected product-domain collections used by the company cockpit, including `companies`, `portfolios`, `portfolio_items`, `goals`, `projects`, `issues`, `releases`, `operational_checks`, `operational_incidents`, `feedback_items`, `metric_snapshots`, and `import_batches`
 - schema-first custom collections with field validation and index metadata
 - scoped API tokens at `namespace + collection + operation` granularity
 - realtime record events over WebSocket

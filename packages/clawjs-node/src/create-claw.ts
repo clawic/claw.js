@@ -47,6 +47,22 @@ import type {
   NotificationDeliveryMode,
   NotificationPriority,
   NotificationReceiptPolicy,
+  TemporalExecution,
+  TemporalItem,
+  HomeDescriptor,
+  AreaDescriptor,
+  ThingDescriptor,
+  IoTStateSnapshot,
+  IoTActionRequest,
+  IoTActionResult,
+  SceneRecord,
+  AutomationRecord,
+  PolicyRecord,
+  ApprovalRecord,
+  ConnectorDescriptor,
+  RawIoTInvocation,
+  IoTPolicyEvaluation,
+  IoTEventRecord,
 } from "@clawjs/core";
 import {
   createTtsPlaybackPlan,
@@ -196,7 +212,29 @@ import {
 import { createTelegramService, type TelegramConnectBotInput, type TelegramSendMediaInput, type TelegramSendMessageInput, type TelegramStatusResult, type TelegramWebhookConfigInput, type TelegramSyncUpdatesOptions, type TelegramBanOrRestrictInput, type TelegramInviteLinkOptions } from "./telegram/index.ts";
 import { createSlackService, type SlackConnectBotInput, type SlackSendMessageInput, type SlackStatusResult } from "./slack/index.ts";
 import { createWhatsAppService, type WhatsAppConnectInput, type WhatsAppSendMessageInput, type WhatsAppStatusResult } from "./whatsapp/index.ts";
-import { doctorKeychain, ensureHttpSecretReference, ensureTelegramBotSecretReference, listSecrets, describeSecret, type EnsureSecretReferenceInput, type EnsureSecretReferenceResult, type SecretDoctorResult, type SecretProxyMetadata } from "./secrets/index.ts";
+import {
+  brokerSecretHttp,
+  describeSecret,
+  doctorKeychain,
+  ensureHttpSecretReference,
+  ensureTelegramBotSecretReference,
+  getSecretCapabilities,
+  listSecretActions,
+  listSecretLeases,
+  listSecrets,
+  listSecretTypes,
+  runSecretAction,
+  type EnsureSecretReferenceInput,
+  type EnsureSecretReferenceResult,
+  type SecretBrokerHttpInput,
+  type SecretBrokerHttpResult,
+  type SecretCapabilityStatus,
+  type SecretDoctorResult,
+  type SecretLeaseRecord,
+  type SecretProxyMetadata,
+  type SecretTypeDescriptor,
+  type SecretTypedActionDescriptor,
+} from "./secrets/index.ts";
 import { mergeManagedBlocks, type MergeManagedBlocksOptions } from "./files/managed-blocks.ts";
 import {
   synthesize,
@@ -224,6 +262,28 @@ import {
   writeObservedDomain,
 } from "./observed/store.ts";
 import { NotifyClient, type SendNotificationInput, type UpsertSubscriptionInput } from "./notify/index.ts";
+import { IotClient } from "./iot/index.ts";
+import {
+  EmbeddedTimeEngine,
+  TimeClient,
+  type CreateTemporalItemInput,
+  type TimeServiceLike,
+  type UpdateTemporalItemInput,
+} from "./time/index.ts";
+import {
+  ContentClient,
+  type ContentApprovalRequest,
+  type ContentAssetRef,
+  type ContentBrand,
+  type ContentCampaign,
+  type ContentDestination,
+  type ContentEntry,
+  type ContentOperation,
+  type ContentPublishPlan,
+  type ContentPublicationRun,
+  type ContentScopedTokenRecord,
+  type ContentVariant,
+} from "./content/index.ts";
 
 export interface CreateClawOptions {
   runtime: {
@@ -265,6 +325,24 @@ export interface CreateClawOptions {
     baseUrl: string;
     sourceToken?: string;
     clientToken?: string;
+  };
+  time?: {
+    baseUrl?: string;
+    token?: string;
+    dbPath?: string;
+    defaultTimeZone?: string;
+    schedulerIntervalMs?: number;
+    notifyBaseUrl?: string;
+    notifySourceToken?: string;
+  };
+  content?: {
+    baseUrl: string;
+    token?: string;
+  };
+  iot?: {
+    baseUrl: string;
+    token?: string;
+    homeId?: string;
   };
 }
 
@@ -668,6 +746,12 @@ export interface ClawInstance {
   secrets: {
     list: (search?: string) => Promise<SecretProxyMetadata[]>;
     describe: (name: string) => Promise<SecretProxyMetadata | null>;
+    types: (search?: string) => Promise<SecretTypeDescriptor[]>;
+    capabilities: (name: string) => Promise<{ secret: SecretProxyMetadata; capabilities: SecretCapabilityStatus[] }>;
+    actions: (name: string) => Promise<{ secret: SecretProxyMetadata; actions: SecretTypedActionDescriptor[] }>;
+    brokerHttp: (input: SecretBrokerHttpInput) => Promise<SecretBrokerHttpResult>;
+    runAction: (name: string, actionId: string) => Promise<{ action: SecretTypedActionDescriptor; result: SecretBrokerHttpResult }>;
+    leases: () => Promise<SecretLeaseRecord[]>;
     doctorKeychain: () => Promise<SecretDoctorResult>;
     ensureHttpReference: (input: EnsureSecretReferenceInput) => Promise<EnsureSecretReferenceResult>;
     ensureTelegramBotReference: (input: { name: string; apiBaseUrl?: string; notes?: string; readOnly?: boolean }) => Promise<EnsureSecretReferenceResult>;
@@ -703,6 +787,148 @@ export interface ClawInstance {
     subscriptions: {
       upsert: (input: UpsertSubscriptionInput) => Promise<{ subscription: { id: string } }>;
       remove: (id: string) => Promise<{ ok: boolean }>;
+    };
+  };
+  time: {
+    configured: boolean;
+    list: (filters?: {
+      kind?: TemporalItem["kind"];
+      status?: TemporalItem["status"];
+      workspaceId?: string;
+      projectId?: string;
+      agentId?: string;
+      ownerId?: string;
+      sourceProvider?: string;
+    }) => Promise<{ items: TemporalItem[] }>;
+    get: (id: string) => Promise<{ item: TemporalItem }>;
+    create: (input: CreateTemporalItemInput) => Promise<{ item: TemporalItem }>;
+    update: (id: string, input: UpdateTemporalItemInput) => Promise<{ item: TemporalItem }>;
+    delete: (id: string) => Promise<{ ok: boolean }>;
+    pause: (id: string) => Promise<{ item: TemporalItem }>;
+    resume: (id: string) => Promise<{ item: TemporalItem }>;
+    runNow: (id: string) => Promise<{ item: TemporalItem; execution: TemporalExecution }>;
+    listExecutions: (itemId?: string) => Promise<{ executions: TemporalExecution[] }>;
+    calendarView: (input?: { start?: string; end?: string }) => Promise<{ items: TemporalItem[]; entries: Array<Record<string, unknown>> }>;
+    timelineView: (input?: { start?: string; end?: string }) => Promise<{ items: TemporalItem[] }>;
+    signalAnchor: (input: { anchorId: string; signal: "reply_received" | "task_completed" | "event_started" | "execution_succeeded" }) => Promise<{ items: TemporalItem[] }>;
+  };
+  content: {
+    configured: boolean;
+    brands: {
+      list: () => Promise<{ brands: ContentBrand[] }>;
+      create: (input: Record<string, unknown>) => Promise<{ brand: ContentBrand }>;
+      update: (id: string, input: Record<string, unknown>) => Promise<{ brand: ContentBrand }>;
+    };
+    destinations: {
+      list: (filters?: { brandId?: string }) => Promise<{ destinations: ContentDestination[] }>;
+      create: (input: Record<string, unknown>) => Promise<{ destination: ContentDestination }>;
+      update: (id: string, input: Record<string, unknown>) => Promise<{ destination: ContentDestination }>;
+      testConnection: (id: string) => Promise<{ ok: boolean; destination: ContentDestination }>;
+      view: () => Promise<Record<string, unknown>>;
+    };
+    campaigns: {
+      list: (filters?: { brandId?: string }) => Promise<{ campaigns: ContentCampaign[] }>;
+      create: (input: Record<string, unknown>) => Promise<{ campaign: ContentCampaign }>;
+      update: (id: string, input: Record<string, unknown>) => Promise<{ campaign: ContentCampaign }>;
+    };
+    entries: {
+      list: (filters?: { brandId?: string; campaignId?: string; status?: string }) => Promise<{ entries: ContentEntry[] }>;
+      get: (id: string) => Promise<Record<string, unknown>>;
+      create: (input: Record<string, unknown>) => Promise<{ entry: ContentEntry }>;
+      update: (id: string, input: Record<string, unknown>) => Promise<{ entry: ContentEntry }>;
+      archive: (id: string) => Promise<{ entry: ContentEntry }>;
+      attachAsset: (id: string, input: Record<string, unknown>) => Promise<{ asset: ContentAssetRef }>;
+      generateVariants: (id: string, input: { destinationIds: string[] }) => Promise<{ variants: ContentVariant[] }>;
+    };
+    variants: {
+      list: (filters?: { entryId?: string; destinationId?: string; status?: string }) => Promise<{ variants: ContentVariant[] }>;
+      create: (input: Record<string, unknown>) => Promise<{ variant: ContentVariant }>;
+      update: (id: string, input: Record<string, unknown>) => Promise<{ variant: ContentVariant }>;
+    };
+    approvals: {
+      list: (filters?: { status?: string }) => Promise<{ approvals: ContentApprovalRequest[] }>;
+      approve: (id: string, input?: Record<string, unknown>) => Promise<{ approval: ContentApprovalRequest }>;
+      reject: (id: string, input: { comment: string }) => Promise<{ approval: ContentApprovalRequest }>;
+      cancel: (id: string) => Promise<{ approval: ContentApprovalRequest }>;
+      view: () => Promise<Record<string, unknown>>;
+    };
+    calendar: {
+      view: () => Promise<Record<string, unknown>>;
+    };
+    publish: {
+      listPlans: (filters?: { status?: string }) => Promise<{ plans: ContentPublishPlan[] }>;
+      createPlan: (input: Record<string, unknown>) => Promise<{ plan: ContentPublishPlan; approval?: ContentApprovalRequest | null }>;
+      cancelPlan: (id: string) => Promise<{ plan: ContentPublishPlan }>;
+      runNow: (id: string) => Promise<{ plan: ContentPublishPlan; run: ContentPublicationRun }>;
+      schedulerRun: () => Promise<{ runs: ContentPublicationRun[] }>;
+      listRuns: () => Promise<{ runs: Array<ContentPublicationRun & { canRetry: boolean }> }>;
+      getRun: (id: string) => Promise<Record<string, unknown>>;
+      retryRun: (id: string) => Promise<{ plan: ContentPublishPlan; run: ContentPublicationRun }>;
+      view: () => Promise<Record<string, unknown>>;
+    };
+    app: {
+      frontendContract: () => Promise<Record<string, unknown>>;
+      screens: () => Promise<{ screens: Array<Record<string, unknown>> }>;
+      dashboard: () => Promise<Record<string, unknown>>;
+      pipeline: () => Promise<Record<string, unknown>>;
+      composer: (entryId: string) => Promise<Record<string, unknown>>;
+      form: (formId: "entry.create" | "variant.edit" | "destination.create" | "publish-plan.create") => Promise<Record<string, unknown>>;
+    };
+    tokens: {
+      list: () => Promise<{ tokens: ContentScopedTokenRecord[] }>;
+      issue: (input: { label: string; operations: ContentOperation[] }) => Promise<{ token: string; record: ContentScopedTokenRecord }>;
+    };
+  };
+  iot: {
+    inventory: {
+      homes: {
+        list: () => Promise<HomeDescriptor[]>;
+        get: (homeId?: string) => Promise<HomeDescriptor>;
+      };
+      areas: {
+        list: (homeId?: string) => Promise<AreaDescriptor[]>;
+      };
+      things: {
+        list: (options?: { homeId?: string; kind?: string; query?: string; area?: string }) => Promise<ThingDescriptor[]>;
+        get: (thingId: string, homeId?: string) => Promise<ThingDescriptor | null>;
+        search: (query: string, options?: { homeId?: string; kind?: string; area?: string }) => Promise<ThingDescriptor[]>;
+      };
+    };
+    state: {
+      get: (homeId?: string) => Promise<IoTStateSnapshot>;
+      history: (homeId?: string, options?: { limit?: number }) => Promise<IoTEventRecord[]>;
+      watch: (homeId?: string) => AsyncGenerator<IoTEventRecord>;
+    };
+    actions: {
+      run: (input: IoTActionRequest, homeId?: string) => Promise<IoTActionResult>;
+      lights: {
+        off: (area?: string, homeId?: string) => Promise<IoTActionResult>;
+        on: (area?: string, homeId?: string) => Promise<IoTActionResult>;
+      };
+      climate: {
+        set: (selector: string, temperature: number, homeId?: string) => Promise<IoTActionResult>;
+      };
+    };
+    scenes: {
+      list: (homeId?: string) => Promise<SceneRecord[]>;
+      activate: (sceneId: string, homeId?: string) => Promise<{ scene: SceneRecord; results: IoTActionResult[] }>;
+    };
+    automations: {
+      list: (homeId?: string) => Promise<AutomationRecord[]>;
+      create: (input: { label: string; enabled?: boolean; trigger?: Record<string, unknown>; conditions?: Array<Record<string, unknown>>; actions: IoTActionRequest[] }, homeId?: string) => Promise<AutomationRecord>;
+      enable: (automationId: string, homeId?: string) => Promise<AutomationRecord>;
+      disable: (automationId: string, homeId?: string) => Promise<AutomationRecord>;
+      run: (automationId: string, homeId?: string) => Promise<{ automation: AutomationRecord; results: IoTActionResult[] }>;
+    };
+    policies: {
+      evaluate: (input: IoTActionRequest, homeId?: string) => Promise<IoTPolicyEvaluation>;
+      list: (homeId?: string) => Promise<PolicyRecord[]>;
+      listApprovals: (homeId?: string) => Promise<ApprovalRecord[]>;
+      approve: (approvalId: string, homeId?: string) => Promise<{ approval: ApprovalRecord; result: IoTActionResult }>;
+      deny: (approvalId: string, homeId?: string) => Promise<ApprovalRecord>;
+    };
+    raw: {
+      invoke: (input: RawIoTInvocation) => Promise<RawIoTInvocation & { acceptedAt: string }>;
     };
   };
   sessions: {
@@ -942,6 +1168,34 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       token: options.notify.clientToken,
     })
     : null;
+  const embeddedTimeEngine = options.time?.baseUrl
+    ? null
+    : new EmbeddedTimeEngine({
+        dbPath: options.time?.dbPath ?? path.join(options.workspace.rootDir, ".clawjs", "data", "productivity.sqlite"),
+        defaultTimeZone: options.time?.defaultTimeZone ?? "UTC",
+        schedulerIntervalMs: options.time?.schedulerIntervalMs,
+        notifyBaseUrl: options.time?.notifyBaseUrl,
+        notifySourceToken: options.time?.notifySourceToken,
+      });
+  embeddedTimeEngine?.startScheduler();
+  const timeClient: TimeServiceLike | null = options.time?.baseUrl
+    ? new TimeClient({
+        baseUrl: options.time.baseUrl,
+        token: options.time.token,
+      })
+    : embeddedTimeEngine;
+  const contentClient = options.content?.baseUrl
+    ? new ContentClient({
+        baseUrl: options.content.baseUrl,
+        token: options.content.token,
+      })
+    : null;
+  const iotClient = options.iot?.baseUrl
+    ? new IotClient({
+      baseUrl: options.iot.baseUrl,
+      token: options.iot.token,
+    })
+    : null;
 
   function registerGenerationBackend(input: RegisterCommandGenerationBackendInput): GenerationBackendDescriptor {
     const backend = generationStore.registerCommandBackend(input);
@@ -1037,6 +1291,27 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       throw new Error(`notify ${kind} client is not configured. Set CreateClawOptions.notify with baseUrl and the required token.`);
     }
     return client;
+  }
+
+  function requireTimeClient(): TimeServiceLike {
+    if (!timeClient) {
+      throw new Error("time client is not configured.");
+    }
+    return timeClient;
+  }
+
+  function requireContentClient(): ContentClient {
+    if (!contentClient) {
+      throw new Error("content client is not configured. Set CreateClawOptions.content with baseUrl.");
+    }
+    return contentClient;
+  }
+
+  function requireIotClient(): IotClient {
+    if (!iotClient) {
+      throw new Error("iot client is not configured. Set CreateClawOptions.iot with baseUrl.");
+    }
+    return iotClient;
   }
 
   function listWorkspaceSkillPaths(): string[] {
@@ -3552,6 +3827,12 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     secrets: {
       list: async (search) => listSecrets(processHost, { search, env: secretsEnv }),
       describe: async (name) => describeSecret(processHost, { name, env: secretsEnv }),
+      types: async (search) => listSecretTypes(processHost, { search, env: secretsEnv }),
+      capabilities: async (name) => getSecretCapabilities(processHost, { name, env: secretsEnv }),
+      actions: async (name) => listSecretActions(processHost, { name, env: secretsEnv }),
+      brokerHttp: async (input) => brokerSecretHttp(processHost, input, { env: secretsEnv }),
+      runAction: async (name, actionId) => runSecretAction(processHost, { name, actionId, env: secretsEnv }),
+      leases: async () => listSecretLeases(processHost, { env: secretsEnv }),
       doctorKeychain: async () => doctorKeychain(processHost, { env: secretsEnv }),
       ensureHttpReference: async (input) => ensureHttpSecretReference(processHost, input, { env: secretsEnv }),
       ensureTelegramBotReference: async (input) => ensureTelegramBotSecretReference(processHost, input, { env: secretsEnv }),
@@ -3574,6 +3855,155 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       subscriptions: {
         upsert: async (input) => requireNotifyClient("client").upsertSubscription(input),
         remove: async (id) => requireNotifyClient("client").deleteSubscription(id),
+      },
+    },
+    time: {
+      configured: Boolean(timeClient),
+      list: async (filters) => requireTimeClient().list(filters),
+      get: async (id) => requireTimeClient().get(id),
+      create: async (input) => requireTimeClient().create(input),
+      update: async (id, input) => requireTimeClient().update(id, input),
+      delete: async (id) => requireTimeClient().delete(id),
+      pause: async (id) => requireTimeClient().pause(id),
+      resume: async (id) => requireTimeClient().resume(id),
+      runNow: async (id) => requireTimeClient().runNow(id),
+      listExecutions: async (itemId) => requireTimeClient().listExecutions(itemId),
+      calendarView: async (input) => requireTimeClient().calendarView(input),
+      timelineView: async (input) => requireTimeClient().timelineView(input),
+      signalAnchor: async (input) => requireTimeClient().signalAnchor(input),
+    },
+    content: {
+      configured: Boolean(contentClient),
+      brands: {
+        list: async () => requireContentClient().listBrands(),
+        create: async (input) => requireContentClient().createBrand(input),
+        update: async (id, input) => requireContentClient().updateBrand(id, input),
+      },
+      destinations: {
+        list: async (filters) => requireContentClient().listDestinations(filters),
+        create: async (input) => requireContentClient().createDestination(input),
+        update: async (id, input) => requireContentClient().updateDestination(id, input),
+        testConnection: async (id) => requireContentClient().testConnection(id),
+        view: async () => requireContentClient().destinationsReadModel(),
+      },
+      campaigns: {
+        list: async (filters) => requireContentClient().listCampaigns(filters),
+        create: async (input) => requireContentClient().createCampaign(input),
+        update: async (id, input) => requireContentClient().updateCampaign(id, input),
+      },
+      entries: {
+        list: async (filters) => requireContentClient().listEntries(filters),
+        get: async (id) => requireContentClient().getEntry(id),
+        create: async (input) => requireContentClient().createEntry(input),
+        update: async (id, input) => requireContentClient().updateEntry(id, input),
+        archive: async (id) => requireContentClient().archiveEntry(id),
+        attachAsset: async (id, input) => requireContentClient().attachAsset(id, input),
+        generateVariants: async (id, input) => requireContentClient().generateVariants(id, input),
+      },
+      variants: {
+        list: async (filters) => requireContentClient().listVariants(filters),
+        create: async (input) => requireContentClient().createVariant(input),
+        update: async (id, input) => requireContentClient().updateVariant(id, input),
+      },
+      approvals: {
+        list: async (filters) => requireContentClient().listApprovals(filters),
+        approve: async (id, input) => requireContentClient().approve(id, input),
+        reject: async (id, input) => requireContentClient().reject(id, input),
+        cancel: async (id) => requireContentClient().cancelApproval(id),
+        view: async () => requireContentClient().approvalsReadModel(),
+      },
+      calendar: {
+        view: async () => requireContentClient().calendar(),
+      },
+      publish: {
+        listPlans: async (filters) => requireContentClient().listPlans(filters),
+        createPlan: async (input) => requireContentClient().createPlan(input),
+        cancelPlan: async (id) => requireContentClient().cancelPlan(id),
+        runNow: async (id) => requireContentClient().runPlan(id),
+        schedulerRun: async () => requireContentClient().schedulerRun(),
+        listRuns: async () => requireContentClient().listPublications(),
+        getRun: async (id) => requireContentClient().getPublication(id),
+        retryRun: async (id) => requireContentClient().retryPublication(id),
+        view: async () => requireContentClient().publicationsReadModel(),
+      },
+      app: {
+        frontendContract: async () => requireContentClient().frontendContract(),
+        screens: async () => requireContentClient().screens(),
+        dashboard: async () => requireContentClient().dashboard(),
+        pipeline: async () => requireContentClient().pipeline(),
+        composer: async (entryId) => requireContentClient().composer(entryId),
+        form: async (formId) => requireContentClient().form(formId),
+      },
+      tokens: {
+        list: async () => requireContentClient().listTokens(),
+        issue: async (input) => requireContentClient().issueToken(input),
+      },
+    },
+    iot: {
+      inventory: {
+        homes: {
+          list: async () => requireIotClient().listHomes(),
+          get: async (homeId) => requireIotClient().getHome(homeId ?? options.iot?.homeId),
+        },
+        areas: {
+          list: async (homeId) => requireIotClient().listAreas(homeId ?? options.iot?.homeId),
+        },
+        things: {
+          list: async (input = {}) => requireIotClient().listThings({
+            ...input,
+            homeId: input.homeId ?? options.iot?.homeId,
+          }),
+          get: async (thingId, homeId) => requireIotClient().getThing(thingId, homeId ?? options.iot?.homeId),
+          search: async (query, input = {}) => requireIotClient().searchThings(query, {
+            ...input,
+            homeId: input.homeId ?? options.iot?.homeId,
+          }),
+        },
+      },
+      state: {
+        get: async (homeId) => requireIotClient().getState(homeId ?? options.iot?.homeId),
+        history: async (homeId, queryOptions) => requireIotClient().history(homeId ?? options.iot?.homeId, queryOptions),
+        watch: async function* (homeId) {
+          for await (const event of requireIotClient().watch(homeId ?? options.iot?.homeId)) {
+            yield event;
+          }
+        },
+      },
+      actions: {
+        run: async (input, homeId) => requireIotClient().runAction(input, homeId ?? options.iot?.homeId),
+        lights: {
+          off: async (area, homeId) => requireIotClient().runAction({ family: "light", action: "off", ...(area ? { area } : {}) }, homeId ?? options.iot?.homeId),
+          on: async (area, homeId) => requireIotClient().runAction({ family: "light", action: "on", ...(area ? { area } : {}) }, homeId ?? options.iot?.homeId),
+        },
+        climate: {
+          set: async (selector, temperature, homeId) => requireIotClient().runAction({
+            family: "climate",
+            selector,
+            action: "set",
+            value: temperature,
+          }, homeId ?? options.iot?.homeId),
+        },
+      },
+      scenes: {
+        list: async (homeId) => requireIotClient().listScenes(homeId ?? options.iot?.homeId),
+        activate: async (sceneId, homeId) => requireIotClient().activateScene(sceneId, homeId ?? options.iot?.homeId),
+      },
+      automations: {
+        list: async (homeId) => requireIotClient().listAutomations(homeId ?? options.iot?.homeId),
+        create: async (input, homeId) => requireIotClient().createAutomation(input, homeId ?? options.iot?.homeId),
+        enable: async (automationId, homeId) => requireIotClient().enableAutomation(automationId, homeId ?? options.iot?.homeId),
+        disable: async (automationId, homeId) => requireIotClient().disableAutomation(automationId, homeId ?? options.iot?.homeId),
+        run: async (automationId, homeId) => requireIotClient().runAutomation(automationId, homeId ?? options.iot?.homeId),
+      },
+      policies: {
+        evaluate: async (input, homeId) => requireIotClient().evaluatePolicy(input, homeId ?? options.iot?.homeId),
+        list: async () => [],
+        listApprovals: async (homeId) => requireIotClient().listApprovals(homeId ?? options.iot?.homeId),
+        approve: async (approvalId, homeId) => requireIotClient().approve(approvalId, homeId ?? options.iot?.homeId),
+        deny: async (approvalId, homeId) => requireIotClient().deny(approvalId, homeId ?? options.iot?.homeId),
+      },
+      raw: {
+        invoke: async (input) => requireIotClient().rawInvoke(input),
       },
     },
     sessions: {

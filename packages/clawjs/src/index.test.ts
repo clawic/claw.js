@@ -1,11 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "fs";
 import http from "http";
 import os from "os";
 import path from "path";
+import { once } from "events";
 
 import { createClaw, saveAuthStore } from "@clawjs/claw";
+import { buildTimeApp } from "../../../time/src/server/app.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CLI_USAGE, runCli } from "./index.ts";
 
 function captureStream() {
@@ -19,6 +22,101 @@ function captureStream() {
     } as unknown as NodeJS.WritableStream,
     getOutput() {
       return output;
+    },
+  };
+}
+
+function runCommand(command: string, args: string[], options: { cwd: string }): string {
+  return execFileSync(command, args, {
+    cwd: options.cwd,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      npm_config_audit: "false",
+      npm_config_fund: "false",
+    },
+  });
+}
+
+function packWorkspacePackage(packageDir: string, packDir: string): string {
+  const tarballName = runCommand("npm", ["pack", "--pack-destination", packDir], { cwd: packageDir }).trim().split("\n").pop() ?? "";
+  return path.join(packDir, tarballName);
+}
+
+function runInstalledClaw(binPath: string, cwd: string, args: string[]): string {
+  return execFileSync(process.execPath, [binPath, ...args], {
+    cwd,
+    encoding: "utf8",
+    env: process.env,
+  });
+}
+
+async function createFakeVaultCliServer() {
+  const server = http.createServer((request, response) => {
+    const url = new URL(request.url || "/", "http://127.0.0.1");
+    if (url.pathname === "/v1/secret-types") {
+      response.setHeader("content-type", "application/json");
+      response.end(JSON.stringify({
+        types: [{
+          typeId: "npm.token",
+          label: "NPM token",
+          description: "Token for npm registry brokered checks.",
+          kind: "npm_token",
+          defaultAllowedHosts: ["registry.npmjs.org"],
+          defaultAllowedHeaderNames: ["Authorization"],
+          defaultAllowInURL: false,
+          defaultAllowInRequestBody: false,
+          defaultAllowLocalNetwork: false,
+          defaultReadOnly: true,
+          defaultLeaseModes: ["process"],
+          defaultCapabilities: ["metadata.read", "broker.http", "lease.process"],
+          fields: [],
+          actions: [{ id: "npm.whoami", label: "Who am I", description: "Call the npm registry identity endpoint.", capability: "broker.http", method: "GET" }],
+        }],
+      }));
+      return;
+    }
+    if (url.pathname === "/v1/tenants/demo-tenant/secrets") {
+      response.setHeader("content-type", "application/json");
+      response.end(JSON.stringify({
+        secrets: [{
+          secretName: "npm_token_main",
+          name: "npm_token_main",
+          typeId: "npm.token",
+          kind: "npm_token",
+          allowedHosts: ["registry.npmjs.org"],
+          allowedHeaderNames: ["Authorization"],
+          readOnly: true,
+          allowInURL: false,
+          allowInRequestBody: false,
+          allowLocalNetwork: false,
+          updatedAt: "2026-04-14T00:00:00.000Z",
+        }],
+      }));
+      return;
+    }
+    if (url.pathname === "/v1/tenants/demo-tenant/secrets/npm_token_main/capabilities") {
+      response.setHeader("content-type", "application/json");
+      response.end(JSON.stringify({
+        secret: { secretName: "npm_token_main", typeId: "npm.token" },
+        capabilities: [
+          { capability: "metadata.read", allowed: true },
+          { capability: "broker.http", allowed: true },
+        ],
+      }));
+      return;
+    }
+    response.statusCode = 404;
+    response.end("Not found");
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  const port = typeof address === "object" && address ? address.port : 0;
+  return {
+    baseUrl: `http://127.0.0.1:${port}`,
+    async close() {
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     },
   };
 }
@@ -595,6 +693,419 @@ test("runCli add workspace and workspace command groups operate on local product
     cwd: tempRoot,
   }), CLI_EXIT_OK);
   assert.match(searchStdout.getOutput(), /"domain": "tasks"/);
+});
+
+test("runCli zero-config productivity commands bootstrap local sqlite in an empty directory", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-productivity-zero-config-"));
+
+  const personStdout = captureStream();
+  assert.equal(await runCli([
+    "people",
+    "upsert",
+    "Alice Example",
+    "--email", "alice@example.com",
+    "--json",
+  ], {
+    stdout: personStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const person = JSON.parse(personStdout.getOutput()) as { id: string };
+
+  const projectStdout = captureStream();
+  assert.equal(await runCli([
+    "projects",
+    "create",
+    "Workspace Core",
+    "--status", "in_progress",
+    "--owner-person-id", person.id,
+    "--json",
+  ], {
+    stdout: projectStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const project = JSON.parse(projectStdout.getOutput()) as { id: string; ownerPersonId?: string };
+  assert.equal(project.ownerPersonId, person.id);
+
+  const goalStdout = captureStream();
+  assert.equal(await runCli([
+    "goals",
+    "create",
+    "Ship zero-config productivity",
+    "--status", "active",
+    "--project-id", project.id,
+    "--owner-person-id", person.id,
+    "--metric-key", "cli_crud",
+    "--target-value", "1",
+    "--json",
+  ], {
+    stdout: goalStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const goal = JSON.parse(goalStdout.getOutput()) as { id: string; projectId?: string };
+  assert.equal(goal.projectId, project.id);
+
+  const taskStdout = captureStream();
+  assert.equal(await runCli([
+    "tasks",
+    "create",
+    "Ship workspace",
+    "--project-id", project.id,
+    "--goal-id", goal.id,
+    "--json",
+  ], {
+    stdout: taskStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const task = JSON.parse(taskStdout.getOutput()) as { id: string; status?: string; projectId?: string; goalId?: string };
+  assert.equal(task.projectId, project.id);
+  assert.equal(task.goalId, goal.id);
+
+  const reminderStdout = captureStream();
+  assert.equal(await runCli([
+    "reminders",
+    "create",
+    "Follow up",
+    "--trigger-at", "2026-04-15T09:00:00.000Z",
+    "--anchor-type", "task",
+    "--anchor-id", task.id,
+    "--json",
+  ], {
+    stdout: reminderStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const reminder = JSON.parse(reminderStdout.getOutput()) as { id: string; anchorId?: string; status?: string };
+  assert.equal(reminder.anchorId, task.id);
+
+  const deadlineStdout = captureStream();
+  assert.equal(await runCli([
+    "deadlines",
+    "create",
+    "Launch date",
+    "--due-at", "2026-04-20T18:00:00.000Z",
+    "--anchor-type", "project",
+    "--anchor-id", project.id,
+    "--json",
+  ], {
+    stdout: deadlineStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const deadline = JSON.parse(deadlineStdout.getOutput()) as { id: string; anchorId?: string };
+  assert.equal(deadline.anchorId, project.id);
+
+  const noteStdout = captureStream();
+  assert.equal(await runCli([
+    "notes",
+    "create",
+    "Workspace notes",
+    "--content", "Zero-config workspace launch checklist",
+    "--tags", "workspace,launch",
+    "--json",
+  ], {
+    stdout: noteStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const note = JSON.parse(noteStdout.getOutput()) as { id: string };
+
+  const eventStdout = captureStream();
+  assert.equal(await runCli([
+    "events",
+    "create",
+    "Launch review",
+    "--starts-at", "2026-04-16T10:00:00.000Z",
+    "--attendees", person.id,
+    "--json",
+  ], {
+    stdout: eventStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const event = JSON.parse(eventStdout.getOutput()) as { id: string };
+  assert.ok(event.id);
+
+  const timeStdout = captureStream();
+  assert.equal(await runCli([
+    "time",
+    "create",
+    "routine",
+    "Daily check",
+    "--cron", "0 * * * *",
+    "--json",
+  ], {
+    stdout: timeStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const routine = JSON.parse(timeStdout.getOutput()) as { item: { id: string; kind: string } };
+  assert.equal(routine.item.kind, "routine");
+
+  const inboxStdout = captureStream();
+  assert.equal(await runCli([
+    "inbox",
+    "draft",
+    "Need update on workspace core",
+    "--channel", "email",
+    "--participants", person.id,
+    "--json",
+  ], {
+    stdout: inboxStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const thread = JSON.parse(inboxStdout.getOutput()) as { thread: { id: string } };
+  assert.ok(thread.thread.id);
+
+  const completeStdout = captureStream();
+  assert.equal(await runCli([
+    "tasks",
+    "complete",
+    task.id,
+    "--json",
+  ], {
+    stdout: completeStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(completeStdout.getOutput(), /"status": "done"/);
+
+  const remindersListStdout = captureStream();
+  assert.equal(await runCli([
+    "reminders",
+    "list",
+    "--after", "2026-04-15T00:00:00.000Z",
+    "--before", "2026-04-16T00:00:00.000Z",
+    "--json",
+  ], {
+    stdout: remindersListStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(remindersListStdout.getOutput(), new RegExp(reminder.id));
+
+  const deadlinesListStdout = captureStream();
+  assert.equal(await runCli([
+    "deadlines",
+    "list",
+    "--after", "2026-04-20T00:00:00.000Z",
+    "--before", "2026-04-21T00:00:00.000Z",
+    "--json",
+  ], {
+    stdout: deadlinesListStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(deadlinesListStdout.getOutput(), new RegExp(deadline.id));
+
+  const timeListStdout = captureStream();
+  assert.equal(await runCli([
+    "time",
+    "list",
+    "--kind", "routine",
+    "--json",
+  ], {
+    stdout: timeListStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(timeListStdout.getOutput(), new RegExp(routine.item.id));
+
+  const workspaceSearchStdout = captureStream();
+  assert.equal(await runCli([
+    "workspace-search",
+    "query",
+    "workspace",
+    "--domains", "tasks,goals,projects,reminders,deadlines,notes,people,inbox,events",
+    "--json",
+  ], {
+    stdout: workspaceSearchStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(workspaceSearchStdout.getOutput(), /"domain": "tasks"/);
+  assert.match(workspaceSearchStdout.getOutput(), /"domain": "notes"/);
+
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "data", "productivity.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "workspace.manifest.json")), false);
+  assert.ok(note.id);
+});
+
+test("published CLI tarballs install with npm and manage productivity zero-config from the real binary", async () => {
+  const packDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-packages-"));
+  const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-installed-"));
+  const packageRoots = {
+    core: path.resolve(process.cwd(), "packages/clawjs-core"),
+    claw: path.resolve(process.cwd(), "packages/clawjs-node"),
+    workspace: path.resolve(process.cwd(), "packages/clawjs-workspace"),
+    cli: path.resolve(process.cwd(), "packages/clawjs"),
+  };
+
+  const tarballs = [
+    packWorkspacePackage(packageRoots.core, packDir),
+    packWorkspacePackage(packageRoots.claw, packDir),
+    packWorkspacePackage(packageRoots.workspace, packDir),
+    packWorkspacePackage(packageRoots.cli, packDir),
+  ];
+
+  runCommand("npm", ["init", "-y"], { cwd: installRoot });
+  runCommand("npm", ["install", "--prefer-offline", ...tarballs], { cwd: installRoot });
+
+  const binPath = path.join(installRoot, "node_modules", "@clawjs", "cli", "bin", "clawjs.mjs");
+  assert.equal(fs.existsSync(binPath), true);
+
+  const person = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "people",
+    "upsert",
+    "Alice Example",
+    "--email", "alice@example.com",
+    "--json",
+  ])) as { id: string };
+
+  const project = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "projects",
+    "create",
+    "Workspace Core",
+    "--status", "in_progress",
+    "--owner-person-id", person.id,
+    "--json",
+  ])) as { id: string };
+
+  const goal = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "goals",
+    "create",
+    "Ship productivity",
+    "--project-id", project.id,
+    "--owner-person-id", person.id,
+    "--json",
+  ])) as { id: string };
+
+  const task = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "tasks",
+    "create",
+    "Ship workspace",
+    "--project-id", project.id,
+    "--goal-id", goal.id,
+    "--json",
+  ])) as { id: string };
+
+  const reminder = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "reminders",
+    "create",
+    "Follow up",
+    "--trigger-at", "2026-04-15T09:00:00.000Z",
+    "--anchor-type", "task",
+    "--anchor-id", task.id,
+    "--json",
+  ])) as { id: string; anchorId?: string };
+  assert.equal(reminder.anchorId, task.id);
+
+  const deadline = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "deadlines",
+    "create",
+    "Launch date",
+    "--due-at", "2026-04-20T18:00:00.000Z",
+    "--anchor-type", "project",
+    "--anchor-id", project.id,
+    "--json",
+  ])) as { id: string; anchorId?: string };
+  assert.equal(deadline.anchorId, project.id);
+
+  const event = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "events",
+    "create",
+    "Launch review",
+    "--starts-at", "2026-04-16T10:00:00.000Z",
+    "--attendees", person.id,
+    "--json",
+  ])) as { id: string };
+  assert.ok(event.id);
+
+  const note = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "notes",
+    "create",
+    "Workspace notes",
+    "--content", "Zero-config workspace launch checklist",
+    "--json",
+  ])) as { id: string };
+  assert.ok(note.id);
+
+  const inbox = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "inbox",
+    "draft",
+    "Need update on workspace core",
+    "--channel", "email",
+    "--participants", person.id,
+    "--json",
+  ])) as { thread: { id: string } };
+  assert.ok(inbox.thread.id);
+
+  const completed = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "tasks",
+    "complete",
+    task.id,
+    "--json",
+  ])) as { status: string };
+  assert.equal(completed.status, "done");
+
+  const reminders = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "reminders",
+    "list",
+    "--json",
+  ])) as Array<{ id: string }>;
+  const deadlines = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "deadlines",
+    "list",
+    "--json",
+  ])) as Array<{ id: string }>;
+  const events = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "events",
+    "list",
+    "--json",
+  ])) as Array<{ id: string }>;
+
+  assert.equal(reminders.some((item) => item.id === reminder.id), true);
+  assert.equal(deadlines.some((item) => item.id === deadline.id), true);
+  assert.equal(events.some((item) => item.id === event.id), true);
+  assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "data", "productivity.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "workspace.manifest.json")), false);
+});
+
+test("runCli migrates legacy workspace JSON productivity data into local sqlite automatically", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-productivity-migration-"));
+  const legacyTasksDir = path.join(workspaceRoot, ".clawjs", "data", "collections", "tasks");
+  fs.mkdirSync(legacyTasksDir, { recursive: true });
+  fs.writeFileSync(path.join(legacyTasksDir, "task-legacy.json"), JSON.stringify({
+    id: "task-legacy",
+    createdAt: "2026-04-01T09:00:00.000Z",
+    updatedAt: "2026-04-01T09:00:00.000Z",
+    source: { kind: "local" },
+    title: "Imported task",
+    status: "todo",
+    priority: "medium",
+    labels: [],
+    watcherPersonIds: [],
+    childTaskIds: [],
+    dependsOnTaskIds: [],
+    checklist: [],
+  }, null, 2));
+
+  const listStdout = captureStream();
+  assert.equal(await runCli([
+    "tasks",
+    "list",
+    "--json",
+  ], {
+    stdout: listStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(listStdout.getOutput(), /Imported task/);
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "data", "productivity.sqlite")), true);
 });
 
 test("runCli exposes explicit exit codes for success, degraded, failure, and usage states", async () => {
@@ -1792,6 +2303,71 @@ test("runCli exposes provider catalog and auth state commands", async () => {
   assert.match(stateStdout.getOutput(), /"providers"/);
 });
 
+test("runCli exposes vault-backed secrets commands", async () => {
+  const vault = await createFakeVaultCliServer();
+  try {
+    const listStdout = captureStream();
+    const listExitCode = await runCli([
+      "--runtime", "demo",
+      "secrets",
+      "list",
+      "--workspace", fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-secrets-list-")),
+      "--secrets-backend", "vault",
+      "--vault-url", vault.baseUrl,
+      "--vault-token", "vault-token",
+      "--vault-tenant-id", "demo-tenant",
+      "--json",
+    ], {
+      stdout: listStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(listExitCode, CLI_EXIT_OK);
+    assert.match(listStdout.getOutput(), /"npm_token_main"/);
+
+    const typesStdout = captureStream();
+    const typesExitCode = await runCli([
+      "--runtime", "demo",
+      "secrets",
+      "types",
+      "--workspace", fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-secrets-types-")),
+      "--secrets-backend", "vault",
+      "--vault-url", vault.baseUrl,
+      "--vault-token", "vault-token",
+      "--vault-tenant-id", "demo-tenant",
+      "--json",
+    ], {
+      stdout: typesStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(typesExitCode, CLI_EXIT_OK);
+    assert.match(typesStdout.getOutput(), /"npm.token"/);
+
+    const capabilitiesStdout = captureStream();
+    const capabilitiesExitCode = await runCli([
+      "--runtime", "demo",
+      "secrets",
+      "capabilities",
+      "--name", "npm_token_main",
+      "--workspace", fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-secrets-capabilities-")),
+      "--secrets-backend", "vault",
+      "--vault-url", vault.baseUrl,
+      "--vault-token", "vault-token",
+      "--vault-tenant-id", "demo-tenant",
+      "--json",
+    ], {
+      stdout: capabilitiesStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(capabilitiesExitCode, CLI_EXIT_OK);
+    assert.match(capabilitiesStdout.getOutput(), /"capabilities"/);
+  } finally {
+    await vault.close();
+  }
+});
+
 test("runCli can upload, search, read, and download documents", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-documents-"));
   const sourceFile = path.join(workspaceRoot, "brief.txt");
@@ -1994,4 +2570,180 @@ test("runCli honors --runtime for alternate workspace layouts", async () => {
   assert.equal(fs.existsSync(path.join(zeroWorkspace, "TOOLS.md")), false);
   assert.equal(fs.existsSync(path.join(picoWorkspace, "memory", "MEMORY.md")), true);
   assert.equal(fs.existsSync(path.join(picoWorkspace, "TOOLS.md")), false);
+});
+
+test("runCli browser commands target relay browser routes", async () => {
+  const requests: Array<{ method: string; url: string; auth: string | undefined; body: string }> = [];
+  const server = http.createServer(async (req, res) => {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    requests.push({
+      method: req.method ?? "GET",
+      url: req.url ?? "/",
+      auth: req.headers.authorization,
+      body: Buffer.concat(chunks).toString("utf8"),
+    });
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({
+      session: {
+        workspaceId: "main",
+        active: true,
+        status: "ready",
+        navigation: {
+          title: "Login",
+          url: "https://example.com/login",
+          displayUrl: "https://example.com/login",
+          isLocalUrl: false,
+        },
+        controller: null,
+        viewport: { width: 1440, height: 960 },
+        updatedAt: new Date().toISOString(),
+      },
+      sharePath: "/workspace/demo-tenant/demo-agent/main/browser",
+      shareUrl: "http://127.0.0.1:4410/workspace/demo-tenant/demo-agent/main/browser",
+    }));
+  });
+
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  const relayUrl = `http://127.0.0.1:${address.port}`;
+
+  try {
+    const stdout = captureStream();
+    const ensureExitCode = await runCli([
+      "browser",
+      "ensure",
+      "--relay-url", relayUrl,
+      "--access-token", "relay-token",
+      "--tenant-id", "demo-tenant",
+      "--agent-id", "demo-agent",
+      "--workspace-id", "main",
+      "--url", "http://localhost:4300",
+    ], {
+      stdout: stdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    assert.equal(ensureExitCode, CLI_EXIT_OK);
+    assert.match(stdout.getOutput(), /workspace\/demo-tenant\/demo-agent\/main\/browser/);
+    assert.equal(requests[0]?.method, "POST");
+    assert.equal(requests[0]?.auth, "Bearer relay-token");
+    assert.match(requests[0]?.url ?? "", /\/v1\/tenants\/demo-tenant\/agents\/demo-agent\/workspaces\/main\/browser\/session$/);
+    assert.match(requests[0]?.body ?? "", /localhost:4300/);
+
+    const statusStdout = captureStream();
+    const statusExitCode = await runCli([
+      "browser",
+      "status",
+      "--relay-url", relayUrl,
+      "--access-token", "relay-token",
+      "--tenant-id", "demo-tenant",
+      "--agent-id", "demo-agent",
+      "--workspace-id", "main",
+    ], {
+      stdout: statusStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    assert.equal(statusExitCode, CLI_EXIT_OK);
+    assert.equal(statusStdout.getOutput().trim(), "ready");
+    assert.equal(requests[1]?.method, "GET");
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+test("runCli supports time commands and schedule sugar", async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-time-"));
+  const built = buildTimeApp({
+    config: {
+      host: "127.0.0.1",
+      port: 0,
+      dataDir: path.join(tmpDir, "data"),
+      dbPath: path.join(tmpDir, "data", "time.sqlite"),
+      defaultTimeZone: "UTC",
+      schedulerIntervalMs: 50,
+    },
+  });
+  const address = await built.app.listen({ host: "127.0.0.1", port: 0 });
+  const timeUrl = address.replace(/\/$/, "");
+
+  try {
+    const scheduleStdout = captureStream();
+    const scheduleExitCode = await runCli([
+      "schedule",
+      "at",
+      "monday 9am",
+      "review PRs",
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+      "--json",
+    ], {
+      stdout: scheduleStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    assert.equal(scheduleExitCode, CLI_EXIT_OK);
+    assert.match(scheduleStdout.getOutput(), /"kind": "event"/);
+
+    const everyStdout = captureStream();
+    const everyExitCode = await runCli([
+      "schedule",
+      "every",
+      "3h",
+      "check deployment health",
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+      "--json",
+    ], {
+      stdout: everyStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(everyExitCode, CLI_EXIT_OK);
+    assert.match(everyStdout.getOutput(), /"kind": "routine"/);
+
+    const afterStdout = captureStream();
+    const afterExitCode = await runCli([
+      "schedule",
+      "after",
+      "24h if no reply",
+      "nudge owner",
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+      "--anchor-type", "thread",
+      "--anchor-id", "thread-1",
+      "--anchor-at", "2026-04-09T08:00:00.000Z",
+      "--json",
+    ], {
+      stdout: afterStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(afterExitCode, CLI_EXIT_OK);
+    assert.match(afterStdout.getOutput(), /"kind": "follow_up"/);
+
+    const listStdout = captureStream();
+    const listExitCode = await runCli([
+      "time",
+      "list",
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+      "--json",
+    ], {
+      stdout: listStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(listExitCode, CLI_EXIT_OK);
+    assert.match(listStdout.getOutput(), /review PRs/);
+  } finally {
+    await built.app.close();
+  }
 });

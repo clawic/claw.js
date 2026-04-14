@@ -242,6 +242,14 @@ export class RelayConnectorRuntime {
             },
           }
         : {}),
+      ...(process.env.CLAWJS_CONTENT_URL
+        ? {
+            content: {
+              baseUrl: process.env.CLAWJS_CONTENT_URL,
+              token: process.env.CLAWJS_CONTENT_TOKEN,
+            },
+          }
+        : {}),
     });
     await claw.workspace.init();
     const workspaceClaw = await extendClawWithWorkspace(claw, { workspaceDir: metadata.workspaceDir });
@@ -825,6 +833,32 @@ export class RelayConnectorRuntime {
         await workspaceClaw.tasks.remove(id);
         return { ok: true };
       }
+      case "goals.list":
+        return { goals: await workspaceClaw.goals.list() };
+      case "goals.create":
+        return { goal: await workspaceClaw.goals.create(payload as Record<string, unknown>) };
+      case "goals.update": {
+        const id = String(payload?.id ?? "");
+        return { goal: await workspaceClaw.goals.update(id, payload as Record<string, unknown>) };
+      }
+      case "goals.delete": {
+        const id = String(payload?.id ?? "");
+        await workspaceClaw.goals.remove(id);
+        return { ok: true };
+      }
+      case "projects.list":
+        return { projects: await workspaceClaw.projects.list() };
+      case "projects.create":
+        return { project: await workspaceClaw.projects.create(payload as Record<string, unknown>) };
+      case "projects.update": {
+        const id = String(payload?.id ?? "");
+        return { project: await workspaceClaw.projects.update(id, payload as Record<string, unknown>) };
+      }
+      case "projects.delete": {
+        const id = String(payload?.id ?? "");
+        await workspaceClaw.projects.remove(id);
+        return { ok: true };
+      }
       case "notes.list":
         return { notes: await workspaceClaw.notes.list() };
       case "notes.create":
@@ -917,6 +951,32 @@ export class RelayConnectorRuntime {
         compatWrite("people-hidden", [...hidden]);
         return { ok: true };
       }
+      case "reminders.list":
+        return { reminders: await workspaceClaw.reminders.list({ limit: 100 }) };
+      case "reminders.create":
+        return { reminder: await workspaceClaw.reminders.create(payload as Record<string, unknown>) };
+      case "reminders.update": {
+        const id = String(payload?.id ?? "");
+        return { reminder: await workspaceClaw.reminders.update(id, payload as Record<string, unknown>) };
+      }
+      case "reminders.delete": {
+        const id = String(payload?.id ?? "");
+        await workspaceClaw.reminders.remove(id);
+        return { ok: true };
+      }
+      case "deadlines.list":
+        return { deadlines: await workspaceClaw.deadlines.list({ limit: 100 }) };
+      case "deadlines.create":
+        return { deadline: await workspaceClaw.deadlines.create(payload as Record<string, unknown>) };
+      case "deadlines.update": {
+        const id = String(payload?.id ?? "");
+        return { deadline: await workspaceClaw.deadlines.update(id, payload as Record<string, unknown>) };
+      }
+      case "deadlines.delete": {
+        const id = String(payload?.id ?? "");
+        await workspaceClaw.deadlines.remove(id);
+        return { ok: true };
+      }
       case "events.list":
         if (claw.time.configured) {
           return await claw.time.legacyEvents();
@@ -978,6 +1038,132 @@ export class RelayConnectorRuntime {
         const id = String(payload?.id ?? "");
         await claw.time.delete(id);
         return { ok: true };
+      }
+      case "content.brands.list":
+        return await claw.content.brands.list();
+      case "content.brands.create":
+        return await claw.content.brands.create(payload as Record<string, unknown>);
+      case "content.brands.update": {
+        const id = String(payload?.id ?? "");
+        return await claw.content.brands.update(id, payload as Record<string, unknown>);
+      }
+      case "content.destinations.list":
+        return await claw.content.destinations.list(typeof payload?.brandId === "string" ? { brandId: payload.brandId } : undefined);
+      case "content.destinations.create":
+        return await claw.content.destinations.create(payload as Record<string, unknown>);
+      case "content.destinations.update": {
+        const id = String(payload?.id ?? "");
+        return await claw.content.destinations.update(id, payload as Record<string, unknown>);
+      }
+      case "content.destinations.testConnection": {
+        const id = String(payload?.id ?? "");
+        return await claw.content.destinations.testConnection(id);
+      }
+      case "content.campaigns.list":
+        return await claw.content.campaigns.list(typeof payload?.brandId === "string" ? { brandId: payload.brandId } : undefined);
+      case "content.campaigns.create":
+        return await claw.content.campaigns.create(payload as Record<string, unknown>);
+      case "content.campaigns.update": {
+        const id = String(payload?.id ?? "");
+        return await claw.content.campaigns.update(id, payload as Record<string, unknown>);
+      }
+      case "content.entries.list":
+        return await claw.content.entries.list(payload as Record<string, string>);
+      case "content.entries.get": {
+        const id = String(payload?.id ?? "");
+        return await claw.content.entries.get(id);
+      }
+      case "content.entries.create":
+        return await claw.content.entries.create(payload as Record<string, unknown>);
+      case "content.entries.update": {
+        const id = String(payload?.id ?? "");
+        return await claw.content.entries.update(id, payload as Record<string, unknown>);
+      }
+      case "content.entries.archive": {
+        const id = String(payload?.id ?? "");
+        return await claw.content.entries.archive(id);
+      }
+      case "content.entries.attachAsset": {
+        const id = String(payload?.id ?? "");
+        return await claw.content.entries.attachAsset(id, payload as Record<string, unknown>);
+      }
+      case "content.entries.generateVariants": {
+        const id = String(payload?.id ?? "");
+        return await claw.content.entries.generateVariants(id, {
+          destinationIds: Array.isArray(payload?.destinationIds) ? payload.destinationIds.map(String) : [],
+        });
+      }
+      case "content.variants.list":
+        return await claw.content.variants.list(payload as Record<string, string>);
+      case "content.variants.create":
+        return await claw.content.variants.create(payload as Record<string, unknown>);
+      case "content.variants.update": {
+        const id = String(payload?.id ?? "");
+        return await claw.content.variants.update(id, payload as Record<string, unknown>);
+      }
+      case "content.approvals.list":
+        return await claw.content.approvals.list(payload as Record<string, string>);
+      case "content.approvals.approve": {
+        const id = String(payload?.id ?? "");
+        return await claw.content.approvals.approve(id, payload as Record<string, unknown>);
+      }
+      case "content.approvals.reject": {
+        const id = String(payload?.id ?? "");
+        return await claw.content.approvals.reject(id, { comment: String(payload?.comment ?? "") });
+      }
+      case "content.approvals.cancel": {
+        const id = String(payload?.id ?? "");
+        return await claw.content.approvals.cancel(id);
+      }
+      case "content.calendar.view":
+        return await claw.content.calendar.view();
+      case "content.publish.listPlans":
+        return await claw.content.publish.listPlans(payload as Record<string, string>);
+      case "content.publish.createPlan":
+        return await claw.content.publish.createPlan(payload as Record<string, unknown>);
+      case "content.publish.cancelPlan": {
+        const id = String(payload?.id ?? "");
+        return await claw.content.publish.cancelPlan(id);
+      }
+      case "content.publish.runNow": {
+        const id = String(payload?.id ?? "");
+        return await claw.content.publish.runNow(id);
+      }
+      case "content.publish.schedulerRun":
+        return await claw.content.publish.schedulerRun();
+      case "content.publish.listRuns":
+        return await claw.content.publish.listRuns();
+      case "content.publish.getRun": {
+        const id = String(payload?.id ?? "");
+        return await claw.content.publish.getRun(id);
+      }
+      case "content.publish.retryRun": {
+        const id = String(payload?.id ?? "");
+        return await claw.content.publish.retryRun(id);
+      }
+      case "content.app.frontendContract":
+        return await claw.content.app.frontendContract();
+      case "content.app.screens":
+        return await claw.content.app.screens();
+      case "content.app.dashboard":
+        return await claw.content.app.dashboard();
+      case "content.app.calendar":
+        return await claw.content.calendar.view();
+      case "content.app.pipeline":
+        return await claw.content.app.pipeline();
+      case "content.app.composer": {
+        const entryId = String(payload?.entryId ?? "");
+        return await claw.content.app.composer(entryId);
+      }
+      case "content.app.destinations":
+        return await claw.content.destinations.view();
+      case "content.app.approvals":
+        return await claw.content.approvals.view();
+      case "content.app.publications":
+        return await claw.content.publish.view();
+      case "content.app.form": {
+        const formId = String(payload?.formId ?? "entry.create") as "entry.create" | "variant.edit" | "destination.create" | "publish-plan.create";
+        return await claw.content.app.form(formId);
       }
       case "personas.list":
         return { personas: compatRead("personas", DEFAULT_PERSONAS) };

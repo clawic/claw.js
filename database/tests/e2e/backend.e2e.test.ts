@@ -1,10 +1,12 @@
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import WebSocket from "ws";
 
+import { DatabaseServiceStore } from "../../src/server/db.ts";
 import { startDatabaseServer } from "./helpers.ts";
 
 const servers: Array<Awaited<ReturnType<typeof startDatabaseServer>>> = [];
@@ -92,8 +94,56 @@ test("namespace creation seeds protected built-ins and custom schemas keep index
     headers: authHeaders(server.adminToken),
   });
   const collectionsPayload = await collectionsResponse.json() as { items: Array<{ name: string; protected: boolean }> };
-  assert.deepEqual(collectionsPayload.items.slice(0, 4).map((item) => item.name).sort(), ["events", "notes", "people", "tasks"]);
+  const collectionNames = collectionsPayload.items.map((item) => item.name);
+  for (const expected of [
+    "people",
+    "tasks",
+    "goals",
+    "projects",
+    "events",
+    "reminders",
+    "deadlines",
+    "notes",
+    "portfolios",
+    "portfolio_items",
+    "releases",
+    "operational_checks",
+    "operational_incidents",
+    "feedback_items",
+    "metric_snapshots",
+    "import_batches",
+  ]) {
+    assert.ok(collectionNames.includes(expected), `missing built-in collection ${expected}`);
+  }
   assert.equal(collectionsPayload.items.find((item) => item.name === "people")?.protected, true);
+  assert.equal(collectionsPayload.items.find((item) => item.name === "portfolios")?.protected, true);
+
+  const goalsCollection = await fetch(`${server.baseUrl}/v1/namespaces/crm/collections/goals`, {
+    headers: authHeaders(server.adminToken),
+  });
+  assert.equal(goalsCollection.status, 200);
+  const goalsPayload = await goalsCollection.json() as { fields: Array<{ name: string }> };
+  assert.ok(goalsPayload.fields.some((field) => field.name === "parentId"));
+  assert.ok(goalsPayload.fields.some((field) => field.name === "parentGoalId"));
+  assert.ok(goalsPayload.fields.some((field) => field.name === "portfolioId"));
+  assert.ok(goalsPayload.fields.some((field) => field.name === "portfolioItemId"));
+  assert.ok(goalsPayload.fields.some((field) => field.name === "metricKey"));
+
+  const remindersCollection = await fetch(`${server.baseUrl}/v1/namespaces/crm/collections/reminders`, {
+    headers: authHeaders(server.adminToken),
+  });
+  assert.equal(remindersCollection.status, 200);
+  const remindersPayload = await remindersCollection.json() as { fields: Array<{ name: string }> };
+  assert.ok(remindersPayload.fields.some((field) => field.name === "triggerAt"));
+  assert.ok(remindersPayload.fields.some((field) => field.name === "anchorType"));
+
+  const deadlinesCollection = await fetch(`${server.baseUrl}/v1/namespaces/crm/collections/deadlines`, {
+    headers: authHeaders(server.adminToken),
+  });
+  assert.equal(deadlinesCollection.status, 200);
+  const deadlinesPayload = await deadlinesCollection.json() as { fields: Array<{ name: string }> };
+  assert.ok(deadlinesPayload.fields.some((field) => field.name === "dueAt"));
+  assert.ok(deadlinesPayload.fields.some((field) => field.name === "anchorId"));
 
   const customCollection = await fetch(`${server.baseUrl}/v1/namespaces/crm/collections`, {
     method: "POST",
@@ -150,6 +200,54 @@ test("namespace creation seeds protected built-ins and custom schemas keep index
     }),
   });
   assert.equal(destructiveBuiltIn.status, 400);
+});
+
+test("existing databases receive additive built-in upgrades without reset", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "database-migration-"));
+  const dataDir = path.join(rootDir, ".data");
+  const dbPath = path.join(dataDir, "database.sqlite");
+  const filesDir = path.join(dataDir, "files");
+
+  const store = new DatabaseServiceStore(dbPath, filesDir);
+  store.sqlite.prepare(`
+    UPDATE collections
+    SET fields_json = ?, indexes_json = ?, core_fields_json = ?
+    WHERE namespace_id = 'main' AND name = 'goals'
+  `).run(
+    JSON.stringify([
+      { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+      { name: "title", type: "text", required: true },
+      { name: "level", type: "select", required: true, options: ["company", "team", "personal"] },
+      { name: "status", type: "select", required: true, options: ["active", "paused", "done"] },
+      { name: "description", type: "text" },
+      { name: "parentId", type: "relation", relation: { collectionName: "goals" } },
+      { name: "ownerAgentId", type: "relation", relation: { collectionName: "company_agents" } },
+    ]),
+    JSON.stringify([{ name: "goals_company_idx", fields: ["companyId"] }]),
+    JSON.stringify(["companyId", "title", "status"]),
+  );
+  store.sqlite.prepare(`
+    DELETE FROM collections
+    WHERE namespace_id = 'main' AND name IN ('portfolios', 'portfolio_items', 'releases')
+  `).run();
+  store.close();
+
+  const upgraded = new DatabaseServiceStore(dbPath, filesDir);
+  const goals = upgraded.getCollection("main", "goals");
+  const portfolios = upgraded.getCollection("main", "portfolios");
+  const releases = upgraded.getCollection("main", "releases");
+
+  assert.ok(goals);
+  assert.ok(goals.fields.some((field) => field.name === "parentId"));
+  assert.ok(goals.fields.some((field) => field.name === "parentGoalId"));
+  assert.ok(goals.fields.some((field) => field.name === "portfolioId"));
+  assert.ok(goals.fields.some((field) => field.name === "portfolioItemId"));
+  assert.ok(goals.fields.some((field) => field.name === "metricLabel"));
+  assert.ok(portfolios);
+  assert.ok(releases);
+
+  upgraded.close();
+  fs.rmSync(rootDir, { recursive: true, force: true });
 });
 
 test("record CRUD, scoped tokens, files, and realtime work together", async () => {

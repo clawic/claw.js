@@ -3,6 +3,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 
 import Database from "better-sqlite3";
+import { PRODUCTIVITY_COLLECTION_DEFINITIONS } from "../../../packages/clawjs-core/src/productivity.ts";
 
 import { generateOpaqueToken, hashSecret } from "./auth.ts";
 import type {
@@ -259,56 +260,23 @@ function builtInCollections(): Array<{
   indexes: IndexDefinition[];
 }> {
   return [
-    {
-      name: "people",
-      displayName: "People",
-      coreFieldNames: ["displayName", "email"],
-      fields: [
-        { name: "displayName", type: "text", required: true },
-        { name: "email", type: "email", required: true },
-        { name: "phone", type: "text" },
-        { name: "role", type: "text" },
-        { name: "organization", type: "text" },
-      ],
-      indexes: [{ name: "people_email_unique", fields: ["email"], unique: true }],
-    },
-    {
-      name: "tasks",
-      displayName: "Tasks",
-      coreFieldNames: ["title", "status"],
-      fields: [
-        { name: "title", type: "text", required: true },
-        { name: "status", type: "select", required: true, options: ["todo", "in_progress", "done"] },
-        { name: "priority", type: "select", options: ["low", "medium", "high", "urgent"] },
-        { name: "dueAt", type: "date" },
-        { name: "assignee", type: "relation", relation: { collectionName: "people" } },
-      ],
-      indexes: [{ name: "tasks_status_idx", fields: ["status"] }],
-    },
-    {
-      name: "events",
-      displayName: "Events",
-      coreFieldNames: ["title", "startsAt"],
-      fields: [
-        { name: "title", type: "text", required: true },
-        { name: "startsAt", type: "date", required: true },
-        { name: "endsAt", type: "date" },
-        { name: "location", type: "text" },
-        { name: "notes", type: "text" },
-      ],
-      indexes: [{ name: "events_starts_at_idx", fields: ["startsAt"] }],
-    },
-    {
-      name: "notes",
-      displayName: "Notes",
-      coreFieldNames: ["title", "content"],
-      fields: [
-        { name: "title", type: "text", required: true },
-        { name: "content", type: "text", required: true },
-        { name: "tags", type: "json" },
-      ],
-      indexes: [{ name: "notes_title_idx", fields: ["title"] }],
-    },
+    ...PRODUCTIVITY_COLLECTION_DEFINITIONS.map((definition) => ({
+      name: definition.name,
+      displayName: definition.displayName,
+      coreFieldNames: [...definition.coreFieldNames],
+      fields: definition.fields.map((field) => ({
+        name: field.name,
+        type: field.type,
+        ...(field.required ? { required: true } : {}),
+        ...(field.options ? { options: [...field.options] } : {}),
+        ...(field.relation ? { relation: { collectionName: field.relation.collectionName } } : {}),
+      })),
+      indexes: definition.indexes.map((index) => ({
+        name: index.name,
+        fields: [...index.fields],
+        ...(index.unique ? { unique: true } : {}),
+      })),
+    })),
     // ── Company app collections ─────────────────────────────────────
     // Models a virtual company where the human (board) hires AI agents
     // into roles and collaborates with them via issues and an inbox.
@@ -330,34 +298,62 @@ function builtInCollections(): Array<{
       indexes: [{ name: "companies_prefix_unique", fields: ["issuePrefix"], unique: true }],
     },
     {
-      name: "goals",
-      displayName: "Goals",
-      coreFieldNames: ["companyId", "title", "status"],
-      fields: [
-        { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
-        { name: "title", type: "text", required: true },
-        { name: "level", type: "select", required: true, options: ["company", "team", "personal"] },
-        { name: "status", type: "select", required: true, options: ["active", "paused", "done"] },
-        { name: "description", type: "text" },
-        { name: "parentId", type: "relation", relation: { collectionName: "goals" } },
-        { name: "ownerAgentId", type: "relation", relation: { collectionName: "company_agents" } },
-      ],
-      indexes: [{ name: "goals_company_idx", fields: ["companyId"] }],
-    },
-    {
-      name: "projects",
-      displayName: "Projects",
-      coreFieldNames: ["companyId", "name", "status"],
+      name: "portfolios",
+      displayName: "Portfolios",
+      coreFieldNames: ["companyId", "name", "slug", "status"],
       fields: [
         { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
         { name: "name", type: "text", required: true },
-        { name: "status", type: "select", required: true, options: ["draft", "in_progress", "paused", "done", "archived"] },
-        { name: "goalId", type: "relation", relation: { collectionName: "goals" } },
+        { name: "slug", type: "text", required: true },
+        { name: "status", type: "select", required: true, options: ["active", "paused", "archived"] },
         { name: "description", type: "text" },
-        { name: "leadAgentId", type: "relation", relation: { collectionName: "company_agents" } },
+        { name: "ownerAgentId", type: "relation", relation: { collectionName: "company_agents" } },
+        { name: "priority", type: "select", options: ["low", "medium", "high", "urgent"] },
         { name: "color", type: "text" },
       ],
-      indexes: [{ name: "projects_company_idx", fields: ["companyId"] }],
+      indexes: [
+        { name: "portfolios_company_idx", fields: ["companyId"] },
+        { name: "portfolios_company_slug_unique", fields: ["companyId", "slug"], unique: true },
+      ],
+    },
+    {
+      name: "portfolio_items",
+      displayName: "Portfolio Items",
+      coreFieldNames: ["companyId", "portfolioId", "name", "slug", "itemType", "status"],
+      fields: [
+        { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+        { name: "portfolioId", type: "relation", required: true, relation: { collectionName: "portfolios" } },
+        { name: "name", type: "text", required: true },
+        { name: "slug", type: "text", required: true },
+        {
+          name: "itemType",
+          type: "select",
+          required: true,
+          options: ["app", "web", "saas", "client", "brand", "store", "service", "internal", "other"],
+        },
+        { name: "status", type: "select", required: true, options: ["active", "paused", "at_risk", "archived"] },
+        {
+          name: "lifecycleStage",
+          type: "select",
+          required: true,
+          options: ["idea", "validating", "building", "launched", "scaling", "sustaining", "sunset"],
+        },
+        { name: "description", type: "text" },
+        { name: "ownerAgentId", type: "relation", relation: { collectionName: "company_agents" } },
+        { name: "healthStatus", type: "select", options: ["green", "yellow", "red", "unknown"] },
+        { name: "priority", type: "select", options: ["low", "medium", "high", "urgent"] },
+        { name: "targetDate", type: "date" },
+        { name: "tags", type: "json" },
+        { name: "sourceSystem", type: "text" },
+        { name: "metadata", type: "json" },
+      ],
+      indexes: [
+        { name: "portfolio_items_company_idx", fields: ["companyId"] },
+        { name: "portfolio_items_portfolio_idx", fields: ["portfolioId"] },
+        { name: "portfolio_items_company_slug_unique", fields: ["companyId", "slug"], unique: true },
+        { name: "portfolio_items_type_idx", fields: ["itemType"] },
+        { name: "portfolio_items_health_idx", fields: ["healthStatus"] },
+      ],
     },
     {
       name: "company_agents",
@@ -379,6 +375,11 @@ function builtInCollections(): Array<{
         { name: "clawWorkspaceId", type: "text" },
         { name: "clawAgentId", type: "text" },
         { name: "workspaceDir", type: "text" },
+        { name: "scopeType", type: "select", options: ["company", "portfolio", "portfolio_item", "project"] },
+        { name: "scopeId", type: "text" },
+        { name: "autonomyLevel", type: "select", options: ["observe", "suggest", "act_limited", "act_full"] },
+        { name: "approvalPolicy", type: "json" },
+        { name: "watchDomains", type: "json" },
       ],
       indexes: [{ name: "company_agents_company_idx", fields: ["companyId"] }],
     },
@@ -395,12 +396,22 @@ function builtInCollections(): Array<{
         { name: "priority", type: "select", required: true, options: ["low", "medium", "high", "urgent"] },
         { name: "description", type: "text" },
         { name: "projectId", type: "relation", relation: { collectionName: "projects" } },
+        { name: "portfolioId", type: "relation", relation: { collectionName: "portfolios" } },
+        { name: "portfolioItemId", type: "relation", relation: { collectionName: "portfolio_items" } },
         { name: "goalId", type: "relation", relation: { collectionName: "goals" } },
         { name: "parentId", type: "relation", relation: { collectionName: "issues" } },
         { name: "assigneeAgentId", type: "relation", relation: { collectionName: "company_agents" } },
         { name: "createdByAgentId", type: "relation", relation: { collectionName: "company_agents" } },
         { name: "createdByUserId", type: "text" },
         { name: "executionRunId", type: "text" },
+        { name: "workType", type: "select", options: ["feature", "bug", "ops", "support", "research", "launch", "maintenance"] },
+        { name: "sourceDomain", type: "select", options: ["strategy", "execution", "operations", "feedback"] },
+        { name: "releaseId", type: "relation", relation: { collectionName: "releases" } },
+        { name: "incidentId", type: "relation", relation: { collectionName: "operational_incidents" } },
+        { name: "feedbackItemId", type: "relation", relation: { collectionName: "feedback_items" } },
+        { name: "autonomous", type: "boolean" },
+        { name: "approvalState", type: "select", options: ["not_required", "pending", "approved", "rejected"] },
+        { name: "dueAt", type: "date" },
       ],
       indexes: [
         { name: "issues_company_idx", fields: ["companyId"] },
@@ -434,6 +445,7 @@ function builtInCollections(): Array<{
         { name: "requestedByUserId", type: "text" },
         { name: "decidedAt", type: "date" },
         { name: "decidedByUserId", type: "text" },
+        { name: "reason", type: "text" },
       ],
       indexes: [{ name: "approvals_company_idx", fields: ["companyId"] }],
     },
@@ -446,15 +458,417 @@ function builtInCollections(): Array<{
         { name: "agentId", type: "relation", required: true, relation: { collectionName: "company_agents" } },
         { name: "status", type: "select", required: true, options: ["queued", "running", "succeeded", "failed", "cancelled"] },
         { name: "issueId", type: "relation", relation: { collectionName: "issues" } },
+        { name: "portfolioItemId", type: "relation", relation: { collectionName: "portfolio_items" } },
+        { name: "projectId", type: "relation", relation: { collectionName: "projects" } },
+        { name: "releaseId", type: "relation", relation: { collectionName: "releases" } },
+        { name: "incidentId", type: "relation", relation: { collectionName: "operational_incidents" } },
+        { name: "feedbackItemId", type: "relation", relation: { collectionName: "feedback_items" } },
         { name: "clawSessionId", type: "text" },
         { name: "startedAt", type: "date" },
         { name: "finishedAt", type: "date" },
         { name: "errorMessage", type: "text" },
         { name: "metrics", type: "json" },
+        { name: "actionType", type: "text" },
       ],
       indexes: [{ name: "runs_company_idx", fields: ["companyId"] }],
     },
+    {
+      name: "releases",
+      displayName: "Releases",
+      coreFieldNames: ["companyId", "name", "status", "releaseType"],
+      fields: [
+        { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+        { name: "portfolioItemId", type: "relation", relation: { collectionName: "portfolio_items" } },
+        { name: "projectId", type: "relation", relation: { collectionName: "projects" } },
+        { name: "name", type: "text", required: true },
+        { name: "status", type: "select", required: true, options: ["planned", "in_progress", "blocked", "released", "cancelled"] },
+        { name: "releaseType", type: "select", required: true, options: ["launch", "update", "experiment", "maintenance", "internal"] },
+        { name: "plannedAt", type: "date" },
+        { name: "releasedAt", type: "date" },
+        { name: "summary", type: "text" },
+        { name: "ownerAgentId", type: "relation", relation: { collectionName: "company_agents" } },
+        { name: "notes", type: "text" },
+        { name: "metadata", type: "json" },
+      ],
+      indexes: [
+        { name: "releases_company_idx", fields: ["companyId"] },
+        { name: "releases_item_idx", fields: ["portfolioItemId"] },
+      ],
+    },
+    {
+      name: "operational_checks",
+      displayName: "Operational Checks",
+      coreFieldNames: ["companyId", "name", "domain", "status"],
+      fields: [
+        { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+        { name: "portfolioItemId", type: "relation", relation: { collectionName: "portfolio_items" } },
+        { name: "projectId", type: "relation", relation: { collectionName: "projects" } },
+        { name: "name", type: "text", required: true },
+        {
+          name: "domain",
+          type: "select",
+          required: true,
+          options: ["availability", "quality", "delivery", "compliance", "support", "growth", "custom"],
+        },
+        { name: "status", type: "select", required: true, options: ["ok", "degraded", "failed", "unknown"] },
+        { name: "severity", type: "select", required: true, options: ["info", "warning", "critical"] },
+        { name: "sourceType", type: "select", required: true, options: ["manual", "import", "monitor", "derived"] },
+        { name: "lastObservedAt", type: "date" },
+        { name: "detail", type: "text" },
+        { name: "metricValue", type: "number" },
+        { name: "metricUnit", type: "text" },
+        { name: "ownerAgentId", type: "relation", relation: { collectionName: "company_agents" } },
+        { name: "metadata", type: "json" },
+      ],
+      indexes: [
+        { name: "operational_checks_company_idx", fields: ["companyId"] },
+        { name: "operational_checks_status_idx", fields: ["status"] },
+      ],
+    },
+    {
+      name: "operational_incidents",
+      displayName: "Operational Incidents",
+      coreFieldNames: ["companyId", "title", "status", "severity", "startedAt"],
+      fields: [
+        { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+        { name: "portfolioItemId", type: "relation", relation: { collectionName: "portfolio_items" } },
+        { name: "projectId", type: "relation", relation: { collectionName: "projects" } },
+        { name: "checkId", type: "relation", relation: { collectionName: "operational_checks" } },
+        { name: "title", type: "text", required: true },
+        { name: "status", type: "select", required: true, options: ["open", "investigating", "mitigated", "resolved", "cancelled"] },
+        { name: "severity", type: "select", required: true, options: ["sev1", "sev2", "sev3", "sev4"] },
+        { name: "startedAt", type: "date", required: true },
+        { name: "resolvedAt", type: "date" },
+        { name: "ownerAgentId", type: "relation", relation: { collectionName: "company_agents" } },
+        { name: "summary", type: "text" },
+        { name: "resolution", type: "text" },
+        { name: "linkedIssueId", type: "relation", relation: { collectionName: "issues" } },
+        { name: "metadata", type: "json" },
+      ],
+      indexes: [
+        { name: "operational_incidents_company_idx", fields: ["companyId"] },
+        { name: "operational_incidents_status_idx", fields: ["status"] },
+      ],
+    },
+    {
+      name: "feedback_items",
+      displayName: "Feedback Items",
+      coreFieldNames: ["companyId", "title", "status", "sourceType", "receivedAt"],
+      fields: [
+        { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+        { name: "portfolioItemId", type: "relation", relation: { collectionName: "portfolio_items" } },
+        { name: "projectId", type: "relation", relation: { collectionName: "projects" } },
+        { name: "title", type: "text", required: true },
+        { name: "body", type: "text", required: true },
+        { name: "status", type: "select", required: true, options: ["new", "triaged", "planned", "closed", "ignored"] },
+        { name: "priority", type: "select", required: true, options: ["low", "medium", "high", "urgent"] },
+        {
+          name: "sourceType",
+          type: "select",
+          required: true,
+          options: ["review", "support", "interview", "sales", "ops", "internal", "import", "other"],
+        },
+        { name: "sourceLabel", type: "text" },
+        { name: "customerName", type: "text" },
+        { name: "customerSegment", type: "text" },
+        { name: "sentiment", type: "select", options: ["positive", "neutral", "negative", "mixed"] },
+        { name: "receivedAt", type: "date", required: true },
+        { name: "ownerAgentId", type: "relation", relation: { collectionName: "company_agents" } },
+        { name: "linkedIssueId", type: "relation", relation: { collectionName: "issues" } },
+        { name: "metadata", type: "json" },
+      ],
+      indexes: [
+        { name: "feedback_items_company_idx", fields: ["companyId"] },
+        { name: "feedback_items_status_idx", fields: ["status"] },
+      ],
+    },
+    {
+      name: "metric_snapshots",
+      displayName: "Metric Snapshots",
+      coreFieldNames: ["companyId", "metricKey", "metricLabel", "value", "capturedAt"],
+      fields: [
+        { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+        { name: "portfolioId", type: "relation", relation: { collectionName: "portfolios" } },
+        { name: "portfolioItemId", type: "relation", relation: { collectionName: "portfolio_items" } },
+        { name: "projectId", type: "relation", relation: { collectionName: "projects" } },
+        { name: "metricKey", type: "text", required: true },
+        { name: "metricLabel", type: "text", required: true },
+        { name: "value", type: "number", required: true },
+        { name: "unit", type: "text" },
+        { name: "direction", type: "select", required: true, options: ["up_good", "down_good", "neutral"] },
+        { name: "capturedAt", type: "date", required: true },
+        { name: "sourceType", type: "select", required: true, options: ["manual", "import", "derived"] },
+        { name: "period", type: "text" },
+        { name: "metadata", type: "json" },
+      ],
+      indexes: [
+        { name: "metric_snapshots_company_idx", fields: ["companyId"] },
+        { name: "metric_snapshots_key_idx", fields: ["metricKey"] },
+      ],
+    },
+    {
+      name: "import_batches",
+      displayName: "Import Batches",
+      coreFieldNames: ["companyId", "type", "status", "startedAt"],
+      fields: [
+        { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+        { name: "type", type: "select", required: true, options: ["feedback", "metrics", "checks", "incidents", "mixed"] },
+        { name: "status", type: "select", required: true, options: ["running", "completed", "failed", "cancelled"] },
+        { name: "sourceLabel", type: "text" },
+        { name: "startedAt", type: "date", required: true },
+        { name: "finishedAt", type: "date" },
+        { name: "createdByUserId", type: "text" },
+        { name: "summary", type: "text" },
+        { name: "counts", type: "json" },
+        { name: "metadata", type: "json" },
+      ],
+      indexes: [
+        { name: "import_batches_company_idx", fields: ["companyId"] },
+        { name: "import_batches_status_idx", fields: ["status"] },
+      ],
+    },
+    // ── Wiki app collections ───────────────────────────────────────────
+    // Mirrors the wiki app's data model for cross-app data sync.
+    {
+      name: "wiki_pages",
+      displayName: "Wiki Pages",
+      coreFieldNames: ["title", "slug", "spaceId"],
+      fields: [
+        { name: "title", type: "text", required: true },
+        { name: "slug", type: "text", required: true },
+        { name: "body", type: "text", required: true },
+        { name: "spaceId", type: "text", required: true },
+        { name: "parentPageId", type: "text" },
+        { name: "tags", type: "json" },
+        { name: "status", type: "select", options: ["draft", "published", "archived"] },
+      ],
+      indexes: [{ name: "wiki_pages_slug_idx", fields: ["slug"] }],
+    },
+    {
+      name: "wiki_comments",
+      displayName: "Wiki Comments",
+      coreFieldNames: ["pageId", "body"],
+      fields: [
+        { name: "pageId", type: "text", required: true },
+        { name: "parentCommentId", type: "text" },
+        { name: "body", type: "text", required: true },
+        { name: "authorAgentId", type: "text" },
+        { name: "authorUserId", type: "text" },
+        { name: "upvotes", type: "number" },
+      ],
+      indexes: [{ name: "wiki_comments_page_idx", fields: ["pageId"] }],
+    },
+    {
+      name: "wiki_links",
+      displayName: "Wiki Links",
+      coreFieldNames: ["sourcePageId", "targetPageId", "linkType"],
+      fields: [
+        { name: "sourcePageId", type: "text", required: true },
+        { name: "targetPageId", type: "text", required: true },
+        { name: "linkType", type: "select", required: true, options: ["related", "depends-on", "supersedes", "wikilink"] },
+        { name: "label", type: "text" },
+      ],
+      indexes: [
+        { name: "wiki_links_source_idx", fields: ["sourcePageId"] },
+        { name: "wiki_links_target_idx", fields: ["targetPageId"] },
+      ],
+    },
+    {
+      name: "wiki_revisions",
+      displayName: "Wiki Revisions",
+      coreFieldNames: ["pageId", "revisionNumber"],
+      fields: [
+        { name: "pageId", type: "text", required: true },
+        { name: "revisionNumber", type: "number", required: true },
+        { name: "title", type: "text" },
+        { name: "body", type: "text", required: true },
+        { name: "editedByAgentId", type: "text" },
+        { name: "editedByUserId", type: "text" },
+        { name: "changeSummary", type: "text" },
+      ],
+      indexes: [{ name: "wiki_revisions_page_idx", fields: ["pageId"] }],
+    },
+    // ── Hub app collections ────────────────────────────────────────────
+    // Real-time communication platform for agents. Spaces contain
+    // channels organised by categories; messages flow through channels.
+    {
+      name: "hub_spaces",
+      displayName: "Hub Spaces",
+      coreFieldNames: ["name", "ownerId"],
+      fields: [
+        { name: "name", type: "text", required: true },
+        { name: "description", type: "text" },
+        { name: "icon", type: "text" },
+        { name: "ownerId", type: "text", required: true },
+        { name: "visibility", type: "select", required: true, options: ["public", "private"] },
+        { name: "metadata", type: "json" },
+      ],
+      indexes: [{ name: "hub_spaces_owner_idx", fields: ["ownerId"] }],
+    },
+    {
+      name: "hub_categories",
+      displayName: "Hub Categories",
+      coreFieldNames: ["spaceId", "name"],
+      fields: [
+        { name: "spaceId", type: "relation", required: true, relation: { collectionName: "hub_spaces" } },
+        { name: "name", type: "text", required: true },
+        { name: "position", type: "number", required: true },
+      ],
+      indexes: [{ name: "hub_categories_space_idx", fields: ["spaceId"] }],
+    },
+    {
+      name: "hub_channels",
+      displayName: "Hub Channels",
+      coreFieldNames: ["name", "kind"],
+      fields: [
+        { name: "spaceId", type: "relation", relation: { collectionName: "hub_spaces" } },
+        { name: "categoryId", type: "relation", relation: { collectionName: "hub_categories" } },
+        { name: "name", type: "text", required: true },
+        { name: "topic", type: "text" },
+        { name: "kind", type: "select", required: true, options: ["text", "voice", "announcement", "dm"] },
+        { name: "visibility", type: "select", required: true, options: ["public", "private"] },
+        { name: "position", type: "number" },
+        { name: "lastMessageAt", type: "date" },
+      ],
+      indexes: [
+        { name: "hub_channels_space_idx", fields: ["spaceId"] },
+        { name: "hub_channels_kind_idx", fields: ["kind"] },
+      ],
+    },
+    {
+      name: "hub_messages",
+      displayName: "Hub Messages",
+      coreFieldNames: ["channelId", "authorId", "content"],
+      fields: [
+        { name: "channelId", type: "relation", required: true, relation: { collectionName: "hub_channels" } },
+        { name: "threadId", type: "relation", relation: { collectionName: "hub_messages" } },
+        { name: "authorId", type: "text", required: true },
+        { name: "authorKind", type: "select", required: true, options: ["agent", "human"] },
+        { name: "content", type: "text", required: true },
+        { name: "contentType", type: "select", required: true, options: ["text", "system", "embed", "file"] },
+        { name: "editedAt", type: "date" },
+        { name: "replyToId", type: "relation", relation: { collectionName: "hub_messages" } },
+        { name: "attachments", type: "json" },
+        { name: "pinned", type: "boolean" },
+      ],
+      indexes: [
+        { name: "hub_messages_channel_idx", fields: ["channelId"] },
+        { name: "hub_messages_thread_idx", fields: ["threadId"] },
+        { name: "hub_messages_author_idx", fields: ["authorId"] },
+      ],
+    },
+    {
+      name: "hub_members",
+      displayName: "Hub Members",
+      coreFieldNames: ["spaceId", "agentId", "status"],
+      fields: [
+        { name: "spaceId", type: "relation", required: true, relation: { collectionName: "hub_spaces" } },
+        { name: "agentId", type: "text", required: true },
+        { name: "displayName", type: "text" },
+        { name: "roles", type: "json" },
+        { name: "status", type: "select", required: true, options: ["active", "banned", "left"] },
+        { name: "presence", type: "select", options: ["online", "idle", "busy", "offline"] },
+        { name: "lastSeenAt", type: "date" },
+      ],
+      indexes: [
+        { name: "hub_members_space_idx", fields: ["spaceId"] },
+        { name: "hub_members_agent_idx", fields: ["agentId"] },
+        { name: "hub_members_unique", fields: ["spaceId", "agentId"], unique: true },
+      ],
+    },
+    {
+      name: "hub_roles",
+      displayName: "Hub Roles",
+      coreFieldNames: ["spaceId", "name"],
+      fields: [
+        { name: "spaceId", type: "relation", required: true, relation: { collectionName: "hub_spaces" } },
+        { name: "name", type: "text", required: true },
+        { name: "color", type: "text" },
+        { name: "position", type: "number", required: true },
+        { name: "permissions", type: "json", required: true },
+        { name: "mentionable", type: "boolean" },
+      ],
+      indexes: [{ name: "hub_roles_space_idx", fields: ["spaceId"] }],
+    },
+    {
+      name: "hub_reactions",
+      displayName: "Hub Reactions",
+      coreFieldNames: ["messageId", "agentId", "emoji"],
+      fields: [
+        { name: "messageId", type: "relation", required: true, relation: { collectionName: "hub_messages" } },
+        { name: "agentId", type: "text", required: true },
+        { name: "emoji", type: "text", required: true },
+      ],
+      indexes: [
+        { name: "hub_reactions_message_idx", fields: ["messageId"] },
+        { name: "hub_reactions_unique", fields: ["messageId", "agentId", "emoji"], unique: true },
+      ],
+    },
+    {
+      name: "hub_read_states",
+      displayName: "Hub Read States",
+      coreFieldNames: ["channelId", "agentId"],
+      fields: [
+        { name: "channelId", type: "relation", required: true, relation: { collectionName: "hub_channels" } },
+        { name: "agentId", type: "text", required: true },
+        { name: "lastReadMessageId", type: "relation", relation: { collectionName: "hub_messages" } },
+        { name: "lastReadAt", type: "date" },
+        { name: "mentionCount", type: "number" },
+      ],
+      indexes: [
+        { name: "hub_read_states_unique", fields: ["channelId", "agentId"], unique: true },
+      ],
+    },
+    {
+      name: "hub_dm_participants",
+      displayName: "Hub DM Participants",
+      coreFieldNames: ["channelId", "agentId"],
+      fields: [
+        { name: "channelId", type: "relation", required: true, relation: { collectionName: "hub_channels" } },
+        { name: "agentId", type: "text", required: true },
+      ],
+      indexes: [
+        { name: "hub_dm_participants_channel_idx", fields: ["channelId"] },
+        { name: "hub_dm_participants_agent_idx", fields: ["agentId"] },
+        { name: "hub_dm_participants_unique", fields: ["channelId", "agentId"], unique: true },
+      ],
+    },
+    {
+      name: "hub_notifications",
+      displayName: "Hub Notifications",
+      coreFieldNames: ["recipientId", "kind", "read"],
+      fields: [
+        { name: "recipientId", type: "text", required: true },
+        { name: "kind", type: "select", required: true, options: ["mention", "dm", "reply", "system"] },
+        { name: "channelId", type: "relation", relation: { collectionName: "hub_channels" } },
+        { name: "messageId", type: "relation", relation: { collectionName: "hub_messages" } },
+        { name: "spaceId", type: "relation", relation: { collectionName: "hub_spaces" } },
+        { name: "read", type: "boolean", required: true },
+        { name: "body", type: "text" },
+      ],
+      indexes: [{ name: "hub_notifications_recipient_idx", fields: ["recipientId"] }],
+    },
   ];
+}
+
+function mergeBuiltinFields(current: FieldDefinition[], next: FieldDefinition[]): FieldDefinition[] {
+  const byName = new Map(current.map((field) => [field.name, field]));
+  for (const field of next) {
+    if (!byName.has(field.name)) {
+      byName.set(field.name, field);
+    }
+  }
+  return [...byName.values()];
+}
+
+function mergeBuiltinIndexes(current: IndexDefinition[], next: IndexDefinition[]): IndexDefinition[] {
+  const byName = new Map(current.map((index) => [index.name, index]));
+  for (const index of next) {
+    if (!byName.has(index.name)) {
+      byName.set(index.name, index);
+    }
+  }
+  return [...byName.values()];
 }
 
 export class DatabaseServiceStore {
@@ -561,17 +975,62 @@ export class DatabaseServiceStore {
 
   ensureBuiltinCollections(namespaceId: string): void {
     for (const builtIn of builtInCollections()) {
-      if (this.getCollection(namespaceId, builtIn.name)) continue;
-      this.createCollection(namespaceId, {
-        name: builtIn.name,
-        displayName: builtIn.displayName,
-        fields: builtIn.fields,
-        indexes: builtIn.indexes,
-        builtin: true,
-        protected: true,
-        coreFieldNames: builtIn.coreFieldNames,
-      });
+      const current = this.getCollection(namespaceId, builtIn.name);
+      if (!current) {
+        this.createCollection(namespaceId, {
+          name: builtIn.name,
+          displayName: builtIn.displayName,
+          fields: builtIn.fields,
+          indexes: builtIn.indexes,
+          builtin: true,
+          protected: true,
+          coreFieldNames: builtIn.coreFieldNames,
+        });
+        continue;
+      }
+      this.syncBuiltinCollection(namespaceId, current, builtIn);
     }
+  }
+
+  private syncBuiltinCollection(
+    namespaceId: string,
+    current: CollectionDefinition,
+    builtIn: {
+      name: string;
+      displayName: string;
+      coreFieldNames: string[];
+      fields: FieldDefinition[];
+      indexes: IndexDefinition[];
+    },
+  ): void {
+    const mergedFields = validateFields(mergeBuiltinFields(current.fields, builtIn.fields));
+    const mergedIndexes = mergeBuiltinIndexes(current.indexes, builtIn.indexes).map(normalizeIndex);
+    const mergedCoreFieldNames = [...new Set([...current.coreFieldNames, ...builtIn.coreFieldNames])];
+
+    const needsUpdate =
+      current.displayName !== builtIn.displayName ||
+      !current.builtin ||
+      !current.protected ||
+      mergedFields.length !== current.fields.length ||
+      mergedIndexes.length !== current.indexes.length ||
+      mergedCoreFieldNames.length !== current.coreFieldNames.length;
+
+    if (!needsUpdate) return;
+
+    const now = nowIso();
+    this.sqlite.prepare(`
+      UPDATE collections
+      SET display_name = ?, fields_json = ?, indexes_json = ?, builtin = 1, protected = 1, core_fields_json = ?, updated_at = ?
+      WHERE namespace_id = ? AND name = ?
+    `).run(
+      builtIn.displayName,
+      JSON.stringify(mergedFields),
+      JSON.stringify(mergedIndexes),
+      JSON.stringify(mergedCoreFieldNames),
+      now,
+      namespaceId,
+      builtIn.name,
+    );
   }
 
   verifyAdmin(email: string, password: string): { id: string; email: string } | null {

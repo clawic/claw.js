@@ -19,7 +19,7 @@ container.
 - `.clawjs/intents/`
 - `.clawjs/observed/`
 - `.clawjs/projections/`
-- `.clawjs/conversations/`
+- `.clawjs/sessions/`
 
 `intents` store what the user wants, `observed` stores rebuildable
 runtime snapshots, and `projections` stores the binding/schema layer
@@ -98,6 +98,10 @@ const results = await claw.search.query({ query: "docs", domains: ["tasks", "not
 The productivity instance adds:
 
 - `tasks` for task CRUD, completion, archive, and search
+- `goals` for goal CRUD, archive, and search
+- `projects` for project CRUD, archive, and search
+- `reminders` for reminder CRUD, pause/resume, and search
+- `deadlines` for deadline CRUD, pause/resume, and search
 - `notes` for note CRUD, archive, and search
 - `people` for person upserts, identity matching, and search
 - `inbox` for draft creation, routing replies, ingesting incoming messages, and thread reads
@@ -119,11 +123,16 @@ That split matters:
 
 ## Productivity CLI Commands
 
-When a generated project includes the workspace companion, the CLI also
-exposes productivity commands on top of the base workspace contract:
+The CLI exposes the same productivity commands directly and defaults to
+the current directory as the workspace root, with SQLite storage at
+`.clawjs/data/productivity.sqlite`:
 
 ```bash
 claw tasks list
+claw goals create "Ship workspace productivity"
+claw projects create "Workspace Core"
+claw reminders create "Follow up" --trigger-at 2026-03-27T09:00:00Z
+claw deadlines create "Launch date" --due-at 2026-03-30T18:00:00Z
 claw notes create --title "Release notes" --content "Draft"
 claw people upsert --name "Iván"
 claw inbox list
@@ -133,6 +142,7 @@ claw workspace-index rebuild
 ```
 
 Use `workspace-search query` for keyword, semantic, or hybrid search
-over tasks, notes, people, inbox, and events. Use
+over tasks, goals, projects, reminders, deadlines, notes, people,
+inbox, and events. Use
 `workspace-index rebuild` after large imports or when you change the
 embedding strategy.

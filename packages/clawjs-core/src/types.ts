@@ -19,6 +19,10 @@ export type CapabilityName =
   | "sandbox"
   | "plugins"
   | "tasks"
+  | "goals"
+  | "projects"
+  | "reminders"
+  | "deadlines"
   | "notes"
   | "people"
   | "inbox"
@@ -218,6 +222,23 @@ export interface NotificationReceiptPolicy {
   kind: "none" | "critical";
   retrySec?: number;
   expireSec?: number;
+}
+
+export interface QuietHoursPolicy {
+  enabled: boolean;
+  timeZone: string;
+  startMinute: number;
+  endMinute: number;
+  allowCritical?: boolean;
+}
+
+export interface UserNotificationPreferences {
+  tenantId: string;
+  userId: string;
+  criticalOnly: boolean;
+  quietHours?: QuietHoursPolicy | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SubscriptionFilter {
@@ -536,6 +557,10 @@ export interface AuditEvent {
 
 export type WorkspaceDomain =
   | "tasks"
+  | "goals"
+  | "projects"
+  | "reminders"
+  | "deadlines"
   | "notes"
   | "people"
   | "inbox"
@@ -549,6 +574,10 @@ export type WorkspaceSearchStrategy =
 
 export type LinkedEntityDomain =
   | "task"
+  | "goal"
+  | "project"
+  | "reminder"
+  | "deadline"
   | "note"
   | "person"
   | "inbox_thread"
@@ -594,9 +623,82 @@ export interface TaskRecord extends WorkspaceRecordBase {
   watcherPersonIds: string[];
   dueAt?: string;
   scheduledEventId?: string;
+  eventId?: string;
+  projectId?: string;
+  goalId?: string;
   parentTaskId?: string;
   childTaskIds: string[];
+  dependsOnTaskIds: string[];
+  companyId?: string;
+  portfolioId?: string;
+  portfolioItemId?: string;
   checklist: TaskChecklistItem[];
+}
+
+export interface GoalRecord extends WorkspaceRecordBase {
+  title: string;
+  description?: string;
+  status: "active" | "paused" | "done";
+  level?: "company" | "team" | "personal";
+  projectId?: string;
+  parentId?: string;
+  parentGoalId?: string;
+  ownerPersonId?: string;
+  ownerAgentId?: string;
+  companyId?: string;
+  portfolioId?: string;
+  portfolioItemId?: string;
+  metricKey?: string;
+  metricLabel?: string;
+  targetValue?: number;
+  currentValue?: number;
+  unit?: string;
+  period?: string;
+  healthStatus?: "green" | "yellow" | "red" | "unknown";
+}
+
+export interface ProjectRecord extends WorkspaceRecordBase {
+  name: string;
+  description?: string;
+  status: "draft" | "in_progress" | "paused" | "done" | "archived";
+  goalId?: string;
+  ownerPersonId?: string;
+  leadAgentId?: string;
+  companyId?: string;
+  portfolioId?: string;
+  portfolioItemId?: string;
+  color?: string;
+  kind?: "delivery" | "growth" | "ops" | "research" | "migration" | "other";
+  healthStatus?: "green" | "yellow" | "red" | "unknown";
+  startDate?: string;
+  targetDate?: string;
+}
+
+export type ProductivityAnchorType =
+  | "task"
+  | "project"
+  | "goal"
+  | "event"
+  | "thread"
+  | "standalone";
+
+export interface ReminderRecord extends WorkspaceRecordBase {
+  title: string;
+  description?: string;
+  status: "active" | "paused" | "done" | "cancelled";
+  triggerAt: string;
+  anchorType?: ProductivityAnchorType;
+  anchorId?: string;
+  channel?: string;
+}
+
+export interface DeadlineRecord extends WorkspaceRecordBase {
+  title: string;
+  description?: string;
+  status: "active" | "paused" | "done" | "cancelled";
+  dueAt: string;
+  anchorType?: ProductivityAnchorType;
+  anchorId?: string;
 }
 
 export interface NoteBlock {
@@ -684,6 +786,105 @@ export interface EventRecord extends WorkspaceRecordBase {
   linkedTaskIds: string[];
   linkedNoteIds: string[];
   reminders: EventReminder[];
+}
+
+export interface TemporalParticipant {
+  id: string;
+  kind: "human" | "agent" | "org" | "external";
+  label: string;
+  personId?: string;
+  agentId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface TemporalAction {
+  id: string;
+  kind: "notify" | "agent_prompt" | "workflow" | "create_task" | "calendar_sync";
+  target?: string;
+  payload?: Record<string, unknown>;
+}
+
+export interface TemporalOccurrenceOverride {
+  originalStartAt: string;
+  startsAt?: string;
+  endsAt?: string;
+  cancelled?: boolean;
+}
+
+export interface TemporalSchedule {
+  mode: "one_off" | "cron" | "rrule" | "relative";
+  timezone: string;
+  startsAt?: string;
+  cron?: string;
+  rrule?: string;
+  relative?: {
+    anchorType: "thread" | "task" | "project" | "goal" | "event" | "execution" | "standalone";
+    anchorId: string;
+    anchorAt: string;
+    offsetMs: number;
+    cancelOn?: "reply_received" | "task_completed" | "event_started" | "execution_succeeded";
+  };
+  overrides?: TemporalOccurrenceOverride[];
+  cancelledOccurrences?: string[];
+}
+
+export interface TemporalProjection {
+  id: string;
+  itemId: string;
+  target: "workspace_events" | "relay_routines" | "google_calendar" | "runtime_scheduler" | "notify";
+  status: "pending" | "active" | "synced" | "failed";
+  provider?: string;
+  externalId?: string;
+  detail?: Record<string, unknown>;
+  updatedAt: string;
+}
+
+export interface TemporalExecution {
+  id: string;
+  itemId: string;
+  status: "pending" | "running" | "succeeded" | "failed" | "cancelled";
+  scheduledFor: string;
+  startedAt?: string;
+  completedAt?: string;
+  triggeredBy: "scheduler" | "manual" | "system";
+  output?: string;
+  error?: string;
+}
+
+export interface TemporalNaturalInput {
+  command: "at" | "every" | "after";
+  expression: string;
+  timezone?: string;
+  anchorType?: "thread" | "task" | "project" | "goal" | "event" | "execution" | "standalone";
+  anchorId?: string;
+  anchorAt?: string;
+}
+
+export interface TemporalItem {
+  id: string;
+  kind: "event" | "routine" | "reminder" | "deadline" | "follow_up";
+  status: "active" | "paused" | "cancelled" | "completed";
+  title: string;
+  description?: string;
+  location?: string;
+  startsAt?: string;
+  endsAt?: string;
+  dueAt?: string;
+  timezone: string;
+  schedule: TemporalSchedule;
+  participants: TemporalParticipant[];
+  actions: TemporalAction[];
+  projections: TemporalProjection[];
+  ownerId?: string;
+  workspaceId?: string;
+  projectId?: string;
+  agentId?: string;
+  sourceProvider?: string;
+  anchorType?: "thread" | "task" | "project" | "goal" | "event" | "execution" | "standalone";
+  anchorId?: string;
+  nextRunAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface WorkspaceSearchQuery {
@@ -944,6 +1145,185 @@ export interface RuntimePluginDescriptor {
 
 export interface PluginCatalog {
   plugins: RuntimePluginDescriptor[];
+}
+
+// ── IoT types ────────────────────────────────────────────────────────
+
+export type IoTRiskLevel = "safe" | "caution" | "restricted";
+export type IoTThingKind =
+  | "light"
+  | "switch"
+  | "climate"
+  | "cover"
+  | "lock"
+  | "sensor"
+  | "camera"
+  | "media"
+  | "vacuum"
+  | "appliance"
+  | "presence"
+  | "energy";
+
+export interface HomeDescriptor {
+  id: string;
+  label: string;
+  isDefault: boolean;
+  createdAt: string;
+}
+
+export interface AreaDescriptor {
+  id: string;
+  homeId: string;
+  label: string;
+  aliases?: string[];
+}
+
+export interface ConnectorDescriptor {
+  id: string;
+  homeId: string;
+  label: string;
+  kind: "bridge" | "protocol" | "vendor";
+  status: "ready" | "degraded" | "offline";
+  capabilities: string[];
+}
+
+export interface CapabilityDescriptor {
+  id: string;
+  thingId: string;
+  key: string;
+  label: string;
+  writable: boolean;
+  readable: boolean;
+  unit?: string;
+  observedValue?: unknown;
+  desiredValue?: unknown;
+  observedAt: string;
+}
+
+export interface ThingDescriptor {
+  id: string;
+  homeId: string;
+  areaId?: string;
+  label: string;
+  aliases?: string[];
+  kind: IoTThingKind;
+  risk: IoTRiskLevel;
+  connectorId: string;
+  targetRef: string;
+  metadata?: Record<string, unknown>;
+  capabilities: CapabilityDescriptor[];
+}
+
+export interface IoTActionRequest {
+  homeId?: string;
+  selector?: string;
+  area?: string;
+  family?: IoTThingKind | "scene" | "automation";
+  capability?: string;
+  action: "on" | "off" | "toggle" | "set" | "open" | "close" | "lock" | "unlock" | "arm" | "disarm" | "start" | "stop" | "pause" | "resume" | "activate";
+  value?: unknown;
+  targets?: string[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface IoTActionResult {
+  status: "executed" | "approval_required" | "ambiguous" | "denied";
+  homeId: string;
+  decision: "allow" | "approval_required" | "deny" | "ambiguous";
+  reasons: string[];
+  updatedAt: string;
+  targets: Array<{
+    id: string;
+    label: string;
+    kind: IoTThingKind;
+    areaId?: string;
+  }>;
+  capabilityUpdates: Array<{
+    thingId: string;
+    capability: string;
+    observedValue?: unknown;
+    desiredValue?: unknown;
+  }>;
+  approvalId?: string;
+  candidates?: Array<{
+    id: string;
+    label: string;
+    kind: IoTThingKind;
+  }>;
+}
+
+export interface IoTPolicyEvaluation {
+  decision: "allow" | "approval_required" | "deny" | "ambiguous";
+  riskLevel: IoTRiskLevel;
+  reasons: string[];
+  candidates?: Array<{
+    id: string;
+    label: string;
+    kind: IoTThingKind;
+  }>;
+  resolvedTargetIds?: string[];
+}
+
+export interface SceneRecord {
+  id: string;
+  homeId: string;
+  label: string;
+  description?: string;
+  actions: IoTActionRequest[];
+}
+
+export interface AutomationRecord {
+  id: string;
+  homeId: string;
+  label: string;
+  enabled: boolean;
+  trigger: Record<string, unknown>;
+  conditions: Array<Record<string, unknown>>;
+  actions: IoTActionRequest[];
+}
+
+export interface PolicyRecord {
+  id: string;
+  homeId: string;
+  label: string;
+  riskLevel?: IoTRiskLevel;
+  requiresApproval: boolean;
+  localOnly?: boolean;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ApprovalRecord {
+  id: string;
+  homeId: string;
+  status: "pending" | "approved" | "denied" | "executed";
+  reason: string;
+  action: IoTActionRequest;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IoTEventRecord {
+  id: string;
+  homeId: string;
+  type: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface IoTStateSnapshot {
+  home: HomeDescriptor;
+  areas: AreaDescriptor[];
+  connectors: ConnectorDescriptor[];
+  things: ThingDescriptor[];
+  updatedAt: string;
+}
+
+export interface RawIoTInvocation {
+  connector: string;
+  homeId?: string;
+  target: string;
+  action: string;
+  payload?: Record<string, unknown>;
 }
 
 export interface TelegramBotProfile {

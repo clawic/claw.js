@@ -5,6 +5,7 @@ import os from "os";
 import path from "path";
 
 import { Claw, createClaw } from "./create-claw.ts";
+import { buildTimeApp } from "../../../time/src/server/app.ts";
 
 function createFakeSecretsProxy(): { proxyPath: string; statePath: string } {
   const binDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-telegram-proxy-bin-"));
@@ -544,6 +545,52 @@ if (args[0] === "gateway" && args[1] === "call") {
     case "clawjs.doctor":
       json({ ok: true, issues: [] });
       break;
+    case "sessions.list":
+      json({
+        sessions: [{
+          sessionKey: "alpha",
+          title: "Native Alpha",
+          updatedAt: "2026-04-08T10:00:00.000Z",
+        }],
+      });
+      break;
+    case "sessions.preview":
+      json({
+        sessionKey: params.sessionKey || "alpha",
+        title: "Native Alpha",
+        preview: "hello from native",
+      });
+      break;
+    case "sessions.resolve":
+      json({
+        sessionKey: params.sessionKey || "alpha",
+        found: true,
+      });
+      break;
+    case "chat.history":
+      json({
+        sessionKey: params.sessionKey || "alpha",
+        messages: [{ role: "assistant", content: "hello from native" }],
+      });
+      break;
+    case "chat.send":
+      json({
+        accepted: true,
+        sessionKey: params.sessionKey || "alpha",
+      });
+      break;
+    case "chat.inject":
+      json({
+        injected: true,
+        sessionKey: params.sessionKey || "alpha",
+      });
+      break;
+    case "chat.abort":
+      json({
+        aborted: true,
+        sessionKey: params.sessionKey || "alpha",
+      });
+      break;
     default:
       json({ method, params });
       break;
@@ -961,6 +1008,86 @@ test("createClaw exposes app discovery, managed block preservation, and secret r
   assert.deepEqual(detached?.removedAgentIds, ["demo-main"]);
 });
 
+test("createClaw exposes the time namespace when configured", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-time-sdk-workspace-"));
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-time-sdk-data-"));
+  const built = buildTimeApp({
+    config: {
+      host: "127.0.0.1",
+      port: 0,
+      dataDir,
+      dbPath: path.join(dataDir, "time.sqlite"),
+      defaultTimeZone: "Europe/Madrid",
+      schedulerIntervalMs: 60_000,
+    },
+  });
+  const address = await built.app.listen({ host: "127.0.0.1", port: 0 });
+
+  try {
+    const claw = await createClaw({
+      runtime: { adapter: "demo" },
+      workspace: {
+        appId: "demo",
+        workspaceId: "workspace-time-sdk",
+        agentId: "agent-time-sdk",
+        rootDir: workspaceDir,
+      },
+      time: { baseUrl: address },
+    });
+
+    assert.equal(claw.time.configured, true);
+    const created = await claw.time.create({
+      kind: "routine",
+      title: "Review pull requests",
+      workspaceId: "workspace-time-sdk",
+      agentId: "agent-time-sdk",
+      natural: {
+        command: "every",
+        expression: "3h",
+        timezone: "Europe/Madrid",
+      },
+    });
+    assert.equal(created.item.kind, "routine");
+
+    const listed = await claw.time.list({ workspaceId: "workspace-time-sdk" });
+    assert.equal(listed.items.some((item) => item.id === created.item.id), true);
+  } finally {
+    await built.app.close();
+  }
+});
+
+test("createClaw embeds the time engine by default", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-time-sdk-embedded-"));
+  const claw = await createClaw({
+    runtime: { adapter: "demo" },
+    workspace: {
+      appId: "demo",
+      workspaceId: "workspace-time-embedded",
+      agentId: "agent-time-embedded",
+      rootDir: workspaceDir,
+    },
+  });
+
+  assert.equal(claw.time.configured, true);
+  const created = await claw.time.create({
+    kind: "reminder",
+    title: "Check release",
+    startsAt: "2026-04-15T09:00:00.000Z",
+    schedule: { mode: "one_off", timezone: "UTC", startsAt: "2026-04-15T09:00:00.000Z" },
+    anchorType: "task",
+    anchorId: "task-123",
+  });
+  assert.equal(created.item.anchorType, "task");
+  assert.equal(created.item.nextRunAt, "2026-04-15T09:00:00.000Z");
+
+  const signalled = await claw.time.signalAnchor({ anchorId: "task-123", signal: "task_completed" });
+  assert.equal(signalled.items[0]?.id, created.item.id);
+  assert.equal(signalled.items[0]?.status, "cancelled");
+
+  const dbPath = path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite");
+  assert.equal(fs.existsSync(dbPath), true);
+});
+
 test("createClaw can connect a Telegram bot and reflect it through telegram state and channels", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-telegram-"));
   const { proxyPath, statePath } = createFakeSecretsProxy();
@@ -1047,7 +1174,7 @@ test("createClaw telegram API supports commands, chat inspection, sending, and u
   const member = await claw.telegram.getChatMember("1001", "7");
   const invite = await claw.telegram.createInviteLink("1001");
   const updates = await claw.telegram.startPolling({ limit: 10 }).then(() => claw.telegram.syncUpdates());
-  const sessions = claw.conversations.listSessions();
+  const sessions = claw.sessions.listSessions();
 
   assert.deepEqual(commands, fetchedCommands);
   assert.equal((sentMessage.chat as { id: string }).id, "1001");
@@ -1090,8 +1217,8 @@ test("createClaw can diff and sync binding output", async () => {
   assert.equal(fs.existsSync(path.join(workspaceDir, "SOUL.md")), true);
 });
 
-test("createClaw exposes a workspace-backed conversation store", async () => {
-  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-conversations-"));
+test("createClaw exposes a workspace-backed session store", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-sessions-"));
   const claw = await createClaw({
     runtime: { adapter: "openclaw" },
     workspace: {
@@ -1102,14 +1229,14 @@ test("createClaw exposes a workspace-backed conversation store", async () => {
     },
   });
 
-  const session = claw.conversations.createSession("Hello");
-  claw.conversations.appendMessage(session.sessionId, {
+  const session = claw.sessions.createSession("Hello");
+  claw.sessions.appendMessage(session.sessionId, {
     role: "user",
     content: "first",
   });
 
-  assert.equal(claw.conversations.listSessions().length, 1);
-  assert.equal(claw.conversations.getSession(session.sessionId)?.messageCount, 1);
+  assert.equal(claw.sessions.listSessions().length, 1);
+  assert.equal(claw.sessions.getSession(session.sessionId)?.messageCount, 1);
 });
 
 test("createClaw can search sessions locally", async () => {
@@ -1124,13 +1251,13 @@ test("createClaw can search sessions locally", async () => {
     },
   });
 
-  const session = claw.conversations.createSession("Budget review");
-  claw.conversations.appendMessage(session.sessionId, {
+  const session = claw.sessions.createSession("Budget review");
+  claw.sessions.appendMessage(session.sessionId, {
     role: "user",
     content: "Need to review the quarterly budget with finance",
   });
 
-  const results = await claw.conversations.searchSessions({
+  const results = await claw.sessions.searchSessions({
     query: "quarterly budget",
     strategy: "local",
   });
@@ -1161,8 +1288,8 @@ test("createClaw can search sessions through OpenClaw memory search", async () =
     },
   });
 
-  const session = claw.conversations.createSession("Budget review");
-  claw.conversations.appendMessage(session.sessionId, {
+  const session = claw.sessions.createSession("Budget review");
+  claw.sessions.appendMessage(session.sessionId, {
     role: "user",
     content: "Need to review the quarterly budget with finance",
   });
@@ -1177,7 +1304,7 @@ test("createClaw can search sessions through OpenClaw memory search", async () =
         score: 0.91,
       }],
     });
-    const results = await claw.conversations.searchSessions({
+    const results = await claw.sessions.searchSessions({
       query: "budget finance",
       strategy: "openclaw-memory",
       fallbackToLocal: false,
@@ -1214,14 +1341,14 @@ test("createClaw auto search falls back to local sessions when OpenClaw memory s
     },
   });
 
-  const session = claw.conversations.createSession("Hiring");
-  claw.conversations.appendMessage(session.sessionId, {
+  const session = claw.sessions.createSession("Hiring");
+  claw.sessions.appendMessage(session.sessionId, {
     role: "user",
     content: "Prepare the interview loop for backend candidates",
   });
 
   try {
-    const results = await claw.conversations.searchSessions({
+    const results = await claw.sessions.searchSessions({
       query: "interview loop",
       strategy: "auto",
     });
@@ -1446,7 +1573,7 @@ test("createClaw installs skills.sh skills as external when runtime inventory do
   assert.match(fs.readFileSync(npxLog, "utf8"), /--yes skills add vercel-labs\/agent-skills/);
 });
 
-test("createClaw instances keep separate workspaces and conversations isolated", async () => {
+test("createClaw instances keep separate workspaces and sessions isolated", async () => {
   const workspaceA = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-a-"));
   const workspaceB = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-b-"));
 
@@ -1471,22 +1598,22 @@ test("createClaw instances keep separate workspaces and conversations isolated",
 
   await Promise.all([clawA.workspace.init(), clawB.workspace.init()]);
 
-  const sessionA = clawA.conversations.createSession("Alpha");
-  clawA.conversations.appendMessage(sessionA.sessionId, { role: "user", content: "only-a" });
-  const sessionB = clawB.conversations.createSession("Beta");
-  clawB.conversations.appendMessage(sessionB.sessionId, { role: "user", content: "only-b" });
+  const sessionA = clawA.sessions.createSession("Alpha");
+  clawA.sessions.appendMessage(sessionA.sessionId, { role: "user", content: "only-a" });
+  const sessionB = clawB.sessions.createSession("Beta");
+  clawB.sessions.appendMessage(sessionB.sessionId, { role: "user", content: "only-b" });
 
   clawA.files.writeWorkspaceFile("notes.md", "workspace-a\n");
   clawB.files.writeWorkspaceFile("notes.md", "workspace-b\n");
 
-  assert.equal(clawA.conversations.listSessions().length, 1);
-  assert.equal(clawB.conversations.listSessions().length, 1);
-  assert.equal(clawA.conversations.getSession(sessionB.sessionId), null);
-  assert.equal(clawB.conversations.getSession(sessionA.sessionId), null);
+  assert.equal(clawA.sessions.listSessions().length, 1);
+  assert.equal(clawB.sessions.listSessions().length, 1);
+  assert.equal(clawA.sessions.getSession(sessionB.sessionId), null);
+  assert.equal(clawB.sessions.getSession(sessionA.sessionId), null);
   assert.equal(clawA.files.readWorkspaceFile("notes.md"), "workspace-a\n");
   assert.equal(clawB.files.readWorkspaceFile("notes.md"), "workspace-b\n");
-  assert.equal(fs.existsSync(path.join(workspaceA, ".clawjs", "conversations", `${sessionB.sessionId}.jsonl`)), false);
-  assert.equal(fs.existsSync(path.join(workspaceB, ".clawjs", "conversations", `${sessionA.sessionId}.jsonl`)), false);
+  assert.equal(fs.existsSync(path.join(workspaceA, ".clawjs", "sessions", `${sessionB.sessionId}.jsonl`)), false);
+  assert.equal(fs.existsSync(path.join(workspaceB, ".clawjs", "sessions", `${sessionA.sessionId}.jsonl`)), false);
 });
 
 test("createClaw instances can share a workspace and initialize it in parallel", async () => {
@@ -1514,27 +1641,27 @@ test("createClaw instances can share a workspace and initialize it in parallel",
   await Promise.all([clawA.workspace.init(), clawB.workspace.init()]);
 
   const [sessionA, sessionB] = await Promise.all([
-    Promise.resolve().then(() => clawA.conversations.createSession("Alpha")),
-    Promise.resolve().then(() => clawB.conversations.createSession("Beta")),
+    Promise.resolve().then(() => clawA.sessions.createSession("Alpha")),
+    Promise.resolve().then(() => clawB.sessions.createSession("Beta")),
   ]);
 
   await Promise.all([
-    Promise.resolve().then(() => clawA.conversations.appendMessage(sessionA.sessionId, { role: "user", content: "only-a" })),
-    Promise.resolve().then(() => clawB.conversations.appendMessage(sessionB.sessionId, { role: "user", content: "only-b" })),
+    Promise.resolve().then(() => clawA.sessions.appendMessage(sessionA.sessionId, { role: "user", content: "only-a" })),
+    Promise.resolve().then(() => clawB.sessions.appendMessage(sessionB.sessionId, { role: "user", content: "only-b" })),
     Promise.resolve().then(() => clawA.files.writeWorkspaceFile("notes-a.md", "workspace-a\n")),
     Promise.resolve().then(() => clawB.files.writeWorkspaceFile("notes-b.md", "workspace-b\n")),
   ]);
 
-  assert.equal(clawA.conversations.listSessions().length, 2);
-  assert.equal(clawB.conversations.listSessions().length, 2);
-  assert.equal(clawA.conversations.getSession(sessionB.sessionId)?.messageCount, 1);
-  assert.equal(clawB.conversations.getSession(sessionA.sessionId)?.messageCount, 1);
+  assert.equal(clawA.sessions.listSessions().length, 2);
+  assert.equal(clawB.sessions.listSessions().length, 2);
+  assert.equal(clawA.sessions.getSession(sessionB.sessionId)?.messageCount, 1);
+  assert.equal(clawB.sessions.getSession(sessionA.sessionId)?.messageCount, 1);
   assert.equal(clawA.files.readWorkspaceFile("notes-a.md"), "workspace-a\n");
   assert.equal(clawA.files.readWorkspaceFile("notes-b.md"), "workspace-b\n");
   assert.equal(clawB.files.readWorkspaceFile("notes-a.md"), "workspace-a\n");
   assert.equal(clawB.files.readWorkspaceFile("notes-b.md"), "workspace-b\n");
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "conversations", `${sessionA.sessionId}.jsonl`)), true);
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "conversations", `${sessionB.sessionId}.jsonl`)), true);
+  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "sessions", `${sessionA.sessionId}.jsonl`)), true);
+  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "sessions", `${sessionB.sessionId}.jsonl`)), true);
 });
 
 test("createClaw exposes workspace validation and binding persistence", async () => {
@@ -1676,8 +1803,8 @@ test("createClaw emits domain events and supports auth key storage", async () =>
   });
 
   await claw.workspace.init();
-  const session = claw.conversations.createSession("Hello");
-  claw.conversations.appendMessage(session.sessionId, {
+  const session = claw.sessions.createSession("Hello");
+  claw.sessions.appendMessage(session.sessionId, {
     role: "user",
     content: "first",
   });
@@ -1690,8 +1817,8 @@ test("createClaw emits domain events and supports auth key storage", async () =>
   assert.equal(diagnostics.profiles[0]?.maskedCredential, "******************5678");
   assert.deepEqual(seen, [
     "workspace.initialized",
-    "conversations.session_created",
-    "conversations.message_appended",
+    "sessions.session_created",
+    "sessions.message_appended",
     "auth.progress",
     "auth.api_key_saved",
     "auth.progress",
@@ -1909,21 +2036,19 @@ test("createClaw exposes runtime command builders", async () => {
     },
   });
 
-  assert.deepEqual(claw.runtime.installCommand("pnpm"), {
-    command: "pnpm",
-    args: ["add", "-g", "openclaw"],
-  });
-  assert.deepEqual(claw.runtime.uninstallCommand("pnpm"), {
-    command: "pnpm",
-    args: ["remove", "-g", "openclaw"],
-  });
+  assert.equal(path.basename(claw.runtime.installCommand("pnpm").command), "pnpm");
+  assert.deepEqual(claw.runtime.installCommand("pnpm").args, ["add", "-g", "openclaw"]);
+  assert.equal(path.basename(claw.runtime.uninstallCommand("pnpm").command), "pnpm");
+  assert.deepEqual(claw.runtime.uninstallCommand("pnpm").args, ["remove", "-g", "openclaw"]);
   assert.deepEqual(claw.runtime.setupWorkspaceCommand(), {
     command: "openclaw",
     args: ["agents", "add", "demo-main", "--non-interactive", "--workspace", workspaceDir, "--json"],
+    env: claw.runtime.setupWorkspaceCommand().env,
   });
   assert.deepEqual(claw.runtime.repairCommand(), {
     command: "openclaw",
     args: ["gateway", "install"],
+    env: claw.runtime.repairCommand().env,
   });
   assert.deepEqual(
     claw.runtime.installPlan("pnpm").steps.map((step) => step.phase),
@@ -2005,22 +2130,21 @@ test("createClaw can stream and persist an assistant reply through gateway confi
   const encoder = new TextEncoder();
   globalThis.fetch = (async () => new Response(new ReadableStream({
     start(controller) {
-      controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"hello"}}]}\n'));
-      controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":" world"}}]}\n'));
-      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.enqueue(encoder.encode('event: response.output_text.delta\ndata: {"delta":"hello"}\n\n'));
+      controller.enqueue(encoder.encode('event: response.output_text.delta\ndata: {"delta":" world"}\n\n'));
       controller.close();
     },
   }), { status: 200 })) as typeof fetch;
 
   try {
-    const session = claw.conversations.createSession("Hello");
-    claw.conversations.appendMessage(session.sessionId, {
+    const session = claw.sessions.createSession("Hello");
+    claw.sessions.appendMessage(session.sessionId, {
       role: "user",
       content: "say hi",
     });
 
     const seen: string[] = [];
-    for await (const chunk of claw.conversations.streamAssistantReply({
+    for await (const chunk of claw.sessions.streamAssistantReply({
       sessionId: session.sessionId,
       systemPrompt: "Be concise.",
       contextBlocks: [{ title: "Mode", content: "Friendly." }],
@@ -2031,9 +2155,73 @@ test("createClaw can stream and persist an assistant reply through gateway confi
 
     assert.deepEqual(seen, ["hello", " world"]);
     assert.equal(
-      claw.conversations.getSession(session.sessionId)?.messages.at(-1)?.content,
+      claw.sessions.getSession(session.sessionId)?.messages.at(-1)?.content,
       "hello world",
     );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("createClaw sends persisted documents through OpenClaw responses transport", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-stream-docs-"));
+  const claw = await createClaw({
+    runtime: {
+      adapter: "openclaw",
+      gateway: {
+        url: "http://127.0.0.1:18789",
+      },
+    },
+    workspace: {
+      appId: "demo",
+      workspaceId: "demo-docs",
+      agentId: "demo-docs",
+      rootDir: workspaceDir,
+    },
+  });
+
+  let requestBody: Record<string, unknown> | null = null;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (_url, init) => {
+    requestBody = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+    return new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('event: response.output_text.delta\ndata: {"delta":"reviewed"}\n\n'));
+        controller.close();
+      },
+    }), { status: 200 });
+  }) as typeof fetch;
+
+  try {
+    const session = claw.sessions.createSession("Budget");
+    const document = await claw.documents.upload({
+      name: "budget.pdf",
+      mimeType: "application/pdf",
+      data: Buffer.from("budget alpha").toString("base64"),
+      sessionId: session.sessionId,
+    });
+    claw.sessions.appendMessage(session.sessionId, {
+      role: "user",
+      content: "Review the attached budget",
+      documents: [{
+        documentId: document.documentId,
+        name: document.name,
+        mimeType: document.mimeType,
+        sizeBytes: document.sizeBytes,
+      }],
+    });
+
+    const seen: string[] = [];
+    for await (const chunk of claw.sessions.streamAssistantReply({
+      sessionId: session.sessionId,
+      transport: "gateway",
+    })) {
+      if (!chunk.done) seen.push(chunk.delta);
+    }
+
+    assert.deepEqual(seen, ["reviewed"]);
+    assert.match(JSON.stringify(requestBody), /input_file/);
+    assert.match(JSON.stringify(requestBody), /budget\.pdf/);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -2062,25 +2250,25 @@ test("createClaw can generate and persist a session title", async () => {
   }), { status: 200 })) as typeof fetch;
 
   try {
-    const session = claw.conversations.createSession("Hello");
-    claw.conversations.appendMessage(session.sessionId, {
+    const session = claw.sessions.createSession("Hello");
+    claw.sessions.appendMessage(session.sessionId, {
       role: "user",
       content: "I want to talk about anxiety at work",
     });
 
-    const title = await claw.conversations.generateTitle({
+    const title = await claw.sessions.generateTitle({
       sessionId: session.sessionId,
       transport: "gateway",
     });
 
     assert.equal(title, "Work anxiety");
-    assert.equal(claw.conversations.getSession(session.sessionId)?.title, "Work anxiety");
+    assert.equal(claw.sessions.getSession(session.sessionId)?.title, "Work anxiety");
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test("createClaw surfaces runtime progress and conversation events", async () => {
+test("createClaw surfaces runtime progress and session events", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-progress-"));
   const claw = await createClaw({
     runtime: { adapter: "openclaw" },
@@ -2102,9 +2290,8 @@ test("createClaw surfaces runtime progress and conversation events", async () =>
   const encoder = new TextEncoder();
   globalThis.fetch = (async () => new Response(new ReadableStream({
     start(controller) {
-      controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"Plan"}}]}\n'));
-      controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":" a launch checklist"}}]}\n'));
-      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.enqueue(encoder.encode('event: response.output_text.delta\ndata: {"delta":"Plan"}\n\n'));
+      controller.enqueue(encoder.encode('event: response.output_text.delta\ndata: {"delta":" a launch checklist"}\n\n'));
       controller.close();
     },
   }), { status: 200 })) as typeof fetch;
@@ -2122,14 +2309,14 @@ test("createClaw surfaces runtime progress and conversation events", async () =>
         rootDir: fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-events-stream-")),
       },
     });
-    const session = streamingClaw.conversations.createSession("Hello");
-    streamingClaw.conversations.appendMessage(session.sessionId, {
+    const session = streamingClaw.sessions.createSession("Hello");
+    streamingClaw.sessions.appendMessage(session.sessionId, {
       role: "user",
       content: "Plan a launch checklist",
     });
 
     const events: string[] = [];
-    for await (const event of streamingClaw.conversations.streamAssistantReplyEvents({
+    for await (const event of streamingClaw.sessions.streamAssistantReplyEvents({
       sessionId: session.sessionId,
       transport: "gateway",
     })) {
@@ -2137,10 +2324,51 @@ test("createClaw surfaces runtime progress and conversation events", async () =>
     }
 
     assert.deepEqual(events, ["transport:gateway", "chunk", "chunk", "done", "title"]);
-    assert.equal(streamingClaw.conversations.getSession(session.sessionId)?.title, "Plan a launch checklist");
+    assert.equal(streamingClaw.sessions.getSession(session.sessionId)?.title, "Plan a launch checklist");
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("createClaw exposes native OpenClaw session and chat gateway wrappers", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-native-openclaw-"));
+  const { binDir, configPath, statePath } = createFakeOpenClawPluginToolchain();
+
+  await withPatchedEnv({
+    PATH: `${binDir}${path.delimiter}${process.env.PATH || ""}`,
+  }, async () => {
+    const claw = await createClaw({
+      runtime: {
+        adapter: "openclaw",
+        configPath,
+      },
+      workspace: {
+        appId: "demo",
+        workspaceId: "demo-native-openclaw",
+        agentId: "demo-native-openclaw",
+        rootDir: workspaceDir,
+      },
+    });
+
+    const list = await claw.runtime.openclaw.sessions.list({ limit: 5 }) as { sessions: Array<{ sessionKey: string }> };
+    const preview = await claw.runtime.openclaw.sessions.preview({ sessionKey: "alpha" }) as { sessionKey: string; title: string };
+    const history = await claw.runtime.openclaw.chat.history({ sessionKey: "alpha" }) as { sessionKey: string; messages: Array<{ role: string; content: string }> };
+    const sent = await claw.runtime.openclaw.chat.send({ sessionKey: "alpha", message: "hello" }) as { accepted: boolean; sessionKey: string };
+
+    assert.equal(list.sessions[0]?.sessionKey, "alpha");
+    assert.equal(preview.title, "Native Alpha");
+    assert.equal(history.messages[0]?.content, "hello from native");
+    assert.equal(sent.accepted, true);
+    assert.equal(sent.sessionKey, "alpha");
+
+    const state = JSON.parse(fs.readFileSync(statePath, "utf8")) as {
+      gatewayCalls: Array<{ method: string }>;
+    };
+    assert.deepEqual(
+      state.gatewayCalls.map((entry) => entry.method).slice(-4),
+      ["sessions.list", "sessions.preview", "chat.history", "chat.send"],
+    );
+  });
 });
 
 test("createClaw does not persist partial assistant text when stream aborts", async () => {
@@ -2158,8 +2386,8 @@ test("createClaw does not persist partial assistant text when stream aborts", as
     },
   });
 
-  const session = claw.conversations.createSession("Hello");
-  claw.conversations.appendMessage(session.sessionId, {
+  const session = claw.sessions.createSession("Hello");
+  claw.sessions.appendMessage(session.sessionId, {
     role: "user",
     content: "Plan a launch checklist",
   });
@@ -2168,7 +2396,7 @@ test("createClaw does not persist partial assistant text when stream aborts", as
   abortController.abort("user_cancelled");
 
   const events: string[] = [];
-  for await (const event of claw.conversations.streamAssistantReplyEvents({
+  for await (const event of claw.sessions.streamAssistantReplyEvents({
     sessionId: session.sessionId,
     transport: "gateway",
     signal: abortController.signal,
@@ -2177,7 +2405,7 @@ test("createClaw does not persist partial assistant text when stream aborts", as
   }
 
   assert.deepEqual(events, ["aborted"]);
-  assert.equal(claw.conversations.getSession(session.sessionId)?.messageCount, 1);
+  assert.equal(claw.sessions.getSession(session.sessionId)?.messageCount, 1);
 });
 
 test("createClaw exposes runtime/provider watchers and async event iteration", async () => {

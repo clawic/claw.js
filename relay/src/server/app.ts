@@ -250,7 +250,7 @@ function browserActorFromClaims(claims: AuthClaims): BrowserActor {
 }
 
 function browserSharePath(params: WorkspaceParams): string {
-  return `/workspace/${params.tenantId}/${params.agentId}/${params.workspaceId}/browser`;
+  return `/browser/${params.tenantId}/${params.agentId}/${params.workspaceId}`;
 }
 
 function browserShareUrl(config: RelayConfig, params: WorkspaceParams): string {
@@ -2862,10 +2862,14 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
 
   const resourceMap = [
     { path: "tasks", scope: "workspace:data" },
+    { path: "goals", scope: "workspace:data" },
+    { path: "projects", scope: "workspace:data" },
     { path: "notes", scope: "workspace:data" },
     { path: "memory", scope: "workspace:data" },
     { path: "inbox", scope: "workspace:data" },
     { path: "people", scope: "workspace:data" },
+    { path: "reminders", scope: "workspace:data" },
+    { path: "deadlines", scope: "workspace:data" },
     { path: "events", scope: "workspace:data" },
     { path: "time", scope: "workspace:data" },
     { path: "personas", scope: "workspace:data" },
@@ -3003,6 +3007,306 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       return result;
     });
   }
+
+  app.get(`${workspacePrefix}/content/brands`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.brands.list");
+    if (!result) return;
+    return result;
+  });
+
+  app.post(`${workspacePrefix}/content/brands`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.brands.create", await readRequestBody(request));
+    if (!result) return;
+    return result;
+  });
+
+  app.put(`${workspacePrefix}/content/brands/:brandId`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { brandId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.brands.update", {
+      id: params.brandId,
+      ...(await readRequestBody(request)),
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/destinations`, async (request, reply) => {
+    const query = request.query as { brandId?: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.destinations.list", query);
+    if (!result) return;
+    return result;
+  });
+
+  app.post(`${workspacePrefix}/content/destinations`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.destinations.create", await readRequestBody(request));
+    if (!result) return;
+    return result;
+  });
+
+  app.put(`${workspacePrefix}/content/destinations/:destinationId`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { destinationId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.destinations.update", {
+      id: params.destinationId,
+      ...(await readRequestBody(request)),
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.post(`${workspacePrefix}/content/destinations/:destinationId/test-connection`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { destinationId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.destinations.testConnection", { id: params.destinationId });
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/campaigns`, async (request, reply) => {
+    const query = request.query as { brandId?: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.campaigns.list", query);
+    if (!result) return;
+    return result;
+  });
+
+  app.post(`${workspacePrefix}/content/campaigns`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.campaigns.create", await readRequestBody(request));
+    if (!result) return;
+    return result;
+  });
+
+  app.put(`${workspacePrefix}/content/campaigns/:campaignId`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { campaignId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.campaigns.update", {
+      id: params.campaignId,
+      ...(await readRequestBody(request)),
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/entries`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.entries.list", request.query as Record<string, unknown>);
+    if (!result) return;
+    return result;
+  });
+
+  app.post(`${workspacePrefix}/content/entries`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.entries.create", await readRequestBody(request));
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/entries/:entryId`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { entryId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.entries.get", { id: params.entryId });
+    if (!result) return;
+    return result;
+  });
+
+  app.put(`${workspacePrefix}/content/entries/:entryId`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { entryId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.entries.update", {
+      id: params.entryId,
+      ...(await readRequestBody(request)),
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.post(`${workspacePrefix}/content/entries/:entryId/archive`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { entryId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.entries.archive", { id: params.entryId });
+    if (!result) return;
+    return result;
+  });
+
+  app.post(`${workspacePrefix}/content/entries/:entryId/assets`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { entryId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.entries.attachAsset", {
+      id: params.entryId,
+      ...(await readRequestBody(request)),
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.post(`${workspacePrefix}/content/entries/:entryId/variants:generate`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { entryId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.entries.generateVariants", {
+      id: params.entryId,
+      ...(await readRequestBody(request)),
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/variants`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.variants.list", request.query as Record<string, unknown>);
+    if (!result) return;
+    return result;
+  });
+
+  app.post(`${workspacePrefix}/content/variants`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.variants.create", await readRequestBody(request));
+    if (!result) return;
+    return result;
+  });
+
+  app.put(`${workspacePrefix}/content/variants/:variantId`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { variantId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.variants.update", {
+      id: params.variantId,
+      ...(await readRequestBody(request)),
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/approvals`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.approvals.list", request.query as Record<string, unknown>);
+    if (!result) return;
+    return result;
+  });
+
+  app.post(`${workspacePrefix}/content/approvals/:approvalId/approve`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { approvalId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.approvals.approve", {
+      id: params.approvalId,
+      ...(await readRequestBody(request)),
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.post(`${workspacePrefix}/content/approvals/:approvalId/reject`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { approvalId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.approvals.reject", {
+      id: params.approvalId,
+      ...(await readRequestBody(request)),
+    });
+    if (!result) return;
+    return result;
+  });
+
+  app.post(`${workspacePrefix}/content/approvals/:approvalId/cancel`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { approvalId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.approvals.cancel", { id: params.approvalId });
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/calendar`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.calendar.view");
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/plans`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.publish.listPlans", request.query as Record<string, unknown>);
+    if (!result) return;
+    return result;
+  });
+
+  app.post(`${workspacePrefix}/content/plans`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.publish.createPlan", await readRequestBody(request));
+    if (!result) return;
+    return result;
+  });
+
+  app.post(`${workspacePrefix}/content/plans/:planId/cancel`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { planId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.publish.cancelPlan", { id: params.planId });
+    if (!result) return;
+    return result;
+  });
+
+  app.post(`${workspacePrefix}/content/plans/:planId/run`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { planId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.publish.runNow", { id: params.planId });
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/publications`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.publish.listRuns");
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/publications/:runId`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { runId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.publish.getRun", { id: params.runId });
+    if (!result) return;
+    return result;
+  });
+
+  app.post(`${workspacePrefix}/content/publications/:runId/retry`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { runId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.publish.retryRun", { id: params.runId });
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/app/frontend-contract`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.app.frontendContract");
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/app/screens`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.app.screens");
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/app/dashboard`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.app.dashboard");
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/app/calendar`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.app.calendar");
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/app/pipeline`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.app.pipeline");
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/app/composer/:entryId`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { entryId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.app.composer", { entryId: params.entryId });
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/app/destinations`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.app.destinations");
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/app/approvals`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.app.approvals");
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/app/publications`, async (request, reply) => {
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.app.publications");
+    if (!result) return;
+    return result;
+  });
+
+  app.get(`${workspacePrefix}/content/app/forms/:formId`, async (request, reply) => {
+    const params = request.params as WorkspaceParams & { formId: string };
+    const result = await invokeWorkspace(request as FastifyRequest<{ Params: WorkspaceParams }>, reply, auth, registry, db, "workspace:data", "content.app.form", { formId: params.formId });
+    if (!result) return;
+    return result;
+  });
 
   app.get(`${workspacePrefix}/images/:imageId`, async (request, reply) => {
     const params = request.params as WorkspaceParams & { imageId: string };

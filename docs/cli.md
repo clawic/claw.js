@@ -40,6 +40,7 @@ The official flow is now `claw new` for project creation,
 | `--dry-run` | Prints command or plan output instead of mutating state when supported. |
 | `--agent-dir`, `--home-dir`, `--config-path`, `--runtime-workspace`, `--auth-store` | Adapter path overrides. |
 | `--gateway-url`, `--gateway-token`, `--gateway-port`, `--gateway-config` | Gateway overrides passed through to the runtime adapter. |
+| `--vault-url`, `--vault-token`, `--vault-tenant-id`, `--vault-sidecar` | Vault connection and compatibility-sidecar overrides for `claw secrets ...`. |
 | `--template-pack` | Template-pack path used by `workspace init` or `files apply-template-pack`. |
 
 ## Project Commands
@@ -63,13 +64,27 @@ resources.
 
 ## Productivity Commands
 
-When the project includes the workspace productivity companion, the CLI
-also exposes entity CRUD and cross-domain search commands:
+The productivity surface is built into the CLI. In any directory, the
+commands below autobootstrap a local SQLite store at
+`.clawjs/data/productivity.sqlite` without `workspace init` and without
+installing `@clawjs/workspace` into the target project.
 
 ```bash
 claw tasks list
 claw tasks create --title "Triage docs drift"
 claw tasks complete --id task-123
+
+claw goals list
+claw goals create "Ship local-first productivity" --project-id project-123
+
+claw projects list
+claw projects create "Workspace Core" --status in_progress
+
+claw reminders list --before 2026-03-28T00:00:00Z
+claw reminders create "Follow up" --trigger-at 2026-03-27T09:00:00Z --anchor-type task --anchor-id task-123
+
+claw deadlines list --after 2026-03-27T00:00:00Z
+claw deadlines create "Launch date" --due-at 2026-03-30T18:00:00Z --anchor-type project --anchor-id project-123
 
 claw notes list
 claw notes create --title "Release notes" --content "Draft"
@@ -91,7 +106,46 @@ claw workspace-index rebuild
 
 Use `--json` when you want the raw records back. `workspace-search
 query` also accepts `--strategy auto|keyword|semantic|hybrid`,
-`--limit`, and `--include-archived`.
+`--limit`, and `--include-archived`. `reminders list` and
+`deadlines list` also accept `--before` and `--after` filters over
+their due timestamps.
+
+## Time Commands
+
+```bash
+claw time list --time-url http://127.0.0.1:4730
+claw time create event "Release sync" --starts-at 2026-03-27T09:00:00Z --time-url http://127.0.0.1:4730
+claw time executions --time-url http://127.0.0.1:4730
+claw time calendar --time-url http://127.0.0.1:4730
+
+claw schedule at "monday 9am" "review PRs" --time-url http://127.0.0.1:4730
+claw schedule every "3h" "check deployment health" --time-url http://127.0.0.1:4730
+claw schedule after "24h if no reply" "follow up" --anchor-type thread --anchor-id thread-42 --time-url http://127.0.0.1:4730
+```
+
+Use `--time-url` or `CLAWJS_TIME_URL` to point the CLI at the standalone
+`time/` service. `--time-token` or `CLAWJS_TIME_TOKEN` adds optional
+bearer auth when the service is fronted by a gateway.
+
+## Secrets Commands
+
+```bash
+claw secrets list --vault-url http://127.0.0.1:4610 --vault-token <token> --vault-tenant-id demo-tenant
+claw secrets describe revenuecat_admin --json
+claw secrets types --search revenuecat
+claw secrets capabilities revenuecat_admin
+claw secrets broker http --method GET --url https://api.revenuecat.com/v2/projects --header "Authorization: Bearer {{revenuecat_admin}}"
+claw secrets leases list
+```
+
+Use `--vault-url`, `--vault-token`, and `--vault-tenant-id` or the
+matching `VAULT_BASE_URL`, `VAULT_TOKEN`, and `VAULT_TENANT_ID`
+environment variables to make Vault the active backend. When those
+settings are present, `claw.secrets` and `claw secrets ...` default to
+Vault instead of the legacy local proxy. Add `--vault-sidecar` or
+`CLAWJS_VAULT_SIDECAR_PATH` when you need proxy-compatible sidecar flows
+such as `{{secretName}}` injection or lease-backed process/browser
+execution.
 
 ## Advanced Runtime Commands
 
@@ -138,6 +192,37 @@ claw database file upload --namespace main --collection leads --record rec_123 -
 `claw database ...` delegates to the standalone CLI shipped inside the
 repo-local `database/` app. Use `--database-dir` or `CLAWJS_DATABASE_DIR`
 when the app lives outside the default monorepo path.
+
+## ERP Bridge
+
+```bash
+claw erp login --url http://127.0.0.1:4530 --email admin@erp.local --password erp-admin
+claw erp tenant bootstrap --name "Acme ERP" --pack es_eu --url http://127.0.0.1:4530 --token <admin-token>
+claw erp sales quote-create --tenant tenant_123 --entity entity_123 --branch branch_123 --customer "Ada" --amount 125000 --url http://127.0.0.1:4530 --token <admin-token>
+claw erp reports dashboard --tenant tenant_123 --entity entity_123 --url http://127.0.0.1:4530 --token <admin-token>
+```
+
+`claw erp ...` delegates to the standalone CLI shipped inside the
+repo-local `erp/` app. Use `--erp-dir` or `CLAWJS_ERP_DIR` when the app
+lives outside the default monorepo path.
+
+## IoT Bridge
+
+```bash
+claw iot homes list --url http://127.0.0.1:4520
+claw iot areas list
+claw iot things list --kind light
+claw iot lights off office
+claw iot climate set thermostat --temperature 21
+claw iot scenes activate scene_good_night
+claw iot automations run automation_bedtime
+claw iot approvals list
+claw iot raw invoke --connector home-assistant --target light.office_main --action turn_on --payload '{"brightness":80}'
+```
+
+`claw iot ...` delegates to the standalone CLI shipped inside the
+repo-local `iot/` app. Use `--iot-dir` or `CLAWJS_IOT_DIR` when the app
+lives outside the default monorepo path.
 
 ## Workspace Commands
 
@@ -196,6 +281,20 @@ claw scheduler list
 claw scheduler run --id morning-sync
 claw scheduler enable --id morning-sync
 claw scheduler disable --id morning-sync
+
+claw time list
+claw time get item_123
+claw time create routine "Review PRs" --cron "0 */3 * * *"
+claw time pause item_123
+claw time resume item_123
+claw time run item_123
+claw time executions --item-id item_123
+claw time calendar
+claw time timeline
+
+claw schedule at "monday 9am" "review PRs"
+claw schedule every "3h" "check deployment health"
+claw schedule after "24h if no reply" "follow up"
 
 claw memory list
 claw memory status
@@ -318,7 +417,6 @@ Some public SDK surfaces do not have first-class CLI commands yet:
 - `claw.runtime.plugins`
 - `claw.slack`
 - `claw.whatsapp`
-- `claw.secrets`
 - `claw.watch`
 
 Use the Node API for those flows today.

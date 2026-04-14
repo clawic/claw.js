@@ -40,6 +40,7 @@
   },
   "dependencies": {
     "@clawjs/claw": "0.1.0",
-    "@clawjs/core": "0.1.0"
+    "@clawjs/core": "0.1.0",
+    "better-sqlite3": "^12.9.0"
   }
 }

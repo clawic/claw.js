@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ClawJS Time</title>
+    <link rel="stylesheet" href="/static/app.css">
+  </head>
+  <body>
+    <div class="app-shell" data-testid="time-page">
+      <aside class="sidebar">
+        <div>
+          <p class="eyebrow">Calendar / Scheduler</p>
+          <h1>ClawJS Time</h1>
+          <p class="hint">One source of truth for events, routines, reminders, deadlines, and follow-ups.</p>
+        </div>
+        <nav class="tabs">
+          <button data-testid="tab-calendar" data-tab="calendar" class="active">Calendar</button>
+          <button data-testid="tab-timeline" data-tab="timeline">Timeline</button>
+          <button data-testid="tab-automations" data-tab="automations">Automations</button>
+          <button data-testid="tab-runs" data-tab="runs">Runs</button>
+        </nav>
+        <div class="actions">
+          <button data-testid="create-event-button">Create event</button>
+          <button data-testid="create-routine-button">Create every 3h</button>
+          <button data-testid="create-followup-button">Create 24h follow-up</button>
+          <button data-testid="simulate-reply-button">Simulate reply</button>
+        </div>
+      </aside>
+      <main class="content">
+        <header class="toolbar">
+          <div>
+            <span class="toolbar-label">Temporal items</span>
+            <strong id="summary-count">0 items</strong>
+          </div>
+          <button data-testid="run-routine-button" class="secondary">Run routine now</button>
+        </header>
+        <section class="grid">
+          <div class="panel">
+            <h2 id="panel-title">Calendar</h2>
+            <div id="item-list" class="list"></div>
+          </div>
+          <div class="panel detail">
+            <h2>Detail</h2>
+            <div id="detail-panel">
+              <p class="placeholder">Select an item to inspect participants, schedule, actions, and projections.</p>
+            </div>
+          </div>
+        </section>
+        <section class="panel runs-panel hidden" id="runs-panel">
+          <h2>Execution history</h2>
+          <div id="runs-list"></div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/static/app.js"></script>
+  </body>
+  </html>

@@ -203,6 +203,168 @@ export const channelsStateSnapshotSchema = z.object({
   details: z.record(z.unknown()).optional(),
 });
 
+export const homeDescriptorSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  isDefault: z.boolean(),
+  createdAt: z.string().min(1),
+});
+
+export const areaDescriptorSchema = z.object({
+  id: z.string().min(1),
+  homeId: z.string().min(1),
+  label: z.string().min(1),
+  aliases: z.array(z.string()).optional(),
+});
+
+export const connectorDescriptorSchema = z.object({
+  id: z.string().min(1),
+  homeId: z.string().min(1),
+  label: z.string().min(1),
+  kind: z.enum(["bridge", "protocol", "vendor"]),
+  status: z.enum(["ready", "degraded", "offline"]),
+  capabilities: z.array(z.string()),
+});
+
+export const capabilityDescriptorSchema = z.object({
+  id: z.string().min(1),
+  thingId: z.string().min(1),
+  key: z.string().min(1),
+  label: z.string().min(1),
+  writable: z.boolean(),
+  readable: z.boolean(),
+  unit: z.string().min(1).optional(),
+  observedValue: z.unknown().optional(),
+  desiredValue: z.unknown().optional(),
+  observedAt: z.string().min(1),
+});
+
+export const thingDescriptorSchema = z.object({
+  id: z.string().min(1),
+  homeId: z.string().min(1),
+  areaId: z.string().min(1).optional(),
+  label: z.string().min(1),
+  aliases: z.array(z.string()).optional(),
+  kind: z.enum(["light", "switch", "climate", "cover", "lock", "sensor", "camera", "media", "vacuum", "appliance", "presence", "energy"]),
+  risk: z.enum(["safe", "caution", "restricted"]),
+  connectorId: z.string().min(1),
+  targetRef: z.string().min(1),
+  metadata: z.record(z.unknown()).optional(),
+  capabilities: z.array(capabilityDescriptorSchema),
+});
+
+export const iotActionRequestSchema = z.object({
+  homeId: z.string().min(1).optional(),
+  selector: z.string().min(1).optional(),
+  area: z.string().min(1).optional(),
+  family: z.enum(["light", "switch", "climate", "cover", "lock", "sensor", "camera", "media", "vacuum", "appliance", "presence", "energy", "scene", "automation"]).optional(),
+  capability: z.string().min(1).optional(),
+  action: z.enum(["on", "off", "toggle", "set", "open", "close", "lock", "unlock", "arm", "disarm", "start", "stop", "pause", "resume", "activate"]),
+  value: z.unknown().optional(),
+  targets: z.array(z.string().min(1)).optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+export const iotActionResultSchema = z.object({
+  status: z.enum(["executed", "approval_required", "ambiguous", "denied"]),
+  homeId: z.string().min(1),
+  decision: z.enum(["allow", "approval_required", "deny", "ambiguous"]),
+  reasons: z.array(z.string()),
+  updatedAt: z.string().min(1),
+  targets: z.array(z.object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    kind: thingDescriptorSchema.shape.kind,
+    areaId: z.string().min(1).optional(),
+  })),
+  capabilityUpdates: z.array(z.object({
+    thingId: z.string().min(1),
+    capability: z.string().min(1),
+    observedValue: z.unknown().optional(),
+    desiredValue: z.unknown().optional(),
+  })),
+  approvalId: z.string().min(1).optional(),
+  candidates: z.array(z.object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    kind: thingDescriptorSchema.shape.kind,
+  })).optional(),
+});
+
+export const iotPolicyEvaluationSchema = z.object({
+  decision: z.enum(["allow", "approval_required", "deny", "ambiguous"]),
+  riskLevel: z.enum(["safe", "caution", "restricted"]),
+  reasons: z.array(z.string()),
+  candidates: z.array(z.object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    kind: thingDescriptorSchema.shape.kind,
+  })).optional(),
+  resolvedTargetIds: z.array(z.string().min(1)).optional(),
+});
+
+export const sceneRecordSchema = z.object({
+  id: z.string().min(1),
+  homeId: z.string().min(1),
+  label: z.string().min(1),
+  description: z.string().optional(),
+  actions: z.array(iotActionRequestSchema),
+});
+
+export const automationRecordSchema = z.object({
+  id: z.string().min(1),
+  homeId: z.string().min(1),
+  label: z.string().min(1),
+  enabled: z.boolean(),
+  trigger: z.record(z.unknown()),
+  conditions: z.array(z.record(z.unknown())),
+  actions: z.array(iotActionRequestSchema),
+});
+
+export const policyRecordSchema = z.object({
+  id: z.string().min(1),
+  homeId: z.string().min(1),
+  label: z.string().min(1),
+  riskLevel: z.enum(["safe", "caution", "restricted"]).optional(),
+  requiresApproval: z.boolean(),
+  localOnly: z.boolean().optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+export const approvalRecordSchema = z.object({
+  id: z.string().min(1),
+  homeId: z.string().min(1),
+  status: z.enum(["pending", "approved", "denied", "executed"]),
+  reason: z.string().min(1),
+  action: iotActionRequestSchema,
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+});
+
+export const iotEventRecordSchema = z.object({
+  id: z.string().min(1),
+  homeId: z.string().min(1),
+  type: z.string().min(1),
+  payload: z.record(z.unknown()),
+  createdAt: z.string().min(1),
+});
+
+export const iotStateSnapshotSchema = z.object({
+  home: homeDescriptorSchema,
+  areas: z.array(areaDescriptorSchema),
+  connectors: z.array(connectorDescriptorSchema),
+  things: z.array(thingDescriptorSchema),
+  updatedAt: z.string().min(1),
+});
+
+export const rawIotInvocationSchema = z.object({
+  connector: z.string().min(1),
+  homeId: z.string().min(1).optional(),
+  target: z.string().min(1),
+  action: z.string().min(1),
+  payload: z.record(z.unknown()).optional(),
+});
+
 export const telegramBotProfileSchema = z.object({
   id: z.string().min(1),
   isBot: z.boolean(),
@@ -370,7 +532,7 @@ export const intentDomainSchema = z.enum([
   "skills",
   "plugins",
   "files",
-  "conversations",
+  "sessions",
   "speech",
 ]);
 
@@ -384,22 +546,22 @@ export const observedDomainSchema = z.enum([
   "plugins",
   "memory",
   "scheduler",
-  "conversations",
+  "sessions",
 ]);
 
 export const featureOwnershipSchema = z.enum(["sdk-owned", "runtime-owned", "mirrored"]);
-export const conversationPolicySchema = z.enum(["managed", "mirror", "native"]);
+export const sessionPolicySchema = z.enum(["managed", "mirror", "native"]);
 
 export const runtimeFeatureDescriptorSchema = z.object({
   featureId: z.string().min(1),
   ownership: featureOwnershipSchema,
   supported: z.boolean(),
-  conversationPolicy: conversationPolicySchema.optional(),
+  sessionPolicy: sessionPolicySchema.optional(),
   limitations: z.array(z.string()).optional(),
 });
 
 export const linkedEntityRefSchema = z.object({
-  domain: z.enum(["task", "note", "person", "inbox_thread", "inbox_message", "event"]),
+  domain: z.enum(["task", "goal", "project", "reminder", "deadline", "note", "person", "inbox_thread", "inbox_message", "event"]),
   id: z.string().min(1),
   label: z.string().min(1).optional(),
   relationship: z.string().min(1).optional(),
@@ -438,9 +600,80 @@ export const taskRecordSchema = z.object({
   watcherPersonIds: z.array(z.string()),
   dueAt: z.string().min(1).optional(),
   scheduledEventId: z.string().min(1).optional(),
+  eventId: z.string().min(1).optional(),
+  projectId: z.string().min(1).optional(),
+  goalId: z.string().min(1).optional(),
   parentTaskId: z.string().min(1).optional(),
   childTaskIds: z.array(z.string()),
+  dependsOnTaskIds: z.array(z.string()),
+  companyId: z.string().min(1).optional(),
+  portfolioId: z.string().min(1).optional(),
+  portfolioItemId: z.string().min(1).optional(),
   checklist: z.array(taskChecklistItemSchema),
+});
+
+export const goalRecordSchema = z.object({
+  ...workspaceRecordBaseShape,
+  title: z.string().min(1),
+  description: z.string().optional(),
+  status: z.enum(["active", "paused", "done"]),
+  level: z.enum(["company", "team", "personal"]).optional(),
+  projectId: z.string().min(1).optional(),
+  parentId: z.string().min(1).optional(),
+  parentGoalId: z.string().min(1).optional(),
+  ownerPersonId: z.string().min(1).optional(),
+  ownerAgentId: z.string().min(1).optional(),
+  companyId: z.string().min(1).optional(),
+  portfolioId: z.string().min(1).optional(),
+  portfolioItemId: z.string().min(1).optional(),
+  metricKey: z.string().min(1).optional(),
+  metricLabel: z.string().min(1).optional(),
+  targetValue: z.number().optional(),
+  currentValue: z.number().optional(),
+  unit: z.string().min(1).optional(),
+  period: z.string().min(1).optional(),
+  healthStatus: z.enum(["green", "yellow", "red", "unknown"]).optional(),
+});
+
+export const projectRecordSchema = z.object({
+  ...workspaceRecordBaseShape,
+  name: z.string().min(1),
+  description: z.string().optional(),
+  status: z.enum(["draft", "in_progress", "paused", "done", "archived"]),
+  goalId: z.string().min(1).optional(),
+  ownerPersonId: z.string().min(1).optional(),
+  leadAgentId: z.string().min(1).optional(),
+  companyId: z.string().min(1).optional(),
+  portfolioId: z.string().min(1).optional(),
+  portfolioItemId: z.string().min(1).optional(),
+  color: z.string().min(1).optional(),
+  kind: z.enum(["delivery", "growth", "ops", "research", "migration", "other"]).optional(),
+  healthStatus: z.enum(["green", "yellow", "red", "unknown"]).optional(),
+  startDate: z.string().min(1).optional(),
+  targetDate: z.string().min(1).optional(),
+});
+
+const productivityAnchorTypeSchema = z.enum(["task", "project", "goal", "event", "thread", "standalone"]);
+
+export const reminderRecordSchema = z.object({
+  ...workspaceRecordBaseShape,
+  title: z.string().min(1),
+  description: z.string().optional(),
+  status: z.enum(["active", "paused", "done", "cancelled"]),
+  triggerAt: z.string().min(1),
+  anchorType: productivityAnchorTypeSchema.optional(),
+  anchorId: z.string().min(1).optional(),
+  channel: z.string().min(1).optional(),
+});
+
+export const deadlineRecordSchema = z.object({
+  ...workspaceRecordBaseShape,
+  title: z.string().min(1),
+  description: z.string().optional(),
+  status: z.enum(["active", "paused", "done", "cancelled"]),
+  dueAt: z.string().min(1),
+  anchorType: productivityAnchorTypeSchema.optional(),
+  anchorId: z.string().min(1).optional(),
 });
 
 export const noteBlockSchema = z.object({
@@ -503,16 +736,115 @@ export const eventRecordSchema = z.object({
   reminders: z.array(eventReminderSchema),
 });
 
+export const temporalParticipantSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(["human", "agent", "org", "external"]),
+  label: z.string().min(1),
+  personId: z.string().min(1).optional(),
+  agentId: z.string().min(1).optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+export const temporalActionSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(["notify", "agent_prompt", "workflow", "create_task", "calendar_sync"]),
+  target: z.string().min(1).optional(),
+  payload: z.record(z.unknown()).optional(),
+});
+
+export const temporalOccurrenceOverrideSchema = z.object({
+  originalStartAt: z.string().min(1),
+  startsAt: z.string().min(1).optional(),
+  endsAt: z.string().min(1).optional(),
+  cancelled: z.boolean().optional(),
+});
+
+export const temporalScheduleSchema = z.object({
+  mode: z.enum(["one_off", "cron", "rrule", "relative"]),
+  timezone: z.string().min(1),
+  startsAt: z.string().min(1).optional(),
+  cron: z.string().min(1).optional(),
+  rrule: z.string().min(1).optional(),
+  relative: z.object({
+    anchorType: z.enum(["thread", "task", "project", "goal", "event", "execution", "standalone"]),
+    anchorId: z.string().min(1),
+    anchorAt: z.string().min(1),
+    offsetMs: z.number().int().nonnegative(),
+    cancelOn: z.enum(["reply_received", "task_completed", "event_started", "execution_succeeded"]).optional(),
+  }).optional(),
+  overrides: z.array(temporalOccurrenceOverrideSchema).optional(),
+  cancelledOccurrences: z.array(z.string()).optional(),
+});
+
+export const temporalProjectionSchema = z.object({
+  id: z.string().min(1),
+  itemId: z.string().min(1),
+  target: z.enum(["workspace_events", "relay_routines", "google_calendar", "runtime_scheduler", "notify"]),
+  status: z.enum(["pending", "active", "synced", "failed"]),
+  provider: z.string().min(1).optional(),
+  externalId: z.string().min(1).optional(),
+  detail: z.record(z.unknown()).optional(),
+  updatedAt: z.string().min(1),
+});
+
+export const temporalExecutionSchema = z.object({
+  id: z.string().min(1),
+  itemId: z.string().min(1),
+  status: z.enum(["pending", "running", "succeeded", "failed", "cancelled"]),
+  scheduledFor: z.string().min(1),
+  startedAt: z.string().min(1).optional(),
+  completedAt: z.string().min(1).optional(),
+  triggeredBy: z.enum(["scheduler", "manual", "system"]),
+  output: z.string().optional(),
+  error: z.string().optional(),
+});
+
+export const temporalNaturalInputSchema = z.object({
+  command: z.enum(["at", "every", "after"]),
+  expression: z.string().min(1),
+  timezone: z.string().min(1).optional(),
+  anchorType: z.enum(["thread", "task", "project", "goal", "event", "execution", "standalone"]).optional(),
+  anchorId: z.string().min(1).optional(),
+  anchorAt: z.string().min(1).optional(),
+});
+
+export const temporalItemSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(["event", "routine", "reminder", "deadline", "follow_up"]),
+  status: z.enum(["active", "paused", "cancelled", "completed"]),
+  title: z.string().min(1),
+  description: z.string().optional(),
+  location: z.string().optional(),
+  startsAt: z.string().min(1).optional(),
+  endsAt: z.string().min(1).optional(),
+  dueAt: z.string().min(1).optional(),
+  timezone: z.string().min(1),
+  schedule: temporalScheduleSchema,
+  participants: z.array(temporalParticipantSchema),
+  actions: z.array(temporalActionSchema),
+  projections: z.array(temporalProjectionSchema),
+  ownerId: z.string().min(1).optional(),
+  workspaceId: z.string().min(1).optional(),
+  projectId: z.string().min(1).optional(),
+  agentId: z.string().min(1).optional(),
+  sourceProvider: z.string().min(1).optional(),
+  anchorType: z.enum(["thread", "task", "project", "goal", "event", "execution", "standalone"]).optional(),
+  anchorId: z.string().min(1).optional(),
+  nextRunAt: z.string().min(1).optional(),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+});
+
 export const workspaceSearchQuerySchema = z.object({
   query: z.string().min(1),
-  domains: z.array(z.enum(["tasks", "notes", "people", "inbox", "events"])).optional(),
+  domains: z.array(z.enum(["tasks", "goals", "projects", "reminders", "deadlines", "notes", "people", "inbox", "events"])).optional(),
   strategy: z.enum(["auto", "keyword", "semantic", "hybrid"]).optional(),
   limit: z.number().int().positive().optional(),
   includeArchived: z.boolean().optional(),
 });
 
 export const workspaceSearchResultSchema = z.object({
-  domain: z.enum(["tasks", "notes", "people", "inbox", "events"]),
+  domain: z.enum(["tasks", "goals", "projects", "reminders", "deadlines", "notes", "people", "inbox", "events"]),
   id: z.string().min(1),
   title: z.string().min(1),
   snippet: z.string(),
@@ -535,7 +867,7 @@ export const auditEventSchema = z.object({
     "providers",
     "models",
     "auth",
-    "conversations",
+    "sessions",
     "watchers",
     "compat",
     "doctor",
@@ -547,6 +879,10 @@ export const auditEventSchema = z.object({
     "sandbox",
     "plugins",
     "tasks",
+    "goals",
+    "projects",
+    "reminders",
+    "deadlines",
     "notes",
     "people",
     "inbox",

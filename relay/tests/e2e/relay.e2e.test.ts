@@ -9,6 +9,7 @@ import WebSocket from "ws";
 import { buildRelayApp } from "../../src/server/app.ts";
 import { RelayLogger } from "../../src/server/logger.ts";
 import { deriveAssignmentWorkspaceId, deriveRuntimeAgentId } from "../../src/shared/project-model.ts";
+import { buildIotApp } from "../../../iot/src/server/app.ts";
 
 interface SessionRecord {
   sessionId: string;
@@ -39,21 +40,34 @@ interface RelayDocumentRecord {
   contentBase64: string;
 }
 
+const TEST_BROWSER_FRAME = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WnSUs8AAAAASUVORK5CYII=";
+
 const state = {
   sessionsByWorkspace: new Map<string, Map<string, SessionRecord>>(),
   workspaceFilesByWorkspace: new Map<string, Map<string, string>>(),
   documentsByWorkspace: new Map<string, Map<string, RelayDocumentRecord>>(),
   uploadSessionsByWorkspace: new Map<string, Map<string, { name: string; mimeType: string; sessionId?: string; chunks: string[] }>>(),
   tasks: [] as Array<Record<string, unknown>>,
+  goals: [] as Array<Record<string, unknown>>,
+  projects: [] as Array<Record<string, unknown>>,
   notes: [] as Array<Record<string, unknown>>,
   memory: [] as Array<Record<string, unknown>>,
   inbox: [] as Array<Record<string, unknown>>,
   people: [] as Array<Record<string, unknown>>,
+  reminders: [] as Array<Record<string, unknown>>,
+  deadlines: [] as Array<Record<string, unknown>>,
   events: [] as Array<Record<string, unknown>>,
   personas: [] as Array<Record<string, unknown>>,
   plugins: [] as Array<Record<string, unknown>>,
   routines: [] as Array<Record<string, unknown>>,
   images: [] as Array<Record<string, unknown>>,
+  contentBrands: [] as Array<Record<string, unknown>>,
+  contentDestinations: [] as Array<Record<string, unknown>>,
+  contentEntries: [] as Array<Record<string, unknown>>,
+  contentVariants: [] as Array<Record<string, unknown>>,
+  contentApprovals: [] as Array<Record<string, unknown>>,
+  contentPlans: [] as Array<Record<string, unknown>>,
+  contentRuns: [] as Array<Record<string, unknown>>,
 };
 
 function sessionsForWorkspace(workspaceId: string): Map<string, SessionRecord> {
@@ -108,6 +122,28 @@ function documentRef(document: RelayDocumentRecord) {
 }
 
 function startFakeConnector(url: string, connectorToken: string, agentId = "demo-agent", connectorId = agentId) {
+  const browserState = {
+    session: {
+      workspaceId: "main",
+      active: false,
+      status: "idle",
+      navigation: {
+        title: "Claw Browser",
+        url: "",
+        displayUrl: "Not started",
+        isLocalUrl: false,
+      },
+      controller: null as null | {
+        deviceId: string;
+        userId: string;
+        email?: string;
+        acquiredAt: string;
+      },
+      viewport: { width: 1440, height: 960 },
+      updatedAt: new Date().toISOString(),
+    },
+    frameSeq: 0,
+  };
   const socket = new WebSocket(url.replace(/^http/, "ws") + "/v1/connector/connect", {
     headers: { Authorization: `Bearer ${connectorToken}` },
   });
@@ -120,7 +156,7 @@ function startFakeConnector(url: string, connectorToken: string, agentId = "demo
         connectorId,
         agentId,
         version: "test",
-        capabilities: ["sessions", "workspace", "crud"],
+        capabilities: ["sessions", "workspace", "crud", "browser"],
         workspaces: [{ workspaceId: "main", displayName: "Main" }],
       },
     }));
@@ -153,9 +189,94 @@ function startFakeConnector(url: string, connectorToken: string, agentId = "demo
           .map((document) => documentRef(document as RelayDocumentRecord))
         : []
     );
+    const emitBrowserState = (reason: string) => {
+      browserState.session.updatedAt = new Date().toISOString();
+      socket.send(JSON.stringify({
+        type: "event",
+        event: "browser.state",
+        payload: {
+          workspaceId: targetWorkspaceId,
+          reason,
+          session: browserState.session,
+        },
+      }));
+    };
+    const emitBrowserFrame = () => {
+      browserState.frameSeq += 1;
+      socket.send(JSON.stringify({
+        type: "event",
+        event: "browser.frame",
+        payload: {
+          workspaceId: targetWorkspaceId,
+          seq: browserState.frameSeq,
+          imageBase64: TEST_BROWSER_FRAME,
+          mimeType: "image/png",
+          capturedAt: new Date().toISOString(),
+          viewport: browserState.session.viewport,
+        },
+      }));
+    };
     switch (message.operation) {
       case "workspace.status":
         respond({ status: { workspaceId: message.workspaceId, online: true } });
+        return;
+      case "browser.session.status":
+        respond({ session: browserState.session });
+        return;
+      case "browser.session.ensure":
+        browserState.session = {
+          ...browserState.session,
+          active: true,
+          status: "ready",
+          navigation: {
+            title: "Shared login",
+            url: String(message.payload?.initialUrl ?? "http://localhost:4300/login"),
+            displayUrl: "Local preview",
+            isLocalUrl: true,
+          },
+        };
+        respond({ session: browserState.session });
+        emitBrowserState("session-ready");
+        emitBrowserFrame();
+        return;
+      case "browser.control.acquire":
+        browserState.session = {
+          ...browserState.session,
+          controller: {
+            deviceId: String(message.payload?.actor?.deviceId ?? "device"),
+            userId: String(message.payload?.actor?.userId ?? "user"),
+            ...(typeof message.payload?.actor?.email === "string" ? { email: message.payload.actor.email } : {}),
+            acquiredAt: new Date().toISOString(),
+          },
+        };
+        respond({ session: browserState.session });
+        emitBrowserState("control-acquired");
+        return;
+      case "browser.control.release":
+        browserState.session = {
+          ...browserState.session,
+          controller: null,
+        };
+        respond({ session: browserState.session });
+        emitBrowserState("control-released");
+        return;
+      case "browser.navigate":
+        browserState.session = {
+          ...browserState.session,
+          navigation: {
+            title: String(message.payload?.url ?? "Browser"),
+            url: String(message.payload?.url ?? ""),
+            displayUrl: String(message.payload?.url ?? ""),
+            isLocalUrl: false,
+          },
+        };
+        respond({ session: browserState.session });
+        emitBrowserState("navigate");
+        emitBrowserFrame();
+        return;
+      case "browser.input":
+        respond({ session: browserState.session });
+        emitBrowserFrame();
         return;
       case "integrations.status":
         respond({ integrations: { runtime: { adapter: "fake" }, channels: [] } });
@@ -429,6 +550,44 @@ function startFakeConnector(url: string, connectorToken: string, agentId = "demo
         state.tasks.splice(0, state.tasks.length, ...state.tasks.filter((task) => task.id !== message.payload?.id));
         respond({ ok: true });
         return;
+      case "goals.list":
+        respond({ goals: state.goals });
+        return;
+      case "goals.create": {
+        const goal = { id: randomId("goal"), ...message.payload };
+        state.goals.push(goal);
+        respond({ goal });
+        return;
+      }
+      case "goals.update": {
+        const index = state.goals.findIndex((goal) => goal.id === message.payload?.id);
+        if (index >= 0) state.goals[index] = { ...state.goals[index], ...message.payload };
+        respond({ goal: state.goals[index] });
+        return;
+      }
+      case "goals.delete":
+        state.goals.splice(0, state.goals.length, ...state.goals.filter((goal) => goal.id !== message.payload?.id));
+        respond({ ok: true });
+        return;
+      case "projects.list":
+        respond({ projects: state.projects });
+        return;
+      case "projects.create": {
+        const project = { id: randomId("project"), ...message.payload };
+        state.projects.push(project);
+        respond({ project });
+        return;
+      }
+      case "projects.update": {
+        const index = state.projects.findIndex((project) => project.id === message.payload?.id);
+        if (index >= 0) state.projects[index] = { ...state.projects[index], ...message.payload };
+        respond({ project: state.projects[index] });
+        return;
+      }
+      case "projects.delete":
+        state.projects.splice(0, state.projects.length, ...state.projects.filter((project) => project.id !== message.payload?.id));
+        respond({ ok: true });
+        return;
       case "notes.list":
         respond({ notes: state.notes });
         return;
@@ -492,6 +651,44 @@ function startFakeConnector(url: string, connectorToken: string, agentId = "demo
         return;
       }
       case "people.delete":
+        respond({ ok: true });
+        return;
+      case "reminders.list":
+        respond({ reminders: state.reminders });
+        return;
+      case "reminders.create": {
+        const reminder = { id: randomId("reminder"), ...message.payload };
+        state.reminders.push(reminder);
+        respond({ reminder });
+        return;
+      }
+      case "reminders.update": {
+        const index = state.reminders.findIndex((reminder) => reminder.id === message.payload?.id);
+        if (index >= 0) state.reminders[index] = { ...state.reminders[index], ...message.payload };
+        respond({ reminder: state.reminders[index] });
+        return;
+      }
+      case "reminders.delete":
+        state.reminders.splice(0, state.reminders.length, ...state.reminders.filter((reminder) => reminder.id !== message.payload?.id));
+        respond({ ok: true });
+        return;
+      case "deadlines.list":
+        respond({ deadlines: state.deadlines });
+        return;
+      case "deadlines.create": {
+        const deadline = { id: randomId("deadline"), ...message.payload };
+        state.deadlines.push(deadline);
+        respond({ deadline });
+        return;
+      }
+      case "deadlines.update": {
+        const index = state.deadlines.findIndex((deadline) => deadline.id === message.payload?.id);
+        if (index >= 0) state.deadlines[index] = { ...state.deadlines[index], ...message.payload };
+        respond({ deadline: state.deadlines[index] });
+        return;
+      }
+      case "deadlines.delete":
+        state.deadlines.splice(0, state.deadlines.length, ...state.deadlines.filter((deadline) => deadline.id !== message.payload?.id));
         respond({ ok: true });
         return;
       case "events.list":
@@ -573,6 +770,235 @@ function startFakeConnector(url: string, connectorToken: string, agentId = "demo
       case "images.delete":
         respond({ removed: true });
         return;
+      case "content.brands.list":
+        respond({ brands: state.contentBrands });
+        return;
+      case "content.brands.create": {
+        const brand = { id: randomId("brand"), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), ...message.payload };
+        state.contentBrands.push(brand);
+        respond({ brand });
+        return;
+      }
+      case "content.brands.update": {
+        const index = state.contentBrands.findIndex((brand) => brand.id === message.payload?.id);
+        if (index >= 0) state.contentBrands[index] = { ...state.contentBrands[index], ...message.payload, updatedAt: new Date().toISOString() };
+        respond({ brand: state.contentBrands[index] });
+        return;
+      }
+      case "content.destinations.list":
+        respond({ destinations: state.contentDestinations });
+        return;
+      case "content.destinations.create": {
+        const destination = { id: randomId("destination"), status: "active", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), ...message.payload };
+        state.contentDestinations.push(destination);
+        respond({ destination });
+        return;
+      }
+      case "content.destinations.update": {
+        const index = state.contentDestinations.findIndex((destination) => destination.id === message.payload?.id);
+        if (index >= 0) state.contentDestinations[index] = { ...state.contentDestinations[index], ...message.payload, updatedAt: new Date().toISOString() };
+        respond({ destination: state.contentDestinations[index] });
+        return;
+      }
+      case "content.destinations.testConnection": {
+        const destination = state.contentDestinations.find((entry) => entry.id === message.payload?.id);
+        respond({ ok: true, destination });
+        return;
+      }
+      case "content.entries.list":
+        respond({ entries: state.contentEntries });
+        return;
+      case "content.entries.get": {
+        const entry = state.contentEntries.find((item) => item.id === message.payload?.id);
+        respond({ entry, revisions: [], assets: [], variants: state.contentVariants.filter((variant) => variant.entryId === entry?.id) });
+        return;
+      }
+      case "content.entries.create": {
+        const entry = {
+          id: randomId("entry"),
+          status: "draft",
+          currentRevisionNumber: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          ...message.payload,
+        };
+        state.contentEntries.push(entry);
+        respond({ entry });
+        return;
+      }
+      case "content.entries.update": {
+        const index = state.contentEntries.findIndex((entry) => entry.id === message.payload?.id);
+        if (index >= 0) state.contentEntries[index] = { ...state.contentEntries[index], ...message.payload, updatedAt: new Date().toISOString() };
+        respond({ entry: state.contentEntries[index] });
+        return;
+      }
+      case "content.entries.archive": {
+        const index = state.contentEntries.findIndex((entry) => entry.id === message.payload?.id);
+        if (index >= 0) state.contentEntries[index] = { ...state.contentEntries[index], status: "archived", updatedAt: new Date().toISOString() };
+        respond({ entry: state.contentEntries[index] });
+        return;
+      }
+      case "content.entries.attachAsset":
+        respond({ asset: { id: randomId("asset"), ...message.payload } });
+        return;
+      case "content.entries.generateVariants": {
+        const destinationIds = Array.isArray(message.payload?.destinationIds) ? message.payload.destinationIds.map(String) : [];
+        const variants = destinationIds.map((destinationId) => {
+          const variant = {
+            id: randomId("variant"),
+            entryId: message.payload?.id,
+            destinationId,
+            status: "ready",
+            body: "Generated relay variant",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          state.contentVariants.push(variant);
+          return variant;
+        });
+        respond({ variants });
+        return;
+      }
+      case "content.variants.list":
+        respond({ variants: state.contentVariants });
+        return;
+      case "content.variants.create": {
+        const variant = { id: randomId("variant"), status: "ready", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), ...message.payload };
+        state.contentVariants.push(variant);
+        respond({ variant });
+        return;
+      }
+      case "content.variants.update": {
+        const index = state.contentVariants.findIndex((variant) => variant.id === message.payload?.id);
+        if (index >= 0) state.contentVariants[index] = { ...state.contentVariants[index], ...message.payload, updatedAt: new Date().toISOString() };
+        respond({ variant: state.contentVariants[index] });
+        return;
+      }
+      case "content.approvals.list":
+        respond({ approvals: state.contentApprovals });
+        return;
+      case "content.approvals.approve": {
+        const index = state.contentApprovals.findIndex((approval) => approval.id === message.payload?.id);
+        if (index >= 0) state.contentApprovals[index] = { ...state.contentApprovals[index], status: "approved" };
+        respond({ approval: state.contentApprovals[index] });
+        return;
+      }
+      case "content.approvals.reject": {
+        const index = state.contentApprovals.findIndex((approval) => approval.id === message.payload?.id);
+        if (index >= 0) state.contentApprovals[index] = { ...state.contentApprovals[index], status: "rejected", comment: message.payload?.comment };
+        respond({ approval: state.contentApprovals[index] });
+        return;
+      }
+      case "content.approvals.cancel": {
+        const index = state.contentApprovals.findIndex((approval) => approval.id === message.payload?.id);
+        if (index >= 0) state.contentApprovals[index] = { ...state.contentApprovals[index], status: "cancelled" };
+        respond({ approval: state.contentApprovals[index] });
+        return;
+      }
+      case "content.calendar.view":
+        respond({ items: state.contentPlans.map((plan) => ({ planId: plan.id, title: "Relay calendar item", scheduledAt: plan.scheduledAt ?? null })) });
+        return;
+      case "content.publish.listPlans":
+        respond({ plans: state.contentPlans });
+        return;
+      case "content.publish.createPlan": {
+        const variant = state.contentVariants.find((entry) => entry.id === message.payload?.variantId);
+        const plan = {
+          id: randomId("plan"),
+          entryId: variant?.entryId,
+          variantId: variant?.id,
+          destinationId: variant?.destinationId,
+          status: "queued",
+          scheduledAt: message.payload?.scheduledAt ?? null,
+        };
+        state.contentPlans.push(plan);
+        respond({ plan, approval: null });
+        return;
+      }
+      case "content.publish.cancelPlan": {
+        const index = state.contentPlans.findIndex((plan) => plan.id === message.payload?.id);
+        if (index >= 0) state.contentPlans[index] = { ...state.contentPlans[index], status: "cancelled" };
+        respond({ plan: state.contentPlans[index] });
+        return;
+      }
+      case "content.publish.runNow": {
+        const plan = state.contentPlans.find((entry) => entry.id === message.payload?.id);
+        const run = {
+          id: randomId("run"),
+          planId: plan?.id,
+          entryId: plan?.entryId,
+          variantId: plan?.variantId,
+          destinationId: plan?.destinationId,
+          status: "succeeded",
+          attemptNumber: 1,
+          externalId: randomId("external"),
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+        };
+        if (plan) Object.assign(plan, { status: "succeeded" });
+        state.contentRuns.push(run);
+        respond({ plan, run });
+        return;
+      }
+      case "content.publish.schedulerRun":
+        respond({ runs: state.contentRuns });
+        return;
+      case "content.publish.listRuns":
+        respond({ runs: state.contentRuns.map((run) => ({ ...run, canRetry: run.status === "failed" })) });
+        return;
+      case "content.publish.getRun": {
+        const run = state.contentRuns.find((entry) => entry.id === message.payload?.id);
+        respond({ run, canRetry: false, plan: state.contentPlans.find((plan) => plan.id === run?.planId) ?? null });
+        return;
+      }
+      case "content.publish.retryRun": {
+        const previous = state.contentRuns.find((entry) => entry.id === message.payload?.id);
+        const run = {
+          id: randomId("run"),
+          planId: previous?.planId,
+          entryId: previous?.entryId,
+          variantId: previous?.variantId,
+          destinationId: previous?.destinationId,
+          status: "succeeded",
+          attemptNumber: Number(previous?.attemptNumber ?? 0) + 1,
+          externalId: randomId("external"),
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+        };
+        state.contentRuns.push(run);
+        respond({ plan: state.contentPlans.find((plan) => plan.id === previous?.planId) ?? null, run });
+        return;
+      }
+      case "content.app.frontendContract":
+        respond({ version: "1", screens: [] });
+        return;
+      case "content.app.screens":
+        respond({ screens: [{ id: "dashboard", route: "/dashboard" }] });
+        return;
+      case "content.app.dashboard":
+        respond({ metrics: { drafts: state.contentEntries.length } });
+        return;
+      case "content.app.calendar":
+        respond({ items: state.contentPlans });
+        return;
+      case "content.app.pipeline":
+        respond({ columns: [] });
+        return;
+      case "content.app.composer":
+        respond({ entry: state.contentEntries.find((entry) => entry.id === message.payload?.entryId) ?? null });
+        return;
+      case "content.app.destinations":
+        respond({ items: state.contentDestinations });
+        return;
+      case "content.app.approvals":
+        respond({ items: state.contentApprovals });
+        return;
+      case "content.app.publications":
+        respond({ items: state.contentRuns });
+        return;
+      case "content.app.form":
+        respond({ id: message.payload?.formId ?? "entry.create" });
+        return;
       case "skills.list":
         respond({ skills: [{ id: "checks", enabled: true }] });
         return;
@@ -614,9 +1040,26 @@ function startFakeConnector(url: string, connectorToken: string, agentId = "demo
 let baseUrl = "";
 let appRef: Awaited<ReturnType<typeof buildRelayApp>> | null = null;
 let logger: RelayLogger;
+let iotRef: ReturnType<typeof buildIotApp> | null = null;
+let iotBaseUrl = "";
 
 before(async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-relay-e2e-"));
+  const iotDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-relay-iot-e2e-"));
+  iotRef = buildIotApp({
+    config: {
+      host: "127.0.0.1",
+      port: 0,
+      dataDir: path.join(iotDir, ".data"),
+      dbPath: path.join(iotDir, ".data", "iot.sqlite"),
+    },
+  });
+  await iotRef.app.listen({ host: "127.0.0.1", port: 0 });
+  const iotAddress = iotRef.app.server.address();
+  if (!iotAddress || typeof iotAddress === "string") {
+    throw new Error("Failed to resolve iot address");
+  }
+  iotBaseUrl = `http://127.0.0.1:${iotAddress.port}`;
   logger = new RelayLogger();
   appRef = await buildRelayApp({
     logger,
@@ -627,6 +1070,7 @@ before(async () => {
       jwtSecrets: ["relay-e2e-secret"],
       publicBaseUrl: "http://127.0.0.1:4410",
       loginRateLimitMax: 100,
+      iotBaseUrl,
     },
   });
   await appRef.app.listen({ host: "127.0.0.1", port: 0 });
@@ -639,6 +1083,7 @@ before(async () => {
 
 after(async () => {
   await appRef?.app.close();
+  await iotRef?.app.close();
 });
 
 async function login(email: string, password: string) {
@@ -679,6 +1124,151 @@ describe("relay e2e", () => {
       Buffer.from(await fontResponse.arrayBuffer()),
       fs.readFileSync(path.join(sharedPublicDir, "fonts", "source-sans-3", "source-sans-3-v18-cyrillic_latin_latin-ext-regular.woff2")),
     );
+  });
+
+  test("relay forwards home-scoped iot state, actions, approvals, and stream", async () => {
+    const { accessToken } = await login("user@relay.local", "relay-user");
+
+    const stateResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/homes/home_main/state`, {
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+    assert.equal(stateResponse.status, 200);
+    const statePayload = await stateResponse.json() as { snapshot: { things: Array<{ id: string }> } };
+    assert.ok(statePayload.snapshot.things.some((thing) => thing.id === "office-light"));
+
+    const approvalResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/homes/home_main/actions`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ family: "lock", selector: "front door", action: "unlock" }),
+    });
+    assert.equal(approvalResponse.status, 200);
+    const approvalPayload = await approvalResponse.json() as { result: { approvalId?: string; status: string } };
+    assert.equal(approvalPayload.result.status, "approval_required");
+    assert.ok(approvalPayload.result.approvalId);
+
+    const approvalsResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/homes/home_main/approvals`, {
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+    assert.equal(approvalsResponse.status, 200);
+    const approvalsPayload = await approvalsResponse.json() as { approvals: Array<{ id: string; status: string }> };
+    assert.equal(approvalsPayload.approvals[0]?.status, "pending");
+
+    const streamResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/homes/home_main/events/stream`, {
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+    assert.equal(streamResponse.status, 200);
+    const reader = streamResponse.body?.getReader();
+    const firstChunk = reader ? await reader.read() : { value: undefined };
+    const chunkText = firstChunk.value ? Buffer.from(firstChunk.value).toString("utf8") : "";
+    assert.match(chunkText, /event: ready/);
+    reader?.releaseLock();
+  });
+
+  test("relay forwards content workspace routes for brands, variants, plans, runs, and read models", async () => {
+    const userTokens = await login("user@relay.local", "relay-user");
+    const adminTokens = await login("admin@relay.local", "relay-admin");
+
+    const enrollmentResponse = await fetch(`${baseUrl}/v1/admin/connectors/enrollments`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${adminTokens.accessToken}`,
+      },
+      body: JSON.stringify({ tenantId: "demo-tenant", agentId: "content-agent", description: "content connector" }),
+    });
+    assert.equal(enrollmentResponse.status, 200);
+    const enrollment = await enrollmentResponse.json() as { enrollmentToken: string };
+
+    const connectorEnroll = await fetch(`${baseUrl}/v1/connector/enroll`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enrollmentToken: enrollment.enrollmentToken }),
+    });
+    const connectorToken = (await connectorEnroll.json() as { connectorToken: string }).connectorToken;
+    const socket = startFakeConnector(baseUrl, connectorToken, "content-agent");
+    await new Promise((resolve) => socket.once("message", () => resolve(null)));
+
+    const brandResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/content-agent/workspaces/main/content/brands`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+      body: JSON.stringify({ name: "Relay Brand" }),
+    });
+    assert.equal(brandResponse.status, 200);
+    const brandId = (await brandResponse.json() as { brand: { id: string } }).brand.id;
+
+    const destinationResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/content-agent/workspaces/main/content/destinations`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+      body: JSON.stringify({ brandId, name: "Relay Destination", kind: "webhook", publishPolicy: "autopublish" }),
+    });
+    const destinationId = (await destinationResponse.json() as { destination: { id: string } }).destination.id;
+
+    const entryResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/content-agent/workspaces/main/content/entries`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+      body: JSON.stringify({ brandId, title: "Relay entry", canonicalBody: "Relay body", canonicalFormat: "markdown", contentType: "post" }),
+    });
+    const entryId = (await entryResponse.json() as { entry: { id: string } }).entry.id;
+
+    const generatedResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/content-agent/workspaces/main/content/entries/${entryId}/variants:generate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+      body: JSON.stringify({ destinationIds: [destinationId] }),
+    });
+    const variantId = (await generatedResponse.json() as { variants: Array<{ id: string }> }).variants[0]!.id;
+
+    const planResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/content-agent/workspaces/main/content/plans`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+      body: JSON.stringify({ variantId }),
+    });
+    const planId = (await planResponse.json() as { plan: { id: string } }).plan.id;
+
+    const runResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/content-agent/workspaces/main/content/plans/${planId}/run`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+    });
+    const runPayload = await runResponse.json() as { run: { id: string; status: string } };
+    assert.equal(runPayload.run.status, "succeeded");
+
+    const publicationsResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/content-agent/workspaces/main/content/publications`, {
+      headers: {
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+    });
+    const publicationsPayload = await publicationsResponse.json() as { runs: Array<{ id: string }> };
+    assert.ok(publicationsPayload.runs.some((run) => run.id === runPayload.run.id));
+
+    const dashboardResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/content-agent/workspaces/main/content/app/dashboard`, {
+      headers: {
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+    });
+    assert.equal(dashboardResponse.status, 200);
+    const dashboardPayload = await dashboardResponse.json() as { metrics: { drafts: number } };
+    assert.ok(typeof dashboardPayload.metrics.drafts === "number");
+
+    socket.close();
   });
 
   test("login, refresh, logout, connector enrollment, routing, CRUD, SSE, offline and admin protection", async () => {
@@ -743,21 +1333,21 @@ describe("relay e2e", () => {
       headers: { Authorization: `Bearer ${userTokens.accessToken}` },
     });
     const agentsPayload = await agentsResponse.json() as { agents: Array<{ agentId: string; status: string }> };
-    assert.equal(agentsPayload.agents[0]?.agentId, "demo-agent");
-    assert.equal(agentsPayload.agents[0]?.status, "online");
+    const demoAgent = agentsPayload.agents.find((agent) => agent.agentId === "demo-agent");
+    assert.equal(demoAgent?.status, "online");
 
     const workspacesResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/demo-agent/workspaces`, {
       headers: { Authorization: `Bearer ${userTokens.accessToken}` },
     });
     const workspacesPayload = await workspacesResponse.json() as { workspaces: Array<{ workspaceId: string }> };
-    assert.equal(workspacesPayload.workspaces[0]?.workspaceId, "main");
+    assert.equal(workspacesPayload.workspaces.some((workspace) => workspace.workspaceId === "main"), true);
 
     const myWorkspaces = await fetch(`${baseUrl}/v1/me/workspaces`, {
       headers: { Authorization: `Bearer ${userTokens.accessToken}` },
     });
     assert.equal(myWorkspaces.status, 200);
     const myWorkspacesPayload = await myWorkspaces.json() as { workspaces: Array<{ workspaceId: string }> };
-    assert.equal(myWorkspacesPayload.workspaces[0]?.workspaceId, "main");
+    assert.equal(myWorkspacesPayload.workspaces.some((workspace) => workspace.workspaceId === "main"), true);
 
     const workspaceFileWrite = await fetch(`${baseUrl}/v1/admin/tenants/demo-tenant/agents/demo-agent/workspaces/main/workspace-files/SOUL.md`, {
       method: "PUT",
@@ -953,6 +1543,26 @@ describe("relay e2e", () => {
     const task = await taskCreate.json() as { task: { id: string } };
     assert.ok(task.task.id);
 
+    const goalCreate = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/demo-agent/workspaces/main/goals`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+      body: JSON.stringify({ title: "Goal 1" }),
+    });
+    assert.equal(goalCreate.status, 200);
+
+    const projectCreate = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/demo-agent/workspaces/main/projects`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+      body: JSON.stringify({ name: "Project 1" }),
+    });
+    assert.equal(projectCreate.status, 200);
+
     const noteCreate = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/demo-agent/workspaces/main/notes`, {
       method: "POST",
       headers: {
@@ -982,6 +1592,26 @@ describe("relay e2e", () => {
       body: JSON.stringify({ displayName: "Alice" }),
     });
     assert.equal(peopleCreate.status, 200);
+
+    const reminderCreate = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/demo-agent/workspaces/main/reminders`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+      body: JSON.stringify({ title: "Reminder 1", triggerAt: "2026-04-15T09:00:00.000Z" }),
+    });
+    assert.equal(reminderCreate.status, 200);
+
+    const deadlineCreate = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/demo-agent/workspaces/main/deadlines`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+      body: JSON.stringify({ title: "Deadline 1", dueAt: "2026-04-16T09:00:00.000Z" }),
+    });
+    assert.equal(deadlineCreate.status, 200);
 
     const eventCreate = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/demo-agent/workspaces/main/events`, {
       method: "POST",
@@ -1178,6 +1808,122 @@ describe("relay e2e", () => {
       headers: { Authorization: `Bearer ${userPrimary.accessToken}` },
     });
     assert.equal(offlineAfterRevoke.status, 503);
+  });
+
+  test("browser session routes expose shared state, control, and frame streaming", async () => {
+    const adminTokens = await login("admin@relay.local", "relay-admin");
+    const userTokens = await login("user@relay.local", "relay-user");
+
+    const enrollmentResponse = await fetch(`${baseUrl}/v1/admin/connectors/enrollments`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${adminTokens.accessToken}`,
+      },
+      body: JSON.stringify({ tenantId: "demo-tenant", agentId: "browser-agent", description: "browser connector" }),
+    });
+    assert.equal(enrollmentResponse.status, 200);
+    const enrollment = await enrollmentResponse.json() as { enrollmentToken: string };
+
+    const connectorEnroll = await fetch(`${baseUrl}/v1/connector/enroll`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enrollmentToken: enrollment.enrollmentToken }),
+    });
+    const connectorToken = (await connectorEnroll.json() as { connectorToken: string }).connectorToken;
+    const socket = startFakeConnector(baseUrl, connectorToken, "browser-agent");
+    await new Promise((resolve) => socket.once("message", () => resolve(null)));
+
+    const idleResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/browser-agent/workspaces/main/browser/session`, {
+      headers: { Authorization: `Bearer ${userTokens.accessToken}` },
+    });
+    assert.equal(idleResponse.status, 200);
+    const idlePayload = await idleResponse.json() as { session: { status: string; active: boolean } };
+    assert.equal(idlePayload.session.status, "idle");
+    assert.equal(idlePayload.session.active, false);
+
+    const ensured = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/browser-agent/workspaces/main/browser/session`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+      body: JSON.stringify({ initialUrl: "http://localhost:4300/login" }),
+    });
+    assert.equal(ensured.status, 200);
+    const ensuredPayload = await ensured.json() as {
+      session: { active: boolean; navigation: { displayUrl: string } };
+      shareUrl: string;
+    };
+    assert.equal(ensuredPayload.session.active, true);
+    assert.equal(ensuredPayload.session.navigation.displayUrl, "Local preview");
+    assert.match(ensuredPayload.shareUrl, /browser\/demo-tenant\/browser-agent\/main$/);
+
+    const browserWs = new WebSocket(
+      `${baseUrl.replace(/^http/, "ws")}/v1/tenants/demo-tenant/agents/browser-agent/workspaces/main/browser/ws?access_token=${encodeURIComponent(userTokens.accessToken)}`,
+    );
+    const firstMessages: Array<Record<string, unknown>> = [];
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("Timed out waiting for browser events")), 10_000);
+      browserWs.on("message", (buffer) => {
+        firstMessages.push(JSON.parse(buffer.toString()) as Record<string, unknown>);
+        const hasState = firstMessages.some((entry) => entry.type === "browser.state");
+        const hasFrame = firstMessages.some((entry) => entry.type === "browser.frame");
+        if (hasState && hasFrame) {
+          clearTimeout(timer);
+          resolve();
+        }
+      });
+      browserWs.once("error", reject);
+    });
+    assert.ok(firstMessages.some((entry) => entry.type === "browser.state"));
+    assert.ok(firstMessages.some((entry) => entry.type === "browser.frame"));
+
+    const acquire = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/browser-agent/workspaces/main/browser/control/acquire`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+      body: JSON.stringify({}),
+    });
+    assert.equal(acquire.status, 200);
+    const acquirePayload = await acquire.json() as { session: { controller: { deviceId: string } | null } };
+    assert.equal(acquirePayload.session.controller?.deviceId, userTokens.deviceId);
+
+    const wsCommandResult = await new Promise<Record<string, unknown>>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("Timed out waiting for browser command result")), 10_000);
+      const onMessage = (buffer: WebSocket.RawData) => {
+        const payload = JSON.parse(buffer.toString()) as Record<string, unknown>;
+        if (payload.type === "browser.state" && payload.reason === "input-applied") {
+          clearTimeout(timer);
+          browserWs.off("message", onMessage);
+          resolve(payload);
+        }
+      };
+      browserWs.on("message", onMessage);
+      browserWs.send(JSON.stringify({
+        type: "browser.input",
+        command: { type: "key", key: "Enter" },
+      }));
+    });
+    assert.equal(wsCommandResult.type, "browser.state");
+
+    const release = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/browser-agent/workspaces/main/browser/control/release`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+      body: JSON.stringify({}),
+    });
+    assert.equal(release.status, 200);
+    const releasePayload = await release.json() as { session: { controller: null } };
+    assert.equal(releasePayload.session.controller, null);
+
+    browserWs.close();
+    socket.close();
+    await new Promise((resolve) => socket.once("close", () => resolve(null)));
   });
 
   test("denied pairings are blocked", async () => {
@@ -1514,9 +2260,9 @@ describe("relay e2e", () => {
     const agentsPayload = await listProjectAgents.json() as {
       agents: Array<{ agentId: string; displayName: string; agent?: { displayName?: string; role?: string; description?: string } }>;
     };
-    assert.equal(agentsPayload.agents[0]?.agentId, "ios-agent");
-    assert.equal(agentsPayload.agents[0]?.agent?.displayName, "Support Agent");
-    assert.equal(agentsPayload.agents[0]?.agent?.role, "support");
+    const iosAgent = agentsPayload.agents.find((agent) => agent.agentId === "ios-agent");
+    assert.equal(iosAgent?.agent?.displayName, "Support Agent");
+    assert.equal(iosAgent?.agent?.role, "support");
 
     const listSessions = await fetch(`${baseUrl}/v1/tenants/demo-tenant/projects/ios-chat/agents/ios-agent/sessions`, {
       headers: { Authorization: `Bearer ${userTokens.accessToken}` },

@@ -12,7 +12,7 @@ import {
 } from "@clawjs/claw";
 import type { TelegramSendMediaInput, TelegramSendMessageInput } from "@clawjs/claw";
 import { createWorkspaceClaw } from "@clawjs/workspace";
-import type { RuntimeAdapterId } from "@clawjs/core";
+import type { RuntimeAdapterId, TemporalItem } from "@clawjs/core";
 import {
   addProjectIntegration,
   collectProjectInfo,
@@ -64,9 +64,16 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} auth status|login|remove`,
     `  ${binName} models list|default|set-default`,
     `  ${binName} providers list|catalog|auth-state`,
+    `  ${binName} secrets list|describe|types|capabilities|broker http|leases list`,
     `  ${binName} scheduler list|run|enable|disable`,
+    `  ${binName} time list|get|create|update|delete|pause|resume|run|executions|calendar|timeline`,
+    `  ${binName} schedule at|every|after ...`,
     `  ${binName} memory list|status|inspect|search`,
     `  ${binName} tasks list|get|create|update|complete|search`,
+    `  ${binName} goals list|get|create|update|delete|search`,
+    `  ${binName} projects list|get|create|update|delete|search`,
+    `  ${binName} reminders list|get|create|update|pause|resume|delete|search`,
+    `  ${binName} deadlines list|get|create|update|pause|resume|delete|search`,
     `  ${binName} notes list|get|create|update|search`,
     `  ${binName} people list|get|upsert|search`,
     `  ${binName} inbox list|read|search|draft|archive`,
@@ -75,6 +82,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} workspace-index rebuild`,
     `  ${binName} skills list|inspect|sync|sources|search|install`,
     `  ${binName} channels list|status`,
+    `  ${binName} browser status|ensure|share --relay-url URL --access-token TOKEN --tenant-id ID --agent-id ID --workspace-id ID`,
     `  ${binName} telegram connect|status|webhook set|clear|polling start|stop|commands set|get|chats list|inspect|send`,
     `  ${binName} sessions create|list|search|read|stream|generate-title`,
     `  ${binName} documents list|read|search|upload|register|download`,
@@ -86,6 +94,9 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} generations backends|register-command|remove-backend|create|list|read|delete`,
     `  ${binName} notify send|cancel|subscriptions upsert|delete`,
     `  ${binName} database serve|login|namespace|collection|record|token|file`,
+    `  ${binName} content serve|login|brand|destination|campaign|entry|variant|approval|publish|token`,
+    `  ${binName} erp serve|login|tenant|company|localization|gl|ar|ap|sales|purchase|inventory|mrp|projects|hr|payroll|support|docs|reports|agents|approvals`,
+    `  ${binName} iot serve|homes|areas|things|state|lights|climate|scenes|automations|approvals|raw`,
     `  ${binName} compat [--refresh] [--json]`,
     "",
     "Global options:",
@@ -275,6 +286,7 @@ async function createCliClaw(
   workspaceId: string,
   agentId: string,
 ) {
+  const explicitVaultBackend = flags["vault-url"] || flags["vault-token"] || flags["vault-tenant-id"] ? "vault" : undefined;
   return createClaw({
     runtime: {
       adapter: runtimeAdapter,
@@ -296,6 +308,22 @@ async function createCliClaw(
       agentId,
       rootDir: workspaceRoot,
     },
+    secrets: (
+      flags["secrets-backend"]
+      || flags["vault-url"]
+      || flags["vault-token"]
+      || flags["vault-tenant-id"]
+      || process.env.CLAWJS_SECRETS_BACKEND
+      || process.env.VAULT_BASE_URL
+      || process.env.VAULT_TOKEN
+      || process.env.VAULT_TENANT_ID
+    ) ? {
+      backend: (flags["secrets-backend"] || explicitVaultBackend || process.env.CLAWJS_SECRETS_BACKEND) as "local_proxy" | "vault" | undefined,
+      baseUrl: flags["vault-url"] || process.env.VAULT_BASE_URL,
+      credential: flags["vault-token"] || process.env.VAULT_TOKEN,
+      tenantId: flags["vault-tenant-id"] || process.env.VAULT_TENANT_ID,
+      sidecarPath: flags["vault-sidecar"] || process.env.CLAWJS_VAULT_SIDECAR_PATH,
+    } : undefined,
     templates: {
       pack: flags["template-pack"],
     },
@@ -306,29 +334,13 @@ async function createCliClaw(
         clientToken: flags["notify-client-token"],
       }
       : undefined,
+    time: flags["time-url"] || process.env.CLAWJS_TIME_URL
+      ? {
+        baseUrl: flags["time-url"] || process.env.CLAWJS_TIME_URL || "",
+        token: flags["time-token"] || process.env.CLAWJS_TIME_TOKEN,
+      }
+      : undefined,
   });
-}
-
-function resolveWorkspaceProjectRoot(contextCwd: string, flags: Record<string, string>, workspaceRoot: string): string {
-  if (flags.project) {
-    return path.resolve(contextCwd, flags.project);
-  }
-  return locateProjectRoot(contextCwd) ?? workspaceRoot;
-}
-
-function ensureWorkspacePackageInstalled(projectRoot: string): void {
-  const packageJsonPath = path.join(projectRoot, "package.json");
-  if (!fs.existsSync(packageJsonPath)) {
-    throw new Error("Workspace commands require a project package.json. Run `claw add workspace` in a Claw project first.");
-  }
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as {
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-  };
-  const dependency = packageJson.dependencies?.["@clawjs/workspace"] ?? packageJson.devDependencies?.["@clawjs/workspace"];
-  if (!dependency) {
-    throw new Error("Workspace commands require @clawjs/workspace in the target project. Run `claw add workspace`.");
-  }
 }
 
 async function createCliWorkspaceClaw(
@@ -338,10 +350,8 @@ async function createCliWorkspaceClaw(
   appId: string,
   workspaceId: string,
   agentId: string,
-  contextCwd: string,
+  _contextCwd: string,
 ) {
-  const projectRoot = resolveWorkspaceProjectRoot(contextCwd, flags, workspaceRoot);
-  ensureWorkspacePackageInstalled(projectRoot);
   return createWorkspaceClaw({
     runtime: {
       adapter: runtimeAdapter,
@@ -366,6 +376,12 @@ async function createCliWorkspaceClaw(
     templates: {
       pack: flags["template-pack"],
     },
+    time: flags["time-url"] || process.env.CLAWJS_TIME_URL
+      ? {
+        baseUrl: flags["time-url"] || process.env.CLAWJS_TIME_URL || "",
+        token: flags["time-token"] || process.env.CLAWJS_TIME_TOKEN,
+      }
+      : undefined,
   });
 }
 
@@ -387,6 +403,36 @@ function resolveDatabaseDirectory(flags: Record<string, string>, contextCwd: str
     return path.resolve(process.env.CLAWJS_DATABASE_DIR);
   }
   return path.resolve(fileURLToPath(new URL("../../../database", import.meta.url)));
+}
+
+function resolveIotDirectory(flags: Record<string, string>, contextCwd: string): string {
+  if (flags["iot-dir"]) {
+    return path.resolve(contextCwd, flags["iot-dir"]);
+  }
+  if (process.env.CLAWJS_IOT_DIR?.trim()) {
+    return path.resolve(process.env.CLAWJS_IOT_DIR);
+  }
+  return path.resolve(fileURLToPath(new URL("../../../iot", import.meta.url)));
+}
+
+function resolveErpDirectory(flags: Record<string, string>, contextCwd: string): string {
+  if (flags["erp-dir"]) {
+    return path.resolve(contextCwd, flags["erp-dir"]);
+  }
+  if (process.env.CLAWJS_ERP_DIR?.trim()) {
+    return path.resolve(process.env.CLAWJS_ERP_DIR);
+  }
+  return path.resolve(fileURLToPath(new URL("../../../erp", import.meta.url)));
+}
+
+function resolveContentDirectory(flags: Record<string, string>, contextCwd: string): string {
+  if (flags["content-dir"]) {
+    return path.resolve(contextCwd, flags["content-dir"]);
+  }
+  if (process.env.CLAWJS_CONTENT_DIR?.trim()) {
+    return path.resolve(process.env.CLAWJS_CONTENT_DIR);
+  }
+  return path.resolve(fileURLToPath(new URL("../../../content", import.meta.url)));
 }
 
 async function runDelegatedDatabaseCli(
@@ -417,6 +463,154 @@ async function runDelegatedDatabaseCli(
       resolve(code ?? CLI_EXIT_FAILURE);
     });
   });
+}
+
+async function runDelegatedIotCli(
+  argv: string[],
+  flags: Record<string, string>,
+  context: CliContext,
+): Promise<number> {
+  const iotDir = resolveIotDirectory(flags, context.cwd);
+  if (!fs.existsSync(path.join(iotDir, "package.json"))) {
+    context.stderr.write(`IoT CLI not found at ${iotDir}\n`);
+    return CLI_EXIT_FAILURE;
+  }
+
+  const distCliPath = path.join(iotDir, "dist", "cli.js");
+  const command = fs.existsSync(distCliPath) ? process.execPath : "npm";
+  const args = fs.existsSync(distCliPath)
+    ? [distCliPath, ...argv.slice(1)]
+    : ["--prefix", iotDir, "run", "cli", "--silent", "--", ...argv.slice(1)];
+
+  return await new Promise<number>((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: context.cwd,
+      stdio: "inherit",
+      env: process.env,
+    });
+    child.on("error", reject);
+    child.on("exit", (code) => {
+      resolve(code ?? CLI_EXIT_FAILURE);
+    });
+  });
+}
+
+async function runDelegatedErpCli(
+  argv: string[],
+  flags: Record<string, string>,
+  context: CliContext,
+): Promise<number> {
+  const erpDir = resolveErpDirectory(flags, context.cwd);
+  if (!fs.existsSync(path.join(erpDir, "package.json"))) {
+    context.stderr.write(`ERP CLI not found at ${erpDir}\n`);
+    return CLI_EXIT_FAILURE;
+  }
+
+  const distCliPath = path.join(erpDir, "dist", "cli.js");
+  const command = fs.existsSync(distCliPath) ? process.execPath : "npm";
+  const args = fs.existsSync(distCliPath)
+    ? [distCliPath, ...argv.slice(1)]
+    : ["--prefix", erpDir, "run", "cli", "--silent", "--", ...argv.slice(1)];
+
+  return await new Promise<number>((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: context.cwd,
+      stdio: "inherit",
+      env: process.env,
+    });
+    child.on("error", reject);
+    child.on("exit", (code) => {
+      resolve(code ?? CLI_EXIT_FAILURE);
+    });
+  });
+}
+
+async function runDelegatedContentCli(
+  argv: string[],
+  flags: Record<string, string>,
+  context: CliContext,
+): Promise<number> {
+  const contentDir = resolveContentDirectory(flags, context.cwd);
+  if (!fs.existsSync(path.join(contentDir, "package.json"))) {
+    context.stderr.write(`Content CLI not found at ${contentDir}\n`);
+    return CLI_EXIT_FAILURE;
+  }
+
+  const distCliPath = path.join(contentDir, "dist", "cli.js");
+  const command = fs.existsSync(distCliPath) ? process.execPath : "npm";
+  const args = fs.existsSync(distCliPath)
+    ? [distCliPath, ...argv.slice(1)]
+    : ["--prefix", contentDir, "run", "cli", "--silent", "--", ...argv.slice(1)];
+
+  return await new Promise<number>((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: context.cwd,
+      stdio: "inherit",
+      env: process.env,
+    });
+    child.on("error", reject);
+    child.on("exit", (code) => {
+      resolve(code ?? CLI_EXIT_FAILURE);
+    });
+  });
+}
+
+function resolveRelayBaseUrl(flags: Record<string, string>): string {
+  const raw = flags["relay-url"] ?? process.env.CLAWJS_RELAY_URL ?? process.env.RELAY_URL ?? "";
+  if (!raw.trim()) {
+    throw new Error("--relay-url is required");
+  }
+  const trimmed = raw.trim().replace(/\/$/, "");
+  return trimmed.endsWith("/v1") ? trimmed : `${trimmed}/v1`;
+}
+
+function requireRelayBrowserConfig(flags: Record<string, string>): {
+  baseUrl: string;
+  accessToken: string;
+  tenantId: string;
+  agentId: string;
+  workspaceId: string;
+} {
+  const accessToken = (flags["access-token"] ?? process.env.CLAWJS_RELAY_ACCESS_TOKEN ?? "").trim();
+  const tenantId = (flags["tenant-id"] ?? process.env.CLAWJS_RELAY_TENANT_ID ?? "").trim();
+  const agentId = (flags["agent-id"] ?? process.env.CLAWJS_RELAY_AGENT_ID ?? "").trim();
+  const workspaceId = (flags["workspace-id"] ?? process.env.CLAWJS_RELAY_WORKSPACE_ID ?? "").trim();
+  if (!accessToken) throw new Error("--access-token is required");
+  if (!tenantId) throw new Error("--tenant-id is required");
+  if (!agentId) throw new Error("--agent-id is required");
+  if (!workspaceId) throw new Error("--workspace-id is required");
+  return {
+    baseUrl: resolveRelayBaseUrl(flags),
+    accessToken,
+    tenantId,
+    agentId,
+    workspaceId,
+  };
+}
+
+async function relayBrowserRequest<T>(
+  flags: Record<string, string>,
+  input: {
+    method: "GET" | "POST";
+    path: string;
+    body?: unknown;
+  },
+): Promise<T> {
+  const { baseUrl, accessToken } = requireRelayBrowserConfig(flags);
+  const response = await fetch(`${baseUrl}${input.path}`, {
+    method: input.method,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    ...(input.body !== undefined ? { body: JSON.stringify(input.body) } : {}),
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(body || `Relay browser request failed: ${response.status}`);
+  }
+  const text = await response.text();
+  return (text ? JSON.parse(text) : null) as T;
 }
 
 function parsePackageManager(value: string | undefined): SupportedPackageManager {
@@ -515,6 +709,33 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
   if (group === "database") {
     try {
       return await runDelegatedDatabaseCli(argv, flags, context);
+    } catch (error) {
+      context.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+      return CLI_EXIT_FAILURE;
+    }
+  }
+
+  if (group === "content") {
+    try {
+      return await runDelegatedContentCli(argv, flags, context);
+    } catch (error) {
+      context.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+      return CLI_EXIT_FAILURE;
+    }
+  }
+
+  if (group === "erp") {
+    try {
+      return await runDelegatedErpCli(argv, flags, context);
+    } catch (error) {
+      context.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+      return CLI_EXIT_FAILURE;
+    }
+  }
+
+  if (group === "iot") {
+    try {
+      return await runDelegatedIotCli(argv, flags, context);
     } catch (error) {
       context.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
       return CLI_EXIT_FAILURE;
@@ -952,6 +1173,44 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
     return compat.degraded ? CLI_EXIT_DEGRADED : CLI_EXIT_OK;
   }
 
+  if (group === "browser" && (command === "status" || command === "ensure" || command === "share")) {
+    try {
+      const relay = requireRelayBrowserConfig(flags);
+      const browserPath = `/tenants/${relay.tenantId}/agents/${relay.agentId}/workspaces/${relay.workspaceId}/browser/session`;
+      const payload = command === "status"
+        ? await relayBrowserRequest<{
+            session: Record<string, unknown>;
+            sharePath: string;
+            shareUrl: string;
+          }>(flags, {
+            method: "GET",
+            path: browserPath,
+          })
+        : await relayBrowserRequest<{
+            session: Record<string, unknown>;
+            sharePath: string;
+            shareUrl: string;
+          }>(flags, {
+            method: "POST",
+            path: browserPath,
+            ...(flags.url?.trim() ? { body: { initialUrl: flags.url.trim() } } : {}),
+          });
+      if (wantsJson) {
+        writeJson(context.stdout, payload);
+      } else if (command === "share") {
+        context.stdout.write(`${payload.shareUrl}\n`);
+      } else if (command === "status") {
+        context.stdout.write(`${String((payload.session as { status?: string })?.status ?? "unknown")}\n`);
+      } else {
+        context.stdout.write(`${payload.shareUrl}\n`);
+      }
+      return CLI_EXIT_OK;
+    } catch (error) {
+      context.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+      return CLI_EXIT_FAILURE;
+    }
+  }
+
   if (group === "doctor") {
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const doctor = await claw.doctor.run();
@@ -1187,6 +1446,94 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
     return Object.keys(state.providers).length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   }
 
+  if (group === "secrets" && command === "list") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const secrets = await claw.secrets.list(flags.search);
+    if (wantsJson) {
+      writeJson(context.stdout, secrets);
+    } else {
+      context.stdout.write(`${secrets.map((secret) => `${secret.name}${secret.typeId ? ` [${secret.typeId}]` : ""}`).join("\n")}\n`);
+    }
+    return secrets.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "secrets" && command === "describe") {
+    const name = flags.name || flags.id;
+    if (!name) {
+      context.stderr.write("--name is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const secret = await claw.secrets.describe(name);
+    if (wantsJson) {
+      writeJson(context.stdout, secret);
+    } else {
+      context.stdout.write(`${secret ? `${secret.name}${secret.typeId ? ` [${secret.typeId}]` : ""}` : "missing"}\n`);
+    }
+    return secret ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
+  }
+
+  if (group === "secrets" && command === "types") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const types = await claw.secrets.types(flags.search);
+    if (wantsJson) {
+      writeJson(context.stdout, types);
+    } else {
+      context.stdout.write(`${types.map((type) => `${type.typeId} ${type.label}`).join("\n")}\n`);
+    }
+    return types.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "secrets" && command === "capabilities") {
+    const name = flags.name || flags.id;
+    if (!name) {
+      context.stderr.write("--name is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const payload = await claw.secrets.capabilities(name);
+    if (wantsJson) {
+      writeJson(context.stdout, payload);
+    } else {
+      context.stdout.write(`${payload.capabilities.map((entry) => `${entry.capability}:${entry.allowed ? "allow" : "deny"}`).join("\n")}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "secrets" && command === "broker" && subcommand === "http") {
+    const url = flags.url;
+    if (!url) {
+      context.stderr.write("--url is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const method = flags.method || "GET";
+    const headers = parseJsonFlag<Record<string, string>>(flags["headers-json"], "--headers-json");
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const payload = await claw.secrets.brokerHttp({
+      method,
+      url,
+      ...(headers ? { headers } : {}),
+      ...(flags.body ? { body: flags.body } : {}),
+    });
+    if (wantsJson) {
+      writeJson(context.stdout, payload);
+    } else {
+      context.stdout.write(`${payload.status}\n${payload.bodyText}\n`);
+    }
+    return payload.ok ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
+  }
+
+  if (group === "secrets" && command === "leases" && subcommand === "list") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const leases = await claw.secrets.leases();
+    if (wantsJson) {
+      writeJson(context.stdout, leases);
+    } else {
+      context.stdout.write(`${leases.map((lease) => `${lease.secretName} ${lease.mode} ${lease.revokedAt ? "revoked" : lease.consumedAt ? "consumed" : "active"}`).join("\n")}\n`);
+    }
+    return leases.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
   if (group === "auth" && command === "status") {
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const auth = await claw.auth.status();
@@ -1284,6 +1631,171 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
     return CLI_EXIT_OK;
   }
 
+  if (group === "time") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    if (command === "list") {
+      const payload = await claw.time.list({
+        kind: flags.kind as TemporalItem["kind"] | undefined,
+        status: flags.status as TemporalItem["status"] | undefined,
+        workspaceId: flags["workspace-id"] || workspaceId,
+        ...(flags["project-id"] ? { projectId: flags["project-id"] } : {}),
+        ...(flags["agent-id"] ? { agentId: flags["agent-id"] } : {}),
+        ...(flags["owner-id"] ? { ownerId: flags["owner-id"] } : {}),
+        ...(flags["source-provider"] ? { sourceProvider: flags["source-provider"] } : {}),
+      });
+      if (wantsJson) writeJson(context.stdout, payload);
+      else context.stdout.write(`${payload.items.map((item) => `${item.id} ${item.kind} ${item.status} ${item.title}`).join("\n")}\n`);
+      return payload.items.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+    if (command === "get") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write("Usage: claw time get <id>\n");
+        return CLI_EXIT_USAGE;
+      }
+      const payload = await claw.time.get(id);
+      if (wantsJson) writeJson(context.stdout, payload);
+      else context.stdout.write(`${payload.item.id} ${payload.item.title}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "create") {
+      const kind = (subcommand || flags.kind) as "event" | "routine" | "reminder" | "deadline" | "follow_up" | undefined;
+      const title = extractPositionals(argv)[3] || flags.title;
+      if (!kind || !title) {
+        context.stderr.write("Usage: claw time create <kind> <title> [--starts-at ISO|--cron EXPR|--rrule RRULE|--after 24h --anchor-type thread --anchor-id ID --anchor-at ISO]\n");
+        return CLI_EXIT_USAGE;
+      }
+      const payload = await claw.time.create({
+        kind,
+        title,
+        description: flags.description,
+        location: flags.location,
+        startsAt: flags["starts-at"],
+        endsAt: flags["ends-at"],
+        workspaceId,
+        ...(flags["project-id"] ? { projectId: flags["project-id"] } : {}),
+        ...(flags["agent-id"] ? { agentId: flags["agent-id"] } : {}),
+        ...(flags.timezone ? { timezone: flags.timezone } : {}),
+        ...(flags.cron || flags.rrule || flags["after"]
+          ? {
+              schedule: {
+                mode: flags["after"] ? "relative" : flags.rrule ? "rrule" : flags.cron ? "cron" : "one_off",
+                timezone: flags.timezone || "UTC",
+                ...(flags.cron ? { cron: flags.cron } : {}),
+                ...(flags.rrule ? { rrule: flags.rrule } : {}),
+                ...(flags["after"]
+                  ? {
+                      relative: {
+                        anchorType: (flags["anchor-type"] || "thread") as NonNullable<TemporalItem["anchorType"]>,
+                        anchorId: flags["anchor-id"] || "",
+                        anchorAt: flags["anchor-at"] || new Date().toISOString(),
+                        offsetMs: Number(flags["after-ms"] || 0),
+                        ...(flags["cancel-on"] ? { cancelOn: flags["cancel-on"] as "reply_received" | "task_completed" | "event_started" | "execution_succeeded" } : {}),
+                      },
+                    }
+                  : {}),
+              },
+            }
+          : {}),
+      });
+      if (wantsJson) writeJson(context.stdout, payload);
+      else context.stdout.write(`${payload.item.id}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "update") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write("Usage: claw time update <id> [--title TEXT] [--status STATUS]\n");
+        return CLI_EXIT_USAGE;
+      }
+      const payload = await claw.time.update(id, {
+        title: flags.title,
+        description: flags.description,
+        status: flags.status as "active" | "paused" | "cancelled" | "completed" | undefined,
+        location: flags.location,
+        startsAt: flags["starts-at"],
+        endsAt: flags["ends-at"],
+        ...(flags.timezone ? { timezone: flags.timezone } : {}),
+      });
+      if (wantsJson) writeJson(context.stdout, payload);
+      else context.stdout.write(`${payload.item.id}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "delete") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write("Usage: claw time delete <id>\n");
+        return CLI_EXIT_USAGE;
+      }
+      const payload = await claw.time.delete(id);
+      if (wantsJson) writeJson(context.stdout, payload);
+      else context.stdout.write(`${payload.ok}\n`);
+      return payload.ok ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
+    }
+    if (command === "pause" || command === "resume" || command === "run") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write(`Usage: claw time ${command} <id>\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const payload = command === "pause"
+        ? await claw.time.pause(id)
+        : command === "resume"
+          ? await claw.time.resume(id)
+          : await claw.time.runNow(id);
+      if (wantsJson) writeJson(context.stdout, payload);
+      else context.stdout.write(`${"item" in payload ? payload.item.id : "ok"}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "executions") {
+      const payload = await claw.time.listExecutions(flags["item-id"]);
+      if (wantsJson) writeJson(context.stdout, payload);
+      else context.stdout.write(`${payload.executions.map((entry) => `${entry.itemId} ${entry.status} ${entry.scheduledFor}`).join("\n")}\n`);
+      return payload.executions.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+    if (command === "calendar") {
+      const payload = await claw.time.calendarView({ start: flags.start, end: flags.end });
+      if (wantsJson) writeJson(context.stdout, payload);
+      else context.stdout.write(`${payload.items.map((item) => `${item.title} ${item.startsAt || item.nextRunAt}`).join("\n")}\n`);
+      return payload.items.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+    if (command === "timeline") {
+      const payload = await claw.time.timelineView({ start: flags.start, end: flags.end });
+      if (wantsJson) writeJson(context.stdout, payload);
+      else context.stdout.write(`${payload.items.map((item) => `${item.title} ${item.startsAt || item.nextRunAt}`).join("\n")}\n`);
+      return payload.items.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+  }
+
+  if (group === "schedule" && (command === "at" || command === "every" || command === "after")) {
+    const expression = subcommand;
+    const title = extractPositionals(argv)[3] || flags.title;
+    if (!expression || !title) {
+      context.stderr.write("Usage: claw schedule at|every|after <expression> <title> [--anchor-type TYPE --anchor-id ID --anchor-at ISO]\n");
+      return CLI_EXIT_USAGE;
+    }
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const payload = await claw.time.create({
+      kind: command === "at" ? "event" : command === "every" ? "routine" : "follow_up",
+      title,
+      description: flags.description,
+      workspaceId,
+      ...(flags["project-id"] ? { projectId: flags["project-id"] } : {}),
+      ...(flags["agent-id"] ? { agentId: flags["agent-id"] } : {}),
+      natural: {
+        command,
+        expression,
+        timezone: flags.timezone,
+        anchorType: flags["anchor-type"] as NonNullable<TemporalItem["anchorType"]> | undefined,
+        anchorId: flags["anchor-id"],
+        anchorAt: flags["anchor-at"],
+      },
+    });
+    if (wantsJson) writeJson(context.stdout, payload);
+    else context.stdout.write(`${payload.item.id}\n`);
+    return CLI_EXIT_OK;
+  }
+
   if (group === "memory" && (command === "list" || command === "status" || command === "inspect")) {
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const memory = await claw.memory.list();
@@ -1351,6 +1863,13 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
         assigneePersonId: flags.assignee,
         watcherPersonIds: parseCsvFlag(flags.watchers),
         dueAt: flags["due-at"],
+        eventId: flags["event-id"],
+        projectId: flags["project-id"],
+        goalId: flags["goal-id"],
+        dependsOnTaskIds: parseCsvFlag(flags["depends-on"]),
+        companyId: flags["company-id"],
+        portfolioId: flags["portfolio-id"],
+        portfolioItemId: flags["portfolio-item-id"],
       });
       if (wantsJson) writeJson(context.stdout, task);
       else context.stdout.write(`${task.id}\n`);
@@ -1371,6 +1890,13 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
         assigneePersonId: flags.assignee,
         ...(flags.watchers ? { watcherPersonIds: parseCsvFlag(flags.watchers) } : {}),
         dueAt: flags["due-at"],
+        eventId: flags["event-id"],
+        projectId: flags["project-id"],
+        goalId: flags["goal-id"],
+        ...(flags["depends-on"] ? { dependsOnTaskIds: parseCsvFlag(flags["depends-on"]) } : {}),
+        companyId: flags["company-id"],
+        portfolioId: flags["portfolio-id"],
+        portfolioItemId: flags["portfolio-item-id"],
       });
       if (wantsJson) writeJson(context.stdout, task);
       else context.stdout.write(`${task.id}\n`);
@@ -1394,6 +1920,436 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
         return CLI_EXIT_USAGE;
       }
       const results = await claw.tasks.search(query, {
+        strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
+        ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+      });
+      if (wantsJson) writeJson(context.stdout, results);
+      else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
+      return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+  }
+
+  if (group === "goals") {
+    const claw = await createCliWorkspaceClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, context.cwd);
+    if (command === "list") {
+      const goals = await claw.goals.list({
+        ...(flags.status ? { status: parseCsvFlag(flags.status) as Array<"active" | "paused" | "done"> } : {}),
+        ...(flags["project-id"] ? { projectId: flags["project-id"] } : {}),
+        ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+        includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
+      });
+      if (wantsJson) writeJson(context.stdout, goals);
+      else context.stdout.write(`${goals.map((goal) => `${goal.status} ${goal.id} ${goal.title}`).join("\n")}\n`);
+      return goals.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+    if (command === "get") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write("Usage: claw goals get <id> [--json]\n");
+        return CLI_EXIT_USAGE;
+      }
+      const goal = await claw.goals.get(id);
+      if (!goal) return CLI_EXIT_FAILURE;
+      if (wantsJson) writeJson(context.stdout, goal);
+      else context.stdout.write(`${goal.status} ${goal.id} ${goal.title}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "create") {
+      const title = subcommand || flags.title;
+      if (!title) {
+        context.stderr.write("Usage: claw goals create <title> [--status STATUS] [--project-id ID]\n");
+        return CLI_EXIT_USAGE;
+      }
+      const goal = await claw.goals.create({
+        title,
+        description: flags.description,
+        status: flags.status as "active" | "paused" | "done" | undefined,
+        level: flags.level as "company" | "team" | "personal" | undefined,
+        projectId: flags["project-id"],
+        parentId: flags["parent-id"],
+        parentGoalId: flags["parent-goal-id"],
+        ownerPersonId: flags["owner-person-id"],
+        ownerAgentId: flags["owner-agent-id"],
+        companyId: flags["company-id"],
+        portfolioId: flags["portfolio-id"],
+        portfolioItemId: flags["portfolio-item-id"],
+        metricKey: flags["metric-key"],
+        metricLabel: flags["metric-label"],
+        ...(flags["target-value"] ? { targetValue: Number(flags["target-value"]) } : {}),
+        ...(flags["current-value"] ? { currentValue: Number(flags["current-value"]) } : {}),
+        unit: flags.unit,
+        period: flags.period,
+        healthStatus: flags["health-status"] as "green" | "yellow" | "red" | "unknown" | undefined,
+      });
+      if (wantsJson) writeJson(context.stdout, goal);
+      else context.stdout.write(`${goal.id}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "update") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write("Usage: claw goals update <id> [--title TEXT] [--status STATUS]\n");
+        return CLI_EXIT_USAGE;
+      }
+      const goal = await claw.goals.update(id, {
+        title: flags.title,
+        description: flags.description,
+        status: flags.status as "active" | "paused" | "done" | undefined,
+        level: flags.level as "company" | "team" | "personal" | undefined,
+        projectId: flags["project-id"],
+        parentId: flags["parent-id"],
+        parentGoalId: flags["parent-goal-id"],
+        ownerPersonId: flags["owner-person-id"],
+        ownerAgentId: flags["owner-agent-id"],
+        companyId: flags["company-id"],
+        portfolioId: flags["portfolio-id"],
+        portfolioItemId: flags["portfolio-item-id"],
+        metricKey: flags["metric-key"],
+        metricLabel: flags["metric-label"],
+        ...(flags["target-value"] ? { targetValue: Number(flags["target-value"]) } : {}),
+        ...(flags["current-value"] ? { currentValue: Number(flags["current-value"]) } : {}),
+        unit: flags.unit,
+        period: flags.period,
+        healthStatus: flags["health-status"] as "green" | "yellow" | "red" | "unknown" | undefined,
+      });
+      if (wantsJson) writeJson(context.stdout, goal);
+      else context.stdout.write(`${goal.id}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "delete") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write("Usage: claw goals delete <id>\n");
+        return CLI_EXIT_USAGE;
+      }
+      const removed = await claw.goals.remove(id);
+      if (!removed) return CLI_EXIT_FAILURE;
+      if (wantsJson) writeJson(context.stdout, { ok: true });
+      else context.stdout.write("ok\n");
+      return CLI_EXIT_OK;
+    }
+    if (command === "search") {
+      const query = subcommand || flags.query;
+      if (!query) {
+        context.stderr.write("Usage: claw goals search <query>\n");
+        return CLI_EXIT_USAGE;
+      }
+      const results = await claw.goals.search(query, {
+        strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
+        ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+      });
+      if (wantsJson) writeJson(context.stdout, results);
+      else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
+      return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+  }
+
+  if (group === "projects") {
+    const claw = await createCliWorkspaceClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, context.cwd);
+    if (command === "list") {
+      const projects = await claw.projects.list({
+        ...(flags.status ? { status: parseCsvFlag(flags.status) as Array<"draft" | "in_progress" | "paused" | "done" | "archived"> } : {}),
+        ...(flags["goal-id"] ? { goalId: flags["goal-id"] } : {}),
+        ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+        includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
+      });
+      if (wantsJson) writeJson(context.stdout, projects);
+      else context.stdout.write(`${projects.map((project) => `${project.status} ${project.id} ${project.name}`).join("\n")}\n`);
+      return projects.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+    if (command === "get") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write("Usage: claw projects get <id> [--json]\n");
+        return CLI_EXIT_USAGE;
+      }
+      const project = await claw.projects.get(id);
+      if (!project) return CLI_EXIT_FAILURE;
+      if (wantsJson) writeJson(context.stdout, project);
+      else context.stdout.write(`${project.status} ${project.id} ${project.name}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "create") {
+      const name = subcommand || flags.name || flags.title;
+      if (!name) {
+        context.stderr.write("Usage: claw projects create <name> [--status STATUS] [--goal-id ID]\n");
+        return CLI_EXIT_USAGE;
+      }
+      const project = await claw.projects.create({
+        name,
+        description: flags.description,
+        status: flags.status as "draft" | "in_progress" | "paused" | "done" | "archived" | undefined,
+        goalId: flags["goal-id"],
+        ownerPersonId: flags["owner-person-id"],
+        leadAgentId: flags["lead-agent-id"],
+        companyId: flags["company-id"],
+        portfolioId: flags["portfolio-id"],
+        portfolioItemId: flags["portfolio-item-id"],
+        color: flags.color,
+        kind: flags.kind as "delivery" | "growth" | "ops" | "research" | "migration" | "other" | undefined,
+        healthStatus: flags["health-status"] as "green" | "yellow" | "red" | "unknown" | undefined,
+        startDate: flags["start-date"],
+        targetDate: flags["target-date"],
+      });
+      if (wantsJson) writeJson(context.stdout, project);
+      else context.stdout.write(`${project.id}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "update") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write("Usage: claw projects update <id> [--name TEXT] [--status STATUS]\n");
+        return CLI_EXIT_USAGE;
+      }
+      const project = await claw.projects.update(id, {
+        name: flags.name || flags.title,
+        description: flags.description,
+        status: flags.status as "draft" | "in_progress" | "paused" | "done" | "archived" | undefined,
+        goalId: flags["goal-id"],
+        ownerPersonId: flags["owner-person-id"],
+        leadAgentId: flags["lead-agent-id"],
+        companyId: flags["company-id"],
+        portfolioId: flags["portfolio-id"],
+        portfolioItemId: flags["portfolio-item-id"],
+        color: flags.color,
+        kind: flags.kind as "delivery" | "growth" | "ops" | "research" | "migration" | "other" | undefined,
+        healthStatus: flags["health-status"] as "green" | "yellow" | "red" | "unknown" | undefined,
+        startDate: flags["start-date"],
+        targetDate: flags["target-date"],
+      });
+      if (wantsJson) writeJson(context.stdout, project);
+      else context.stdout.write(`${project.id}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "delete") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write("Usage: claw projects delete <id>\n");
+        return CLI_EXIT_USAGE;
+      }
+      const removed = await claw.projects.remove(id);
+      if (!removed) return CLI_EXIT_FAILURE;
+      if (wantsJson) writeJson(context.stdout, { ok: true });
+      else context.stdout.write("ok\n");
+      return CLI_EXIT_OK;
+    }
+    if (command === "search") {
+      const query = subcommand || flags.query;
+      if (!query) {
+        context.stderr.write("Usage: claw projects search <query>\n");
+        return CLI_EXIT_USAGE;
+      }
+      const results = await claw.projects.search(query, {
+        strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
+        ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+      });
+      if (wantsJson) writeJson(context.stdout, results);
+      else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
+      return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+  }
+
+  if (group === "reminders") {
+    const claw = await createCliWorkspaceClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, context.cwd);
+    if (command === "list") {
+      const reminders = await claw.reminders.list({
+        ...(flags.status ? { status: parseCsvFlag(flags.status) as Array<"active" | "paused" | "done" | "cancelled"> } : {}),
+        ...(flags["anchor-id"] ? { anchorId: flags["anchor-id"] } : {}),
+        ...(flags.before ? { before: flags.before } : {}),
+        ...(flags.after ? { after: flags.after } : {}),
+        ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+        includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
+      });
+      if (wantsJson) writeJson(context.stdout, reminders);
+      else context.stdout.write(`${reminders.map((reminder) => `${reminder.status} ${reminder.id} ${reminder.title}`).join("\n")}\n`);
+      return reminders.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+    if (command === "get") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write("Usage: claw reminders get <id> [--json]\n");
+        return CLI_EXIT_USAGE;
+      }
+      const reminder = await claw.reminders.get(id);
+      if (!reminder) return CLI_EXIT_FAILURE;
+      if (wantsJson) writeJson(context.stdout, reminder);
+      else context.stdout.write(`${reminder.status} ${reminder.id} ${reminder.title}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "create") {
+      const title = subcommand || flags.title;
+      if (!title || !flags["trigger-at"]) {
+        context.stderr.write("Usage: claw reminders create <title> --trigger-at ISO [--anchor-type TYPE --anchor-id ID]\n");
+        return CLI_EXIT_USAGE;
+      }
+      const reminder = await claw.reminders.create({
+        title,
+        description: flags.description,
+        status: flags.status as "active" | "paused" | "done" | "cancelled" | undefined,
+        triggerAt: flags["trigger-at"],
+        anchorType: flags["anchor-type"] as "task" | "project" | "goal" | "event" | "thread" | "standalone" | undefined,
+        anchorId: flags["anchor-id"],
+        channel: flags.channel,
+      });
+      if (wantsJson) writeJson(context.stdout, reminder);
+      else context.stdout.write(`${reminder.id}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "update") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write("Usage: claw reminders update <id> [--title TEXT] [--trigger-at ISO]\n");
+        return CLI_EXIT_USAGE;
+      }
+      const reminder = await claw.reminders.update(id, {
+        title: flags.title,
+        description: flags.description,
+        status: flags.status as "active" | "paused" | "done" | "cancelled" | undefined,
+        triggerAt: flags["trigger-at"],
+        anchorType: flags["anchor-type"] as "task" | "project" | "goal" | "event" | "thread" | "standalone" | undefined,
+        anchorId: flags["anchor-id"],
+        channel: flags.channel,
+      });
+      if (wantsJson) writeJson(context.stdout, reminder);
+      else context.stdout.write(`${reminder.id}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "pause" || command === "resume") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write(`Usage: claw reminders ${command} <id>\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const reminder = command === "pause"
+        ? await claw.reminders.pause(id)
+        : await claw.reminders.resume(id);
+      if (wantsJson) writeJson(context.stdout, reminder);
+      else context.stdout.write(`${reminder.id}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "delete") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write("Usage: claw reminders delete <id>\n");
+        return CLI_EXIT_USAGE;
+      }
+      const removed = await claw.reminders.remove(id);
+      if (!removed) return CLI_EXIT_FAILURE;
+      if (wantsJson) writeJson(context.stdout, { ok: true });
+      else context.stdout.write("ok\n");
+      return CLI_EXIT_OK;
+    }
+    if (command === "search") {
+      const query = subcommand || flags.query;
+      if (!query) {
+        context.stderr.write("Usage: claw reminders search <query>\n");
+        return CLI_EXIT_USAGE;
+      }
+      const results = await claw.reminders.search(query, {
+        strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
+        ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+      });
+      if (wantsJson) writeJson(context.stdout, results);
+      else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
+      return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+  }
+
+  if (group === "deadlines") {
+    const claw = await createCliWorkspaceClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, context.cwd);
+    if (command === "list") {
+      const deadlines = await claw.deadlines.list({
+        ...(flags.status ? { status: parseCsvFlag(flags.status) as Array<"active" | "paused" | "done" | "cancelled"> } : {}),
+        ...(flags["anchor-id"] ? { anchorId: flags["anchor-id"] } : {}),
+        ...(flags.before ? { before: flags.before } : {}),
+        ...(flags.after ? { after: flags.after } : {}),
+        ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+        includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
+      });
+      if (wantsJson) writeJson(context.stdout, deadlines);
+      else context.stdout.write(`${deadlines.map((deadline) => `${deadline.status} ${deadline.id} ${deadline.title}`).join("\n")}\n`);
+      return deadlines.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+    if (command === "get") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write("Usage: claw deadlines get <id> [--json]\n");
+        return CLI_EXIT_USAGE;
+      }
+      const deadline = await claw.deadlines.get(id);
+      if (!deadline) return CLI_EXIT_FAILURE;
+      if (wantsJson) writeJson(context.stdout, deadline);
+      else context.stdout.write(`${deadline.status} ${deadline.id} ${deadline.title}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "create") {
+      const title = subcommand || flags.title;
+      if (!title || !flags["due-at"]) {
+        context.stderr.write("Usage: claw deadlines create <title> --due-at ISO [--anchor-type TYPE --anchor-id ID]\n");
+        return CLI_EXIT_USAGE;
+      }
+      const deadline = await claw.deadlines.create({
+        title,
+        description: flags.description,
+        status: flags.status as "active" | "paused" | "done" | "cancelled" | undefined,
+        dueAt: flags["due-at"],
+        anchorType: flags["anchor-type"] as "task" | "project" | "goal" | "event" | "thread" | "standalone" | undefined,
+        anchorId: flags["anchor-id"],
+      });
+      if (wantsJson) writeJson(context.stdout, deadline);
+      else context.stdout.write(`${deadline.id}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "update") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write("Usage: claw deadlines update <id> [--title TEXT] [--due-at ISO]\n");
+        return CLI_EXIT_USAGE;
+      }
+      const deadline = await claw.deadlines.update(id, {
+        title: flags.title,
+        description: flags.description,
+        status: flags.status as "active" | "paused" | "done" | "cancelled" | undefined,
+        dueAt: flags["due-at"],
+        anchorType: flags["anchor-type"] as "task" | "project" | "goal" | "event" | "thread" | "standalone" | undefined,
+        anchorId: flags["anchor-id"],
+      });
+      if (wantsJson) writeJson(context.stdout, deadline);
+      else context.stdout.write(`${deadline.id}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "pause" || command === "resume") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write(`Usage: claw deadlines ${command} <id>\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const deadline = command === "pause"
+        ? await claw.deadlines.pause(id)
+        : await claw.deadlines.resume(id);
+      if (wantsJson) writeJson(context.stdout, deadline);
+      else context.stdout.write(`${deadline.id}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (command === "delete") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write("Usage: claw deadlines delete <id>\n");
+        return CLI_EXIT_USAGE;
+      }
+      const removed = await claw.deadlines.remove(id);
+      if (!removed) return CLI_EXIT_FAILURE;
+      if (wantsJson) writeJson(context.stdout, { ok: true });
+      else context.stdout.write("ok\n");
+      return CLI_EXIT_OK;
+    }
+    if (command === "search") {
+      const query = subcommand || flags.query;
+      if (!query) {
+        context.stderr.write("Usage: claw deadlines search <query>\n");
+        return CLI_EXIT_USAGE;
+      }
+      const results = await claw.deadlines.search(query, {
         strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
@@ -1688,7 +2644,7 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
     const claw = await createCliWorkspaceClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, context.cwd);
     const results = await claw.search.query({
       query,
-      domains: parseCsvFlag(flags.domains) as Array<"tasks" | "notes" | "people" | "inbox" | "events">,
+      domains: parseCsvFlag(flags.domains) as Array<"tasks" | "goals" | "projects" | "reminders" | "deadlines" | "notes" | "people" | "inbox" | "events">,
       strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
       ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
