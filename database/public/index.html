@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Claw Database</title>
+    <title>Database</title>
     <link rel="icon" href="/brand/favicon.ico" />
     <link rel="stylesheet" href="/static/remixicon.css" />
     <link rel="stylesheet" href="/static/app.css" />
@@ -14,7 +14,7 @@
       <div class="login-wrapper">
         <div class="login-logo">
           <img src="/brand/logo.png" alt="ClawJS" width="44" height="44" />
-          <span class="login-brand">Claw<strong>Base</strong></span>
+          <span class="login-brand">Database</span>
         </div>
         <h4 class="login-title">Superuser login</h4>
         <form id="login-form" data-testid="login-form" class="login-form">
@@ -40,7 +40,7 @@
     <div id="app-view" class="page-wrapper hidden" data-testid="admin-console">
       <!-- Narrow icon rail -->
       <aside class="app-sidebar" aria-label="Primary">
-        <a class="app-sidebar-logo" href="#" title="ClawBase">
+        <a class="app-sidebar-logo" href="#" title="Database">
           <img src="/brand/logo.png" alt="ClawJS" width="32" height="32" />
         </a>
         <nav class="main-menu">
@@ -60,6 +60,10 @@
             <i class="ri-tools-line"></i>
           </button>
         </nav>
+        <button type="button" id="theme-toggle" class="menu-item menu-item-muted" title="Toggle theme" aria-label="Toggle theme">
+          <i class="ri-sun-line theme-icon-light"></i>
+          <i class="ri-moon-line theme-icon-dark"></i>
+        </button>
         <button type="button" id="logout-btn" class="menu-item menu-item-muted" title="Sign out" aria-label="Sign out">
           <i class="ri-logout-box-r-line"></i>
         </button>
@@ -363,7 +367,7 @@
               <div class="form-row">
                 <div class="form-field readonly">
                   <label>Application name</label>
-                  <input id="settings-name" type="text" value="ClawBase" readonly />
+                  <input id="settings-name" type="text" value="Database" readonly />
                 </div>
                 <div class="form-field readonly">
                   <label>Application URL</label>
@@ -436,7 +440,7 @@
                 <input id="schema-coll-name" type="text" spellcheck="false" placeholder='eg. "posts"' />
                 <div class="form-field-addon">
                   <div class="btn btn-sm btn-transparent btn-disabled p-r-10 p-l-10">
-                    <span class="txt">Type: Base</span>
+                    <span class="txt">Type: Database</span>
                   </div>
                 </div>
               </div>

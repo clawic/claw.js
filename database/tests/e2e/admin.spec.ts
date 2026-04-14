@@ -4,6 +4,8 @@ import { expect, saveBrowserScreenshot, test } from "./helpers";
 
 test("admin console covers namespace, collection, records, tokens, files, and realtime", async ({ page }) => {
   await page.goto("/");
+  await expect(page).toHaveTitle("Database");
+  await expect(page.locator(".login-brand")).toHaveText("Database");
   await expect(page.locator(".login-logo img")).toHaveAttribute("src", "/brand/logo.png");
   await expect(page.locator('link[rel="icon"]').first()).toHaveAttribute("href", "/brand/favicon.ico");
 
@@ -64,6 +66,9 @@ test("admin console covers namespace, collection, records, tokens, files, and re
   await page.locator("#file-input").setInputFiles(path.join(process.cwd(), "tests", "e2e", "fixtures-upload.txt"));
   await page.getByTestId("file-form").getByRole("button", { name: "Upload file" }).click();
   await expect(page.getByTestId("file-card")).toContainText("fixtures-upload.txt");
+
+  await page.getByTestId("nav-settings").click();
+  await expect(page.locator("#settings-name")).toHaveValue("Database");
 
   // Create a second record and verify it shows up in the log feed.
   await page.getByTestId("nav-collections").click();
