@@ -54,7 +54,7 @@ export function buildOpenClawCommandEnv(baseEnv: NodeJS.ProcessEnv = process.env
     OPENCLAW_CONFIG_PATH: openClawConfigPath(),
     OPENCLAW_WORKSPACE_DIR: resolveClawJSWorkspaceDir(),
     OPENCLAW_AGENT_DIR: resolveClawJSAgentDir(),
-    OPENCLAW_CONVERSATIONS_DIR: resolveClawJSSessionsDir(),
+    OPENCLAW_SESSIONS_DIR: resolveClawJSSessionsDir(),
   };
 }
 
@@ -96,7 +96,7 @@ function resolveClawJSContext() {
     stateDir: resolveOpenClawStateDir(),
     workspaceDir: readConfiguredEnv("OPENCLAW_WORKSPACE_DIR") || undefined,
     agentDir: readConfiguredEnv("OPENCLAW_AGENT_DIR") || undefined,
-    conversationsDir: readConfiguredEnv("OPENCLAW_CONVERSATIONS_DIR") || undefined,
+    sessionsDir: readConfiguredEnv("OPENCLAW_SESSIONS_DIR") || undefined,
   });
 }
 
@@ -119,7 +119,7 @@ export function resolveClawJSAgentDir(): string {
 }
 
 export function resolveClawJSSessionsDir(): string {
-  return resolveClawJSContext().conversationsDir;
+  return resolveClawJSContext().sessionsDir;
 }
 
 export async function getClaw(): Promise<Awaited<ReturnType<typeof createClaw>>> {
@@ -148,6 +148,15 @@ export async function getClaw(): Promise<Awaited<ReturnType<typeof createClaw>>>
         agentId: ids.agentId,
         rootDir: resolveClawJSWorkspaceDir(),
       },
+      secrets: readConfiguredEnv("VAULT_BASE_URL") && readConfiguredEnv("VAULT_TOKEN") && readConfiguredEnv("VAULT_TENANT_ID")
+        ? {
+          backend: "vault",
+          baseUrl: readConfiguredEnv("VAULT_BASE_URL") || undefined,
+          credential: readConfiguredEnv("VAULT_TOKEN") || undefined,
+          tenantId: readConfiguredEnv("VAULT_TENANT_ID") || undefined,
+          sidecarPath: readConfiguredEnv("CLAWJS_VAULT_SIDECAR_PATH") || undefined,
+        }
+        : undefined,
     });
   }
 

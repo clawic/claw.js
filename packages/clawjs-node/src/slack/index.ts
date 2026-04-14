@@ -2,8 +2,8 @@ import { maskCredential, type ChannelDescriptor, type SlackBotProfile, type Slac
 
 import type { WorkspaceDataStore } from "../data/store.ts";
 import type { CommandRunner } from "../runtime/contracts.ts";
-import type { ConversationStore } from "../conversations/store.ts";
-import { DEFAULT_SECRETS_PROXY_PATH } from "../secrets/index.ts";
+import type { SessionStore } from "../sessions/store.ts";
+import { resolveSecretsCommandSpec } from "../secrets/command.ts";
 import { readSlackStateSnapshot, writeSlackStateSnapshot } from "../state/store.ts";
 import { NodeFileSystemHost } from "../host/filesystem.ts";
 
@@ -40,7 +40,7 @@ export interface SlackService {
 export interface CreateSlackServiceOptions {
   workspaceDir: string;
   dataStore: WorkspaceDataStore;
-  conversationStore: ConversationStore;
+  sessionStore: SessionStore;
   runner: CommandRunner;
   env?: NodeJS.ProcessEnv;
   filesystem?: NodeFileSystemHost;
@@ -95,10 +95,6 @@ function maskSecretReference(secretName: string): string {
   return `vault:${maskCredential(secretName) ?? "configured"}`;
 }
 
-function resolveSecretsProxyPath(env?: NodeJS.ProcessEnv): string {
-  return env?.CLAWJS_SECRETS_PROXY_PATH?.trim() || process.env.CLAWJS_SECRETS_PROXY_PATH?.trim() || DEFAULT_SECRETS_PROXY_PATH;
-}
-
 function buildRunnerEnv(env?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return {
     ...process.env,
@@ -114,10 +110,11 @@ async function callSlackApi<TResult = JsonRecord>(
   params: JsonRecord = {},
   timeoutMs = 15_000,
 ): Promise<TResult> {
-  const proxyPath = resolveSecretsProxyPath(env);
+  const spec = resolveSecretsCommandSpec(env);
   const url = `${SLACK_API_BASE_URL}/${method}`;
   const body = JSON.stringify(params);
   const args = [
+    ...spec.argsPrefix,
     "request",
     "--method",
     "POST",
@@ -132,8 +129,8 @@ async function callSlackApi<TResult = JsonRecord>(
     "--timeout",
     String(Math.max(1, Math.ceil(timeoutMs / 1000))),
   ];
-  const result = await runner.exec(proxyPath, args, {
-    env: buildRunnerEnv(env),
+  const result = await runner.exec(spec.command, args, {
+    env: buildRunnerEnv(spec.env),
     timeoutMs: timeoutMs + 1_000,
   });
   const payload = JSON.parse(result.stdout || "null") as { ok?: boolean; error?: string; [key: string]: unknown };
@@ -236,7 +233,7 @@ function updateKnownChannels(snapshot: SlackStateSnapshot, channels: SlackChanne
 }
 
 /* ------------------------------------------------------------------ */
-/*  Session / conversation mapping                                    */
+/*  Session / session mapping                                    */
 /* ------------------------------------------------------------------ */
 
 function readSessionMap(dataStore: WorkspaceDataStore): Record<string, string> {
@@ -358,7 +355,7 @@ export function createSlackService(options: CreateSlackServiceOptions): SlackSer
       options.runner,
       options.env,
       snapshot.secretName!,
-      "conversations.list",
+      "sessions.list",
       { types: "public_channel,private_channel", limit: 200, exclude_archived: true },
     );
 
@@ -381,7 +378,7 @@ export function createSlackService(options: CreateSlackServiceOptions): SlackSer
       options.runner,
       options.env,
       snapshot.secretName!,
-      "conversations.info",
+      "sessions.info",
       { channel: channelId },
     );
 

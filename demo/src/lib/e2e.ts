@@ -332,7 +332,7 @@ function buildDefaultIntegrationStatus(): IntegrationStatus {
         version: "0.0.0-e2e",
         recommended: true,
         capabilities: [
-          { key: "conversation_gateway", supported: true, status: "ready", strategy: "gateway", source: "fixture", probeMethod: "fixture" },
+          { key: "session_gateway", supported: true, status: "ready", strategy: "gateway", source: "fixture", probeMethod: "fixture" },
           { key: "memory", supported: true, status: "degraded", strategy: "derived", source: "fixture", probeMethod: "fixture", limitations: ["OpenClaw memory is workspace-file based in ClawJS."] },
           { key: "scheduler", supported: true, status: "degraded", strategy: "derived", source: "fixture", probeMethod: "fixture", limitations: ["Heartbeat-based scheduling only."] },
         ],
@@ -372,7 +372,7 @@ function buildDefaultIntegrationStatus(): IntegrationStatus {
         version: "0.9.0-e2e",
         recommended: false,
         capabilities: [
-          { key: "conversation_gateway", supported: true, status: "ready", strategy: "gateway", source: "fixture", probeMethod: "fixture" },
+          { key: "session_gateway", supported: true, status: "ready", strategy: "gateway", source: "fixture", probeMethod: "fixture" },
           { key: "skills", supported: true, status: "ready", strategy: "native", source: "fixture", probeMethod: "filesystem" },
           { key: "memory", supported: true, status: "ready", strategy: "bridge", source: "fixture", probeMethod: "filesystem", limitations: ["Memory inventory is mapped from ~/.hermes/memories and session storage."] },
           { key: "sandbox", supported: true, status: "degraded", strategy: "hosted", source: "fixture", probeMethod: "fixture", limitations: ["Isolation depends on the selected Hermes terminal backend."] },
@@ -412,7 +412,7 @@ function buildDefaultIntegrationStatus(): IntegrationStatus {
         version: "0.1.5-e2e",
         recommended: false,
         capabilities: [
-          { key: "conversation_gateway", supported: true, status: "ready", strategy: "gateway", source: "fixture", probeMethod: "fixture" },
+          { key: "session_gateway", supported: true, status: "ready", strategy: "gateway", source: "fixture", probeMethod: "fixture" },
           { key: "channels", supported: true, status: "ready", strategy: "native", source: "fixture", probeMethod: "config" },
           { key: "memory", supported: true, status: "ready", strategy: "bridge", source: "fixture", probeMethod: "filesystem", limitations: ["Memory is mapped from workspace files and does not expose Nanobot Dream memory internals."] },
           { key: "sandbox", supported: true, status: "degraded", strategy: "hosted", source: "fixture", probeMethod: "fixture", limitations: ["Bubblewrap sandboxing is only available on Linux with bwrap installed."] },

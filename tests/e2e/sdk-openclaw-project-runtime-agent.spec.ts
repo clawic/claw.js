@@ -102,10 +102,10 @@ const claw = await Claw({
 await claw.workspace.init();
 const status = await claw.runtime.status();
 await claw.runtime.setupWorkspace();
-const session = claw.conversations.createSession("Deploy plan");
-claw.conversations.appendMessage(session.sessionId, { role: "user", content: "ship it" });
+const session = claw.sessions.createSession("Deploy plan");
+claw.sessions.appendMessage(session.sessionId, { role: "user", content: "ship it" });
 let reply = "";
-for await (const chunk of claw.conversations.streamAssistantReply({
+for await (const chunk of claw.sessions.streamAssistantReply({
   sessionId: session.sessionId,
   transport: "cli",
 })) {

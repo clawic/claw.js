@@ -3,7 +3,7 @@
  * Uses the SDK's adapter registry to probe all available runtimes.
  */
 import {
-  getRuntimeConversationDescriptor,
+  getRuntimeSessionDescriptor,
   getRuntimeResourceCatalogs,
   getRuntimeStatusReport,
   NodeProcessHost,
@@ -103,7 +103,7 @@ export async function getAdapterStatus(adapterId: RuntimeAdapterId): Promise<Ada
         channels = catalogs.channels.channels.map((c) => ({ id: c.id, label: c.label, kind: c.kind }));
       } catch { /* best effort */ }
     }
-    const conversation = getRuntimeConversationDescriptor(adapter, runtimeOptions);
+    const conversation = getRuntimeSessionDescriptor(adapter, runtimeOptions);
     const limitations = capabilities.flatMap((capability) => capability.limitations ?? []);
 
     return {
@@ -117,7 +117,7 @@ export async function getAdapterStatus(adapterId: RuntimeAdapterId): Promise<Ada
       hasScheduler: !!capMap.scheduler?.supported,
       hasMemory: !!capMap.memory?.supported,
       hasSandbox: !!capMap.sandbox?.supported,
-      hasGateway: !!capMap.conversation_gateway?.supported,
+      hasGateway: !!capMap.session_gateway?.supported,
       conversation: {
         transport: conversation.transport.kind,
         fallbackTransport: conversation.fallbackTransport,

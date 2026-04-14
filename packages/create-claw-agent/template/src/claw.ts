@@ -27,7 +27,7 @@ export async function getAgentSnapshot() {
   const memory = await claw.memory.list();
   const skills = await claw.skills.list();
   const schedulers = await claw.scheduler.list();
-  const sessions = claw.conversations.listSessions();
+  const sessions = claw.sessions.listSessions();
 
   return {
     runtime,

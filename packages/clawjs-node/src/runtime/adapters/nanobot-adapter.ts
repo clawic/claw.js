@@ -141,7 +141,7 @@ export const nanobotAdapter = createSimpleRuntimeAdapter({
     skills: { supported: true, status: "degraded", strategy: "derived", limitations: ["Skills inventory is derived from workspace state and does not yet mirror all Nanobot MCP/plugin metadata."] },
     channels: { supported: true, status: "ready", strategy: "native", limitations: ["Channel metadata is normalized from config/runtime state into the ClawJS descriptor model."] },
     sandbox: { supported: true, status: "degraded", strategy: "hosted", limitations: ["Bubblewrap sandboxing is only available on Linux with bwrap installed."] },
-    conversation_gateway: { supported: true, status: "ready", strategy: "gateway" },
+    session_gateway: { supported: true, status: "ready", strategy: "gateway" },
   },
   capabilityOverrides: {
     scheduler: { supported: true, status: "ready", strategy: "native" },
@@ -149,7 +149,7 @@ export const nanobotAdapter = createSimpleRuntimeAdapter({
     skills: { supported: true, status: "degraded", strategy: "derived", limitations: ["Skills inventory is derived from workspace structure and Nanobot runtime metadata."] },
     channels: { supported: true, status: "ready", strategy: "native" },
     sandbox: { supported: true, status: "degraded", strategy: "hosted", limitations: ["Sandboxing depends on Linux bubblewrap support."] },
-    conversation_gateway: { supported: true, status: "ready", strategy: "gateway" },
+    session_gateway: { supported: true, status: "ready", strategy: "gateway" },
   },
   resourceLoaders: {
     async listSchedulers() {

@@ -11,7 +11,7 @@ test("demo API contracts stay deterministic in hermetic mode", async ({ request 
   expect(statusPayload.paths.stateDir).toContain("/.tmp/e2e/openclaw-state");
   expect(statusPayload.paths.workspaceDir).toContain("/.tmp/e2e/workspace");
   expect(statusPayload.paths.agentDir).toContain("/.tmp/e2e/agent");
-  expect(statusPayload.paths.conversationsDir).toContain("/.tmp/e2e/sessions");
+  expect(statusPayload.paths.sessionsDir).toContain("/.tmp/e2e/sessions");
   expect(statusPayload.paths.configDir).toContain("/.tmp/e2e/workspace/config");
   expect(statusPayload.paths.localSettingsPath).toContain("/.tmp/e2e/workspace/settings.json");
   for (const value of Object.values(statusPayload.paths)) {

@@ -1,11 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildRuntimeCapabilityMap, defaultManagedConversationFeatures, openClawMirrorFeatures } from "./shared.ts";
+import { buildRuntimeCapabilityMap, defaultManagedSessionFeatures, openClawMirrorFeatures } from "./shared.ts";
 
 test("buildRuntimeCapabilityMap normalizes unsupported capability invariants", () => {
   const capabilityMap = buildRuntimeCapabilityMap({
-    conversation_gateway: {
+    session_gateway: {
       supported: true,
       status: "unsupported",
       strategy: "gateway",
@@ -17,7 +17,7 @@ test("buildRuntimeCapabilityMap normalizes unsupported capability invariants", (
     },
   });
 
-  assert.deepEqual(capabilityMap.conversation_gateway, {
+  assert.deepEqual(capabilityMap.session_gateway, {
     supported: false,
     status: "unsupported",
     strategy: "unsupported",
@@ -29,8 +29,8 @@ test("buildRuntimeCapabilityMap normalizes unsupported capability invariants", (
   });
 });
 
-test("feature descriptor helpers declare ownership and conversation policy", () => {
-  const managed = defaultManagedConversationFeatures({
+test("feature descriptor helpers declare ownership and session policy", () => {
+  const managed = defaultManagedSessionFeatures({
     channelsSupported: true,
     skillsSupported: true,
   });
@@ -43,7 +43,7 @@ test("feature descriptor helpers declare ownership and conversation policy", () 
   }));
 
   assert.equal(managed.find((feature) => feature.featureId === "models")?.ownership, "sdk-owned");
-  assert.equal(managed.find((feature) => feature.featureId === "conversations")?.conversationPolicy, "managed");
-  assert.equal(mirrored.find((feature) => feature.featureId === "conversations")?.conversationPolicy, "mirror");
+  assert.equal(managed.find((feature) => feature.featureId === "sessions")?.sessionPolicy, "managed");
+  assert.equal(mirrored.find((feature) => feature.featureId === "sessions")?.sessionPolicy, "mirror");
   assert.equal(mirrored.find((feature) => feature.featureId === "plugins")?.supported, true);
 });

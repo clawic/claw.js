@@ -10,13 +10,13 @@ test("runtime adapters expose capability-driven details without OpenClaw regress
   await expect(page.getByTestId("adapter-nanobot-card")).toBeVisible();
 
   await page.getByTestId("adapter-hermes-card").click();
-  await expect(page.getByTestId("adapter-hermes-capability-conversation_gateway")).toBeVisible();
+  await expect(page.getByTestId("adapter-hermes-capability-session_gateway")).toBeVisible();
   await expect(page.getByTestId("adapter-hermes-capability-sandbox")).toHaveAttribute("data-state", "degraded");
   await expect(page.getByTestId("adapter-hermes-conversation-transport")).toContainText("hybrid -> cli");
   await expect(page.getByTestId("adapter-hermes-limitations")).toContainText("Isolation depends on the selected Hermes terminal backend.");
 
   await page.getByTestId("adapter-nanobot-card").click();
-  await expect(page.getByTestId("adapter-nanobot-capability-conversation_gateway")).toBeVisible();
+  await expect(page.getByTestId("adapter-nanobot-capability-session_gateway")).toBeVisible();
   await expect(page.getByTestId("adapter-nanobot-capability-sandbox")).toHaveAttribute("data-state", "degraded");
   await expect(page.getByTestId("adapter-nanobot-conversation-transport")).toContainText("hybrid -> cli");
   await expect(page.getByTestId("adapter-nanobot-limitations")).toContainText("Bubblewrap sandboxing is only available on Linux with bwrap installed.");

@@ -27,7 +27,7 @@ import {
 const WACLI_STORE_DIR = path.join(os.homedir(), ".wacli");
 
 export interface ResetOptions {
-  conversations: boolean;
+  sessions: boolean;
   profile: boolean;
   contextFiles: boolean;
   transcriptions: boolean;
@@ -38,7 +38,7 @@ export interface ResetOptions {
 }
 
 export const ALL_RESET_OPTIONS: ResetOptions = {
-  conversations: true,
+  sessions: true,
   profile: true,
   contextFiles: true,
   transcriptions: true,
@@ -264,7 +264,7 @@ export function resetClawJSWorkspace(options: ResetOptions = ALL_RESET_OPTIONS):
     syncGeneratedProfile();
   } else {
     // Selective reset
-    if (options.conversations) {
+    if (options.sessions) {
       secureDeleteDir(sessionsDir);
     }
 

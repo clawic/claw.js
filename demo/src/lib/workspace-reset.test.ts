@@ -14,7 +14,7 @@ test("resetClawJSWorkspace clears workspace state and forces onboarding again", 
   const projectDir = path.join(tempRoot, "project");
   const stateDir = path.join(tempRoot, "openclaw-state");
   const workspaceDir = path.join(stateDir, "workspaces", "clawjs-demo");
-  const canonicalSessionsDir = path.join(workspaceDir, ".clawjs", "conversations");
+  const canonicalSessionsDir = path.join(workspaceDir, ".clawjs", "sessions");
 
   const previousCwd = process.cwd();
   const previousStateDir = process.env.OPENCLAW_STATE_DIR;

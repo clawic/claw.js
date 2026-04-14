@@ -43,7 +43,7 @@ export const ironclawAdapter = createSimpleRuntimeAdapter({
     sandbox: { supported: true, status: "ready", strategy: "native" },
     plugins: { supported: true, status: "ready", strategy: "native" },
     scheduler: { supported: true, status: "ready", strategy: "native" },
-    conversation_gateway: { supported: true, status: "ready", strategy: "gateway" },
+    session_gateway: { supported: true, status: "ready", strategy: "gateway" },
   },
   defaultSchedulers: [{
     id: "ironclaw-routines",

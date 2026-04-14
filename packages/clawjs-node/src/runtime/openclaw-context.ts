@@ -3,7 +3,7 @@ import os from "os";
 import path from "path";
 
 import { NodeProcessHost } from "../host/process.ts";
-import { resolveConversationsDir } from "../conversations/store.ts";
+import { resolveSessionsDir } from "../sessions/store.ts";
 import {
   readOpenClawGatewayConfig,
   resolveOpenClawConfigPath,
@@ -56,7 +56,7 @@ export interface ResolveOpenClawContextOptions extends GatewayConfigOptions {
   agentId?: string;
   workspaceDir?: string;
   agentDir?: string;
-  conversationsDir?: string;
+  sessionsDir?: string;
 }
 
 export interface OpenClawRuntimeContext {
@@ -65,7 +65,7 @@ export interface OpenClawRuntimeContext {
   agentId: string;
   workspaceDir: string;
   agentDir: string;
-  conversationsDir: string;
+  sessionsDir: string;
   configuredAgent: OpenClawAgentConfig | null;
   cliAgent: OpenClawAgentConfig | null;
   cliAgentDetected: boolean;
@@ -182,9 +182,9 @@ export function resolveOpenClawContext(options: ResolveOpenClawContextOptions = 
     || readValue(env.OPENCLAW_AGENT_DIR)
     || readValue(configuredAgent?.agentDir)
     || path.join(stateDir, "agents", agentId, "agent");
-  const conversationsDir = readValue(options.conversationsDir)
-    || readValue(env.OPENCLAW_CONVERSATIONS_DIR)
-    || resolveConversationsDir(workspaceDir);
+  const sessionsDir = readValue(options.sessionsDir)
+    || readValue(env.OPENCLAW_SESSIONS_DIR)
+    || resolveSessionsDir(workspaceDir);
 
   return {
     stateDir,
@@ -192,7 +192,7 @@ export function resolveOpenClawContext(options: ResolveOpenClawContextOptions = 
     agentId,
     workspaceDir,
     agentDir,
-    conversationsDir,
+    sessionsDir,
     configuredAgent,
     cliAgent: null,
     cliAgentDetected: false,
@@ -230,15 +230,15 @@ export async function resolveOpenClawContextWithCli(
     || readValue(env.OPENCLAW_AGENT_DIR)
     || readValue(configuredAgent?.agentDir)
     || context.agentDir;
-  const conversationsDir = readValue(options.conversationsDir)
-    || readValue(env.OPENCLAW_CONVERSATIONS_DIR)
-    || resolveConversationsDir(workspaceDir);
+  const sessionsDir = readValue(options.sessionsDir)
+    || readValue(env.OPENCLAW_SESSIONS_DIR)
+    || resolveSessionsDir(workspaceDir);
 
   return {
     ...context,
     workspaceDir,
     agentDir,
-    conversationsDir,
+    sessionsDir,
     configuredAgent,
     cliAgent,
     cliAgentDetected: !!cliAgent,

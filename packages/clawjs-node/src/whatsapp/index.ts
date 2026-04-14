@@ -2,8 +2,8 @@ import { maskCredential, type ChannelDescriptor, type WhatsAppBotProfile, type W
 
 import type { WorkspaceDataStore } from "../data/store.ts";
 import type { CommandRunner } from "../runtime/contracts.ts";
-import type { ConversationStore } from "../conversations/store.ts";
-import { DEFAULT_SECRETS_PROXY_PATH } from "../secrets/index.ts";
+import type { SessionStore } from "../sessions/store.ts";
+import { resolveSecretsCommandSpec } from "../secrets/command.ts";
 import { readWhatsAppStateSnapshot, writeWhatsAppStateSnapshot } from "../state/store.ts";
 import { NodeFileSystemHost } from "../host/filesystem.ts";
 
@@ -39,7 +39,7 @@ export interface WhatsAppService {
 export interface CreateWhatsAppServiceOptions {
   workspaceDir: string;
   dataStore: WorkspaceDataStore;
-  conversationStore: ConversationStore;
+  sessionStore: SessionStore;
   runner: CommandRunner;
   env?: NodeJS.ProcessEnv;
   filesystem?: NodeFileSystemHost;
@@ -98,10 +98,6 @@ function maskSecretReference(secretName: string): string {
   return `vault:${maskCredential(secretName) ?? "configured"}`;
 }
 
-function resolveSecretsProxyPath(env?: NodeJS.ProcessEnv): string {
-  return env?.CLAWJS_SECRETS_PROXY_PATH?.trim() || process.env.CLAWJS_SECRETS_PROXY_PATH?.trim() || DEFAULT_SECRETS_PROXY_PATH;
-}
-
 function resolveWacliPath(env?: NodeJS.ProcessEnv): string {
   return env?.CLAWJS_WACLI_PATH?.trim() || process.env.CLAWJS_WACLI_PATH?.trim() || DEFAULT_WACLI_PATH;
 }
@@ -122,9 +118,10 @@ async function callBusinessApi<TResult>(
   body: JsonRecord,
   timeoutMs = 15_000,
 ): Promise<TResult> {
-  const proxyPath = resolveSecretsProxyPath(env);
+  const spec = resolveSecretsCommandSpec(env);
   const url = `${WHATSAPP_GRAPH_API_BASE}/${phoneNumberId}/${endpoint}`;
   const args = [
+    ...spec.argsPrefix,
     "request",
     "--method",
     "POST",
@@ -139,8 +136,8 @@ async function callBusinessApi<TResult>(
     "--timeout",
     String(Math.max(1, Math.ceil(timeoutMs / 1000))),
   ];
-  const result = await runner.exec(proxyPath, args, {
-    env: buildRunnerEnv(env),
+  const result = await runner.exec(spec.command, args, {
+    env: buildRunnerEnv(spec.env),
     timeoutMs: timeoutMs + 1_000,
   });
   const payload = JSON.parse(result.stdout || "null") as JsonRecord;
@@ -228,16 +225,17 @@ export function createWhatsAppService(options: CreateWhatsAppServiceOptions): Wh
       // Verify credentials by calling the phone number endpoint
       let profile: WhatsAppBotProfile | undefined;
       try {
-        const proxyPath = resolveSecretsProxyPath(options.env);
+        const spec = resolveSecretsCommandSpec(options.env);
         const url = `${WHATSAPP_GRAPH_API_BASE}/${phoneNumberId}`;
-        const result = await options.runner.exec(proxyPath, [
+        const result = await options.runner.exec(spec.command, [
+          ...spec.argsPrefix,
           "request",
           "--method", "GET",
           "--url", url,
           "--header", `Authorization: Bearer {{${secretName}}}`,
           "--timeout", "10",
         ], {
-          env: buildRunnerEnv(options.env),
+          env: buildRunnerEnv(spec.env),
           timeoutMs: 12_000,
         });
         const data = JSON.parse(result.stdout || "null") as JsonRecord;

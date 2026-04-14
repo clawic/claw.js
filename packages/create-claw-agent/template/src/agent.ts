@@ -12,8 +12,8 @@ async function runReport() {
 
 async function runSession(prompt: string) {
   const claw = await getClaw();
-  const session = claw.conversations.createSession("Agent demo");
-  claw.conversations.appendMessage(session.sessionId, {
+  const session = claw.sessions.createSession("Agent demo");
+  claw.sessions.appendMessage(session.sessionId, {
     role: "user",
     content: prompt,
   });
@@ -22,19 +22,19 @@ async function runSession(prompt: string) {
     ok: true,
     sessionId: session.sessionId,
     message: prompt,
-    sessions: claw.conversations.listSessions().length,
+    sessions: claw.sessions.listSessions().length,
   }, null, 2)}\n`);
 }
 
 async function runReply(prompt: string) {
   const claw = await getClaw();
-  const session = claw.conversations.createSession("Agent reply");
-  claw.conversations.appendMessage(session.sessionId, {
+  const session = claw.sessions.createSession("Agent reply");
+  claw.sessions.appendMessage(session.sessionId, {
     role: "user",
     content: prompt,
   });
 
-  for await (const chunk of claw.conversations.streamAssistantReply({
+  for await (const chunk of claw.sessions.streamAssistantReply({
     sessionId: session.sessionId,
     transport: "auto",
   })) {

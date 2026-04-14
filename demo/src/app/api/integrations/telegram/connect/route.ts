@@ -9,7 +9,41 @@ const execFileAsync = promisify(execFile);
 
 const TELEGRAM_SECRET_NAME = "clawjs_telegram_bot_token";
 
-async function storeSecretInKeychain(secretName: string, secretValue: string): Promise<void> {
+function vaultConfig() {
+  const baseUrl = process.env.VAULT_BASE_URL?.trim();
+  const token = process.env.VAULT_TOKEN?.trim();
+  const tenantId = process.env.VAULT_TENANT_ID?.trim();
+  return baseUrl && token && tenantId ? { baseUrl, token, tenantId } : null;
+}
+
+async function storeSecret(secretName: string, secretValue: string): Promise<void> {
+  const vault = vaultConfig();
+  if (vault) {
+    const response = await fetch(`${vault.baseUrl.replace(/\/+$/, "")}/v1/tenants/${vault.tenantId}/secrets`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${vault.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        secretName,
+        secretValue,
+        typeId: "telegram.bot_token",
+        allowedHosts: ["api.telegram.org"],
+        allowedHeaderNames: [],
+        allowInURL: true,
+        allowInRequestBody: false,
+        allowLocalNetwork: false,
+        readOnly: false,
+        leaseModes: ["process", "browser"],
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+    return;
+  }
+
   const serviceName = `secrets-proxy:${secretName}`;
 
   // Delete existing entry if present (ignore errors)
@@ -33,7 +67,10 @@ async function storeSecretInKeychain(secretName: string, secretValue: string): P
   ], { timeout: 5000 });
 }
 
-async function removeSecretFromKeychain(secretName: string): Promise<void> {
+async function removeSecret(secretName: string): Promise<void> {
+  if (vaultConfig()) {
+    return;
+  }
   const serviceName = `secrets-proxy:${secretName}`;
   try {
     await execFileAsync("security", [
@@ -124,7 +161,7 @@ export async function POST(req: NextRequest) {
 
     // Delete flow
     if (botToken === null) {
-      await removeSecretFromKeychain(TELEGRAM_SECRET_NAME);
+      await removeSecret(TELEGRAM_SECRET_NAME);
 
       const config = getUserConfig();
       config.telegram = {
@@ -165,7 +202,7 @@ export async function POST(req: NextRequest) {
     const botName = meData.result.first_name;
 
     // 2. Store the token in macOS Keychain
-    await storeSecretInKeychain(TELEGRAM_SECRET_NAME, botToken);
+    await storeSecret(TELEGRAM_SECRET_NAME, botToken);
 
     // 3. Save to user config
     const config = getUserConfig();

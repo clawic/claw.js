@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getUserConfig, saveUserConfig, clearConfigCache, redactUserConfigForClient } from "@/lib/user-config";
 import { saveClawJSLocalSettings } from "@/lib/local-settings";
 import { syncGeneratedProfile } from "@/lib/profile-context";
+import { ensureE2ESeeded, isE2EEnabled } from "@/lib/e2e";
 
 const MAX_CONFIG_SIZE = 100 * 1024; // 100 KB
 export const dynamic = "force-dynamic";
@@ -25,6 +26,7 @@ const userConfigSchema = z.object({
 }).passthrough();
 
 export async function GET() {
+  if (isE2EEnabled()) ensureE2ESeeded();
   try {
     const config = redactUserConfigForClient(getUserConfig());
     return new Response(JSON.stringify(config, null, 2), {

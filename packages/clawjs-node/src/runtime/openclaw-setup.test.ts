@@ -49,7 +49,7 @@ test("getOpenClawSetupStatus requires a configured agent instead of only a local
         agentId: "clawjs-demo",
         workspaceDir: "/tmp/clawjs-demo",
         agentDir: "/tmp/agent",
-        conversationsDir: "/tmp/conversations",
+        sessionsDir: "/tmp/sessions",
         configuredAgent: null,
         cliAgent: null,
         cliAgentDetected: false,

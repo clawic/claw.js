@@ -10,7 +10,7 @@ import type {
 } from "../contracts.ts";
 import type {
   CapabilityName,
-  ConversationPolicy,
+  SessionPolicy,
   FeatureOwnership,
   RuntimeFeatureDescriptor,
   RuntimeCapabilityKey,
@@ -136,8 +136,8 @@ const ALL_RUNTIME_CAPABILITIES: RuntimeCapabilityKey[] = [
   "workspace",
   "auth",
   "models",
-  "conversation_cli",
-  "conversation_gateway",
+  "session_cli",
+  "session_gateway",
   "streaming",
   "scheduler",
   "memory",
@@ -178,7 +178,7 @@ export function buildRuntimeFeatureDescriptor(
   ownership: FeatureOwnership,
   supported: boolean,
   options: {
-    conversationPolicy?: ConversationPolicy;
+    sessionPolicy?: SessionPolicy;
     limitations?: string[];
   } = {},
 ): RuntimeFeatureDescriptor {
@@ -186,12 +186,12 @@ export function buildRuntimeFeatureDescriptor(
     featureId,
     ownership,
     supported,
-    ...(options.conversationPolicy ? { conversationPolicy: options.conversationPolicy } : {}),
+    ...(options.sessionPolicy ? { sessionPolicy: options.sessionPolicy } : {}),
     ...(options.limitations && options.limitations.length > 0 ? { limitations: options.limitations } : {}),
   };
 }
 
-export function defaultManagedConversationFeatures(options: {
+export function defaultManagedSessionFeatures(options: {
   channelsSupported?: boolean;
   skillsSupported?: boolean;
   pluginsSupported?: boolean;
@@ -210,7 +210,7 @@ export function defaultManagedConversationFeatures(options: {
     buildRuntimeFeatureDescriptor("files", "sdk-owned", true, { limitations: limitationsByFeature.files }),
     buildRuntimeFeatureDescriptor("memory", "runtime-owned", options.memorySupported ?? false, { limitations: limitationsByFeature.memory }),
     buildRuntimeFeatureDescriptor("scheduler", "runtime-owned", options.schedulerSupported ?? false, { limitations: limitationsByFeature.scheduler }),
-    buildRuntimeFeatureDescriptor("conversations", "mirrored", true, { conversationPolicy: "managed", limitations: limitationsByFeature.conversations }),
+    buildRuntimeFeatureDescriptor("sessions", "mirrored", true, { sessionPolicy: "managed", limitations: limitationsByFeature.sessions }),
     buildRuntimeFeatureDescriptor("speech", "sdk-owned", true, { limitations: limitationsByFeature.speech }),
   ];
 }
@@ -226,7 +226,7 @@ export function openClawMirrorFeatures(status: RuntimeCapabilityMap): RuntimeFea
     buildRuntimeFeatureDescriptor("files", "sdk-owned", true),
     buildRuntimeFeatureDescriptor("memory", "runtime-owned", status.memory.supported, { limitations: status.memory.limitations }),
     buildRuntimeFeatureDescriptor("scheduler", "runtime-owned", status.scheduler.supported, { limitations: status.scheduler.limitations }),
-    buildRuntimeFeatureDescriptor("conversations", "mirrored", true, { conversationPolicy: "mirror" }),
+    buildRuntimeFeatureDescriptor("sessions", "mirrored", true, { sessionPolicy: "mirror" }),
     buildRuntimeFeatureDescriptor("speech", "sdk-owned", true),
   ];
 }

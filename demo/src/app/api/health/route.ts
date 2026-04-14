@@ -3,7 +3,7 @@ import type { CapabilityHealth } from "@/lib/demo-store";
 import { isE2EEnabled } from "@/lib/e2e";
 
 const CAPABILITIES = [
-  "runtime", "workspace", "auth", "models", "conversations",
+  "runtime", "workspace", "auth", "models", "sessions",
   "scheduler", "memory", "skills", "channels", "plugins",
   "file_sync", "orchestration",
 ];
@@ -21,7 +21,7 @@ const DETAILS: Record<string, Record<string, string>> = {
   workspace: { ready: "Workspace synced", degraded: "Sync delayed by 2m", error: "Workspace lock file stale" },
   auth: { ready: "All tokens valid", degraded: "Token refresh pending", error: "OAuth token expired" },
   models: { ready: "3 models available", degraded: "1 model slow to respond", error: "Primary model unavailable" },
-  conversations: { ready: "Session store healthy", degraded: "Slow query response", error: "Index corrupted" },
+  sessions: { ready: "Session store healthy", degraded: "Slow query response", error: "Index corrupted" },
   scheduler: { ready: "12 routines scheduled", degraded: "2 routines delayed", error: "Cron daemon unresponsive" },
   memory: { ready: "Vector store indexed", degraded: "Re-indexing in progress", error: "Embedding service down" },
   skills: { ready: "8 skills loaded", degraded: "1 skill failed health check", error: "Skill registry unreachable" },

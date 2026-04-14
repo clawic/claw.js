@@ -144,7 +144,7 @@ test("repairWorkspace restores missing workspace layout and normalizes compat sn
   assert.equal(result.compatSnapshotSourcePath, snapshotPath);
   assert.equal(fs.existsSync(resolveCompatSnapshotPath(workspaceDir)), true);
   assert.equal(readCompatSnapshot(workspaceDir)?.runtimeVersion, "1.2.3");
-  assert.equal(result.createdDirectories.includes(path.join(workspaceDir, ".clawjs", "conversations")), true);
+  assert.equal(result.createdDirectories.includes(path.join(workspaceDir, ".clawjs", "sessions")), true);
 });
 
 test("workspace mutations respect the workspace lock", () => {

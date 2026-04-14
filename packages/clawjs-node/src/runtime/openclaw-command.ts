@@ -59,7 +59,10 @@ export function withOpenClawCommandEnv(
   env?: NodeJS.ProcessEnv,
   options: OpenClawCommandOptions = {},
 ): NodeJS.ProcessEnv | undefined {
-  const commandEnv = withOpenClawBinaryEnv(env, options.binaryPath) ?? (env ? { ...env } : undefined) ?? {};
+  const commandEnv = withOpenClawBinaryEnv({
+    ...process.env,
+    ...(env ?? {}),
+  }, options.binaryPath) ?? {};
   const resolvedStateDir = readConfiguredValue(commandEnv.OPENCLAW_STATE_DIR) ?? readConfiguredValue(options.homeDir);
   const resolvedConfigPath = readConfiguredValue(commandEnv.OPENCLAW_CONFIG_PATH) ?? readConfiguredValue(options.configPath);
 

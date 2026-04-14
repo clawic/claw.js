@@ -41,7 +41,7 @@ test("resolveOpenClawContext prefers explicit overrides", () => {
     agentId: "alpha",
     workspaceDir: "/tmp/workspace-alpha",
     agentDir: "/tmp/agents/alpha/agent",
-    conversationsDir: "/tmp/conversations-alpha",
+    sessionsDir: "/tmp/sessions-alpha",
     url: "127.0.0.1:19999",
     token: "secret",
     port: 19999,
@@ -52,7 +52,7 @@ test("resolveOpenClawContext prefers explicit overrides", () => {
   assert.equal(context.agentId, "alpha");
   assert.equal(context.workspaceDir, "/tmp/workspace-alpha");
   assert.equal(context.agentDir, "/tmp/agents/alpha/agent");
-  assert.equal(context.conversationsDir, "/tmp/conversations-alpha");
+  assert.equal(context.sessionsDir, "/tmp/sessions-alpha");
   assert.equal(context.cliAgentDetected, false);
   assert.equal(context.gateway?.url, "http://127.0.0.1:19999");
   assert.equal(context.gateway?.token, "secret");

@@ -5,7 +5,7 @@ import os from "os";
 import path from "path";
 
 import type { CommandRunner } from "../contracts.ts";
-import { getRuntimeConversationDescriptor, getRuntimeResourceCatalogs, getRuntimeStatusReport } from "../engines.ts";
+import { getRuntimeSessionDescriptor, getRuntimeResourceCatalogs, getRuntimeStatusReport } from "../engines.ts";
 import { hermesAdapter } from "./hermes-adapter.ts";
 import { nanobotAdapter } from "./nanobot-adapter.ts";
 import { openclawAdapter } from "./openclaw-adapter.ts";
@@ -53,7 +53,7 @@ test("openclaw adapter preserves its transport and capability-map contract", asy
   assert.deepEqual(status.capabilityMap.memory.limitations, ["OpenClaw memory is workspace-file based in ClawJS."]);
   assert.deepEqual(status.capabilityMap.scheduler.limitations, ["Heartbeat-based scheduling only."]);
 
-  const conversation = getRuntimeConversationDescriptor(openclawAdapter, {
+  const conversation = getRuntimeSessionDescriptor(openclawAdapter, {
     adapter: "openclaw",
     gateway: { url: "http://127.0.0.1:4100" },
   });
@@ -96,7 +96,7 @@ test("hermes adapter exposes structured capabilities, resources, and transport m
   assert.equal(resources.skills.skills.some((entry) => entry.id === "checks"), true);
   assert.equal(resources.schedulers.schedulers.some((entry) => entry.id === "daily"), true);
 
-  const conversation = getRuntimeConversationDescriptor(hermesAdapter, options);
+  const conversation = getRuntimeSessionDescriptor(hermesAdapter, options);
   assert.equal(conversation.transport.kind, "hybrid");
   assert.equal(conversation.primaryTransport, "gateway");
   assert.equal(conversation.fallbackTransport, "cli");
@@ -143,7 +143,7 @@ test("nanobot adapter exposes normalized channels, memory, and sandbox limitatio
   assert.equal(resources.memory.memory.some((entry) => entry.path?.endsWith("MEMORY.md")), true);
   assert.equal(resources.skills.skills.some((entry) => entry.id === "review"), true);
 
-  const conversation = getRuntimeConversationDescriptor(nanobotAdapter, options);
+  const conversation = getRuntimeSessionDescriptor(nanobotAdapter, options);
   assert.equal(conversation.transport.kind, "hybrid");
   assert.equal(conversation.primaryTransport, "gateway");
   assert.equal(conversation.fallbackTransport, "cli");

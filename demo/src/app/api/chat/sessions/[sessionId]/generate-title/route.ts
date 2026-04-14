@@ -28,7 +28,7 @@ export async function POST(_: Request, context: RouteContext) {
 
   try {
     const claw = await getClaw();
-    const generatedTitle = await claw.conversations.generateTitle({
+    const generatedTitle = await claw.sessions.generateTitle({
       sessionId,
       transport: "auto",
     });

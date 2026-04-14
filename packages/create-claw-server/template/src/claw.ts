@@ -34,7 +34,7 @@ export async function getClawSnapshot() {
   }
 
   const inspection = await claw.workspace.inspect();
-  const sessions = claw.conversations.listSessions();
+  const sessions = claw.sessions.listSessions();
 
   return {
     ok: true,

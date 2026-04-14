@@ -138,14 +138,14 @@ export const hermesAdapter = createSimpleRuntimeAdapter({
     channels: { supported: true, status: "degraded", strategy: "native", limitations: ["Channel inventory is normalized to the ClawJS descriptor model and may omit platform-specific metadata."] },
     skills: { supported: true, status: "ready", strategy: "native", limitations: ["Skill inventory is read from ~/.hermes/skills and does not expose all Hermes skill metadata yet."] },
     sandbox: { supported: true, status: "degraded", strategy: "hosted", limitations: ["Isolation depends on the selected Hermes terminal backend such as Docker, SSH, Modal, or local."] },
-    conversation_gateway: { supported: true, status: "ready", strategy: "gateway" },
+    session_gateway: { supported: true, status: "ready", strategy: "gateway" },
   },
   capabilityOverrides: {
     scheduler: { supported: true, status: "ready", strategy: "native" },
     memory: { supported: true, status: "ready", strategy: "bridge" },
     channels: { supported: true, status: "degraded", strategy: "native", limitations: ["Channel inventory is normalized from Hermes gateway capabilities."] },
     skills: { supported: true, status: "ready", strategy: "native" },
-    conversation_gateway: { supported: true, status: "ready", strategy: "gateway" },
+    session_gateway: { supported: true, status: "ready", strategy: "gateway" },
     sandbox: { supported: true, status: "degraded", strategy: "hosted", limitations: ["Sandboxing depends on the configured terminal backend."] },
   },
   resourceLoaders: {

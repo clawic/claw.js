@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 
-import { ConversationStore, resolveConversationsDir } from "@clawjs/claw";
+import { SessionStore, resolveSessionsDir } from "@clawjs/claw";
 
 import { resolveClawJSSessionsDir, resolveClawJSWorkspaceDir } from "./openclaw-agent.ts";
 
@@ -78,7 +78,7 @@ export function extractLatestUserMessageFromWrappedPrompt(text: string): string 
   const matches = [...normalized.matchAll(/(?:^|\n)USER:\s([\s\S]*?)(?=(?:\nAttachments:|\n(?:ASSISTANT|USER):|$))/g)];
   if (matches.length === 0) {
     const compact = normalized.replace(/\s+/g, " ").trim();
-    const fallback = compact.match(/(?:^|CONVERSATION:\s*)USER:\s(.+?)(?=(?:\s+ASSISTANT:|\s+USER:|$))/i);
+    const fallback = compact.match(/(?:^|SESSION:\s*)USER:\s(.+?)(?=(?:\s+ASSISTANT:|\s+USER:|$))/i);
     return (fallback?.[1] || text).trim();
   }
 
@@ -151,16 +151,16 @@ export function parseOpenClawTranscript(raw: string): SessionMessage[] {
   return parsed;
 }
 
-function conversationsDir(): string {
-  return resolveConversationsDir(resolveClawJSWorkspaceDir());
+function sessionsDir(): string {
+  return resolveSessionsDir(resolveClawJSWorkspaceDir());
 }
 
 function conversationPath(sessionId: string): string {
-  return path.join(conversationsDir(), `${sessionId}.jsonl`);
+  return path.join(sessionsDir(), `${sessionId}.jsonl`);
 }
 
-function getConversationStore(): ConversationStore {
-  return new ConversationStore(resolveClawJSWorkspaceDir());
+function getSessionStore(): SessionStore {
+  return new SessionStore(resolveClawJSWorkspaceDir());
 }
 
 function normalizeRecord(record: {
@@ -215,15 +215,15 @@ function normalizeSummary(summary: {
 }
 
 export function openClawSessionsDir(): string {
-  return conversationsDir();
+  return sessionsDir();
 }
 
 export function listSessions(): SessionSummary[] {
-  return getConversationStore().listSessions().map(normalizeSummary);
+  return getSessionStore().listSessions().map(normalizeSummary);
 }
 
 export function searchSessions(query: string, limit?: number): SessionSummary[] {
-  const results = getConversationStore().searchSessions(query, {
+  const results = getSessionStore().searchSessions(query, {
     limit: limit ?? 20,
     includeMessages: true,
   });
@@ -231,12 +231,12 @@ export function searchSessions(query: string, limit?: number): SessionSummary[] 
 }
 
 export function getSession(sessionId: string): SessionRecord | null {
-  const session = getConversationStore().getSession(sessionId);
+  const session = getSessionStore().getSession(sessionId);
   return session ? normalizeRecord(session) : null;
 }
 
 export function createSession(title?: string): SessionRecord {
-  const session = getConversationStore().createSession(title);
+  const session = getSessionStore().createSession(title);
   return normalizeRecord(session);
 }
 
@@ -244,7 +244,7 @@ export function appendSessionMessage(
   sessionId: string,
   message: Omit<SessionMessage, "id" | "createdAt"> & { createdAt?: number },
 ): SessionRecord {
-  const store = getConversationStore();
+  const store = getSessionStore();
   const createdAt = message.createdAt ?? Date.now();
   const session = store.appendMessage(sessionId, {
     role: message.role,
@@ -264,5 +264,5 @@ export function sessionExists(sessionId: string): boolean {
 }
 
 export function updateSessionTitle(sessionId: string, newTitle: string): boolean {
-  return getConversationStore().updateSessionTitle(sessionId, newTitle);
+  return getSessionStore().updateSessionTitle(sessionId, newTitle);
 }

@@ -17,7 +17,7 @@ import {
 test("extractLatestUserMessageFromWrappedPrompt returns the latest user block", () => {
   const wrapped = [
     "You are ClawJS inside a web chat UI.",
-    "CONVERSATION:",
+    "SESSION:",
     "ASSISTANT: Earlier reply",
     "",
     "USER: First turn",
@@ -38,7 +38,7 @@ test("parseOpenClawTranscript recovers user and assistant messages", () => {
       timestamp: "2026-03-17T10:00:00.000Z",
       message: {
         role: "user",
-        content: [{ type: "text", text: "CONVERSATION:\nASSISTANT: Hi\n\nUSER: I need to talk" }],
+        content: [{ type: "text", text: "SESSION:\nASSISTANT: Hi\n\nUSER: I need to talk" }],
       },
     }),
     JSON.stringify({
@@ -85,7 +85,7 @@ test("sessions load directly from OpenClaw conversation transcripts", { concurre
           timestamp: "2026-03-17T11:00:00.000Z",
           message: {
             role: "user",
-            content: [{ type: "text", text: "CONVERSATION:\nUSER: Legacy prompt" }],
+            content: [{ type: "text", text: "SESSION:\nUSER: Legacy prompt" }],
           },
         }),
         JSON.stringify({
@@ -147,7 +147,7 @@ test("session event titles override transcript-derived summaries", { concurrency
           timestamp: "2026-03-17T11:00:02.000Z",
           message: {
             role: "user",
-            content: [{ type: "text", text: "CONVERSATION:\nASSISTANT: We can start there.\n\nUSER: Work is starting to overwhelm me" }],
+            content: [{ type: "text", text: "SESSION:\nASSISTANT: We can start there.\n\nUSER: Work is starting to overwhelm me" }],
           },
         }),
       ].join("\n")

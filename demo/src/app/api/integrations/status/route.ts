@@ -14,7 +14,7 @@ import { getWacliAuthStatus } from "@/lib/wacli-runtime";
 import { hasBinary } from "@/lib/platform";
 import { getClaw } from "@/lib/claw";
 import { getAllAdapterStatuses } from "@/lib/runtime-adapters";
-import { getE2EIntegrationStatus, isE2EEnabled } from "@/lib/e2e";
+import { ensureE2ESeeded, getE2EIntegrationStatus, isE2EEnabled } from "@/lib/e2e";
 
 interface ToolStatus {
   installed: boolean;
@@ -32,18 +32,50 @@ export const revalidate = 0;
 
 const NO_STORE_HEADERS = { "Cache-Control": "no-store, max-age=0" };
 
-export async function GET() {
+const DISABLED_EMAIL_STATUS = {
+  installed: false,
+  available: false,
+  backend: "unsupported" as const,
+  accounts: [],
+  selectedAccountsValid: false,
+  message: null,
+};
+
+const DISABLED_CALENDAR_STATUS = {
+  installed: false,
+  available: false,
+  needsPermission: false,
+  backend: "unsupported" as const,
+  calendars: [],
+  selectedCalendarValid: false,
+  message: null,
+};
+
+export async function GET(request: Request) {
   if (isE2EEnabled()) {
+    ensureE2ESeeded();
     return NextResponse.json(getE2EIntegrationStatus(), { headers: NO_STORE_HEADERS });
   }
 
   const config = getUserConfig();
+  const url = new URL(request.url);
+  const scope = url.searchParams.get("scope");
+  const bootstrapScope = scope === "bootstrap";
 
   const contactsEnabled = !!config.contactsEnabled;
+  const emailEnabled = (config.emailAccounts ?? []).filter(Boolean).length > 0;
+  const calendarEnabled = (config.calendarAccounts ?? []).filter(Boolean).length > 0;
+  const adapterStatusesPromise = bootstrapScope ? Promise.resolve([]) : getAllAdapterStatuses();
+  const emailStatusPromise = bootstrapScope && !emailEnabled
+    ? Promise.resolve(DISABLED_EMAIL_STATUS)
+    : getMailIntegrationStatus(config.emailAccounts);
+  const calendarStatusPromise = bootstrapScope && !calendarEnabled
+    ? Promise.resolve(DISABLED_CALENDAR_STATUS)
+    : getCalendarIntegrationStatus(config.calendarAccounts?.[0] || undefined);
 
   let [wacliStatus, calendarStatus, contactsStatus, emailStatus, openClawStatus, adapterStatuses] = await Promise.all([
     getWacliAuthStatus(),
-    getCalendarIntegrationStatus(config.calendarAccounts?.[0] || undefined),
+    calendarStatusPromise,
     contactsEnabled
       ? getContactsIntegrationStatus().catch(() => ({
           installed: false, available: false, needsPermission: false,
@@ -55,14 +87,14 @@ export async function GET() {
           backend: "unsupported" as const, contactCount: 0,
           message: null,
         }),
-    getMailIntegrationStatus(config.emailAccounts),
-    getClawJSOpenClawStatus(),
-    getAllAdapterStatuses(),
+    emailStatusPromise,
+    getClawJSOpenClawStatus({ includeLatestVersion: !bootstrapScope }),
+    adapterStatusesPromise,
   ]);
 
   if (openClawStatus.cliAvailable && openClawStatus.agentConfigured && !openClawStatus.authConfigured) {
     await reconcileClawJSOpenClawDefaultModelWithAvailableAuth().catch(() => null);
-    openClawStatus = await getClawJSOpenClawStatus();
+    openClawStatus = await getClawJSOpenClawStatus({ includeLatestVersion: !bootstrapScope });
   }
 
   const wacliDbExists = config.dataSources.wacliDbPath
@@ -96,8 +128,8 @@ export async function GET() {
       lastError: wacliStatus.lastError,
       wacliAvailable: wacliStatus.cliAvailable,
     } satisfies ToolStatus,
-    email: { ...emailStatus, enabled: (config.emailAccounts ?? []).filter(Boolean).length > 0 },
-    calendar: { ...calendarStatus, enabled: (config.calendarAccounts ?? []).filter(Boolean).length > 0 },
+    email: { ...emailStatus, enabled: emailEnabled },
+    calendar: { ...calendarStatus, enabled: calendarEnabled },
     contacts: { ...contactsStatus, enabled: !!config.contactsEnabled },
     transcription: {
       dbExists: transcriptionDbExists,

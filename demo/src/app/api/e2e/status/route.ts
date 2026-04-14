@@ -16,7 +16,7 @@ export async function GET() {
       stateDir: resolveOpenClawStateDir(),
       workspaceDir: resolveClawJSWorkspaceDir(),
       agentDir: resolveClawJSAgentDir(),
-      conversationsDir: resolveClawJSSessionsDir(),
+      sessionsDir: resolveClawJSSessionsDir(),
       configDir: getClawJSConfigDir(),
       localSettingsPath: getClawJSLocalSettingsPath(),
     },

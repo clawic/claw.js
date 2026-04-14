@@ -40,7 +40,7 @@ export const nemoclawAdapter = createSimpleRuntimeAdapter({
   capabilityOverrides: {
     sandbox: { supported: true, status: "ready", strategy: "hosted", limitations: ["Sandboxing is provided by the host OpenShell/Nemo stack."] },
     scheduler: { supported: true, status: "ready", strategy: "hosted" },
-    conversation_gateway: { supported: true, status: "ready", strategy: "gateway" },
+    session_gateway: { supported: true, status: "ready", strategy: "gateway" },
   },
   defaultSchedulers: [{
     id: "nemoclaw-jobs",

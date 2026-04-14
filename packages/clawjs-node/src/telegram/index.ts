@@ -2,8 +2,8 @@ import { maskCredential, type ChannelDescriptor, type TelegramBotProfile, type T
 
 import type { WorkspaceDataStore } from "../data/store.ts";
 import type { CommandRunner } from "../runtime/contracts.ts";
-import type { ConversationStore } from "../conversations/store.ts";
-import { DEFAULT_SECRETS_PROXY_PATH } from "../secrets/index.ts";
+import type { SessionStore } from "../sessions/store.ts";
+import { resolveSecretsCommandSpec } from "../secrets/command.ts";
 import { readTelegramStateSnapshot, writeTelegramStateSnapshot } from "../state/store.ts";
 import { NodeFileSystemHost } from "../host/filesystem.ts";
 
@@ -102,7 +102,7 @@ export interface TelegramService {
 export interface CreateTelegramServiceOptions {
   workspaceDir: string;
   dataStore: WorkspaceDataStore;
-  conversationStore: ConversationStore;
+  sessionStore: SessionStore;
   runner: CommandRunner;
   env?: NodeJS.ProcessEnv;
   filesystem?: NodeFileSystemHost;
@@ -168,10 +168,6 @@ function maskSecretReference(secretName: string): string {
   return `vault:${maskCredential(secretName) ?? "configured"}`;
 }
 
-function resolveSecretsProxyPath(env?: NodeJS.ProcessEnv): string {
-  return env?.CLAWJS_SECRETS_PROXY_PATH?.trim() || process.env.CLAWJS_SECRETS_PROXY_PATH?.trim() || DEFAULT_SECRETS_PROXY_PATH;
-}
-
 function buildRunnerEnv(env?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return {
     ...process.env,
@@ -188,10 +184,11 @@ async function callTelegramApi<TResult>(
   params: JsonRecord = {},
   timeoutMs = 15_000,
 ): Promise<TResult> {
-  const proxyPath = resolveSecretsProxyPath(env);
+  const spec = resolveSecretsCommandSpec(env);
   const url = `${normalizeApiBaseUrl(apiBaseUrl)}/bot{{${secretName}}}/${method}`;
   const body = JSON.stringify(params);
   const args = [
+    ...spec.argsPrefix,
     "request",
     "--method",
     "POST",
@@ -204,8 +201,8 @@ async function callTelegramApi<TResult>(
     "--timeout",
     String(Math.max(1, Math.ceil(timeoutMs / 1000))),
   ];
-  const result = await runner.exec(proxyPath, args, {
-    env: buildRunnerEnv(env),
+  const result = await runner.exec(spec.command, args, {
+    env: buildRunnerEnv(spec.env),
     timeoutMs: timeoutMs + 1_000,
   });
   const payload = JSON.parse(result.stdout || "null") as { ok?: boolean; result?: TResult; description?: string; error_code?: number };
@@ -403,7 +400,7 @@ function rememberUpdate(dataStore: WorkspaceDataStore, envelope: TelegramUpdateE
 
 function recordMessageInConversation(
   dataStore: WorkspaceDataStore,
-  conversationStore: ConversationStore,
+  sessionStore: SessionStore,
   envelope: TelegramUpdateEnvelope,
   chat: TelegramChatSummary | undefined,
   content: string | null,
@@ -413,12 +410,12 @@ function recordMessageInConversation(
   let sessionId = sessionMap[chat.id];
   if (!sessionId) {
     const title = chat.title ?? chat.username ?? chat.firstName ?? `Telegram ${chat.id}`;
-    const session = conversationStore.createSession(title);
+    const session = sessionStore.createSession(title);
     sessionId = session.sessionId;
     sessionMap[chat.id] = sessionId;
     writeSessionMap(dataStore, sessionMap);
   }
-  conversationStore.appendMessage(sessionId, {
+  sessionStore.appendMessage(sessionId, {
     role: "user",
     content,
     contextChips: [{
@@ -629,7 +626,7 @@ export function createTelegramService(options: CreateTelegramServiceOptions): Te
       raw: update,
     };
     rememberUpdate(options.dataStore, envelope);
-    recordMessageInConversation(options.dataStore, options.conversationStore, envelope, chat, extractUserText(update));
+    recordMessageInConversation(options.dataStore, options.sessionStore, envelope, chat, extractUserText(update));
     const persisted = await persist(updateKnownChats(updateTransport(snapshot, {
       ...snapshot.transport,
       active: snapshot.transport.mode !== "disabled",

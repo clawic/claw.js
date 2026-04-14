@@ -50,9 +50,21 @@ exit 1
   fs.writeFileSync(scriptPath, script, { mode: 0o755 });
 }
 
+function writeFakeNpmCli(binDir: string): string {
+  const markerPath = path.join(binDir, "npm-called.txt");
+  const scriptPath = path.join(binDir, "npm");
+  const script = `#!/bin/sh
+set -eu
+echo called > ${JSON.stringify(markerPath)}
+echo "9.9.9"
+`;
+  fs.writeFileSync(scriptPath, script, { mode: 0o755 });
+  return markerPath;
+}
+
 async function withFakeOpenClaw<T>(
   modelStatus: string,
-  run: (paths: { stateDir: string; agentDir: string; workspaceDir: string }) => Promise<T>,
+  run: (paths: { binDir: string; stateDir: string; agentDir: string; workspaceDir: string }) => Promise<T>,
 ): Promise<T> {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-openclaw-status-"));
   const binDir = path.join(tempRoot, "bin");
@@ -97,7 +109,7 @@ async function withFakeOpenClaw<T>(
   process.env.OPENCLAW_FAKE_AGENT_ID = "clawjs-demo";
 
   try {
-    return await run({ stateDir, agentDir, workspaceDir });
+    return await run({ binDir, stateDir, agentDir, workspaceDir });
   } finally {
     if (previousPath === undefined) {
       delete process.env.PATH;
@@ -218,4 +230,16 @@ test("pickPreferredAuthenticatedOpenClawModel prioritizes ChatGPT subscription a
   });
 
   assert.equal(model, "openai-codex/gpt-5.4");
+});
+
+test("getClawJSOpenClawStatus can skip latest version lookup for hot paths", { concurrency: false }, async () => {
+  await withFakeOpenClaw('{"defaultModel":"openai-codex/gpt-5.4","auth":{"missingProvidersInUse":[],"providers":[{"provider":"openai-codex","effective":{"kind":"oauth"},"profiles":{"oauth":1}}]}}', async ({ binDir }) => {
+    const markerPath = writeFakeNpmCli(binDir);
+    const status = await getClawJSOpenClawStatus({ includeLatestVersion: false });
+
+    assert.equal(status.installed, true);
+    assert.equal(status.cliAvailable, true);
+    assert.equal(status.latestVersion, null);
+    assert.equal(fs.existsSync(markerPath), false);
+  });
 });

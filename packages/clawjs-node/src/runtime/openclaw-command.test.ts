@@ -15,12 +15,11 @@ test("withOpenClawCommandEnv injects canonical OpenClaw paths when provided", ()
     configPath: "/tmp/openclaw-state/openclaw.json",
   });
 
-  assert.deepEqual(env, {
-    NODE_ENV: "test",
-    CLAWJS_OPENCLAW_PATH: "/usr/local/bin/openclaw",
-    OPENCLAW_STATE_DIR: "/tmp/openclaw-state",
-    OPENCLAW_CONFIG_PATH: "/tmp/openclaw-state/openclaw.json",
-  });
+  assert.equal(env?.NODE_ENV, "test");
+  assert.equal(env?.CLAWJS_OPENCLAW_PATH, "/usr/local/bin/openclaw");
+  assert.equal(env?.OPENCLAW_STATE_DIR, "/tmp/openclaw-state");
+  assert.equal(env?.OPENCLAW_CONFIG_PATH, "/tmp/openclaw-state/openclaw.json");
+  assert.equal(typeof env?.PATH, "string");
 });
 
 test("withOpenClawCommandEnv preserves explicit env overrides", () => {
@@ -32,10 +31,9 @@ test("withOpenClawCommandEnv preserves explicit env overrides", () => {
     configPath: "/tmp/openclaw-state/openclaw.json",
   });
 
-  assert.deepEqual(env, {
-    OPENCLAW_STATE_DIR: "/custom/state",
-    OPENCLAW_CONFIG_PATH: "/custom/config.json",
-  });
+  assert.equal(env?.OPENCLAW_STATE_DIR, "/custom/state");
+  assert.equal(env?.OPENCLAW_CONFIG_PATH, "/custom/config.json");
+  assert.equal(typeof env?.PATH, "string");
 });
 
 test("buildOpenClawCommand forwards canonical env to subprocesses", () => {
@@ -46,8 +44,21 @@ test("buildOpenClawCommand forwards canonical env to subprocesses", () => {
 
   assert.equal(command.command, "openclaw");
   assert.deepEqual(command.args, ["models", "status", "--json"]);
-  assert.deepEqual(command.env, {
-    OPENCLAW_STATE_DIR: "/tmp/openclaw-state",
-    OPENCLAW_CONFIG_PATH: "/tmp/openclaw-state/openclaw.json",
-  });
+  assert.equal(command.env?.OPENCLAW_STATE_DIR, "/tmp/openclaw-state");
+  assert.equal(command.env?.OPENCLAW_CONFIG_PATH, "/tmp/openclaw-state/openclaw.json");
+  assert.equal(typeof command.env?.PATH, "string");
+});
+
+test("buildOpenClawCommand preserves PATH when only canonical config is provided", () => {
+  const previousPath = process.env.PATH;
+  process.env.PATH = "/tmp/fake-bin";
+  try {
+    const command = buildOpenClawCommand(["gateway", "status"], {
+      configPath: "/tmp/openclaw-state/openclaw.json",
+    });
+    assert.equal(command.env?.OPENCLAW_CONFIG_PATH, "/tmp/openclaw-state/openclaw.json");
+    assert.equal(command.env?.PATH, "/tmp/fake-bin");
+  } finally {
+    process.env.PATH = previousPath;
+  }
 });

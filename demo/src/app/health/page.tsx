@@ -17,7 +17,7 @@ interface CapabilityHealth {
 
 const CAPABILITY_ICONS: Record<string, string> = {
   runtime: "cpu", workspace: "folder", auth: "shield", models: "brain",
-  conversations: "messages", scheduler: "clock", memory: "database",
+  sessions: "messages", scheduler: "clock", memory: "database",
   skills: "layers", channels: "radio", plugins: "puzzle",
   file_sync: "files", orchestration: "workflow",
 };

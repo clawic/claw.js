@@ -491,7 +491,7 @@ function SettingsContent() {
   const [resettingWorkspace, setResettingWorkspace] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetOptions, setResetOptions] = useState({
-    conversations: true,
+    sessions: true,
     profile: true,
     contextFiles: true,
     transcriptions: true,
@@ -1722,7 +1722,7 @@ function SettingsContent() {
               const noneSelected = Object.values(resetOptions).every(v => !v);
               const rc = messages.settings.general.resetCategories;
               const categories = [
-                { key: "conversations" as const, label: rc.conversations, desc: rc.conversationsDesc },
+                { key: "sessions" as const, label: rc.sessions, desc: rc.conversationsDesc },
                 { key: "profile" as const, label: rc.profile, desc: rc.profileDesc },
                 { key: "contextFiles" as const, label: rc.contextFiles, desc: rc.contextFilesDesc },
                 { key: "transcriptions" as const, label: rc.transcriptions, desc: rc.transcriptionsDesc },
@@ -1756,7 +1756,7 @@ function SettingsContent() {
                           checked={allSelected}
                           onChange={() => {
                             const next = !allSelected;
-                            setResetOptions(prev => ({ conversations: next, profile: next, contextFiles: next, transcriptions: next, settings: next, whatsappData: next, whatsappCli: next, emailAccounts: next, calendarAccounts: next, openClawWorkspace: next, openClawUninstall: prev.openClawUninstall }));
+                            setResetOptions(prev => ({ sessions: next, profile: next, contextFiles: next, transcriptions: next, settings: next, whatsappData: next, whatsappCli: next, emailAccounts: next, calendarAccounts: next, openClawWorkspace: next, openClawUninstall: prev.openClawUninstall }));
                           }}
                           className="sr-only"
                         />
@@ -2203,19 +2203,19 @@ function SettingsContent() {
                               <span className="text-[11px] text-foreground font-mono">{adapter.workspaceFiles.join(", ")}</span>
                             </div>
                           )}
-                          {adapter.conversation && (
+                          {adapter.session && (
                             <>
                               <div className="px-4 py-2 flex items-baseline gap-3">
                                 <span className="text-[11px] text-muted-foreground w-[76px] flex-shrink-0">Transport</span>
-                                <span data-testid={`adapter-${adapter.id}-conversation-transport`} className="text-[11px] text-foreground font-mono">
-                                  {adapter.conversation.transport}
-                                  {adapter.conversation.fallbackTransport ? ` -> ${adapter.conversation.fallbackTransport}` : ""}
+                                <span data-testid={`adapter-${adapter.id}-session-transport`} className="text-[11px] text-foreground font-mono">
+                                  {adapter.session.transport}
+                                  {adapter.session.fallbackTransport ? ` -> ${adapter.session.fallbackTransport}` : ""}
                                 </span>
                               </div>
-                              {adapter.conversation.sessionPersistence && (
+                              {adapter.session.sessionPersistence && (
                                 <div className="px-4 py-2 flex items-baseline gap-3">
                                   <span className="text-[11px] text-muted-foreground w-[76px] flex-shrink-0">Sessions</span>
-                                  <span className="text-[11px] text-foreground font-mono">{adapter.conversation.sessionPersistence}</span>
+                                  <span className="text-[11px] text-foreground font-mono">{adapter.session.sessionPersistence}</span>
                                 </div>
                               )}
                             </>

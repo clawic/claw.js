@@ -63,6 +63,10 @@ export interface ClawJSOpenClawStatus {
   defaultModel: string | null;
 }
 
+interface GetClawJSOpenClawStatusOptions {
+  includeLatestVersion?: boolean;
+}
+
 let ensureAgentPromise: Promise<ClawJSOpenClawContext> | null = null;
 
 const AUTHENTICATED_MODEL_PRIORITY: string[] = [
@@ -210,7 +214,9 @@ export async function reconcileClawJSOpenClawDefaultModelWithAvailableAuth(): Pr
   return preferredModel;
 }
 
-export async function getClawJSOpenClawStatus(): Promise<ClawJSOpenClawStatus> {
+export async function getClawJSOpenClawStatus(
+  options: GetClawJSOpenClawStatusOptions = {},
+): Promise<ClawJSOpenClawStatus> {
   const binary = await findCommandFresh("openclaw");
   if (!binary) {
     return {
@@ -250,16 +256,18 @@ export async function getClawJSOpenClawStatus(): Promise<ClawJSOpenClawStatus> {
     version = null;
   }
 
-  try {
-    const npmBinary = await findCommand("npm");
-    if (npmBinary) {
-      latestVersion = execFileSync(npmBinary, ["view", "openclaw", "version"], {
-        encoding: "utf8",
-        timeout: 10_000,
-      }).trim() || null;
+  if (options.includeLatestVersion !== false) {
+    try {
+      const npmBinary = await findCommand("npm");
+      if (npmBinary) {
+        latestVersion = execFileSync(npmBinary, ["view", "openclaw", "version"], {
+          encoding: "utf8",
+          timeout: 10_000,
+        }).trim() || null;
+      }
+    } catch {
+      latestVersion = null;
     }
-  } catch {
-    latestVersion = null;
   }
 
   try {

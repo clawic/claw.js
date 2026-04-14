@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { saveClawJSLocalSettings, getClawJSLocalSettings } from "@/lib/local-settings";
 import { resolveLocale } from "@/lib/i18n/messages";
 import { clearConfigCache } from "@/lib/user-config";
+import { ensureE2ESeeded, isE2EEnabled } from "@/lib/e2e";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -9,6 +10,7 @@ export const revalidate = 0;
 const NO_STORE_HEADERS = { "Cache-Control": "no-store, max-age=0" };
 
 export async function GET() {
+  if (isE2EEnabled()) ensureE2ESeeded();
   try {
     return Response.json(getClawJSLocalSettings(), { headers: NO_STORE_HEADERS });
   } catch {

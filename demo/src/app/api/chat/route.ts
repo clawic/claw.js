@@ -655,7 +655,7 @@ async function streamOpenClawAgent(
           }));
         }
 
-        for await (const event of claw.conversations.streamAssistantReplyEvents({
+        for await (const event of claw.sessions.streamAssistantReplyEvents({
           sessionId,
           systemPrompt,
           transport: "auto",
@@ -959,8 +959,8 @@ function buildPersonalityParagraph(config: import("@/lib/user-config").UserConfi
   // Depth level
   if (t.depthLevel && t.depthLevel !== "moderate") {
     const depthInstructions: Record<string, string> = {
-      surface: "DEPTH: Keep conversations focused on the present situation and practical solutions. Don't dig into childhood history or deep psychological roots unless the user explicitly brings them up. Stay action-oriented and here-and-now.",
-      deep: "DEPTH: You go deep. Explore root causes, repeated patterns, hidden motivations, and the deeper 'why' behind behavior. Do not settle for surface-level answers when the conversation clearly supports going deeper.",
+      surface: "DEPTH: Keep sessions focused on the present situation and practical solutions. Don't dig into childhood history or deep psychological roots unless the user explicitly brings them up. Stay action-oriented and here-and-now.",
+      deep: "DEPTH: You go deep. Explore root causes, repeated patterns, hidden motivations, and the deeper 'why' behind behavior. Do not settle for surface-level answers when the session clearly supports going deeper.",
     };
     parts.push(depthInstructions[t.depthLevel]);
   }
@@ -968,7 +968,7 @@ function buildPersonalityParagraph(config: import("@/lib/user-config").UserConfi
   // Exercise frequency
   if (t.exerciseFrequency && t.exerciseFrequency !== "sometimes") {
     const exerciseInstructions: Record<string, string> = {
-      never: "PRACTICAL EXERCISES: Do NOT suggest exercises, breathing techniques, journaling prompts, or homework unless the user specifically asks for them. Focus purely on conversation and reflection.",
+      never: "PRACTICAL EXERCISES: Do NOT suggest exercises, breathing techniques, journaling prompts, or homework unless the user specifically asks for them. Focus purely on session and reflection.",
       frequent: "PRACTICAL EXERCISES: Frequently suggest practical exercises, techniques, and activities the user can try between chats. Favor concrete actions over abstract advice.",
     };
     parts.push(exerciseInstructions[t.exerciseFrequency]);
@@ -1013,8 +1013,8 @@ function buildPersonalityParagraph(config: import("@/lib/user-config").UserConfi
   // Progress speed
   if (t.progressSpeed && t.progressSpeed !== "moderate") {
     const speedInstructions: Record<string, string> = {
-      patient: "PACING: Be patient and unhurried. Let conversations unfold at their own pace. Don't rush to solutions or try to cover too much ground in one session. Sometimes sitting with something is more valuable than solving it.",
-      direct: "PACING: Move the conversation forward efficiently. Do not linger on topics longer than needed. When you understand the issue, pivot toward insight or action.",
+      patient: "PACING: Be patient and unhurried. Let sessions unfold at their own pace. Don't rush to solutions or try to cover too much ground in one session. Sometimes sitting with something is more valuable than solving it.",
+      direct: "PACING: Move the session forward efficiently. Do not linger on topics longer than needed. When you understand the issue, pivot toward insight or action.",
     };
     parts.push(speedInstructions[t.progressSpeed]);
   }
@@ -1031,7 +1031,7 @@ function buildPersonalityParagraph(config: import("@/lib/user-config").UserConfi
   // User autonomy
   if (t.userAutonomy && t.userAutonomy !== "collaborative") {
     const autonomyInstructions: Record<string, string> = {
-      "active-guidance": "SESSION LEADERSHIP: You actively lead the conversation. You set the agenda, suggest topics, ask structured questions, and guide the user through a clear process.",
+      "active-guidance": "SESSION LEADERSHIP: You actively lead the session. You set the agenda, suggest topics, ask structured questions, and guide the user through a clear process.",
       "user-led": "SESSION LEADERSHIP: The user leads. You follow their direction, explore what they bring up, and support their process without steering or forcing an agenda.",
     };
     parts.push(autonomyInstructions[t.userAutonomy]);
@@ -1040,7 +1040,7 @@ function buildPersonalityParagraph(config: import("@/lib/user-config").UserConfi
   // AI reminders
   if (t.aiReminders && t.aiReminders !== "never") {
     const aiReminderInstructions: Record<string, string> = {
-      start: "AI TRANSPARENCY: At the beginning of each conversation, briefly remind the user that you are an AI assistant. After that initial reminder, proceed naturally without repeating it unnecessarily.",
+      start: "AI TRANSPARENCY: At the beginning of each session, briefly remind the user that you are an AI assistant. After that initial reminder, proceed naturally without repeating it unnecessarily.",
       periodically: "AI TRANSPARENCY: Periodically remind the user that you are an AI assistant, especially when discussing health, legal, financial, or other high-stakes topics.",
     };
     parts.push(aiReminderInstructions[t.aiReminders]);
@@ -1053,7 +1053,7 @@ function buildPersonalityParagraph(config: import("@/lib/user-config").UserConfi
   // Session duration
   if (t.sessionDuration && t.sessionDuration !== "unlimited") {
     const durationMap: Record<string, string> = { "15min": "15 minutes", "30min": "30 minutes", "45min": "45 minutes" };
-    parts.push(`SESSION DURATION: Aim for sessions of approximately ${durationMap[t.sessionDuration]}. As the session approaches this length, begin wrapping up. Summarize key takeaways, suggest something to reflect on, and bring the conversation to a natural close. Let the user know they can continue in a new session.`);
+    parts.push(`SESSION DURATION: Aim for sessions of approximately ${durationMap[t.sessionDuration]}. As the session approaches this length, begin wrapping up. Summarize key takeaways, suggest something to reflect on, and bring the session to a natural close. Let the user know they can continue in a new session.`);
   }
 
   // Session structure
@@ -1072,7 +1072,7 @@ function buildPersonalityParagraph(config: import("@/lib/user-config").UserConfi
 
   // Inter-session follow-up
   if (t.interSessionFollowUp) {
-    parts.push("INTER-SESSION FOLLOW-UP: At the beginning of each new conversation, briefly check in on topics, commitments, or exercises from previous sessions. Ask how things went, what they noticed, and whether they want to continue exploring those themes or move to something new.");
+    parts.push("INTER-SESSION FOLLOW-UP: At the beginning of each new session, briefly check in on topics, commitments, or exercises from previous sessions. Ask how things went, what they noticed, and whether they want to continue exploring those themes or move to something new.");
   }
 
   const tb = config.assistantPersona;

@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     if (parsedBody) {
       options = {
-        conversations: parsedBody.conversations ?? true,
+        sessions: parsedBody.sessions ?? true,
         profile: parsedBody.profile ?? true,
         contextFiles: parsedBody.contextFiles ?? true,
         transcriptions: parsedBody.transcriptions ?? true,

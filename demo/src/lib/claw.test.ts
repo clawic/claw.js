@@ -20,7 +20,7 @@ test("buildOpenClawCommandEnv pins the canonical OpenClaw paths for subprocesses
   assert.equal(env.OPENCLAW_CONFIG_PATH, openClawConfigPath());
   assert.equal(env.OPENCLAW_WORKSPACE_DIR, resolveClawJSWorkspaceDir());
   assert.equal(env.OPENCLAW_AGENT_DIR, resolveClawJSAgentDir());
-  assert.equal(env.OPENCLAW_CONVERSATIONS_DIR, resolveClawJSSessionsDir());
+  assert.equal(env.OPENCLAW_SESSIONS_DIR, resolveClawJSSessionsDir());
 });
 
 test("canonical OpenClaw defaults stay under ~/.openclaw", () => {
