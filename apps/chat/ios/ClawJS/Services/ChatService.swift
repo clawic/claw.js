@@ -22,6 +22,10 @@ final class ChatService: ObservableObject {
     private var projectAgents: [UUID: [UUID]] = [:]
     private var agentProjects: [UUID: [UUID]] = [:]
     private var activeStreamTask: Task<Void, Never>?
+    private var reconnectTask: Task<Void, Never>?
+    private var discoveryObserver: Any?
+    private var reconnectAttempt = 0
+    private let maxReconnectDelay: TimeInterval = 30
 
     var filteredProjects: [Project] {
         if searchText.isEmpty { return projects }
@@ -52,7 +56,27 @@ final class ChatService: ObservableObject {
         self.projects = MockData.projects
         self.topics = []
         self.conversations = []
+
+        // Start Bonjour discovery for local relay instances
+        RelayDiscovery.shared.startBrowsing()
+
+        // Auto-reconnect when a relay is discovered on the network
+        discoveryObserver = NotificationCenter.default.addObserver(
+            forName: .relayDiscovered,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.reconnect()
+        }
+
         loadRemoteData()
+    }
+
+    deinit {
+        reconnectTask?.cancel()
+        if let observer = discoveryObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     private func localAgentId(for remoteId: String) -> UUID {
@@ -162,6 +186,9 @@ final class ChatService: ObservableObject {
                     self.conversations = resolvedConversations
                     self.isConnected = true
                     self.canCreateAgents = false
+                    self.reconnectAttempt = 0
+                    self.reconnectTask?.cancel()
+                    self.reconnectTask = nil
                 }
             } catch {
                 print("[ChatService] API not available, using mock data: \(error.localizedDescription)")
@@ -171,6 +198,7 @@ final class ChatService: ObservableObject {
                     self.conversations = MockData.generateConversations()
                     self.isConnected = false
                     self.canCreateAgents = false
+                    self.scheduleReconnect()
                 }
             }
         }
@@ -357,7 +385,6 @@ final class ChatService: ObservableObject {
     }
 
     func sendVoiceMessage(in conversationId: UUID, attachment: Attachment) {
-        // First, add the message with voice attachment and placeholder text
         guard let index = conversations.firstIndex(where: { $0.id == conversationId }) else { return }
         let message = Message(
             id: UUID(),
@@ -374,41 +401,20 @@ final class ChatService: ObservableObject {
         let remoteAgentId = agentMap[agentId]
         let remoteProjectId = projectId.flatMap { projectMap[$0] }
 
-        activeStreamTask = Task {
-            // Try to transcribe the audio for the relay
-            let audioService = AudioService()
-            var textToSend = "[Voice message]"
-            if let fileURL = attachment.fileURL,
-               let transcription = await audioService.transcribe(url: fileURL),
-               !transcription.isEmpty {
-                textToSend = transcription
-                // Update local message text with transcription
-                await MainActor.run {
-                    if let idx = self.conversations.firstIndex(where: { $0.id == conversationId }),
-                       let msgIdx = self.conversations[idx].messages.lastIndex(where: { $0.role == .user && $0.hasAudioAttachment }) {
-                        let old = self.conversations[idx].messages[msgIdx]
-                        self.conversations[idx].messages[msgIdx] = Message(
-                            id: old.id,
-                            role: old.role,
-                            text: transcription,
-                            timestamp: old.timestamp,
-                            attachments: old.attachments
-                        )
-                    }
-                }
-            }
+        // Build attachment payload with audio data
+        var relayAttachments: [[String: String]] = []
+        var payload: [String: String] = ["name": attachment.name, "mimeType": attachment.mimeType]
+        if let base64 = attachment.base64Data {
+            payload["data"] = "data:\(attachment.mimeType);base64,\(base64)"
+        }
+        relayAttachments.append(payload)
 
-            // Build attachment payload
-            var relayAttachments: [[String: String]] = []
-            var payload: [String: String] = ["name": attachment.name, "mimeType": attachment.mimeType]
-            if let base64 = attachment.base64Data {
-                payload["data"] = "data:\(attachment.mimeType);base64,\(base64)"
-            }
-            relayAttachments.append(payload)
+        let text = "[Voice message]"
 
-            if let sessionId = sessionMap[conversationId] {
-                await streamReply(conversationId: conversationId, sessionId: sessionId, agentId: remoteAgentId, projectId: remoteProjectId, text: textToSend, attachments: relayAttachments)
-            } else {
+        if let sessionId = sessionMap[conversationId] {
+            activeStreamTask = Task { await streamReply(conversationId: conversationId, sessionId: sessionId, agentId: remoteAgentId, projectId: remoteProjectId, text: text, attachments: relayAttachments) }
+        } else {
+            activeStreamTask = Task {
                 do {
                     guard let remoteAgentId, let remoteProjectId else {
                         throw APIService.APIError.badResponse
@@ -416,7 +422,7 @@ final class ChatService: ObservableObject {
                     let title = conversations.first(where: { $0.id == conversationId })?.title ?? "Chat"
                     let session = try await api.createSession(title: title, agentId: remoteAgentId, projectId: remoteProjectId)
                     await MainActor.run { self.sessionMap[conversationId] = session.sessionId }
-                    await streamReply(conversationId: conversationId, sessionId: session.sessionId, agentId: remoteAgentId, projectId: remoteProjectId, text: textToSend, attachments: relayAttachments)
+                    await streamReply(conversationId: conversationId, sessionId: session.sessionId, agentId: remoteAgentId, projectId: remoteProjectId, text: text, attachments: relayAttachments)
                 } catch {
                     print("[ChatService] Failed: \(error)")
                     await MainActor.run { self.fallbackReply(in: conversationId) }
@@ -518,6 +524,9 @@ final class ChatService: ObservableObject {
     }
 
     func reconnect() {
+        reconnectTask?.cancel()
+        reconnectTask = nil
+        reconnectAttempt = 0
         sessionMap.removeAll()
         agentMap.removeAll()
         projectMap.removeAll()
@@ -528,6 +537,18 @@ final class ChatService: ObservableObject {
         conversations.removeAll()
         isConnected = false
         loadRemoteData()
+    }
+
+    private func scheduleReconnect() {
+        reconnectTask?.cancel()
+        reconnectAttempt += 1
+        let delay = min(Double(1 << min(reconnectAttempt, 5)), maxReconnectDelay)
+        print("[ChatService] Auto-reconnect in \(Int(delay))s (attempt \(reconnectAttempt))")
+        reconnectTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            guard let self, !Task.isCancelled, !self.isConnected else { return }
+            self.loadRemoteData()
+        }
     }
 
     // MARK: - Fallback

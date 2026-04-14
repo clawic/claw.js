@@ -8,12 +8,26 @@ struct SettingsView: View {
     @AppStorage("selectedAppearance") private var selectedAppearance: AppearanceMode = .system
     @AppStorage("appLanguage") private var appLanguage = ""
 
+    @AppStorage("relayBaseURL") private var relayBaseURL = "http://localhost:4410"
+    @AppStorage("relayTenantId") private var relayTenantId = "demo-tenant"
+    @AppStorage("relayEmail") private var relayEmail = "user@relay.local"
+    @AppStorage("relayPassword") private var relayPassword = "relay-user"
+
     @State private var showDeleteAlert = false
     @State private var showLanguagePicker = false
+    @State private var showQRScanner = false
+    @State private var qrStatus: QRStatus = .idle
+
+    enum QRStatus: Equatable {
+        case idle
+        case success
+        case error
+    }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
+                relaySection
                 appearanceSection
                 languageSection
                 notificationsSection
@@ -33,6 +47,212 @@ struct SettingsView: View {
         } message: {
             Text(L10n.Settings.deleteAllAlert)
         }
+        .sheet(isPresented: $showQRScanner) {
+            NavigationStack {
+                QRScannerView { code in
+                    handleQRCode(code)
+                    showQRScanner = false
+                }
+                .navigationTitle(L10n.Relay.scanQR)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(L10n.General.close) { showQRScanner = false }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Relay Connection
+
+    private var relaySection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L10n.Relay.title.uppercased())
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(.secondary)
+                .padding(.leading, 4)
+
+            VStack(spacing: 0) {
+                // Status row
+                HStack(spacing: 12) {
+                    Image(systemName: chatService.isConnected ? "wifi" : "wifi.slash")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white)
+                        .frame(width: 30, height: 30)
+                        .background(chatService.isConnected ? Color.green : Color.red)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    Text(chatService.isConnected ? L10n.Relay.connected : L10n.Relay.disconnected)
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Circle()
+                        .fill(chatService.isConnected ? Color.green : Color.red)
+                        .frame(width: 8, height: 8)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+
+                Divider().padding(.leading, 52)
+
+                // URL field
+                relayField(
+                    icon: "link",
+                    color: .blue,
+                    label: L10n.Relay.url,
+                    text: $relayBaseURL,
+                    placeholder: "http://192.168.1.100:4410"
+                )
+                Divider().padding(.leading, 52)
+
+                // Tenant field
+                relayField(
+                    icon: "building.2.fill",
+                    color: .indigo,
+                    label: L10n.Relay.tenant,
+                    text: $relayTenantId,
+                    placeholder: "demo-tenant"
+                )
+                Divider().padding(.leading, 52)
+
+                // Email field
+                relayField(
+                    icon: "envelope.fill",
+                    color: .teal,
+                    label: L10n.Relay.email,
+                    text: $relayEmail,
+                    placeholder: "user@relay.local"
+                )
+                Divider().padding(.leading, 52)
+
+                // Password field
+                relayField(
+                    icon: "lock.fill",
+                    color: .orange,
+                    label: L10n.Relay.password,
+                    text: $relayPassword,
+                    placeholder: "password",
+                    isSecure: true
+                )
+            }
+            .glassEffect(.regular, in: .rect(cornerRadius: 16))
+
+            // Action buttons
+            HStack(spacing: 12) {
+                Button {
+                    showQRScanner = true
+                    qrStatus = .idle
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "qrcode.viewfinder")
+                            .font(.system(size: 14))
+                        Text(L10n.Relay.scanQR)
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.blue)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+
+                Button {
+                    chatService.reconnect()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 14))
+                        Text(L10n.Relay.reconnect)
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .glassEffect(.regular, in: .rect(cornerRadius: 12))
+                }
+            }
+
+            // QR status feedback
+            if qrStatus == .success {
+                Text(L10n.Relay.qrSuccess)
+                    .font(.caption)
+                    .foregroundColor(.green)
+                    .padding(.leading, 4)
+            } else if qrStatus == .error {
+                Text(L10n.Relay.qrError)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .padding(.leading, 4)
+            }
+
+            if let discovered = RelayDiscovery.shared.discoveredURL {
+                HStack(spacing: 4) {
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                    Text("Auto-discovered: \(discovered)")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                }
+                .padding(.leading, 4)
+            }
+
+            Text(L10n.Relay.scanHint)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.leading, 4)
+        }
+    }
+
+    private func relayField(
+        icon: String,
+        color: Color,
+        label: String,
+        text: Binding<String>,
+        placeholder: String,
+        isSecure: Bool = false
+    ) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundColor(.white)
+                .frame(width: 30, height: 30)
+                .background(color)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                if isSecure {
+                    SecureField(placeholder, text: text)
+                        .font(.system(size: 14))
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                } else {
+                    TextField(placeholder, text: text)
+                        .font(.system(size: 14))
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+
+    private func handleQRCode(_ code: String) {
+        guard let data = code.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let url = json["relayUrl"] as? String else {
+            qrStatus = .error
+            return
+        }
+        relayBaseURL = url
+        if let tenant = json["tenantId"] as? String { relayTenantId = tenant }
+        if let email = json["email"] as? String { relayEmail = email }
+        if let password = json["password"] as? String { relayPassword = password }
+        qrStatus = .success
+        chatService.reconnect()
     }
 
     // MARK: - Appearance

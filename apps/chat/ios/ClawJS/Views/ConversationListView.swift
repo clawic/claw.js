@@ -323,7 +323,7 @@ struct ConversationRow: View {
                 .foregroundColor(.primary)
                 .lineLimit(1)
             Spacer()
-            if conversation.status == .unread || conversation.status == .streaming || conversation.status == .thinking {
+            if conversation.status == .unread {
                 Circle()
                     .fill(Color.blue)
                     .frame(width: 8, height: 8)

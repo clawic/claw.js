@@ -41,6 +41,45 @@ enum ConversationStatus: Int, Comparable, Equatable {
     }
 }
 
+// MARK: - Attachment
+
+struct Attachment: Identifiable, Equatable {
+    let id: UUID
+    let name: String
+    let mimeType: String
+    let data: Data?
+    let fileURL: URL?
+    let duration: TimeInterval
+    let waveformSamples: [Float]
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        mimeType: String,
+        data: Data? = nil,
+        fileURL: URL? = nil,
+        duration: TimeInterval = 0,
+        waveformSamples: [Float] = []
+    ) {
+        self.id = id
+        self.name = name
+        self.mimeType = mimeType
+        self.data = data
+        self.fileURL = fileURL
+        self.duration = duration
+        self.waveformSamples = waveformSamples
+    }
+
+    var isAudio: Bool {
+        mimeType.hasPrefix("audio/")
+    }
+
+    var base64Data: String? {
+        guard let data else { return nil }
+        return data.base64EncodedString()
+    }
+}
+
 // MARK: - Message
 
 enum MessageRole: Equatable {
@@ -53,6 +92,29 @@ struct Message: Identifiable, Equatable {
     let role: MessageRole
     let text: String
     let timestamp: Date
+    let attachments: [Attachment]
+
+    init(
+        id: UUID = UUID(),
+        role: MessageRole,
+        text: String,
+        timestamp: Date = Date(),
+        attachments: [Attachment] = []
+    ) {
+        self.id = id
+        self.role = role
+        self.text = text
+        self.timestamp = timestamp
+        self.attachments = attachments
+    }
+
+    var hasAudioAttachment: Bool {
+        attachments.contains { $0.isAudio }
+    }
+
+    var audioAttachment: Attachment? {
+        attachments.first { $0.isAudio }
+    }
 }
 
 // MARK: - Conversation
@@ -72,7 +134,11 @@ struct Conversation: Identifiable {
     }
 
     var lastMessagePreview: String {
-        lastMessage?.text ?? "New conversation"
+        if let last = lastMessage {
+            if last.hasAudioAttachment { return "Voice message" }
+            return last.text
+        }
+        return "New conversation"
     }
 
     var lastActivityTime: Date {

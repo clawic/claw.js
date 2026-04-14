@@ -4,8 +4,6 @@ struct SettingsView: View {
     @EnvironmentObject private var chatService: ChatService
     @AppStorage("notificationsEnabled") private var notificationsEnabled = true
     @AppStorage("soundEnabled") private var soundEnabled = true
-    @AppStorage("hapticEnabled") private var hapticEnabled = true
-    @AppStorage("selectedAppearance") private var selectedAppearance: AppearanceMode = .system
     @AppStorage("appLanguage") private var appLanguage = ""
     @AppStorage("relayBaseURL") private var relayBaseURL = "http://127.0.0.1:4410"
     @AppStorage("relayTenantId") private var relayTenantId = "demo-tenant"
@@ -17,7 +15,7 @@ struct SettingsView: View {
     var body: some View {
         TabView {
             generalTab
-                .tabItem { Label(L10n.Settings.appearance, systemImage: "paintbrush") }
+                .tabItem { Label("General", systemImage: "gearshape") }
 
             relayTab
                 .tabItem { Label("Relay", systemImage: "network") }
@@ -28,7 +26,8 @@ struct SettingsView: View {
             aboutTab
                 .tabItem { Label(L10n.Settings.about, systemImage: "info.circle") }
         }
-        .frame(width: 500, height: 560)
+        .frame(width: 480, height: 480)
+        .preferredColorScheme(.dark)
         .alert(L10n.Settings.deleteAllConversations, isPresented: $showDeleteAlert) {
             Button(L10n.General.cancel, role: .cancel) {}
             Button(L10n.General.delete, role: .destructive) {
@@ -43,15 +42,6 @@ struct SettingsView: View {
 
     private var generalTab: some View {
         Form {
-            Section(L10n.Settings.appearance) {
-                Picker(L10n.Settings.appearance, selection: $selectedAppearance) {
-                    ForEach(AppearanceMode.allCases, id: \.self) { mode in
-                        Text(mode.title).tag(mode)
-                    }
-                }
-                .pickerStyle(.segmented)
-            }
-
             Section(L10n.Settings.language) {
                 Picker(L10n.Settings.language, selection: $appLanguage) {
                     ForEach(AppLanguage.allCases) { lang in
@@ -72,7 +62,6 @@ struct SettingsView: View {
             Section(L10n.Settings.notifications) {
                 Toggle(L10n.Settings.notifications, isOn: $notificationsEnabled)
                 Toggle(L10n.Settings.sound, isOn: $soundEnabled)
-                Toggle(L10n.Settings.haptics, isOn: $hapticEnabled)
             }
         }
         .formStyle(.grouped)
@@ -92,7 +81,7 @@ struct SettingsView: View {
                 SecureField("Password", text: $relayPassword)
             }
             Section {
-                Text("Changes take effect the next time you launch the app or open a new conversation.")
+                Text("Changes take effect the next time you launch the app.")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -124,22 +113,20 @@ struct SettingsView: View {
     // MARK: - About
 
     private var aboutTab: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "bubble.left.and.bubble.right.fill")
-                .font(.system(size: 56))
-                .foregroundColor(.accentColor)
-            Text(L10n.General.appName)
-                .font(.title)
-                .fontWeight(.bold)
+        VStack(spacing: 14) {
+            Spacer()
+            Text("ClawJS")
+                .font(.system(size: 20, weight: .semibold, design: .monospaced))
             Text(L10n.Settings.appSubtitle)
-                .font(.subheadline)
+                .font(.system(size: 12, design: .monospaced))
                 .foregroundColor(.secondary)
-            Divider().padding(.horizontal, 60)
-            VStack(spacing: 6) {
+            Divider().padding(.horizontal, 80)
+            VStack(spacing: 4) {
                 LabeledContent(L10n.Settings.version, value: "1.0.0")
                 LabeledContent(L10n.Settings.build, value: "1")
             }
-            .padding(.horizontal, 60)
+            .font(.system(size: 12, design: .monospaced))
+            .padding(.horizontal, 80)
             Spacer()
         }
         .padding()

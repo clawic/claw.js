@@ -201,28 +201,42 @@ final class APIService {
         return toSessionRecord(response.session, agentId: agentId, projectId: projectId)
     }
 
-    func sendMessage(text: String, sessionId: String, agentId: String, projectId: String) -> AsyncThrowingStream<String, Error> {
+    func sendMessage(text: String, sessionId: String, agentId: String, projectId: String, attachments: [[String: String]] = []) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task {
                 do {
                     let config = relayConfig()
                     let token = try await accessToken(for: config)
-                    var components = URLComponents(url: try makeURL(
-                        tenantPath(
-                            config.tenantId,
-                            suffix: "/projects/\(encode(projectId))/agents/\(encode(agentId))/sessions/\(encode(sessionId))/stream"
-                        ),
-                        config: config
-                    ), resolvingAgainstBaseURL: false)
-                    components?.queryItems = [
-                        URLQueryItem(name: "message", value: text),
-                    ]
-                    guard let url = components?.url else {
-                        throw APIError.invalidURL
+                    let streamPath = tenantPath(
+                        config.tenantId,
+                        suffix: "/projects/\(encode(projectId))/agents/\(encode(agentId))/sessions/\(encode(sessionId))/stream"
+                    )
+
+                    var request: URLRequest
+                    if attachments.isEmpty {
+                        // GET with query param for plain text messages
+                        var components = URLComponents(url: try makeURL(streamPath, config: config), resolvingAgainstBaseURL: false)
+                        components?.queryItems = [
+                            URLQueryItem(name: "message", value: text),
+                        ]
+                        guard let url = components?.url else {
+                            throw APIError.invalidURL
+                        }
+                        request = URLRequest(url: url)
+                        request.httpMethod = "GET"
+                    } else {
+                        // POST with JSON body when attachments are present
+                        let url = try makeURL(streamPath, config: config)
+                        request = URLRequest(url: url)
+                        request.httpMethod = "POST"
+                        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                        let body: [String: Any] = [
+                            "message": text,
+                            "attachments": attachments,
+                        ]
+                        request.httpBody = try JSONSerialization.data(withJSONObject: body)
                     }
 
-                    var request = URLRequest(url: url)
-                    request.httpMethod = "GET"
                     request.timeoutInterval = 180
                     request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 

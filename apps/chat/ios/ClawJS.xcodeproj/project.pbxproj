@@ -33,6 +33,7 @@
 		VC0000010000000000000001 /* AudioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = VC0000020000000000000001 /* AudioService.swift */; };
 		VC0000010000000000000002 /* VoiceNotePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = VC0000020000000000000002 /* VoiceNotePlayerView.swift */; };
 		VC0000010000000000000003 /* VoiceRecordingOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = VC0000020000000000000003 /* VoiceRecordingOverlay.swift */; };
+		RD0000010000000000000001 /* RelayDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = RD0000020000000000000001 /* RelayDiscovery.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -62,6 +63,7 @@
 		VC0000020000000000000001 /* AudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioService.swift; sourceTree = "<group>"; };
 		VC0000020000000000000002 /* VoiceNotePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceNotePlayerView.swift; sourceTree = "<group>"; };
 		VC0000020000000000000003 /* VoiceRecordingOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceRecordingOverlay.swift; sourceTree = "<group>"; };
+		RD0000020000000000000001 /* RelayDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayDiscovery.swift; sourceTree = "<group>"; };
 		L10N00020000000000000001 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		L10N00020000000000000002 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/Localizable.strings; sourceTree = "<group>"; };
 		L10N00020000000000000003 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -121,6 +123,7 @@
 				A20000040000000000000004 /* ChatService.swift */,
 				A20000160000000000000010 /* APIService.swift */,
 				VC0000020000000000000001 /* AudioService.swift */,
+				RD0000020000000000000001 /* RelayDiscovery.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -289,6 +292,7 @@
 				VC0000010000000000000002 /* VoiceNotePlayerView.swift in Sources */,
 				VC0000010000000000000003 /* VoiceRecordingOverlay.swift in Sources */,
 				MD0000010000000000000001 /* MarkdownView.swift in Sources */,
+				RD0000010000000000000001 /* RelayDiscovery.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

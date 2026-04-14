@@ -29,7 +29,7 @@ struct ChatView: View {
     var body: some View {
         VStack(spacing: 0) {
             headerBar
-            Divider().background(Theme.border)
+            Rectangle().fill(Theme.border).frame(height: 1)
             messagesArea
             ChatInputBar(
                 text: $messageText,
@@ -50,11 +50,15 @@ struct ChatView: View {
         }
     }
 
-    // MARK: - Header (Codex-style)
+    // MARK: - Header (clean, Discord-inspired)
 
     private var headerBar: some View {
-        HStack(spacing: 12) {
-            // Title + project tag
+        HStack(spacing: 10) {
+            // Channel-style hash icon
+            Image(systemName: "number")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Theme.textMuted)
+
             Text(currentConversation.title)
                 .font(Theme.header)
                 .foregroundStyle(Theme.textPrimary)
@@ -64,19 +68,17 @@ struct ChatView: View {
                 Text(project.name.lowercased())
                     .font(Theme.caption)
                     .foregroundStyle(Theme.textMuted)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(Theme.hoverBg)
+                    )
             }
-
-            // Three-dot menu
-            Button(action: {}) {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.textMuted)
-            }
-            .buttonStyle(.plain)
 
             Spacer()
 
-            // Play / stop
+            // Stop button (only when busy)
             if isBusy {
                 Button(action: cancelGeneration) {
                     Image(systemName: "stop.fill")
@@ -84,17 +86,6 @@ struct ChatView: View {
                         .foregroundStyle(Theme.textSecondary)
                         .frame(width: 28, height: 28)
                         .background(Theme.hoverBg, in: RoundedRectangle(cornerRadius: 6))
-                        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Theme.border, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-            } else {
-                Button(action: {}) {
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Theme.textSecondary)
-                        .frame(width: 28, height: 28)
-                        .background(Theme.hoverBg, in: RoundedRectangle(cornerRadius: 6))
-                        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Theme.border, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
             }
@@ -102,23 +93,31 @@ struct ChatView: View {
             // Confirmar button
             Button(action: {}) {
                 HStack(spacing: 4) {
-                    Image(systemName: "diamond")
-                        .font(.system(size: 9))
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10, weight: .semibold))
                     Text("Confirmar")
                         .font(.system(size: 12, weight: .medium))
                 }
                 .foregroundStyle(Theme.confirmGreen)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
                 .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .strokeBorder(Theme.confirmGreen.opacity(0.4), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(Theme.confirmGreen.opacity(0.1))
                 )
             }
             .buttonStyle(.plain)
+
+            // More options
+            Button(action: {}) {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Theme.textMuted)
+            }
+            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Messages area
@@ -182,7 +181,7 @@ struct ChatView: View {
     }
 }
 
-// MARK: - Message Entry (Codex-style: user = dark card, agent = plain text)
+// MARK: - Message Entry (flat rows, Discord-style)
 
 struct MessageEntry: View {
     let message: Message
@@ -193,27 +192,37 @@ struct MessageEntry: View {
     private var isUser: Bool { message.role == .user }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if isUser {
-                // User messages shown as a dark card (like Codex shows user prompts)
-                Text(message.text)
-                    .font(Theme.body)
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineSpacing(4)
-                    .textSelection(.enabled)
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(Theme.inputBg)
-                    )
-            } else {
-                // Agent messages: rendered markdown
+        HStack(alignment: .top, spacing: 12) {
+            // Avatar
+            Circle()
+                .fill(isUser ? Theme.inputBg : Theme.accent.opacity(0.2))
+                .frame(width: 36, height: 36)
+                .overlay(
+                    Image(systemName: isUser ? "person.fill" : "cpu")
+                        .font(.system(size: 14))
+                        .foregroundStyle(isUser ? Theme.textMuted : Theme.accent)
+                )
+
+            VStack(alignment: .leading, spacing: 4) {
+                // Name + timestamp
+                HStack(spacing: 8) {
+                    Text(isUser ? "Tu" : (agent?.name ?? "Agente"))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(isUser ? Theme.textPrimary : Theme.accent)
+                    Text(message.timestamp, style: .time)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.textMuted)
+                }
+
+                // Message body
                 if isStreaming {
-                    StreamingMarkdownText(text: message.text, onDone: onStreamingDone)
+                    StreamingText(text: message.text, onDone: onStreamingDone)
                 } else {
-                    MarkdownView(text: message.text)
+                    Text(message.text)
+                        .font(Theme.body)
                         .foregroundStyle(Theme.textPrimary)
+                        .lineSpacing(4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .textSelection(.enabled)
                 }
             }
@@ -261,37 +270,30 @@ struct ThinkingEntry: View {
     }
 }
 
-// MARK: - Streaming Markdown Text
+// MARK: - Streaming Text
 
-struct StreamingMarkdownText: View {
+struct StreamingText: View {
     let text: String
     var onDone: (() -> Void)?
     @State private var displayLen: Int = 0
     @State private var timer: Timer?
 
-    private var visibleText: String {
-        String(text.prefix(displayLen))
-    }
-
     var body: some View {
-        MarkdownView(text: visibleText)
+        Text(text.prefix(displayLen))
+            .font(Theme.body)
             .foregroundStyle(Theme.textPrimary)
+            .lineSpacing(5)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .onAppear { startStreaming() }
             .onDisappear { timer?.invalidate(); timer = nil }
-            .onChange(of: text) { _, newValue in
-                if displayLen >= newValue.count { return }
-                if timer == nil { startStreaming() }
-            }
     }
 
     private func startStreaming() {
-        timer?.invalidate()
         displayLen = 0
         timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { t in
             displayLen = min(displayLen + 2, text.count)
             if displayLen >= text.count {
                 t.invalidate()
-                timer = nil
                 onDone?()
             }
         }

@@ -18,8 +18,16 @@ struct ChatInputBar: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Main input area
-            VStack(spacing: 0) {
+            // Main input — Discord style: rounded bar sitting above bottom
+            HStack(alignment: .bottom, spacing: 8) {
+                // Plus button
+                Button(action: {}) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(Theme.textMuted)
+                }
+                .buttonStyle(.plain)
+
                 // Text field
                 TextField(placeholder, text: $text, axis: .vertical)
                     .lineLimit(1...8)
@@ -28,38 +36,20 @@ struct ChatInputBar: View {
                     .font(Theme.body)
                     .foregroundStyle(Theme.textPrimary)
                     .textFieldStyle(.plain)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 14)
-                    .padding(.bottom, 8)
                     .onSubmit(onSend)
 
-                // Input controls row
-                HStack(spacing: 6) {
-                    // Plus button
-                    Button(action: {}) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Theme.textMuted)
-                    }
-                    .buttonStyle(.plain)
+                Spacer(minLength: 0)
 
-                    // Model dropdown
-                    dropdownPill("GPT-5.4")
-
-                    // Effort dropdown
-                    dropdownPill("Alto")
-
-                    Spacer()
-
-                    // Mic button
+                // Right-side controls
+                HStack(spacing: 10) {
                     Button(action: {}) {
                         Image(systemName: "mic")
-                            .font(.system(size: 12))
+                            .font(.system(size: 14))
                             .foregroundStyle(Theme.textMuted)
                     }
                     .buttonStyle(.plain)
 
-                    // Send / Stop button
+                    // Send / Stop
                     Group {
                         if isGenerating {
                             Button(action: { onStop?() }) {
@@ -78,7 +68,7 @@ struct ChatInputBar: View {
                                     .foregroundColor(canSend ? .black : Theme.textMuted)
                                     .frame(width: 28, height: 28)
                                     .background(
-                                        Circle().fill(canSend ? Theme.accent : Theme.hoverBg)
+                                        Circle().fill(canSend ? Theme.accent : Color.clear)
                                     )
                             }
                             .buttonStyle(.plain)
@@ -89,37 +79,26 @@ struct ChatInputBar: View {
                     .animation(.easeInOut(duration: 0.15), value: isGenerating)
                     .animation(.easeInOut(duration: 0.15), value: canSend)
                 }
-                .padding(.horizontal, 14)
-                .padding(.bottom, 12)
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(Theme.inputBg)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Theme.border, lineWidth: 1)
-            )
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 16)
 
-            // Status bar below input
-            HStack(spacing: 12) {
-                statusPill(icon: "desktopcomputer", label: "Local")
-                statusPill(icon: "shield.checkered", label: "Acceso completo", accent: true)
-
+            // Compact status row
+            HStack(spacing: 10) {
+                statusLabel(icon: "desktopcomputer", text: "Local")
+                statusLabel(icon: "arrow.triangle.branch", text: "main")
                 Spacer()
-
-                statusPill(icon: "arrow.triangle.branch", label: "main")
-                Button(action: {}) {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Theme.textMuted)
-                }
-                .buttonStyle(.plain)
+                dropdownPill("GPT-5.4")
+                dropdownPill("Alto")
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 8)
-            .padding(.bottom, 12)
+            .padding(.horizontal, 20)
+            .padding(.top, 6)
+            .padding(.bottom, 10)
         }
         .onAppear {
             if autofocus {
@@ -140,23 +119,18 @@ struct ChatInputBar: View {
                 Image(systemName: "chevron.down")
                     .font(.system(size: 7, weight: .semibold))
             }
-            .foregroundStyle(Theme.textSecondary)
+            .foregroundStyle(Theme.textMuted)
         }
         .buttonStyle(.plain)
     }
 
-    private func statusPill(icon: String, label: String, accent: Bool = false) -> some View {
-        Button(action: {}) {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 9))
-                Text(label)
-                    .font(Theme.caption)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 7))
-            }
-            .foregroundStyle(accent ? Theme.accent : Theme.textMuted)
+    private func statusLabel(icon: String, text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 9))
+            Text(text)
+                .font(Theme.caption)
         }
-        .buttonStyle(.plain)
+        .foregroundStyle(Theme.textMuted)
     }
 }

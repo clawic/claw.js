@@ -122,6 +122,24 @@ enum L10n {
         static var appSubtitle: String { tr("settings.app_subtitle", "ClawJS - AI Chat Assistant") }
     }
 
+    // MARK: - Relay
+
+    enum Relay {
+        static var title: String { tr("relay.title", "Relay Connection") }
+        static var url: String { tr("relay.url", "Relay URL") }
+        static var tenant: String { tr("relay.tenant", "Tenant ID") }
+        static var email: String { tr("relay.email", "Email") }
+        static var password: String { tr("relay.password", "Password") }
+        static var scanQR: String { tr("relay.scan_qr", "Scan QR Code") }
+        static var scanHint: String { tr("relay.scan_hint", "Scan the QR code from the relay dashboard to connect automatically.") }
+        static var connected: String { tr("relay.connected", "Connected") }
+        static var disconnected: String { tr("relay.disconnected", "Not connected") }
+        static var reconnect: String { tr("relay.reconnect", "Reconnect") }
+        static var save: String { tr("relay.save", "Save & Connect") }
+        static var qrSuccess: String { tr("relay.qr_success", "Relay configured from QR code.") }
+        static var qrError: String { tr("relay.qr_error", "Could not read relay info from QR code.") }
+    }
+
     // MARK: - Appearance
 
     enum Appearance {

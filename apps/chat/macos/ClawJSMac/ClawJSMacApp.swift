@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 @main
 struct ClawJSMacApp: App {
@@ -6,19 +7,34 @@ struct ClawJSMacApp: App {
     @AppStorage("selectedAppearance") private var selectedAppearance: AppearanceMode = .system
     @AppStorage("appLanguage") private var appLanguage = ""
 
+    init() {
+        // Clear any stale window state that might prevent window creation
+        UserDefaults.standard.removeObject(forKey: "NSWindow Frame main")
+        UserDefaults.standard.removeObject(forKey: "NSWindow Frame SwiftUI")
+    }
+
     var body: some Scene {
         WindowGroup(L10n.General.appName) {
             RootSplitView()
                 .environmentObject(chatService)
-                .preferredColorScheme(selectedAppearance.colorScheme)
-                .frame(minWidth: 960, minHeight: 640)
+                .preferredColorScheme(.dark)
+                .frame(minWidth: 860, minHeight: 560)
                 .id(appLanguage)
+                .onAppear {
+                    // Ensure the window is visible and properly sized
+                    DispatchQueue.main.async {
+                        if let window = NSApp.windows.first(where: { $0.contentView != nil }) {
+                            window.makeKeyAndOrderFront(nil)
+                            if window.frame.width < 100 || window.frame.height < 100 {
+                                window.setFrame(NSRect(x: 200, y: 200, width: 1120, height: 720), display: true)
+                            }
+                        }
+                    }
+                }
         }
-        .defaultSize(width: 1280, height: 820)
+        .defaultSize(width: 1120, height: 720)
         .defaultPosition(.center)
         .windowResizability(.contentMinSize)
-        .windowStyle(.titleBar)
-        .windowToolbarStyle(.unified)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button(L10n.Home.newChat) {
