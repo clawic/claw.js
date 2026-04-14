@@ -1,0 +1,59 @@
+{
+  "version": "1.0.0",
+  "shell": {
+    "tenantSelector": true,
+    "legalEntitySelector": true,
+    "branchSwitcher": true,
+    "globalSearch": true,
+    "inbox": true,
+    "approvals": true,
+    "alerts": true,
+    "profileMenu": true,
+    "commandPalette": true,
+    "breadcrumbs": true,
+    "syncStatus": true,
+    "jobStatus": true,
+    "localizationBadge": true
+  },
+  "modules": [
+    { "id": "dashboard", "label": "Dashboard", "route": "/dashboard" },
+    { "id": "finance", "label": "Finance", "route": "/finance" },
+    { "id": "sales", "label": "Sales", "route": "/sales" },
+    { "id": "purchase", "label": "Purchase", "route": "/purchase" },
+    { "id": "inventory", "label": "Inventory", "route": "/inventory" },
+    { "id": "mrp", "label": "Manufacturing", "route": "/mrp" },
+    { "id": "projects", "label": "Projects", "route": "/projects" },
+    { "id": "hr", "label": "HR", "route": "/hr" },
+    { "id": "payroll", "label": "Payroll", "route": "/payroll" },
+    { "id": "support", "label": "Support", "route": "/support" },
+    { "id": "dms", "label": "Documents", "route": "/dms" },
+    { "id": "bi", "label": "BI", "route": "/bi" },
+    { "id": "admin", "label": "Admin", "route": "/admin" }
+  ],
+  "screens": [
+    {
+      "id": "dashboard.home",
+      "route": "/dashboard",
+      "purpose": "Operational landing page with finance, approvals, jobs, activity feed, and alerts.",
+      "testIds": ["shell-tenant-selector", "dashboard-cash-card", "dashboard-activity-feed"]
+    },
+    {
+      "id": "sales.quote.list",
+      "route": "/sales/quotes",
+      "purpose": "Quote list with filters, saved views, export, and bulk actions.",
+      "testIds": ["sales-quote-table", "sales-quote-filter-status", "sales-quote-create"]
+    },
+    {
+      "id": "finance.entry.detail",
+      "route": "/finance/entries/:entryId",
+      "purpose": "Journal entry detail with header, lines, audit, and reversal action.",
+      "testIds": ["gl-entry-header", "gl-entry-lines", "gl-entry-reverse"]
+    }
+  ],
+  "globalStates": {
+    "loading": ["skeleton", "disable-primary-actions"],
+    "error": ["inline-error", "retry-cta", "correlation-id"],
+    "empty": ["empty-state", "primary-cta", "secondary-doc-link"],
+    "realtime": ["stale-badge", "manual-refresh", "job-progress"]
+  }
+}

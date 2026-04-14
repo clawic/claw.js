@@ -1,0 +1,15 @@
+{
+  "id": "publish-plan.create",
+  "title": "Create publish plan",
+  "submitLabel": "Schedule publication",
+  "fields": [
+    { "key": "variantId", "label": "Variant", "component": "select", "required": true, "group": "identity", "order": 1 },
+    { "key": "scheduledAt", "label": "Scheduled at", "component": "datetime", "required": false, "group": "timing", "order": 2, "defaultValue": null },
+    { "key": "notes", "label": "Notes", "component": "textarea", "required": false, "group": "timing", "order": 3 }
+  ],
+  "validations": {
+    "variantId": "required"
+  },
+  "visibilityRules": [],
+  "sideEffects": ["may create approval request", "may create time item"]
+}

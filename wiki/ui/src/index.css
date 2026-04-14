@@ -1,0 +1,354 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/brand/fonts/source-sans-3/source-sans-3-v18-cyrillic_latin_latin-ext-regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/brand/fonts/source-sans-3/source-sans-3-v18-cyrillic_latin_latin-ext-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/brand/fonts/source-sans-3/source-sans-3-v18-cyrillic_latin_latin-ext-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/brand/fonts/source-sans-3/source-sans-3-v18-cyrillic_latin_latin-ext-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Ubuntu Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/brand/fonts/ubuntu-mono/ubuntu-mono-v17-cyrillic_latin_latin-ext-regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Ubuntu Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/brand/fonts/ubuntu-mono/ubuntu-mono-v17-cyrillic_latin_latin-ext-700.woff2") format("woff2");
+}
+
+:root {
+  color-scheme: light;
+  --color-bg: #ffffff;
+  --color-bg-panel: #f7f7f5;
+  --color-bg-hover: rgba(55, 53, 47, 0.04);
+  --color-bg-active: rgba(55, 53, 47, 0.08);
+  --color-bg-input: rgba(55, 53, 47, 0.04);
+  --color-bg-sidebar: #f7f7f5;
+  --color-border: #e9e9e7;
+  --color-border-strong: #d3d3d0;
+  --color-text: #37352f;
+  --color-text-muted: rgba(55, 53, 47, 0.65);
+  --color-text-faint: rgba(55, 53, 47, 0.35);
+  --color-primary: #2eaadc;
+  --color-primary-bg: #e8f4f8;
+  --color-red: #eb5757;
+  --color-green: #4dab6f;
+  --color-green-bg: #dbeddb;
+  --color-yellow-bg: #fbf3db;
+  --color-blue-bg: #ddebf1;
+  --color-orange-bg: #faebdd;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-bg: #191919;
+    --color-bg-panel: #202020;
+    --color-bg-hover: rgba(255, 255, 255, 0.04);
+    --color-bg-active: rgba(255, 255, 255, 0.08);
+    --color-bg-input: rgba(255, 255, 255, 0.06);
+    --color-bg-sidebar: #1e1e1e;
+    --color-border: rgba(255, 255, 255, 0.08);
+    --color-border-strong: rgba(255, 255, 255, 0.14);
+    --color-text: rgba(255, 255, 255, 0.9);
+    --color-text-muted: rgba(255, 255, 255, 0.5);
+    --color-text-faint: rgba(255, 255, 255, 0.25);
+    --color-primary: #529cca;
+    --color-primary-bg: rgba(45, 135, 195, 0.15);
+    --color-red: #eb5757;
+    --color-green: #4dab6f;
+    --color-green-bg: rgba(77, 171, 111, 0.15);
+    --color-yellow-bg: rgba(251, 243, 219, 0.08);
+    --color-blue-bg: rgba(45, 135, 195, 0.1);
+    --color-orange-bg: rgba(250, 235, 221, 0.08);
+  }
+}
+
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-bg-panel: var(--color-bg-panel);
+  --color-bg-hover: var(--color-bg-hover);
+  --color-bg-active: var(--color-bg-active);
+  --color-bg-input: var(--color-bg-input);
+  --color-bg-sidebar: var(--color-bg-sidebar);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-faint: var(--color-text-faint);
+  --color-primary: var(--color-primary);
+  --color-primary-bg: var(--color-primary-bg);
+  --color-red: var(--color-red);
+  --color-green: var(--color-green);
+  --color-green-bg: var(--color-green-bg);
+  --color-yellow-bg: var(--color-yellow-bg);
+  --color-blue-bg: var(--color-blue-bg);
+  --color-orange-bg: var(--color-orange-bg);
+  --radius-sm: 3px;
+  --radius: 3px;
+  --font-sans: "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Ubuntu Mono", ui-monospace, Menlo, monospace;
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+* { font-family: inherit; }
+code, pre, kbd { font-family: var(--font-mono); }
+
+/* ---- Login ---- */
+.wiki-login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background: var(--color-bg);
+}
+.wiki-login-wrapper {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.wiki-login-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 32px;
+  letter-spacing: -0.02em;
+}
+.wiki-login-brand img { display: block; }
+
+/* ---- Field ---- */
+.wiki-field {
+  display: block;
+  margin: 0 0 10px;
+}
+.wiki-field > label {
+  display: block;
+  width: 100%;
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  padding: 8px 10px 1px;
+  background: var(--color-bg-input);
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+}
+.wiki-field > input,
+.wiki-field > textarea {
+  display: block;
+  width: 100%;
+  background: var(--color-bg-input);
+  border: 0;
+  border-bottom-left-radius: 3px;
+  border-bottom-right-radius: 3px;
+  outline: 0;
+  padding: 3px 10px 8px;
+  font-size: 14px;
+  color: var(--color-text);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.wiki-field:focus-within > label,
+.wiki-field:focus-within > input,
+.wiki-field:focus-within > textarea {
+  background: var(--color-bg-active);
+}
+
+.wiki-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 20px;
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  border: 0;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity .12s;
+  margin-top: 4px;
+}
+.wiki-btn:hover { opacity: 0.85; }
+.wiki-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ---- Markdown prose ---- */
+.wiki-prose {
+  font-size: 15px;
+  line-height: 1.7;
+}
+.wiki-prose h1 {
+  font-size: 1.875em;
+  font-weight: 700;
+  margin: 1em 0 0.25em;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+.wiki-prose h2 {
+  font-size: 1.375em;
+  font-weight: 600;
+  margin: 1.6em 0 0.4em;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+.wiki-prose h3 {
+  font-size: 1.125em;
+  font-weight: 600;
+  margin: 1.2em 0 0.25em;
+  letter-spacing: -0.01em;
+}
+.wiki-prose p {
+  margin: 0.4em 0;
+}
+.wiki-prose ul, .wiki-prose ol {
+  margin: 0.35em 0;
+  padding-left: 1.6em;
+}
+.wiki-prose li {
+  margin: 0.15em 0;
+  padding-left: 0.15em;
+}
+.wiki-prose code {
+  background: var(--color-bg-input);
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+  font-size: 0.85em;
+  color: #eb5757;
+}
+.wiki-prose pre {
+  background: var(--color-bg-panel);
+  padding: 16px 20px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 1em 0;
+  font-size: 0.875em;
+  line-height: 1.55;
+}
+.wiki-prose pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: 1em;
+}
+.wiki-prose blockquote {
+  border-left: 3px solid var(--color-border-strong);
+  padding: 4px 0 4px 16px;
+  margin: 0.6em 0;
+  color: var(--color-text);
+}
+.wiki-prose table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  font-size: 0.925em;
+}
+.wiki-prose th, .wiki-prose td {
+  border: 1px solid var(--color-border);
+  padding: 7px 12px;
+  text-align: left;
+}
+.wiki-prose th {
+  background: var(--color-bg-panel);
+  font-weight: 600;
+  font-size: 0.75em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+.wiki-prose a {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-decoration-color: var(--color-border-strong);
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+.wiki-prose a:hover {
+  text-decoration-color: var(--color-text);
+}
+.wiki-prose mark {
+  background: #fef08a;
+  color: inherit;
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+/* Callout */
+.wiki-callout {
+  display: flex;
+  gap: 10px;
+  padding: 16px 16px 16px 12px;
+  border-radius: 4px;
+  background: var(--color-yellow-bg);
+  margin: 1em 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.wiki-callout-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 20px;
+}
+*:hover::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+}
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ---- Selection ---- */
+::selection {
+  background: rgba(46, 170, 220, 0.25);
+}

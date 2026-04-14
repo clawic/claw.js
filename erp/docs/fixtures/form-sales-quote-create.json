@@ -1,0 +1,81 @@
+{
+  "id": "sales.quote.create",
+  "title": "Create sales quote",
+  "submitLabel": "Create quote",
+  "fields": [
+    {
+      "key": "branchId",
+      "label": "Branch",
+      "component": "select",
+      "required": true,
+      "group": "commercial_scope",
+      "order": 10,
+      "placeholder": "Select branch",
+      "helpText": "Controls numbering, permissions, and reporting scope."
+    },
+    {
+      "key": "customerName",
+      "label": "Customer",
+      "component": "combobox",
+      "required": true,
+      "group": "counterparty",
+      "order": 20,
+      "placeholder": "Search customer or create inline",
+      "helpText": "Mandatory before lines can be priced."
+    },
+    {
+      "key": "currency",
+      "label": "Currency",
+      "component": "select",
+      "required": true,
+      "group": "commercial_scope",
+      "order": 30,
+      "defaultValue": "EUR"
+    },
+    {
+      "key": "itemSku",
+      "label": "Item",
+      "component": "async-select",
+      "required": false,
+      "group": "lines",
+      "order": 40,
+      "placeholder": "Search SKU"
+    },
+    {
+      "key": "quantity",
+      "label": "Quantity",
+      "component": "number",
+      "required": true,
+      "group": "lines",
+      "order": 50,
+      "defaultValue": 1
+    },
+    {
+      "key": "totalAmountCents",
+      "label": "Total amount",
+      "component": "money",
+      "required": true,
+      "group": "totals",
+      "order": 60,
+      "helpText": "Backend owns tax, rounding, and posting semantics."
+    }
+  ],
+  "validations": {
+    "branchId": "required",
+    "customerName": "required",
+    "currency": "required",
+    "quantity": "required|positive",
+    "totalAmountCents": "required|positive"
+  },
+  "visibilityRules": [
+    {
+      "field": "itemSku",
+      "visibleWhen": { "quoteType": "stock_or_service" }
+    }
+  ],
+  "sideEffects": [
+    "refresh price context after customer change",
+    "refresh numbering preview after branch change",
+    "show approval warning when amount exceeds policy"
+  ]
+}

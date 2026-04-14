@@ -1,0 +1,129 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ERP API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "http://127.0.0.1:4530" }
+  ],
+  "paths": {
+    "/v1/health": {
+      "get": {
+        "summary": "Health check",
+        "responses": {
+          "200": {
+            "description": "Service health"
+          }
+        }
+      }
+    },
+    "/v1/auth/admin/login": {
+      "post": {
+        "summary": "Admin login",
+        "requestBody": {
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "JWT token"
+          }
+        }
+      }
+    },
+    "/v1/tenants/bootstrap": {
+      "post": {
+        "summary": "Bootstrap tenant and primary legal entity",
+        "responses": {
+          "200": {
+            "description": "Tenant bootstrap payload"
+          }
+        }
+      }
+    },
+    "/v1/tenants/{tenantId}/legal-entities/{legalEntityId}/localizations/install": {
+      "post": {
+        "summary": "Install or upgrade localization pack",
+        "parameters": [
+          { "name": "tenantId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "legalEntityId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job payload"
+          }
+        }
+      }
+    },
+    "/v1/tenants/{tenantId}/legal-entities/{legalEntityId}/sales/quotes": {
+      "post": {
+        "summary": "Create sales quote"
+      }
+    },
+    "/v1/tenants/{tenantId}/legal-entities/{legalEntityId}/sales/shipments": {
+      "post": {
+        "summary": "Post shipment and inventory/COGS effects"
+      }
+    },
+    "/v1/tenants/{tenantId}/legal-entities/{legalEntityId}/ar/invoices": {
+      "post": {
+        "summary": "Post customer invoice"
+      }
+    },
+    "/v1/tenants/{tenantId}/legal-entities/{legalEntityId}/ar/payments": {
+      "post": {
+        "summary": "Register customer payment"
+      }
+    },
+    "/v1/tenants/{tenantId}/legal-entities/{legalEntityId}/purchase/receipts": {
+      "post": {
+        "summary": "Post purchase receipt and inventory accrual"
+      }
+    },
+    "/v1/tenants/{tenantId}/legal-entities/{legalEntityId}/ap/bills": {
+      "post": {
+        "summary": "Post vendor bill"
+      }
+    },
+    "/v1/tenants/{tenantId}/legal-entities/{legalEntityId}/ap/payments": {
+      "post": {
+        "summary": "Register vendor payment"
+      }
+    },
+    "/v1/tenants/{tenantId}/legal-entities/{legalEntityId}/mrp/orders/{orderId}/post": {
+      "post": {
+        "summary": "Post production order"
+      }
+    },
+    "/v1/tenants/{tenantId}/legal-entities/{legalEntityId}/payroll/runs/{runId}/post": {
+      "post": {
+        "summary": "Post payroll run"
+      }
+    },
+    "/v1/tenants/{tenantId}/legal-entities/{legalEntityId}/approvals/{approvalId}/approve": {
+      "post": {
+        "summary": "Approve regulated agent action"
+      }
+    },
+    "/v1/app/frontend-contract": {
+      "get": {
+        "summary": "Frontend shell and module contract"
+      }
+    },
+    "/v1/app/forms/{formId}": {
+      "get": {
+        "summary": "Form schema contract"
+      }
+    },
+    "/v1/app/dashboard": {
+      "get": {
+        "summary": "Dashboard read model"
+      }
+    },
+    "/v1/app/documents/{documentId}": {
+      "get": {
+        "summary": "Document detail read model"
+      }
+    }
+  }
+}

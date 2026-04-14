@@ -1,0 +1,17 @@
+{
+  "entry": {
+    "id": "entry_demo_1",
+    "title": "Launch teaser",
+    "status": "draft",
+    "brandId": "brand_demo",
+    "campaignId": "campaign_demo",
+    "currentRevisionNumber": 2
+  },
+  "revisions": [
+    { "revisionNumber": 1, "createdAt": "2026-04-09T09:00:00.000Z" },
+    { "revisionNumber": 2, "createdAt": "2026-04-09T10:00:00.000Z" }
+  ],
+  "variants": [
+    { "id": "variant_demo_li", "destinationId": "dest_li", "status": "ready" }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "entry": {
+    "id": "entry_demo_1",
+    "title": "Launch teaser",
+    "summary": "Short teaser for spring launch.",
+    "canonicalBody": "We are shipping the new editorial workspace next week.",
+    "status": "draft",
+    "currentRevisionNumber": 2
+  },
+  "variants": [
+    {
+      "id": "variant_demo_li",
+      "destinationId": "dest_li",
+      "destinationKind": "linkedin_post",
+      "status": "ready",
+      "body": "We are shipping the new editorial workspace next week. Stay tuned.",
+      "validationErrors": []
+    }
+  ],
+  "assets": [
+    {
+      "id": "asset_demo_1",
+      "driveItemId": "drive_hero_1",
+      "assetKind": "image",
+      "name": "Hero image",
+      "altText": "Launch teaser artwork"
+    }
+  ]
+}

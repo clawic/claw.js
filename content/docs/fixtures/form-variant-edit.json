@@ -1,0 +1,17 @@
+{
+  "id": "variant.edit",
+  "title": "Edit variant",
+  "submitLabel": "Save variant",
+  "fields": [
+    { "key": "destinationId", "label": "Destination", "component": "readonly", "required": true, "group": "identity", "order": 1 },
+    { "key": "format", "label": "Format", "component": "select", "required": true, "group": "editor", "order": 2 },
+    { "key": "title", "label": "Variant title", "component": "text", "required": false, "group": "editor", "order": 3 },
+    { "key": "body", "label": "Variant body", "component": "textarea", "required": true, "group": "editor", "order": 4 },
+    { "key": "publishConfig", "label": "Publish config", "component": "json", "required": false, "group": "delivery", "order": 5 }
+  ],
+  "validations": {
+    "body": "required"
+  },
+  "visibilityRules": [],
+  "sideEffects": ["revalidates capabilities"]
+}

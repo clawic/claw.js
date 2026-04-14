@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/brand/fonts/source-sans-3/source-sans-3-v18-cyrillic_latin_latin-ext-regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/brand/fonts/source-sans-3/source-sans-3-v18-cyrillic_latin_latin-ext-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/brand/fonts/source-sans-3/source-sans-3-v18-cyrillic_latin_latin-ext-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Ubuntu Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/brand/fonts/ubuntu-mono/ubuntu-mono-v17-cyrillic_latin_latin-ext-regular.woff2") format("woff2");
+}
+
+@theme {
+  --font-sans: "Source Sans 3", system-ui, sans-serif;
+  --font-mono: "Ubuntu Mono", monospace;
+
+  --color-brand-50: oklch(0.97 0.014 250);
+  --color-brand-100: oklch(0.93 0.032 250);
+  --color-brand-200: oklch(0.87 0.055 250);
+  --color-brand-300: oklch(0.78 0.085 250);
+  --color-brand-400: oklch(0.68 0.12 250);
+  --color-brand-500: oklch(0.58 0.16 250);
+  --color-brand-600: oklch(0.50 0.17 250);
+  --color-brand-700: oklch(0.42 0.14 250);
+  --color-brand-800: oklch(0.35 0.10 250);
+  --color-brand-900: oklch(0.28 0.07 250);
+}
+
+body {
+  font-family: var(--font-sans);
+}

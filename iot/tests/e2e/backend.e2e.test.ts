@@ -1,0 +1,83 @@
+import { afterEach, test } from "node:test";
+import assert from "node:assert/strict";
+
+import { startIotServer } from "./helpers.ts";
+
+const servers: Array<Awaited<ReturnType<typeof startIotServer>>> = [];
+
+afterEach(async () => {
+  while (servers.length > 0) {
+    const server = servers.pop();
+    if (server) await server.close();
+  }
+});
+
+async function boot() {
+  const server = await startIotServer("iot-backend");
+  servers.push(server);
+  return server;
+}
+
+test("iot backend supports semantic actions, scenes, automations, and approvals", async () => {
+  const server = await boot();
+
+  const homesResponse = await fetch(`${server.baseUrl}/v1/homes`);
+  const homesPayload = await homesResponse.json() as { homes: Array<{ id: string; isDefault: boolean }> };
+  assert.equal(homesPayload.homes.length, 1);
+  assert.equal(homesPayload.homes[0]?.isDefault, true);
+
+  const lightsOff = await fetch(`${server.baseUrl}/v1/actions`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ family: "light", action: "off", area: "office" }),
+  });
+  const lightsOffPayload = await lightsOff.json() as { result: { status: string; capabilityUpdates: Array<{ observedValue: unknown }> } };
+  assert.equal(lightsOffPayload.result.status, "executed");
+  assert.equal(lightsOffPayload.result.capabilityUpdates[0]?.observedValue, false);
+
+  const restricted = await fetch(`${server.baseUrl}/v1/actions`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ family: "lock", selector: "front door", action: "unlock" }),
+  });
+  const restrictedPayload = await restricted.json() as { result: { status: string; approvalId?: string } };
+  assert.equal(restrictedPayload.result.status, "approval_required");
+  assert.ok(restrictedPayload.result.approvalId);
+
+  const approvalsResponse = await fetch(`${server.baseUrl}/v1/approvals`);
+  const approvalsPayload = await approvalsResponse.json() as { approvals: Array<{ id: string; status: string }> };
+  assert.equal(approvalsPayload.approvals[0]?.status, "pending");
+
+  const approvalId = restrictedPayload.result.approvalId!;
+  const approved = await fetch(`${server.baseUrl}/v1/approvals/${approvalId}/approve`, {
+    method: "POST",
+  });
+  const approvedPayload = await approved.json() as { result: { approval: { status: string }; result: { status: string } } };
+  assert.equal(approvedPayload.result.approval.status, "executed");
+  assert.equal(approvedPayload.result.result.status, "executed");
+
+  const scene = await fetch(`${server.baseUrl}/v1/scenes/scene_good_night/activate`, {
+    method: "POST",
+  });
+  const scenePayload = await scene.json() as { result: { scene: { id: string }; results: Array<{ status: string }> } };
+  assert.equal(scenePayload.result.scene.id, "scene_good_night");
+  assert.equal(scenePayload.result.results.length, 2);
+
+  const automation = await fetch(`${server.baseUrl}/v1/automations`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      label: "Office Reset",
+      trigger: { type: "manual" },
+      actions: [{ family: "light", selector: "office", action: "on" }],
+    }),
+  });
+  const automationPayload = await automation.json() as { automation: { id: string } };
+  assert.ok(automationPayload.automation.id);
+
+  const runAutomation = await fetch(`${server.baseUrl}/v1/automations/${automationPayload.automation.id}/run`, {
+    method: "POST",
+  });
+  const runAutomationPayload = await runAutomation.json() as { result: { results: Array<{ status: string }> } };
+  assert.equal(runAutomationPayload.result.results[0]?.status, "executed");
+});

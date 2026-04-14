@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "planId": "plan_demo_1",
+      "entryId": "entry_demo_1",
+      "title": "Launch teaser",
+      "scheduledAt": "2026-04-10T09:00:00.000Z",
+      "destination": { "id": "dest_li", "name": "LinkedIn Company", "kind": "linkedin_post" },
+      "approvalStatus": "approved",
+      "planStatus": "scheduled",
+      "canReschedule": true
+    }
+  ]
+}

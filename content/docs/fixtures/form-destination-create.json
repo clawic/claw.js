@@ -1,0 +1,19 @@
+{
+  "id": "destination.create",
+  "title": "Create destination",
+  "submitLabel": "Create destination",
+  "fields": [
+    { "key": "brandId", "label": "Brand", "component": "select", "required": true, "group": "identity", "order": 1 },
+    { "key": "name", "label": "Name", "component": "text", "required": true, "group": "identity", "order": 2 },
+    { "key": "kind", "label": "Kind", "component": "select", "required": true, "group": "identity", "order": 3 },
+    { "key": "publishPolicy", "label": "Publish policy", "component": "select", "required": true, "group": "policy", "order": 4, "defaultValue": "manual" },
+    { "key": "secretRef", "label": "Secret reference", "component": "text", "required": false, "group": "auth", "order": 5 }
+  ],
+  "validations": {
+    "brandId": "required",
+    "name": "required",
+    "kind": "required"
+  },
+  "visibilityRules": [],
+  "sideEffects": ["injects default capability map"]
+}

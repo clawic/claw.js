@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Notify</title>
+    <link rel="icon" href="/brand/favicon.ico" />
+    <link rel="stylesheet" href="/static/remixicon.css" />
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body>
+    <!-- ============== LOGIN ============== -->
+    <section id="login-view" class="page-wrapper full-page center-content">
+      <div class="login-wrapper">
+        <div class="login-logo">
+          <img src="/brand/logo.png" alt="ClawJS" width="44" height="44" />
+          <span class="login-brand">Notify</span>
+        </div>
+        <h4 class="login-title">Superuser login</h4>
+        <form id="login-form" data-testid="login-form" class="login-form">
+          <div class="form-field required">
+            <label for="login-email">Email</label>
+            <input id="login-email" type="email" value="admin@notify.local" autocomplete="username" />
+          </div>
+          <div class="form-field required">
+            <label for="login-password">Password</label>
+            <input id="login-password" type="password" value="notify-admin" autocomplete="current-password" />
+          </div>
+          <a class="login-forgot link-hint" href="#" tabindex="-1">Forgotten password?</a>
+          <button type="submit" data-testid="login-submit" class="btn btn-lg btn-block btn-next">
+            <span class="txt">Login</span>
+            <i class="ri-arrow-right-line"></i>
+          </button>
+          <p id="login-error" class="error"></p>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============== APP SHELL ============== -->
+    <div id="app-view" class="page-wrapper hidden" data-testid="admin-console">
+      <!-- Narrow icon rail -->
+      <aside class="app-sidebar" aria-label="Primary">
+        <a class="app-sidebar-logo" href="#" title="Notify">
+          <img src="/brand/logo.png" alt="ClawJS" width="32" height="32" />
+        </a>
+        <nav class="main-menu">
+          <button type="button" class="menu-item current-route" data-view="notifications" data-testid="nav-notifications" title="Notifications" aria-label="Notifications">
+            <i class="ri-notification-3-line"></i>
+          </button>
+          <button type="button" class="menu-item" data-view="deliveries" data-testid="nav-deliveries" title="Deliveries" aria-label="Deliveries">
+            <i class="ri-send-plane-line"></i>
+          </button>
+          <button type="button" class="menu-item" data-view="source-apps" data-testid="nav-source-apps" title="Source Apps" aria-label="Source Apps">
+            <i class="ri-apps-line"></i>
+          </button>
+          <button type="button" class="menu-item" data-view="client-apps" data-testid="nav-client-apps" title="Client Apps" aria-label="Client Apps">
+            <i class="ri-smartphone-line"></i>
+          </button>
+          <button type="button" class="menu-item" data-view="settings" data-testid="nav-settings" title="Settings" aria-label="Settings">
+            <i class="ri-tools-line"></i>
+          </button>
+        </nav>
+        <button type="button" id="logout-btn" class="menu-item menu-item-muted" title="Sign out" aria-label="Sign out">
+          <i class="ri-logout-box-r-line"></i>
+        </button>
+      </aside>
+
+      <!-- Contextual sidebar -->
+      <aside class="page-sidebar" data-testid="sidebar">
+        <div class="sidebar-content" data-view-only="notifications">
+          <h5 class="sidebar-title">Notifications</h5>
+          <div class="sidebar-list">
+            <button type="button" class="sidebar-list-item active">
+              <i class="ri-notification-3-line"></i>
+              <span class="txt">All notifications</span>
+            </button>
+            <button type="button" class="sidebar-list-item">
+              <i class="ri-time-line"></i>
+              <span class="txt">Recent</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sidebar-content" data-view-only="deliveries">
+          <h5 class="sidebar-title">Deliveries</h5>
+          <div class="sidebar-list">
+            <button type="button" class="sidebar-list-item active">
+              <i class="ri-send-plane-line"></i>
+              <span class="txt">All deliveries</span>
+            </button>
+            <button type="button" class="sidebar-list-item" data-delivery-filter="queued">
+              <i class="ri-loader-4-line"></i>
+              <span class="txt">Queued</span>
+            </button>
+            <button type="button" class="sidebar-list-item" data-delivery-filter="delivered">
+              <i class="ri-check-line"></i>
+              <span class="txt">Delivered</span>
+            </button>
+            <button type="button" class="sidebar-list-item" data-delivery-filter="read">
+              <i class="ri-eye-line"></i>
+              <span class="txt">Read</span>
+            </button>
+            <button type="button" class="sidebar-list-item" data-delivery-filter="failed">
+              <i class="ri-error-warning-line"></i>
+              <span class="txt">Failed</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sidebar-content" data-view-only="source-apps">
+          <h5 class="sidebar-title">Source Apps</h5>
+          <div class="sidebar-list">
+            <button type="button" class="sidebar-list-item active">
+              <i class="ri-apps-line"></i>
+              <span class="txt">Registered apps</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sidebar-content" data-view-only="client-apps">
+          <h5 class="sidebar-title">Client Apps</h5>
+          <div class="sidebar-list">
+            <button type="button" class="sidebar-list-item active">
+              <i class="ri-smartphone-line"></i>
+              <span class="txt">Registered clients</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sidebar-content" data-view-only="settings">
+          <h5 class="sidebar-title">System</h5>
+          <div class="sidebar-list">
+            <button type="button" class="sidebar-list-item active">
+              <i class="ri-home-4-line"></i>
+              <span class="txt">Application</span>
+            </button>
+            <button type="button" class="sidebar-list-item">
+              <i class="ri-bar-chart-box-line"></i>
+              <span class="txt">Metrics</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main content -->
+      <main class="page-main">
+        <!-- ==== Notifications pane ==== -->
+        <section class="page-content" data-pane="notifications">
+          <header class="page-header">
+            <nav class="breadcrumbs">
+              <div class="breadcrumb-item">Notifications</div>
+              <div class="breadcrumb-item">All notifications</div>
+            </nav>
+            <div class="flex-fill"></div>
+            <div class="btns-group">
+              <button type="button" id="notifications-refresh" class="btn btn-transparent btn-circle" title="Refresh" aria-label="Refresh">
+                <i class="ri-refresh-line"></i>
+              </button>
+            </div>
+          </header>
+          <div class="searchbar">
+            <i class="ri-search-line searchbar-icon"></i>
+            <input id="notifications-filter" type="text" placeholder="Search notifications..." />
+          </div>
+          <div class="clearfix m-b-sm"></div>
+          <div id="notifications-table" class="table-wrapper" data-testid="notifications-table"></div>
+        </section>
+
+        <!-- ==== Deliveries pane ==== -->
+        <section class="page-content hidden" data-pane="deliveries">
+          <header class="page-header">
+            <nav class="breadcrumbs">
+              <div class="breadcrumb-item">Deliveries</div>
+              <div class="breadcrumb-item">All deliveries</div>
+            </nav>
+            <div class="flex-fill"></div>
+            <div class="btns-group">
+              <button type="button" id="deliveries-refresh" class="btn btn-transparent btn-circle" title="Refresh" aria-label="Refresh">
+                <i class="ri-refresh-line"></i>
+              </button>
+            </div>
+          </header>
+          <div class="clearfix m-b-sm"></div>
+          <div id="deliveries-table" class="table-wrapper" data-testid="deliveries-table"></div>
+        </section>
+
+        <!-- ==== Source Apps pane ==== -->
+        <section class="page-content hidden" data-pane="source-apps">
+          <header class="page-header">
+            <nav class="breadcrumbs">
+              <div class="breadcrumb-item">Source Apps</div>
+              <div class="breadcrumb-item">Registered apps</div>
+            </nav>
+            <div class="flex-fill"></div>
+            <div class="btns-group">
+              <button type="button" id="source-apps-refresh" class="btn btn-transparent btn-circle" title="Refresh" aria-label="Refresh">
+                <i class="ri-refresh-line"></i>
+              </button>
+            </div>
+          </header>
+          <div class="wrapper-lg m-auto">
+            <div class="panel-card">
+              <h5 class="panel-card-title">Create source app</h5>
+              <form id="source-app-form" data-testid="source-app-form">
+                <div class="form-row">
+                  <div class="form-field required">
+                    <label for="source-app-name">Display name</label>
+                    <input id="source-app-name" type="text" placeholder="My Service" />
+                  </div>
+                  <div class="form-field">
+                    <label for="source-app-desc">Description</label>
+                    <input id="source-app-desc" type="text" placeholder="optional description" />
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-sm btn-primary">
+                    <i class="ri-add-line"></i>
+                    <span>Create source app</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+            <div class="panel-card">
+              <h5 class="panel-card-title">Registered source apps</h5>
+              <div id="source-apps-list" class="data-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==== Client Apps pane ==== -->
+        <section class="page-content hidden" data-pane="client-apps">
+          <header class="page-header">
+            <nav class="breadcrumbs">
+              <div class="breadcrumb-item">Client Apps</div>
+              <div class="breadcrumb-item">Registered clients</div>
+            </nav>
+            <div class="flex-fill"></div>
+            <div class="btns-group">
+              <button type="button" id="client-apps-refresh" class="btn btn-transparent btn-circle" title="Refresh" aria-label="Refresh">
+                <i class="ri-refresh-line"></i>
+              </button>
+            </div>
+          </header>
+          <div class="wrapper-lg m-auto">
+            <div class="panel-card">
+              <h5 class="panel-card-title">Register client app</h5>
+              <form id="client-app-form" data-testid="client-app-form">
+                <div class="form-row">
+                  <div class="form-field required">
+                    <label for="client-app-name">Display name</label>
+                    <input id="client-app-name" type="text" placeholder="My iOS App" />
+                  </div>
+                  <div class="form-field required">
+                    <label for="client-app-platform">Platform</label>
+                    <select id="client-app-platform">
+                      <option value="ios">iOS</option>
+                      <option value="android">Android</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-field required">
+                  <label for="client-app-bundle">Bundle ID</label>
+                  <input id="client-app-bundle" type="text" placeholder="com.example.myapp" />
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-sm btn-primary">
+                    <i class="ri-add-line"></i>
+                    <span>Register client app</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+            <div class="panel-card">
+              <h5 class="panel-card-title">Registered client apps</h5>
+              <div id="client-apps-list" class="data-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==== Settings pane ==== -->
+        <section class="page-content hidden" data-pane="settings" data-testid="settings-card">
+          <header class="page-header">
+            <nav class="breadcrumbs">
+              <div class="breadcrumb-item">Settings</div>
+              <div class="breadcrumb-item">Application</div>
+            </nav>
+            <div class="btns-group">
+              <button type="button" id="settings-refresh" class="btn btn-transparent btn-circle" title="Refresh" aria-label="Refresh">
+                <i class="ri-refresh-line"></i>
+              </button>
+            </div>
+          </header>
+          <div class="wrapper-lg m-auto">
+            <div class="panel-card">
+              <h5 class="panel-card-title">Application</h5>
+              <div class="form-row">
+                <div class="form-field readonly">
+                  <label>Application name</label>
+                  <input id="settings-name" type="text" value="Notify" readonly />
+                </div>
+                <div class="form-field readonly">
+                  <label>Application URL</label>
+                  <input id="settings-url" type="text" value="http://127.0.0.1:4610" readonly />
+                </div>
+              </div>
+
+              <h5 class="panel-card-title">Service state</h5>
+              <div id="settings-rows" class="settings-rows"></div>
+
+              <h5 class="panel-card-title">Metrics summary</h5>
+              <div id="metrics-summary" class="metrics-grid"></div>
+
+              <h5 class="panel-card-title">Raw output</h5>
+              <pre id="settings-output" class="code-block"></pre>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- ==== Notification detail drawer ==== -->
+      <div id="notification-drawer" class="overlay-panel-container hidden" role="dialog" aria-label="Notification detail">
+        <div class="overlay-backdrop" id="notification-drawer-backdrop"></div>
+        <div class="overlay-panel overlay-panel-lg">
+          <div class="overlay-panel-section panel-header">
+            <button type="button" id="drawer-close" class="overlay-close" aria-label="Close">
+              <i class="ri-close-line"></i>
+            </button>
+            <h4 id="drawer-title">Notification</h4>
+          </div>
+          <div class="overlay-panel-section panel-content">
+            <div id="notification-detail" class="notification-detail"></div>
+          </div>
+          <div class="overlay-panel-section panel-footer">
+            <button type="button" id="drawer-close-btn" class="btn btn-transparent">
+              <span class="txt">Close</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/static/app.js"></script>
+  </body>
+</html>

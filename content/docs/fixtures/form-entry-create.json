@@ -1,0 +1,21 @@
+{
+  "id": "entry.create",
+  "title": "Create entry",
+  "submitLabel": "Create entry",
+  "fields": [
+    { "key": "brandId", "label": "Brand", "component": "select", "required": true, "group": "identity", "order": 1 },
+    { "key": "campaignId", "label": "Campaign", "component": "select", "required": false, "group": "identity", "order": 2, "defaultValue": null },
+    { "key": "contentType", "label": "Content type", "component": "select", "required": true, "group": "identity", "order": 3, "defaultValue": "post" },
+    { "key": "canonicalFormat", "label": "Canonical format", "component": "select", "required": true, "group": "editor", "order": 4, "defaultValue": "markdown" },
+    { "key": "title", "label": "Title", "component": "text", "required": true, "group": "editor", "order": 5 },
+    { "key": "summary", "label": "Summary", "component": "textarea", "required": false, "group": "editor", "order": 6 },
+    { "key": "canonicalBody", "label": "Body", "component": "rich-text", "required": true, "group": "editor", "order": 7 }
+  ],
+  "validations": {
+    "brandId": "required",
+    "title": "required",
+    "canonicalBody": "required"
+  },
+  "visibilityRules": [],
+  "sideEffects": ["creates revision 1"]
+}

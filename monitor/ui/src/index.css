@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  color-scheme: dark;
+
+  /* Uptime Kuma dark palette */
+  --color-bg:          #0f1115;
+  --color-bg-panel:    #161b25;
+  --color-bg-card:     #1a1f2b;
+  --color-bg-hover:    #1e2432;
+  --color-bg-input:    #121722;
+  --color-bg-sidebar:  #0f1115;
+
+  --color-border:        rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.15);
+
+  --color-text:       #e9eef5;
+  --color-text-muted: #9ca3af;
+  --color-text-faint: #5c6370;
+
+  /* Status colors - Uptime Kuma */
+  --color-green:    #5cdd8b;
+  --color-green-bg: rgba(92, 221, 139, 0.12);
+  --color-red:      #fc4438;
+  --color-red-bg:   rgba(252, 68, 56, 0.12);
+  --color-yellow:   #f5a623;
+  --color-yellow-bg:rgba(245, 166, 35, 0.12);
+  --color-blue:     #5cc8ff;
+  --color-blue-bg:  rgba(92, 200, 255, 0.12);
+  --color-gray:     #6b7280;
+  --color-gray-bg:  rgba(107, 114, 128, 0.12);
+}
+
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-bg-panel: var(--color-bg-panel);
+  --color-bg-card: var(--color-bg-card);
+  --color-bg-hover: var(--color-bg-hover);
+  --color-bg-input: var(--color-bg-input);
+  --color-bg-sidebar: var(--color-bg-sidebar);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-faint: var(--color-text-faint);
+  --color-red: var(--color-red);
+  --color-red-bg: var(--color-red-bg);
+  --color-green: var(--color-green);
+  --color-green-bg: var(--color-green-bg);
+  --color-yellow: var(--color-yellow);
+  --color-yellow-bg: var(--color-yellow-bg);
+  --color-blue: var(--color-blue);
+  --color-blue-bg: var(--color-blue-bg);
+  --color-gray: var(--color-gray);
+  --color-gray-bg: var(--color-gray-bg);
+  --font-sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+* { font-family: inherit; box-sizing: border-box; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* Pulse animation for status dots */
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 currentColor; opacity: 0.6; }
+  100% { box-shadow: 0 0 0 6px currentColor; opacity: 0; }
+}
+.pulse-dot::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  animation: pulse-ring 2s ease-out infinite;
+  box-shadow: 0 0 0 0 currentColor;
+}

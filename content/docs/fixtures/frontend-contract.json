@@ -1,0 +1,52 @@
+{
+  "version": "1",
+  "shell": {
+    "selectors": [
+      "shell-brand-selector",
+      "shell-destination-scope",
+      "shell-calendar-range",
+      "shell-command-palette",
+      "shell-approvals",
+      "shell-jobs",
+      "shell-sync-status",
+      "shell-profile"
+    ],
+    "supportsRealtime": true
+  },
+  "modules": [
+    { "id": "dashboard", "title": "Dashboard" },
+    { "id": "calendar", "title": "Calendar" },
+    { "id": "pipeline", "title": "Pipeline" },
+    { "id": "composer", "title": "Composer" },
+    { "id": "destinations", "title": "Destinations" },
+    { "id": "approvals", "title": "Approvals" },
+    { "id": "publications", "title": "Publications" }
+  ],
+  "screens": [
+    { "id": "dashboard", "route": "/dashboard", "purpose": "Operational content overview", "testIds": ["content-dashboard", "dashboard-drafts-card"] },
+    { "id": "calendar", "route": "/calendar", "purpose": "Editorial scheduling surface", "testIds": ["content-calendar", "calendar-view-switcher"] },
+    { "id": "pipeline", "route": "/pipeline", "purpose": "Editorial workflow management", "testIds": ["content-pipeline", "pipeline-column-draft"] },
+    { "id": "entries", "route": "/entries", "purpose": "Content library", "testIds": ["content-entry-list", "entry-row"] },
+    { "id": "composer", "route": "/composer/:entryId", "purpose": "Canonical editor and channel variants", "testIds": ["content-composer", "composer-preview"] },
+    { "id": "destinations", "route": "/destinations", "purpose": "Publishing destinations and capabilities", "testIds": ["content-destinations", "destination-card"] },
+    { "id": "approvals", "route": "/approvals", "purpose": "Human review queue", "testIds": ["content-approvals", "approval-row"] },
+    { "id": "publications", "route": "/publications", "purpose": "Publication run history", "testIds": ["content-publications", "publication-row"] }
+  ],
+  "globalStates": {
+    "statuses": ["draft", "in_review", "approved", "scheduled", "publishing", "published", "partially_published", "failed", "archived"],
+    "publishPolicies": ["manual", "autopublish", "conditional"]
+  },
+  "badges": {
+    "entryStatus": {
+      "draft": "neutral",
+      "in_review": "warning",
+      "approved": "info",
+      "scheduled": "accent",
+      "publishing": "accent",
+      "published": "success",
+      "partially_published": "warning",
+      "failed": "danger",
+      "archived": "muted"
+    }
+  }
+}

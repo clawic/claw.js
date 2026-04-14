@@ -1,0 +1,13 @@
+{
+  "items": [
+    {
+      "id": "approval_demo_1",
+      "entryId": "entry_demo_2",
+      "variantId": "variant_demo_webhook",
+      "destinationId": "dest_wh",
+      "status": "pending",
+      "requestedAt": "2026-04-09T11:00:00.000Z",
+      "comment": null
+    }
+  ]
+}

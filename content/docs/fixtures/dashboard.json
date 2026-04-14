@@ -1,0 +1,18 @@
+{
+  "metrics": {
+    "drafts": 4,
+    "scheduled": 3,
+    "published": 9,
+    "failed": 1,
+    "pendingApprovals": 2,
+    "healthyDestinations": 5,
+    "assetsAttached": 17,
+    "activeCampaigns": 2
+  },
+  "upcoming": [
+    { "planId": "plan_demo_1", "title": "Launch teaser", "scheduledAt": "2026-04-10T09:00:00.000Z", "destination": "LinkedIn" }
+  ],
+  "activity": [
+    { "id": "activity_1", "type": "publication.completed", "label": "Product teaser published to Bluesky", "at": "2026-04-09T10:00:00.000Z" }
+  ]
+}

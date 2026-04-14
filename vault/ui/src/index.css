@@ -1,0 +1,302 @@
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/brand/fonts/source-sans-3/source-sans-3-v18-cyrillic_latin_latin-ext-regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/brand/fonts/source-sans-3/source-sans-3-v18-cyrillic_latin_latin-ext-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/brand/fonts/source-sans-3/source-sans-3-v18-cyrillic_latin_latin-ext-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Ubuntu Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/brand/fonts/ubuntu-mono/ubuntu-mono-v17-cyrillic_latin_latin-ext-regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Ubuntu Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/brand/fonts/ubuntu-mono/ubuntu-mono-v17-cyrillic_latin_latin-ext-700.woff2") format("woff2");
+}
+
+:root {
+  color-scheme: light;
+  font-family: "Source Sans 3", "Segoe UI", sans-serif;
+  background: linear-gradient(180deg, #efe9dc 0%, #f7f3eb 100%);
+  color: #1f1812;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.login-shell,
+.shell {
+  min-height: 100vh;
+}
+
+.login-shell {
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background:
+    radial-gradient(circle at top left, rgba(207, 111, 46, 0.18), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(104, 70, 51, 0.18), transparent 30%),
+    linear-gradient(180deg, #efe9dc 0%, #f7f3eb 100%);
+}
+
+.login-card {
+  width: min(420px, 100%);
+  padding: 28px;
+  border-radius: 24px;
+  background: rgba(255, 252, 247, 0.9);
+  border: 1px solid rgba(110, 77, 53, 0.18);
+  box-shadow: 0 20px 60px rgba(78, 54, 37, 0.14);
+}
+
+.login-card h1,
+.page-header h1 {
+  font-family: inherit;
+  margin: 0 0 8px;
+  font-size: 34px;
+}
+
+.login-card label,
+.card label {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 14px;
+  color: #4d3a2a;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid #ceb9a0;
+  background: #fffaf2;
+  padding: 10px 12px;
+}
+
+textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+button {
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 18px;
+  background: #40281c;
+  color: #fff8ef;
+  margin-top: 16px;
+}
+
+.ghost {
+  background: rgba(64, 40, 28, 0.08);
+  color: #40281c;
+}
+
+.error {
+  margin-top: 12px;
+  border-radius: 14px;
+  padding: 12px;
+  background: #fde0d8;
+  color: #7b2319;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+}
+
+.rail {
+  padding: 24px;
+  border-right: 1px solid rgba(110, 77, 53, 0.16);
+  background: rgba(249, 245, 236, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.brand {
+  font-family: inherit;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+code {
+  font-family: "Ubuntu Mono", ui-monospace, Menlo, monospace;
+}
+
+.brand-mark,
+.login-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark img,
+.login-brand-mark img {
+  display: block;
+}
+
+.hint,
+.status {
+  color: #6d5542;
+  font-size: 13px;
+}
+
+.nav {
+  display: grid;
+  gap: 8px;
+}
+
+.nav-item {
+  margin: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: #40281c;
+  text-align: left;
+}
+
+.nav-item-active {
+  background: #40281c;
+  color: #fff8ef;
+}
+
+.content {
+  padding: 28px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: rgba(255, 252, 247, 0.92);
+  border: 1px solid rgba(110, 77, 53, 0.16);
+  box-shadow: 0 20px 50px rgba(90, 63, 44, 0.08);
+  border-radius: 22px;
+  padding: 22px;
+}
+
+.card-wide {
+  grid-column: 1 / -1;
+}
+
+.card h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 20px;
+}
+
+.list {
+  display: grid;
+  gap: 12px;
+}
+
+.list-card {
+  display: grid;
+  gap: 4px;
+  align-items: start;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid #d8c4ac;
+  background: #fff8ef;
+  color: #2f2016;
+  text-align: left;
+}
+
+.list-card-active {
+  border-color: #40281c;
+}
+
+.divider {
+  height: 1px;
+  background: #eadbc8;
+  margin: 18px 0;
+}
+
+.toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  margin-top: 10px;
+}
+
+.toggles label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+code {
+  display: block;
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #261710;
+  color: #fff5ec;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 960px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .rail {
+    border-right: 0;
+    border-bottom: 1px solid rgba(110, 77, 53, 0.16);
+    gap: 24px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

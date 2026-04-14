@@ -1,0 +1,12 @@
+{
+  "run": {
+    "id": "run_demo_1",
+    "planId": "plan_demo_1",
+    "status": "succeeded",
+    "attemptNumber": 1,
+    "externalId": "linkedin_post_123",
+    "providerMessage": "Published successfully",
+    "error": null
+  },
+  "canRetry": false
+}
