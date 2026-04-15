@@ -97,15 +97,28 @@ const results = await claw.search.query({ query: "docs", domains: ["tasks", "not
 
 The productivity instance adds:
 
+- `areas` for long-lived responsibility areas
 - `tasks` for task CRUD, completion, archive, and search
 - `goals` for goal CRUD, archive, and search
 - `projects` for project CRUD, archive, and search
+- `milestones` for milestone CRUD, archive, and search
+- `activity` for activity/history reads and search
+- `blockers` for explicit blockers, dependency state, and blocker search
+- `artifacts` for captured evidence such as screenshots, tests, links, and notes
+- `decisions` for structured operational decisions and rationale
+- `workSessions` for focused work blocks with outcomes and timeboxes
+- `agents` for roster, autonomy, permissions, and current focus
+- `releases` for release state, risk, linked work, incidents, and approvals
+- `incidents` for operational risk, severity, blockers, and customer impact
+- `feedback` for external signal linked back to work, incidents, and follow-up
+- `checks` for operational checks, cadence, and readiness or compliance state
 - `reminders` for reminder CRUD, pause/resume, and search
 - `deadlines` for deadline CRUD, pause/resume, and search
 - `notes` for note CRUD, archive, and search
 - `people` for person upserts, identity matching, and search
 - `inbox` for draft creation, routing replies, ingesting incoming messages, and thread reads
 - `events` for calendar-style records and search
+- `agenda`, `review`, and `productivity` helpers for higher-level daily workflows, my-work views, team coordination, operations cockpit summaries, export/import, backup, inspect, and repair
 - `search`, `context`, and `ui` helpers for cross-domain workflows
 - `workspace.tools.describe()` so UIs can render tool metadata from the same runtime-aware source
 
@@ -123,26 +136,54 @@ That split matters:
 
 ## Productivity CLI Commands
 
-The CLI exposes the same productivity commands directly and defaults to
-the current directory as the workspace root, with SQLite storage at
-`.clawjs/data/productivity.sqlite`:
+The CLI defaults to the current directory as the workspace root. Outside
+an existing Claw project, the local-first database lives at
+`.clawjs/data/database.sqlite`. The primary zero-config workflow is
+`claw db ...`, with the productivity nouns available as convenience
+aliases for overlapping CRUD verbs:
 
 ```bash
+claw db task "Ship workspace productivity"
+claw db tasks list
+claw db leads create --set name=Ada --set website=https://ada.dev
+
+claw areas create "Personal Ops"
 claw tasks list
 claw goals create "Ship workspace productivity"
 claw projects create "Workspace Core"
+claw milestones create "CLI beta" --project-id project-123
+claw activity list --task-id task-123
+claw blockers create "Waiting on approval" --kind policy_block --task-id task-123
+claw artifacts create "Staging screenshot" --kind screenshot --task-id task-123
+claw decisions create "Keep the loop on /tasks" --status accepted --task-id task-123
+claw work-sessions create "Focus shipping" --task-ids task-123
+claw assignments create "Reviewer owns release gate" --task-id task-123 --assigned-to-agent-id reviewer
+claw handoffs create "Pass release validation" --task-id task-123 --from-agent-id planner --to-agent-id reviewer
+claw approvals create "Approve publish" --kind publish --task-id task-123 --policy-reason "Publishing requires sign-off"
+claw capacity create "Reviewer capacity" --agent-id reviewer --max-wip 2 --current-wip 1
 claw reminders create "Follow up" --trigger-at 2026-03-27T09:00:00Z
 claw deadlines create "Launch date" --due-at 2026-03-30T18:00:00Z
 claw notes create --title "Release notes" --content "Draft"
 claw people upsert --name "Iván"
 claw inbox list
 claw events list
+claw my-work
+claw team-work
+claw agenda
+claw review daily
+claw export snapshot.json
+claw backup backups/
 claw workspace-search query "release"
 claw workspace-index rebuild
 ```
 
 Use `workspace-search query` for keyword, semantic, or hybrid search
-over tasks, goals, projects, reminders, deadlines, notes, people,
-inbox, and events. Use
+over areas, tasks, goals, projects,
+milestones, blockers, artifacts, decisions, work sessions,
+assignments, handoffs, approvals, capacity, reminders, deadlines,
+notes, people, inbox, events, activity, agents, releases, incidents,
+feedback, and checks. Use `my-work` for the single-agent loop summary,
+`team-work` for the coordination view, `productivity.operationsCockpit()`
+for the organizational risk and operations summary, and
 `workspace-index rebuild` after large imports or when you change the
 embedding strategy.

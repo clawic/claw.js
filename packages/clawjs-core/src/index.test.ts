@@ -7,22 +7,38 @@ import {
   CLAWJS_NON_SYNONYMS,
   ClawError,
   PRODUCTIVITY_COLLECTION_DEFINITIONS,
+  activityEntryRecordSchema,
+  areaRecordSchema,
+  assignmentRecordSchema,
+  artifactRecordSchema,
   auditEventSchema,
+  blockerRecordSchema,
+  capacityRecordSchema,
+  agentRecordSchema,
   createTtsPlaybackPlan,
   compatSnapshotSchema,
   createManifest,
+  decisionRecordSchema,
   deadlineRecordSchema,
   eventRecordSchema,
+  feedbackRecordSchema,
   goalRecordSchema,
+  handoffRecordSchema,
+  incidentRecordSchema,
   linkedEntityRefSchema,
   segmentTextForTts,
   manifestSchema,
+  milestoneRecordSchema,
   maskCredential,
   noteRecordSchema,
+  operationalCheckRecordSchema,
   personIdentitySchema,
   projectRecordSchema,
+  productivityApprovalRecordSchema,
+  releaseRecordSchema,
   reminderRecordSchema,
   taskRecordSchema,
+  workSessionRecordSchema,
   stripMarkdownForTts,
   summarizeReadiness,
   templatePackSchema,
@@ -123,12 +139,29 @@ test("compat and template schemas validate normalized payloads", () => {
 });
 
 test("workspace productivity schemas validate linked records and search queries", () => {
+  const area = areaRecordSchema.parse({
+    id: "area-1",
+    createdAt: "2026-03-21T10:00:00.000Z",
+    updatedAt: "2026-03-21T10:00:00.000Z",
+    source: { kind: "local" },
+    name: "Platform",
+    status: "active",
+  });
+  assert.equal(area.status, "active");
+
   const link = linkedEntityRefSchema.parse({
+    domain: "area",
+    id: "area-1",
+    relationship: "contains",
+  });
+  assert.equal(link.domain, "area");
+
+  const taskLink = linkedEntityRefSchema.parse({
     domain: "task",
     id: "task-1",
     relationship: "blocks",
   });
-  assert.equal(link.domain, "task");
+  assert.equal(taskLink.domain, "task");
 
   const task = taskRecordSchema.parse({
     id: "task-1",
@@ -139,13 +172,22 @@ test("workspace productivity schemas validate linked records and search queries"
     status: "todo",
     priority: "high",
     labels: ["sdk"],
+    areaId: "area-1",
     watcherPersonIds: [],
     childTaskIds: [],
     dependsOnTaskIds: [],
+    blockedByIds: [],
+    evidenceIds: [],
+    decisionIds: [],
+    assignmentIds: [],
+    handoffIds: [],
+    approvalIds: [],
     checklist: [],
-    links: [link],
+    estimateMinutes: 90,
+    blockedReason: "waiting on api",
+    links: [taskLink],
   });
-  assert.equal(task.priority, "high");
+  assert.equal(task.estimateMinutes, 90);
 
   const goal = goalRecordSchema.parse({
     id: "goal-1",
@@ -155,11 +197,14 @@ test("workspace productivity schemas validate linked records and search queries"
     title: "Ship productivity",
     status: "active",
     level: "personal",
+    areaId: "area-1",
     parentId: "goal-root",
     parentGoalId: "goal-root",
     ownerAgentId: "agent-1",
+    reviewCadence: "weekly",
+    metricDirection: "increase",
   });
-  assert.equal(goal.parentId, "goal-root");
+  assert.equal(goal.reviewCadence, "weekly");
 
   const project = projectRecordSchema.parse({
     id: "project-1",
@@ -168,9 +213,223 @@ test("workspace productivity schemas validate linked records and search queries"
     source: { kind: "local" },
     name: "Workspace local-first",
     status: "in_progress",
+    areaId: "area-1",
     leadAgentId: "agent-1",
+    milestoneIds: ["milestone-1"],
   });
-  assert.equal(project.leadAgentId, "agent-1");
+  assert.equal(project.milestoneIds[0], "milestone-1");
+
+  const milestone = milestoneRecordSchema.parse({
+    id: "milestone-1",
+    createdAt: "2026-03-21T10:00:00.000Z",
+    updatedAt: "2026-03-21T10:00:00.000Z",
+    source: { kind: "local" },
+    title: "CLI beta",
+    status: "active",
+    areaId: "area-1",
+    projectId: "project-1",
+  });
+  assert.equal(milestone.projectId, "project-1");
+
+  const activity = activityEntryRecordSchema.parse({
+    id: "activity-1",
+    createdAt: "2026-03-21T10:00:00.000Z",
+    updatedAt: "2026-03-21T10:00:00.000Z",
+    source: { kind: "derived" },
+    entityType: "task",
+    entityId: "task-1",
+    kind: "created",
+    title: "Task created",
+    areaId: "area-1",
+    projectId: "project-1",
+    taskId: "task-1",
+  });
+  assert.equal(activity.entityType, "task");
+
+  const blocker = blockerRecordSchema.parse({
+    id: "blocker-1",
+    createdAt: "2026-03-21T10:00:00.000Z",
+    updatedAt: "2026-03-21T10:00:00.000Z",
+    source: { kind: "local" },
+    title: "Waiting on policy review",
+    status: "active",
+    kind: "policy_block",
+    taskId: "task-1",
+    dependencyTaskIds: [],
+    evidenceIds: [],
+  });
+  assert.equal(blocker.kind, "policy_block");
+
+  const artifact = artifactRecordSchema.parse({
+    id: "artifact-1",
+    createdAt: "2026-03-21T10:00:00.000Z",
+    updatedAt: "2026-03-21T10:00:00.000Z",
+    source: { kind: "local" },
+    title: "Hermetic screenshot",
+    kind: "screenshot",
+    taskId: "task-1",
+    summary: "Captured final screen",
+  });
+  assert.equal(artifact.kind, "screenshot");
+
+  const decision = decisionRecordSchema.parse({
+    id: "decision-1",
+    createdAt: "2026-03-21T10:00:00.000Z",
+    updatedAt: "2026-03-21T10:00:00.000Z",
+    source: { kind: "local" },
+    title: "Keep the loop on /tasks",
+    status: "accepted",
+    taskId: "task-1",
+    alternatives: ["New route", "Reuse panel"],
+    artifactIds: ["artifact-1"],
+  });
+  assert.equal(decision.status, "accepted");
+
+  const session = workSessionRecordSchema.parse({
+    id: "session-1",
+    createdAt: "2026-03-21T10:00:00.000Z",
+    updatedAt: "2026-03-21T10:00:00.000Z",
+    source: { kind: "local" },
+    title: "Focus on task loop",
+    status: "active",
+    taskIds: ["task-1"],
+    blockerIds: ["blocker-1"],
+    startedAt: "2026-03-21T10:05:00.000Z",
+  });
+  assert.equal(session.status, "active");
+
+  const assignment = assignmentRecordSchema.parse({
+    id: "assignment-1",
+    createdAt: "2026-03-21T10:00:00.000Z",
+    updatedAt: "2026-03-21T10:00:00.000Z",
+    source: { kind: "local" },
+    title: "Own the release gate",
+    status: "accepted",
+    taskId: "task-1",
+    assignedToAgentId: "agent-release",
+    assignedBy: "lead-agent",
+  });
+  assert.equal(assignment.assignedToAgentId, "agent-release");
+
+  const handoff = handoffRecordSchema.parse({
+    id: "handoff-1",
+    createdAt: "2026-03-21T10:00:00.000Z",
+    updatedAt: "2026-03-21T10:00:00.000Z",
+    source: { kind: "local" },
+    title: "Pass QA closeout to reviewer",
+    status: "proposed",
+    taskId: "task-1",
+    fromAgentId: "agent-build",
+    toAgentId: "agent-review",
+    artifactIds: ["artifact-1"],
+    blockerIds: ["blocker-1"],
+  });
+  assert.equal(handoff.toAgentId, "agent-review");
+
+  const approval = productivityApprovalRecordSchema.parse({
+    id: "approval-1",
+    createdAt: "2026-03-21T10:00:00.000Z",
+    updatedAt: "2026-03-21T10:00:00.000Z",
+    source: { kind: "local" },
+    title: "Approve publish step",
+    status: "pending",
+    kind: "publish",
+    taskId: "task-1",
+    policyReason: "Publishing requires a reviewer gate.",
+    evidenceIds: ["artifact-1"],
+    decisionIds: ["decision-1"],
+  });
+  assert.equal(approval.kind, "publish");
+
+  const capacity = capacityRecordSchema.parse({
+    id: "capacity-1",
+    createdAt: "2026-03-21T10:00:00.000Z",
+    updatedAt: "2026-03-21T10:00:00.000Z",
+    source: { kind: "derived" },
+    title: "Agent reviewer",
+    status: "active",
+    agentId: "agent-review",
+    availability: "available",
+    currentWip: 2,
+    queueDepth: 3,
+    blockedCount: 1,
+    overdueCount: 0,
+    assignedTaskIds: ["task-1"],
+    pendingApprovalIds: ["approval-1"],
+    pendingHandoffIds: ["handoff-1"],
+  });
+  assert.equal(capacity.agentId, "agent-review");
+
+  const agent = agentRecordSchema.parse({
+    id: "agent-1",
+    createdAt: "2026-03-21T10:00:00.000Z",
+    updatedAt: "2026-03-21T10:00:00.000Z",
+    source: { kind: "local" },
+    name: "Reviewer",
+    status: "active",
+    role: "review",
+    domains: ["release", "quality"],
+    availability: "busy",
+    autonomyLevel: "act_limited",
+    permissions: ["tasks.update", "checks.update"],
+    policyGate: "approval_required",
+    linkedTaskIds: ["task-1"],
+  });
+  assert.equal(agent.autonomyLevel, "act_limited");
+
+  const release = releaseRecordSchema.parse({
+    id: "release-1",
+    createdAt: "2026-03-21T10:00:00.000Z",
+    updatedAt: "2026-03-21T10:00:00.000Z",
+    source: { kind: "local" },
+    title: "Spring launch",
+    status: "at_risk",
+    projectId: "project-1",
+    linkedTaskIds: ["task-1"],
+    incidentIds: ["incident-1"],
+    approvalIds: ["approval-1"],
+  });
+  assert.equal(release.status, "at_risk");
+
+  const incident = incidentRecordSchema.parse({
+    id: "incident-1",
+    createdAt: "2026-03-21T10:00:00.000Z",
+    updatedAt: "2026-03-21T10:00:00.000Z",
+    source: { kind: "local" },
+    title: "Checkout regression",
+    status: "investigating",
+    severity: "sev2",
+    projectId: "project-1",
+    taskId: "task-1",
+    blockerIds: ["blocker-1"],
+    feedbackIds: ["feedback-1"],
+  });
+  assert.equal(incident.severity, "sev2");
+
+  const feedback = feedbackRecordSchema.parse({
+    id: "feedback-1",
+    createdAt: "2026-03-21T10:00:00.000Z",
+    updatedAt: "2026-03-21T10:00:00.000Z",
+    source: { kind: "channel", channel: "support" },
+    title: "Customer saw the regression",
+    status: "new",
+    origin: "customer",
+    priority: "high",
+    incidentId: "incident-1",
+  });
+  assert.equal(feedback.origin, "customer");
+
+  const check = operationalCheckRecordSchema.parse({
+    id: "check-1",
+    createdAt: "2026-03-21T10:00:00.000Z",
+    updatedAt: "2026-03-21T10:00:00.000Z",
+    source: { kind: "derived" },
+    title: "Release readiness",
+    status: "failing",
+    kind: "release_readiness",
+    releaseId: "release-1",
+  });
+  assert.equal(check.kind, "release_readiness");
 
   const reminder = reminderRecordSchema.parse({
     id: "reminder-1",
@@ -252,7 +511,7 @@ test("workspace productivity schemas validate linked records and search queries"
 
   const search = workspaceSearchQuerySchema.parse({
     query: "workspace",
-    domains: ["tasks", "goals", "projects", "reminders", "deadlines", "notes"],
+    domains: ["areas", "tasks", "goals", "projects", "milestones", "blockers", "artifacts", "decisions", "work_sessions", "assignments", "handoffs", "approvals", "capacity", "agents", "releases", "incidents", "feedback", "checks", "reminders", "deadlines", "notes"],
     strategy: "hybrid",
     limit: 5,
   });
@@ -261,12 +520,31 @@ test("workspace productivity schemas validate linked records and search queries"
 
 test("productivity collection definitions expose the unified local and remote contract", () => {
   const collectionNames = PRODUCTIVITY_COLLECTION_DEFINITIONS.map((definition) => definition.name);
-  assert.deepEqual(collectionNames.slice(0, 10), [
+  assert.deepEqual(collectionNames.slice(0, 21), [
+    "areas",
     "people",
     "tasks",
     "goals",
     "projects",
+    "milestones",
     "events",
+    "activity_entries",
+    "blockers",
+    "artifacts",
+    "decisions",
+    "work_sessions",
+    "assignments",
+    "handoffs",
+    "approvals",
+    "capacity",
+    "agents",
+    "releases",
+    "incidents",
+    "feedback",
+    "checks",
+  ]);
+
+  assert.deepEqual(collectionNames.slice(21), [
     "reminders",
     "deadlines",
     "notes",
@@ -281,6 +559,28 @@ test("productivity collection definitions expose the unified local and remote co
 
   const projectFields = PRODUCTIVITY_COLLECTION_DEFINITIONS.find((definition) => definition.name === "projects")?.fields ?? [];
   assert.equal(projectFields.some((field) => field.name === "leadAgentId"), true);
+
+  const taskFields = PRODUCTIVITY_COLLECTION_DEFINITIONS.find((definition) => definition.name === "tasks")?.fields ?? [];
+  assert.equal(taskFields.some((field) => field.name === "blockedByIds"), true);
+  assert.equal(taskFields.some((field) => field.name === "approvalIds"), true);
+
+  const blockerFields = PRODUCTIVITY_COLLECTION_DEFINITIONS.find((definition) => definition.name === "blockers")?.fields ?? [];
+  assert.equal(blockerFields.some((field) => field.name === "kind"), true);
+
+  const assignmentFields = PRODUCTIVITY_COLLECTION_DEFINITIONS.find((definition) => definition.name === "assignments")?.fields ?? [];
+  assert.equal(assignmentFields.some((field) => field.name === "assignedToAgentId"), true);
+
+  const approvalFields = PRODUCTIVITY_COLLECTION_DEFINITIONS.find((definition) => definition.name === "approvals")?.fields ?? [];
+  assert.equal(approvalFields.some((field) => field.name === "policyReason"), true);
+
+  const agentFields = PRODUCTIVITY_COLLECTION_DEFINITIONS.find((definition) => definition.name === "agents")?.fields ?? [];
+  assert.equal(agentFields.some((field) => field.name === "autonomyLevel"), true);
+
+  const releaseFields = PRODUCTIVITY_COLLECTION_DEFINITIONS.find((definition) => definition.name === "releases")?.fields ?? [];
+  assert.equal(releaseFields.some((field) => field.name === "incidentIds"), true);
+
+  const incidentFields = PRODUCTIVITY_COLLECTION_DEFINITIONS.find((definition) => definition.name === "incidents")?.fields ?? [];
+  assert.equal(incidentFields.some((field) => field.name === "severity"), true);
 });
 
 test("canonical terminology exports the agreed product vocabulary", () => {

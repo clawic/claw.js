@@ -18,9 +18,12 @@ export type CapabilityName =
   | "channels"
   | "sandbox"
   | "plugins"
+  | "areas"
   | "tasks"
   | "goals"
   | "projects"
+  | "milestones"
+  | "activity"
   | "reminders"
   | "deadlines"
   | "notes"
@@ -556,9 +559,25 @@ export interface AuditEvent {
 }
 
 export type WorkspaceDomain =
+  | "areas"
   | "tasks"
   | "goals"
   | "projects"
+  | "milestones"
+  | "activity"
+  | "blockers"
+  | "artifacts"
+  | "decisions"
+  | "work_sessions"
+  | "assignments"
+  | "handoffs"
+  | "approvals"
+  | "capacity"
+  | "agents"
+  | "releases"
+  | "incidents"
+  | "feedback"
+  | "checks"
   | "reminders"
   | "deadlines"
   | "notes"
@@ -573,9 +592,25 @@ export type WorkspaceSearchStrategy =
   | "hybrid";
 
 export type LinkedEntityDomain =
+  | "area"
   | "task"
   | "goal"
   | "project"
+  | "milestone"
+  | "activity_entry"
+  | "blocker"
+  | "artifact"
+  | "decision"
+  | "work_session"
+  | "assignment"
+  | "handoff"
+  | "approval"
+  | "capacity"
+  | "agent"
+  | "release"
+  | "incident"
+  | "feedback_item"
+  | "operational_check"
   | "reminder"
   | "deadline"
   | "note"
@@ -613,15 +648,29 @@ export interface TaskChecklistItem {
   completed: boolean;
 }
 
+export interface AreaRecord extends WorkspaceRecordBase {
+  name: string;
+  description?: string;
+  status: "active" | "paused" | "archived";
+  color?: string;
+  ownerPersonId?: string;
+}
+
 export interface TaskRecord extends WorkspaceRecordBase {
   title: string;
   description?: string;
   status: "todo" | "in_progress" | "blocked" | "done" | "cancelled";
   priority: "low" | "medium" | "high" | "urgent";
   labels: string[];
+  areaId?: string;
   assigneePersonId?: string;
   watcherPersonIds: string[];
   dueAt?: string;
+  estimateMinutes?: number;
+  actualMinutes?: number;
+  blockedReason?: string;
+  startedAt?: string;
+  completedAt?: string;
   scheduledEventId?: string;
   eventId?: string;
   projectId?: string;
@@ -629,6 +678,20 @@ export interface TaskRecord extends WorkspaceRecordBase {
   parentTaskId?: string;
   childTaskIds: string[];
   dependsOnTaskIds: string[];
+  assignedToAgentId?: string;
+  assignedBy?: string;
+  delegatedBy?: string;
+  reviewerAgentId?: string;
+  blockedByIds: string[];
+  evidenceIds: string[];
+  decisionIds: string[];
+  assignmentIds: string[];
+  handoffIds: string[];
+  approvalIds: string[];
+  sourceItemId?: string;
+  confidence?: number;
+  handoffTo?: string;
+  approvedBy?: string;
   companyId?: string;
   portfolioId?: string;
   portfolioItemId?: string;
@@ -640,6 +703,7 @@ export interface GoalRecord extends WorkspaceRecordBase {
   description?: string;
   status: "active" | "paused" | "done";
   level?: "company" | "team" | "personal";
+  areaId?: string;
   projectId?: string;
   parentId?: string;
   parentGoalId?: string;
@@ -654,6 +718,10 @@ export interface GoalRecord extends WorkspaceRecordBase {
   currentValue?: number;
   unit?: string;
   period?: string;
+  timeframeStart?: string;
+  timeframeEnd?: string;
+  reviewCadence?: "daily" | "weekly" | "monthly" | "quarterly";
+  metricDirection?: "increase" | "decrease" | "maintain";
   healthStatus?: "green" | "yellow" | "red" | "unknown";
 }
 
@@ -661,6 +729,7 @@ export interface ProjectRecord extends WorkspaceRecordBase {
   name: string;
   description?: string;
   status: "draft" | "in_progress" | "paused" | "done" | "archived";
+  areaId?: string;
   goalId?: string;
   ownerPersonId?: string;
   leadAgentId?: string;
@@ -672,6 +741,258 @@ export interface ProjectRecord extends WorkspaceRecordBase {
   healthStatus?: "green" | "yellow" | "red" | "unknown";
   startDate?: string;
   targetDate?: string;
+  milestoneIds: string[];
+  completedAt?: string;
+}
+
+export interface MilestoneRecord extends WorkspaceRecordBase {
+  title: string;
+  description?: string;
+  status: "planned" | "active" | "done" | "archived";
+  areaId?: string;
+  projectId?: string;
+  goalId?: string;
+  targetDate?: string;
+  completedAt?: string;
+}
+
+export interface ActivityEntryRecord extends WorkspaceRecordBase {
+  entityType: LinkedEntityDomain;
+  entityId: string;
+  kind: "created" | "updated" | "completed" | "archived" | "processed" | "commented";
+  title: string;
+  content?: string;
+  areaId?: string;
+  projectId?: string;
+  goalId?: string;
+  milestoneId?: string;
+  taskId?: string;
+  threadId?: string;
+  actor?: string;
+}
+
+export interface BlockerRecord extends WorkspaceRecordBase {
+  title: string;
+  description?: string;
+  status: "active" | "resolved" | "cancelled";
+  kind: "waiting_human" | "waiting_agent" | "waiting_system" | "missing_context" | "policy_block";
+  taskId?: string;
+  projectId?: string;
+  goalId?: string;
+  ownerPersonId?: string;
+  ownerAgentId?: string;
+  dependencyTaskIds: string[];
+  evidenceIds: string[];
+  resolvedAt?: string;
+  confidence?: number;
+}
+
+export interface ArtifactRecord extends WorkspaceRecordBase {
+  title: string;
+  kind: "link" | "file" | "command" | "test" | "screenshot" | "message" | "note";
+  taskId?: string;
+  projectId?: string;
+  goalId?: string;
+  threadId?: string;
+  decisionId?: string;
+  uri?: string;
+  summary?: string;
+  content?: string;
+  confidence?: number;
+}
+
+export interface DecisionRecord extends WorkspaceRecordBase {
+  title: string;
+  summary?: string;
+  status: "proposed" | "accepted" | "rejected" | "superseded";
+  taskId?: string;
+  projectId?: string;
+  goalId?: string;
+  ownerPersonId?: string;
+  ownerAgentId?: string;
+  outcome?: string;
+  rationale?: string;
+  alternatives: string[];
+  artifactIds: string[];
+  confidence?: number;
+}
+
+export interface WorkSessionRecord extends WorkspaceRecordBase {
+  title: string;
+  status: "active" | "completed" | "cancelled";
+  objective?: string;
+  taskIds: string[];
+  blockerIds: string[];
+  startedAt: string;
+  endedAt?: string;
+  outcome?: string;
+  timeboxMinutes?: number;
+  ownerAgentId?: string;
+  confidence?: number;
+}
+
+export interface AssignmentRecord extends WorkspaceRecordBase {
+  title: string;
+  status: "proposed" | "accepted" | "rejected" | "released" | "completed";
+  taskId?: string;
+  projectId?: string;
+  goalId?: string;
+  assignedToAgentId: string;
+  assignedBy?: string;
+  delegatedBy?: string;
+  reviewerAgentId?: string;
+  rationale?: string;
+  rejectionReason?: string;
+  acceptedAt?: string;
+  rejectedAt?: string;
+  completedAt?: string;
+  dueAt?: string;
+  priority?: TaskRecord["priority"];
+  confidence?: number;
+}
+
+export interface HandoffRecord extends WorkspaceRecordBase {
+  title: string;
+  status: "proposed" | "accepted" | "rejected" | "returned" | "completed";
+  taskId?: string;
+  projectId?: string;
+  goalId?: string;
+  fromAgentId: string;
+  toAgentId: string;
+  objective?: string;
+  currentState?: string;
+  contextSummary?: string;
+  nextStep?: string;
+  riskSummary?: string;
+  artifactIds: string[];
+  blockerIds: string[];
+  approvalId?: string;
+  rejectionReason?: string;
+  acceptedAt?: string;
+  completedAt?: string;
+  confidence?: number;
+}
+
+export interface ProductivityApprovalRecord extends WorkspaceRecordBase {
+  title: string;
+  status: "pending" | "approved" | "rejected" | "cancelled";
+  kind: "deploy" | "publish" | "delete" | "external_send" | "spend" | "policy_gate" | "other";
+  taskId?: string;
+  projectId?: string;
+  goalId?: string;
+  handoffId?: string;
+  requestedByAgentId?: string;
+  approverAgentId?: string;
+  policyReason: string;
+  evidenceIds: string[];
+  decisionIds: string[];
+  approvedBy?: string;
+  outcome?: string;
+  approvedAt?: string;
+  rejectedAt?: string;
+  confidence?: number;
+}
+
+export interface CapacityRecord extends WorkspaceRecordBase {
+  title: string;
+  status: "active" | "limited" | "overloaded" | "offline";
+  agentId: string;
+  teamId?: string;
+  role?: string;
+  availability: "available" | "busy" | "away" | "offline";
+  maxWip?: number;
+  currentWip: number;
+  queueDepth: number;
+  blockedCount: number;
+  overdueCount: number;
+  responseLatencyMinutes?: number;
+  utilization?: number;
+  assignedTaskIds: string[];
+  pendingApprovalIds: string[];
+  pendingHandoffIds: string[];
+  snapshotAt?: string;
+  confidence?: number;
+}
+
+export interface AgentRecord extends WorkspaceRecordBase {
+  name: string;
+  status: "active" | "limited" | "offline";
+  role: string;
+  teamId?: string;
+  domains: string[];
+  shift?: string;
+  availability: "available" | "busy" | "away" | "offline";
+  autonomyLevel: "observe" | "suggest" | "act_limited" | "act_full";
+  permissions: string[];
+  policyGate: "none" | "approval_required" | "restricted";
+  currentFocus?: string;
+  linkedTaskIds: string[];
+  confidence?: number;
+}
+
+export interface ReleaseRecord extends WorkspaceRecordBase {
+  title: string;
+  status: "planned" | "active" | "at_risk" | "released" | "cancelled";
+  projectId?: string;
+  goalId?: string;
+  ownerAgentId?: string;
+  targetDate?: string;
+  shippedAt?: string;
+  riskSummary?: string;
+  linkedTaskIds: string[];
+  incidentIds: string[];
+  approvalIds: string[];
+  confidence?: number;
+}
+
+export interface IncidentRecord extends WorkspaceRecordBase {
+  title: string;
+  status: "open" | "investigating" | "mitigating" | "resolved" | "closed";
+  severity: "sev1" | "sev2" | "sev3" | "sev4";
+  projectId?: string;
+  goalId?: string;
+  taskId?: string;
+  releaseId?: string;
+  ownerAgentId?: string;
+  summary?: string;
+  customerImpact?: string;
+  blockerIds: string[];
+  feedbackIds: string[];
+  startedAt?: string;
+  resolvedAt?: string;
+  confidence?: number;
+}
+
+export interface FeedbackRecord extends WorkspaceRecordBase {
+  title: string;
+  status: "new" | "triaged" | "planned" | "closed";
+  origin: "customer" | "agent" | "system" | "sales" | "support" | "ops";
+  priority: "low" | "medium" | "high" | "urgent";
+  projectId?: string;
+  goalId?: string;
+  taskId?: string;
+  incidentId?: string;
+  ownerAgentId?: string;
+  summary?: string;
+  followUpTaskId?: string;
+  confidence?: number;
+}
+
+export interface OperationalCheckRecord extends WorkspaceRecordBase {
+  title: string;
+  status: "pending" | "passing" | "failing" | "snoozed";
+  kind: "release_readiness" | "incident_followup" | "sla" | "quality" | "compliance" | "ops";
+  projectId?: string;
+  goalId?: string;
+  releaseId?: string;
+  incidentId?: string;
+  ownerAgentId?: string;
+  cadence?: "hourly" | "daily" | "weekly" | "monthly";
+  lastRunAt?: string;
+  nextRunAt?: string;
+  resultSummary?: string;
+  playbook?: string;
+  confidence?: number;
 }
 
 export type ProductivityAnchorType =
@@ -905,6 +1226,132 @@ export interface WorkspaceSearchResult {
   matchedFields: string[];
   links?: LinkedEntityRef[];
   updatedAt?: string;
+}
+
+export interface ProductivityAgendaItem {
+  domain: "tasks" | "milestones" | "reminders" | "deadlines" | "events" | "activity";
+  id: string;
+  title: string;
+  when: string;
+  status: string;
+  overdue: boolean;
+  areaId?: string;
+  projectId?: string;
+  goalId?: string;
+  milestoneId?: string;
+  taskId?: string;
+}
+
+export interface ProductivityAgenda {
+  start: string;
+  end: string;
+  generatedAt: string;
+  items: ProductivityAgendaItem[];
+  summary: {
+    overdue: number;
+    dueToday: number;
+    upcoming: number;
+  };
+}
+
+export interface ProductivityReview {
+  cadence: "daily" | "weekly";
+  generatedAt: string;
+  summary: {
+    blockedTasks: number;
+    overdueTasks: number;
+    activeGoals: number;
+    activeProjects: number;
+    pendingMilestones: number;
+    unreadThreads: number;
+    dueDeadlines: number;
+    pendingReminders: number;
+    upcomingEvents: number;
+    activeBlockers: number;
+    pendingDecisions: number;
+    activeWorkSessions: number;
+  };
+  blockedTasks: TaskRecord[];
+  overdueTasks: TaskRecord[];
+  activeGoals: GoalRecord[];
+  activeProjects: ProjectRecord[];
+  pendingMilestones: MilestoneRecord[];
+  unreadThreads: InboxThreadRecord[];
+  dueDeadlines: DeadlineRecord[];
+  pendingReminders: ReminderRecord[];
+  upcomingEvents: EventRecord[];
+  activeBlockers: BlockerRecord[];
+  pendingDecisions: DecisionRecord[];
+  activeWorkSessions: WorkSessionRecord[];
+}
+
+export interface ProductivityMyWork {
+  generatedAt: string;
+  summary: {
+    triageThreads: number;
+    readyTasks: number;
+    blockedTasks: number;
+    activeBlockers: number;
+    pendingDecisions: number;
+    activeWorkSessions: number;
+    recentArtifacts: number;
+  };
+  triageThreads: InboxThreadRecord[];
+  readyTasks: TaskRecord[];
+  blockedTasks: TaskRecord[];
+  activeBlockers: BlockerRecord[];
+  pendingDecisions: DecisionRecord[];
+  activeWorkSession: WorkSessionRecord | null;
+  recentArtifacts: ArtifactRecord[];
+}
+
+export interface ProductivityTeamWork {
+  generatedAt: string;
+  summary: {
+    activeAssignments: number;
+    pendingHandoffs: number;
+    pendingApprovals: number;
+    overloadedAgents: number;
+    agentsAtRisk: number;
+  };
+  activeAssignments: AssignmentRecord[];
+  pendingHandoffs: HandoffRecord[];
+  pendingApprovals: ProductivityApprovalRecord[];
+  capacity: CapacityRecord[];
+}
+
+export interface ProductivityOperationsAgent {
+  agent: AgentRecord;
+  capacity: CapacityRecord | null;
+  openIncidentIds: string[];
+  pendingApprovalIds: string[];
+  activeReleaseIds: string[];
+}
+
+export interface ProductivityOperationsCockpit {
+  generatedAt: string;
+  summary: {
+    activeGoals: number;
+    activeProjects: number;
+    activeReleases: number;
+    atRiskReleases: number;
+    openIncidents: number;
+    criticalIncidents: number;
+    failingChecks: number;
+    newFeedback: number;
+    activeAgents: number;
+    approvalGatedAgents: number;
+  };
+  portfolio: {
+    activeGoals: GoalRecord[];
+    activeProjects: ProjectRecord[];
+    atRiskProjects: ProjectRecord[];
+  };
+  releases: ReleaseRecord[];
+  incidents: IncidentRecord[];
+  feedback: FeedbackRecord[];
+  checks: OperationalCheckRecord[];
+  agents: ProductivityOperationsAgent[];
 }
 
 export interface WorkspaceSurfaceDescriptor {
