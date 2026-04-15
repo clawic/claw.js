@@ -6,15 +6,27 @@ import type { TtsCatalog } from "@clawjs/claw";
 import type { IntegrationStatus } from "@/lib/app-bootstrap";
 import { getClawJSLocalSettingsPath, saveClawJSLocalSettings } from "@/lib/local-settings";
 import {
+  type Approval,
+  type AgentRecord,
+  type Assignment,
   generateId,
   readCollection,
   readDocument,
   resolveDemoDataDir,
+  type CapacitySnapshot,
+  type FeedbackRecord,
+  type Handoff,
+  type IncidentRecord,
+  type OperationalCheckRecord,
+  type ReleaseRecord,
   writeCollection,
   writeDocument,
   type ActivityEvent,
+  type Artifact,
+  type Blocker,
   type BudgetConfig,
   type CalendarEventRecord,
+  type Decision,
   type Goal,
   type InboxMessage,
   type MemoryEntry,
@@ -24,6 +36,7 @@ import {
   type RoutineExecution,
   type Task,
   type UsageRecord,
+  type WorkSession,
 } from "@/lib/demo-store";
 import {
   appendSessionMessage,
@@ -264,6 +277,10 @@ function rmIfExists(targetPath: string): void {
 
 function nowMinus(minutes: number): number {
   return Date.now() - minutes * 60_000;
+}
+
+function nowPlus(minutes: number): number {
+  return Date.now() + minutes * 60_000;
 }
 
 function defaultAuthProviders(): Record<string, E2EAiAuthProviderInfo> {
@@ -638,6 +655,15 @@ function buildSeededTasks(): Task[] {
       goalId: "goal-e2e",
       labels: ["chat", "e2e"],
       linkedSessionIds: [],
+      blockedByIds: ["blocker-policy"],
+      evidenceIds: ["artifact-proof"],
+      decisionIds: ["decision-loop"],
+      assignmentIds: ["assignment-reviewer"],
+      handoffIds: ["handoff-reviewer"],
+      approvalIds: ["approval-publish"],
+      assignedToAgentId: "reviewer",
+      reviewerAgentId: "lead",
+      handoffTo: "reviewer",
       createdAt: nowMinus(500),
       updatedAt: nowMinus(20),
     },
@@ -650,8 +676,276 @@ function buildSeededTasks(): Task[] {
       goalId: "goal-e2e",
       labels: ["settings"],
       linkedSessionIds: [],
+      blockedByIds: [],
+      evidenceIds: [],
+      decisionIds: [],
+      assignmentIds: [],
+      handoffIds: [],
+      approvalIds: [],
       createdAt: nowMinus(520),
       updatedAt: nowMinus(60),
+    },
+  ];
+}
+
+function buildSeededBlockers(): Blocker[] {
+  return [
+    {
+      id: "blocker-policy",
+      title: "Approval pending for browser release flow",
+      kind: "policy_block",
+      status: "active",
+      taskId: "task-chat",
+      description: "Need final sign-off before enabling the broader suite.",
+      createdAt: nowMinus(180),
+      updatedAt: nowMinus(15),
+    },
+  ];
+}
+
+function buildSeededArtifacts(): Artifact[] {
+  return [
+    {
+      id: "artifact-proof",
+      title: "Latest hermetic screenshot",
+      kind: "screenshot",
+      taskId: "task-chat",
+      summary: "Current task board validation snapshot.",
+      createdAt: nowMinus(140),
+      updatedAt: nowMinus(10),
+    },
+  ];
+}
+
+function buildSeededDecisions(): Decision[] {
+  return [
+    {
+      id: "decision-loop",
+      title: "Keep the agent loop on the existing tasks view",
+      status: "accepted",
+      taskId: "task-chat",
+      summary: "Avoid a parallel dashboard and extend the existing workflow surface.",
+      alternatives: ["New route", "Separate cockpit first"],
+      artifactIds: ["artifact-proof"],
+      createdAt: nowMinus(160),
+      updatedAt: nowMinus(8),
+    },
+  ];
+}
+
+function buildSeededWorkSessions(): WorkSession[] {
+  return [
+    {
+      id: "work-session-active",
+      title: "Focus: cover chat streaming",
+      status: "active",
+      taskIds: ["task-chat"],
+      blockerIds: ["blocker-policy"],
+      objective: "Close the remaining validation gaps on the seeded task.",
+      timeboxMinutes: 25,
+      startedAt: nowMinus(25),
+      createdAt: nowMinus(25),
+      updatedAt: nowMinus(5),
+    },
+  ];
+}
+
+function buildSeededAssignments(): Assignment[] {
+  return [
+    {
+      id: "assignment-reviewer",
+      title: "Reviewer owns the release gate",
+      status: "accepted",
+      taskId: "task-chat",
+      assignedToAgentId: "reviewer",
+      assignedBy: "planner",
+      reviewerAgentId: "lead",
+      rationale: "Keep one owner on the blocking release path.",
+      acceptedAt: nowMinus(90),
+      createdAt: nowMinus(120),
+      updatedAt: nowMinus(12),
+    },
+  ];
+}
+
+function buildSeededHandoffs(): Handoff[] {
+  return [
+    {
+      id: "handoff-reviewer",
+      title: "Pass final release validation to reviewer",
+      status: "proposed",
+      taskId: "task-chat",
+      fromAgentId: "planner",
+      toAgentId: "reviewer",
+      objective: "Finish the release gate and clear the blocker.",
+      currentState: "Evidence exists but final approval is still open.",
+      nextStep: "Review the last screenshot and confirm publish readiness.",
+      artifactIds: ["artifact-proof"],
+      blockerIds: ["blocker-policy"],
+      createdAt: nowMinus(70),
+      updatedAt: nowMinus(6),
+    },
+  ];
+}
+
+function buildSeededApprovals(): Approval[] {
+  return [
+    {
+      id: "approval-publish",
+      title: "Approve publish of the broader browser suite",
+      status: "pending",
+      kind: "publish",
+      taskId: "task-chat",
+      handoffId: "handoff-reviewer",
+      requestedByAgentId: "reviewer",
+      approverAgentId: "lead",
+      policyReason: "Publishing the suite requires reviewer sign-off.",
+      evidenceIds: ["artifact-proof"],
+      decisionIds: ["decision-loop"],
+      createdAt: nowMinus(60),
+      updatedAt: nowMinus(4),
+    },
+  ];
+}
+
+function buildSeededCapacity(): CapacitySnapshot[] {
+  return [
+    {
+      id: "capacity-reviewer",
+      title: "Reviewer",
+      status: "limited",
+      agentId: "reviewer",
+      teamId: "release",
+      role: "review",
+      availability: "busy",
+      maxWip: 2,
+      currentWip: 1,
+      queueDepth: 3,
+      blockedCount: 1,
+      overdueCount: 0,
+      utilization: 0.5,
+      assignedTaskIds: ["task-chat"],
+      pendingApprovalIds: ["approval-publish"],
+      pendingHandoffIds: ["handoff-reviewer"],
+      snapshotAt: nowMinus(3),
+      createdAt: nowMinus(80),
+      updatedAt: nowMinus(3),
+    },
+  ];
+}
+
+function buildSeededAgents(): AgentRecord[] {
+  return [
+    {
+      id: "agent-reviewer",
+      name: "reviewer",
+      status: "limited",
+      role: "release reviewer",
+      teamId: "release",
+      domains: ["release", "quality", "ops"],
+      availability: "busy",
+      autonomyLevel: "act_limited",
+      permissions: ["review", "approve_publish"],
+      policyGate: "approval_required",
+      currentFocus: "Close the remaining browser release gate.",
+      linkedTaskIds: ["task-chat"],
+      createdAt: nowMinus(140),
+      updatedAt: nowMinus(4),
+    },
+    {
+      id: "agent-lead",
+      name: "lead",
+      status: "active",
+      role: "operations lead",
+      teamId: "release",
+      domains: ["ops", "governance"],
+      availability: "available",
+      autonomyLevel: "act_full",
+      permissions: ["approve_publish", "rebalance"],
+      policyGate: "none",
+      currentFocus: "Review risk and unblock the release.",
+      linkedTaskIds: [],
+      createdAt: nowMinus(180),
+      updatedAt: nowMinus(10),
+    },
+  ];
+}
+
+function buildSeededReleases(): ReleaseRecord[] {
+  return [
+    {
+      id: "release-spring",
+      title: "Spring browser hardening",
+      status: "at_risk",
+      goalId: "goal-e2e",
+      ownerAgentId: "reviewer",
+      targetDate: nowPlus(1),
+      riskSummary: "Publish is still gated on approval and one open incident.",
+      linkedTaskIds: ["task-chat"],
+      incidentIds: ["incident-seeded"],
+      approvalIds: ["approval-publish"],
+      createdAt: nowMinus(110),
+      updatedAt: nowMinus(5),
+    },
+  ];
+}
+
+function buildSeededIncidents(): IncidentRecord[] {
+  return [
+    {
+      id: "incident-seeded",
+      title: "Regression risk on browser release path",
+      status: "investigating",
+      severity: "sev2",
+      taskId: "task-chat",
+      releaseId: "release-spring",
+      ownerAgentId: "reviewer",
+      summary: "One blocking validation step is still open.",
+      customerImpact: "Delayed rollout if publish is attempted prematurely.",
+      blockerIds: ["blocker-policy"],
+      feedbackIds: ["feedback-seeded"],
+      startedAt: nowMinus(100),
+      createdAt: nowMinus(100),
+      updatedAt: nowMinus(5),
+    },
+  ];
+}
+
+function buildSeededFeedback(): FeedbackRecord[] {
+  return [
+    {
+      id: "feedback-seeded",
+      title: "Support flagged uncertainty on release readiness",
+      status: "new",
+      origin: "support",
+      priority: "high",
+      taskId: "task-chat",
+      incidentId: "incident-seeded",
+      ownerAgentId: "reviewer",
+      summary: "Need one final proof point before cutting the release.",
+      createdAt: nowMinus(90),
+      updatedAt: nowMinus(6),
+    },
+  ];
+}
+
+function buildSeededChecks(): OperationalCheckRecord[] {
+  return [
+    {
+      id: "check-seeded",
+      title: "Release readiness gate",
+      status: "failing",
+      kind: "release_readiness",
+      releaseId: "release-spring",
+      incidentId: "incident-seeded",
+      ownerAgentId: "reviewer",
+      cadence: "daily",
+      lastRunAt: nowMinus(20),
+      nextRunAt: nowPlus(1),
+      resultSummary: "Approval still pending and incident remains open.",
+      playbook: "release-checklist-v1",
+      createdAt: nowMinus(90),
+      updatedAt: nowMinus(3),
     },
   ];
 }
@@ -1362,6 +1656,19 @@ function writeSeededCollections(): void {
   writeCollection("notes", buildSeededNotes());
   writeCollection("tasks", buildSeededTasks());
   writeCollection("goals", buildSeededGoals());
+  writeCollection("blockers", buildSeededBlockers());
+  writeCollection("artifacts", buildSeededArtifacts());
+  writeCollection("decisions", buildSeededDecisions());
+  writeCollection("work-sessions", buildSeededWorkSessions());
+  writeCollection("assignments", buildSeededAssignments());
+  writeCollection("handoffs", buildSeededHandoffs());
+  writeCollection("approvals", buildSeededApprovals());
+  writeCollection("capacity", buildSeededCapacity());
+  writeCollection("agents", buildSeededAgents());
+  writeCollection("releases", buildSeededReleases());
+  writeCollection("incidents", buildSeededIncidents());
+  writeCollection("feedback", buildSeededFeedback());
+  writeCollection("checks", buildSeededChecks());
   writeCollection("routines", buildSeededRoutines());
   writeCollection("routine-executions", buildSeededRoutineExecutions());
   writeCollection("plugins", buildSeededPlugins());
@@ -1384,6 +1691,19 @@ function writeFreshCollections(): void {
   writeCollection<Note>("notes", []);
   writeCollection<Task>("tasks", []);
   writeCollection<Goal>("goals", []);
+  writeCollection<Blocker>("blockers", []);
+  writeCollection<Artifact>("artifacts", []);
+  writeCollection<Decision>("decisions", []);
+  writeCollection<WorkSession>("work-sessions", []);
+  writeCollection<Assignment>("assignments", []);
+  writeCollection<Handoff>("handoffs", []);
+  writeCollection<Approval>("approvals", []);
+  writeCollection<CapacitySnapshot>("capacity", []);
+  writeCollection<AgentRecord>("agents", []);
+  writeCollection<ReleaseRecord>("releases", []);
+  writeCollection<IncidentRecord>("incidents", []);
+  writeCollection<FeedbackRecord>("feedback", []);
+  writeCollection<OperationalCheckRecord>("checks", []);
   writeCollection<Routine>("routines", []);
   writeCollection<RoutineExecution>("routine-executions", []);
   writeCollection<Plugin>("plugins", []);
@@ -1406,6 +1726,19 @@ function writeCleanCollections(): void {
   writeCollection<Note>("notes", []);
   writeCollection<Task>("tasks", []);
   writeCollection<Goal>("goals", []);
+  writeCollection<Blocker>("blockers", []);
+  writeCollection<Artifact>("artifacts", []);
+  writeCollection<Decision>("decisions", []);
+  writeCollection<WorkSession>("work-sessions", []);
+  writeCollection<Assignment>("assignments", []);
+  writeCollection<Handoff>("handoffs", []);
+  writeCollection<Approval>("approvals", []);
+  writeCollection<CapacitySnapshot>("capacity", []);
+  writeCollection<AgentRecord>("agents", []);
+  writeCollection<ReleaseRecord>("releases", []);
+  writeCollection<IncidentRecord>("incidents", []);
+  writeCollection<FeedbackRecord>("feedback", []);
+  writeCollection<OperationalCheckRecord>("checks", []);
   writeCollection<Routine>("routines", []);
   writeCollection<RoutineExecution>("routine-executions", []);
   writeCollection<Plugin>("plugins", []);
