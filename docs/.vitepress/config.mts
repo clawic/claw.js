@@ -92,6 +92,8 @@ export default defineConfig({
       {
         text: "Repository",
         items: [
+          { text: "Tracking Overview", link: "/tracking/" },
+          { text: "Tracking Backlog", link: "/tracking/backlog" },
           { text: "Git Workflow", link: "/git-workflow" },
           { text: "Demo Terminology Note", link: "/demo-terminology-note" },
         ],

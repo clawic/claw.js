@@ -69,6 +69,7 @@ ClawJS keeps a stable internal layer under `.clawjs/` even when runtimes disagre
 ## Start Here
 
 - [Getting Started](/getting-started) for the official scaffold and workspace flow.
+- [Project Tracking](/tracking/) for the shared progress and backlog view across repository areas.
 - [CLI](/cli) for the current command surface, including productivity and media commands.
 - [Database service](/database) for the standalone namespace-based data service and admin console.
 - [Time service](/time) for the standalone calendar and scheduler control plane.
