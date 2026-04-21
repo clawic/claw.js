@@ -13,6 +13,7 @@ import {
 import type { TelegramSendMediaInput, TelegramSendMessageInput } from "@clawjs/claw";
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { RuntimeAdapterId, TemporalItem } from "@clawjs/core";
+import { runMagicDbCli } from "./database-magic.ts";
 import { runMemoryCli } from "./memory-local.ts";
 import {
   addProjectIntegration,
@@ -701,6 +702,19 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
   const flags = parseFlags(argv);
   const binName = context.binName?.trim() || DEFAULT_CLI_BIN;
   const usage = buildCliUsage(binName);
+
+  if (group === "db") {
+    return await runMagicDbCli({
+      argv,
+      positionals,
+      flags,
+      workspaceRoot: flags.workspace || context.cwd,
+      stdout: context.stdout,
+      stderr: context.stderr,
+      wantsJson,
+      binName,
+    });
+  }
 
   if (group === "memory") {
     const memoryWorkspaceRoot = flags.workspace || context.cwd;
