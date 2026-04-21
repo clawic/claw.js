@@ -1,0 +1,31 @@
+{
+  "name": "memory",
+  "version": "0.3.0",
+  "description": "Typed local memory CLI for agents",
+  "bin": {
+    "memory": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && cp src/ui.html dist/ui.html",
+    "test:e2e": "npm run build && node --test dist/test/e2e.spec.js",
+    "test": "npm run build && node --test dist/test/*.spec.js"
+  },
+  "keywords": [
+    "cli",
+    "memory",
+    "ontology",
+    "sqlite",
+    "agents"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^12.4.1",
+    "commander": "^14.0.2",
+    "yaml": "^2.8.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^24.7.2",
+    "typescript": "^5.9.3"
+  }
+}
