@@ -6,9 +6,10 @@ description: Runtime-facing instance namespaces, options, and public methods in 
 # API Reference
 
 This page documents the runtime-facing `@clawjs/claw` surface you use in
-application code. The exhaustive export inventory for `@clawjs/claw` and
-`@clawjs/core` lives in [Public Surface](/surface). For the side-by-side
-SDK, CLI, and Relay comparison, use [Interface Matrix](/interface-matrix).
+application code. The exhaustive export inventory for `@clawjs/claw`,
+`@clawjs/core`, and `@clawjs/database` lives in [Public Surface](/surface).
+For the side-by-side SDK, CLI, and Relay comparison, use
+[Interface Matrix](/interface-matrix).
 
 ## Factories
 
@@ -42,9 +43,11 @@ const same = await createClaw({
 | Path | Description |
 |----|----|
 | `runtime.adapter` | Required runtime adapter id such as `openclaw`, `demo`, `hermes`, or `ironclaw`. |
+| `runtime.binaryPath` | Optional executable override for runtimes such as OpenClaw when the binary is outside `PATH`. |
 | `runtime.agentDir` | Optional runtime agent directory override. |
 | `runtime.homeDir`, `configPath`, `workspacePath`, `authStorePath` | Optional adapter-specific path overrides. |
 | `runtime.gateway` | Optional gateway `url`, `token`, `port`, and `configPath` overrides. |
+| `runtime.pluginBridge` | Optional OpenClaw plugin bridge package and install settings. |
 | `runtime.env` | Optional environment override passed to adapter commands. |
 | `workspace.appId` | Stable application id persisted in the manifest. |
 | `workspace.workspaceId` | Stable workspace id. |
@@ -54,7 +57,11 @@ const same = await createClaw({
 | `secrets.backend` | Optional secrets backend. Defaults to `vault` when `VAULT_BASE_URL`, `VAULT_TOKEN`, and `VAULT_TENANT_ID` are configured, otherwise `local_proxy`. |
 | `secrets.baseUrl`, `secrets.credential`, `secrets.tenantId` | Vault connection used by `claw.secrets`, typed actions, and brokered HTTP execution. |
 | `secrets.sidecarPath` | Optional Vault sidecar path used for proxy-compatible `{{secretName}}` flows and lease-backed process/browser injection. |
+| `notify.baseUrl`, `sourceToken`, `clientToken` | Optional Notify service endpoint and source/client credentials for `claw.notify`. |
 | `time.baseUrl`, `time.token` | Optional standalone time-service endpoint used for calendar, routines, reminders, deadlines, and follow-ups. |
+| `time.dbPath`, `defaultTimeZone`, `schedulerIntervalMs`, `notifyBaseUrl`, `notifySourceToken` | Optional embedded temporal engine and notification integration settings when no time-service URL is configured. |
+| `content.baseUrl`, `content.token` | Optional Content service endpoint and token for `claw.content`. |
+| `iot.baseUrl`, `iot.token`, `iot.homeId` | Optional IoT service endpoint, token, and default home id for `claw.iot`. |
 
 ## Instance Namespaces
 
@@ -85,6 +92,8 @@ const same = await createClaw({
 | `claw.secrets` | `list`, `describe`, `types`, `capabilities`, `actions`, `brokerHttp`, `runAction`, `leases`, `doctorKeychain`, `ensureHttpReference`, `ensureTelegramBotReference` |
 | `claw.time` | temporal item CRUD, pause/resume/run, execution history, calendar/timeline views, and anchor signals |
 | `claw.iot` | inventory, state, actions, scenes, automations, approvals, and raw connector invocations |
+| `claw.content` | brands, destinations, campaigns, entries, variants, approvals, calendar, publish plans/runs, app read models, and scoped tokens |
+| `claw.notify` | notification send/cancel, receipts, feed sync, read/ack flows, push tokens, glances, and subscriptions |
 | `claw.sessions` | session CRUD, title generation, structured reply streaming, chunk streaming |
 | `claw.documents` | list, get, search, upload, register, chunked upload, download, ref resolution |
 | `claw.data` | `document`, `collection`, `asset`, `rootDir` |
@@ -201,6 +210,72 @@ const executions = await claw.time.listExecutions();
 Use `claw.time` when the schedule itself is the product object. The
 workspace `events` surface remains available as a compatibility view and
 projects into the temporal system when the time service is configured.
+
+## Content
+
+Configure the standalone content service through `CreateClawOptions.content`
+when content entries, variants, approvals, publish plans, and content app
+read models are the product source of truth:
+
+```ts
+const claw = await createClaw({
+  runtime: { adapter: "openclaw" },
+  workspace: {
+    appId: "demo",
+    workspaceId: "demo-main",
+    agentId: "demo-main",
+    rootDir: "./workspace",
+  },
+  content: {
+    baseUrl: "http://127.0.0.1:4650",
+    token: "<local-dev-token>",
+  },
+});
+
+const brands = await claw.content.brands.list();
+const entries = await claw.content.entries.list({ status: "draft" });
+const approvals = await claw.content.approvals.list();
+const dashboard = await claw.content.app.dashboard();
+```
+
+Use the content namespace for CMS and publishing workflows. Use
+`claw.documents` for workspace-local document blobs and refs attached to
+sessions.
+
+## Notify
+
+Configure the standalone Notify service through `CreateClawOptions.notify`
+when notifications, receipts, glances, and subscriptions are product
+objects:
+
+```ts
+const claw = await createClaw({
+  runtime: { adapter: "openclaw" },
+  workspace: {
+    appId: "demo",
+    workspaceId: "demo-main",
+    agentId: "demo-main",
+    rootDir: "./workspace",
+  },
+  notify: {
+    baseUrl: "http://127.0.0.1:4610",
+    sourceToken: "<local-source-token>",
+    clientToken: "<local-client-token>",
+  },
+});
+
+const sent = await claw.notify.send({
+  context: { tenantId: "demo", eventType: "deploy.finished" },
+  delivery: { mode: "alert", title: "Deploy finished" },
+});
+
+const feed = await claw.notify.feed(20);
+await claw.notify.subscriptions.upsert({ agentId: "deployer", action: "allow" });
+```
+
+Use `sourceToken` for emitting notifications and source-owned glances.
+Use `clientToken` for user-facing feed, read, acknowledgement, and
+subscription flows.
 
 ## Intent, Observed, and Features
 

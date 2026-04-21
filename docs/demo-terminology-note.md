@@ -1,4 +1,9 @@
-# Demo terminology note
+---
+title: Demo Terminology Note
+description: Naming guidance for demo surfaces so runtime, workspace, agent, provider, model, and gateway terms stay distinct.
+---
+
+# Demo Terminology Note
 
 This note is intentionally implementation-facing. The current task does not modify the demo UI.
 

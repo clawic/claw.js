@@ -45,6 +45,11 @@ Default local URL:
 
 - [http://127.0.0.1:4650](http://127.0.0.1:4650)
 
+These credentials and the default URL are disposable local-development
+defaults. Do not point examples at real publishing destinations or
+production content services without explicit service credentials and
+approval policies.
+
 ## CLI
 
 The app ships its own CLI:

@@ -23,6 +23,7 @@ Use this page when you need to answer questions like:
 | Surface | Primary entrypoint | Notes |
 | --- | --- | --- |
 | SDK | `@clawjs/claw` | Base runtime-facing surface. |
+| Database package | `@clawjs/database` | Shared database service app, store, API client, auth, and realtime hub. |
 | SDK workspace extension | `@clawjs/workspace` | Adds tasks, notes, people, inbox, events, search, and workspace index. |
 | CLI | `claw ...` | Local shell surface shipped by `@clawjs/cli`. |
 | Relay API | `relay/` HTTP `/v1` routes | Public remote API routed through the relay connector. |
@@ -136,6 +137,8 @@ The Relay also exposes equivalent project-scoped routes under:
 | Content entries / variants / assets | `claw.content.entries.*`, `claw.content.variants.*` | `claw content entry ...`, `variant ...` | `GET/POST WS/content/entries`, `PUT WS/content/entries/:entryId`, `POST WS/content/entries/:entryId/assets`, `POST WS/content/entries/:entryId/variants:generate`, `GET/POST WS/content/variants` |
 | Content approvals / plans / publications | `claw.content.approvals.*`, `claw.content.publish.*` | `claw content approval ...`, `publish ...` | `GET/POST WS/content/approvals`, `POST WS/content/approvals/:approvalId/approve|reject|cancel`, `GET/POST WS/content/plans`, `POST WS/content/plans/:planId/run`, `GET WS/content/publications` |
 | Content frontend contracts and read models | `claw.content.app.*`, `claw.content.calendar.view()` | `-` | `GET WS/content/app/*`, `GET WS/content/calendar` |
+| Notify send / cancel | `claw.notify.send()`, `cancel()` | `claw notify send`, `cancel` | standalone Notify service routes |
+| Notify feed / subscriptions | `claw.notify.feed()`, `subscriptions.*` | `claw notify subscriptions ...` | standalone Notify service routes |
 | Time items list / get | `claw.time.list()`, `get()` | `claw time list`, `get` | `GET WS/time`, `GET WS/time/:id` |
 | Time item create / update / delete | `claw.time.create()`, `update()`, `delete()` | `claw time create`, `update`, `delete` | `POST WS/time`, `PUT WS/time`, `DELETE WS/time` |
 | Time item pause / resume / run | `claw.time.pause()`, `resume()`, `runNow()` | `claw time pause`, `resume`, `run` | `PUT WS/time` |

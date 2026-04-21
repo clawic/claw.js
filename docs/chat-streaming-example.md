@@ -1,3 +1,8 @@
+---
+title: Chat Streaming Example
+description: Example flow for sessions, context chips, structured stream events, retries, fallback, and title persistence.
+---
+
 # Chat Streaming Example
 
 This example covers the closest thing to the end-user product surface:

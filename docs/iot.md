@@ -28,6 +28,10 @@ Default local URL:
 
 - [http://127.0.0.1:4520](http://127.0.0.1:4520)
 
+The default URL is for a disposable local service. Do not connect these
+examples to real homes, production connectors, or irreversible device
+actions without an isolated test backend or an explicit approval flow.
+
 ## CLI
 
 ```bash

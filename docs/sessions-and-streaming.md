@@ -1,3 +1,8 @@
+---
+title: Sessions and Structured Stream Events
+description: Legacy compatibility alias for the canonical Sessions guide.
+---
+
 # Sessions and Structured Stream Events
 
 This page is kept as a compatibility alias for older links. The

@@ -6,13 +6,9 @@ description: Scaffold a ClawJS project, initialize a workspace, and extend it wi
 # Getting Started
 
 This guide is the main public entrypoint for bootstrapping a ClawJS project.
-
-The official flow is:
-
-1. Install the CLI globally.
-2. Create a project with `claw new`.
-3. Initialize the workspace.
-4. Extend the project with `claw generate` and `claw add`.
+Start with the zero-config path when you want the fastest local success,
+then switch to the production runtime path when you are ready to target a
+real installed runtime.
 
 ## Prerequisites
 
@@ -20,23 +16,21 @@ The official flow is:
 | --- | --- |
 | Node.js | Version `20` or newer. |
 | Package manager | `npm`, `pnpm`, or `yarn`. |
-| Runtime adapter | Choose the adapter that matches your runtime. Support levels differ by adapter. |
+| Runtime adapter | Use `demo` for a zero-config starter. Use `openclaw` for the production-supported real runtime path. |
 
-## Pick a Runtime Adapter
+## Choose the Path
 
-ClawJS supports these adapters:
+| If you are... | Use this path | Why |
+| --- | --- | --- |
+| Creating a new app or agent | `claw new ...` with the generated `demo` scripts | Fastest first success; no external runtime install required. |
+| Wiring ClawJS into an existing repo | Manual workspace init | Keeps your existing project shape and adds `.clawjs/` explicitly. |
+| Targeting a real runtime | `openclaw` setup | `openclaw` is the production-supported adapter. |
+| Exposing a remote client | Relay after local setup | Relay routes requests to a connected workspace; it is not the first local bootstrap step. |
 
-- `openclaw`
-- `zeroclaw`
-- `picoclaw`
-- `nanobot`
-- `nanoclaw`
-- `nullclaw`
-- `ironclaw`
-- `nemoclaw`
-- `hermes`
-
-Every CLI command that depends on runtime behavior accepts `--runtime`.
+Supported adapters are `demo`, `openclaw`, `zeroclaw`, `picoclaw`,
+`nanobot`, `nanoclaw`, `nullclaw`, `ironclaw`, `nemoclaw`, and
+`hermes`. Every CLI command that depends on runtime behavior accepts
+`--runtime`.
 
 ## Install and Verify
 
@@ -54,15 +48,25 @@ npm install @clawjs/claw
 
 `claw info --json` gives you a quick summary of the current project, the detected workspace state, and the installed CLI version.
 
-## Create a Project
+## Zero-Config First Success
 
-The official project entrypoint is `claw new`.
+The generated app uses the `demo` adapter by default so it can initialize
+and report runtime status without installing a host runtime first.
 
 ```bash
 claw new app my-app
 cd my-app
 npm run claw:init
+npm run claw:status
+npm run dev
 ```
+
+Success means:
+
+- the project exists
+- `.clawjs/manifest.json` exists
+- `npm run claw:status` prints JSON for the `demo` adapter
+- the app starts locally with the generated scripts
 
 Other v1 project types:
 
@@ -81,7 +85,25 @@ Compatibility note:
 
 still work, but they are compatibility wrappers around the same scaffolding engine.
 
-## First Workspace Creation
+## Production Runtime Path
+
+Use the production path after the generated app works locally and you
+want to target a real runtime:
+
+```bash
+claw --runtime openclaw runtime status --workspace .
+claw --runtime openclaw runtime setup-workspace --workspace .
+claw --runtime openclaw doctor --workspace . --json
+```
+
+Use [Support Matrix](/support-matrix) before selecting any adapter for
+production. Experimental adapters are useful for adapter development and
+exploration, but should not be presented as the default production path.
+
+## Manual Workspace Creation
+
+Use this only when you are wiring ClawJS into an existing repository
+instead of starting from a generated project.
 
 The workspace root is whichever path you pass as `--workspace`, or the current working directory if you omit it.
 
@@ -94,7 +116,7 @@ Terminology note:
 
 ```bash
 claw \
-  --runtime zeroclaw \
+  --runtime openclaw \
   workspace init \
   --workspace /path/to/workspace \
   --app-id demo \
@@ -138,7 +160,7 @@ Examples:
 - `zeroclaw` seeds `SOUL.md`, `USER.md`, `AGENTS.md`, `IDENTITY.md`, `MEMORY.md`
 - `picoclaw` seeds `SOUL.md`, `USER.md`, `AGENTS.md`, `IDENTITY.md`, `memory/MEMORY.md`
 
-## Runtime Workspace Setup
+## Manual Runtime Workspace Setup
 
 Some adapters need an explicit setup step after the filesystem layout exists.
 
@@ -159,7 +181,7 @@ import { Claw } from "@clawjs/claw";
 
 const claw = await Claw({
   runtime: {
-    adapter: "zeroclaw",
+    adapter: "openclaw",
   },
   workspace: {
     appId: "demo",
@@ -214,12 +236,12 @@ The important ownership rule is:
 
 ```bash
 claw \
-  --runtime zeroclaw \
+  --runtime openclaw \
   workspace inspect \
   --workspace /path/to/workspace
 
 claw \
-  --runtime zeroclaw \
+  --runtime openclaw \
   workspace validate \
   --workspace /path/to/workspace
 ```

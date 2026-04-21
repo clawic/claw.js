@@ -39,6 +39,7 @@ ClawJS gives you one place to solve the hard parts that show up across runtimes:
 | `@clawjs/core` | Shared types, schemas, capability maps, manifests, and snapshot shapes. |
 | `@clawjs/claw` | Runtime adapters, workspace management, sessions, auth, compat, doctor, media generation, secrets, watchers, and state persistence. |
 | `@clawjs/workspace` | Productivity extension for tasks, notes, people, inbox, events, search, context, and UI descriptors on top of the base SDK. |
+| `@clawjs/database` | Shared database engine, API client, auth, realtime hub, store, and embeddable service app. |
 | `@clawjs/node` | Compatibility wrapper that reexports the primary SDK surface for existing integrations that still import `@clawjs/node`. |
 | `@clawjs/cli` | Official CLI with `claw` and `clawjs` binaries for scaffolding, runtime management, workspace ops, productivity commands, sessions, media, and package-aware project generation. |
 | `@clawjs/openclaw-plugin` | OpenClaw bridge plugin for gateway RPC methods, observability hooks, and managed tooling. |
@@ -68,20 +69,39 @@ ClawJS keeps a stable internal layer under `.clawjs/` even when runtimes disagre
 
 ## Start Here
 
-- [Getting Started](/getting-started) for the official scaffold and workspace flow.
-- [Project Tracking](/tracking/) for the shared progress and backlog view across repository areas.
-- [CLI](/cli) for the current command surface, including productivity and media commands.
-- [Database service](/database) for the standalone namespace-based data service and admin console.
-- [Time service](/time) for the standalone calendar and scheduler control plane.
-- [ERP backend](https://github.com/clawic/clawjs/tree/main/erp) for the standalone ledger-first ERP backend, CLI bridge, and frontend contract package in this repo.
-- [Execution Plane](/execution-plane) for the standalone control plane that manages agent-authored code, workers, runs, notebooks, and deployments.
-- [Terminology](/terminology) for the canonical product vocabulary.
-- [Runtime](/runtime) for the adapter contract and capability model.
+### First success
+
+- [Getting Started](/getting-started) for the zero-config starter path and the production runtime path.
+- [Setup and First Workspace](/setup) for manual integration into an existing repository.
+- [Support Matrix](/support-matrix) before choosing an adapter for production work.
+
+### Build apps
+
 - [Workspace](/workspace) for the stable `.clawjs` layout and the `@clawjs/workspace` productivity layer.
+- [Sessions](/sessions) for stored conversations, streaming, documents, title generation, and native runtime chat boundaries.
+- [Files & Templates](/files) for template packs, bindings, and managed blocks.
+- [Plugin Authoring](/plugins) for scaffolded distributable plugins and the OpenClaw bridge.
+
+### Operate runtimes
+
+- [Runtime](/runtime) for the adapter lifecycle, capability model, and transport policy.
+- [Diagnostics & Repair](/diagnostics) for compat refresh and doctor flows.
+- [Authentication](/authentication) for provider login and auth state.
+
+### Use services
+
+- [Database](/database) for local-first CRUD, the standalone service, scoped tokens, files, and realtime.
+- [Time Service](/time) for calendar, routines, deadlines, follow-ups, executions, and timeline views.
+- [Content Service](/content), [Notify](/notify), [IoT](/iot), [Vault](/vault), [Drive](/drive), and [Execution Plane](/execution-plane) for standalone service surfaces.
+
+### Integrate remotely
+
 - [Relay](/relay) for the public HTTPS relay, reverse connector flow, and remote workspace routing model.
 - [Interface Matrix](/interface-matrix) for the side-by-side SDK, CLI, and Relay API comparison.
-- [Files & Templates](/files) for template packs, bindings, and managed blocks.
-- [Sessions](/sessions) for session storage and stream events.
-- [Diagnostics & Repair](/diagnostics) for compat refresh and doctor flows.
+
+### Reference
+
+- [CLI](/cli) for the command surface.
 - [API Reference](/api) for the instance namespaces and runtime-facing methods.
-- [Public Surface](/surface) for the exhaustive package export inventory.
+- [Public Surface](/surface) for the package export inventory.
+- [Terminology](/terminology) for canonical product vocabulary.

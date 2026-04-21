@@ -7,6 +7,21 @@ description: Session storage, normalized stream events, and adapter-aware transp
 
 Session data lives in `.clawjs/sessions/<session-id>.jsonl`. The store keeps session headers and message events in a line-delimited format, independent of the selected runtime adapter.
 
+## Which Surface To Use
+
+| Need | Use | Why |
+| --- | --- | --- |
+| Persist a conversation turn without generating a reply | `claw.sessions.appendMessage()` | Writes the normalized message and document refs to the workspace transcript. |
+| Stream UI events with transport, retry, title, and error metadata | `claw.sessions.streamAssistantReplyEvents()` or `claw sessions stream --events` | Best for apps, logs, and agents that need deterministic observability. |
+| Stream only assistant text chunks | `claw.sessions.streamAssistantReply()` or `claw sessions stream` | Best for simple terminal or text-only UI output. |
+| Generate or refresh a title | `claw.sessions.generateTitle()` or `claw sessions generate-title` | Uses the same adapter-aware transport policy without sending a full product reply. |
+| Attach files to chat | `claw.documents.upload()` or `register()`, then pass `message.documents` | Keeps blobs in the document store and transcripts lightweight. |
+| Use native OpenClaw session keys or native chat history | `claw.runtime.openclaw.sessions.*` and `claw.runtime.openclaw.chat.*` | Keeps adapter-specific gateway semantics out of the generic session store. |
+
+Default to `streamAssistantReplyEvents()` for product apps. It exposes
+the same text as the raw stream and also tells you which transport was
+used, whether fallback happened, and whether the title changed.
+
 ## Listing sessions
 
 The Node API exposes:

@@ -1,4 +1,9 @@
-# Onboarding Basico Example
+---
+title: Onboarding Basic Example
+description: Minimal local-first onboarding flow using the demo adapter, workspace init, inspect, and runtime status.
+---
+
+# Onboarding Basic Example
 
 This example shows the smallest first-run flow you can build on top of ClawJS:
 

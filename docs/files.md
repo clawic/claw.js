@@ -54,6 +54,19 @@ The supported mutation modes are `seed_if_missing`, `replace_full`,
 `prepend`, `append`, `insert_before_anchor`, `insert_after_anchor`, and
 `managed_block`.
 
+### Template Pack Rules
+
+- `seed_if_missing` writes only when the target file does not exist.
+- `replace_full` replaces the entire target file and should be reserved
+  for generated files or explicit reset flows.
+- `prepend` and `append` do not deduplicate existing content.
+- Anchor insertions fail safely when the anchor is missing; use preview
+  output before applying packs that depend on anchors.
+- `managed_block` targets one block id and replaces only that block's
+  inner content when valid markers already exist.
+- Relative mutation paths are resolved under the workspace root. Sidecar
+  content is resolved next to the `template-pack.json` that references it.
+
 ## Managed Blocks
 
 Managed blocks use the exact marker format
@@ -90,6 +103,22 @@ const merged = mergeManagedBlocks(serialized, "# user edits");
 | `listManagedBlockProblems(content)` | Detects missing or duplicate markers. |
 | `previewManagedBlockMutation(original, blockId, content)` | Returns the before/after preview for a single block update. |
 | `mergeManagedBlocks(original, edited, options?)` | Reinserts managed blocks into edited content, optionally for selected block ids only. |
+
+### Managed Block Safety
+
+- A managed block is valid only when exactly one start marker and one end
+  marker exist for the block id and the start appears before the end.
+- Duplicate start or end markers are reported by
+  `listManagedBlockProblems()` and should be fixed before applying an
+  automated mutation.
+- `previewManagedBlockMutation()` is the safe preflight for one block; it
+  shows the before/after content without writing.
+- `mergeManagedBlocks(original, edited)` preserves managed blocks from
+  the original file while accepting user edits around them.
+- `writeWorkspaceFilePreservingManagedBlocks()` is the safe full-file
+  write when generated content should not destroy current managed blocks.
+- If two template mutations target the same block id in one pack, the
+  later mutation wins after earlier mutations have been applied.
 
 ## Binding Sync
 

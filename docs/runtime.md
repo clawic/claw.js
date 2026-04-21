@@ -14,8 +14,10 @@ are **runtime adapters**. They are not gateways.
 
 <div class="callout">
 
-**Supported adapters:** `openclaw`, `zeroclaw`, `picoclaw`, `nanobot`,
-`nanoclaw`, `nullclaw`, `ironclaw`, `nemoclaw`, `hermes`.
+**Supported adapters:** `demo`, `openclaw`, `zeroclaw`, `picoclaw`,
+`nanobot`, `nanoclaw`, `nullclaw`, `ironclaw`, `nemoclaw`, `hermes`.
+Use `demo` for generated zero-config starters and `openclaw` for the
+production-supported real runtime path.
 
 </div>
 

@@ -1,3 +1,8 @@
+---
+title: Settings Runtime Agents Example
+description: Example settings page for runtime status, workspace context, setup actions, and model switching.
+---
+
 # Settings Runtime Agents Example
 
 This example is the operational counterpart to chat and onboarding. It shows how to surface:

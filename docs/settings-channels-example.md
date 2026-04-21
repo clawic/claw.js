@@ -1,3 +1,8 @@
+---
+title: Settings Channels Example
+description: Example integrations settings surface for channel status and scheduler state.
+---
+
 # Settings Channels Example
 
 This example focuses on the settings surface most integrations need first:

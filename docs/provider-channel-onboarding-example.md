@@ -1,4 +1,9 @@
-# Provider And Channel Onboarding Example
+---
+title: Provider and Channel Onboarding Example
+description: Example onboarding flow for provider, model, channel, and runtime setup state.
+---
+
+# Provider and Channel Onboarding Example
 
 This example mirrors a product onboarding where the user:
 

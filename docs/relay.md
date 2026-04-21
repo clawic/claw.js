@@ -95,6 +95,35 @@ materialized/<projectId>/<agentId>/
 
 The materialized workspace remains the execution target. A project is not a workspace alias.
 
+## Identity and Routing Map
+
+| Identifier | Owned by | Meaning |
+| --- | --- | --- |
+| `tenantId` | Relay control plane | Tenant boundary for users, connectors, projects, agents, and workspace grants. |
+| `projectId` | Relay product model | Shared product or business context exposed through project-scoped routes. |
+| `agentId` | Relay product model | Reusable logical agent role and connector identity. |
+| `assignment` | Relay product model | Concrete `projectId + agentId` pairing that materializes into one runtime workspace. |
+| `workspaceId` | ClawJS workspace model | Isolated workspace context used by SDK, CLI, and Relay workspace routes. |
+| `runtimeAgentId` | Runtime adapter | Adapter-facing agent id written into the materialized workspace for OpenClaw setup and sessions. |
+| `connectorId` | Relay connector lifecycle | One reverse WebSocket process connected behind NAT for a tenant and logical agent. |
+
+Worked request flow:
+
+1. A client authenticates and calls a project-scoped route with
+   `tenantId`, `projectId`, and `agentId`.
+2. Relay resolves the project-agent assignment and its materialized
+   `workspaceId` and `runtimeAgentId`.
+3. Relay finds the active `connectorId` for the tenant and logical
+   agent.
+4. Relay forwards an `invoke` frame over `/v1/connector/connect`.
+5. The connector executes the request against the materialized workspace
+   on disk.
+6. The runtime adapter uses `runtimeAgentId` for native runtime setup,
+   status, and session behavior.
+7. Relay returns the connector result to the original HTTPS client.
+
+If no active connector matches the request, Relay fails fast with `503`.
+
 ## Quick Start
 
 The relay is a separate app under `relay/`. It is not part of the root npm workspace bootstrap.

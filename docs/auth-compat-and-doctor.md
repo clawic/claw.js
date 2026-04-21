@@ -1,3 +1,8 @@
+---
+title: Auth, Compat, and Doctor
+description: Auth state, runtime compatibility snapshots, and doctor reports across runtime adapters.
+---
+
 # Auth, Compat, and Doctor
 
 ClawJS keeps auth, runtime compatibility, and workspace health in separate stores so they can be refreshed independently across runtime adapters.

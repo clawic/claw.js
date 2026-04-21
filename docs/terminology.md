@@ -1,3 +1,8 @@
+---
+title: Terminology
+description: Canonical product terms for runtime adapters, workspaces, agents, providers, models, and gateways.
+---
+
 # ClawJS Terminology
 
 This document is the canonical naming reference for ClawJS and the wider `create-claw-*` portfolio.

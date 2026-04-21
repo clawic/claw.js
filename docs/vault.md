@@ -58,6 +58,10 @@ Default local credentials:
 - admin: `admin@vault.local` / `vault-admin`
 - operator: `operator@vault.local` / `vault-operator`
 
+These credentials and the default URL are disposable local-development
+defaults. Real secrets should only be configured in an isolated Vault
+tenant with explicit host, header, lease, and action policies.
+
 The native macOS operator app lives in `apps/vault-macos/`:
 
 ```bash

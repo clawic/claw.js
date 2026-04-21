@@ -1,3 +1,8 @@
+---
+title: Git Workflow
+description: Branch, release, and merge workflow for the ClawJS repository.
+---
+
 # Git Workflow
 
 This repository should launch with a small set of long-lived branches and strict merge discipline.

@@ -50,6 +50,10 @@ Default local URL:
 - [http://127.0.0.1:4610](http://127.0.0.1:4610)
 - Hub UI: [http://127.0.0.1:4360](http://127.0.0.1:4360)
 
+These credentials, URLs, mock push providers, and example tokens are
+local-development defaults. Do not use them for real users, devices, or
+production notification delivery.
+
 ## Core routes
 
 - `POST /v1/auth/admin/login`

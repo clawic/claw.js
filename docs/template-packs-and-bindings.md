@@ -1,3 +1,8 @@
+---
+title: Template Packs and Bindings
+description: Repository-level narrative for template packs, managed settings, and settings-to-file projections.
+---
+
 # Template Packs and Settings-to-File Bindings
 
 ClawJS treats file mutations as structured operations instead of raw string replacement.

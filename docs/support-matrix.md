@@ -1,3 +1,8 @@
+---
+title: Support Matrix
+description: Runtime adapter stability, support level, and recommended production defaults.
+---
+
 # Support Matrix
 
 ClawJS uses explicit support tiers.

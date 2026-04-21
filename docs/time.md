@@ -26,6 +26,12 @@ Use the standalone service through the main CLI:
 
 ```bash
 claw time list --time-url http://127.0.0.1:4730
+claw time pause item_123 --time-url http://127.0.0.1:4730
+claw time resume item_123 --time-url http://127.0.0.1:4730
+claw time run item_123 --time-url http://127.0.0.1:4730
+claw time executions --item-id item_123 --time-url http://127.0.0.1:4730
+claw time calendar --time-url http://127.0.0.1:4730
+claw time timeline --time-url http://127.0.0.1:4730
 claw schedule every "3h" "check deployment health" --time-url http://127.0.0.1:4730
 ```
 
@@ -57,6 +63,13 @@ await claw.time.create({
     anchorId: "thread-42",
   },
 });
+
+await claw.time.pause("item_123");
+await claw.time.resume("item_123");
+const run = await claw.time.runNow("item_123");
+const executions = await claw.time.listExecutions("item_123");
+const calendar = await claw.time.calendarView();
+const timeline = await claw.time.timelineView();
 ```
 
 ## Data Model
@@ -72,3 +85,14 @@ The canonical record is `TemporalItem` with:
 
 Store timestamps in UTC and keep an IANA timezone on the item so the
 service can normalize natural input and recurring schedules correctly.
+
+## Execution Views
+
+- `pause` and `resume` change whether the scheduler should evaluate the
+  item.
+- `run` / `runNow()` executes an item immediately and records a
+  `TemporalExecution`.
+- `executions` lists historical runs, optionally scoped to one item.
+- `calendar` returns date-bounded entries suitable for calendar UIs.
+- `timeline` returns chronological temporal items for activity and
+  planning views.

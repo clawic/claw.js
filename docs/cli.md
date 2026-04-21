@@ -62,16 +62,38 @@ Generated repositories include a root `claw.project.json` file. That is
 how `generate`, `add`, and `info` know where to write and register
 resources.
 
-## Productivity Commands
+## Magic Database Workflow
 
-The productivity surface is built into the CLI. In any directory, the
-commands below autobootstrap a local SQLite store at
-`.clawjs/data/productivity.sqlite` without `workspace init` and without
-installing `@clawjs/workspace` into the target project.
+The primary productivity and data workflow is `claw db ...`. In any
+directory outside an existing Claw workspace project, it autobootstraps
+a local database at `.clawjs/data/database.sqlite` with no schema setup
+step and no separate workspace install.
 
 ```bash
+claw db task "Triage docs drift"
+claw db tasks list
+claw db leads create --set name=Ada --set website=https://ada.dev
+claw db leads schema
+claw db leads list --url http://127.0.0.1:4510 --token <token>
+```
+
+The CLI auto-normalizes common field synonyms, keeps unknown fields
+without failing the write, and auto-creates custom collections on first
+write. Use `--json` for raw record envelopes and machine-readable
+output.
+
+## Productivity Aliases
+
+The productivity nouns remain available as convenience aliases over the
+same CRUD facade for overlapping verbs:
+
+```bash
+claw areas create "Personal Ops" --status active
+claw areas list
+
 claw tasks list
 claw tasks create --title "Triage docs drift"
+claw tasks move --ids task-123 --project-id project-123 --goal-id goal-123
 claw tasks complete --id task-123
 
 claw goals list
@@ -79,6 +101,29 @@ claw goals create "Ship local-first productivity" --project-id project-123
 
 claw projects list
 claw projects create "Workspace Core" --status in_progress
+claw projects archive project-123 --cascade
+
+claw milestones list
+claw milestones create "CLI beta" --project-id project-123 --area-id area-123
+
+claw activity list --task-id task-123
+
+claw blockers list
+claw blockers create "Waiting on approval" --kind policy_block --task-id task-123
+
+claw artifacts list
+claw artifacts create "Staging screenshot" --kind screenshot --task-id task-123 --summary "Proof of the final state"
+
+claw decisions list
+claw decisions create "Keep the loop on /tasks" --status accepted --task-id task-123
+
+claw work-sessions list
+claw work-sessions create "Focus shipping" --task-ids task-123 --timebox-minutes 25
+claw work-sessions complete work-session-123 --outcome "Closed the loop"
+claw assignments create "Reviewer owns release gate" --task-id task-123 --assigned-to-agent-id reviewer
+claw handoffs create "Pass release validation" --task-id task-123 --from-agent-id planner --to-agent-id reviewer
+claw approvals create "Approve publish" --kind publish --task-id task-123 --policy-reason "Publishing requires sign-off"
+claw capacity create "Reviewer capacity" --agent-id reviewer --max-wip 2 --current-wip 1
 
 claw reminders list --before 2026-03-28T00:00:00Z
 claw reminders create "Follow up" --trigger-at 2026-03-27T09:00:00Z --anchor-type task --anchor-id task-123
@@ -96,19 +141,36 @@ claw inbox list
 claw inbox read --id thread-123
 claw inbox draft --channel email --content "Thanks"
 claw inbox archive --id thread-123
+claw inbox process thread-123 --task-title "Reply" --note-title "Summary"
 
 claw events list
 claw events create --title "Release sync" --starts-at 2026-03-27T09:00:00Z
+
+claw my-work --json
+claw team-work --json
+claw agenda --json
+claw review daily --json
+claw export snapshot.json
+claw import snapshot.json --replace
+claw backup backups/
 
 claw workspace-search query "release" --domains tasks,notes,inbox
 claw workspace-index rebuild
 ```
 
-Use `--json` when you want the raw records back. `workspace-search
-query` also accepts `--strategy auto|keyword|semantic|hybrid`,
-`--limit`, and `--include-archived`. `reminders list` and
-`deadlines list` also accept `--before` and `--after` filters over
-their due timestamps.
+For overlapping CRUD verbs, `claw tasks ...`, `claw notes ...`,
+`claw people ...`, `claw projects ...`, `claw goals ...`,
+`claw reminders ...`, `claw deadlines ...`, and `claw events ...`
+follow the same local-first behavior and record normalization as
+`claw db <collection> ...`. `workspace-search query` also accepts
+`--strategy auto|keyword|semantic|hybrid`,
+`--limit`, and `--include-archived`. `my-work` returns the current
+single-agent operating view, including triage threads, ready work,
+blockers, pending decisions, the active focus session, and recent
+artifacts. `team-work` returns the coordination view across assignments,
+handoffs, approvals, and capacity. `reminders list` and `deadlines
+list` also accept `--before` and `--after` filters over their due
+timestamps.
 
 ## Time Commands
 
@@ -123,9 +185,12 @@ claw schedule every "3h" "check deployment health" --time-url http://127.0.0.1:4
 claw schedule after "24h if no reply" "follow up" --anchor-type thread --anchor-id thread-42 --time-url http://127.0.0.1:4730
 ```
 
-Use `--time-url` or `CLAWJS_TIME_URL` to point the CLI at the standalone
-`time/` service. `--time-token` or `CLAWJS_TIME_TOKEN` adds optional
-bearer auth when the service is fronted by a gateway.
+By default, `claw time ...`, `claw schedule ...`, `claw reminders ...`,
+`claw deadlines ...`, and `claw events ...` use the embedded local
+temporal engine. Use `--time-url` or `CLAWJS_TIME_URL` only when you
+want to point the CLI at the standalone `time/` service instead.
+`--time-token` or `CLAWJS_TIME_TOKEN` adds optional bearer auth when
+that service is fronted by a gateway.
 
 ## Secrets Commands
 
@@ -177,29 +242,102 @@ claw --runtime openclaw doctor
 files. `doctor` returns a combined runtime/workspace/managed-block
 report.
 
+## Database Commands
+
+`claw db ...` is the high-level, local-first database surface:
+
+```bash
+claw db task "Ship CLI"
+claw db tasks list
+claw db leads create --set name=Ada --set website=https://ada.dev
+claw db leads update rec_123 --set status=qualified
+claw db leads get rec_123
+claw db leads delete rec_123
+claw db leads schema
+```
+
+Use `--namespace main`, `--url`, and `--token` when you want the same
+surface against a remote database service instead of the local store.
+
 ## Database Bridge
 
 ```bash
-claw database serve --url http://127.0.0.1:4510
+claw database serve
 claw database login --url http://127.0.0.1:4510 --email admin@database.local --password database-admin
 claw database namespace list --url http://127.0.0.1:4510 --token <admin-token>
 claw database collection create --namespace main --name leads --fields '[{"name":"name","type":"text","required":true}]' --url http://127.0.0.1:4510 --token <admin-token>
 claw database record create --namespace main --collection leads --data '{"name":"Ada"}' --url http://127.0.0.1:4510 --token <admin-token>
-claw database token mint --url http://127.0.0.1:4510 --token <admin-token>
+claw database token create --url http://127.0.0.1:4510 --token <admin-token>
 claw database file upload --namespace main --collection leads --record rec_123 --file ./avatar.png --url http://127.0.0.1:4510 --token <admin-token>
 ```
 
-`claw database ...` delegates to the standalone CLI shipped inside the
-repo-local `database/` app. Use `--database-dir` or `CLAWJS_DATABASE_DIR`
-when the app lives outside the default monorepo path.
+`claw database ...` is the low-level admin/operator surface for serving
+the database service, schema management, tokens, records, and files. Use
+`claw db ...` for the normal local-first CRUD workflow. Use
+`--database-dir` or `CLAWJS_DATABASE_DIR` only when you want to point
+the bridge at a custom standalone app checkout during development.
+
+The URL and seeded credentials above are disposable local-development
+defaults. Do not reuse them for a shared or production service.
+
+## Content Bridge
+
+```bash
+claw content serve
+claw content login --url http://127.0.0.1:4650 --email admin@content.local --password content-admin
+claw content brand list --url http://127.0.0.1:4650 --token <admin-token>
+claw content destination list --url http://127.0.0.1:4650 --token <admin-token>
+claw content campaign list --url http://127.0.0.1:4650 --token <admin-token>
+claw content entry list --url http://127.0.0.1:4650 --token <admin-token>
+claw content variant list --url http://127.0.0.1:4650 --token <admin-token>
+claw content approval list --url http://127.0.0.1:4650 --token <admin-token>
+claw content publish plans --url http://127.0.0.1:4650 --token <admin-token>
+claw content token issue --url http://127.0.0.1:4650 --token <admin-token>
+```
+
+`claw content ...` delegates to the standalone content-service CLI. Use
+it for CMS and social-publishing administration: brands, destinations,
+campaigns, entries, variants, approvals, publish plans, publication
+runs, and scoped tokens. The local URL and seeded account are only for
+disposable development data.
+
+## Notify Bridge
+
+```bash
+claw notify send --notify-url http://127.0.0.1:4610 --notify-source-token <source-token> --context-json '{"tenantId":"demo"}' --delivery-json '{"mode":"alert","title":"hello"}'
+claw notify cancel <notification-id> --notify-url http://127.0.0.1:4610 --notify-source-token <source-token>
+claw notify subscriptions upsert --notify-url http://127.0.0.1:4610 --notify-client-token <client-token> --source-app-id ops-center --agent-id deployer
+claw notify subscriptions delete <subscription-id> --notify-url http://127.0.0.1:4610 --notify-client-token <client-token>
+```
+
+Use source tokens for emitting or canceling notifications. Use client
+tokens for user-facing subscription changes. Keep these examples on a
+local Notify service unless you have explicitly configured real source
+and client credentials.
 
 ## ERP Bridge
 
 ```bash
+claw erp serve
 claw erp login --url http://127.0.0.1:4530 --email admin@erp.local --password erp-admin
 claw erp tenant bootstrap --name "Acme ERP" --pack es_eu --url http://127.0.0.1:4530 --token <admin-token>
+claw erp company list --tenant tenant_123 --url http://127.0.0.1:4530 --token <admin-token>
+claw erp localization status --tenant tenant_123 --url http://127.0.0.1:4530 --token <admin-token>
+claw erp gl account-list --tenant tenant_123 --url http://127.0.0.1:4530 --token <admin-token>
+claw erp ar invoice-list --tenant tenant_123 --url http://127.0.0.1:4530 --token <admin-token>
+claw erp ap bill-list --tenant tenant_123 --url http://127.0.0.1:4530 --token <admin-token>
 claw erp sales quote-create --tenant tenant_123 --entity entity_123 --branch branch_123 --customer "Ada" --amount 125000 --url http://127.0.0.1:4530 --token <admin-token>
+claw erp purchase order-list --tenant tenant_123 --url http://127.0.0.1:4530 --token <admin-token>
+claw erp inventory stock-list --tenant tenant_123 --url http://127.0.0.1:4530 --token <admin-token>
+claw erp mrp plan-list --tenant tenant_123 --url http://127.0.0.1:4530 --token <admin-token>
+claw erp projects list --tenant tenant_123 --url http://127.0.0.1:4530 --token <admin-token>
+claw erp hr employee-list --tenant tenant_123 --url http://127.0.0.1:4530 --token <admin-token>
+claw erp payroll run-list --tenant tenant_123 --url http://127.0.0.1:4530 --token <admin-token>
+claw erp support ticket-list --tenant tenant_123 --url http://127.0.0.1:4530 --token <admin-token>
+claw erp docs list --tenant tenant_123 --url http://127.0.0.1:4530 --token <admin-token>
 claw erp reports dashboard --tenant tenant_123 --entity entity_123 --url http://127.0.0.1:4530 --token <admin-token>
+claw erp agents list --tenant tenant_123 --url http://127.0.0.1:4530 --token <admin-token>
+claw erp approvals list --tenant tenant_123 --url http://127.0.0.1:4530 --token <admin-token>
 ```
 
 `claw erp ...` delegates to the standalone CLI shipped inside the
@@ -209,9 +347,11 @@ lives outside the default monorepo path.
 ## IoT Bridge
 
 ```bash
+claw iot serve
 claw iot homes list --url http://127.0.0.1:4520
 claw iot areas list
 claw iot things list --kind light
+claw iot state get
 claw iot lights off office
 claw iot climate set thermostat --temperature 21
 claw iot scenes activate scene_good_night
@@ -223,6 +363,17 @@ claw iot raw invoke --connector home-assistant --target light.office_main --acti
 `claw iot ...` delegates to the standalone CLI shipped inside the
 repo-local `iot/` app. Use `--iot-dir` or `CLAWJS_IOT_DIR` when the app
 lives outside the default monorepo path.
+
+## Shared Browser Bridge
+
+```bash
+claw browser status --relay-url http://127.0.0.1:4410 --access-token <access-token> --tenant-id demo-tenant --agent-id demo-agent --workspace-id main
+claw browser ensure --relay-url http://127.0.0.1:4410 --access-token <access-token> --tenant-id demo-tenant --agent-id demo-agent --workspace-id main --url https://example.org
+claw browser share --relay-url http://127.0.0.1:4410 --access-token <access-token> --tenant-id demo-tenant --agent-id demo-agent --workspace-id main
+```
+
+The browser bridge calls Relay workspace browser-session routes. Use it
+only after a relay connector is online for the target workspace.
 
 ## Workspace Commands
 

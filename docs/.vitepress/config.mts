@@ -50,6 +50,7 @@ export default defineConfig({
         items: [
           { text: "Introduction", link: "/" },
           { text: "Getting Started", link: "/getting-started" },
+          { text: "Manual Setup", link: "/setup" },
           { text: "Terminology", link: "/terminology" },
           { text: "Support Matrix", link: "/support-matrix" },
         ],
@@ -74,12 +75,27 @@ export default defineConfig({
         items: [
           { text: "CLI", link: "/cli" },
           { text: "API Reference", link: "/api" },
+          { text: "Interface Matrix", link: "/interface-matrix" },
           { text: "Public Surface", link: "/surface" },
+        ],
+      },
+      {
+        text: "Services",
+        items: [
+          { text: "Database", link: "/database" },
+          { text: "Time Service", link: "/time" },
+          { text: "Content Service", link: "/content" },
+          { text: "Notify", link: "/notify" },
+          { text: "IoT", link: "/iot" },
+          { text: "Vault", link: "/vault" },
+          { text: "Drive", link: "/drive" },
+          { text: "Execution Plane", link: "/execution-plane" },
         ],
       },
       {
         text: "Deep Dives",
         items: [
+          { text: "Plugin Authoring", link: "/plugins" },
           { text: "Template Packs and Bindings", link: "/template-packs-and-bindings" },
           { text: "Runtime Migration Notes", link: "/runtime-migration-notes" },
           { text: "Chat Streaming Example", link: "/chat-streaming-example" },
@@ -92,7 +108,7 @@ export default defineConfig({
       {
         text: "Repository",
         items: [
-          { text: "Tracking Overview", link: "/tracking/" },
+          { text: "Project Tracking", link: "/tracking/" },
           { text: "Tracking Backlog", link: "/tracking/backlog" },
           { text: "Git Workflow", link: "/git-workflow" },
           { text: "Demo Terminology Note", link: "/demo-terminology-note" },

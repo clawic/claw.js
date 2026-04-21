@@ -45,6 +45,10 @@
       { "name": "claw.whatsapp", "tier": "SDK advanced public", "visibility": "advanced" },
       { "name": "claw.inference", "tier": "SDK core", "visibility": "stable" },
       { "name": "claw.secrets", "tier": "SDK advanced public", "visibility": "local-only" },
+      { "name": "claw.time", "tier": "SDK advanced public", "visibility": "advanced" },
+      { "name": "claw.iot", "tier": "SDK advanced public", "visibility": "advanced" },
+      { "name": "claw.content", "tier": "SDK advanced public", "visibility": "advanced" },
+      { "name": "claw.notify", "tier": "SDK advanced public", "visibility": "advanced" },
       { "name": "claw.sessions", "tier": "SDK core", "visibility": "stable" },
       { "name": "claw.documents", "tier": "SDK core", "visibility": "stable" },
       { "name": "claw.data", "tier": "SDK advanced public", "visibility": "advanced" },
@@ -90,7 +94,12 @@
       { "name": "audio", "tier": "CLI local/runtime ops", "commands": ["generate", "list", "read", "delete", "backends"] },
       { "name": "video", "tier": "CLI local/runtime ops", "commands": ["generate", "list", "read", "delete", "backends"] },
       { "name": "generations", "tier": "CLI local/runtime ops", "commands": ["backends", "register-command", "remove-backend", "create", "list", "read", "delete"] },
-      { "name": "database", "tier": "CLI local/runtime ops", "commands": ["serve", "login", "namespace", "collection", "record", "token", "file"] }
+      { "name": "browser", "tier": "CLI local/runtime ops", "commands": ["status", "ensure", "share"] },
+      { "name": "notify", "tier": "CLI local/runtime ops", "commands": ["send", "cancel", "subscriptions upsert", "subscriptions delete"] },
+      { "name": "database", "tier": "CLI local/runtime ops", "commands": ["serve", "login", "namespace", "collection", "record", "token", "file"] },
+      { "name": "content", "tier": "CLI local/runtime ops", "commands": ["serve", "login", "brand", "destination", "campaign", "entry", "variant", "approval", "publish", "token"] },
+      { "name": "erp", "tier": "CLI local/runtime ops", "commands": ["serve", "login", "tenant", "company", "localization", "gl", "ar", "ap", "sales", "purchase", "inventory", "mrp", "projects", "hr", "payroll", "support", "docs", "reports", "agents", "approvals"] },
+      { "name": "iot", "tier": "CLI local/runtime ops", "commands": ["serve", "homes", "areas", "things", "state", "lights", "climate", "scenes", "automations", "approvals", "raw"] }
     ]
   },
   "relay": {

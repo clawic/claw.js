@@ -128,6 +128,13 @@ The productivity layer stores its records under `.clawjs/data` while the
 base workspace metadata stays under the stable `.clawjs/manifest`,
 `compat`, `intents`, `observed`, and `projections` folders.
 
+The current local-first database path is
+`.clawjs/data/database.sqlite`. Older workspaces that still contain the
+legacy productivity database are detected and migrated by the local data
+layer. After migration, new writes should use `claw db ...`,
+`@clawjs/workspace`, or the database service APIs instead of writing the
+old file directly.
+
 That split matters:
 
 - `.clawjs/manifest`, `intents`, `observed`, and `projections` are SDK-owned control planes

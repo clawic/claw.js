@@ -10,6 +10,15 @@ designed for a compact self-hosted deployment shape: one HTTPS-facing
 service, one SQLite database, one admin console, and scoped API access
 for agents or apps.
 
+ClawJS now exposes database behavior through three related surfaces:
+
+- `claw db ...` for the normal local-first CRUD workflow backed by
+  `.clawjs/data/database.sqlite`
+- `claw database ...` for low-level service administration and remote
+  namespace operations
+- `@clawjs/database` for the shared service app, store, API client,
+  auth helpers, and realtime hub used by the standalone service and CLI
+
 ## What v1 includes
 
 - namespaces that behave like separate logical databases
@@ -38,7 +47,22 @@ Default local URL:
 
 - [http://127.0.0.1:4510](http://127.0.0.1:4510)
 
+These credentials and the default URL are disposable local-development
+defaults. Do not reuse them for shared, staging, or production services.
+
 ## CLI
+
+For local-first data and productivity records, use `claw db ...`:
+
+```bash
+claw db task "Ship database docs"
+claw db tasks list
+claw db leads create --set name=Ada --set website=https://ada.dev
+claw db leads schema
+```
+
+Use `--namespace main`, `--url`, and `--token` when the same CRUD facade
+should target a running database service.
 
 The app ships its own CLI:
 
@@ -51,3 +75,29 @@ The main `claw` CLI also exposes the same surface through a thin bridge:
 ```bash
 claw database namespace list --url http://127.0.0.1:4510 --token <admin-token>
 ```
+
+Use the bridge for admin/operator operations: serving the database app,
+logging in, managing namespaces, collections, records, scoped tokens, and
+files.
+
+## Shared Package Surface
+
+`@clawjs/database` publishes the reusable implementation pieces:
+
+- `buildDatabaseApp()` for embedding the Fastify service
+- `loadDatabaseConfig()` and `DatabaseServiceConfig` for runtime config
+- `DatabaseServiceStore` for the SQLite-backed namespace, schema,
+  record, token, and file store
+- `DatabaseApiClient` for remote admin and scoped-token calls
+- `DatabaseAuthService`, `hashSecret()`, and `generateOpaqueToken()` for
+  admin/scoped-token auth
+- `RealtimeHub` and `RecordChangeEvent` for WebSocket record events
+
+## Migration Note
+
+The local-first CLI now stores data at `.clawjs/data/database.sqlite`.
+Existing workspaces that still have the older productivity database are
+recognized and migrated forward by the local database layer. Treat that
+migration as one-way for normal usage: once the new database is active,
+new writes should go through `claw db ...` or the workspace productivity
+facades.

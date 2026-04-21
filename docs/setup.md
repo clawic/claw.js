@@ -1,7 +1,13 @@
+---
+title: Setup and First Workspace
+description: Manual integration checklist for existing repositories and advanced workspace setup.
+---
+
 # Setup and First Workspace
 
-This page is the condensed operational checklist. The canonical walkthrough
-now lives in [Getting Started](/getting-started).
+This page is the manual integration checklist for existing repositories
+and advanced setup flows. The canonical first-run walkthrough lives in
+[Getting Started](/getting-started).
 
 ## Minimal Flow
 

@@ -1,3 +1,8 @@
+---
+title: Drive
+description: Standalone local-first file, document, upload, revision, and sharing service.
+---
+
 # Drive
 
 `drive/` is a local-first Google Drive-style product surface for ClawJS.
@@ -47,6 +52,9 @@ Default local admin credentials:
 email: admin@localhost
 password: admin
 ```
+
+These credentials and the default URL are disposable local-development
+defaults. Do not use them against shared or production Drive services.
 
 ## CLI
 

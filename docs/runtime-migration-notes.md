@@ -1,3 +1,8 @@
+---
+title: Runtime Migration Notes
+description: Upgrade and migration notes for runtime adapter behavior and workspace contracts.
+---
+
 # Runtime Migration Notes
 
 This repo keeps compatibility normalization logic for the current workspace snapshot path. When adapter behavior changes, prefer schema normalization over ad hoc file rewrites.
