@@ -13,6 +13,7 @@ import {
 import type { TelegramSendMediaInput, TelegramSendMessageInput } from "@clawjs/claw";
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { RuntimeAdapterId, TemporalItem } from "@clawjs/core";
+import { runMemoryCli } from "./memory-local.ts";
 import {
   addProjectIntegration,
   collectProjectInfo,
@@ -68,7 +69,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} scheduler list|run|enable|disable`,
     `  ${binName} time list|get|create|update|delete|pause|resume|run|executions|calendar|timeline`,
     `  ${binName} schedule at|every|after ...`,
-    `  ${binName} memory list|status|inspect|search`,
+    `  ${binName} memory save|list|get|update|delete|search|context|status|capabilities`,
     `  ${binName} tasks list|get|create|update|complete|search`,
     `  ${binName} goals list|get|create|update|delete|search`,
     `  ${binName} projects list|get|create|update|delete|search`,
@@ -700,6 +701,35 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
   const flags = parseFlags(argv);
   const binName = context.binName?.trim() || DEFAULT_CLI_BIN;
   const usage = buildCliUsage(binName);
+
+  if (group === "memory") {
+    const memoryWorkspaceRoot = flags.workspace || context.cwd;
+    const memoryWorkspaceId = flags["workspace-id"] || pathSafeBasename(memoryWorkspaceRoot);
+    const memoryAgentId = flags["agent-id"] || memoryWorkspaceId;
+    const memoryRuntimeAdapterId = resolveRuntimeAdapterId(flags);
+    return await runMemoryCli({
+      argv,
+      positionals,
+      flags,
+      workspaceRoot: memoryWorkspaceRoot,
+      workspaceId: memoryWorkspaceId,
+      agentId: memoryAgentId,
+      stdout: context.stdout,
+      stderr: context.stderr,
+      wantsJson,
+      binName,
+      runtime: {
+        list: async () => {
+          const claw = await createCliClaw(memoryRuntimeAdapterId, flags, memoryWorkspaceRoot, flags["app-id"] || "clawjs-app", memoryWorkspaceId, memoryAgentId);
+          return await claw.memory.list();
+        },
+        search: async (query) => {
+          const claw = await createCliClaw(memoryRuntimeAdapterId, flags, memoryWorkspaceRoot, flags["app-id"] || "clawjs-app", memoryWorkspaceId, memoryAgentId);
+          return await claw.memory.search(query);
+        },
+      },
+    });
+  }
 
   if (argv.includes("--help") || argv.includes("-h") || group === "help") {
     context.stdout.write(`${usage}\n`);
