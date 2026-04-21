@@ -447,10 +447,14 @@ claw schedule at "monday 9am" "review PRs"
 claw schedule every "3h" "check deployment health"
 claw schedule after "24h if no reply" "follow up"
 
-claw memory list
-claw memory status
-claw memory inspect
-claw memory search --query incident
+claw memory capabilities --json
+claw memory status --json
+claw memory save "User prefers concise answers" --title "Response style" --tags preference
+claw memory list --json
+claw memory get <id> --json
+claw memory search incident --json
+claw memory context "incident response style" --json
+claw memory search incident --source runtime --json
 
 claw skills list
 claw skills inspect
