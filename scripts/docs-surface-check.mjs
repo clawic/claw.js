@@ -20,6 +20,13 @@ const publicDocPages = [
   "authentication.md",
   "relay.md",
   "vault.md",
+  "database.md",
+  "time.md",
+  "content.md",
+  "notify.md",
+  "iot.md",
+  "drive.md",
+  "execution-plane.md",
   "models.md",
   "sessions.md",
   "files.md",
@@ -29,6 +36,7 @@ const publicDocPages = [
   "api.md",
   "surface.md",
   "interface-matrix.md",
+  "plugins.md",
 ];
 
 const forbiddenPatterns = [
@@ -81,6 +89,8 @@ const requiredSnippets = [
       "claw.telegram",
       "claw.secrets",
       "claw.inference",
+      "claw.content",
+      "claw.notify",
       "claw.data",
       "claw.orchestration",
       "claw.providers",
@@ -100,6 +110,11 @@ const requiredSnippets = [
       "tts synthesize",
       "workspace repair",
       "channels status",
+      "browser status",
+      "content serve",
+      "notify send",
+      "erp serve",
+      "iot serve",
     ],
   },
   {
@@ -282,7 +297,8 @@ const surfacePath = path.join(rootDir, "docs", "surface.md");
 const surfaceEntries = new Set(extractSurfaceEntries(surfacePath));
 const sdkExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-node", "dist", "index.d.ts")));
 const coreExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-core", "dist", "index.d.ts")));
-const expectedSurfaceEntries = new Set([...sdkExports, ...coreExports]);
+const databaseExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-database", "dist", "index.d.ts")));
+const expectedSurfaceEntries = new Set([...sdkExports, ...coreExports, ...databaseExports]);
 
 for (const exportName of expectedSurfaceEntries) {
   if (!surfaceEntries.has(exportName)) {
