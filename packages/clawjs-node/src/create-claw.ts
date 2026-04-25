@@ -3411,6 +3411,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           text: action.text,
           media: action.media,
           threadId: action.threadId ?? context.message.threadId,
+          parseMode: action.parseMode,
           agentId,
           metadata: {
             ...(action.metadata ?? {}),

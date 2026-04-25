@@ -6087,6 +6087,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       text: flags.text,
       media: flags.media,
       threadId: flags["thread-id"] || flags["message-thread-id"],
+      parseMode: flags["parse-mode"] as "HTML" | "Markdown" | "MarkdownV2" | undefined,
       agentId: flags.agent,
     });
     if (wantsJson) {

@@ -53,6 +53,84 @@ function accountApiBaseUrl(account: ChannelAccountDescriptor): string {
     : DEFAULT_TELEGRAM_API_BASE_URL;
 }
 
+function escapeTelegramHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function escapeTelegramHtmlAttribute(value: string): string {
+  return escapeTelegramHtml(value).replace(/"/g, "&quot;");
+}
+
+function renderTelegramInlineMarkdown(value: string): string {
+  const parts = value.split(/(`[^`\n]+`)/g);
+  return parts.map((part) => {
+    if (part.startsWith("`") && part.endsWith("`")) {
+      return `<code>${escapeTelegramHtml(part.slice(1, -1))}</code>`;
+    }
+    let rendered = escapeTelegramHtml(part);
+    rendered = rendered.replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, (_match, label: string, href: string) => (
+      `<a href="${escapeTelegramHtmlAttribute(href)}">${label}</a>`
+    ));
+    rendered = rendered.replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>");
+    rendered = rendered.replace(/(^|[^\*])\*([^*\n]+)\*/g, "$1<i>$2</i>");
+    return rendered;
+  }).join("");
+}
+
+function renderTelegramMarkdownHtml(value: string): string {
+  const lines = value.split(/\r?\n/);
+  const rendered: string[] = [];
+  let inFence = false;
+  const fence: string[] = [];
+  for (const line of lines) {
+    if (line.trim().startsWith("```")) {
+      if (inFence) {
+        rendered.push(`<pre><code>${escapeTelegramHtml(fence.join("\n"))}</code></pre>`);
+        fence.length = 0;
+        inFence = false;
+      } else {
+        inFence = true;
+      }
+      continue;
+    }
+    if (inFence) {
+      fence.push(line);
+      continue;
+    }
+    const heading = line.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
+      rendered.push(`<b>${renderTelegramInlineMarkdown(heading[2] ?? "")}</b>`);
+      continue;
+    }
+    const listItem = line.match(/^(\s*)[-*]\s+(.+)$/);
+    if (listItem) {
+      rendered.push(`${listItem[1] ?? ""}• ${renderTelegramInlineMarkdown(listItem[2] ?? "")}`);
+      continue;
+    }
+    rendered.push(renderTelegramInlineMarkdown(line));
+  }
+  if (inFence) rendered.push(`<pre><code>${escapeTelegramHtml(fence.join("\n"))}</code></pre>`);
+  return rendered.join("\n");
+}
+
+function buildTelegramTextPayload(input: SendChannelMessageInput): {
+  text: string;
+  parseMode?: "HTML" | "Markdown" | "MarkdownV2";
+  plainText: string;
+} {
+  const plainText = input.text ?? "";
+  if (input.parseMode) return { text: plainText, parseMode: input.parseMode, plainText };
+  return { text: renderTelegramMarkdownHtml(plainText), parseMode: "HTML", plainText };
+}
+
+function isTelegramHtmlParseError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /parse|entity|can't parse|unsupported start tag|bad request/i.test(message);
+}
+
 function asStringId(value: string | number | bigint): string {
   return String(value);
 }
@@ -347,8 +425,9 @@ export async function sendTelegramAccountMessage(
   input: SendChannelMessageInput,
 ): Promise<ChannelMessageRecord> {
   const account = requireTelegramAccount(options.registry, input.accountId);
-  const response = input.media
-    ? await callTelegramApi<JsonRecord>(
+  const textPayload = buildTelegramTextPayload(input);
+  const send = (text: string, parseMode?: "HTML" | "Markdown" | "MarkdownV2") => input.media
+    ? callTelegramApi<JsonRecord>(
       options.runner,
       options.env,
       account.secretRef!,
@@ -357,11 +436,12 @@ export async function sendTelegramAccountMessage(
       {
         chat_id: input.targetId,
         photo: input.media,
-        ...(input.text ? { caption: input.text } : {}),
+        ...(input.text ? { caption: text } : {}),
+        ...(input.text && parseMode ? { parse_mode: parseMode } : {}),
         ...(input.threadId !== undefined ? { message_thread_id: Number(input.threadId) } : {}),
       },
     )
-    : await callTelegramApi<JsonRecord>(
+    : callTelegramApi<JsonRecord>(
       options.runner,
       options.env,
       account.secretRef!,
@@ -369,10 +449,18 @@ export async function sendTelegramAccountMessage(
       "sendMessage",
       {
         chat_id: input.targetId,
-        text: input.text ?? "",
+        text,
+        ...(parseMode ? { parse_mode: parseMode } : {}),
         ...(input.threadId !== undefined ? { message_thread_id: Number(input.threadId) } : {}),
       },
     );
+  let response: JsonRecord;
+  try {
+    response = await send(textPayload.text, textPayload.parseMode);
+  } catch (error) {
+    if (textPayload.parseMode !== "HTML" || !isTelegramHtmlParseError(error)) throw error;
+    response = await send(textPayload.plainText);
+  }
   const record = options.registry.messages.recordTelegramOutbound({
     ...input,
     provider: "telegram",

@@ -173,7 +173,7 @@ const sent = await claw.channels.messages.send({
   provider: "telegram",
   accountId: "support",
   targetId: "-1001",
-  text: "topic reply",
+  text: "**topic** reply with [docs](https://example.com) and \`code\`",
   threadId: 77,
   agentId: "support-agent",
 });
@@ -210,6 +210,8 @@ process.stdout.write(JSON.stringify({
   deniedCount: deniedMessages.length,
   commands,
   lastThreadId: proxyState.lastSend?.message_thread_id,
+  lastParseMode: proxyState.lastSend?.parse_mode,
+  lastText: proxyState.lastSend?.text,
 }, null, 2));
 `;
 
@@ -235,6 +237,8 @@ process.stdout.write(JSON.stringify({
       deniedCount: number;
       commands: Array<{ command: string; description: string }>;
       lastThreadId: number;
+      lastParseMode?: string;
+      lastText?: string;
     };
 
     expect(payload.accountIds).toEqual(["telegram:ops", "telegram:support"]);
@@ -249,6 +253,10 @@ process.stdout.write(JSON.stringify({
     expect(payload.deniedCount).toBe(0);
     expect(payload.commands[0]?.command).toBe("start");
     expect(payload.lastThreadId).toBe(77);
+    expect(payload.lastParseMode).toBe("HTML");
+    expect(payload.lastText).toContain("<b>topic</b>");
+    expect(payload.lastText).toContain('<a href="https://example.com">docs</a>');
+    expect(payload.lastText).toContain("<code>code</code>");
 
     const processorPath = path.join(tempRoot, "processor.cjs");
     fs.writeFileSync(processorPath, `
