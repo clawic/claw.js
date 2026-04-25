@@ -40,6 +40,8 @@ const statePath = process.env.FAKE_TELEGRAM_PROXY_STATE;
 const url = readFlag("--url") || "";
 const body = readFlag("--body") || "{}";
 const method = url.split("/").pop();
+const tokenMatch = url.match(/\\/bot([^/]+)\\//);
+const token = tokenMatch ? tokenMatch[1] : "";
 const payload = JSON.parse(body);
 const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
 let result;
@@ -82,6 +84,8 @@ switch (method) {
     result = state.commands || [];
     break;
   case "sendMessage":
+    state.lastSend = payload;
+    state.lastSendToken = token;
     result = {
       message_id: 99,
       chat: { id: payload.chat_id, type: "private" },
@@ -89,6 +93,8 @@ switch (method) {
     };
     break;
   case "sendPhoto":
+    state.lastSend = payload;
+    state.lastSendToken = token;
     result = {
       message_id: 100,
       chat: { id: payload.chat_id, type: "private" },
@@ -171,6 +177,10 @@ function createFakeOpenClawMemoryToolchain(): { binDir: string; openclawLog: str
   fs.writeFileSync(openclawPath, `#!/bin/sh
 echo "$@" >> "${openclawLog}"
 if [ "$1" = "memory" ]; then
+  if [ -n "$FAKE_OPENCLAW_MEMORY_SEARCH_FILE" ] && [ -f "$FAKE_OPENCLAW_MEMORY_SEARCH_FILE" ]; then
+    cat "$FAKE_OPENCLAW_MEMORY_SEARCH_FILE"
+    exit 0
+  fi
   if [ -n "$FAKE_OPENCLAW_MEMORY_SEARCH" ]; then
     printf "%s\n" "$FAKE_OPENCLAW_MEMORY_SEARCH"
   else
@@ -1188,6 +1198,154 @@ test("createClaw telegram API supports commands, chat inspection, sending, and u
   assert.equal(await claw.telegram.listChats("alice").then((entries) => entries.length > 0), true);
 });
 
+test("createClaw channels registry supports Telegram accounts, bindings, targets, and messages", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-channels-registry-"));
+  const { proxyPath, statePath } = createFakeSecretsProxy();
+  const claw = await createClaw({
+    runtime: {
+      adapter: "openclaw",
+      env: {
+        ...process.env,
+        CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+        FAKE_TELEGRAM_PROXY_STATE: statePath,
+      },
+    },
+    workspace: {
+      appId: "demo",
+      workspaceId: "channels-registry",
+      agentId: "channels-registry",
+      rootDir: workspaceDir,
+    },
+  });
+
+  const support = await claw.channels.accounts.registerTelegramBot({
+    accountId: "support",
+    secretName: "telegram_support_bot_token",
+    label: "Support Telegram",
+  });
+  const ops = await claw.channels.accounts.registerTelegramBot({
+    accountId: "ops",
+    secretName: "telegram_ops_bot_token",
+    label: "Ops Telegram",
+  });
+  const binding = claw.channels.bindings.grant({
+    agentId: "support-agent",
+    provider: "telegram",
+    accountId: "support",
+    targetId: "1001",
+    permissions: ["read", "write", "ingest"],
+    priority: 10,
+  });
+  const synced = await claw.channels.messages.sync({ accountId: "support", limit: 10 });
+  const sent = await claw.channels.messages.send({
+    provider: "telegram",
+    accountId: "support",
+    targetId: "1001",
+    text: "reply from registry",
+    threadId: 42,
+    agentId: "support-agent",
+  });
+  const deniedMessages = claw.channels.messages.read({
+    agentId: "blocked-agent",
+    provider: "telegram",
+    accountId: "support",
+    targetId: "1001",
+  });
+
+  const accounts = claw.channels.accounts.list("telegram");
+  const targets = claw.channels.targets.list({ provider: "telegram", accountId: "support" });
+  const messages = claw.channels.messages.read({
+    agentId: "support-agent",
+    provider: "telegram",
+    accountId: "support",
+    targetId: "1001",
+  });
+  const channels = await claw.channels.list();
+  const proxyState = JSON.parse(fs.readFileSync(statePath, "utf8")) as { lastSend?: { message_thread_id?: number } };
+
+  assert.equal(support.id, "telegram:support");
+  assert.equal(ops.id, "telegram:ops");
+  assert.equal(accounts.length, 2);
+  assert.equal(binding.id, "support-agent:telegram:support:1001");
+  assert.equal(synced[0]?.text, "hello telegram");
+  assert.equal(sent.threadId, "42");
+  assert.equal(proxyState.lastSend?.message_thread_id, 42);
+  assert.equal(deniedMessages.length, 0);
+  assert.equal(targets.some((target) => target.targetId === "1001"), true);
+  assert.equal(messages.some((message) => message.direction === "inbound"), true);
+  assert.equal(messages.some((message) => message.direction === "outbound"), true);
+  assert.equal(channels.some((channel) => channel.id === "telegram:support" && channel.status === "connected"), true);
+  assert.equal(channels.some((channel) => channel.id === "telegram:ops" && channel.status === "connected"), true);
+});
+
+test("createClaw channel listener invokes a detached processor action", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-channels-listener-"));
+  const processorPath = path.join(workspaceDir, "processor.cjs");
+  fs.mkdirSync(workspaceDir, { recursive: true });
+  fs.writeFileSync(processorPath, `
+process.stdin.setEncoding("utf8");
+let input = "";
+process.stdin.on("data", (chunk) => input += chunk);
+process.stdin.on("end", () => {
+  const event = JSON.parse(input);
+  process.stdout.write(JSON.stringify({
+    actions: [{
+      type: "send_message",
+      text: "auto reply: " + event.message.text,
+      targetId: event.targetId
+    }]
+  }));
+});
+`);
+  const { proxyPath, statePath } = createFakeSecretsProxy();
+  const claw = await createClaw({
+    runtime: {
+      adapter: "openclaw",
+      env: {
+        ...process.env,
+        CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+        FAKE_TELEGRAM_PROXY_STATE: statePath,
+      },
+    },
+    workspace: {
+      appId: "demo",
+      workspaceId: "channels-listener",
+      agentId: "channels-listener",
+      rootDir: workspaceDir,
+    },
+  });
+
+  await claw.channels.accounts.registerTelegramBot({
+    accountId: "support",
+    secretName: "telegram_support_bot_token",
+  });
+  claw.channels.bindings.grant({
+    agentId: "support-router",
+    provider: "telegram",
+    accountId: "support",
+    targetId: "1001",
+    permissions: ["write"],
+  });
+  claw.channels.processors.register({
+    id: "support-router",
+    command: `${process.execPath} ${processorPath}`,
+  });
+
+  const listener = await claw.channels.listen.run({
+    accountId: "support",
+    processorId: "support-router",
+    once: true,
+    timeoutSeconds: 0,
+  });
+  const proxyState = JSON.parse(fs.readFileSync(statePath, "utf8")) as { lastSend?: { text?: string }; lastSendToken?: string };
+  const events = claw.channels.events.list({ accountId: "support", processorId: "support-router" });
+
+  assert.equal(listener.status, "stopped");
+  assert.equal(proxyState.lastSend?.text, "auto reply: hello telegram");
+  assert.equal(proxyState.lastSendToken, "{{telegram_support_bot_token}}");
+  assert.equal(events.some((event) => event.type === "channel.processor.invoked" && event.status === "ok"), true);
+});
+
 test("createClaw can diff and sync binding output", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-binding-"));
   const claw = await createClaw({
@@ -1271,9 +1429,11 @@ test("createClaw can search sessions locally", async () => {
 test("createClaw can search sessions through OpenClaw memory search", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-search-memory-"));
   const { binDir, openclawLog } = createFakeOpenClawMemoryToolchain();
+  const memoryFixturePath = path.join(workspaceDir, "memory-search.json");
   const runtimeEnv: NodeJS.ProcessEnv = {
     ...process.env,
     PATH: `${binDir}:${process.env.PATH ?? ""}`,
+    FAKE_OPENCLAW_MEMORY_SEARCH_FILE: memoryFixturePath,
   };
   const claw = await createClaw({
     runtime: {
@@ -1295,7 +1455,7 @@ test("createClaw can search sessions through OpenClaw memory search", async () =
   });
 
   try {
-    runtimeEnv.FAKE_OPENCLAW_MEMORY_SEARCH = JSON.stringify({
+    fs.writeFileSync(memoryFixturePath, JSON.stringify({
       results: [{
         text: "Need to review the quarterly budget with finance",
         path: `/tmp/agents/demo-search-memory/sessions/${session.sessionId}.jsonl`,
@@ -1303,7 +1463,7 @@ test("createClaw can search sessions through OpenClaw memory search", async () =
         endLine: 16,
         score: 0.91,
       }],
-    });
+    }));
     const results = await claw.sessions.searchSessions({
       query: "budget finance",
       strategy: "openclaw-memory",
@@ -1314,9 +1474,9 @@ test("createClaw can search sessions through OpenClaw memory search", async () =
     assert.equal(results[0]?.sessionId, session.sessionId);
     assert.equal(results[0]?.strategy, "openclaw-memory");
     assert.equal(results[0]?.sourcePath?.includes(`/sessions/${session.sessionId}.jsonl`), true);
-    assert.match(fs.readFileSync(openclawLog, "utf8"), /memory --agent demo-search-memory search --query budget finance --json/);
+    assert.match(fs.readFileSync(openclawLog, "utf8"), /memory search --agent demo-search-memory --query budget finance --json/);
   } finally {
-    delete runtimeEnv.FAKE_OPENCLAW_MEMORY_SEARCH;
+    delete runtimeEnv.FAKE_OPENCLAW_MEMORY_SEARCH_FILE;
   }
 });
 
@@ -1571,6 +1731,80 @@ test("createClaw installs skills.sh skills as external when runtime inventory do
   assert.equal(result.runtimeVisibility, "external");
   assert.equal(result.syncedSkills, undefined);
   assert.match(fs.readFileSync(npxLog, "utf8"), /--yes skills add vercel-labs\/agent-skills/);
+});
+
+test("createClaw library resolves and syncs local skills and instruction blocks", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-library-sync-workspace-"));
+  const libraryDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-library-sync-library-"));
+  const skillSourceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-library-skill-source-"));
+  fs.writeFileSync(path.join(skillSourceDir, "skill.json"), JSON.stringify({
+    id: "namecheap",
+    name: "Namecheap",
+    version: "0.1.0",
+    description: "Manage domain operations through safe references.",
+  }, null, 2));
+
+  const claw = await createClaw({
+    runtime: { adapter: "openclaw" },
+    library: { rootDir: libraryDir },
+    workspace: {
+      appId: "demo",
+      workspaceId: "demo-library-sync",
+      agentId: "ada",
+      rootDir: workspaceDir,
+    },
+  });
+
+  claw.library.importSkill("namecheap", {
+    id: "namecheap",
+    title: "Namecheap",
+    path: skillSourceDir,
+    tags: ["domains"],
+  });
+  claw.library.createInstruction({
+    id: "ceo-soul",
+    title: "CEO Soul",
+    projection: { target: "agents" },
+    content: "Operate like a pragmatic CEO.",
+  });
+  claw.library.assign({ assetId: "namecheap", scope: "agent", targetId: "ada" });
+  claw.library.assign({ assetId: "ceo-soul", scope: "agent", targetId: "ada" });
+
+  const synced = await claw.library.sync();
+
+  assert.equal(synced.resolved.assets.length, 2);
+  assert.equal(synced.syncedSkills.some((entry) => entry.id === "namecheap"), true);
+  assert.equal(fs.existsSync(path.join(workspaceDir, "skills", "namecheap", "skill.json")), true);
+  assert.match(fs.readFileSync(path.join(workspaceDir, "AGENTS.md"), "utf8"), /Operate like a pragmatic CEO/);
+});
+
+test("createClaw library sync blocks missing secret references unless explicitly allowed", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-library-secret-workspace-"));
+  const libraryDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-library-secret-library-"));
+  const claw = await createClaw({
+    runtime: { adapter: "openclaw" },
+    library: { rootDir: libraryDir },
+    workspace: {
+      appId: "demo",
+      workspaceId: "demo-library-secret",
+      agentId: "ops",
+      rootDir: workspaceDir,
+    },
+  });
+
+  claw.library.create({
+    id: "namecheap",
+    kind: "skill",
+    title: "Namecheap",
+    requiredSecrets: [{ name: "namecheap_api_token", label: "Namecheap API token" }],
+    source: { source: "workspace", installRef: "namecheap" },
+  });
+  claw.library.assign({ assetId: "namecheap", scope: "agent", targetId: "ops" });
+
+  await assert.rejects(() => claw.library.sync(), /Missing required library secrets: namecheap:namecheap_api_token/);
+  const resolved = claw.library.resolve();
+  assert.equal(JSON.stringify(resolved).includes("secret-value"), false);
+  assert.equal(resolved.missingSecrets[0]?.name, "namecheap_api_token");
 });
 
 test("createClaw instances keep separate workspaces and sessions isolated", async () => {

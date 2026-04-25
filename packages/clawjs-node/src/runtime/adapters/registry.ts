@@ -1,6 +1,7 @@
 import type { RuntimeAdapter } from "../contracts.ts";
 import type { RuntimeAdapterId } from "@clawjs/core";
 import { demoAdapter } from "./demo-adapter.ts";
+import { codexAdapter } from "./codex-adapter.ts";
 import { openclawAdapter } from "./openclaw-adapter.ts";
 import { nanobotAdapter } from "./nanobot-adapter.ts";
 import { nanoclawAdapter } from "./nanoclaw-adapter.ts";
@@ -14,6 +15,7 @@ import { picoclawAdapter } from "./picoclaw-adapter.ts";
 const ADAPTERS = new Map<RuntimeAdapterId, RuntimeAdapter>([
   [demoAdapter.id, demoAdapter],
   [openclawAdapter.id, openclawAdapter],
+  [codexAdapter.id, codexAdapter],
   [zeroclawAdapter.id, zeroclawAdapter],
   [picoclawAdapter.id, picoclawAdapter],
   [nanobotAdapter.id, nanobotAdapter],

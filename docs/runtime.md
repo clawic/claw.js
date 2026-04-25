@@ -14,7 +14,7 @@ are **runtime adapters**. They are not gateways.
 
 <div class="callout">
 
-**Supported adapters:** `demo`, `openclaw`, `zeroclaw`, `picoclaw`,
+**Supported adapters:** `demo`, `openclaw`, `codex`, `zeroclaw`, `picoclaw`,
 `nanobot`, `nanoclaw`, `nullclaw`, `ironclaw`, `nemoclaw`, `hermes`.
 Use `demo` for generated zero-config starters and `openclaw` for the
 production-supported real runtime path.
@@ -77,6 +77,7 @@ Runtime-facing files are defined per adapter, not globally. Examples:
 
 - **OpenClaw:** \`SOUL.md\`, \`USER.md\`, \`AGENTS.md\`, \`TOOLS.md\`,
   \`IDENTITY.md\`, \`HEARTBEAT.md\`
+- **Codex:** \`AGENTS.md\`
 - **ZeroClaw:** \`SOUL.md\`, \`USER.md\`, \`AGENTS.md\`,
   \`IDENTITY.md\`, \`MEMORY.md\`
 - **PicoClaw:** \`SOUL.md\`, \`USER.md\`, \`AGENTS.md\`,

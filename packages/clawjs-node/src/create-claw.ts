@@ -6,6 +6,14 @@ import type {
   AuthState,
   BindingDefinition,
   ChannelDescriptor,
+  ChannelAccountDescriptor,
+  ChannelAgentBinding,
+  ChannelEventRecord,
+  ChannelListenerDescriptor,
+  ChannelMessageRecord,
+  ChannelPermission,
+  ChannelProcessorDescriptor,
+  ChannelTargetDescriptor,
   ClawManifest,
   SessionPolicy,
   SessionSearchInput,
@@ -39,6 +47,7 @@ import type {
   TelegramChatSummary,
   TelegramCommand,
   TelegramMemberSummary,
+  TelegramTransportStatus,
   TelegramUpdateEnvelope,
   WorkspaceConfig,
   NotificationAudience,
@@ -63,6 +72,10 @@ import type {
   RawIoTInvocation,
   IoTPolicyEvaluation,
   IoTEventRecord,
+  LibraryAsset,
+  LibraryAssignment,
+  LibraryResolveResult,
+  LibrarySyncResult,
 } from "@clawjs/core";
 import {
   createTtsPlaybackPlan,
@@ -131,6 +144,20 @@ import { streamRuntimeSession, streamRuntimeSessionEvents, type SessionStreamEve
 import { generateRuntimeSessionTitle } from "./sessions/title.ts";
 import { createWorkspaceDataStore, type WorkspaceDataStore } from "./data/store.ts";
 import { createDocumentStore, resolveLegacyDocumentRefs } from "./documents/store.ts";
+import {
+  createDriveStorageShareAdapter,
+  createLocalStorageStore,
+  type StorageDriveIndexAdapter,
+  type LocalStorageStore,
+  type StorageGetResult,
+  type StorageGrant,
+  type StorageListInput,
+  type StorageObject,
+  type StoragePutInput,
+  type StorageRef,
+  type StorageScopedToken,
+  type StorageShare,
+} from "./storage/index.ts";
 import { generateRuntimeText, type GenerateTextInput, type GenerateTextResult } from "./inference/generate-text.ts";
 import {
   createGenerationStore,
@@ -140,6 +167,15 @@ import {
   type GenerationRecord,
   type RegisterCommandGenerationBackendInput,
 } from "./generations/store.ts";
+import {
+  createImageLibraryStore,
+  OPENAI_BACKEND_ID,
+  type ImageCreateInput,
+  type ImageEditInput,
+  type ImageImportInput,
+  type ImageListOptions,
+  type ImageRecord,
+} from "./images/store.ts";
 import {
   attachWorkspace,
   buildWorkspaceResetPlan,
@@ -210,6 +246,24 @@ import {
   type SkillSourceAdapter,
 } from "./skills/index.ts";
 import { createTelegramService, type TelegramConnectBotInput, type TelegramSendMediaInput, type TelegramSendMessageInput, type TelegramStatusResult, type TelegramWebhookConfigInput, type TelegramSyncUpdatesOptions, type TelegramBanOrRestrictInput, type TelegramInviteLinkOptions } from "./telegram/index.ts";
+import { createChannelsRegistry, type GrantChannelBindingInput, type ReadChannelMessagesInput, type RegisterChannelProcessorInput, type RegisterChannelTargetInput, type RegisterTelegramBotAccountInput, type SendChannelMessageInput, type UpsertChannelListenerInput } from "./channels/index.ts";
+import { invokeChannelProcessor, type ChannelProcessorAction } from "./channels/processors.ts";
+import {
+  callTelegramAccountBooleanMethod,
+  callTelegramAccountRecordMethod,
+  configureTelegramAccountWebhook,
+  connectTelegramAccount,
+  disableTelegramAccountWebhook,
+  getTelegramAccountChat,
+  getTelegramAccountCommands,
+  listTelegramAccountChats,
+  refreshTelegramAccountStatus,
+  sendTelegramAccountMessage,
+  setTelegramAccountCommands,
+  syncTelegramAccount,
+  telegramBanOrRestrictParams,
+  telegramInviteLinkParams,
+} from "./channels/telegram.ts";
 import { createSlackService, type SlackConnectBotInput, type SlackSendMessageInput, type SlackStatusResult } from "./slack/index.ts";
 import { createWhatsAppService, type WhatsAppConnectInput, type WhatsAppSendMessageInput, type WhatsAppStatusResult } from "./whatsapp/index.ts";
 import {
@@ -235,7 +289,16 @@ import {
   type SecretTypeDescriptor,
   type SecretTypedActionDescriptor,
 } from "./secrets/index.ts";
-import { mergeManagedBlocks, type MergeManagedBlocksOptions } from "./files/managed-blocks.ts";
+import { applyTextMutation, mergeManagedBlocks, type MergeManagedBlocksOptions } from "./files/managed-blocks.ts";
+import {
+  createLocalLibraryStore,
+  libraryProjectionTargetFile,
+  normalizeLibraryId,
+  type LibraryAssetInput,
+  type LibraryAssetUpdate,
+  type LibraryAssignInput,
+  type LibraryResolveInput,
+} from "./library/store.ts";
 import {
   synthesize,
   listTtsProviders,
@@ -312,6 +375,24 @@ export interface CreateClawOptions {
   workspace: WorkspaceConfig;
   templates?: {
     pack?: string;
+  };
+  library?: {
+    rootDir?: string;
+    env?: NodeJS.ProcessEnv;
+  };
+  images?: {
+    rootDir?: string;
+    env?: NodeJS.ProcessEnv;
+    allowEnvCredentials?: boolean;
+    openaiBaseUrl?: string;
+  };
+  storage?: {
+    grants?: StorageGrant[];
+    driveIndex?: StorageDriveIndexAdapter;
+    share?: {
+      driveBaseUrl: string;
+      token: string;
+    };
   };
   secrets?: {
     backend?: "local_proxy" | "vault";
@@ -660,6 +741,20 @@ export interface ClawInstance {
     search: (query: string, options?: { source?: string; limit?: number }) => Promise<SkillSearchResult>;
     install: (ref: string, options?: { source?: string }) => Promise<SkillInstallResult & { syncedSkills?: SkillDescriptor[] }>;
   };
+  library: {
+    list: () => LibraryAsset[];
+    get: (id: string) => LibraryAsset | null;
+    create: (input: LibraryAssetInput) => LibraryAsset;
+    update: (id: string, patch: LibraryAssetUpdate) => LibraryAsset;
+    remove: (id: string) => boolean;
+    importSkill: (ref: string, options?: { id?: string; title?: string; source?: string; path?: string; tags?: string[] }) => LibraryAsset;
+    createInstruction: (input: Omit<LibraryAssetInput, "kind"> & { content: string; projection: NonNullable<LibraryAssetInput["projection"]> }) => LibraryAsset;
+    createBundle: (input: Omit<LibraryAssetInput, "kind"> & { bundleAssetIds: string[] }) => LibraryAsset;
+    assign: (input: LibraryAssignInput) => LibraryAssignment;
+    unassign: (input: LibraryAssignInput) => boolean;
+    resolve: (input?: LibraryResolveInput) => LibraryResolveResult;
+    sync: (input?: LibraryResolveInput & { allowMissingSecrets?: boolean }) => Promise<LibrarySyncResult>;
+  };
   generations: {
     backends: () => GenerationBackendDescriptor[];
     registerCommandBackend: (input: RegisterCommandGenerationBackendInput) => GenerationBackendDescriptor;
@@ -671,9 +766,13 @@ export interface ClawInstance {
   };
   image: {
     backends: () => GenerationBackendDescriptor[];
-    generate: (input: Omit<CreateGenerationInput, "kind">) => Promise<GenerationRecord>;
-    list: (options?: Omit<GenerationListOptions, "kind">) => GenerationRecord[];
-    get: (id: string) => GenerationRecord | null;
+    create: (input: Omit<ImageCreateInput, "workspaceId" | "agentId"> & { backendId?: string; command?: string; args?: string[]; cwd?: string; env?: Record<string, string>; outputExtension?: string; mimeType?: string }) => Promise<ImageRecord>;
+    generate: (input: Omit<CreateGenerationInput, "kind"> & Partial<ImageCreateInput>) => Promise<ImageRecord>;
+    edit: (input: Omit<ImageEditInput, "workspaceId" | "agentId"> & { backendId?: string; command?: string; args?: string[]; cwd?: string; env?: Record<string, string>; outputExtension?: string; mimeType?: string }) => Promise<ImageRecord>;
+    import: (input: Omit<ImageImportInput, "workspaceId" | "agentId">) => ImageRecord;
+    list: (options?: Omit<GenerationListOptions, "kind"> & ImageListOptions) => ImageRecord[];
+    search: (options?: ImageListOptions) => ImageRecord[];
+    get: (id: string) => ImageRecord | null;
     remove: (id: string) => boolean;
   };
   audio: {
@@ -703,6 +802,62 @@ export interface ClawInstance {
   };
   channels: {
     list: () => Promise<ChannelDescriptor[]>;
+    accounts: {
+      registerTelegramBot: (input: RegisterTelegramBotAccountInput & Omit<TelegramConnectBotInput, "secretName">) => Promise<ChannelAccountDescriptor>;
+      list: (provider?: string) => ChannelAccountDescriptor[];
+      get: (provider: string, accountId?: string) => ChannelAccountDescriptor | null;
+      status: (provider?: string) => Promise<ChannelAccountDescriptor[]>;
+      remove: (provider: string, accountId?: string) => Promise<ChannelAccountDescriptor[]>;
+    };
+    targets: {
+      register: (input: RegisterChannelTargetInput) => ChannelTargetDescriptor;
+      list: (input?: { provider?: string; accountId?: string; query?: string }) => ChannelTargetDescriptor[];
+      get: (provider: string, accountId: string | undefined, targetId: string, threadId?: string | number) => ChannelTargetDescriptor | null;
+    };
+    bindings: {
+      grant: (input: GrantChannelBindingInput) => ChannelAgentBinding;
+      revoke: (id: string) => boolean;
+      list: (input?: { agentId?: string; provider?: string; accountId?: string; targetId?: string }) => ChannelAgentBinding[];
+      can: (agentId: string | undefined, permission: ChannelPermission, selector: { provider: string; accountId?: string; targetId?: string }) => boolean;
+    };
+    processors: {
+      register: (input: RegisterChannelProcessorInput) => ChannelProcessorDescriptor;
+      list: () => ChannelProcessorDescriptor[];
+      get: (id?: string) => ChannelProcessorDescriptor | null;
+      remove: (id: string) => boolean;
+    };
+    listeners: {
+      upsert: (input: UpsertChannelListenerInput) => ChannelListenerDescriptor;
+      list: (input?: { provider?: string; accountId?: string; processorId?: string }) => ChannelListenerDescriptor[];
+      get: (provider: string, accountId?: string) => ChannelListenerDescriptor | null;
+      remove: (provider: string, accountId?: string) => boolean;
+    };
+    events: {
+      list: (input?: { provider?: string; accountId?: string; targetId?: string; processorId?: string; limit?: number }) => ChannelEventRecord[];
+    };
+    listen: {
+      run: (input?: {
+        provider?: string;
+        accountId?: string;
+        processorId?: string;
+        once?: boolean;
+        intervalMs?: number;
+        timeoutSeconds?: number;
+        stopPath?: string;
+        pidPath?: string;
+        logPath?: string;
+        mode?: "foreground" | "background";
+      }) => Promise<ChannelListenerDescriptor>;
+    };
+    messages: {
+      send: (input: SendChannelMessageInput) => Promise<ChannelMessageRecord>;
+      read: (input?: ReadChannelMessagesInput) => ChannelMessageRecord[];
+      sync: (input?: TelegramSyncUpdatesOptions & { provider?: string; accountId?: string }) => Promise<ChannelMessageRecord[]>;
+    };
+    commands: {
+      set: (provider: "telegram", commands: TelegramCommand[], input?: { accountId?: string }) => Promise<TelegramCommand[]>;
+      get: (provider: "telegram", input?: { accountId?: string }) => Promise<TelegramCommand[]>;
+    };
   };
   telegram: {
     provisionSecretReference: (input: { secretName: string; apiBaseUrl?: string; notes?: string; readOnly?: boolean }) => Promise<EnsureSecretReferenceResult>;
@@ -996,6 +1151,26 @@ export interface ClawInstance {
     download: (documentId: string) => Promise<{ document: DocumentRecord; filePath: string; buffer: Buffer } | null>;
     resolveRefs: (documentIds: string[]) => Promise<DocumentRef[]>;
   };
+  storage: {
+    put: (input: StoragePutInput) => StorageObject;
+    get: (ref: Partial<StorageRef> & { key: string }) => StorageGetResult | null;
+    head: (ref: Partial<StorageRef> & { key: string }) => StorageObject | null;
+    list: (input?: StorageListInput) => StorageObject[];
+    delete: (ref: Partial<StorageRef> & { key: string }) => boolean;
+    readText: (ref: Partial<StorageRef> & { key: string }) => string | null;
+    writeText: (input: { bucket?: string; key: string; content: string; contentType?: string; metadata?: Record<string, unknown>; visibility?: StoragePutInput["visibility"] }) => StorageObject;
+    exportToFile: (ref: Partial<StorageRef> & { key: string; filePath: string }) => StorageObject | null;
+    tokens: {
+      issue: (input: { label?: string; grants: StorageGrant[] }) => { record: StorageScopedToken; token: string };
+      list: () => StorageScopedToken[];
+      revoke: (id: string) => boolean;
+    };
+    share: {
+      create: (input: { bucket?: string; key: string; label?: string; expiresAt?: string | null; ttlMs?: number }) => Promise<StorageShare>;
+      revoke: (id: string) => Promise<boolean>;
+      list: () => StorageShare[];
+    };
+  };
   data: WorkspaceDataStore;
   orchestration: {
     snapshot: () => Promise<ReturnType<typeof buildOrchestrationSnapshot>>;
@@ -1060,7 +1235,20 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   const runtimeAgentId = options.workspace.runtimeAgentId ?? logicalAgentId;
   const sessionStore = new SessionStore(workspaceDir, { filesystem });
   const dataStore = createWorkspaceDataStore(workspaceDir, filesystem);
-  const documentStore = createDocumentStore(workspaceDir, filesystem);
+  const storageStore = createLocalStorageStore({
+    workspaceDir,
+    agentId: logicalAgentId,
+    filesystem,
+    grants: options.storage?.grants,
+    driveIndexAdapter: options.storage?.driveIndex,
+    shareAdapter: options.storage?.share
+      ? createDriveStorageShareAdapter({
+          baseUrl: options.storage.share.driveBaseUrl,
+          token: options.storage.share.token,
+        })
+      : undefined,
+  });
+  const documentStore = createDocumentStore(workspaceDir, filesystem, { storage: storageStore });
   const adapter = getRuntimeAdapter(options.runtime.adapter);
   const runtimeEnv = adapter.id === "openclaw"
     ? withOpenClawCommandEnv(options.runtime.env, {
@@ -1092,7 +1280,30 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     filesystem,
     processHost,
     dataStore,
+    storage: storageStore,
     env: runtimeEnv,
+  });
+  const imageStore = createImageLibraryStore({
+    rootDir: options.images?.rootDir ?? workspaceDir,
+    env: {
+      ...(runtimeEnv ?? {}),
+      ...(options.images?.env ?? {}),
+    },
+    scope: {
+      project: options.workspace.appId,
+      workspaceId: options.workspace.workspaceId,
+      agentId: logicalAgentId,
+    },
+    allowEnvCredentials: options.images?.allowEnvCredentials,
+    openaiBaseUrl: options.images?.openaiBaseUrl,
+    filesystem,
+    storage: storageStore,
+    brokerHttp: (input) => brokerSecretHttp(processHost, input, { env: secretsEnv }),
+  });
+  const libraryStore = createLocalLibraryStore({
+    rootDir: options.library?.rootDir,
+    env: options.library?.env ?? runtimeEnv,
+    filesystem,
   });
   const eventBus = new ClawEventBus();
   const runtimeOptions: RuntimeAdapterOptions = {
@@ -1154,6 +1365,10 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     sessionStore,
     runner: processHost,
     env: secretsEnv,
+    filesystem,
+  });
+  const channelsRegistry = createChannelsRegistry({
+    workspaceDir,
     filesystem,
   });
   const sourceNotifyClient = options.notify?.baseUrl
@@ -1260,6 +1475,225 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         return removeGenerationRecord(id);
       },
     };
+  }
+
+  function mapGenerationToImageRecord(record: GenerationRecord): ImageRecord {
+    return {
+      id: record.id,
+      kind: "image",
+      status: record.status,
+      operation: "create",
+      prompt: record.prompt,
+      title: record.title,
+      tags: [],
+      collections: [],
+      project: options.workspace.appId,
+      workspaceId: options.workspace.workspaceId,
+      agentId: logicalAgentId,
+      backendId: record.backendId,
+      backendLabel: record.backendLabel,
+      provider: record.backendId.startsWith("openclaw-skill:openai") ? "openai" : undefined,
+      ...(record.model ? { model: record.model } : {}),
+      sourceImageIds: [],
+      editDepth: 0,
+      provenance: "command-backend",
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+      output: record.output,
+      ...(record.metadata ? { metadata: record.metadata } : {}),
+      ...(record.error ? { error: record.error } : {}),
+    };
+  }
+
+  function isNativeImageBackend(input: { backendId?: string; command?: string }): boolean {
+    return !input.command?.trim() && (!input.backendId || input.backendId === OPENAI_BACKEND_ID || input.backendId === "openai");
+  }
+
+  function shouldUseNativeImageBackend(input: { backendId?: string; command?: string }): boolean {
+    if (!isNativeImageBackend(input)) return false;
+    if (input.backendId === OPENAI_BACKEND_ID || input.backendId === "openai") return true;
+    return imageStore.listBackends().some((backend) => backend.id === OPENAI_BACKEND_ID && backend.available)
+      || !generationStore.listBackends().some((backend) => backend.id !== "command" && backend.available && backend.supportedKinds.includes("image"));
+  }
+
+  function imageBackends(): GenerationBackendDescriptor[] {
+    const nativeBackends = imageStore.listBackends().map((backend) => ({
+      id: backend.id,
+      label: backend.label,
+      type: "command" as const,
+      supportedKinds: ["image" as const],
+      command: "",
+      args: [],
+      source: "builtin" as const,
+      available: backend.available,
+      ...(backend.reason ? { reason: backend.reason } : {}),
+      supportedModels: backend.supportedModels,
+      metadataSchema: backend.metadataSchema,
+    }));
+    return [
+      ...nativeBackends,
+      ...generationStore.listBackends().filter((backend) => backend.supportedKinds.includes("image")),
+    ];
+  }
+
+  function importGenerationRecord(record: GenerationRecord, operation: "create" | "edit", input: {
+    parentId?: string;
+    sourceImageIds?: string[];
+    imageType?: ImageImportInput["imageType"];
+    tags?: string[];
+    collections?: string[];
+    project?: string;
+    topic?: string;
+    externalGenerator?: string;
+    metadata?: Record<string, unknown>;
+  } = {}): ImageRecord {
+    if (!record.output?.filePath || !record.output.exists) {
+      return mapGenerationToImageRecord(record);
+    }
+    return imageStore.importImage({
+      filePath: record.output.filePath,
+      prompt: record.prompt,
+      title: record.title,
+      model: record.model,
+      provider: record.backendId.includes("openai") ? "openai" : undefined,
+      project: input.project,
+      workspaceId: options.workspace.workspaceId,
+      agentId: logicalAgentId,
+      topic: input.topic,
+      imageType: input.imageType,
+      tags: input.tags,
+      collections: input.collections,
+      parentId: input.parentId,
+      sourceImageIds: input.sourceImageIds,
+      operation,
+      provenance: "command-backend",
+      externalGenerator: input.externalGenerator,
+      backendId: record.backendId,
+      backendLabel: record.backendLabel,
+      metadata: {
+        ...(record.metadata ?? {}),
+        ...(input.metadata ?? {}),
+        generationId: record.id,
+      },
+    });
+  }
+
+  async function createImageRecord(input: Omit<ImageCreateInput, "workspaceId" | "agentId"> & {
+    backendId?: string;
+    command?: string;
+    args?: string[];
+    cwd?: string;
+    env?: Record<string, string>;
+    outputExtension?: string;
+    mimeType?: string;
+  }): Promise<ImageRecord> {
+    if (shouldUseNativeImageBackend(input)) {
+      return imageStore.create({
+        ...input,
+        workspaceId: options.workspace.workspaceId,
+        agentId: logicalAgentId,
+      });
+    }
+    const record = await createGenerationRecord({
+      kind: "image",
+      prompt: input.prompt,
+      title: input.title,
+      backendId: input.backendId,
+      model: input.model,
+      metadata: input.metadata,
+      command: input.command,
+      args: input.args,
+      cwd: input.cwd,
+      env: input.env,
+      outputExtension: input.outputExtension,
+      mimeType: input.mimeType,
+    });
+    return importGenerationRecord(record, "create", input);
+  }
+
+  async function editImageRecord(input: Omit<ImageEditInput, "workspaceId" | "agentId"> & {
+    backendId?: string;
+    command?: string;
+    args?: string[];
+    cwd?: string;
+    env?: Record<string, string>;
+    outputExtension?: string;
+    mimeType?: string;
+  }): Promise<ImageRecord> {
+    if (shouldUseNativeImageBackend(input)) {
+      return imageStore.edit({
+        ...input,
+        workspaceId: options.workspace.workspaceId,
+        agentId: logicalAgentId,
+      });
+    }
+    const parent = imageStore.get(input.parentId);
+    const inputImages = [parent?.output?.filePath, ...(input.sourceImageIds ?? []).map((id) => imageStore.get(id)?.output?.filePath)]
+      .filter((entry): entry is string => !!entry);
+    const record = await createGenerationRecord({
+      kind: "image",
+      prompt: input.prompt,
+      title: input.title,
+      backendId: input.backendId,
+      model: input.model,
+      metadata: {
+        ...(input.metadata ?? {}),
+        inputImages,
+        parentId: input.parentId,
+      },
+      command: input.command,
+      args: input.args,
+      cwd: input.cwd,
+      env: input.env,
+      outputExtension: input.outputExtension,
+      mimeType: input.mimeType,
+    });
+    return importGenerationRecord(record, "edit", {
+      ...input,
+      sourceImageIds: [input.parentId, ...(input.sourceImageIds ?? [])],
+    });
+  }
+
+  function listImageRecords(queryOptions: Omit<GenerationListOptions, "kind"> & ImageListOptions = {}): ImageRecord[] {
+    const scopedOptions = {
+      ...queryOptions,
+      workspaceId: queryOptions.workspaceId ?? options.workspace.workspaceId,
+      agentId: queryOptions.agentId ?? logicalAgentId,
+    };
+    const native = imageStore.list(scopedOptions);
+    const existingIds = new Set(native.map((record) => String(record.metadata?.generationId ?? record.id)));
+    const legacy = generationStore.list({
+      kind: "image",
+      ...(scopedOptions.backendId ? { backendId: scopedOptions.backendId } : {}),
+      ...(scopedOptions.status ? { status: scopedOptions.status } : {}),
+    })
+      .filter((record) => !existingIds.has(record.id))
+      .map(mapGenerationToImageRecord);
+    const query = scopedOptions.query?.trim().toLowerCase();
+    const merged = [...native, ...legacy]
+      .filter((record) => !scopedOptions.operation || record.operation === scopedOptions.operation)
+      .filter((record) => !scopedOptions.provenance || record.provenance === scopedOptions.provenance)
+      .filter((record) => !scopedOptions.imageType || record.imageType === scopedOptions.imageType)
+      .filter((record) => !scopedOptions.project || record.project === scopedOptions.project)
+      .filter((record) => !scopedOptions.provider || record.provider === scopedOptions.provider)
+      .filter((record) => !scopedOptions.model || record.model === scopedOptions.model)
+      .filter((record) => !scopedOptions.parentId || record.parentId === scopedOptions.parentId)
+      .filter((record) => !scopedOptions.sourceImageId || record.sourceImageIds.includes(scopedOptions.sourceImageId))
+      .filter((record) => !scopedOptions.tag || record.tags.includes(scopedOptions.tag))
+      .filter((record) => !query || `${record.title} ${record.prompt} ${record.tags.join(" ")} ${record.provider ?? ""} ${record.model ?? ""}`.toLowerCase().includes(query))
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    return merged.slice(0, Math.max(1, scopedOptions.limit ?? Number.MAX_SAFE_INTEGER));
+  }
+
+  function getImageRecord(id: string): ImageRecord | null {
+    const image = imageStore.get(id);
+    if (image) return image;
+    const generation = generationStore.get(id);
+    return generation?.kind === "image" ? mapGenerationToImageRecord(generation) : null;
+  }
+
+  function removeImageRecord(id: string): boolean {
+    return imageStore.remove(id) || removeGenerationRecord(id);
   }
 
   function gatewayConfigOptions() {
@@ -1603,13 +2037,18 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     const telegramChannel = telegram.channel();
     const slackChannel = slack.channel();
     const whatsappChannel = whatsapp.channel();
+    const registryChannels = channelsRegistry.accounts.descriptors();
+    const registryChannelIds = new Set(registryChannels.map((channel) => channel.id));
     try {
       const channels = await adapter.listChannels(processHost, resolvedRuntimeOptions);
       const runtimeChannelMap = new Map(channels.map((channel) => [channel.id, channel]));
-      const filtered = channels.filter((channel) => channel.id !== "telegram" && channel.id !== "slack" && channel.id !== "whatsapp");
-      const result = [...filtered];
+      const filtered = channels.filter((channel) => channel.id !== "telegram" && channel.id !== "slack" && channel.id !== "whatsapp" && !registryChannelIds.has(channel.id));
+      const result = [...filtered, ...registryChannels.filter((channel) => channel.id !== "telegram")];
       const shouldUseLocalTelegram = telegramChannel.status !== "disconnected" || !!readTelegramStateSnapshot(workspaceDir, filesystem);
-      if (shouldUseLocalTelegram) {
+      const registryTelegram = registryChannels.find((channel) => channel.id === "telegram");
+      if (registryTelegram) {
+        result.push(registryTelegram);
+      } else if (shouldUseLocalTelegram) {
         result.push(telegramChannel);
       } else if (runtimeChannelMap.has("telegram")) {
         result.push(runtimeChannelMap.get("telegram")!);
@@ -1628,8 +2067,11 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       }
       return result;
     } catch {
-      const result: ChannelDescriptor[] = [];
-      if (telegramChannel.status !== "disconnected" || readTelegramStateSnapshot(workspaceDir, filesystem)) {
+      const result: ChannelDescriptor[] = [...registryChannels.filter((channel) => channel.id !== "telegram")];
+      const registryTelegram = registryChannels.find((channel) => channel.id === "telegram");
+      if (registryTelegram) {
+        result.push(registryTelegram);
+      } else if (telegramChannel.status !== "disconnected" || readTelegramStateSnapshot(workspaceDir, filesystem)) {
         result.push(telegramChannel);
       }
       if (slackChannel.status !== "disconnected" || readSlackStateSnapshot(workspaceDir, filesystem)) {
@@ -1921,6 +2363,13 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       schemaVersion: 1,
       updatedAt: new Date().toISOString(),
       channels,
+      ...(current?.accounts ? { accounts: current.accounts } : {}),
+      ...(current?.targets ? { targets: current.targets } : {}),
+      ...(current?.messages ? { messages: current.messages } : {}),
+      ...(current?.bindings ? { bindings: current.bindings } : {}),
+      ...(current?.processors ? { processors: current.processors } : {}),
+      ...(current?.listeners ? { listeners: current.listeners } : {}),
+      ...(current?.events ? { events: current.events } : {}),
       ...(current?.details ? { details: current.details } : {}),
     }, filesystem);
   }
@@ -1957,6 +2406,51 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     });
   }
 
+  function recordTelegramStatusInChannels(
+    status: TelegramStatusResult,
+    input?: {
+      accountId?: string;
+      label?: string;
+      secretName?: string;
+    },
+  ) {
+    const secretName = input?.secretName ?? status.secretName;
+    if (!secretName) {
+      return null;
+    }
+    const channelStatus = status.channel.status;
+    const account = channelsRegistry.accounts.registerTelegramBot({
+      accountId: input?.accountId,
+      label: input?.label,
+      secretName,
+      status: channelStatus,
+      botProfile: status.botProfile ?? null,
+      transport: status.transport,
+      metadata: {
+        apiBaseUrl: status.apiBaseUrl,
+        commands: status.commands.length,
+        recentErrors: status.recentErrors,
+      },
+    });
+    for (const chat of status.knownChats) {
+      channelsRegistry.targets.register({
+        provider: "telegram",
+        accountId: account.accountId,
+        targetId: chat.id,
+        kind: chat.type === "private" ? "dm" : chat.type,
+        label: chat.title ?? chat.username ?? chat.firstName ?? chat.id,
+        title: chat.title,
+        username: chat.username,
+        lastSeenAt: chat.lastSeenAt,
+        metadata: {
+          isForum: chat.isForum,
+          inviteLink: chat.inviteLink,
+        },
+      });
+    }
+    return account;
+  }
+
   function patchSkillIntentEntry(entry: {
     id: string;
     enabled: boolean;
@@ -1974,6 +2468,109 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         entry,
       ],
     });
+  }
+
+  function copyLibrarySkillPath(asset: LibraryAsset): string | null {
+    const sourcePath = asset.source?.path?.trim();
+    if (!sourcePath) return null;
+    const absoluteSource = path.isAbsolute(sourcePath)
+      ? sourcePath
+      : path.resolve(libraryStore.rootDir, sourcePath);
+    if (!fs.existsSync(absoluteSource)) {
+      throw new Error(`Library skill source path does not exist for ${asset.id}.`);
+    }
+
+    const targetDir = path.join(workspaceDir, "skills", asset.id);
+    filesystem.ensureDir(targetDir);
+    const stat = fs.statSync(absoluteSource);
+    if (stat.isDirectory()) {
+      fs.cpSync(absoluteSource, targetDir, { recursive: true, force: true });
+      return targetDir;
+    }
+
+    const targetPath = path.join(targetDir, path.basename(absoluteSource));
+    fs.copyFileSync(absoluteSource, targetPath);
+    return targetDir;
+  }
+
+  async function materializeLibrarySkill(asset: LibraryAsset): Promise<SkillDescriptor[]> {
+    const copiedPath = copyLibrarySkillPath(asset);
+    if (!copiedPath && asset.source?.installRef) {
+      await installSkillFromSource(asset.source.installRef, { source: asset.source.source });
+    }
+
+    patchSkillIntentEntry({
+      id: asset.id,
+      enabled: true,
+      installRef: asset.source?.installRef ?? asset.id,
+      source: asset.source?.source ?? (copiedPath ? "library" : undefined),
+      label: asset.title,
+    });
+    const skills = await adapter.syncSkills(processHost, resolvedRuntimeOptions);
+    persistSkillsState(skills);
+    appendAuditEvent("library.skill_synced", "skills", { id: asset.id, runtimeAdapter: adapter.id });
+    eventBus.emit("library.skill_synced", { id: asset.id, runtimeAdapter: adapter.id });
+    return skills;
+  }
+
+  function materializeLibraryInstruction(asset: LibraryAsset): LibrarySyncResult["writtenInstructionBlocks"][number] | null {
+    if (asset.kind !== "instruction") return null;
+    const projection = asset.projection ?? { target: "agents" as const };
+    const targetFile = libraryProjectionTargetFile(projection.target);
+    const blockId = projection.blockId ?? `library-${normalizeLibraryId(asset.id)}`;
+    const content = libraryStore.readContent(asset) ?? "";
+    const before = readWorkspaceFile(workspaceDir, targetFile, filesystem) ?? "";
+    const after = applyTextMutation({
+      originalContent: before,
+      mode: "managed_block",
+      blockId,
+      content,
+    });
+    const result = writeWorkspaceFile(workspaceDir, targetFile, after, filesystem);
+    appendAuditEvent("library.instruction_synced", "files", { id: asset.id, targetFile, blockId, changed: result.changed });
+    eventBus.emit("library.instruction_synced", { id: asset.id, targetFile, blockId, changed: result.changed });
+    return {
+      assetId: asset.id,
+      targetFile,
+      blockId,
+      changed: result.changed,
+    };
+  }
+
+  async function syncLibraryAssets(input: LibraryResolveInput & { allowMissingSecrets?: boolean } = {}): Promise<LibrarySyncResult> {
+    const resolved = libraryStore.resolve({
+      agentId: input.agentId ?? logicalAgentId,
+      workspaceId: input.workspaceId ?? options.workspace.workspaceId,
+      tags: input.tags,
+      availableSecrets: input.availableSecrets,
+    });
+    if (resolved.missingSecrets.length > 0 && !input.allowMissingSecrets) {
+      const missing = resolved.missingSecrets.map((secret) => `${secret.assetId}:${secret.name}`).join(", ");
+      throw new Error(`Missing required library secrets: ${missing}`);
+    }
+
+    let syncedSkills: SkillDescriptor[] = [];
+    const writtenInstructionBlocks: LibrarySyncResult["writtenInstructionBlocks"] = [];
+    for (const asset of resolved.assets) {
+      if (asset.kind === "skill") {
+        syncedSkills = await materializeLibrarySkill(asset);
+      }
+      if (asset.kind === "instruction") {
+        const written = materializeLibraryInstruction(asset);
+        if (written) writtenInstructionBlocks.push(written);
+      }
+    }
+
+    if (syncedSkills.length === 0) {
+      syncedSkills = await readSkills();
+      persistSkillsState(syncedSkills);
+    }
+
+    return {
+      resolved,
+      syncedSkills,
+      writtenInstructionBlocks,
+    };
   }
 
   function patchManagedPluginIntent(target: OpenClawManagedPluginTarget, enabled: boolean) {
@@ -2682,6 +3279,246 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         };
       }),
     };
+  }
+
+  function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function appendChannelListenerLog(logPath: string | undefined, message: string): void {
+    if (!logPath) return;
+    filesystem.ensureDir(path.dirname(logPath));
+    fs.appendFileSync(logPath, `${new Date().toISOString()} ${message}\n`);
+  }
+
+  async function applyChannelProcessorActions(
+    actions: ChannelProcessorAction[],
+    context: {
+      provider: string;
+      accountId: string;
+      message: ChannelMessageRecord;
+      processorId?: string;
+      processorAgentId?: string;
+    },
+  ): Promise<void> {
+    for (const action of actions) {
+      if (action.type === "ignore") continue;
+      if (action.type === "register_target") {
+        channelsRegistry.targets.register({
+          provider: action.provider ?? context.provider,
+          accountId: action.accountId ?? context.accountId,
+          targetId: action.targetId,
+          kind: action.kind ?? "unknown",
+          label: action.label,
+          title: action.title,
+          username: action.username,
+          parentTargetId: action.parentTargetId,
+          threadId: action.threadId,
+          metadata: action.metadata,
+        });
+        continue;
+      }
+      if (action.type === "grant_permission") {
+        channelsRegistry.bindings.grant({
+          agentId: action.agentId,
+          provider: action.provider ?? context.provider,
+          accountId: action.accountId ?? context.accountId,
+          targetId: action.targetId,
+          permissions: action.permissions,
+          priority: action.priority,
+          metadata: action.metadata,
+        });
+        continue;
+      }
+      if (action.type === "send_message") {
+        const agentId = action.agentId ?? context.processorAgentId ?? context.processorId;
+        const targetId = action.targetId ?? context.message.targetId;
+        if (!channelsRegistry.bindings.can(agentId, "write", { provider: context.provider, accountId: context.accountId, targetId })) {
+          throw new Error(`processor ${context.processorId ?? "unknown"} does not have write permission for ${context.provider}:${targetId}`);
+        }
+        await sendTelegramAccountMessage({
+          registry: channelsRegistry,
+          runner: processHost,
+          env: secretsEnv,
+        }, {
+          provider: context.provider,
+          accountId: context.accountId,
+          targetId,
+          text: action.text,
+          media: action.media,
+          threadId: action.threadId ?? context.message.threadId,
+          agentId,
+          metadata: {
+            ...(action.metadata ?? {}),
+            processorId: context.processorId,
+          },
+        });
+      }
+    }
+  }
+
+  async function runChannelListener(input: {
+    provider?: string;
+    accountId?: string;
+    processorId?: string;
+    once?: boolean;
+    intervalMs?: number;
+    timeoutSeconds?: number;
+    stopPath?: string;
+    pidPath?: string;
+    logPath?: string;
+    mode?: "foreground" | "background";
+  } = {}): Promise<ChannelListenerDescriptor> {
+    const provider = input.provider ?? "telegram";
+    const accountId = input.accountId ?? "default";
+    if (provider !== "telegram") {
+      throw new Error(`unsupported channel provider: ${provider}`);
+    }
+    const listenerId = `${provider}:${accountId}`;
+    const processor = input.processorId ? channelsRegistry.processors.get(input.processorId) : null;
+    if (input.processorId && !processor) {
+      throw new Error(`channel processor not found: ${input.processorId}`);
+    }
+    const startedAt = new Date().toISOString();
+    if (input.pidPath) {
+      filesystem.ensureDir(path.dirname(input.pidPath));
+      filesystem.writeTextAtomic(input.pidPath, `${process.pid}\n`);
+    }
+    if (input.stopPath && fs.existsSync(input.stopPath)) {
+      fs.rmSync(input.stopPath, { force: true });
+    }
+    let listener = channelsRegistry.listeners.upsert({
+      id: listenerId,
+      provider,
+      accountId,
+      processorId: processor?.id,
+      mode: input.mode ?? "foreground",
+      status: "running",
+      pid: process.pid,
+      pidPath: input.pidPath,
+      logPath: input.logPath,
+      stopPath: input.stopPath,
+      startedAt,
+      lastHeartbeatAt: startedAt,
+    });
+    channelsRegistry.events.record({ type: "channel.listener.started", provider, accountId, processorId: processor?.id, status: "ok" });
+    eventBus.emit("channel.listener.started", { provider, accountId, processorId: processor?.id, pid: process.pid });
+    appendChannelListenerLog(input.logPath, `listener started provider=${provider} account=${accountId} processor=${processor?.id ?? "none"}`);
+
+    while (true) {
+      if (input.stopPath && fs.existsSync(input.stopPath)) break;
+      try {
+        listener = channelsRegistry.listeners.upsert({
+          id: listenerId,
+          provider,
+          accountId,
+          processorId: processor?.id,
+          mode: input.mode ?? "foreground",
+          status: "running",
+          pid: process.pid,
+          pidPath: input.pidPath,
+          logPath: input.logPath,
+          stopPath: input.stopPath,
+          startedAt,
+          lastHeartbeatAt: new Date().toISOString(),
+        });
+        const messages = await syncTelegramAccount({
+          registry: channelsRegistry,
+          runner: processHost,
+          env: secretsEnv,
+        }, {
+          accountId,
+          limit: 100,
+          timeoutSeconds: input.timeoutSeconds ?? 1,
+        });
+        appendChannelListenerLog(input.logPath, `synced ${messages.length} messages`);
+        for (const message of messages) {
+          if (!processor) continue;
+          try {
+            const result = await invokeChannelProcessor(processor, {
+              type: "channel.message.received",
+              provider,
+              accountId,
+              targetId: message.targetId,
+              message,
+              processorId: processor.id,
+            }, { env: secretsEnv });
+            channelsRegistry.events.record({
+              type: "channel.processor.invoked",
+              provider,
+              accountId,
+              targetId: message.targetId,
+              messageId: message.id,
+              processorId: processor.id,
+              status: result.actions.length > 0 ? "ok" : "ignored",
+              payload: { actionCount: result.actions.length },
+            });
+            await applyChannelProcessorActions(result.actions, {
+              provider,
+              accountId,
+              message,
+              processorId: processor.id,
+              processorAgentId: processor.agentId,
+            });
+          } catch (error) {
+            const messageText = error instanceof Error ? error.message : String(error);
+            channelsRegistry.events.record({
+              type: "channel.processor.invoked",
+              provider,
+              accountId,
+              targetId: message.targetId,
+              messageId: message.id,
+              processorId: processor.id,
+              status: "error",
+              payload: { error: messageText },
+            });
+            appendChannelListenerLog(input.logPath, `processor error ${messageText}`);
+          }
+        }
+      } catch (error) {
+        const messageText = error instanceof Error ? error.message : String(error);
+        channelsRegistry.events.record({ type: "channel.listener.error", provider, accountId, processorId: processor?.id, status: "error", payload: { error: messageText } });
+        listener = channelsRegistry.listeners.upsert({
+          id: listenerId,
+          provider,
+          accountId,
+          processorId: processor?.id,
+          mode: input.mode ?? "foreground",
+          status: "error",
+          pid: process.pid,
+          pidPath: input.pidPath,
+          logPath: input.logPath,
+          stopPath: input.stopPath,
+          startedAt,
+          lastHeartbeatAt: new Date().toISOString(),
+          lastError: messageText,
+        });
+        appendChannelListenerLog(input.logPath, `listener error ${messageText}`);
+        await sleep(Math.max(1_000, Math.min(input.intervalMs ?? 2_000, 10_000)));
+      }
+      if (input.once) break;
+      await sleep(input.intervalMs ?? 2_000);
+    }
+
+    listener = channelsRegistry.listeners.upsert({
+      id: listenerId,
+      provider,
+      accountId,
+      processorId: processor?.id,
+      mode: input.mode ?? "foreground",
+      status: "stopped",
+      pid: process.pid,
+      pidPath: input.pidPath,
+      logPath: input.logPath,
+      stopPath: input.stopPath,
+      startedAt,
+      stoppedAt: new Date().toISOString(),
+      lastHeartbeatAt: new Date().toISOString(),
+    });
+    channelsRegistry.events.record({ type: "channel.listener.stopped", provider, accountId, processorId: processor?.id, status: "ok" });
+    eventBus.emit("channel.listener.stopped", { provider, accountId, processorId: processor?.id, pid: process.pid });
+    appendChannelListenerLog(input.logPath, `listener stopped provider=${provider} account=${accountId}`);
+    return listener;
   }
 
   return {
@@ -3575,6 +4412,25 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         return result;
       },
     },
+    library: {
+      list: () => libraryStore.list(),
+      get: (id) => libraryStore.get(id),
+      create: (input) => libraryStore.create(input),
+      update: (id, patch) => libraryStore.update(id, patch),
+      remove: (id) => libraryStore.remove(id),
+      importSkill: (ref, importOptions = {}) => libraryStore.importSkill(ref, importOptions),
+      createInstruction: (input) => libraryStore.createInstruction(input),
+      createBundle: (input) => libraryStore.createBundle(input),
+      assign: (input) => libraryStore.assign(input),
+      unassign: (input) => libraryStore.unassign(input),
+      resolve: (input = {}) => libraryStore.resolve({
+        agentId: input.agentId ?? logicalAgentId,
+        workspaceId: input.workspaceId ?? options.workspace.workspaceId,
+        tags: input.tags,
+        availableSecrets: input.availableSecrets,
+      }),
+      sync: (input = {}) => syncLibraryAssets(input),
+    },
     generations: {
       backends: () => generationStore.listBackends(),
       registerCommandBackend: (input) => registerGenerationBackend(input),
@@ -3584,7 +4440,21 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       get: (id) => generationStore.get(id),
       remove: (id) => removeGenerationRecord(id),
     },
-    image: createTypedGenerationFacade("image"),
+    image: {
+      backends: () => imageBackends(),
+      create: (input) => createImageRecord(input),
+      generate: (input) => createImageRecord(input),
+      edit: (input) => editImageRecord(input),
+      import: (input) => imageStore.importImage({
+        ...input,
+        workspaceId: options.workspace.workspaceId,
+        agentId: logicalAgentId,
+      }),
+      list: (query) => listImageRecords(query),
+      search: (query) => listImageRecords(query),
+      get: (id) => getImageRecord(id),
+      remove: (id) => removeImageRecord(id),
+    },
     audio: createTypedGenerationFacade("audio"),
     video: createTypedGenerationFacade("video"),
     tts: {
@@ -3616,6 +4486,155 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         persistChannelsState(channels);
         return channels;
       },
+      accounts: {
+        registerTelegramBot: async (input) => {
+          const { accountId, label, ...telegramInput } = input;
+          patchTelegramChannelIntent({
+            enabled: true,
+            secretRef: telegramInput.secretName,
+            config: {
+              accountId: accountId ?? "default",
+              ...(telegramInput.apiBaseUrl ? { apiBaseUrl: telegramInput.apiBaseUrl } : {}),
+              ...(telegramInput.webhookUrl ? { webhookUrl: telegramInput.webhookUrl } : {}),
+              ...(telegramInput.webhookSecretToken ? { webhookSecretToken: telegramInput.webhookSecretToken } : {}),
+              ...(telegramInput.allowedUpdates ? { allowedUpdates: telegramInput.allowedUpdates } : {}),
+              ...(typeof telegramInput.dropPendingUpdates === "boolean" ? { dropPendingUpdates: telegramInput.dropPendingUpdates } : {}),
+            },
+          });
+          const account = await connectTelegramAccount({
+            registry: channelsRegistry,
+            runner: processHost,
+            env: secretsEnv,
+          }, {
+            ...telegramInput,
+            accountId,
+            label,
+          });
+          await refreshChannelSnapshots();
+          appendAuditEvent("telegram.connected", "channels", {
+            secretName: telegramInput.secretName,
+            accountId: account.accountId,
+            mode: (account.transport as TelegramTransportStatus | null)?.mode,
+            runtimeAdapter: adapter.id,
+          });
+          eventBus.emit("telegram.connected", {
+            secretName: telegramInput.secretName,
+            accountId: account.accountId,
+            mode: (account.transport as TelegramTransportStatus | null)?.mode,
+            runtimeAdapter: adapter.id,
+          });
+          return account;
+        },
+        list: (provider) => channelsRegistry.accounts.list(provider),
+        get: (provider, accountId) => channelsRegistry.accounts.get(provider, accountId),
+        status: async (provider) => {
+          if (!provider || provider === "telegram") {
+            const accounts = channelsRegistry.accounts.list("telegram");
+            for (const account of accounts) {
+              await refreshTelegramAccountStatus({
+                registry: channelsRegistry,
+                runner: processHost,
+                env: secretsEnv,
+              }, account.accountId);
+            }
+            await refreshChannelSnapshots();
+          }
+          return channelsRegistry.accounts.list(provider);
+        },
+        remove: async (provider, accountId) => {
+          channelsRegistry.accounts.remove(provider, accountId);
+          await refreshChannelSnapshots();
+          return channelsRegistry.accounts.list(provider);
+        },
+      },
+      targets: {
+        register: (input) => channelsRegistry.targets.register(input),
+        list: (input) => channelsRegistry.targets.list(input),
+        get: (provider, accountId, targetId, threadId) => channelsRegistry.targets.get(provider, accountId, targetId, threadId),
+      },
+      bindings: {
+        grant: (input) => channelsRegistry.bindings.grant(input),
+        revoke: (id) => channelsRegistry.bindings.revoke(id),
+        list: (input) => channelsRegistry.bindings.list(input),
+        can: (agentId, permission, selector) => channelsRegistry.bindings.can(agentId, permission, selector),
+      },
+      processors: {
+        register: (input) => channelsRegistry.processors.register(input),
+        list: () => channelsRegistry.processors.list(),
+        get: (id) => channelsRegistry.processors.get(id),
+        remove: (id) => channelsRegistry.processors.remove(id),
+      },
+      listeners: {
+        upsert: (input) => channelsRegistry.listeners.upsert(input),
+        list: (input) => channelsRegistry.listeners.list(input),
+        get: (provider, accountId) => channelsRegistry.listeners.get(provider, accountId),
+        remove: (provider, accountId) => channelsRegistry.listeners.remove(provider, accountId),
+      },
+      events: {
+        list: (input) => channelsRegistry.events.list(input),
+      },
+      listen: {
+        run: (input) => runChannelListener(input),
+      },
+      messages: {
+        send: async (input) => {
+          const provider = input.provider ?? "telegram";
+          const accountId = input.accountId ?? "default";
+          if (provider !== "telegram") {
+            throw new Error(`unsupported channel provider: ${provider}`);
+          }
+          if (!channelsRegistry.bindings.can(input.agentId, "write", { provider, accountId, targetId: input.targetId })) {
+            throw new Error(`agent ${input.agentId} does not have write permission for ${provider}:${input.targetId}`);
+          }
+          return sendTelegramAccountMessage({
+            registry: channelsRegistry,
+            runner: processHost,
+            env: secretsEnv,
+          }, {
+            ...input,
+            provider,
+            accountId,
+          });
+        },
+        read: (input) => channelsRegistry.messages.read(input),
+        sync: async (input = {}) => {
+          const provider = input.provider ?? "telegram";
+          if (provider !== "telegram") {
+            throw new Error(`unsupported channel provider: ${provider}`);
+          }
+          const records = await syncTelegramAccount({
+            registry: channelsRegistry,
+            runner: processHost,
+            env: secretsEnv,
+          }, input);
+          await refreshChannelSnapshots();
+          return records;
+        },
+      },
+      commands: {
+        set: async (provider, commands, input) => {
+          if (provider !== "telegram") {
+            throw new Error(`unsupported channel provider: ${provider}`);
+          }
+          const saved = await setTelegramAccountCommands({
+            registry: channelsRegistry,
+            runner: processHost,
+            env: secretsEnv,
+          }, input?.accountId, commands);
+          await refreshChannelSnapshots();
+          return saved;
+        },
+        get: async (provider, input) => {
+          if (provider !== "telegram") {
+            throw new Error(`unsupported channel provider: ${provider}`);
+          }
+          return getTelegramAccountCommands({
+            registry: channelsRegistry,
+            runner: processHost,
+            env: secretsEnv,
+          }, input?.accountId);
+        },
+      },
     },
     telegram: {
       provisionSecretReference: async (input) => ensureTelegramBotSecretReference(processHost, {
@@ -3637,6 +4656,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           },
         });
         const status = await telegram.connectBot(input);
+        recordTelegramStatusInChannels(status, { secretName: input.secretName });
         await refreshChannelSnapshots();
         appendAuditEvent("telegram.connected", "channels", {
           secretName: input.secretName,
@@ -3652,6 +4672,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       },
       status: async () => {
         const status = await telegram.status();
+        recordTelegramStatusInChannels(status);
         await refreshChannelSnapshots();
         return status;
       },
@@ -3666,6 +4687,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           },
         });
         const status = await telegram.configureWebhook(input);
+        recordTelegramStatusInChannels(status);
         await refreshChannelSnapshots();
         appendAuditEvent("telegram.webhook_configured", "channels", {
           url: input.url,
@@ -3685,6 +4707,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           },
         });
         const status = await telegram.disableWebhook(input);
+        recordTelegramStatusInChannels(status);
         await refreshChannelSnapshots();
         appendAuditEvent("telegram.webhook_disabled", "channels", { runtimeAdapter: adapter.id });
         eventBus.emit("telegram.webhook_disabled", { runtimeAdapter: adapter.id });
@@ -3701,6 +4724,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           },
         });
         const status = await telegram.startPolling(input);
+        recordTelegramStatusInChannels(status);
         await refreshChannelSnapshots();
         appendAuditEvent("telegram.polling_started", "channels", { runtimeAdapter: adapter.id });
         eventBus.emit("telegram.polling_started", { runtimeAdapter: adapter.id });
@@ -3713,6 +4737,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           },
         });
         const status = await telegram.stopPolling();
+        recordTelegramStatusInChannels(status);
         await refreshChannelSnapshots();
         appendAuditEvent("telegram.polling_stopped", "channels", { runtimeAdapter: adapter.id });
         eventBus.emit("telegram.polling_stopped", { runtimeAdapter: adapter.id });
@@ -3731,8 +4756,29 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         return saved;
       },
       getCommands: () => telegram.getCommands(),
-      sendMessage: (input) => telegram.sendMessage(input),
-      sendMedia: (input) => telegram.sendMedia(input),
+      sendMessage: async (input) => {
+        const response = await telegram.sendMessage(input);
+        channelsRegistry.messages.recordTelegramOutbound({
+          provider: "telegram",
+          accountId: "default",
+          targetId: String(input.chatId),
+          text: input.text,
+          threadId: input.messageThreadId,
+        }, response);
+        return response;
+      },
+      sendMedia: async (input) => {
+        const response = await telegram.sendMedia(input);
+        channelsRegistry.messages.recordTelegramOutbound({
+          provider: "telegram",
+          accountId: "default",
+          targetId: String(input.chatId),
+          text: input.caption,
+          media: input.media,
+          threadId: input.messageThreadId,
+        }, response);
+        return response;
+      },
       listChats: (query) => telegram.listChats(query),
       getChat: (chatId) => telegram.getChat(chatId),
       getChatAdministrators: (chatId) => telegram.getChatAdministrators(chatId),
@@ -3743,6 +4789,9 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       revokeInviteLink: (chatId, inviteLink) => telegram.revokeInviteLink(chatId, inviteLink),
       syncUpdates: async (input) => {
         const updates = await telegram.syncUpdates(input);
+        for (const envelope of updates) {
+          channelsRegistry.messages.recordTelegramUpdate(envelope);
+        }
         await refreshChannelSnapshots();
         if (updates.length > 0) {
           appendAuditEvent("telegram.updates_synced", "channels", { count: updates.length, runtimeAdapter: adapter.id });
@@ -3752,6 +4801,9 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       },
       ingestUpdate: async (update) => {
         const envelope = await telegram.ingestUpdate(update);
+        if (envelope) {
+          channelsRegistry.messages.recordTelegramUpdate(envelope);
+        }
         await refreshChannelSnapshots();
         if (envelope) {
           appendAuditEvent("telegram.update_ingested", "channels", { updateId: envelope.updateId, type: envelope.type, runtimeAdapter: adapter.id });
@@ -4216,6 +5268,26 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       commitUpload: async (uploadId) => documentStore.commitUpload(uploadId),
       download: async (documentId) => documentStore.download(documentId),
       resolveRefs: async (documentIds) => documentStore.resolveRefs(documentIds),
+    },
+    storage: {
+      put: (input) => storageStore.put(input),
+      get: (ref) => storageStore.get(ref),
+      head: (ref) => storageStore.head(ref),
+      list: (input) => storageStore.list(input),
+      delete: (ref) => storageStore.delete(ref),
+      readText: (ref) => storageStore.readText(ref),
+      writeText: (input) => storageStore.writeText(input),
+      exportToFile: (ref) => storageStore.exportToFile(ref),
+      tokens: {
+        issue: (input) => storageStore.issueToken(input),
+        list: () => storageStore.listTokens(),
+        revoke: (id) => storageStore.revokeToken(id),
+      },
+      share: {
+        create: (input) => storageStore.createShare(input),
+        revoke: (id) => storageStore.revokeShare(id),
+        list: () => storageStore.listShares(),
+      },
     },
     data: dataStore,
     orchestration: {

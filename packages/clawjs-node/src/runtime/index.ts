@@ -35,8 +35,10 @@ export {
   setupOpenClawWorkspace,
   repairOpenClawRuntime,
 } from "./openclaw.ts";
+export * from "./codex-command.ts";
 export * from "./adapters/registry.ts";
 export { demoAdapter } from "./adapters/demo-adapter.ts";
+export { codexAdapter } from "./adapters/codex-adapter.ts";
 export { openclawAdapter } from "./adapters/openclaw-adapter.ts";
 export { zeroclawAdapter } from "./adapters/zeroclaw-adapter.ts";
 export { picoclawAdapter } from "./adapters/picoclaw-adapter.ts";

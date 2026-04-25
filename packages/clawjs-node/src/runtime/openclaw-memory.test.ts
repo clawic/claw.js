@@ -8,29 +8,26 @@ import {
 } from "./openclaw-memory.ts";
 
 test("buildOpenClawMemorySearchCommand includes agent and search flags", () => {
-  assert.deepEqual(
-    buildOpenClawMemorySearchCommand("budget", {
-      agentId: "demo-main",
-      limit: 5,
-      minScore: 0.25,
-    }),
-    {
-      command: "openclaw",
-      args: [
-        "memory",
-        "--agent",
-        "demo-main",
-        "search",
-        "--query",
-        "budget",
-        "--json",
-        "--max-results",
-        "5",
-        "--min-score",
-        "0.25",
-      ],
-    },
-  );
+  const command = buildOpenClawMemorySearchCommand("budget", {
+    agentId: "demo-main",
+    limit: 5,
+    minScore: 0.25,
+  });
+
+  assert.equal(command.command, "openclaw");
+  assert.deepEqual(command.args, [
+    "memory",
+    "search",
+    "--agent",
+    "demo-main",
+    "--query",
+    "budget",
+    "--json",
+    "--max-results",
+    "5",
+    "--min-score",
+    "0.25",
+  ]);
 });
 
 test("parseOpenClawMemorySearch tolerates common hit envelopes", () => {

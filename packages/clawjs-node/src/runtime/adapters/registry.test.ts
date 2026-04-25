@@ -13,4 +13,5 @@ test("runtime adapters expose support metadata with one recommended production p
   assert.equal(recommended[0]?.id, "openclaw");
   assert.equal(recommended[0]?.stability, "stable");
   assert.equal(recommended[0]?.supportLevel, "production");
+  assert.equal(adapters.some((adapter) => adapter.id === "codex" && adapter.stability === "experimental" && adapter.supportLevel === "experimental"), true);
 });

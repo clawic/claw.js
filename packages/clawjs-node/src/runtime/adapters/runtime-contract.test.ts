@@ -6,6 +6,7 @@ import path from "path";
 
 import type { CommandRunner } from "../contracts.ts";
 import { getRuntimeSessionDescriptor, getRuntimeResourceCatalogs, getRuntimeStatusReport } from "../engines.ts";
+import { codexAdapter } from "./codex-adapter.ts";
 import { hermesAdapter } from "./hermes-adapter.ts";
 import { nanobotAdapter } from "./nanobot-adapter.ts";
 import { openclawAdapter } from "./openclaw-adapter.ts";
@@ -61,6 +62,47 @@ test("openclaw adapter preserves its transport and capability-map contract", asy
   assert.equal(conversation.transport.gatewayKind, "openai-responses");
   assert.equal(conversation.primaryTransport, "gateway");
   assert.equal(conversation.fallbackTransport, "cli");
+});
+
+test("codex adapter exposes primary-agent-tool status, auth, and hybrid transport", async () => {
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-codex-"));
+  fs.mkdirSync(path.join(homeDir, "skills", "review"), { recursive: true });
+  fs.writeFileSync(path.join(homeDir, "config.toml"), 'model = "gpt-5.3-codex"\n');
+
+  const runner = new FakeRunner({
+    "custom-codex --version": { stdout: "codex-cli 0.122.0-alpha.13\n" },
+    "custom-codex login status": { stdout: "Logged in using ChatGPT\n" },
+    "custom-codex app-server --help": { stdout: "Usage: codex app-server\n" },
+  });
+
+  const options = {
+    adapter: "codex" as const,
+    binaryPath: "custom-codex",
+    homeDir,
+    workspacePath: path.join(homeDir, "workspace"),
+  };
+  const status = await getRuntimeStatusReport(codexAdapter, runner, options);
+  assert.equal(status.version, "0.122.0-alpha.13");
+  assert.equal(status.capabilityMap.auth.status, "ready");
+  assert.equal(status.capabilityMap.session_gateway.status, "ready");
+  assert.equal(status.capabilityMap.channels.supported, false);
+
+  const auth = await codexAdapter.getProviderAuth(runner, options);
+  assert.equal(auth["openai-codex"]?.hasAuth, true);
+
+  const resources = await getRuntimeResourceCatalogs(codexAdapter, runner, options);
+  assert.equal(resources.models.defaultModel?.modelId, "gpt-5.3-codex");
+  assert.equal(resources.skills.skills.some((entry) => entry.id === "review"), true);
+
+  const conversation = getRuntimeSessionDescriptor(codexAdapter, options);
+  assert.equal(conversation.transport.kind, "hybrid");
+  assert.equal(conversation.transport.gatewayKind, "codex-app-server");
+  assert.equal(conversation.primaryTransport, "gateway");
+  assert.equal(conversation.fallbackTransport, "cli");
+  assert.equal(conversation.buildCliInvocation({
+    sessionId: "session-1",
+    prompt: "hello",
+  }).parser, "codex-jsonl");
 });
 
 test("hermes adapter exposes structured capabilities, resources, and transport metadata", async () => {

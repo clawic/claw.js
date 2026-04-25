@@ -190,16 +190,21 @@ export interface SessionCliInvocation {
   args: string[];
   env?: NodeJS.ProcessEnv;
   timeoutMs?: number;
-  parser: "json-payloads" | "stdout-text";
+  parser: "json-payloads" | "codex-jsonl" | "stdout-text";
 }
 
 export interface SessionGatewayDescriptor {
-  kind: "openai-chat-completions" | "openai-responses" | "openclaw-gateway";
+  kind: "openai-chat-completions" | "openai-responses" | "openclaw-gateway" | "codex-app-server";
   url: string;
   token?: string;
   port?: number;
   source?: string;
   configPath?: string;
+  command?: string;
+  args?: string[];
+  cwd?: string;
+  env?: NodeJS.ProcessEnv;
+  model?: string;
 }
 
 export interface RuntimeSessionAdapter {

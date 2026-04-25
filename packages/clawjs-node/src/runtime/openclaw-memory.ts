@@ -97,8 +97,8 @@ export function buildOpenClawMemorySearchCommand(
 ): { command: string; args: string[]; env?: NodeJS.ProcessEnv } {
   const args = [
     "memory",
-    ...(options.agentId ? ["--agent", options.agentId] : []),
     "search",
+    ...(options.agentId ? ["--agent", options.agentId] : []),
     "--query",
     query,
     "--json",
