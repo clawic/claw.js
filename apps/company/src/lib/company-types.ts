@@ -3,7 +3,7 @@
  *
  * Mirrors the database service collections defined in
  * database/src/server/db.ts (companies, goals, projects, company_agents,
- * issues, issue_comments, approvals, runs).
+ * issues, issue_comments, company_approvals, runs).
  */
 
 import type { DatabaseRecord } from "./database-client";

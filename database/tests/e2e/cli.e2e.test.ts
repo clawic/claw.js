@@ -125,3 +125,166 @@ test("dedicated CLI and claw bridge hit the same database service", async () => 
   assert.equal(listedPayload.total, 1);
   assert.equal(listedPayload.items[0]?.name, "Acme");
 });
+
+test("claw db uses the same remote database service for built-ins and magic custom collections", async () => {
+  const server = await boot();
+
+  const login = await execFileAsync("node", [
+    databaseDistCli,
+    "login",
+    "--url",
+    server.baseUrl,
+    "--email",
+    "admin@database.local",
+    "--password",
+    "database-admin",
+    "--json",
+  ], { cwd: process.cwd() });
+  const loginPayload = JSON.parse(login.stdout) as { accessToken: string };
+  assert.ok(loginPayload.accessToken);
+
+  const createdTask = await execFileAsync("node", [
+    clawBin,
+    "db",
+    "task",
+    "create",
+    "Ship CLI",
+    "--url",
+    server.baseUrl,
+    "--token",
+    loginPayload.accessToken,
+    "--json",
+  ], {
+    cwd: path.resolve(process.cwd(), ".."),
+  });
+  const createdTaskPayload = JSON.parse(createdTask.stdout) as { id: string; title: string; status: string };
+  assert.equal(createdTaskPayload.title, "Ship CLI");
+  assert.equal(createdTaskPayload.status, "todo");
+
+  const createdLead = await execFileAsync("node", [
+    clawBin,
+    "db",
+    "leads",
+    "create",
+    "--url",
+    server.baseUrl,
+    "--token",
+    loginPayload.accessToken,
+    "--set",
+    "name=Ada",
+    "--set",
+    "website=https://ada.dev",
+    "--json",
+  ], {
+    cwd: path.resolve(process.cwd(), ".."),
+  });
+  const createdLeadPayload = JSON.parse(createdLead.stdout) as { title: string; metadata?: { website?: string } };
+  assert.equal(createdLeadPayload.title, "Ada");
+  assert.equal(createdLeadPayload.metadata?.website, "https://ada.dev");
+
+  const listedTasks = await execFileAsync("node", [
+    clawBin,
+    "db",
+    "tasks",
+    "list",
+    "--url",
+    server.baseUrl,
+    "--token",
+    loginPayload.accessToken,
+    "--json",
+  ], {
+    cwd: path.resolve(process.cwd(), ".."),
+  });
+  const listedTasksPayload = JSON.parse(listedTasks.stdout) as Array<{ id: string }>;
+  assert.equal(listedTasksPayload.some((item) => item.id === createdTaskPayload.id), true);
+
+  const listedLeads = await execFileAsync("node", [
+    clawBin,
+    "database",
+    "record",
+    "list",
+    "--url",
+    server.baseUrl,
+    "--token",
+    loginPayload.accessToken,
+    "--namespace",
+    "main",
+    "--collection",
+    "leads",
+    "--json",
+  ], {
+    cwd: path.resolve(process.cwd(), ".."),
+  });
+  const listedLeadsPayload = JSON.parse(listedLeads.stdout) as { total: number; items: Array<{ title: string; metadata?: { website?: string } }> };
+  assert.equal(listedLeadsPayload.total, 1);
+  assert.equal(listedLeadsPayload.items[0]?.title, "Ada");
+  assert.equal(listedLeadsPayload.items[0]?.metadata?.website, "https://ada.dev");
+});
+
+test("claw db remote human mode shows local-first style guidance, implicit create, and schema", async () => {
+  const server = await boot();
+
+  const login = await execFileAsync("node", [
+    databaseDistCli,
+    "login",
+    "--url",
+    server.baseUrl,
+    "--email",
+    "admin@database.local",
+    "--password",
+    "database-admin",
+    "--json",
+  ], { cwd: process.cwd() });
+  const loginPayload = JSON.parse(login.stdout) as { accessToken: string };
+  assert.ok(loginPayload.accessToken);
+
+  const createdTask = await execFileAsync("node", [
+    clawBin,
+    "db",
+    "task",
+    "Ship CLI",
+    "--url",
+    server.baseUrl,
+    "--token",
+    loginPayload.accessToken,
+  ], {
+    cwd: path.resolve(process.cwd(), ".."),
+  });
+  assert.match(createdTask.stderr, /Using remote database at/);
+  assert.match(createdTask.stdout, /Created task \S+ "Ship CLI"/);
+
+  const createdLead = await execFileAsync("node", [
+    clawBin,
+    "db",
+    "leads",
+    "--url",
+    server.baseUrl,
+    "--token",
+    loginPayload.accessToken,
+    "--set",
+    "name=Ada",
+  ], {
+    cwd: path.resolve(process.cwd(), ".."),
+  });
+  assert.match(createdLead.stderr, /Created collection "leads"/);
+  assert.match(createdLead.stderr, /Mapped "name" to "title"/);
+  assert.match(createdLead.stdout, /Created lead \S+ "Ada"/);
+
+  const schema = await execFileAsync("node", [
+    clawBin,
+    "db",
+    "leads",
+    "schema",
+    "--url",
+    server.baseUrl,
+    "--token",
+    loginPayload.accessToken,
+    "--json",
+  ], {
+    cwd: path.resolve(process.cwd(), ".."),
+  });
+  const schemaPayload = JSON.parse(schema.stdout) as { exists: boolean; collection: { name: string; fields: Array<{ name: string }> } };
+  assert.equal(schemaPayload.exists, true);
+  assert.equal(schemaPayload.collection.name, "leads");
+  assert.equal(schemaPayload.collection.fields.some((field) => field.name === "title"), true);
+});

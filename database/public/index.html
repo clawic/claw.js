@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Database</title>
+    <title>ClawJS Database</title>
     <link rel="icon" href="/brand/favicon.ico" />
     <link rel="stylesheet" href="/static/remixicon.css" />
     <link rel="stylesheet" href="/static/app.css" />
@@ -12,35 +12,56 @@
     <!-- ============== LOGIN ============== -->
     <section id="login-view" class="page-wrapper full-page center-content">
       <div class="login-wrapper">
-        <div class="login-logo">
-          <img src="/brand/logo.png" alt="ClawJS" width="44" height="44" />
-          <span class="login-brand">Database</span>
+        <div class="login-card">
+          <div class="login-logo">
+            <img src="/brand/logo.png" alt="ClawJS" width="44" height="44" />
+            <div>
+              <span class="login-brand">ClawJS Database</span>
+              <span class="login-subbrand">Superuser login</span>
+            </div>
+          </div>
+          <form id="login-form" data-testid="login-form" class="login-form">
+            <div class="form-field required">
+              <label for="login-email">Email</label>
+              <input id="login-email" type="email" autocomplete="username" placeholder="admin@example.com" />
+            </div>
+            <div class="form-field required">
+              <label for="login-password">Password</label>
+              <input id="login-password" type="password" autocomplete="current-password" placeholder="Your superuser password" />
+            </div>
+            <button type="submit" data-testid="login-submit" class="btn btn-lg btn-block btn-next">
+              <span class="txt">Sign in</span>
+              <i class="ri-arrow-right-line"></i>
+            </button>
+            <p id="login-error" class="error"></p>
+            <div id="login-dev-hint" class="login-dev-hint hidden">
+              <i class="ri-information-line"></i>
+              <span>Development server detected. Credentials prefilled for local use.</span>
+            </div>
+          </form>
         </div>
-        <h4 class="login-title">Superuser login</h4>
-        <form id="login-form" data-testid="login-form" class="login-form">
-          <div class="form-field required">
-            <label for="login-email">Email</label>
-            <input id="login-email" type="email" value="admin@database.local" autocomplete="username" />
-          </div>
-          <div class="form-field required">
-            <label for="login-password">Password</label>
-            <input id="login-password" type="password" value="database-admin" autocomplete="current-password" />
-          </div>
-          <a class="login-forgot link-hint" href="#" tabindex="-1">Forgotten password?</a>
-          <button type="submit" data-testid="login-submit" class="btn btn-lg btn-block btn-next">
-            <span class="txt">Login</span>
-            <i class="ri-arrow-right-line"></i>
-          </button>
-          <p id="login-error" class="error"></p>
-        </form>
       </div>
     </section>
 
     <!-- ============== APP SHELL ============== -->
     <div id="app-view" class="page-wrapper hidden" data-testid="admin-console">
+      <!-- Mobile top bar -->
+      <header class="mobile-topbar" aria-hidden="false">
+        <button type="button" id="mobile-menu-btn" class="icon-btn" aria-label="Open navigation">
+          <i class="ri-menu-line"></i>
+        </button>
+        <div class="mobile-brand">
+          <img src="/brand/logo.png" alt="ClawJS" width="24" height="24" />
+          <span>ClawJS Database</span>
+        </div>
+        <button type="button" id="mobile-list-btn" class="icon-btn" aria-label="Open list">
+          <i class="ri-database-2-line"></i>
+        </button>
+      </header>
+
       <!-- Narrow icon rail -->
       <aside class="app-sidebar" aria-label="Primary">
-        <a class="app-sidebar-logo" href="#" title="Database">
+        <a class="app-sidebar-logo" href="#" title="ClawJS Database">
           <img src="/brand/logo.png" alt="ClawJS" width="32" height="32" />
         </a>
         <nav class="main-menu">
@@ -71,12 +92,20 @@
 
       <!-- Contextual sidebar -->
       <aside class="page-sidebar" data-testid="sidebar">
+        <button type="button" id="page-sidebar-close" class="sidebar-close icon-btn" aria-label="Close panel">
+          <i class="ri-close-line"></i>
+        </button>
+
         <div class="sidebar-content" data-view-only="collections" data-testid="collection-panel">
           <div class="search">
             <i class="ri-search-line"></i>
             <input id="collection-search" type="text" placeholder="Search collections..." />
           </div>
           <div id="collection-list" class="sidebar-list"></div>
+          <div class="sidebar-empty" id="collection-list-empty" hidden>
+            <p>No collections yet.</p>
+            <p class="txt-hint">Create one with the button below to start storing records.</p>
+          </div>
         </div>
 
         <div class="sidebar-content" data-view-only="settings">
@@ -85,29 +114,6 @@
             <button type="button" class="sidebar-list-item active">
               <i class="ri-home-4-line"></i>
               <span class="txt">Application</span>
-            </button>
-            <button type="button" class="sidebar-list-item">
-              <i class="ri-hard-drive-2-line"></i>
-              <span class="txt">Files storage</span>
-            </button>
-            <button type="button" class="sidebar-list-item">
-              <i class="ri-mail-settings-line"></i>
-              <span class="txt">Mail settings</span>
-            </button>
-            <button type="button" class="sidebar-list-item">
-              <i class="ri-shield-keyhole-line"></i>
-              <span class="txt">Token options</span>
-            </button>
-          </div>
-          <h5 class="sidebar-title">Sync</h5>
-          <div class="sidebar-list">
-            <button type="button" class="sidebar-list-item">
-              <i class="ri-import-line"></i>
-              <span class="txt">Import collections</span>
-            </button>
-            <button type="button" class="sidebar-list-item">
-              <i class="ri-export-line"></i>
-              <span class="txt">Export collections</span>
             </button>
           </div>
         </div>
@@ -119,10 +125,6 @@
               <i class="ri-pulse-line"></i>
               <span class="txt">Realtime feed</span>
             </button>
-            <button type="button" class="sidebar-list-item">
-              <i class="ri-server-line"></i>
-              <span class="txt">Request logs</span>
-            </button>
           </div>
         </div>
 
@@ -133,10 +135,6 @@
               <i class="ri-folder-line"></i>
               <span class="txt">Files</span>
             </button>
-            <button type="button" class="sidebar-list-item">
-              <i class="ri-upload-cloud-2-line"></i>
-              <span class="txt">Upload</span>
-            </button>
           </div>
         </div>
 
@@ -146,10 +144,6 @@
             <button type="button" class="sidebar-list-item active">
               <i class="ri-key-2-line"></i>
               <span class="txt">API tokens</span>
-            </button>
-            <button type="button" class="sidebar-list-item">
-              <i class="ri-shield-user-line"></i>
-              <span class="txt">Admin access</span>
             </button>
           </div>
         </div>
@@ -168,18 +162,27 @@
         <section class="page-content" data-pane="collections">
           <header class="page-header">
             <div class="db-switcher-wrap" data-testid="namespace-panel">
-              <button type="button" id="db-switcher" class="db-switcher-chip" aria-expanded="false">
+              <button type="button" id="db-switcher" class="db-switcher-chip" aria-expanded="false" aria-haspopup="true">
                 <i class="ri-database-2-line"></i>
                 <span class="db-label" id="active-namespace-name">Main</span>
                 <i class="ri-arrow-down-s-line db-caret"></i>
               </button>
-              <div id="db-menu" class="db-menu hidden">
-                <div class="db-menu-head">Databases</div>
+              <div id="db-menu" class="db-menu hidden" role="menu">
+                <div class="db-menu-head">
+                  <span>Databases</span>
+                  <button type="button" id="db-menu-close" class="icon-btn icon-btn-sm" aria-label="Close">
+                    <i class="ri-close-line"></i>
+                  </button>
+                </div>
                 <div id="namespace-list" class="db-list"></div>
-                <form id="namespace-form" class="db-form" data-testid="namespace-form">
+                <button type="button" id="db-new-toggle" class="db-new-toggle">
+                  <i class="ri-add-line"></i>
+                  <span>New database</span>
+                </button>
+                <form id="namespace-form" class="db-form hidden" data-testid="namespace-form">
                   <div class="form-field form-field-sm required">
                     <label for="namespace-id">Database ID</label>
-                    <input id="namespace-id" type="text" placeholder="namespace-id" />
+                    <input id="namespace-id" type="text" placeholder="lowercase-id" />
                   </div>
                   <div class="form-field form-field-sm required">
                     <label for="namespace-display-name">Display name</label>
@@ -193,25 +196,20 @@
               <div class="breadcrumb-item">Collections</div>
               <div class="breadcrumb-item" id="schema-title">Select a collection</div>
             </nav>
-            <div class="inline-flex gap-5">
-              <button type="button" id="schema-edit-btn" class="btn btn-transparent btn-circle" title="Edit collection" aria-label="Edit collection">
+            <div class="flex-fill"></div>
+            <div class="btns-group header-actions">
+              <button type="button" id="schema-edit-btn" class="btn btn-transparent btn-circle" title="Edit collection schema" aria-label="Edit collection schema">
                 <i class="ri-settings-4-line"></i>
               </button>
-              <button type="button" id="records-refresh" class="btn btn-transparent btn-circle" title="Refresh" aria-label="Refresh">
+              <button type="button" id="records-refresh" class="btn btn-transparent btn-circle" title="Refresh records" aria-label="Refresh records">
                 <i class="ri-refresh-line"></i>
               </button>
-            </div>
-            <span id="active-collection-name" class="sr-only">Select one</span>
-            <div class="btns-group">
-              <button type="button" class="btn btn-outline">
-                <i class="ri-code-s-slash-line"></i>
-                <span class="txt">API Preview</span>
-              </button>
-              <button type="button" id="new-record-btn" class="btn btn-expanded">
+              <button type="button" id="new-record-btn" class="btn btn-primary btn-expanded">
                 <i class="ri-add-line"></i>
                 <span class="txt">New record</span>
               </button>
             </div>
+            <span id="active-collection-name" class="sr-only">Select one</span>
           </header>
 
           <div class="searchbar">
@@ -222,6 +220,9 @@
 
           <div class="clearfix m-b-sm"></div>
           <div id="records-table" class="table-wrapper" data-testid="records-table"></div>
+          <div id="records-footer" class="records-footer hidden">
+            <span id="records-count">0 records</span>
+          </div>
         </section>
 
         <!-- ==== Logs pane ==== -->
@@ -232,12 +233,11 @@
               <div class="breadcrumb-item">Realtime feed</div>
             </nav>
             <div class="flex-fill"></div>
-            <span class="label label-base live-dot" id="live-status">offline</span>
+            <span class="live-pill" id="live-status" data-state="offline">
+              <span class="live-dot-indicator"></span>
+              <span class="live-label">offline</span>
+            </span>
             <div class="btns-group">
-              <button type="button" class="btn btn-outline">
-                <i class="ri-filter-3-line"></i>
-                <span class="txt">Filter</span>
-              </button>
               <button type="button" class="btn btn-outline" id="logs-clear">
                 <i class="ri-delete-bin-line"></i>
                 <span class="txt">Clear</span>
@@ -246,11 +246,13 @@
           </header>
           <div class="wrapper-lg m-auto">
             <div class="panel-card">
-              <h5 class="panel-card-title">Realtime feed</h5>
+              <h5 class="panel-card-title">Recent activity</h5>
+              <p class="panel-card-sub">Create, update, or delete a record and the event will stream in here. Nothing is persisted beyond this tab.</p>
               <div id="event-list" class="log-list">
                 <div class="empty-state">
                   <i class="ri-pulse-line"></i>
-                  <p>Listening for realtime events. Create, update, or delete a record to see events stream in here.</p>
+                  <p class="empty-title">Waiting for activity</p>
+                  <p class="empty-sub">Realtime events from records, files, and admin actions will appear here.</p>
                 </div>
               </div>
             </div>
@@ -275,18 +277,23 @@
             <div class="panel-card">
               <h5 class="panel-card-title">Upload a new file</h5>
               <form id="file-form" data-testid="file-form">
+                <label class="dropzone" id="file-dropzone">
+                  <input id="file-input" type="file" hidden />
+                  <div class="dropzone-inner">
+                    <i class="ri-upload-cloud-2-line"></i>
+                    <p class="dropzone-title" id="dropzone-title">Drag a file here or click to browse</p>
+                    <p class="dropzone-sub" id="dropzone-sub">Max 25&nbsp;MB per file. Text, images, and binary blobs welcome.</p>
+                  </div>
+                </label>
                 <div class="form-row">
                   <div class="form-field">
-                    <label for="file-input">File</label>
-                    <input id="file-input" type="file" />
-                  </div>
-                  <div class="form-field">
-                    <label for="file-record-id">Record ID (optional)</label>
-                    <input id="file-record-id" type="text" placeholder="record id" />
+                    <label for="file-record-id">Attach to record (optional)</label>
+                    <input id="file-record-id" type="text" placeholder="record id, leave blank to attach to the collection" />
+                    <span class="form-hint">Uses the currently selected collection. Record id is optional for standalone uploads.</span>
                   </div>
                 </div>
                 <div class="form-actions">
-                  <button type="submit" class="btn btn-sm btn-primary">
+                  <button type="submit" id="file-submit" class="btn btn-sm btn-primary" disabled>
                     <i class="ri-upload-cloud-2-line"></i>
                     <span>Upload file</span>
                   </button>
@@ -315,22 +322,60 @@
             </div>
           </header>
           <div class="wrapper-lg m-auto">
+            <div id="issued-token-card" class="panel-card issued-token hidden" role="status" aria-live="polite"></div>
             <div class="panel-card">
               <h5 class="panel-card-title">Issue a new token</h5>
+              <p class="panel-card-sub">Tokens are bearer credentials for automations, scripts, and integrations. You will only see the full token once, store it somewhere safe.</p>
               <form id="token-form" data-testid="token-form">
                 <div class="form-row">
                   <div class="form-field required">
                     <label for="token-label">Label</label>
-                    <input id="token-label" type="text" placeholder="my-service" />
+                    <input id="token-label" type="text" placeholder="e.g. ci-deploy" required />
+                    <span class="form-hint">A human-readable name so you can remember what this token is for.</span>
                   </div>
                   <div class="form-field">
                     <label for="token-collection">Collection scope</label>
-                    <input id="token-collection" type="text" placeholder="optional collection name" />
+                    <input id="token-collection" type="text" placeholder="any collection" />
+                    <span class="form-hint">Leave blank to grant namespace-wide access.</span>
                   </div>
                 </div>
                 <div class="form-field">
-                  <label for="token-operations">Operations</label>
-                  <input id="token-operations" type="text" value="schema:read,records:list,records:read,records:create,records:update,records:delete,files:read,files:write,realtime:subscribe" />
+                  <span class="field-label-group">Permissions</span>
+                  <div class="scope-groups" id="token-scopes">
+                    <fieldset class="scope-group">
+                      <legend><i class="ri-database-2-line"></i> Schema</legend>
+                      <label><input type="checkbox" value="schema:read" checked /> Read schema</label>
+                    </fieldset>
+                    <fieldset class="scope-group">
+                      <legend><i class="ri-folder-line"></i> Records</legend>
+                      <label><input type="checkbox" value="records:list" checked /> List</label>
+                      <label><input type="checkbox" value="records:read" checked /> Read</label>
+                      <label><input type="checkbox" value="records:create" /> Create</label>
+                      <label><input type="checkbox" value="records:update" /> Update</label>
+                      <label><input type="checkbox" value="records:delete" /> Delete</label>
+                    </fieldset>
+                    <fieldset class="scope-group">
+                      <legend><i class="ri-attachment-line"></i> Files</legend>
+                      <label><input type="checkbox" value="files:read" checked /> Read</label>
+                      <label><input type="checkbox" value="files:write" /> Write</label>
+                    </fieldset>
+                    <fieldset class="scope-group">
+                      <legend><i class="ri-pulse-line"></i> Realtime</legend>
+                      <label><input type="checkbox" value="realtime:subscribe" /> Subscribe</label>
+                    </fieldset>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="token-expiry">Expires in</label>
+                    <select id="token-expiry">
+                      <option value="3600">1 hour</option>
+                      <option value="86400">24 hours</option>
+                      <option value="2592000" selected>30 days</option>
+                      <option value="7776000">90 days</option>
+                      <option value="">No expiry</option>
+                    </select>
+                  </div>
                 </div>
                 <div class="form-actions">
                   <button type="submit" class="btn btn-sm btn-primary">
@@ -339,7 +384,6 @@
                   </button>
                 </div>
               </form>
-              <pre id="token-output" class="code-block"></pre>
             </div>
             <div class="panel-card">
               <h5 class="panel-card-title">Active tokens</h5>
@@ -355,6 +399,7 @@
               <div class="breadcrumb-item">Settings</div>
               <div class="breadcrumb-item">Application</div>
             </nav>
+            <div class="flex-fill"></div>
             <div class="btns-group">
               <button type="button" id="settings-refresh" class="btn btn-transparent btn-circle" title="Refresh" aria-label="Refresh">
                 <i class="ri-refresh-line"></i>
@@ -364,23 +409,42 @@
           <div class="wrapper-lg m-auto">
             <div class="panel-card">
               <h5 class="panel-card-title">Application</h5>
-              <div class="form-row">
-                <div class="form-field readonly">
-                  <label>Application name</label>
-                  <input id="settings-name" type="text" value="Database" readonly />
+              <dl class="settings-rows">
+                <div class="settings-row">
+                  <dt>Application name</dt>
+                  <dd id="settings-name">ClawJS Database</dd>
                 </div>
-                <div class="form-field readonly">
-                  <label>Application URL</label>
-                  <input id="settings-url" type="text" value="http://127.0.0.1:4510" readonly />
+                <div class="settings-row">
+                  <dt>Application URL</dt>
+                  <dd id="settings-url" class="mono">—</dd>
                 </div>
-              </div>
-
-              <h5 class="panel-card-title">Service state</h5>
-              <div id="settings-rows" class="settings-rows"></div>
-
-              <h5 class="panel-card-title">Raw output</h5>
-              <pre id="settings-output" class="code-block"></pre>
+              </dl>
             </div>
+
+            <div class="panel-card">
+              <h5 class="panel-card-title">
+                <span>Health</span>
+                <span id="settings-health-pill" class="health-pill" data-state="unknown">
+                  <span class="health-dot"></span>
+                  <span>unknown</span>
+                </span>
+              </h5>
+              <dl class="settings-rows" id="settings-health-rows"></dl>
+            </div>
+
+            <div class="panel-card">
+              <h5 class="panel-card-title">Paths</h5>
+              <dl class="settings-rows" id="settings-paths-rows"></dl>
+              <p class="panel-card-sub">Paths are redacted for your username by default. Click a row to copy the full path.</p>
+            </div>
+
+            <details class="panel-card raw-json-details">
+              <summary>
+                <h5 class="panel-card-title">Raw JSON response</h5>
+                <span class="txt-hint">Collapsed by default. Useful when debugging the health or settings endpoints.</span>
+              </summary>
+              <pre id="settings-output" class="code-block"></pre>
+            </details>
           </div>
         </section>
       </main>
@@ -398,25 +462,24 @@
           <form id="record-form" data-testid="record-form">
             <div class="overlay-panel-section panel-content">
               <div id="record-fields" class="record-fields"></div>
-              <div class="raw-json-section">
-                <div class="raw-json-divider">
-                  <span>Raw JSON (advanced)</span>
-                </div>
+              <details class="raw-json-details">
+                <summary>Raw JSON (advanced)</summary>
                 <div class="form-field">
-                  <label for="record-id">Record ID (leave empty to create)</label>
-                  <input id="record-id" type="text" placeholder="empty = create new" />
+                  <label for="record-id">Record ID</label>
+                  <input id="record-id" type="text" placeholder="Leave empty to create a new record" />
+                  <span class="form-hint">Set this when editing an existing record. New records auto-generate an ID.</span>
                 </div>
                 <div class="form-field">
                   <label for="record-data">Payload (JSON)</label>
                   <textarea id="record-data" rows="10"></textarea>
                 </div>
-              </div>
+              </details>
             </div>
             <div class="overlay-panel-section panel-footer">
               <button type="button" id="record-reset" class="btn btn-transparent">
                 <span class="txt">Reset</span>
               </button>
-              <button type="submit" id="record-save" class="btn btn-expanded-sm">
+              <button type="submit" id="record-save" class="btn btn-primary btn-expanded-sm">
                 <span class="txt">Save record</span>
               </button>
             </div>
@@ -424,7 +487,7 @@
         </div>
       </div>
 
-      <!-- ==== Schema editor drawer (matches PB CollectionUpsertPanel) ==== -->
+      <!-- ==== Schema editor drawer ==== -->
       <div id="schema-drawer" class="overlay-panel-container hidden" role="dialog" aria-label="Edit collection" data-testid="schema-card">
         <div class="overlay-backdrop" id="schema-drawer-backdrop"></div>
         <div class="overlay-panel overlay-panel-lg colored-header collection-panel">
@@ -438,11 +501,6 @@
               <div class="form-field collection-field-name required m-b-0">
                 <label for="schema-coll-name">Name</label>
                 <input id="schema-coll-name" type="text" spellcheck="false" placeholder='eg. "posts"' />
-                <div class="form-field-addon">
-                  <div class="btn btn-sm btn-transparent btn-disabled p-r-10 p-l-10">
-                    <span class="txt">Type: Database</span>
-                  </div>
-                </div>
               </div>
               <input type="submit" class="hidden" tabindex="-1" />
             </form>
@@ -461,9 +519,14 @@
           <div class="overlay-panel-section panel-content tabs-content">
             <div class="tab-item active" data-schema-tab-content="fields">
               <div id="schema-fields-builder" class="schema-fields"></div>
+              <div id="schema-fields-empty" class="empty-state compact" hidden>
+                <i class="ri-layout-column-line"></i>
+                <p class="empty-title">No fields yet</p>
+                <p class="empty-sub">Add your first field to start shaping the collection. Typical starters are <code>title</code> (text) and <code>status</code> (select).</p>
+              </div>
               <button type="button" id="schema-add-field" class="btn btn-block btn-outline">
                 <i class="ri-add-line"></i>
-                <span class="txt">New field</span>
+                <span class="txt">Add field</span>
               </button>
               <hr class="hr-muted" />
               <h6 class="section-title section-title-indexes">
@@ -485,65 +548,150 @@
               </details>
             </div>
             <div class="tab-item" data-schema-tab-content="rules" hidden>
-              <p class="help-block">API rules let you restrict who can list, view, create, update or delete records in this collection. Leave empty to allow everyone, or use <code>@request.auth.id != ""</code> to require a signed-in user.</p>
-              <div class="form-field"><label>List/Search rule</label><input type="text" placeholder='@request.auth.id != ""' /></div>
-              <div class="form-field"><label>View rule</label><input type="text" placeholder='@request.auth.id != ""' /></div>
-              <div class="form-field"><label>Create rule</label><input type="text" placeholder='@request.auth.id != ""' /></div>
-              <div class="form-field"><label>Update rule</label><input type="text" placeholder='@request.auth.id != ""' /></div>
-              <div class="form-field"><label>Delete rule</label><input type="text" placeholder='@request.auth.id != ""' /></div>
+              <p class="help-block">
+                API rules are expressions evaluated per request. An empty rule means the operation is public.
+                Use <code>@request.auth.id != ""</code> to require a signed-in user, or <code>@request.auth.id = record.owner</code> for owner-only access.
+              </p>
+              <div class="rules-list">
+                <div class="rule-row" data-rule="list">
+                  <div class="rule-row-head">
+                    <div>
+                      <strong>List / Search</strong>
+                      <span class="rule-hint">Who can see this collection's records in list queries.</span>
+                    </div>
+                    <button type="button" class="btn btn-xs btn-transparent rule-template-btn" data-template-target="list">
+                      <i class="ri-magic-line"></i>
+                      <span>Use template</span>
+                    </button>
+                  </div>
+                  <textarea class="rule-input mono" rows="2" data-rule-input="list" placeholder='@request.auth.id != ""'></textarea>
+                </div>
+                <div class="rule-row" data-rule="view">
+                  <div class="rule-row-head">
+                    <div>
+                      <strong>View</strong>
+                      <span class="rule-hint">Who can read a single record by id.</span>
+                    </div>
+                    <button type="button" class="btn btn-xs btn-transparent rule-template-btn" data-template-target="view">
+                      <i class="ri-magic-line"></i>
+                      <span>Use template</span>
+                    </button>
+                  </div>
+                  <textarea class="rule-input mono" rows="2" data-rule-input="view" placeholder='@request.auth.id != ""'></textarea>
+                </div>
+                <div class="rule-row" data-rule="create">
+                  <div class="rule-row-head">
+                    <div>
+                      <strong>Create</strong>
+                      <span class="rule-hint">Who can add new records. Commonly authenticated users.</span>
+                    </div>
+                    <button type="button" class="btn btn-xs btn-transparent rule-template-btn" data-template-target="create">
+                      <i class="ri-magic-line"></i>
+                      <span>Use template</span>
+                    </button>
+                  </div>
+                  <textarea class="rule-input mono" rows="2" data-rule-input="create" placeholder='@request.auth.id != ""'></textarea>
+                </div>
+                <div class="rule-row" data-rule="update">
+                  <div class="rule-row-head">
+                    <div>
+                      <strong>Update</strong>
+                      <span class="rule-hint">Who can mutate records. Use <code>record.owner = @request.auth.id</code> for owner-only edits.</span>
+                    </div>
+                    <button type="button" class="btn btn-xs btn-transparent rule-template-btn" data-template-target="update">
+                      <i class="ri-magic-line"></i>
+                      <span>Use template</span>
+                    </button>
+                  </div>
+                  <textarea class="rule-input mono" rows="2" data-rule-input="update" placeholder='record.owner = @request.auth.id'></textarea>
+                </div>
+                <div class="rule-row" data-rule="delete">
+                  <div class="rule-row-head">
+                    <div>
+                      <strong>Delete</strong>
+                      <span class="rule-hint">Who can remove records. Keeping this admin-only is a safe default.</span>
+                    </div>
+                    <button type="button" class="btn btn-xs btn-transparent rule-template-btn" data-template-target="delete">
+                      <i class="ri-magic-line"></i>
+                      <span>Use template</span>
+                    </button>
+                  </div>
+                  <textarea class="rule-input mono" rows="2" data-rule-input="delete" placeholder='record.owner = @request.auth.id'></textarea>
+                </div>
+              </div>
             </div>
             <div class="tab-item" data-schema-tab-content="options" hidden>
-              <p class="help-block">Collection level options. More settings (auth, identity fields, etc.) are available on auth collections.</p>
-              <div class="form-field"><label>System collection</label><input type="text" value="false" readonly /></div>
+              <div class="form-field">
+                <label>Collection ID</label>
+                <div class="copy-row">
+                  <input id="option-collection-id" type="text" readonly />
+                  <button type="button" class="btn btn-sm btn-transparent" id="option-copy-id" title="Copy ID">
+                    <i class="ri-file-copy-line"></i>
+                  </button>
+                </div>
+                <span class="form-hint">Internal id used by API tokens and relations. Immutable once created.</span>
+              </div>
+              <div class="form-field">
+                <label>System collection</label>
+                <div id="option-system" class="option-readout">No</div>
+              </div>
+
+              <div class="danger-zone">
+                <div class="danger-head">
+                  <i class="ri-error-warning-line"></i>
+                  <div>
+                    <strong>Danger zone</strong>
+                    <p class="txt-hint">Destructive actions on this collection. Applies to the active database only.</p>
+                  </div>
+                </div>
+                <div class="danger-actions">
+                  <button type="button" id="option-delete" class="btn btn-sm btn-danger">
+                    <i class="ri-delete-bin-line"></i>
+                    <span>Delete collection</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
           <div class="overlay-panel-section panel-footer">
             <button type="button" id="schema-drawer-cancel" class="btn btn-transparent">
               <span class="txt">Cancel</span>
             </button>
-            <button type="button" id="schema-save" class="btn btn-expanded-sm">
+            <button type="button" id="schema-save" class="btn btn-primary btn-expanded-sm">
               <span class="txt">Save changes</span>
             </button>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- ==== New collection modal ==== -->
-      <div id="collection-modal" class="overlay-panel-container hidden" role="dialog" aria-label="New collection">
-        <div class="overlay-backdrop" data-close-modal></div>
-        <div class="overlay-panel popup">
-          <div class="overlay-panel-section panel-header">
-            <h4>New collection</h4>
-            <button type="button" class="btn btn-sm btn-circle btn-transparent btn-close m-l-auto" data-close-modal aria-label="Close">
-              <i class="ri-close-line txt-lg"></i>
-            </button>
+    <!-- ==== Toasts ==== -->
+    <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="false"></div>
+
+    <!-- ==== Confirm dialog ==== -->
+    <div id="confirm-dialog" class="overlay-panel-container hidden" role="dialog" aria-label="Confirm">
+      <div class="overlay-backdrop" data-close-confirm></div>
+      <div class="overlay-panel popup overlay-panel-sm">
+        <div class="overlay-panel-section panel-header">
+          <h4 id="confirm-title">Are you sure?</h4>
+          <button type="button" class="btn btn-sm btn-circle btn-transparent btn-close m-l-auto" data-close-confirm aria-label="Close">
+            <i class="ri-close-line txt-lg"></i>
+          </button>
+        </div>
+        <div class="overlay-panel-section panel-content">
+          <p id="confirm-body" class="m-0"></p>
+          <div class="form-field" id="confirm-typed-wrap" hidden>
+            <label for="confirm-typed">Type <code id="confirm-typed-sample"></code> to confirm</label>
+            <input id="confirm-typed" type="text" autocomplete="off" />
           </div>
-          <form id="collection-form" data-testid="collection-form">
-            <div class="overlay-panel-section panel-content">
-              <div class="form-row">
-                <div class="form-field required">
-                  <label for="collection-name">Name</label>
-                  <input id="collection-name" type="text" placeholder="collection_name" />
-                </div>
-                <div class="form-field required">
-                  <label for="collection-display-name">Display name</label>
-                  <input id="collection-display-name" type="text" placeholder="Display name" />
-                </div>
-              </div>
-              <div class="form-field">
-                <label for="collection-fields">Fields (JSON)</label>
-                <textarea id="collection-fields" rows="10"></textarea>
-              </div>
-            </div>
-            <div class="overlay-panel-section panel-footer">
-              <button type="button" class="btn btn-transparent" data-close-modal>
-                <span class="txt">Cancel</span>
-              </button>
-              <button type="submit" class="btn btn-expanded">
-                <span class="txt">Create collection</span>
-              </button>
-            </div>
-          </form>
+        </div>
+        <div class="overlay-panel-section panel-footer">
+          <button type="button" class="btn btn-transparent" data-close-confirm>
+            <span class="txt">Cancel</span>
+          </button>
+          <button type="button" id="confirm-ok" class="btn btn-danger" disabled>
+            <span class="txt">Confirm</span>
+          </button>
         </div>
       </div>
     </div>

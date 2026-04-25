@@ -1,6 +1,6 @@
 /* =====================================================
-   Claw Database admin UI
-   SPA with rail + sidebar + panes + drawer
+   ClawJS Database admin UI
+   SPA with rail + sidebar + panes + drawers
    ===================================================== */
 
 const state = {
@@ -14,6 +14,8 @@ const state = {
   tokens: [],
   files: [],
   websocket: null,
+  schemaCreateMode: false,
+  schemaRules: null,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -22,26 +24,29 @@ const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 const els = {
   loginView: $("login-view"),
   appView: $("app-view"),
-  shell: document.getElementById("app-view"),
+  shell: $("app-view"),
   loginForm: $("login-form"),
   loginEmail: $("login-email"),
   loginPassword: $("login-password"),
   loginError: $("login-error"),
+  loginDevHint: $("login-dev-hint"),
   logoutBtn: $("logout-btn"),
+
+  mobileMenuBtn: $("mobile-menu-btn"),
+  mobileListBtn: $("mobile-list-btn"),
+  sidebarCloseBtn: $("page-sidebar-close"),
 
   namespaceList: $("namespace-list"),
   namespaceForm: $("namespace-form"),
   namespaceId: $("namespace-id"),
   namespaceDisplayName: $("namespace-display-name"),
+  dbNewToggle: $("db-new-toggle"),
+  dbMenuClose: $("db-menu-close"),
 
   collectionList: $("collection-list"),
+  collectionListEmpty: $("collection-list-empty"),
   collectionSearch: $("collection-search"),
   newCollectionBtn: $("new-collection-btn"),
-  collectionModal: $("collection-modal"),
-  collectionForm: $("collection-form"),
-  collectionName: $("collection-name"),
-  collectionDisplayName: $("collection-display-name"),
-  collectionFields: $("collection-fields"),
 
   activeNamespaceName: $("active-namespace-name"),
   activeCollectionName: $("active-collection-name"),
@@ -52,6 +57,8 @@ const els = {
   recordsSort: $("records-sort"),
   recordsRefresh: $("records-refresh"),
   recordsTable: $("records-table"),
+  recordsFooter: $("records-footer"),
+  recordsCount: $("records-count"),
 
   recordDrawer: $("record-drawer"),
   drawerTitle: $("drawer-title"),
@@ -64,26 +71,48 @@ const els = {
 
   schemaDrawer: $("schema-drawer"),
   schemaDrawerClose: $("schema-drawer-close"),
+  schemaDrawerCancel: $("schema-drawer-cancel"),
   schemaEditor: $("schema-editor"),
   schemaSave: $("schema-save"),
+  schemaFieldsEmpty: $("schema-fields-empty"),
 
   liveStatus: $("live-status"),
   eventList: $("event-list"),
 
   fileForm: $("file-form"),
   fileInput: $("file-input"),
+  fileDropzone: $("file-dropzone"),
+  fileDropzoneTitle: $("dropzone-title"),
+  fileDropzoneSub: $("dropzone-sub"),
+  fileSubmit: $("file-submit"),
   fileRecordId: $("file-record-id"),
   fileList: $("file-list"),
 
   tokenForm: $("token-form"),
   tokenLabel: $("token-label"),
   tokenCollection: $("token-collection"),
-  tokenOperations: $("token-operations"),
-  tokenOutput: $("token-output"),
+  tokenScopes: $("token-scopes"),
+  tokenExpiry: $("token-expiry"),
+  issuedTokenCard: $("issued-token-card"),
   tokenList: $("token-list"),
 
   settingsRefresh: $("settings-refresh"),
   settingsOutput: $("settings-output"),
+  settingsName: $("settings-name"),
+  settingsUrl: $("settings-url"),
+  settingsHealthRows: $("settings-health-rows"),
+  settingsPathsRows: $("settings-paths-rows"),
+  settingsHealthPill: $("settings-health-pill"),
+
+  toastRoot: $("toast-root"),
+
+  confirmDialog: $("confirm-dialog"),
+  confirmTitle: $("confirm-title"),
+  confirmBody: $("confirm-body"),
+  confirmOk: $("confirm-ok"),
+  confirmTypedWrap: $("confirm-typed-wrap"),
+  confirmTyped: $("confirm-typed"),
+  confirmTypedSample: $("confirm-typed-sample"),
 };
 
 /* ---------- Helpers ---------- */
@@ -99,10 +128,9 @@ const escapeHtml = (value) => {
     .replace(/"/g, "&quot;");
 };
 
-const formatCell = (value) => {
-  if (value == null) return "";
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
+const redactPath = (value) => {
+  if (typeof value !== "string") return value;
+  return value.replace(/\/Users\/[^/]+/g, "~").replace(/\/home\/[^/]+/g, "~");
 };
 
 const exampleFields = () => pretty([
@@ -123,9 +151,86 @@ async function request(path, init = {}) {
   const isJson = response.headers.get("content-type")?.includes("application/json");
   const payload = isJson ? await response.json() : await response.text();
   if (!response.ok) {
-    throw new Error(typeof payload === "string" ? payload : payload.error || JSON.stringify(payload));
+    const err = new Error(typeof payload === "string" ? payload : (payload.error || JSON.stringify(payload)));
+    err.status = response.status;
+    err.payload = payload;
+    throw err;
   }
   return payload;
+}
+
+/* ---------- Toasts ---------- */
+
+function toast(message, { variant = "info", timeout = 4200 } = {}) {
+  if (!els.toastRoot) return;
+  const node = document.createElement("div");
+  node.className = `toast toast-${variant}`;
+  node.setAttribute("role", variant === "error" ? "alert" : "status");
+  const icon =
+    variant === "success" ? "ri-check-line" :
+    variant === "error"   ? "ri-error-warning-line" :
+    variant === "warn"    ? "ri-alert-line" :
+                            "ri-information-line";
+  node.innerHTML = `
+    <i class="${icon}"></i>
+    <div class="toast-body">${escapeHtml(message)}</div>
+    <button type="button" class="toast-close" aria-label="Dismiss">
+      <i class="ri-close-line"></i>
+    </button>
+  `;
+  const close = () => {
+    node.classList.add("leaving");
+    node.addEventListener("transitionend", () => node.remove(), { once: true });
+    setTimeout(() => node.remove(), 500);
+  };
+  node.querySelector(".toast-close").addEventListener("click", close);
+  if (timeout) setTimeout(close, timeout);
+  els.toastRoot.appendChild(node);
+}
+
+const toastSuccess = (msg) => toast(msg, { variant: "success" });
+const toastError   = (msg) => toast(msg, { variant: "error", timeout: 6000 });
+const toastWarn    = (msg) => toast(msg, { variant: "warn" });
+
+/* ---------- Confirm dialog ---------- */
+
+function confirmDialog({ title = "Are you sure?", body = "", confirmText = "Confirm", typedConfirm = null, danger = true } = {}) {
+  return new Promise((resolve) => {
+    els.confirmTitle.textContent = title;
+    els.confirmBody.textContent = body;
+    els.confirmOk.querySelector(".txt").textContent = confirmText;
+    els.confirmOk.className = `btn ${danger ? "btn-danger" : "btn-primary"}`;
+    if (typedConfirm) {
+      els.confirmTypedWrap.hidden = false;
+      els.confirmTypedSample.textContent = typedConfirm;
+      els.confirmTyped.value = "";
+      els.confirmOk.disabled = true;
+      const onInput = () => { els.confirmOk.disabled = els.confirmTyped.value.trim() !== typedConfirm; };
+      els.confirmTyped.addEventListener("input", onInput);
+      els.confirmDialog._onInput = onInput;
+    } else {
+      els.confirmTypedWrap.hidden = true;
+      els.confirmOk.disabled = false;
+    }
+    els.confirmDialog.classList.remove("hidden");
+    setTimeout(() => {
+      (typedConfirm ? els.confirmTyped : els.confirmOk).focus();
+    }, 30);
+
+    const cleanup = () => {
+      els.confirmDialog.classList.add("hidden");
+      els.confirmOk.removeEventListener("click", onOk);
+      if (els.confirmDialog._onInput) {
+        els.confirmTyped.removeEventListener("input", els.confirmDialog._onInput);
+        els.confirmDialog._onInput = null;
+      }
+      $$("[data-close-confirm]", els.confirmDialog).forEach(el => el.removeEventListener("click", onCancel));
+    };
+    const onOk = () => { cleanup(); resolve(true); };
+    const onCancel = () => { cleanup(); resolve(false); };
+    els.confirmOk.addEventListener("click", onOk);
+    $$("[data-close-confirm]", els.confirmDialog).forEach(el => el.addEventListener("click", onCancel));
+  });
 }
 
 /* ---------- View routing ---------- */
@@ -139,6 +244,7 @@ function setView(view) {
   $$(".page-content[data-pane]").forEach((pane) => {
     pane.classList.toggle("hidden", pane.dataset.pane !== view);
   });
+  closeMobileSidebar();
   if (view === "settings") refreshSettings().catch(() => {});
   if (view === "tokens") refreshTokens().catch(() => {});
   if (view === "files") refreshFiles().catch(() => {});
@@ -148,15 +254,32 @@ $$(".menu-item[data-view]").forEach((btn) => {
   btn.addEventListener("click", () => setView(btn.dataset.view));
 });
 
+/* ---------- Mobile sidebar sheet ---------- */
+
+function openMobileSidebar() {
+  els.shell.classList.add("sidebar-open");
+}
+function closeMobileSidebar() {
+  els.shell.classList.remove("sidebar-open");
+}
+els.mobileMenuBtn?.addEventListener("click", openMobileSidebar);
+els.mobileListBtn?.addEventListener("click", openMobileSidebar);
+els.sidebarCloseBtn?.addEventListener("click", closeMobileSidebar);
+
 /* ---------- Drawer / modal ---------- */
 
 function buildFieldInput(field, value) {
   const wrapper = document.createElement("div");
   wrapper.className = `form-field ${field.required ? "required" : ""}`;
 
-  const label = document.createElement("label");
-  label.textContent = field.name;
-  wrapper.appendChild(label);
+  const labelWrap = document.createElement("label");
+  labelWrap.className = "field-label-group";
+  labelWrap.innerHTML = `
+    <span class="field-label">${escapeHtml(field.name)}</span>
+    <span class="field-type-pill">${escapeHtml(field.type || "text")}</span>
+    ${field.required ? `<span class="field-required-mark">required</span>` : ""}
+  `;
+  wrapper.appendChild(labelWrap);
 
   let input;
   if (field.type === "select") {
@@ -189,7 +312,7 @@ function buildFieldInput(field, value) {
                : field.type === "number" ? "number"
                : field.type === "date" ? "datetime-local"
                : "text";
-    input.placeholder = field.type;
+    input.placeholder = field.placeholder || "";
   }
   input.dataset.fieldName = field.name;
   input.dataset.fieldType = field.type;
@@ -226,10 +349,9 @@ function syncDynamicToJson() {
 
 function openRecordDrawer(record = null) {
   const collection = state.currentCollection;
-  const collName = collection?.name || "record";
+  const collName = collection?.displayName || collection?.name || "record";
   els.drawerTitle.textContent = record ? `Edit ${collName} record` : `New ${collName} record`;
 
-  // Build dynamic fields from collection schema
   const container = $("record-fields");
   container.innerHTML = "";
   const data = {};
@@ -252,29 +374,39 @@ function openRecordDrawer(record = null) {
   els.recordData.value = record ? pretty(data) : (collection?.fields ? pretty(data) : exampleRecord());
 
   els.recordDrawer.classList.remove("hidden");
+  // focus the first input for keyboarders
+  setTimeout(() => container.querySelector("input,textarea,select")?.focus(), 40);
 }
 function closeRecordDrawer() {
   els.recordDrawer.classList.add("hidden");
 }
 els.drawerClose.addEventListener("click", closeRecordDrawer);
+$("record-drawer-backdrop")?.addEventListener("click", closeRecordDrawer);
 
 const FIELD_TYPE_OPTIONS = ["text", "email", "url", "number", "date", "boolean", "select", "json", "relation", "file"];
+const TYPE_LABELS = {
+  text: "Text", email: "Email", url: "URL", number: "Number",
+  date: "Date", boolean: "Boolean", select: "Select", json: "JSON",
+  relation: "Relation", file: "File",
+};
 
 function renderSchemaBuilder(fields) {
   const root = $("schema-fields-builder");
   if (!root) return;
   root.innerHTML = "";
+  if (els.schemaFieldsEmpty) els.schemaFieldsEmpty.hidden = fields.length > 0;
   fields.forEach((field, idx) => {
     const row = document.createElement("div");
     row.className = "schema-field";
     row.dataset.index = String(idx);
-    const typeOptions = FIELD_TYPE_OPTIONS.map(t => `<option value="${t}" ${t === (field.type || "text") ? "selected" : ""}>${t}</option>`).join("");
+    const typeOptions = FIELD_TYPE_OPTIONS.map(t => `<option value="${t}" ${t === (field.type || "text") ? "selected" : ""}>${TYPE_LABELS[t] || t}</option>`).join("");
     row.innerHTML = `
       <div class="schema-field-header">
         <i class="field-type-icon ${iconClassForField(field.name, field.type)}"></i>
         <input type="text" class="schema-field-name-input" data-field-prop="name" placeholder="Field name" value="${escapeHtml(field.name || "")}" />
+        <span class="schema-field-type-label">${escapeHtml(TYPE_LABELS[field.type || "text"] || field.type || "text")}</span>
         <div class="field-labels">
-          ${field.required ? `<span class="label label-success">Nonempty</span>` : ""}
+          ${field.required ? `<span class="label label-success">Required</span>` : ""}
           ${field.hidden ? `<span class="label label-danger">Hidden</span>` : ""}
         </div>
         <button type="button" class="btn btn-sm btn-circle btn-transparent options-trigger" aria-label="Toggle options">
@@ -289,7 +421,7 @@ function renderSchemaBuilder(fields) {
         <div class="schema-field-options-footer">
           <label class="form-field-toggle">
             <input type="checkbox" data-field-prop="required" ${field.required ? "checked" : ""} />
-            <span class="txt">Nonempty</span>
+            <span class="txt">Required</span>
           </label>
           <label class="form-field-toggle">
             <input type="checkbox" data-field-prop="hidden" ${field.hidden ? "checked" : ""} />
@@ -307,8 +439,8 @@ function renderSchemaBuilder(fields) {
       </div>
     `;
     row.querySelectorAll("[data-field-prop]").forEach(el => {
-      el.addEventListener("input", () => { syncSchemaBuilderToJson(); refreshFieldIcon(row); });
-      el.addEventListener("change", () => { syncSchemaBuilderToJson(); refreshFieldIcon(row); });
+      el.addEventListener("input", () => { syncSchemaBuilderToJson(); refreshFieldRow(row); });
+      el.addEventListener("change", () => { syncSchemaBuilderToJson(); refreshFieldRow(row); });
     });
     row.querySelector(".options-trigger").addEventListener("click", (e) => {
       e.stopPropagation();
@@ -324,11 +456,13 @@ function renderSchemaBuilder(fields) {
   });
 }
 
-function refreshFieldIcon(row) {
+function refreshFieldRow(row) {
   const icon = row.querySelector(".field-type-icon");
   const name = row.querySelector('[data-field-prop="name"]')?.value || "";
   const type = row.querySelector('[data-field-prop="type"]')?.value || "text";
   if (icon) icon.className = `field-type-icon ${iconClassForField(name, type)}`;
+  const label = row.querySelector(".schema-field-type-label");
+  if (label) label.textContent = TYPE_LABELS[type] || type;
 }
 
 function collectSchemaBuilderFields() {
@@ -369,6 +503,68 @@ function renderSchemaIndexes(indexes) {
   if (count) count.textContent = `(${(indexes || []).length})`;
 }
 
+/* ---------- Rules ---------- */
+
+const RULE_TEMPLATES = [
+  { id: "public", label: "Public", expr: "" },
+  { id: "authenticated", label: "Authenticated users", expr: '@request.auth.id != ""' },
+  { id: "owner", label: "Owner only", expr: "record.owner = @request.auth.id" },
+  { id: "admin", label: "Admin only", expr: "@request.auth.isAdmin = true" },
+];
+
+function renderRules(rules) {
+  const keys = ["list", "view", "create", "update", "delete"];
+  for (const key of keys) {
+    const input = document.querySelector(`[data-rule-input="${key}"]`);
+    if (!input) continue;
+    input.value = rules && rules[key] != null ? rules[key] : "";
+  }
+}
+
+function collectRules() {
+  const keys = ["list", "view", "create", "update", "delete"];
+  const out = {};
+  for (const key of keys) {
+    const input = document.querySelector(`[data-rule-input="${key}"]`);
+    out[key] = input ? input.value.trim() : "";
+  }
+  return out;
+}
+
+$$(".rule-template-btn").forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const target = btn.dataset.templateTarget;
+    const existing = btn.parentElement.parentElement.querySelector(".rule-template-menu");
+    if (existing) { existing.remove(); return; }
+    const menu = document.createElement("div");
+    menu.className = "rule-template-menu";
+    menu.innerHTML = RULE_TEMPLATES.map(t =>
+      `<button type="button" class="rule-template-option" data-expr="${escapeHtml(t.expr)}" data-id="${t.id}">
+         <strong>${escapeHtml(t.label)}</strong>
+         <code>${t.expr ? escapeHtml(t.expr) : "empty = public"}</code>
+       </button>`
+    ).join("");
+    btn.parentElement.parentElement.appendChild(menu);
+    menu.querySelectorAll(".rule-template-option").forEach((opt) => {
+      opt.addEventListener("click", () => {
+        const expr = opt.dataset.expr || "";
+        const input = document.querySelector(`[data-rule-input="${target}"]`);
+        if (input) input.value = expr;
+        menu.remove();
+      });
+    });
+    document.addEventListener("click", function clickAway(e2) {
+      if (!menu.contains(e2.target) && e2.target !== btn) {
+        menu.remove();
+        document.removeEventListener("click", clickAway);
+      }
+    }, { capture: true });
+  });
+});
+
+/* ---------- Schema drawer ---------- */
+
 function openSchemaDrawer(createMode = false) {
   state.schemaCreateMode = createMode;
   const title = $("schema-drawer")?.querySelector(".upsert-panel-title");
@@ -377,24 +573,28 @@ function openSchemaDrawer(createMode = false) {
 
   if (createMode) {
     if (title) title.textContent = "New collection";
-    if (saveBtn) saveBtn.querySelector(".txt").textContent = "Create";
+    if (saveBtn) saveBtn.querySelector(".txt").textContent = "Create collection";
     if (nameInput) nameInput.value = "";
-    renderSchemaBuilder(exampleFields().length ? JSON.parse(exampleFields()) : []);
+    renderSchemaBuilder(JSON.parse(exampleFields()));
     els.schemaEditor.value = exampleFields();
     renderSchemaIndexes([]);
+    renderRules({});
+    setOptionsTab(null);
   } else {
     if (!state.currentCollection) return;
     if (title) title.textContent = "Edit collection";
     if (saveBtn) saveBtn.querySelector(".txt").textContent = "Save changes";
     const fields = state.currentCollection.fields || [];
     const indexes = state.currentCollection.indexes || [];
+    const rules = state.currentCollection.rules || {};
     els.schemaEditor.value = pretty(fields);
     if (nameInput) nameInput.value = state.currentCollection.name;
     renderSchemaBuilder(fields);
     renderSchemaIndexes(indexes);
+    renderRules(rules);
+    setOptionsTab(state.currentCollection);
   }
 
-  // Reset to Fields tab
   $$("[data-schema-tab]").forEach(b => b.classList.toggle("active", b.dataset.schemaTab === "fields"));
   $$("[data-schema-tab-content]").forEach(c => {
     const match = c.dataset.schemaTabContent === "fields";
@@ -402,12 +602,48 @@ function openSchemaDrawer(createMode = false) {
     c.hidden = !match;
   });
   els.schemaDrawer.classList.remove("hidden");
+  setTimeout(() => nameInput?.focus(), 40);
 }
 function closeSchemaDrawer() {
   els.schemaDrawer.classList.add("hidden");
 }
+function setOptionsTab(collection) {
+  const idInput = $("option-collection-id");
+  const systemEl = $("option-system");
+  const deleteBtn = $("option-delete");
+  if (idInput) idInput.value = collection?.id || "";
+  if (systemEl) systemEl.textContent = collection?.system ? "Yes" : "No";
+  if (deleteBtn) deleteBtn.disabled = !collection || collection.system;
+}
+$("option-copy-id")?.addEventListener("click", () => {
+  const idInput = $("option-collection-id");
+  if (!idInput?.value) return;
+  navigator.clipboard?.writeText(idInput.value).then(() => toastSuccess("Collection ID copied"));
+});
+$("option-delete")?.addEventListener("click", async () => {
+  if (!state.currentCollection || !state.currentNamespace) return;
+  const name = state.currentCollection.name;
+  const ok = await confirmDialog({
+    title: `Delete "${name}"?`,
+    body: "This removes the collection schema and every record inside it. The action cannot be undone.",
+    confirmText: "Delete collection",
+    typedConfirm: name,
+  });
+  if (!ok) return;
+  try {
+    await request(`/v1/namespaces/${state.currentNamespace.id}/collections/${name}`, { method: "DELETE" });
+    closeSchemaDrawer();
+    toastSuccess(`Collection "${name}" deleted`);
+    state.currentCollection = null;
+    await refreshNamespace();
+  } catch (error) {
+    toastError(`Could not delete collection: ${error.message}`);
+  }
+});
 els.schemaDrawerClose.addEventListener("click", closeSchemaDrawer);
-els.schemaEditBtn.addEventListener("click", openSchemaDrawer);
+els.schemaDrawerCancel?.addEventListener("click", closeSchemaDrawer);
+$("schema-drawer-backdrop")?.addEventListener("click", closeSchemaDrawer);
+els.schemaEditBtn.addEventListener("click", () => openSchemaDrawer(false));
 
 const schemaAddFieldBtn = $("schema-add-field");
 if (schemaAddFieldBtn) schemaAddFieldBtn.addEventListener("click", () => {
@@ -415,9 +651,12 @@ if (schemaAddFieldBtn) schemaAddFieldBtn.addEventListener("click", () => {
   current.push({ name: "", type: "text" });
   renderSchemaBuilder(current);
   els.schemaEditor.value = pretty(current);
+  setTimeout(() => {
+    const lastRow = document.querySelector(".schema-field:last-of-type .schema-field-name-input");
+    lastRow?.focus();
+  }, 40);
 });
 
-// Schema drawer tab switching
 $$("[data-schema-tab]").forEach((btn) => {
   btn.addEventListener("click", () => {
     const tab = btn.dataset.schemaTab;
@@ -430,24 +669,19 @@ $$("[data-schema-tab]").forEach((btn) => {
   });
 });
 
-function openCollectionModal() {
-  els.collectionFields.value = exampleFields();
-  els.collectionModal.style.display = "";
-  els.collectionModal.classList.remove("hidden");
-  els.collectionName.focus();
-}
-function closeCollectionModal() {
-  els.collectionModal.classList.add("hidden");
-  els.collectionModal.style.display = "none";
-}
 els.newCollectionBtn.addEventListener("click", () => {
-  if (!state.currentNamespace) return;
+  if (!state.currentNamespace) {
+    toastWarn("Create or pick a database first.");
+    return;
+  }
   openSchemaDrawer(true);
 });
-$$("[data-close-modal]").forEach((el) => el.addEventListener("click", closeCollectionModal));
 
 els.newRecordBtn.addEventListener("click", () => {
-  if (!state.currentCollection) return;
+  if (!state.currentCollection) {
+    toastWarn("Pick a collection to add records to.");
+    return;
+  }
   openRecordDrawer(null);
 });
 
@@ -464,24 +698,43 @@ function closeDbMenu() {
   if (!dbSwitcher || !dbMenu) return;
   dbSwitcher.setAttribute("aria-expanded", "false");
   dbMenu.classList.add("hidden");
+  els.namespaceForm?.classList.add("hidden");
+  els.dbNewToggle?.classList.remove("active");
 }
 function toggleDbMenu() {
   if (!dbMenu) return;
   if (dbMenu.classList.contains("hidden")) openDbMenu();
   else closeDbMenu();
 }
-if (dbSwitcher) dbSwitcher.addEventListener("click", toggleDbMenu);
+dbSwitcher?.addEventListener("click", toggleDbMenu);
+els.dbMenuClose?.addEventListener("click", closeDbMenu);
+document.addEventListener("click", (e) => {
+  if (!dbMenu || dbMenu.classList.contains("hidden")) return;
+  if (!dbMenu.contains(e.target) && !dbSwitcher.contains(e.target)) closeDbMenu();
+});
+els.dbNewToggle?.addEventListener("click", () => {
+  els.namespaceForm?.classList.toggle("hidden");
+  els.dbNewToggle?.classList.toggle("active");
+  if (!els.namespaceForm?.classList.contains("hidden")) {
+    setTimeout(() => els.namespaceId?.focus(), 40);
+  }
+});
 
-/* Cancel button inside schema drawer */
-const schemaCancelBtn = $("schema-drawer-cancel");
-if (schemaCancelBtn) schemaCancelBtn.addEventListener("click", closeSchemaDrawer);
+/* ---------- Global ESC ---------- */
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!els.recordDrawer.classList.contains("hidden")) { closeRecordDrawer(); return; }
+  if (!els.schemaDrawer.classList.contains("hidden")) { closeSchemaDrawer(); return; }
+  if (!els.confirmDialog.classList.contains("hidden")) { els.confirmDialog.classList.add("hidden"); return; }
+  if (dbMenu && !dbMenu.classList.contains("hidden")) { closeDbMenu(); return; }
+  if (els.shell.classList.contains("sidebar-open")) { closeMobileSidebar(); return; }
+});
 
 /* ---------- Sidebar: namespaces & collections ---------- */
 
 const FOLDER_ICON = `<i class="ri-folder-line"></i>`;
 const DB_ICON = `<i class="ri-database-2-line"></i>`;
-const LOCK_ICON = `<i class="ri-lock-line lock"></i>`;
-const KEY_ICON = `<i class="ri-key-2-line"></i>`;
 const FIELD_ICON_CLASSES = {
   id: "ri-key-2-line",
   text: "ri-text",
@@ -501,30 +754,6 @@ function iconClassForField(fieldName, fieldType) {
   if (fieldName === "createdAt" || fieldName === "updatedAt") return FIELD_ICON_CLASSES.createdAt;
   return FIELD_ICON_CLASSES[fieldType] || FIELD_ICON_CLASSES.text;
 }
-const UNUSED_FOLDER_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>`;
-const DB_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="2.6"/><path d="M4 5v6c0 1.4 3.6 2.6 8 2.6s8-1.2 8-2.6V5"/><path d="M4 11v6c0 1.4 3.6 2.6 8 2.6s8-1.2 8-2.6v-6"/></svg>`;
-const LOCK_SVG = `<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="1"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>`;
-
-const FIELD_ICONS = {
-  id: `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="4"/><path d="M12 12h9l-2 2m2-2l-2-2"/></svg>`,
-  text: `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2"/><path d="M12 5v14"/><path d="M9 19h6"/></svg>`,
-  email: `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><polyline points="3 7 12 13 21 7"/></svg>`,
-  url: `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>`,
-  number: `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="9" y1="5" x2="8" y2="19"/><line x1="16" y1="5" x2="15" y2="19"/></svg>`,
-  date: `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>`,
-  boolean: `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>`,
-  select: `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>`,
-  json: `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/></svg>`,
-  relation: `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="8" y1="8" x2="16" y2="16"/></svg>`,
-  file: `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/></svg>`,
-  createdAt: `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>`,
-};
-
-function iconForField(fieldName, fieldType) {
-  if (fieldName === "id") return FIELD_ICONS.id;
-  if (fieldName === "createdAt" || fieldName === "updatedAt") return FIELD_ICONS.createdAt;
-  return FIELD_ICONS[fieldType] || FIELD_ICONS.text;
-}
 
 function renderNamespaces() {
   els.namespaceList.innerHTML = "";
@@ -533,7 +762,12 @@ function renderNamespaces() {
     btn.type = "button";
     btn.className = `db-item ${state.currentNamespace?.id === ns.id ? "active" : ""}`;
     btn.dataset.testid = `namespace-${ns.id}`;
-    btn.innerHTML = `${DB_ICON}<strong>${escapeHtml(ns.displayName)}</strong><span class="mono">${escapeHtml(ns.id)}</span>`;
+    const isActive = state.currentNamespace?.id === ns.id;
+    const showId = ns.id !== ns.displayName;
+    btn.innerHTML = `
+      <span class="db-item-name">${DB_ICON}<strong>${escapeHtml(ns.displayName)}</strong>${showId ? `<span class="mono">${escapeHtml(ns.id)}</span>` : ""}</span>
+      ${isActive ? `<i class="ri-check-line db-item-check"></i>` : ""}
+    `;
     btn.addEventListener("click", async () => {
       state.currentNamespace = ns;
       state.currentCollection = null;
@@ -548,6 +782,7 @@ function renderNamespaces() {
 function renderCollections() {
   const query = (els.collectionSearch.value || "").trim().toLowerCase();
   els.collectionList.innerHTML = "";
+  let shown = 0;
   for (const coll of state.collections) {
     if (query && !coll.name.toLowerCase().includes(query) && !coll.displayName.toLowerCase().includes(query)) continue;
     const btn = document.createElement("button");
@@ -557,10 +792,13 @@ function renderCollections() {
     btn.innerHTML = `${FOLDER_ICON}<span class="txt">${escapeHtml(coll.name)}</span>`;
     btn.addEventListener("click", async () => {
       state.currentCollection = coll;
+      closeMobileSidebar();
       await refreshCollection();
     });
     els.collectionList.appendChild(btn);
+    shown += 1;
   }
+  if (els.collectionListEmpty) els.collectionListEmpty.hidden = shown > 0;
 }
 
 els.collectionSearch.addEventListener("input", renderCollections);
@@ -568,21 +806,28 @@ els.collectionSearch.addEventListener("input", renderCollections);
 /* ---------- Records table ---------- */
 
 function renderCell(field, value) {
-  if (value == null || value === "") return '<span class="cell-muted">N/A</span>';
+  if (value == null || value === "") return '<span class="cell-muted">—</span>';
   if (typeof value === "boolean" || field?.type === "boolean") {
     return `<span class="label ${value ? "label-success" : "label-danger"}">${value ? "True" : "False"}</span>`;
   }
   if (typeof value === "object") {
     return `<span class="cell-mono">${escapeHtml(JSON.stringify(value))}</span>`;
   }
-  return escapeHtml(String(value));
+  const str = String(value);
+  return `<span class="cell-value" title="${escapeHtml(str)}">${escapeHtml(str)}</span>`;
 }
 
 function renderRecords(items = []) {
   state.records = items;
   const collection = state.currentCollection;
   if (!collection) {
-    els.recordsTable.innerHTML = `<div class="empty-state">Select a collection to browse records.</div>`;
+    els.recordsTable.innerHTML = `
+      <div class="empty-state large">
+        <i class="ri-database-2-line"></i>
+        <p class="empty-title">Pick a collection</p>
+        <p class="empty-sub">Select one on the left to browse its records, or create a new collection to get started.</p>
+      </div>`;
+    els.recordsFooter.classList.add("hidden");
     return;
   }
   const columns = [
@@ -595,15 +840,23 @@ function renderRecords(items = []) {
     <tr tabindex="0" class="row-handle" data-id="${escapeHtml(item.id)}">
       ${columns.map((c, i) => {
         if (i === 0) {
-          return `<td><span class="row-id"><i class="ri-key-2-line"></i>${escapeHtml(item.id)}</span></td>`;
+          return `<td><span class="row-id" title="${escapeHtml(item.id)}"><i class="ri-key-2-line"></i>${escapeHtml(item.id)}</span></td>`;
         }
         return `<td>${renderCell(c.def, item[c.name])}</td>`;
       }).join("")}
       <td class="col-type-action min-width"><i class="ri-arrow-right-line"></i></td>
     </tr>
   `).join("");
-  const body = rows || `<tr><td colspan="${columns.length + 1}" class="txt-center txt-hint"><h6>No records found.</h6><button type="button" class="btn btn-secondary btn-expanded m-t-sm" onclick="document.getElementById('new-record-btn').click()">New record</button></td></tr>`;
-  els.recordsTable.innerHTML = `<table>${thead}<tbody>${body}</tbody></table>`;
+  const body = rows || `
+    <tr><td colspan="${columns.length + 1}">
+      <div class="empty-state">
+        <i class="ri-inbox-line"></i>
+        <p class="empty-title">No records yet</p>
+        <p class="empty-sub">Click "New record" above to add your first entry to <code>${escapeHtml(collection.name)}</code>.</p>
+      </div>
+    </td></tr>
+  `;
+  els.recordsTable.innerHTML = `<div class="table-scroll"><table>${thead}<tbody>${body}</tbody></table></div>`;
   els.recordsTable.querySelectorAll("tbody tr[data-id]").forEach((tr) => {
     tr.addEventListener("click", (event) => {
       if (event.target.closest(".row-delete")) return;
@@ -611,30 +864,126 @@ function renderRecords(items = []) {
       if (record) openRecordDrawer(record);
     });
   });
+  if (items.length) {
+    els.recordsFooter.classList.remove("hidden");
+    els.recordsCount.textContent = `${items.length} record${items.length === 1 ? "" : "s"}`;
+  } else {
+    els.recordsFooter.classList.add("hidden");
+  }
 }
 
 /* ---------- Tokens ---------- */
 
+function maskToken(token) {
+  if (!token || typeof token !== "string") return "";
+  if (token.length <= 12) return "•".repeat(token.length);
+  return `${token.slice(0, 8)}${"•".repeat(Math.max(10, token.length - 16))}${token.slice(-4)}`;
+}
+
+function renderIssuedToken(payload) {
+  if (!payload || !els.issuedTokenCard) return;
+  const tokenStr = payload.token || payload.accessToken || "";
+  const label = payload.label || "New token";
+  const scopes = payload.operations || [];
+  const expiresAt = payload.expiresAt || null;
+  els.issuedTokenCard.classList.remove("hidden");
+  els.issuedTokenCard.innerHTML = `
+    <div class="issued-token-head">
+      <i class="ri-key-fill"></i>
+      <div>
+        <strong>Token issued</strong>
+        <p class="txt-hint m-0">Store this value now. For security we never show it again after you leave this page.</p>
+      </div>
+      <button type="button" class="icon-btn icon-btn-sm" id="issued-token-dismiss" aria-label="Dismiss">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <div class="issued-token-row">
+      <span class="issued-token-label">${escapeHtml(label)}</span>
+      ${expiresAt ? `<span class="issued-token-expiry">Expires ${escapeHtml(expiresAt)}</span>` : `<span class="issued-token-expiry">No expiry</span>`}
+    </div>
+    <div class="issued-token-value">
+      <code class="mono" id="issued-token-text" data-masked="true" data-full="${escapeHtml(tokenStr)}">${escapeHtml(maskToken(tokenStr))}</code>
+      <button type="button" class="btn btn-sm btn-transparent" id="issued-token-reveal">
+        <i class="ri-eye-line"></i>
+        <span>Reveal</span>
+      </button>
+      <button type="button" class="btn btn-sm btn-primary" id="issued-token-copy">
+        <i class="ri-file-copy-line"></i>
+        <span>Copy</span>
+      </button>
+    </div>
+    ${scopes.length ? `<div class="issued-token-scopes">${scopes.map(s => `<span class="chip">${escapeHtml(s)}</span>`).join("")}</div>` : ""}
+  `;
+  $("issued-token-dismiss").addEventListener("click", () => {
+    els.issuedTokenCard.classList.add("hidden");
+    els.issuedTokenCard.innerHTML = "";
+  });
+  const textEl = $("issued-token-text");
+  $("issued-token-reveal").addEventListener("click", (e) => {
+    const btn = e.currentTarget;
+    const masked = textEl.dataset.masked === "true";
+    textEl.textContent = masked ? textEl.dataset.full : maskToken(textEl.dataset.full);
+    textEl.dataset.masked = masked ? "false" : "true";
+    btn.querySelector("span").textContent = masked ? "Hide" : "Reveal";
+    btn.querySelector("i").className = masked ? "ri-eye-off-line" : "ri-eye-line";
+  });
+  $("issued-token-copy").addEventListener("click", () => {
+    navigator.clipboard?.writeText(tokenStr).then(() => toastSuccess("Token copied to clipboard"));
+  });
+  els.issuedTokenCard.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function renderTokens(items = []) {
   state.tokens = items;
   els.tokenList.innerHTML = "";
+  if (!items.length) {
+    els.tokenList.innerHTML = `
+      <div class="empty-state">
+        <i class="ri-key-2-line"></i>
+        <p class="empty-title">No active tokens</p>
+        <p class="empty-sub">Issue a token above to let scripts, CI, or external services talk to this database.</p>
+      </div>`;
+    return;
+  }
   for (const tok of items) {
     const item = document.createElement("div");
     item.className = `token-item ${tok.revokedAt ? "revoked" : ""}`;
+    const opsChips = (tok.operations || []).slice(0, 6).map(op => `<span class="chip chip-sm">${escapeHtml(op)}</span>`).join("");
+    const moreChip = (tok.operations || []).length > 6 ? `<span class="chip chip-sm">+${tok.operations.length - 6}</span>` : "";
     item.innerHTML = `
-      <div>
+      <div class="token-item-body">
         <div class="label-row">${escapeHtml(tok.label)}</div>
-        <div class="scope">${escapeHtml(tok.collectionName || "namespace-wide")} · ${escapeHtml(tok.operations.join(", "))}</div>
+        <div class="scope">${escapeHtml(tok.collectionName || "namespace-wide")}</div>
+        <div class="token-ops">${opsChips}${moreChip}</div>
         <span class="status">${tok.revokedAt ? `revoked ${escapeHtml(tok.revokedAt)}` : "active"}</span>
       </div>
-      <button type="button" class="btn btn-sm btn-secondary" data-id="${escapeHtml(tok.id)}" ${tok.revokedAt ? "disabled" : ""}>Revoke</button>
+      <button type="button" class="btn btn-sm btn-transparent token-revoke" data-id="${escapeHtml(tok.id)}" ${tok.revokedAt ? "disabled" : ""}>
+        <i class="ri-forbid-line"></i>
+        <span>Revoke</span>
+      </button>
     `;
-    item.querySelector("button").addEventListener("click", async () => {
-      await request(`/v1/namespaces/${state.currentNamespace.id}/tokens/${tok.id}/revoke`, { method: "POST" });
-      await refreshTokens();
+    item.querySelector(".token-revoke").addEventListener("click", async () => {
+      const ok = await confirmDialog({
+        title: `Revoke "${tok.label}"?`,
+        body: "Scripts using this token will stop working immediately. The action cannot be undone.",
+        confirmText: "Revoke token",
+      });
+      if (!ok) return;
+      try {
+        await request(`/v1/namespaces/${state.currentNamespace.id}/tokens/${tok.id}/revoke`, { method: "POST" });
+        toastSuccess(`Token "${tok.label}" revoked`);
+        await refreshTokens();
+      } catch (error) {
+        toastError(`Revoke failed: ${error.message}`);
+      }
     });
     els.tokenList.appendChild(item);
   }
+}
+
+function collectTokenScopes() {
+  return $$('#token-scopes input[type="checkbox"]:checked').map((el) => el.value);
 }
 
 /* ---------- Files ---------- */
@@ -642,23 +991,84 @@ function renderTokens(items = []) {
 function renderFiles(items = []) {
   state.files = items;
   els.fileList.innerHTML = "";
+  if (!items.length) {
+    els.fileList.innerHTML = `
+      <div class="empty-state">
+        <i class="ri-folder-open-line"></i>
+        <p class="empty-title">No files stored yet</p>
+        <p class="empty-sub">Use the dropzone above to upload the first file for this database.</p>
+      </div>`;
+    return;
+  }
   for (const file of items) {
     const card = document.createElement("div");
     card.className = "file-card";
+    const sizeKb = (Number(file.sizeBytes) || 0) / 1024;
+    const sizeLabel = sizeKb >= 1024 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${sizeKb.toFixed(1)} KB`;
     card.innerHTML = `
-      <div class="name">${escapeHtml(file.filename)}</div>
-      <div class="meta">${escapeHtml(file.collectionName || "unbound")} · ${escapeHtml(String(file.sizeBytes))} bytes</div>
+      <div class="name" title="${escapeHtml(file.filename)}">${escapeHtml(file.filename)}</div>
+      <div class="meta">${escapeHtml(file.collectionName || "unbound")} · ${escapeHtml(sizeLabel)}</div>
       <div class="actions">
-        <a class="btn btn-xs btn-outline" href="${escapeHtml(file.downloadPath)}" target="_blank" rel="noreferrer">Open</a>
-        <button type="button" class="btn btn-xs btn-secondary" data-id="${escapeHtml(file.id)}">Delete</button>
+        <a class="btn btn-xs btn-outline" href="${escapeHtml(file.downloadPath)}" target="_blank" rel="noreferrer">
+          <i class="ri-external-link-line"></i><span>Open</span>
+        </a>
+        <button type="button" class="btn btn-xs btn-transparent file-delete" data-id="${escapeHtml(file.id)}">
+          <i class="ri-delete-bin-line"></i><span>Delete</span>
+        </button>
       </div>
     `;
-    card.querySelector("button").addEventListener("click", async () => {
-      await request(`/v1/files/${file.id}`, { method: "DELETE" });
-      await refreshFiles();
+    card.querySelector(".file-delete").addEventListener("click", async () => {
+      const ok = await confirmDialog({
+        title: `Delete ${file.filename}?`,
+        body: "This removes the file from storage. References from records will no longer resolve.",
+        confirmText: "Delete file",
+      });
+      if (!ok) return;
+      try {
+        await request(`/v1/files/${file.id}`, { method: "DELETE" });
+        toastSuccess("File deleted");
+        await refreshFiles();
+      } catch (error) {
+        toastError(`Delete failed: ${error.message}`);
+      }
     });
     els.fileList.appendChild(card);
   }
+}
+
+/* ---------- File dropzone ---------- */
+
+function setDropzoneFile(file) {
+  if (!file) {
+    els.fileDropzoneTitle.textContent = "Drag a file here or click to browse";
+    els.fileDropzoneSub.textContent = "Max 25 MB per file. Text, images, and binary blobs welcome.";
+    els.fileDropzone.classList.remove("has-file");
+    els.fileSubmit.disabled = true;
+    return;
+  }
+  els.fileDropzoneTitle.textContent = file.name;
+  const sizeKb = (file.size || 0) / 1024;
+  const sizeLabel = sizeKb >= 1024 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${sizeKb.toFixed(1)} KB`;
+  els.fileDropzoneSub.textContent = `${sizeLabel} · ready to upload`;
+  els.fileDropzone.classList.add("has-file");
+  els.fileSubmit.disabled = false;
+}
+els.fileInput?.addEventListener("change", () => setDropzoneFile(els.fileInput.files[0]));
+if (els.fileDropzone) {
+  ["dragenter", "dragover"].forEach(ev =>
+    els.fileDropzone.addEventListener(ev, (e) => { e.preventDefault(); els.fileDropzone.classList.add("dragover"); })
+  );
+  ["dragleave", "drop"].forEach(ev =>
+    els.fileDropzone.addEventListener(ev, (e) => { e.preventDefault(); els.fileDropzone.classList.remove("dragover"); })
+  );
+  els.fileDropzone.addEventListener("drop", (e) => {
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    els.fileInput.files = dt.files;
+    setDropzoneFile(file);
+  });
 }
 
 /* ---------- Logs ---------- */
@@ -666,7 +1076,6 @@ function renderFiles(items = []) {
 function pushEvent(event) {
   const summary = event.record?.name || event.record?.title || event.recordId || "";
   const labelVariant = event.type?.includes("created") ? "label-success" : event.type?.includes("updated") ? "label-info" : "label-danger";
-  // clear empty-state placeholder on first event
   const placeholder = els.eventList.querySelector(".empty-state");
   if (placeholder) placeholder.remove();
   const node = document.createElement("div");
@@ -682,12 +1091,23 @@ function pushEvent(event) {
 
 const logsClearBtn = $("logs-clear");
 if (logsClearBtn) logsClearBtn.addEventListener("click", () => {
-  els.eventList.innerHTML = `<div class="empty-state"><i class="ri-pulse-line"></i><p>Listening for realtime events. Create, update, or delete a record to see events stream in here.</p></div>`;
+  els.eventList.innerHTML = `
+    <div class="empty-state">
+      <i class="ri-pulse-line"></i>
+      <p class="empty-title">Waiting for activity</p>
+      <p class="empty-sub">Realtime events from records, files, and admin actions will appear here.</p>
+    </div>`;
 });
-const filesRefreshBtn = $("files-refresh");
-if (filesRefreshBtn) filesRefreshBtn.addEventListener("click", () => refreshFiles().catch(() => {}));
-const tokensRefreshBtn = $("tokens-refresh");
-if (tokensRefreshBtn) tokensRefreshBtn.addEventListener("click", () => refreshTokens().catch(() => {}));
+$("files-refresh")?.addEventListener("click", () => refreshFiles().catch(() => {}));
+$("tokens-refresh")?.addEventListener("click", () => refreshTokens().catch(() => {}));
+
+/* ---------- Live status pill ---------- */
+
+function setLiveStatus(state, label) {
+  if (!els.liveStatus) return;
+  els.liveStatus.dataset.state = state;
+  els.liveStatus.querySelector(".live-label").textContent = label;
+}
 
 /* ---------- Realtime ---------- */
 
@@ -699,11 +1119,11 @@ function connectRealtime() {
   url.searchParams.set("token", state.token);
   state.websocket = new WebSocket(url);
   state.websocket.addEventListener("open", () => {
-    els.liveStatus.textContent = "connected";
+    setLiveStatus("connected", "connected");
     subscribeRealtime();
   });
   state.websocket.addEventListener("close", () => {
-    els.liveStatus.textContent = "closed";
+    setLiveStatus("offline", "offline");
   });
   state.websocket.addEventListener("message", (message) => {
     const payload = JSON.parse(message.data);
@@ -712,7 +1132,7 @@ function connectRealtime() {
       refreshRecords().catch(() => {});
     }
     if (payload.type === "subscribed") {
-      els.liveStatus.textContent = `watching ${payload.collectionName}`;
+      setLiveStatus("watching", `watching ${payload.collectionName}`);
     }
   });
 }
@@ -755,13 +1175,13 @@ async function refreshCollection() {
   const collection = state.currentCollection;
   els.activeCollectionName.textContent = collection?.displayName || "Select one";
   if (!collection) {
-    els.schemaTitle.textContent = "Collection schema";
+    els.schemaTitle.textContent = "Select a collection";
     renderRecords([]);
     return;
   }
   const payload = await request(`/v1/namespaces/${state.currentNamespace.id}/collections/${collection.name}`);
   state.currentCollection = payload;
-  els.schemaTitle.textContent = payload.displayName;
+  els.schemaTitle.textContent = payload.name;
   renderCollections();
   await refreshRecords();
   subscribeRealtime();
@@ -796,21 +1216,59 @@ async function refreshSettings() {
     request("/v1/health"),
     request("/v1/settings"),
   ]);
-  els.settingsOutput.textContent = pretty({ health, settings });
-  const rowsEl = $("settings-rows");
-  if (rowsEl) {
-    const merged = { ...health, ...settings };
-    rowsEl.innerHTML = "";
-    for (const [key, value] of Object.entries(merged)) {
+
+  if (els.settingsOutput) els.settingsOutput.textContent = pretty({ health, settings });
+
+  if (els.settingsUrl && settings?.host && settings?.port) {
+    els.settingsUrl.textContent = `http://${settings.host}:${settings.port}`;
+  }
+  if (els.settingsName) {
+    els.settingsName.textContent = settings?.service || "ClawJS Database";
+  }
+
+  const healthy = Boolean(health?.ok);
+  if (els.settingsHealthPill) {
+    els.settingsHealthPill.dataset.state = healthy ? "ok" : "down";
+    els.settingsHealthPill.querySelector("span:last-child").textContent = healthy ? "healthy" : "unhealthy";
+  }
+
+  if (els.settingsHealthRows) {
+    const healthKeys = ["service", "host", "port", "ok", "uptime", "version"];
+    els.settingsHealthRows.innerHTML = "";
+    for (const key of healthKeys) {
+      const raw = settings?.[key] ?? health?.[key];
+      if (raw === undefined) continue;
       const row = document.createElement("div");
       row.className = "settings-row";
-      row.innerHTML = `<span class="settings-key">${escapeHtml(key)}</span><span class="settings-value">${escapeHtml(typeof value === "object" ? JSON.stringify(value) : String(value))}</span>`;
-      rowsEl.appendChild(row);
+      row.innerHTML = `<dt>${escapeHtml(key)}</dt><dd>${escapeHtml(String(raw))}</dd>`;
+      els.settingsHealthRows.appendChild(row);
     }
   }
-  const urlEl = $("settings-url");
-  if (urlEl && settings?.host && settings?.port) {
-    urlEl.value = `http://${settings.host}:${settings.port}`;
+
+  if (els.settingsPathsRows) {
+    const pathKeys = Object.keys({ ...settings, ...health }).filter(k => /dir|path/i.test(k));
+    els.settingsPathsRows.innerHTML = "";
+    for (const key of pathKeys) {
+      const raw = settings?.[key] ?? health?.[key];
+      if (raw == null) continue;
+      const redacted = redactPath(String(raw));
+      const row = document.createElement("div");
+      row.className = "settings-row clickable";
+      row.innerHTML = `
+        <dt>${escapeHtml(key)}</dt>
+        <dd>
+          <span class="mono" title="${escapeHtml(String(raw))}">${escapeHtml(redacted)}</span>
+          <button type="button" class="icon-btn icon-btn-xs" title="Copy full path" aria-label="Copy full path">
+            <i class="ri-file-copy-line"></i>
+          </button>
+        </dd>
+      `;
+      row.querySelector("button").addEventListener("click", (e) => {
+        e.stopPropagation();
+        navigator.clipboard?.writeText(String(raw)).then(() => toastSuccess("Path copied"));
+      });
+      els.settingsPathsRows.appendChild(row);
+    }
   }
 }
 
@@ -859,6 +1317,8 @@ function applyTheme(theme) {
     applyTheme(stored);
   } else if (window.matchMedia("(prefers-color-scheme: light)").matches) {
     applyTheme("light");
+  } else {
+    applyTheme("dark");
   }
 })();
 
@@ -866,6 +1326,19 @@ $("theme-toggle").addEventListener("click", () => {
   const current = document.documentElement.getAttribute("data-theme");
   applyTheme(current === "light" ? "dark" : "light");
 });
+
+/* ---------- Dev credentials prefill (local only) ---------- */
+
+(function maybePrefillDevCreds() {
+  const host = window.location.hostname;
+  const isLocal = host === "localhost" || host === "127.0.0.1" || host.endsWith(".local");
+  if (!isLocal) return;
+  els.loginEmail.value = "admin@database.local";
+  els.loginPassword.value = "database-admin";
+  els.loginDevHint?.classList.remove("hidden");
+})();
+
+/* ---------- Namespace form ---------- */
 
 els.namespaceForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -877,71 +1350,71 @@ els.namespaceForm.addEventListener("submit", async (event) => {
         displayName: els.namespaceDisplayName.value,
       }),
     });
+    toastSuccess(`Database "${els.namespaceDisplayName.value}" created`);
     els.namespaceId.value = "";
     els.namespaceDisplayName.value = "";
+    els.namespaceForm.classList.add("hidden");
     await refreshNamespaces();
     await refreshNamespace();
   } catch (error) {
-    alert(error.message);
+    toastError(`Could not create database: ${error.message}`);
   }
 });
 
-els.collectionForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  if (!state.currentNamespace) return;
-  try {
-    await request(`/v1/namespaces/${state.currentNamespace.id}/collections`, {
-      method: "POST",
-      body: JSON.stringify({
-        name: els.collectionName.value,
-        displayName: els.collectionDisplayName.value,
-        fields: JSON.parse(els.collectionFields.value || "[]"),
-        indexes: [],
-      }),
-    });
-    els.collectionName.value = "";
-    els.collectionDisplayName.value = "";
-    els.collectionFields.value = exampleFields();
-    closeCollectionModal();
-    await refreshNamespace();
-  } catch (error) {
-    alert(error.message);
-  }
-});
+/* ---------- Schema save ---------- */
 
 els.schemaSave.addEventListener("click", async () => {
   if (!state.currentNamespace) return;
+  let fields;
   try {
-    const fields = JSON.parse(els.schemaEditor.value || "[]");
-    const nameInput = $("schema-coll-name");
-    const collName = nameInput?.value?.trim() || "";
+    fields = JSON.parse(els.schemaEditor.value || "[]");
+  } catch (e) {
+    toastError(`Invalid fields JSON: ${e.message}`);
+    return;
+  }
+  const rules = collectRules();
+  const nameInput = $("schema-coll-name");
+  const collName = nameInput?.value?.trim() || "";
 
-    if (state.schemaCreateMode) {
-      // Create mode
-      if (!collName) { alert("Collection name is required"); return; }
+  if (state.schemaCreateMode) {
+    if (!collName) {
+      toastError("Collection name is required");
+      nameInput?.focus();
+      return;
+    }
+    try {
       await request(`/v1/namespaces/${state.currentNamespace.id}/collections`, {
         method: "POST",
         body: JSON.stringify({
           name: collName,
           displayName: collName.charAt(0).toUpperCase() + collName.slice(1),
           fields,
+          rules,
           indexes: [],
         }),
       });
+      toastSuccess(`Collection "${collName}" created`);
       closeSchemaDrawer();
-      await refreshNamespace();
-    } else {
-      // Edit mode
-      if (!state.currentCollection) return;
+      const payload = await request(`/v1/namespaces/${state.currentNamespace.id}/collections`);
+      state.collections = payload.items;
+      state.currentCollection = state.collections.find((c) => c.name === collName) || state.collections[0];
+      await refreshCollection();
+    } catch (error) {
+      toastError(`Save failed: ${error.message}`);
+    }
+  } else {
+    if (!state.currentCollection) return;
+    try {
       await request(`/v1/namespaces/${state.currentNamespace.id}/collections/${state.currentCollection.name}`, {
         method: "PATCH",
-        body: JSON.stringify({ fields }),
+        body: JSON.stringify({ fields, rules }),
       });
+      toastSuccess("Collection saved");
       closeSchemaDrawer();
       await refreshCollection();
+    } catch (error) {
+      toastError(`Save failed: ${error.message}`);
     }
-  } catch (error) {
-    alert(error.message);
   }
 });
 
@@ -949,75 +1422,123 @@ els.recordsRefresh.addEventListener("click", () => refreshRecords().catch(() => 
 els.recordsFilter.addEventListener("change", () => refreshRecords().catch(() => {}));
 els.recordsSort.addEventListener("change", () => refreshRecords().catch(() => {}));
 
+/* ---------- Record save ---------- */
+
 els.recordForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!state.currentNamespace || !state.currentCollection) return;
+  let payload;
   try {
-    // Merge dynamic fields with raw JSON. Raw JSON takes precedence (fallback for tests).
     const dynamicData = collectDynamicFields() || {};
-    const jsonData = JSON.parse(els.recordData.value || "{}");
-    const payload = { ...dynamicData, ...jsonData };
+    let jsonData = {};
+    if (els.recordData.value.trim()) {
+      try {
+        jsonData = JSON.parse(els.recordData.value);
+      } catch (e) {
+        toastError(`Invalid JSON payload: ${e.message}`);
+        return;
+      }
+    }
+    payload = { ...dynamicData, ...jsonData };
+  } catch (e) {
+    toastError(e.message);
+    return;
+  }
+  try {
     if (els.recordId.value) {
       await request(`/v1/namespaces/${state.currentNamespace.id}/collections/${state.currentCollection.name}/records/${els.recordId.value}`, {
         method: "PATCH",
         body: JSON.stringify(payload),
       });
+      toastSuccess("Record updated");
     } else {
       await request(`/v1/namespaces/${state.currentNamespace.id}/collections/${state.currentCollection.name}/records`, {
         method: "POST",
         body: JSON.stringify(payload),
       });
+      toastSuccess("Record created");
     }
     els.recordId.value = "";
-    els.recordData.value = exampleRecord();
+    els.recordData.value = "";
     closeRecordDrawer();
     await refreshRecords();
   } catch (error) {
-    alert(error.message);
+    toastError(`Save failed: ${error.message}`);
   }
 });
 
 els.recordReset.addEventListener("click", () => {
   els.recordId.value = "";
   els.recordData.value = exampleRecord();
+  const container = $("record-fields");
+  container.querySelectorAll("input, textarea, select").forEach((el) => { el.value = ""; });
 });
+
+/* ---------- Token form ---------- */
 
 els.tokenForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!state.currentNamespace) return;
+  const label = els.tokenLabel.value.trim();
+  if (!label) {
+    toastError("A label is required so you can remember what this token is for.");
+    els.tokenLabel.focus();
+    return;
+  }
+  const operations = collectTokenScopes();
+  if (!operations.length) {
+    toastError("Pick at least one permission for this token.");
+    return;
+  }
+  const expirySeconds = els.tokenExpiry?.value ? Number(els.tokenExpiry.value) : null;
   try {
+    const body = {
+      label,
+      collectionName: els.tokenCollection.value.trim() || undefined,
+      operations,
+    };
+    if (expirySeconds) body.expiresInSeconds = expirySeconds;
     const payload = await request(`/v1/namespaces/${state.currentNamespace.id}/tokens`, {
       method: "POST",
-      body: JSON.stringify({
-        label: els.tokenLabel.value,
-        collectionName: els.tokenCollection.value || undefined,
-        operations: els.tokenOperations.value.split(",").map((entry) => entry.trim()).filter(Boolean),
-      }),
+      body: JSON.stringify(body),
     });
-    els.tokenOutput.textContent = pretty(payload);
+    toastSuccess("Token issued");
+    renderIssuedToken({ ...payload, label, operations });
     els.tokenLabel.value = "";
     els.tokenCollection.value = "";
     await refreshTokens();
   } catch (error) {
-    alert(error.message);
+    toastError(`Could not issue token: ${error.message}`);
   }
 });
 
+/* ---------- File upload ---------- */
+
 els.fileForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (!state.currentNamespace || !els.fileInput.files[0]) return;
+  if (!state.currentNamespace) {
+    toastError("Pick a database first.");
+    return;
+  }
+  const file = els.fileInput.files[0];
+  if (!file) {
+    toastError("Pick a file to upload.");
+    return;
+  }
   try {
     const form = new FormData();
     form.set("namespaceId", state.currentNamespace.id);
     if (state.currentCollection) form.set("collectionName", state.currentCollection.name);
     if (els.fileRecordId.value) form.set("recordId", els.fileRecordId.value);
-    form.set("file", els.fileInput.files[0]);
+    form.set("file", file);
     await request("/v1/files", { method: "POST", body: form });
+    toastSuccess(`Uploaded ${file.name}`);
     els.fileInput.value = "";
     els.fileRecordId.value = "";
+    setDropzoneFile(null);
     await refreshFiles();
   } catch (error) {
-    alert(error.message);
+    toastError(`Upload failed: ${error.message}`);
   }
 });
 
@@ -1025,6 +1546,5 @@ els.settingsRefresh.addEventListener("click", () => refreshSettings().catch(() =
 
 /* ---------- Init ---------- */
 
-els.collectionFields.value = exampleFields();
 els.recordData.value = exampleRecord();
 setView("collections");
