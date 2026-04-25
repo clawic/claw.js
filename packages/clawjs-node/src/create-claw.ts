@@ -873,6 +873,7 @@ export interface ClawInstance {
         once?: boolean;
         intervalMs?: number;
         timeoutSeconds?: number;
+        processorTimeoutMs?: number;
         stopPath?: string;
         pidPath?: string;
         logPath?: string;
@@ -3520,6 +3521,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     once?: boolean;
     intervalMs?: number;
     timeoutSeconds?: number;
+    processorTimeoutMs?: number;
     stopPath?: string;
     pidPath?: string;
     logPath?: string;
@@ -3599,7 +3601,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
               targetId: processorMessage.targetId,
               message: processorMessage,
               processorId: processor.id,
-            }, { env: secretsEnv });
+            }, { env: secretsEnv, timeoutMs: input.processorTimeoutMs ?? 120_000 });
             channelsRegistry.events.record({
               type: "channel.processor.invoked",
               provider,

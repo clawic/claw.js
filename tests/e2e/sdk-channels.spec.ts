@@ -257,7 +257,9 @@ let input = "";
 process.stdin.on("data", (chunk) => input += chunk);
 process.stdin.on("end", () => {
   const event = JSON.parse(input);
-  process.stdout.write(JSON.stringify({ actions: [{ type: "send_message", targetId: event.targetId, text: "background reply: " + event.message.text, threadId: event.message.threadId }] }));
+  const write = () => process.stdout.write(JSON.stringify({ actions: [{ type: "send_message", targetId: event.targetId, text: "background reply: " + event.message.text, threadId: event.message.threadId }] }));
+  if (event.message.text.includes("slow")) setTimeout(write, 700);
+  else write();
 });
 `);
     const state = JSON.parse(fs.readFileSync(statePath, "utf8")) as { updates: unknown[]; lastSend?: { text?: string } };
@@ -369,6 +371,38 @@ process.stdin.on("end", () => {
     expect(backgroundState.lastSend?.text).toBe("background reply: background hello");
     expect(backgroundState.lastSend?.message_thread_id).toBe(77);
     expect(listenerStatus.status).toBe("stopped");
+
+    const slowState = JSON.parse(fs.readFileSync(statePath, "utf8")) as { updates: unknown[]; lastSend?: { text?: string } };
+    slowState.updates.push({
+      update_id: 45,
+      message: {
+        message_id: 46,
+        text: "slow hello",
+        chat: {
+          id: -1001,
+          type: "supergroup",
+          title: "Launch Group",
+          is_forum: true,
+        },
+      },
+    });
+    fs.writeFileSync(statePath, JSON.stringify(slowState, null, 2));
+    await execFileAsync(process.execPath, [
+      cliPath,
+      "channels",
+      "listen",
+      "run",
+      "--workspace", workspaceDir,
+      "--account", "support",
+      "--processor", "support-router",
+      "--once",
+      "--timeout", "0",
+      "--processor-timeout-ms", "2000",
+      "--json",
+    ], { cwd: rootDir, env: cliEnv, maxBuffer: 10 * 1024 * 1024 });
+    const afterSlowState = JSON.parse(fs.readFileSync(statePath, "utf8")) as { lastSend?: { text?: string } };
+    expect(afterSlowState.lastSend?.text).toBe("background reply: slow hello");
+
     expect(inspectedTarget.metadata?.instructions).toBe("Route launch-topic messages to support-router.");
 
     const visualPayload = {

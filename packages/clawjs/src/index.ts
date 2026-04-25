@@ -5693,6 +5693,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         once: argv.includes("--once"),
         intervalMs: flags["interval-ms"] ? Number(flags["interval-ms"]) : undefined,
         timeoutSeconds: flags.timeout ? Number(flags.timeout) : undefined,
+        processorTimeoutMs: flags["processor-timeout-ms"] ? Number(flags["processor-timeout-ms"]) : undefined,
         pidPath: paths.pidPath,
         stopPath: paths.stopPath,
         logPath: paths.logPath,
@@ -5715,6 +5716,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
           once: argv.includes("--once"),
           intervalMs: flags["interval-ms"] ? Number(flags["interval-ms"]) : undefined,
           timeoutSeconds: flags.timeout ? Number(flags.timeout) : undefined,
+          processorTimeoutMs: flags["processor-timeout-ms"] ? Number(flags["processor-timeout-ms"]) : undefined,
           pidPath: paths.pidPath,
           stopPath: paths.stopPath,
           logPath: paths.logPath,
@@ -5745,6 +5747,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       if (flags.processor) args.push("--processor", flags.processor);
       if (flags["interval-ms"]) args.push("--interval-ms", flags["interval-ms"]);
       if (flags.timeout) args.push("--timeout", flags.timeout);
+      if (flags["processor-timeout-ms"]) args.push("--processor-timeout-ms", flags["processor-timeout-ms"]);
       const logFd = fs.openSync(paths.logPath, "a");
       const child = spawn(process.execPath, args, {
         cwd: context.cwd,
