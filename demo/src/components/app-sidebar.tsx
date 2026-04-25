@@ -8,6 +8,7 @@ import { useLocale } from "@/components/locale-provider";
 import type { SessionSummary } from "@/lib/app-bootstrap";
 import { getCachedAppBootstrap } from "@/lib/app-bootstrap";
 import SearchSessionsDialog from "@/components/search-sessions-dialog";
+import { useTheme } from "@/components/theme-provider";
 
 interface AppSidebarProps {
   sessions?: SessionSummary[];
@@ -177,6 +178,7 @@ export default function AppSidebar({ sessions: externalSessions, activeSessionId
   const router = useRouter();
   const { bootstrapData, updateBootstrapData } = useAppBootstrap();
   const { messages } = useLocale();
+  const { resolvedTheme, setTheme } = useTheme();
 
   const [open, setOpen] = useState(() => getCachedAppBootstrap()?.localSettings?.sidebarOpen ?? false);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
@@ -508,23 +510,48 @@ export default function AppSidebar({ sessions: externalSessions, activeSessionId
           />
         </div>
 
-        {/* Settings */}
-        <div className="px-3 pb-4 pt-0">
+        {/* Settings + Theme toggle */}
+        <div className="px-3 pb-4 pt-0 flex items-center gap-1">
           <Link
             href="/settings"
             prefetch={false}
             data-testid="sidebar-link-settings"
-            className={`group flex items-center gap-2 w-full px-3 py-2 rounded-md text-[13px] whitespace-nowrap transition-all duration-200 active:scale-[0.98] ${
+            className={`group flex items-center gap-2 flex-1 min-w-0 px-3 py-2 rounded-md text-[13px] whitespace-nowrap transition-all duration-200 active:scale-[0.98] ${
               pathname === "/settings"
                 ? "bg-muted text-foreground font-medium"
                 : "text-tertiary-foreground hover:text-foreground hover:bg-muted"
             }`}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" className="transition-transform duration-300 group-hover:rotate-45">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" className="transition-transform duration-300 group-hover:rotate-45 flex-shrink-0">
               <path d="M13.85 22.25h-3.7c-.74 0-1.36-.54-1.45-1.27l-.27-1.89a8.93 8.93 0 0 1-1.58-.92l-1.79.72a1.48 1.48 0 0 1-1.82-.56l-1.85-3.2a1.46 1.46 0 0 1 .37-1.82l1.52-1.17a8.7 8.7 0 0 1 0-1.84L1.76 9.13a1.46 1.46 0 0 1-.37-1.82l1.85-3.2a1.48 1.48 0 0 1 1.82-.56l1.79.72c.48-.37 1.01-.68 1.58-.92l.27-1.89A1.47 1.47 0 0 1 10.15 .19h3.7c.74 0 1.36.54 1.45 1.27l.27 1.89c.57.24 1.1.55 1.58.92l1.79-.72a1.48 1.48 0 0 1 1.82.56l1.85 3.2c.36.63.2 1.42-.37 1.82l-1.52 1.17a8.7 8.7 0 0 1 0 1.84l1.52 1.17c.57.4.73 1.19.37 1.82l-1.85 3.2a1.48 1.48 0 0 1-1.82.56l-1.79-.72c-.48.37-1.01.68-1.58.92l-.27 1.89a1.47 1.47 0 0 1-1.45 1.27zM12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" />
             </svg>
             <span className="truncate">{messages.nav.settings}</span>
           </Link>
+          <button
+            type="button"
+            data-testid="theme-toggle"
+            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-md text-tertiary-foreground hover:text-foreground hover:bg-muted transition-all duration-200 active:scale-[0.92]"
+            aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {resolvedTheme === "dark" ? (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+            ) : (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            )}
+          </button>
         </div>
       </aside>
 

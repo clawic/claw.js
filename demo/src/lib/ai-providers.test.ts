@@ -117,10 +117,10 @@ test("i18n label values are non-empty strings for all providers", () => {
 /* ── Runtime adapter tests ── */
 
 const VISIBLE_ADAPTERS = listRuntimeAdapters().filter((a) => a.supportLevel !== "demo");
-const EXPECTED_ADAPTER_IDS = ["openclaw", "zeroclaw", "picoclaw", "nanobot", "nanoclaw", "nullclaw", "ironclaw", "nemoclaw", "hermes"];
+const EXPECTED_ADAPTER_IDS = ["openclaw", "codex", "zeroclaw", "picoclaw", "nanobot", "nanoclaw", "nullclaw", "ironclaw", "nemoclaw", "hermes"];
 
-test("SDK exposes 9 visible runtime adapters (excluding demo)", () => {
-  assert.equal(VISIBLE_ADAPTERS.length, 9, `Expected 9 visible adapters, got ${VISIBLE_ADAPTERS.length}`);
+test("SDK exposes 10 visible runtime adapters (excluding demo)", () => {
+  assert.equal(VISIBLE_ADAPTERS.length, 10, `Expected 10 visible adapters, got ${VISIBLE_ADAPTERS.length}`);
   const ids = VISIBLE_ADAPTERS.map((a) => a.id).sort();
   const expected = [...EXPECTED_ADAPTER_IDS].sort();
   assert.deepEqual(ids, expected);

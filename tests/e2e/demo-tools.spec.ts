@@ -18,6 +18,24 @@ test("images generation and deletion stay hermetic", async ({ page, request }) =
   await expect(page.getByTestId("image-card")).toHaveCount(initialCards);
 });
 
+test("images library filters imported Codex assets and shows metadata", async ({ page, request }) => {
+  await resetDemoState(request, "seeded");
+
+  await page.goto("/images");
+  await expect(page.getByTestId("images-page")).toBeVisible({ timeout: 20_000 });
+
+  await page.getByTestId("images-search").fill("codex");
+  await page.getByTestId("images-source-filter").selectOption("imported-codex");
+  await expect(page.getByTestId("image-card")).toHaveCount(1);
+
+  await page.getByTestId("image-card").first().click();
+  await expect(page.getByTestId("image-detail-panel")).toBeVisible();
+  await expect(page.getByTestId("image-detail-type")).toHaveText("logo");
+  await expect(page.getByTestId("image-lineage")).toContainText("imported-codex");
+
+  await saveArtifactScreenshot(page, "images-library-detail.png");
+});
+
 test("skills can be searched, installed, and removed", async ({ page, request }) => {
   await resetDemoState(request, "seeded");
 

@@ -16,14 +16,26 @@ interface ImageRecord {
   id: string;
   kind: string;
   status: "succeeded" | "failed";
+  operation?: "create" | "edit" | "import";
   prompt: string;
+  revisedPrompt?: string;
   title: string;
+  imageType?: string;
+  tags?: string[];
+  collections?: string[];
   backendId: string;
   backendLabel: string;
+  provider?: string;
   model?: string;
+  parentId?: string;
+  sourceImageIds?: string[];
+  editDepth?: number;
+  provenance?: string;
+  externalGenerator?: string;
   createdAt: string;
   updatedAt: string;
   output: GenerationAsset | null;
+  metadata?: Record<string, unknown>;
   error?: string;
 }
 
@@ -44,6 +56,9 @@ export default function ImagesPage() {
   const [generatingPrompt, setGeneratingPrompt] = useState<string | null>(null);
   const [revealingId, setRevealingId] = useState<string | null>(null);
   const [selectedBackend, setSelectedBackend] = useState<string>("");
+  const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [lightboxImage, setLightboxImage] = useState<ImageRecord | null>(null);
@@ -56,7 +71,11 @@ export default function ImagesPage() {
 
   const loadImages = useCallback(async () => {
     try {
-      const res = await fetch("/api/images");
+      const params = new URLSearchParams();
+      if (query.trim()) params.set("query", query.trim());
+      if (typeFilter) params.set("type", typeFilter);
+      if (sourceFilter) params.set("provenance", sourceFilter);
+      const res = await fetch(`/api/images${params.size ? `?${params.toString()}` : ""}`);
       const data = await res.json();
       if (Array.isArray(data.images)) {
         setImages(data.images);
@@ -64,7 +83,7 @@ export default function ImagesPage() {
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [query, typeFilter, sourceFilter]);
 
   const loadBackends = useCallback(async () => {
     try {
@@ -284,6 +303,40 @@ export default function ImagesPage() {
             )}
           </div>
         )}
+        <div className="mt-3 flex flex-wrap items-center gap-2" data-testid="images-library-filters">
+          <input
+            data-testid="images-search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search library"
+            className="h-8 min-w-[180px] flex-1 rounded-md border border-border bg-card px-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-muted-foreground"
+          />
+          <select
+            data-testid="images-type-filter"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="h-8 rounded-md border border-border bg-card px-2 text-xs text-foreground"
+          >
+            <option value="">All types</option>
+            <option value="logo">Logo</option>
+            <option value="illustration">Illustration</option>
+            <option value="screenshot">Screenshot</option>
+            <option value="mockup">Mockup</option>
+            <option value="diagram">Diagram</option>
+          </select>
+          <select
+            data-testid="images-source-filter"
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value)}
+            className="h-8 rounded-md border border-border bg-card px-2 text-xs text-foreground"
+          >
+            <option value="">All sources</option>
+            <option value="generated-by-system">Generated</option>
+            <option value="imported-codex">Codex imports</option>
+            <option value="imported-chatgpt">ChatGPT imports</option>
+            <option value="command-backend">Command backends</option>
+          </select>
+        </div>
       </div>
 
       {/* Gallery */}
@@ -389,6 +442,18 @@ export default function ImagesPage() {
                   <p className="text-[11px] text-white/90 line-clamp-3 leading-tight">
                     {image.title}
                   </p>
+                  <div className="flex flex-wrap gap-1">
+                    {image.imageType && (
+                      <span className="rounded bg-white/15 px-1.5 py-0.5 text-[10px] text-white/80">
+                        {image.imageType}
+                      </span>
+                    )}
+                    {image.provenance && (
+                      <span className="rounded bg-white/15 px-1.5 py-0.5 text-[10px] text-white/80">
+                        {image.provenance.replace("imported-", "")}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-white/60">
                       {formatDate(image.createdAt)}
@@ -529,14 +594,41 @@ export default function ImagesPage() {
               alt={lightboxImage.title}
               className="max-w-full max-h-[80vh] rounded-lg object-contain"
             />
-            <div className="mt-3 flex items-center gap-3">
-              <p className="text-sm text-white/80 max-w-md truncate">
-                {lightboxImage.title}
+            <div className="mt-3 w-full max-w-2xl rounded-lg bg-black/35 p-3 text-white/80" data-testid="image-detail-panel">
+              <div className="flex items-center gap-3">
+                <p className="min-w-0 flex-1 truncate text-sm font-medium text-white">
+                  {lightboxImage.title}
+                </p>
+                <span className="shrink-0 rounded bg-white/15 px-2 py-1 text-[11px]">
+                  {lightboxImage.operation || "create"}
+                </span>
+              </div>
+              <p className="mt-2 line-clamp-2 text-xs text-white/70">
+                {lightboxImage.prompt}
               </p>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4">
+                <span data-testid="image-detail-type">{lightboxImage.imageType || "untyped"}</span>
+                <span>{lightboxImage.provider || lightboxImage.backendLabel}</span>
+                <span>{lightboxImage.model || "default"}</span>
+                <span>{formatDate(lightboxImage.createdAt)}</span>
+              </div>
+              {(lightboxImage.tags?.length || lightboxImage.provenance || lightboxImage.parentId) && (
+                <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px]" data-testid="image-lineage">
+                  {lightboxImage.provenance && (
+                    <span className="rounded bg-white/15 px-2 py-1">{lightboxImage.provenance}</span>
+                  )}
+                  {lightboxImage.parentId && (
+                    <span className="rounded bg-white/15 px-2 py-1">parent {lightboxImage.parentId.slice(0, 8)}</span>
+                  )}
+                  {(lightboxImage.tags ?? []).map((tag) => (
+                    <span key={tag} className="rounded bg-white/15 px-2 py-1">#{tag}</span>
+                  ))}
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => handleDownload(lightboxImage)}
-                className="shrink-0 px-3 py-1 rounded-md text-xs font-medium bg-white/20 text-white hover:bg-white/30 transition-colors"
+                className="mt-3 shrink-0 px-3 py-1 rounded-md text-xs font-medium bg-white/20 text-white hover:bg-white/30 transition-colors"
               >
                 {messages.images.download}
               </button>

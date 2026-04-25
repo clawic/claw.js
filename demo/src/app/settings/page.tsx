@@ -1722,7 +1722,7 @@ function SettingsContent() {
               const noneSelected = Object.values(resetOptions).every(v => !v);
               const rc = messages.settings.general.resetCategories;
               const categories = [
-                { key: "sessions" as const, label: rc.sessions, desc: rc.conversationsDesc },
+                { key: "sessions" as const, label: rc.conversations, desc: rc.conversationsDesc },
                 { key: "profile" as const, label: rc.profile, desc: rc.profileDesc },
                 { key: "contextFiles" as const, label: rc.contextFiles, desc: rc.contextFilesDesc },
                 { key: "transcriptions" as const, label: rc.transcriptions, desc: rc.transcriptionsDesc },
@@ -1856,6 +1856,7 @@ function SettingsContent() {
                 const adapterKey = adapter.id as keyof typeof adapterMessages;
                 const meta = (adapterMessages[adapterKey] ?? { name: adapter.runtimeName, hint: "" }) as { name: string; hint: string };
                 const isOpenClaw = adapter.id === "openclaw";
+                const isCodex = adapter.id === "codex";
                 const isInstalled = isOpenClaw ? !!oc?.cliAvailable : adapter.cliAvailable;
                 const isSelected = activeAdapterId === adapter.id;
                 const isBusy = !!adapterBusy[adapter.id];
@@ -1880,8 +1881,8 @@ function SettingsContent() {
                           ...current,
                           localSettings: { ...current.localSettings, activeAdapter: adapter.id },
                         }));
-                        // If not installed, install it
-                        if (!isInstalled) {
+                        // If not installed, install runtimes with managed installers. Codex stays explicit because login/install is owned by the Codex CLI.
+                        if (!isInstalled && !isCodex) {
                           setAdapterBusy((prev) => ({ ...prev, [adapter.id]: "installing" }));
                           setAdapterProgress((prev) => ({ ...prev, [adapter.id]: { message: adapterMessages.installing, percent: 0 } }));
                           try {
@@ -1926,6 +1927,8 @@ function SettingsContent() {
                         }`}>
                           {isOpenClaw
                             ? <svg width="17" height="17" viewBox="0 0 120 120" fill="currentColor"><path d="M60 10C30 10 15 35 15 55C15 75 30 95 45 100L45 110L55 110L55 100C55 100 60 102 65 100L65 110L75 110L75 100C90 95 105 75 105 55C105 35 90 10 60 10Z"/><path d="M20 45C5 40 0 50 5 60C10 70 20 65 25 55C28 48 25 45 20 45Z"/><path d="M100 45C115 40 120 50 115 60C110 70 100 65 95 55C92 48 95 45 100 45Z"/><path d="M45 15Q35 5 30 8" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/><path d="M75 15Q85 5 90 8" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/><circle cx="45" cy="35" r="6" fill="currentColor" opacity="0.3"/><circle cx="75" cy="35" r="6" fill="currentColor" opacity="0.3"/></svg>
+                            : isCodex
+                              ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 8a4 4 0 0 1 8 0v8a4 4 0 0 1-8 0z"/><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4 12h4"/><path d="M16 12h4"/></svg>
                             : <img src={`/runtimes/${adapter.id}.png`} alt={meta.name} width={17} height={17} className="rounded-sm grayscale" />
                           }
                         </div>
@@ -2144,8 +2147,65 @@ function SettingsContent() {
                       </>
                     )}
 
+                    {/* ── Codex inline expanded details ── */}
+                    {isCodex && isSelected && (
+                      <>
+                        <div className="flex flex-wrap gap-1.5 px-4 py-3 border-t border-border">
+                          {[
+                            { key: "cli", ok: adapter.cliAvailable, label: "CLI" },
+                            { key: "auth", ok: adapter.capabilities.some((item) => item.key === "auth" && item.status === "ready"), label: "Login" },
+                            { key: "app-server", ok: adapter.capabilities.some((item) => item.key === "session_gateway" && item.status === "ready"), label: "App Server" },
+                            { key: "model", ok: adapter.capabilities.some((item) => item.key === "models" && item.status === "ready"), label: "Model" },
+                          ].map((item) => (
+                            <span
+                              key={item.key}
+                              data-testid={`adapter-codex-status-${item.key}`}
+                              data-state={item.ok ? "ready" : "pending"}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium ${
+                                item.ok
+                                  ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400"
+                                  : "bg-card text-muted-foreground border border-border"
+                              }`}
+                            >
+                              {item.ok ? <Check size={12} strokeWidth={2.5} /> : <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />}
+                              {item.label}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="border-t border-border">
+                          {!isInstalled && (
+                            <div className="px-4 py-3" data-testid="adapter-codex-install-command">
+                              <span className="text-[11px] text-muted-foreground block mb-1.5">Install</span>
+                              <code className="block text-[11px] text-foreground bg-background border border-border rounded-lg px-2.5 py-2 overflow-x-auto">npm i -g @openai/codex</code>
+                            </div>
+                          )}
+                          {isInstalled && adapter.capabilities.some((item) => item.key === "auth" && item.status !== "ready") && (
+                            <div className="px-4 py-3" data-testid="adapter-codex-login-command">
+                              <span className="text-[11px] text-muted-foreground block mb-1.5">Login</span>
+                              <code className="block text-[11px] text-foreground bg-background border border-border rounded-lg px-2.5 py-2 overflow-x-auto">codex login</code>
+                            </div>
+                          )}
+                          {adapter.version && (
+                            <div className="px-4 py-2 flex items-baseline gap-3">
+                              <span className="text-[11px] text-muted-foreground w-[76px] flex-shrink-0">{adapterMessages.versionLabel}</span>
+                              <span className="text-[11px] text-foreground font-mono">{adapter.version}</span>
+                            </div>
+                          )}
+                          {adapter.conversation && (
+                            <div className="px-4 py-2 flex items-baseline gap-3">
+                              <span className="text-[11px] text-muted-foreground w-[76px] flex-shrink-0">Transport</span>
+                              <span data-testid="adapter-codex-session-transport" className="text-[11px] text-foreground font-mono">
+                                {adapter.conversation.transport}
+                                {adapter.conversation.fallbackTransport ? ` -> ${adapter.conversation.fallbackTransport}` : ""}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+
                     {/* ── Non-OpenClaw inline expanded details ── */}
-                    {!isOpenClaw && isSelected && isInstalled && (
+                    {!isOpenClaw && !isCodex && isSelected && isInstalled && (
                       <>
                         {/* Capability chips */}
                         <div className="flex flex-wrap gap-1.5 px-4 py-3 border-t border-border">
@@ -2203,19 +2263,19 @@ function SettingsContent() {
                               <span className="text-[11px] text-foreground font-mono">{adapter.workspaceFiles.join(", ")}</span>
                             </div>
                           )}
-                          {adapter.session && (
+                          {adapter.conversation && (
                             <>
                               <div className="px-4 py-2 flex items-baseline gap-3">
                                 <span className="text-[11px] text-muted-foreground w-[76px] flex-shrink-0">Transport</span>
                                 <span data-testid={`adapter-${adapter.id}-session-transport`} className="text-[11px] text-foreground font-mono">
-                                  {adapter.session.transport}
-                                  {adapter.session.fallbackTransport ? ` -> ${adapter.session.fallbackTransport}` : ""}
+                                  {adapter.conversation.transport}
+                                  {adapter.conversation.fallbackTransport ? ` -> ${adapter.conversation.fallbackTransport}` : ""}
                                 </span>
                               </div>
-                              {adapter.session.sessionPersistence && (
+                              {adapter.conversation.sessionPersistence && (
                                 <div className="px-4 py-2 flex items-baseline gap-3">
                                   <span className="text-[11px] text-muted-foreground w-[76px] flex-shrink-0">Sessions</span>
-                                  <span className="text-[11px] text-foreground font-mono">{adapter.session.sessionPersistence}</span>
+                                  <span className="text-[11px] text-foreground font-mono">{adapter.conversation.sessionPersistence}</span>
                                 </div>
                               )}
                             </>

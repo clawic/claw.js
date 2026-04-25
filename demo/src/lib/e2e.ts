@@ -121,14 +121,26 @@ export interface E2EImageRecord {
   id: string;
   kind: string;
   status: "succeeded" | "failed";
+  operation?: "create" | "edit" | "import";
   prompt: string;
+  revisedPrompt?: string;
   title: string;
+  imageType?: string;
+  tags?: string[];
+  collections?: string[];
   backendId: string;
   backendLabel: string;
+  provider?: string;
   model?: string;
+  parentId?: string;
+  sourceImageIds?: string[];
+  editDepth?: number;
+  provenance?: string;
+  externalGenerator?: string;
   createdAt: string;
   updatedAt: string;
   output: E2EImageAsset | null;
+  metadata?: Record<string, unknown>;
   error?: string;
 }
 
@@ -378,6 +390,39 @@ function buildDefaultIntegrationStatus(): IntegrationStatus {
           gatewayKind: "openai-responses",
           sessionPersistence: "agent",
           sessionPath: path.join(resolveOpenClawStateDir(), "agents", "clawjs-demo-e2e", "sessions"),
+        },
+      },
+      {
+        id: "codex",
+        runtimeName: "Codex",
+        stability: "experimental",
+        supportLevel: "experimental",
+        cliAvailable: true,
+        version: "0.122.0-e2e",
+        recommended: false,
+        capabilities: [
+          { key: "auth", supported: true, status: "ready", strategy: "cli", source: "fixture", probeMethod: "fixture" },
+          { key: "models", supported: true, status: "ready", strategy: "config", source: "fixture", probeMethod: "fixture" },
+          { key: "session_cli", supported: true, status: "ready", strategy: "cli", source: "fixture", probeMethod: "fixture" },
+          { key: "session_gateway", supported: true, status: "ready", strategy: "gateway", source: "fixture", probeMethod: "fixture" },
+          { key: "sandbox", supported: true, status: "ready", strategy: "native", source: "fixture", probeMethod: "fixture" },
+        ],
+        providers: [
+          { id: "openai-codex", label: "Codex" },
+        ],
+        channels: [],
+        workspaceFiles: ["AGENTS"],
+        limitations: [],
+        hasScheduler: false,
+        hasMemory: true,
+        hasSandbox: true,
+        hasGateway: true,
+        conversation: {
+          transport: "hybrid",
+          fallbackTransport: "cli",
+          gatewayKind: "codex-app-server",
+          sessionPersistence: "runtime",
+          sessionPath: path.join(process.cwd(), ".tmp", "e2e-codex-sessions"),
         },
       },
       {
@@ -1213,14 +1258,46 @@ function buildSeededImages(): E2EImageRecord[] {
       id: "img-seeded-chat",
       kind: "image",
       status: "succeeded",
+      operation: "create",
       prompt: "A clean dashboard screenshot for E2E documentation.",
       title: "Dashboard reference",
+      imageType: "screenshot",
+      tags: ["dashboard", "reference"],
+      collections: ["docs"],
       backendId: "mock-image",
       backendLabel: "Mock image backend",
+      provider: "mock",
       model: "mock-v1",
+      sourceImageIds: [],
+      editDepth: 0,
+      provenance: "generated-by-system",
       createdAt,
       updatedAt: createdAt,
       output: asset,
+      metadata: { source: "seeded" },
+    },
+    {
+      id: "img-seeded-codex-logo",
+      kind: "image",
+      status: "succeeded",
+      operation: "import",
+      prompt: "Codex generated a compact mark for the image library.",
+      title: "Codex mark",
+      imageType: "logo",
+      tags: ["codex", "logo"],
+      collections: ["brand"],
+      backendId: "imported-codex",
+      backendLabel: "Imported Codex image",
+      provider: "codex",
+      model: "codex-image",
+      sourceImageIds: [],
+      editDepth: 0,
+      provenance: "imported-codex",
+      externalGenerator: "codex",
+      createdAt: new Date(nowMinus(10)).toISOString(),
+      updatedAt: new Date(nowMinus(10)).toISOString(),
+      output: ensureFixtureImageAsset("seeded-codex-logo"),
+      metadata: { importedBy: "e2e" },
     },
   ];
 }
@@ -1494,14 +1571,44 @@ export function listE2EImagesFiltered(filters: {
   limit?: number;
   status?: string | null;
   backendId?: string | null;
+  query?: string | null;
+  operation?: string | null;
+  imageType?: string | null;
+  provenance?: string | null;
+  tag?: string | null;
 }): E2EImageRecord[] {
-  const { limit, status, backendId } = filters;
+  const { limit, status, backendId, query, operation, imageType, provenance, tag } = filters;
   let images = listE2EImages();
   if (status === "succeeded" || status === "failed") {
     images = images.filter((image) => image.status === status);
   }
   if (backendId) {
     images = images.filter((image) => image.backendId === backendId);
+  }
+  if (operation) {
+    images = images.filter((image) => image.operation === operation);
+  }
+  if (imageType) {
+    images = images.filter((image) => image.imageType === imageType);
+  }
+  if (provenance) {
+    images = images.filter((image) => image.provenance === provenance);
+  }
+  if (tag) {
+    images = images.filter((image) => image.tags?.includes(tag));
+  }
+  const normalizedQuery = query?.trim().toLowerCase();
+  if (normalizedQuery) {
+    images = images.filter((image) => [
+      image.title,
+      image.prompt,
+      image.imageType ?? "",
+      image.provenance ?? "",
+      image.provider ?? "",
+      image.model ?? "",
+      ...(image.tags ?? []),
+      ...(image.collections ?? []),
+    ].join(" ").toLowerCase().includes(normalizedQuery));
   }
   images = [...images].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return typeof limit === "number" && Number.isFinite(limit) ? images.slice(0, limit) : images;
@@ -1512,6 +1619,9 @@ export function createE2EImage(input: {
   backendId?: string;
   model?: string;
   title?: string;
+  type?: string;
+  tags?: string[];
+  collections?: string[];
 }): E2EImageRecord {
   const asset = ensureFixtureImageAsset(generateId());
   const createdAt = new Date().toISOString();
@@ -1519,11 +1629,19 @@ export function createE2EImage(input: {
     id: generateId(),
     kind: "image",
     status: "succeeded",
+    operation: "create",
     prompt: input.prompt,
     title: input.title?.trim() || input.prompt.slice(0, 32),
+    imageType: input.type || "illustration",
+    tags: Array.isArray(input.tags) ? input.tags : ["generated"],
+    collections: Array.isArray(input.collections) ? input.collections : ["e2e"],
     backendId: input.backendId || "mock-image",
     backendLabel: "Mock image backend",
+    provider: "mock",
     ...(input.model ? { model: input.model } : { model: "mock-v1" }),
+    sourceImageIds: [],
+    editDepth: 0,
+    provenance: "generated-by-system",
     createdAt,
     updatedAt: createdAt,
     output: asset,
