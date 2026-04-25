@@ -857,6 +857,7 @@ interface TelegramCodexProcessorEvent {
   accountId?: string;
   targetId?: string;
   message?: {
+    id?: string;
     text?: string;
     targetId?: string;
     threadId?: string | number;
@@ -1005,6 +1006,38 @@ function formatTelegramCodexPrompt(event: TelegramCodexProcessorEvent, text: str
   ].join("\n");
 }
 
+function buildTelegramCodexHistory(input: {
+  claw: Awaited<ReturnType<typeof createCliClaw>>;
+  provider: string;
+  accountId: string;
+  targetId: string;
+  threadId?: string | number;
+  event: TelegramCodexProcessorEvent;
+  prompt: string;
+}): Array<{ role: "user" | "assistant"; content: string }> {
+  const currentMessageId = input.event.message?.id;
+  const currentProviderMessageId = input.event.message?.providerMessageId;
+  const threadKey = input.threadId === undefined ? undefined : String(input.threadId);
+  const priorMessages = input.claw.channels.messages.read({
+    provider: input.provider,
+    accountId: input.accountId,
+    targetId: input.targetId,
+    limit: 30,
+  })
+    .filter((message) => {
+      if (message.threadId !== threadKey) return false;
+      if (currentMessageId && message.id === currentMessageId) return false;
+      if (currentProviderMessageId && message.providerMessageId === currentProviderMessageId && message.direction === "inbound") return false;
+      return !!message.text?.trim();
+    })
+    .reverse()
+    .map((message) => ({
+      role: message.direction === "outbound" ? "assistant" as const : "user" as const,
+      content: message.text?.trim() ?? "",
+    }));
+  return [...priorMessages.slice(-20), { role: "user", content: input.prompt }];
+}
+
 function splitTelegramMessage(text: string, maxLength = 3900): string[] {
   const trimmed = text.trim();
   if (!trimmed) return [];
@@ -1101,13 +1134,22 @@ async function runTelegramCodexProcessor(input: {
     "You are running on the Kappa Mac mini for the ClawJS dev workflow.",
   ].join(" ");
   const claw = await createCliClaw(input.runtimeAdapterId, input.flags, input.workspaceRoot, input.appId, input.workspaceId, input.agentId, input.argv);
+  const messages = buildTelegramCodexHistory({
+    claw,
+    provider,
+    accountId,
+    targetId,
+    ...(threadId ? { threadId } : {}),
+    event,
+    prompt,
+  });
   const result = await claw.inference.generateText({
     sessionId,
     systemPrompt,
     contextBlocks: [
       { title: "Telegram", content: `provider=${provider}\naccount=${accountId}\ntarget=${targetLabel}\nsender=${event.message?.senderLabel ?? senderId}` },
     ],
-    messages: [{ role: "user", content: prompt }],
+    messages,
     transport: (input.flags.transport as "auto" | "gateway" | "cli" | undefined) ?? "auto",
     ...(input.flags.model ? { model: input.flags.model } : {}),
     ...(input.flags["gateway-retries"] ? { gatewayRetries: Number(input.flags["gateway-retries"]) } : { gatewayRetries: 1 }),

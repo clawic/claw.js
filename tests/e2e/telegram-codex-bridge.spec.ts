@@ -28,6 +28,45 @@ function sendActions(actions: ProcessorAction[]) {
   return actions.filter((action) => action.type === "send_message");
 }
 
+function appendChannelMessages(workspacePath: string, messages: Array<{
+  id: string;
+  targetId: string;
+  direction: "inbound" | "outbound";
+  text: string;
+  providerMessageId?: string;
+  senderId?: string;
+}>) {
+  const statePath = path.join(workspacePath, ".clawjs", "observed", "channels.json");
+  const now = new Date().toISOString();
+  fs.mkdirSync(path.dirname(statePath), { recursive: true });
+  const current = fs.existsSync(statePath)
+    ? JSON.parse(fs.readFileSync(statePath, "utf8")) as Record<string, unknown>
+    : {};
+  const existing = Array.isArray(current.messages) ? current.messages : [];
+  fs.writeFileSync(statePath, `${JSON.stringify({
+    schemaVersion: 1,
+    updatedAt: now,
+    channels: [],
+    accounts: current.accounts ?? [],
+    targets: current.targets ?? [],
+    messages: [
+      ...messages.map((message) => ({
+        ...message,
+        provider: "telegram",
+        accountId: "kappa",
+        status: message.direction === "outbound" ? "sent" : "received",
+        createdAt: now,
+        updatedAt: now,
+      })),
+      ...existing,
+    ],
+    bindings: current.bindings ?? [],
+    processors: current.processors ?? [],
+    listeners: current.listeners ?? [],
+    events: current.events ?? [],
+  }, null, 2)}\n`);
+}
+
 async function startHermeticVault(prefix = "clawjs-telegram-vault") {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), `${prefix}-`));
   const { app } = buildVaultApp({
@@ -129,7 +168,11 @@ if (args[0] === "app-server") {
     if (message.method === "turn/start") {
       const payload = JSON.stringify(message.params || {});
       fs.appendFileSync(${JSON.stringify(payloadPath)}, payload + "\\n");
-      const text = payload.includes("Voice note transcript:")
+      const text = payload.includes("Envíame de nuevo lo de los artículos") && payload.includes("Artículo A sobre robótica")
+        ? "context preserved"
+        : payload.includes("Envíame de nuevo lo de los artículos")
+        ? "context missing"
+        : payload.includes("Voice note transcript:")
         ? "voice-aware reply"
         : payload.includes("long")
         ? "x".repeat(8200)
@@ -307,6 +350,24 @@ test("telegram codex bridge owns, authorizes topics, applies reply policy, and s
     codexHome,
   });
   expect(sendActions(voiceNote.actions)[0]).toMatchObject({ type: "send_message", targetId: "501", text: "voice-aware reply" });
+
+  appendChannelMessages(workspacePath, [
+    {
+      id: "telegram:kappa:message:300",
+      targetId: "501",
+      direction: "outbound",
+      text: "Artículo A sobre robótica",
+      providerMessageId: "300",
+    },
+  ]);
+  const contextualReply = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "501", chatType: "private", senderId: "501", text: "Envíame de nuevo lo de los artículos" }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  expect(sendActions(contextualReply.actions)[0]).toMatchObject({ type: "send_message", targetId: "501", text: "context preserved" });
 
   const ignoredByPolicy = await runProcessor(rootDir, {
     event: telegramEvent({ chatId: "-1001", chatType: "supergroup", senderId: "999", text: "plain text", threadId: 77 }),
