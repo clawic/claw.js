@@ -270,11 +270,13 @@ async function executeBrokerRequest(
     headers,
     ...(body ? { body } : {}),
   });
-  const bodyText = await response.text();
+  const bodyBuffer = Buffer.from(await response.arrayBuffer());
+  const bodyText = bodyBuffer.toString("utf8");
   return {
     status: response.status,
     headers: Object.fromEntries(response.headers.entries()),
     bodyText,
+    bodyBase64: bodyBuffer.toString("base64"),
     ok: response.ok,
   };
 }

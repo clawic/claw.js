@@ -92,11 +92,22 @@ test("telegram voice notes are stored, transcribed, and delivered to the process
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-telegram-voice-"));
   const workspaceRoot = path.join(tempRoot, "workspace");
   const whisperPath = path.join(tempRoot, "fake-whisper.cjs");
+  const ffmpegPath = path.join(tempRoot, "fake-ffmpeg.cjs");
   const processorPath = path.join(tempRoot, "processor.cjs");
   fs.mkdirSync(workspaceRoot, { recursive: true });
+  fs.writeFileSync(ffmpegPath, `#!/usr/bin/env node
+const fs = require("fs");
+const args = process.argv.slice(2);
+const input = args[args.indexOf("-i") + 1];
+const output = args[args.length - 1];
+if (!input || !output.endsWith(".wav")) process.exit(2);
+fs.writeFileSync(output, fs.readFileSync(input));
+`, { mode: 0o755 });
   fs.writeFileSync(whisperPath, `#!/usr/bin/env node
 const fs = require("fs");
 const args = process.argv.slice(2);
+const input = args[args.indexOf("-f") + 1];
+if (!input.endsWith(".wav")) process.exit(3);
 const outIndex = args.indexOf("-of");
 if (outIndex !== -1) fs.writeFileSync(args[outIndex + 1] + ".txt", "transcribed telegram voice");
 `, { mode: 0o755 });
@@ -137,7 +148,7 @@ process.stdin.on("end", () => {
   }
 
   expect((await run(["channels", "telegram", "connect", "--workspace", workspaceRoot, "--account", "support", "--secret-name", "telegram_support_bot_token", "--json"])).exitCode).toBe(0);
-  expect((await run(["stt", "set-config", "--workspace", workspaceRoot, "--enabled", "true", "--binary-path", whisperPath, "--model-path", path.join(tempRoot, "model.bin"), "--json"])).exitCode).toBe(0);
+  expect((await run(["stt", "set-config", "--workspace", workspaceRoot, "--enabled", "true", "--binary-path", whisperPath, "--ffmpeg-path", ffmpegPath, "--model-path", path.join(tempRoot, "model.bin"), "--json"])).exitCode).toBe(0);
   expect((await run(["channels", "processors", "add", "--workspace", workspaceRoot, "--id", "voice-router", "--agent-id", "voice-router", "--command", `${process.execPath} ${processorPath}`, "--json"])).exitCode).toBe(0);
   const listen = await run(["channels", "listen", "start", "--workspace", workspaceRoot, "--account", "support", "--processor", "voice-router", "--once", "--timeout", "0", "--json"]);
   expect(listen.exitCode).toBe(0);

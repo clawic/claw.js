@@ -3,7 +3,7 @@ import { maskCredential, type ChannelDescriptor, type TelegramBotProfile, type T
 import type { WorkspaceDataStore } from "../data/store.ts";
 import type { CommandRunner } from "../runtime/contracts.ts";
 import type { SessionStore } from "../sessions/store.ts";
-import { resolveSecretsCommandSpec } from "../secrets/command.ts";
+import { resolveSecretsBackend, resolveSecretsCommandSpec } from "../secrets/command.ts";
 import { readTelegramStateSnapshot, writeTelegramStateSnapshot } from "../state/store.ts";
 import { NodeFileSystemHost } from "../host/filesystem.ts";
 
@@ -220,6 +220,32 @@ export async function downloadTelegramFile(
   filePath: string,
   timeoutMs = 30_000,
 ): Promise<Buffer> {
+  if (resolveSecretsBackend(env) === "vault") {
+    const baseUrl = (env?.VAULT_BASE_URL ?? process.env.VAULT_BASE_URL)?.trim()?.replace(/\/+$/, "");
+    const token = (env?.VAULT_TOKEN ?? process.env.VAULT_TOKEN)?.trim();
+    const tenantId = (env?.VAULT_TENANT_ID ?? process.env.VAULT_TENANT_ID)?.trim();
+    if (!baseUrl || !token || !tenantId) {
+      throw new Error("VAULT_BASE_URL, VAULT_TOKEN, and VAULT_TENANT_ID are required to download Telegram files.");
+    }
+    const normalizedBase = normalizeApiBaseUrl(apiBaseUrl);
+    const fileBase = normalizedBase.replace(/\/api\/?$/, "");
+    const url = `${fileBase}/file/bot{{${secretName}}}/${filePath.replace(/^\/+/, "")}`;
+    const response = await fetch(`${baseUrl}/v1/tenants/${tenantId}/broker/http`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ method: "GET", url }),
+    });
+    const payload = await response.json() as { ok?: boolean; status?: number; bodyText?: string; bodyBase64?: string };
+    if (!response.ok || payload.ok === false) {
+      throw new Error(`Telegram file download failed${payload.status ? ` with HTTP ${payload.status}` : ""}`);
+    }
+    return payload.bodyBase64
+      ? Buffer.from(payload.bodyBase64, "base64")
+      : Buffer.from(payload.bodyText ?? "", "utf8");
+  }
   const spec = resolveSecretsCommandSpec(env);
   const normalizedBase = normalizeApiBaseUrl(apiBaseUrl);
   const fileBase = normalizedBase.replace(/\/api\/?$/, "");

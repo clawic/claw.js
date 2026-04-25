@@ -96,6 +96,7 @@ export interface SecretBrokerHttpResult {
   status: number;
   headers: Record<string, string>;
   bodyText: string;
+  bodyBase64?: string;
   ok: boolean;
 }
 
