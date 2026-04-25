@@ -1,0 +1,1513 @@
+import Foundation
+import Contacts
+import EventKit
+import XCTest
+
+@testable import CommanderAdapters
+@testable import CommanderCore
+
+final class CommanderE2ETests: XCTestCase {
+    func testCapabilityRevokeAndMetadata() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        try context.grant("files.read")
+        let listBefore = try context.runCLI(["system", "capabilities", "list", "--json"])
+        let filesReadBefore = try XCTUnwrap(listBefore.data?.arrayValue?.first(where: { $0.objectValue?["id"]?.stringValue == "files.read" })?.objectValue)
+        XCTAssertEqual(filesReadBefore["risk_level"]?.stringValue, "read")
+        XCTAssertEqual(filesReadBefore["requires_os_permission"]?.boolValue, false)
+        XCTAssertEqual(filesReadBefore["granted"]?.boolValue, true)
+
+        let revoked = try context.runCLI(["system", "capabilities", "revoke", "--scope", "files.read", "--json"])
+        XCTAssertTrue(revoked.ok)
+
+        let listAfter = try context.runCLI(["system", "capabilities", "list", "--json"])
+        let filesReadAfter = try XCTUnwrap(listAfter.data?.arrayValue?.first(where: { $0.objectValue?["id"]?.stringValue == "files.read" })?.objectValue)
+        XCTAssertEqual(filesReadAfter["granted"]?.boolValue, false)
+    }
+
+    func testSystemDoctorAndIntrospection() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        let doctor = try context.runCLI(["system", "doctor", "run", "--json"])
+        XCTAssertTrue(doctor.ok)
+        XCTAssertEqual(doctor.data?.objectValue?["runtime_transport"]?.stringValue, "unix_socket")
+        XCTAssertTrue(doctor.data?.objectValue?["implemented_domains"]?.arrayValue?.contains(where: {
+            $0.stringValue == "reminders"
+        }) == true)
+        XCTAssertTrue(doctor.data?.objectValue?["implemented_domains"]?.arrayValue?.contains(where: {
+            $0.stringValue == "finder"
+        }) == true)
+        XCTAssertEqual(doctor.data?.objectValue?["host_validation_targets"]?.objectValue?["calendar"]?.objectValue?["selector"]?.stringValue, "--calendar")
+        XCTAssertNotNil(doctor.data?.objectValue?["installed_apps"]?.objectValue?["safari"]?.boolValue)
+        XCTAssertNotNil(doctor.data?.objectValue?["installed_apps"]?.objectValue?["finder"]?.boolValue)
+        XCTAssertNotNil(doctor.data?.objectValue?["adapter_health"]?.objectValue?["mail"]?.objectValue?["availability"]?.stringValue)
+        XCTAssertNotNil(doctor.data?.objectValue?["adapter_health"]?.objectValue?["reminders"]?.objectValue?["reason"]?.stringValue)
+        XCTAssertNotNil(doctor.data?.objectValue?["adapter_health"]?.objectValue?["finder"]?.objectValue?["availability"]?.stringValue)
+        XCTAssertNotNil(doctor.data?.objectValue?["host_app_running"]?.boolValue)
+        XCTAssertNotNil(doctor.data?.objectValue?["host_bundle_path"]?.stringValue)
+        XCTAssertNotNil(doctor.data?.objectValue?["legacy_socket_fallback_enabled"]?.boolValue)
+
+        let domains = try context.runCLI(["system", "domains", "list", "--json"])
+        XCTAssertTrue(domains.ok)
+        XCTAssertTrue(domains.data?.arrayValue?.contains(where: { $0.objectValue?["id"]?.stringValue == "contacts" }) == true)
+        XCTAssertTrue(domains.data?.arrayValue?.contains(where: { $0.objectValue?["id"]?.stringValue == "processes" }) == true)
+
+        let commands = try context.runCLI(["system", "commands", "list", "--domain", "reminders", "--json"])
+        XCTAssertTrue(commands.ok)
+        XCTAssertTrue(commands.data?.arrayValue?.contains(where: { $0.stringValue == "reminders items complete" }) == true)
+
+        let finderCommands = try context.runCLI(["system", "commands", "list", "--domain", "finder", "--json"])
+        XCTAssertTrue(finderCommands.ok)
+        XCTAssertEqual(
+            Set(finderCommands.data?.arrayValue?.compactMap(\.stringValue) ?? []),
+            Set(["finder entries reveal", "finder entries open", "finder entries trash"])
+        )
+
+        let reminderCapabilities = try context.runCLI(["system", "capabilities", "list", "--domain", "reminders", "--json"])
+        XCTAssertTrue(reminderCapabilities.ok)
+        let capabilityIDs = Set(reminderCapabilities.data?.arrayValue?.compactMap { $0.objectValue?["id"]?.stringValue } ?? [])
+        XCTAssertEqual(capabilityIDs, Set(["reminders.read", "reminders.write"]))
+
+        let finderCapabilities = try context.runCLI(["system", "capabilities", "list", "--domain", "finder", "--json"])
+        XCTAssertTrue(finderCapabilities.ok)
+        let finderCapabilityIDs = Set(finderCapabilities.data?.arrayValue?.compactMap { $0.objectValue?["id"]?.stringValue } ?? [])
+        XCTAssertEqual(finderCapabilityIDs, Set(["finder.read", "finder.write"]))
+    }
+
+    func testDaemonAutoStartHealthAndReconnect() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        let health = try context.runCLI(["system", "daemon", "health", "--json"])
+        XCTAssertTrue(health.ok)
+        XCTAssertEqual(health.data?.objectValue?["running"]?.boolValue, true)
+
+        let stop = try context.runCLI(["system", "daemon", "stop", "--json"])
+        XCTAssertTrue(stop.ok)
+        Thread.sleep(forTimeInterval: 0.5)
+
+        let healthAgain = try context.runCLI(["system", "daemon", "health", "--json"])
+        XCTAssertTrue(healthAgain.ok)
+        XCTAssertEqual(healthAgain.data?.objectValue?["running"]?.boolValue, true)
+    }
+
+    func testInstallStatusAndCLIInstall() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        let statusBefore = try context.runCLI(["system", "install", "status", "--json"])
+        XCTAssertTrue(statusBefore.ok)
+        XCTAssertEqual(statusBefore.data?.objectValue?["cli_installed"]?.boolValue, false)
+        XCTAssertEqual(statusBefore.data?.objectValue?["launch_agent_installed"]?.boolValue, false)
+
+        let installed = try context.runCLI(["system", "install", "cli", "--json"])
+        XCTAssertTrue(installed.ok)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: context.binDir.appendingPathComponent("commander").path))
+
+        let daemonBinary = context.binary(named: "commanderd")
+        _ = try RuntimeInstaller.installLaunchAgent(daemonBinaryPath: daemonBinary, environment: context.environment)
+
+        let statusAfter = try context.runCLI(["system", "install", "status", "--json"])
+        XCTAssertEqual(statusAfter.data?.objectValue?["cli_installed"]?.boolValue, true)
+        XCTAssertEqual(statusAfter.data?.objectValue?["launch_agent_installed"]?.boolValue, true)
+        XCTAssertEqual(statusAfter.data?.objectValue?["runtime_transport"]?.stringValue, "unix_socket")
+        XCTAssertNotNil(statusAfter.data?.objectValue?["host_app_running"]?.boolValue)
+        XCTAssertNotNil(statusAfter.data?.objectValue?["app_registered_at_login"]?.boolValue)
+    }
+
+    func testCLIInstallResolvesRelativeInvokerPath() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        let packageRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let absoluteBinary = context.binary(named: "commander")
+        let relativeBinary = absoluteBinary.replacingOccurrences(of: packageRoot.path + "/", with: "")
+
+        let process = Process()
+        process.currentDirectoryURL = packageRoot
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        process.arguments = ["-lc", "./\(relativeBinary) system install cli --json"]
+        process.environment = context.environment
+        let stdout = Pipe()
+        let stderr = Pipe()
+        process.standardOutput = stdout
+        process.standardError = stderr
+        try process.run()
+        process.waitUntilExit()
+        XCTAssertEqual(process.terminationStatus, 0, String(data: stderr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? "")
+
+        let response = try CLIJSON.decodeResponse(stdout.fileHandleForReading.readDataToEndOfFile())
+        XCTAssertTrue(response.ok)
+
+        let installedPath = context.binDir.appendingPathComponent("commander").path
+        let installedTarget = try FileManager.default.destinationOfSymbolicLink(atPath: installedPath)
+        XCTAssertEqual(URL(fileURLWithPath: installedTarget).standardizedFileURL.path, absoluteBinary)
+    }
+
+    func testAppPackagingProducesBundleStructure() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        let packageRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let output = context.tmp.appendingPathComponent("Commander.app")
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        process.arguments = [
+            packageRoot.appendingPathComponent("scripts/package_app.sh").path,
+            "--output", output.path,
+            "--binary-path", context.binary(named: "CommanderApp"),
+            "--skip-build",
+            "--skip-sign",
+        ]
+        let stdout = Pipe()
+        let stderr = Pipe()
+        process.standardOutput = stdout
+        process.standardError = stderr
+        try process.run()
+        process.waitUntilExit()
+        XCTAssertEqual(process.terminationStatus, 0, String(data: stderr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? "")
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: output.appendingPathComponent("Contents/MacOS/CommanderApp").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: output.appendingPathComponent("Contents/Info.plist").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: output.appendingPathComponent("Contents/Resources/AppIcon.icns").path))
+
+        let info = NSDictionary(contentsOf: output.appendingPathComponent("Contents/Info.plist")) as? [String: Any]
+        XCTAssertEqual(info?["CFBundleIdentifier"] as? String, "com.clawjs.commander")
+        XCTAssertEqual(info?["CFBundleExecutable"] as? String, "CommanderApp")
+        XCTAssertEqual(info?["CFBundleIconFile"] as? String, "AppIcon")
+        XCTAssertNotNil(info?["NSRemindersFullAccessUsageDescription"] as? String)
+        XCTAssertNotNil(info?["NSAppleEventsUsageDescription"] as? String)
+    }
+
+    func testPackagedAppCanLaunchPermissionRequestsFromBundleProcess() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        let packageRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let output = context.tmp.appendingPathComponent("Commander.app")
+        let requestLog = context.tmp.appendingPathComponent("permission-requests.log")
+
+        let packageProcess = Process()
+        packageProcess.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        packageProcess.arguments = [
+            packageRoot.appendingPathComponent("scripts/package_app.sh").path,
+            "--output", output.path,
+            "--binary-path", context.binary(named: "CommanderApp"),
+            "--skip-build",
+        ]
+        packageProcess.standardOutput = Pipe()
+        packageProcess.standardError = Pipe()
+        try packageProcess.run()
+        packageProcess.waitUntilExit()
+        XCTAssertEqual(packageProcess.terminationStatus, 0)
+
+        let launchProcess = Process()
+        launchProcess.executableURL = output.appendingPathComponent("Contents/MacOS/CommanderApp")
+        launchProcess.arguments = [
+            "--request-os-permissions",
+            "all",
+            "--exit-after-permissions",
+        ]
+        launchProcess.environment = [
+            "COMMANDER_PERMISSION_REQUEST_DRY_RUN": "1",
+            "COMMANDER_PERMISSION_REQUEST_LOG": requestLog.path,
+        ]
+        launchProcess.standardOutput = Pipe()
+        launchProcess.standardError = Pipe()
+        try launchProcess.run()
+        let deadline = Date().addingTimeInterval(10)
+        while launchProcess.isRunning && Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        if launchProcess.isRunning {
+            launchProcess.terminate()
+            XCTFail("Packaged Commander app did not finish permission request flow in time")
+        }
+        XCTAssertEqual(launchProcess.terminationStatus, 0)
+
+        let requestedDomains = try String(contentsOf: requestLog, encoding: .utf8)
+            .split(separator: "\n")
+            .map(String.init)
+        XCTAssertEqual(requestedDomains, ["calendar", "reminders", "contacts", "notifications"])
+    }
+
+    func testPackagedAppServesCommandsOverAppOwnedRuntime() throws {
+        let context = try TestContext(testMode: false)
+        defer { context.cleanup() }
+
+        let packageRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let output = context.tmp.appendingPathComponent("Commander.app")
+
+        let packageProcess = Process()
+        packageProcess.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        packageProcess.arguments = [
+            packageRoot.appendingPathComponent("scripts/package_app.sh").path,
+            "--output", output.path,
+            "--binary-path", context.binary(named: "CommanderApp"),
+            "--skip-build",
+            "--skip-sign",
+        ]
+        packageProcess.standardOutput = Pipe()
+        packageProcess.standardError = Pipe()
+        try packageProcess.run()
+        packageProcess.waitUntilExit()
+        XCTAssertEqual(packageProcess.terminationStatus, 0)
+
+        let doctor = try context.runCLIUnchecked([
+            "system", "doctor", "run", "--json",
+        ], environmentOverride: [
+            "COMMANDER_APP_BUNDLE": output.path,
+            "COMMANDER_RUNTIME_TRANSPORT": RuntimeInstaller.appOwnedRuntimeTransport,
+        ])
+        if !doctor.ok, doctor.error?.code == "transport_error" {
+            throw XCTSkip("Temporary app bundle runtime could not bootstrap on this host")
+        }
+        XCTAssertEqual(doctor.data?.objectValue?["runtime_transport"]?.stringValue, RuntimeInstaller.appOwnedRuntimeTransport)
+        XCTAssertEqual(doctor.data?.objectValue?["host_app_running"]?.boolValue, true)
+        XCTAssertEqual(doctor.data?.objectValue?["host_bundle_path"]?.stringValue, output.path)
+
+        let stopped = try context.runCLIUnchecked([
+            "system", "daemon", "stop", "--json",
+        ], environmentOverride: [
+            "COMMANDER_APP_BUNDLE": output.path,
+            "COMMANDER_RUNTIME_TRANSPORT": RuntimeInstaller.appOwnedRuntimeTransport,
+        ])
+        XCTAssertTrue(stopped.ok)
+    }
+
+    func testInstalledCLISymlinkCanStartPackagedAppRuntime() throws {
+        let context = try TestContext(testMode: false)
+        defer { context.cleanup() }
+
+        let packageRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let output = context.tmp.appendingPathComponent("Commander.app")
+
+        let packageProcess = Process()
+        packageProcess.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        packageProcess.arguments = [
+            packageRoot.appendingPathComponent("scripts/package_app.sh").path,
+            "--output", output.path,
+            "--binary-path", context.binary(named: "CommanderApp"),
+            "--skip-build",
+            "--skip-sign",
+        ]
+        packageProcess.standardOutput = Pipe()
+        packageProcess.standardError = Pipe()
+        try packageProcess.run()
+        packageProcess.waitUntilExit()
+        XCTAssertEqual(packageProcess.terminationStatus, 0)
+
+        let installedCLI = context.binDir.appendingPathComponent("commander")
+        try FileManager.default.createDirectory(at: context.binDir, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: installedCLI, withDestinationURL: URL(fileURLWithPath: context.binary(named: "commander")))
+
+        let process = Process()
+        process.currentDirectoryURL = packageRoot
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        process.arguments = ["-lc", "\"\(installedCLI.path)\" system doctor run --json"]
+        process.environment = context.environment.merging([
+            "COMMANDER_APP_BUNDLE": output.path,
+            "COMMANDER_RUNTIME_TRANSPORT": RuntimeInstaller.appOwnedRuntimeTransport,
+        ]) { _, new in new }
+        let stdout = Pipe()
+        let stderr = Pipe()
+        process.standardOutput = stdout
+        process.standardError = stderr
+        try process.run()
+        process.waitUntilExit()
+
+        let response = try CLIJSON.decodeResponse(stdout.fileHandleForReading.readDataToEndOfFile())
+        if !response.ok, response.error?.code == "transport_error" {
+            throw XCTSkip("Installed CLI symlink could not bootstrap the packaged app runtime on this host")
+        }
+
+        XCTAssertEqual(process.terminationStatus, 0, String(data: stderr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? "")
+        XCTAssertTrue(response.ok)
+        XCTAssertEqual(response.data?.objectValue?["runtime_transport"]?.stringValue, RuntimeInstaller.appOwnedRuntimeTransport)
+        XCTAssertEqual(response.data?.objectValue?["host_bundle_path"]?.stringValue, output.path)
+    }
+
+    func testDaemonStartAndRestartCommands() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        XCTAssertTrue(try context.runCLI(["system", "daemon", "start", "--json"]).ok)
+        let healthBefore = try context.runCLI(["system", "daemon", "health", "--json"])
+        let pidBefore = healthBefore.data?.objectValue?["pid"]?.intValue
+        XCTAssertNotNil(pidBefore)
+
+        XCTAssertTrue(try context.runCLI(["system", "daemon", "restart", "--json"]).ok)
+        let healthAfter = try context.runCLI(["system", "daemon", "health", "--json"])
+        XCTAssertEqual(healthAfter.data?.objectValue?["running"]?.boolValue, true)
+    }
+
+    func testFilesCrudRequiresCapabilitiesAndWritesAuditLogs() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        let filePath = context.tmp.appendingPathComponent("sandbox/demo.txt").path
+
+        let denied = try context.runCLI([
+            "files", "entries", "create",
+            "--path", filePath,
+            "--type", "file",
+            "--content", "hola",
+            "--json",
+        ], expectSuccess: false)
+
+        XCTAssertFalse(denied.ok)
+        XCTAssertEqual(denied.error?.code, "permission_denied")
+
+        try context.grant("files.read")
+        try context.grant("files.write")
+        try context.grant("files.delete")
+
+        XCTAssertTrue(try context.runCLI([
+            "files", "entries", "create",
+            "--path", filePath,
+            "--type", "file",
+            "--content", "hola",
+            "--json",
+        ]).ok)
+
+        let listed = try context.runCLI([
+            "files", "entries", "list",
+            "--path", context.tmp.appendingPathComponent("sandbox").path,
+            "--json",
+        ])
+        XCTAssertTrue(listed.ok)
+        XCTAssertTrue(listed.data?.arrayValue?.contains(where: {
+            $0.objectValue?["name"]?.stringValue == "demo.txt"
+        }) == true)
+
+        let read = try context.runCLI([
+            "files", "entries", "get",
+            "--path", filePath,
+            "--json",
+        ])
+        XCTAssertEqual(read.data?.objectValue?["content"]?.stringValue, "hola")
+
+        XCTAssertTrue(try context.runCLI([
+            "files", "entries", "update",
+            "--path", filePath,
+            "--content", "adios",
+            "--json",
+        ]).ok)
+
+        let movedPath = context.tmp.appendingPathComponent("sandbox/archive/demo.txt").path
+        XCTAssertTrue(try context.runCLI([
+            "files", "entries", "move",
+            "--path", filePath,
+            "--to", movedPath,
+            "--json",
+        ]).ok)
+
+        XCTAssertTrue(try context.runCLI([
+            "files", "entries", "delete",
+            "--path", movedPath,
+            "--json",
+        ]).ok)
+
+        let logs = try context.runCLI([
+            "system", "logs", "list",
+            "--limit", "20",
+            "--json",
+        ])
+        XCTAssertTrue(logs.ok)
+        XCTAssertGreaterThanOrEqual(logs.data?.arrayValue?.count ?? 0, 6)
+        let fileCreateLog = logs.data?.arrayValue?.first(where: { $0.objectValue?["command"]?.stringValue == "files entries create" })?.objectValue
+        XCTAssertEqual(fileCreateLog?["validation_mode"]?.stringValue, "fixture")
+        XCTAssertEqual(fileCreateLog?["arguments"]?.objectValue?["content"]?.stringValue, "[redacted:4]")
+    }
+
+    func testCalendarCrudWorksAgainstIsolatedFixtureStore() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        try context.grant("calendar.read")
+        try context.grant("calendar.write")
+        let start = isoDate(hoursFromNow: 1)
+        let end = isoDate(hoursFromNow: 2)
+
+        let create = try context.runCLI([
+            "calendar", "events", "create",
+            "--title", "Focus block",
+            "--start", start,
+            "--end", end,
+            "--calendar", "Work",
+            "--notes", "Deep work",
+            "--location", "Desk",
+            "--json",
+        ])
+        XCTAssertTrue(create.ok)
+        let id = try XCTUnwrap(create.data?.objectValue?["id"]?.stringValue)
+
+        let listed = try context.runCLI([
+            "calendar", "events", "list",
+            "--range", "2d",
+            "--calendar", "Work",
+            "--json",
+        ])
+        XCTAssertTrue(listed.data?.arrayValue?.contains(where: { $0.objectValue?["id"]?.stringValue == id }) == true)
+
+        let get = try context.runCLI(["calendar", "events", "get", "--id", id, "--json"])
+        XCTAssertEqual(get.data?.objectValue?["title"]?.stringValue, "Focus block")
+
+        let search = try context.runCLI([
+            "calendar", "events", "search",
+            "--query", "deep",
+            "--range", "2d",
+            "--json",
+        ])
+        XCTAssertTrue(search.data?.arrayValue?.contains(where: { $0.objectValue?["id"]?.stringValue == id }) == true)
+
+        let update = try context.runCLI([
+            "calendar", "events", "update",
+            "--id", id,
+            "--title", "Focus block updated",
+            "--location", "Studio",
+            "--json",
+        ])
+        XCTAssertEqual(update.data?.objectValue?["location"]?.stringValue, "Studio")
+
+        let delete = try context.runCLI(["calendar", "events", "delete", "--id", id, "--json"])
+        XCTAssertTrue(delete.ok)
+    }
+
+    func testObsidianCrudWorksAgainstIsolatedVault() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        try context.grant("obsidian.read")
+        try context.grant("obsidian.write")
+
+        let vaultPath = context.tmp.appendingPathComponent("vault").path
+        let notePath = "Inbox/Agent Note.md"
+
+        XCTAssertTrue(try context.runCLI([
+            "obsidian", "notes", "create",
+            "--vault", vaultPath,
+            "--path", notePath,
+            "--content", "# title",
+            "--json",
+        ]).ok)
+
+        let read = try context.runCLI([
+            "obsidian", "notes", "get",
+            "--vault", vaultPath,
+            "--path", notePath,
+            "--json",
+        ])
+        XCTAssertEqual(read.data?.objectValue?["content"]?.stringValue, "# title")
+
+        let search = try context.runCLI([
+            "obsidian", "notes", "search",
+            "--vault", vaultPath,
+            "--folder", "Inbox",
+            "--query", "title",
+            "--json",
+        ])
+        XCTAssertTrue(search.ok)
+        XCTAssertFalse(search.data?.arrayValue?.isEmpty ?? true)
+    }
+
+    func testRemindersCrudInIsolatedTestMode() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        try context.grant("reminders.read")
+        try context.grant("reminders.write")
+
+        let lists = try context.runCLI(["reminders", "lists", "list", "--json"])
+        XCTAssertTrue(lists.data?.arrayValue?.contains(where: { $0.objectValue?["title"]?.stringValue == "Personal" }) == true)
+
+        let created = try context.runCLI([
+            "reminders", "items", "create",
+            "--title", "Buy coffee",
+            "--list", "Personal",
+            "--notes", "beans",
+            "--priority", "5",
+            "--json",
+        ])
+        let id = try XCTUnwrap(created.data?.objectValue?["id"]?.stringValue)
+
+        let searched = try context.runCLI([
+            "reminders", "items", "search",
+            "--query", "coffee",
+            "--json",
+        ])
+        XCTAssertTrue(searched.data?.arrayValue?.contains(where: { $0.objectValue?["id"]?.stringValue == id }) == true)
+
+        let completed = try context.runCLI(["reminders", "items", "complete", "--id", id, "--json"])
+        XCTAssertEqual(completed.data?.objectValue?["completed"]?.boolValue, true)
+
+        let deleted = try context.runCLI(["reminders", "items", "delete", "--id", id, "--json"])
+        XCTAssertTrue(deleted.ok)
+    }
+
+    func testContactsCrudInIsolatedTestMode() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        try context.grant("contacts.read")
+        try context.grant("contacts.write")
+
+        let created = try context.runCLI([
+            "contacts", "people", "create",
+            "--name", "Ada Lovelace",
+            "--email", "ada@example.com",
+            "--phone", "+34123456789",
+            "--organization", "Analytical Engine",
+            "--notes", "First programmer",
+            "--json",
+        ])
+        let id = try XCTUnwrap(created.data?.objectValue?["id"]?.stringValue)
+
+        let get = try context.runCLI(["contacts", "people", "get", "--id", id, "--json"])
+        XCTAssertEqual(get.data?.objectValue?["name"]?.stringValue, "Ada Lovelace")
+
+        let search = try context.runCLI(["contacts", "people", "search", "--query", "Analytical", "--json"])
+        XCTAssertTrue(search.data?.arrayValue?.contains(where: { $0.objectValue?["id"]?.stringValue == id }) == true)
+
+        let update = try context.runCLI([
+            "contacts", "people", "update",
+            "--id", id,
+            "--organization", "Royal Society",
+            "--json",
+        ])
+        XCTAssertEqual(update.data?.objectValue?["organization"]?.stringValue, "Royal Society")
+
+        let delete = try context.runCLI(["contacts", "people", "delete", "--id", id, "--json"])
+        XCTAssertTrue(delete.ok)
+    }
+
+    func testMailCrudInIsolatedTestMode() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        try context.grant("mail.read")
+        try context.grant("mail.send")
+        try context.grant("mail.delete")
+
+        let created = try context.runCLI([
+            "mail", "messages", "create",
+            "--subject", "Draft from agent",
+            "--to", "dev@example.com",
+            "--body", "hello world",
+            "--json",
+        ])
+        let id = try XCTUnwrap(created.data?.objectValue?["id"]?.stringValue)
+        XCTAssertEqual(created.data?.objectValue?["mailbox"]?.stringValue, "Drafts")
+
+        let listed = try context.runCLI(["mail", "messages", "list", "--mailbox", "Drafts", "--json"])
+        XCTAssertTrue(listed.data?.arrayValue?.contains(where: { $0.objectValue?["id"]?.stringValue == id }) == true)
+
+        let searched = try context.runCLI(["mail", "messages", "search", "--query", "agent", "--json"])
+        XCTAssertTrue(searched.data?.arrayValue?.contains(where: { $0.objectValue?["id"]?.stringValue == id }) == true)
+
+        let get = try context.runCLI(["mail", "messages", "get", "--id", id, "--json"])
+        XCTAssertEqual(get.data?.objectValue?["subject"]?.stringValue, "Draft from agent")
+
+        let sent = try context.runCLI([
+            "mail", "messages", "send",
+            "--subject", "Outbound",
+            "--to", "dev@example.com",
+            "--body", "ship it",
+            "--json",
+        ])
+        XCTAssertEqual(sent.data?.objectValue?["mailbox"]?.stringValue, "Sent")
+
+        let delete = try context.runCLI(["mail", "messages", "delete", "--id", id, "--json"])
+        XCTAssertTrue(delete.ok)
+    }
+
+    func testThingsCrudInIsolatedTestMode() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        try context.grant("things.read")
+        try context.grant("things.write")
+
+        let created = try context.runCLI([
+            "things", "todos", "create",
+            "--title", "Ship Commander",
+            "--project", "Launch",
+            "--notes", "stage rollout",
+            "--json",
+        ])
+        let id = try XCTUnwrap(created.data?.objectValue?["id"]?.stringValue)
+
+        let search = try context.runCLI(["things", "todos", "search", "--query", "launch", "--json"])
+        XCTAssertTrue(search.data?.arrayValue?.contains(where: { $0.objectValue?["id"]?.stringValue == id }) == true)
+
+        let get = try context.runCLI(["things", "todos", "get", "--id", id, "--json"])
+        XCTAssertEqual(get.data?.objectValue?["title"]?.stringValue, "Ship Commander")
+
+        let update = try context.runCLI([
+            "things", "todos", "update",
+            "--id", id,
+            "--area", "Work",
+            "--deadline", "2026-04-20",
+            "--json",
+        ])
+        XCTAssertEqual(update.data?.objectValue?["area"]?.stringValue, "Work")
+
+        let complete = try context.runCLI(["things", "todos", "complete", "--id", id, "--json"])
+        XCTAssertEqual(complete.data?.objectValue?["status"]?.stringValue, "completed")
+
+        let delete = try context.runCLI(["things", "todos", "delete", "--id", id, "--json"])
+        XCTAssertTrue(delete.ok)
+    }
+
+    func testNotesCrudInIsolatedTestMode() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        try context.grant("notes.read")
+        try context.grant("notes.write")
+
+        let created = try context.runCLI([
+            "notes", "notes", "create",
+            "--title", "Weekly plan",
+            "--folder", "Work",
+            "--body", "1. Ship adapters",
+            "--json",
+        ])
+        let id = try XCTUnwrap(created.data?.objectValue?["id"]?.stringValue)
+
+        let listed = try context.runCLI(["notes", "notes", "list", "--json"])
+        XCTAssertTrue(listed.data?.arrayValue?.contains(where: { $0.objectValue?["id"]?.stringValue == id }) == true)
+
+        let get = try context.runCLI(["notes", "notes", "get", "--id", id, "--json"])
+        XCTAssertEqual(get.data?.objectValue?["folder"]?.stringValue, "Work")
+
+        let search = try context.runCLI(["notes", "notes", "search", "--query", "adapters", "--json"])
+        XCTAssertTrue(search.data?.arrayValue?.contains(where: { $0.objectValue?["id"]?.stringValue == id }) == true)
+
+        let update = try context.runCLI([
+            "notes", "notes", "update",
+            "--id", id,
+            "--body", "1. Ship adapters\n2. Validate host",
+            "--json",
+        ])
+        XCTAssertTrue(update.data?.objectValue?["body"]?.stringValue?.contains("Validate host") == true)
+
+        let delete = try context.runCLI(["notes", "notes", "delete", "--id", id, "--json"])
+        XCTAssertTrue(delete.ok)
+    }
+
+    func testMessagesSendAndReadInIsolatedTestMode() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        try context.grant("messages.read")
+        try context.grant("messages.send")
+
+        let sent = try context.runCLI([
+            "messages", "messages", "send",
+            "--recipient", "+34123456789",
+            "--text", "ping",
+            "--json",
+        ])
+        let id = try XCTUnwrap(sent.data?.objectValue?["id"]?.stringValue)
+
+        let listed = try context.runCLI(["messages", "conversations", "list", "--json"])
+        XCTAssertTrue(listed.data?.arrayValue?.contains(where: { $0.objectValue?["id"]?.stringValue == id }) == true)
+
+        let get = try context.runCLI(["messages", "conversations", "get", "--id", id, "--json"])
+        XCTAssertEqual(get.data?.objectValue?["participants"]?.stringValue, "+34123456789")
+    }
+
+    func testSafariTabsAndBookmarksInIsolatedTestMode() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        try context.grant("safari.read")
+        try context.grant("safari.write")
+
+        let tabs = try context.runCLI(["safari", "tabs", "list", "--json"])
+        let firstTabID = try XCTUnwrap(tabs.data?.arrayValue?.first?.objectValue?["id"]?.stringValue)
+        let tab = try context.runCLI(["safari", "tabs", "get", "--id", firstTabID, "--json"])
+        XCTAssertEqual(tab.data?.objectValue?["id"]?.stringValue, firstTabID)
+
+        let opened = try context.runCLI(["safari", "tabs", "open", "--url", "https://example.com/new", "--json"])
+        let openedID = try XCTUnwrap(opened.data?.objectValue?["id"]?.stringValue)
+        XCTAssertEqual(opened.data?.objectValue?["url"]?.stringValue, "https://example.com/new")
+
+        let closed = try context.runCLI(["safari", "tabs", "close", "--id", openedID, "--json"])
+        XCTAssertTrue(closed.ok)
+
+        let bookmarks = try context.runCLI(["safari", "bookmarks", "list", "--json"])
+        let bookmarkID = try XCTUnwrap(bookmarks.data?.arrayValue?.first?.objectValue?["id"]?.stringValue)
+
+        let search = try context.runCLI(["safari", "bookmarks", "search", "--query", "docs", "--json"])
+        XCTAssertFalse(search.data?.arrayValue?.isEmpty ?? true)
+
+        let bookmarkOpen = try context.runCLI(["safari", "bookmarks", "open", "--id", bookmarkID, "--json"])
+        XCTAssertEqual(bookmarkOpen.data?.objectValue?["opened"]?.boolValue, true)
+    }
+
+    func testUtilitiesClipboardNotificationsProcessesAndScreenshots() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        try context.grant("clipboard.read")
+        try context.grant("clipboard.write")
+        try context.grant("notifications.post")
+        try context.grant("apps.read")
+        try context.grant("apps.write")
+        try context.grant("processes.read")
+        try context.grant("screenshots.capture")
+
+        let clipboardSet = try context.runCLI(["clipboard", "contents", "set", "--text", "hello", "--json"])
+        XCTAssertTrue(clipboardSet.ok)
+        let clipboardGet = try context.runCLI(["clipboard", "contents", "get", "--json"])
+        XCTAssertEqual(clipboardGet.data?.objectValue?["text"]?.stringValue, "hello")
+        XCTAssertTrue(try context.runCLI(["clipboard", "contents", "clear", "--json"]).ok)
+
+        let notification = try context.runCLI([
+            "notifications", "entries", "post",
+            "--title", "Commander Test",
+            "--body", "fixture mode",
+            "--json",
+        ])
+        XCTAssertEqual(notification.data?.objectValue?["posted"]?.boolValue, true)
+
+        let appsList = try context.runCLI(["apps", "entries", "list", "--json"])
+        XCTAssertTrue(appsList.ok)
+        XCTAssertNotNil(appsList.data?.arrayValue)
+        XCTAssertTrue(try context.runCLI(["apps", "entries", "open", "--name", "Notes", "--json"]).ok)
+        XCTAssertTrue(try context.runCLI(["apps", "entries", "focus", "--name", "Notes", "--json"]).ok)
+        XCTAssertTrue(try context.runCLI(["apps", "entries", "quit", "--name", "Notes", "--json"]).ok)
+
+        let processes = try context.runCLI(["processes", "entries", "list", "--limit", "25", "--json"])
+        let firstProcessID = try XCTUnwrap(processes.data?.arrayValue?.first?.objectValue?["id"]?.stringValue)
+        let process = try context.runCLI(["processes", "entries", "get", "--id", firstProcessID, "--json"])
+        XCTAssertEqual(process.data?.objectValue?["id"]?.stringValue, firstProcessID)
+
+        let screenshotPath = context.tmp.appendingPathComponent("capture.png").path
+        let screenshot = try context.runCLI(["screenshots", "entries", "capture", "--path", screenshotPath, "--json"])
+        XCTAssertEqual(screenshot.data?.objectValue?["captured"]?.boolValue, true)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: screenshotPath))
+    }
+
+    func testFinderCommandsRequireCapabilitiesAndWorkInFixtureMode() throws {
+        let context = try TestContext()
+        defer { context.cleanup() }
+
+        let path = context.tmp.appendingPathComponent("finder/fixture.txt")
+        try FileManager.default.createDirectory(at: path.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try "fixture".write(to: path, atomically: true, encoding: .utf8)
+
+        let denied = try context.runCLI([
+            "finder", "entries", "reveal",
+            "--path", path.path,
+            "--json",
+        ], expectSuccess: false)
+        XCTAssertEqual(denied.error?.code, "permission_denied")
+
+        try context.grant("finder.read")
+        try context.grant("finder.write")
+
+        let reveal = try context.runCLI([
+            "finder", "entries", "reveal",
+            "--path", path.path,
+            "--json",
+        ])
+        XCTAssertEqual(reveal.data?.objectValue?["revealed"]?.boolValue, true)
+
+        let open = try context.runCLI([
+            "finder", "entries", "open",
+            "--path", path.path,
+            "--json",
+        ])
+        XCTAssertEqual(open.data?.objectValue?["opened"]?.boolValue, true)
+
+        let trash = try context.runCLI([
+            "finder", "entries", "trash",
+            "--path", path.path,
+            "--json",
+        ])
+        XCTAssertEqual(trash.data?.objectValue?["trashed"]?.boolValue, true)
+    }
+
+    func testCalendarReadPathIsWiredWithoutMutatingUserData() throws {
+        let context = try TestContext(testMode: false)
+        defer { context.cleanup() }
+
+        try context.grant("calendar.read")
+        let response = try context.runCLIUnchecked(["calendar", "events", "list", "--range", "today", "--json"])
+
+        if response.ok {
+            XCTAssertNotNil(response.data?.arrayValue)
+        } else {
+            XCTAssertEqual(response.error?.code, "permission_denied")
+        }
+    }
+
+    func testHostSafeCalendarCrudAgainstDedicatedCalendar() throws {
+        try requireHostSafe()
+        guard PermissionService().status(for: .calendar) == .authorized else {
+            throw XCTSkip("Calendar permission is not authorized on this host")
+        }
+
+        let calendarName = "Commander Host Tests \(UUID().uuidString.prefix(8))"
+        let calendarStore = EKEventStore()
+        let calendar = try HostFixtures.createCalendar(named: calendarName, store: calendarStore)
+        defer { try? HostFixtures.deleteCalendar(calendar, store: calendarStore) }
+
+        let context = try TestContext(testMode: false, hostSafe: true)
+        defer { context.cleanup() }
+        try context.grant("calendar.read")
+        try context.grant("calendar.write")
+
+        let created = try context.runCLI([
+            "calendar", "events", "create",
+            "--title", "Host validation",
+            "--start", isoDate(hoursFromNow: 1),
+            "--end", isoDate(hoursFromNow: 2),
+            "--calendar", calendarName,
+            "--notes", "isolated resource",
+            "--json",
+        ])
+        let id = try XCTUnwrap(created.data?.objectValue?["id"]?.stringValue)
+        XCTAssertEqual(created.meta.validationMode, .hostIsolated)
+
+        let listed = try context.runCLI([
+            "calendar", "events", "list",
+            "--calendar", calendarName,
+            "--range", "2d",
+            "--json",
+        ])
+        XCTAssertTrue(listed.data?.arrayValue?.contains(where: { $0.objectValue?["id"]?.stringValue == id }) == true)
+
+        let updated = try context.runCLI([
+            "calendar", "events", "update",
+            "--id", id,
+            "--title", "Host validation updated",
+            "--calendar", calendarName,
+            "--json",
+        ])
+        XCTAssertEqual(updated.data?.objectValue?["title"]?.stringValue, "Host validation updated")
+
+        let deleted = try context.runCLI(["calendar", "events", "delete", "--id", id, "--json"])
+        XCTAssertTrue(deleted.ok)
+    }
+
+    func testHostSafeContactsCrudAgainstDedicatedMarker() throws {
+        try requireHostSafe()
+        guard PermissionService().status(for: .contacts) == .authorized else {
+            throw XCTSkip("Contacts permission is not authorized on this host")
+        }
+
+        let context = try TestContext(testMode: false, hostSafe: true)
+        defer { context.cleanup() }
+        try context.grant("contacts.read")
+        try context.grant("contacts.write")
+
+        let marker = "commander-host-\(UUID().uuidString.prefix(8))"
+        var createdID: String?
+        defer {
+            if let createdID {
+                try? HostFixtures.deleteContact(id: createdID)
+            }
+        }
+
+        let created = try context.runCLI([
+            "contacts", "people", "create",
+            "--name", "Commander Host \(marker)",
+            "--email", "host@example.com",
+            "--organization", marker,
+            "--json",
+        ])
+        createdID = try XCTUnwrap(created.data?.objectValue?["id"]?.stringValue)
+        XCTAssertEqual(created.meta.validationMode, .hostIsolated)
+
+        let deleted = try context.runCLI(["contacts", "people", "delete", "--id", createdID!, "--json"])
+        XCTAssertTrue(deleted.ok)
+        createdID = nil
+    }
+
+    func testHostSafeDoctorReportsMailAndRemindersHealth() throws {
+        try requireHostSafe()
+
+        let context = try TestContext(testMode: false, hostSafe: true)
+        defer { context.cleanup() }
+
+        let doctor = try context.runCLI(["system", "doctor", "run", "--json"])
+        let adapterHealth = try XCTUnwrap(doctor.data?.objectValue?["adapter_health"]?.objectValue)
+        let reminders = try XCTUnwrap(adapterHealth["reminders"]?.objectValue)
+        let mail = try XCTUnwrap(adapterHealth["mail"]?.objectValue)
+        let notification = try XCTUnwrap(adapterHealth["notifications"]?.objectValue)
+
+        let reminderReason = reminders["reason"]?.stringValue
+        let currentReminderStatus = doctor.data?.objectValue?["os_permissions"]?.objectValue?["reminders"]?.stringValue
+        if currentReminderStatus == "authorized" {
+            XCTAssertEqual(reminders["availability"]?.stringValue, "available")
+            XCTAssertEqual(reminderReason, "ok")
+        } else {
+            XCTAssertEqual(reminders["availability"]?.stringValue, "unavailable")
+            XCTAssertEqual(reminderReason, "permission_missing")
+        }
+        XCTAssertTrue(["available", "unavailable"].contains(notification["availability"]?.stringValue))
+        XCTAssertTrue(["ok", "permission_missing"].contains(notification["reason"]?.stringValue))
+
+        if HostFixtures.appExists("Mail") {
+            XCTAssertTrue(["available", "degraded"].contains(mail["availability"]?.stringValue))
+            XCTAssertTrue(["ok", "automation_timeout", "automation_denied"].contains(mail["reason"]?.stringValue))
+        } else {
+            XCTAssertEqual(mail["availability"]?.stringValue, "unavailable")
+            XCTAssertEqual(mail["reason"]?.stringValue, "app_missing")
+        }
+    }
+
+    func testHostSafeRemindersCrudAgainstDedicatedList() throws {
+        try requireHostSafe()
+        let preflightContext = try TestContext(testMode: false, hostSafe: true)
+        defer { preflightContext.cleanup() }
+        let doctor = try preflightContext.runCLI(["system", "doctor", "run", "--json"])
+        guard doctor.data?.objectValue?["os_permissions"]?.objectValue?["reminders"]?.stringValue == "authorized" else {
+            throw XCTSkip("Reminders permission is not authorized on this host")
+        }
+
+        let listName = "Commander Host Tests \(UUID().uuidString.prefix(8))"
+        let store = EKEventStore()
+        let calendar = try HostFixtures.createReminderList(named: listName, store: store)
+        defer { try? HostFixtures.deleteReminderList(calendar, store: store) }
+
+        let context = try TestContext(testMode: false, hostSafe: true)
+        defer { context.cleanup() }
+        try context.grant("reminders.read")
+        try context.grant("reminders.write")
+
+        let created = try context.runCLI([
+            "reminders", "items", "create",
+            "--title", "Host reminder",
+            "--list", listName,
+            "--notes", "isolated resource",
+            "--json",
+        ])
+        let id = try XCTUnwrap(created.data?.objectValue?["id"]?.stringValue)
+
+        let listed = try context.runCLI(["reminders", "items", "list", "--list", listName, "--json"])
+        XCTAssertTrue(listed.data?.arrayValue?.contains(where: { $0.objectValue?["id"]?.stringValue == id }) == true)
+
+        let completed = try context.runCLI(["reminders", "items", "complete", "--id", id, "--json"])
+        XCTAssertEqual(completed.data?.objectValue?["completed"]?.boolValue, true)
+
+        let deleted = try context.runCLI(["reminders", "items", "delete", "--id", id, "--json"])
+        XCTAssertTrue(deleted.ok)
+    }
+
+    func testHostSafeNotificationsPostWhenAuthorized() throws {
+        try requireHostSafe()
+
+        let context = try TestContext(testMode: false, hostSafe: true)
+        defer { context.cleanup() }
+        let doctor = try context.runCLI(["system", "doctor", "run", "--json"])
+        guard doctor.data?.objectValue?["os_permissions"]?.objectValue?["notifications"]?.stringValue == "authorized" else {
+            throw XCTSkip("Notifications permission is not authorized on this host")
+        }
+        try context.grant("notifications.post")
+
+        let posted = try context.runCLI([
+            "notifications", "entries", "post",
+            "--title", "Commander host notification",
+            "--body", "runtime host validation",
+            "--json",
+        ])
+        XCTAssertTrue(posted.ok)
+        XCTAssertEqual(posted.data?.objectValue?["posted"]?.boolValue, true)
+        XCTAssertEqual(posted.meta.validationMode, .hostIsolated)
+    }
+
+    func testHostSafeSafariTabLifecycleAgainstDedicatedWindow() throws {
+        try requireHostSafe()
+        guard HostFixtures.appExists("Safari") else {
+            throw XCTSkip("Safari is not installed on this host")
+        }
+
+        let windowIndex: Int
+        do {
+            windowIndex = try HostFixtures.createSafariWindow()
+        } catch let error as CommanderError where error.payload.code == "adapter_unavailable" {
+            throw XCTSkip("Safari automation timed out on this host")
+        }
+        defer { try? HostFixtures.closeSafariWindow(windowIndex: windowIndex) }
+
+        let context = try TestContext(testMode: false, hostSafe: true)
+        defer { context.cleanup() }
+        try context.grant("safari.read")
+        try context.grant("safari.write")
+
+        let url = "https://example.com/commander-host-\(UUID().uuidString.prefix(8))"
+        let opened = try context.runCLI([
+            "safari", "tabs", "open",
+            "--url", url,
+            "--window", "\(windowIndex)",
+            "--json",
+        ])
+        let id = try XCTUnwrap(opened.data?.objectValue?["id"]?.stringValue)
+        XCTAssertEqual(opened.meta.validationMode, .hostIsolated)
+
+        let listed = try context.runCLI(["safari", "tabs", "list", "--window", "\(windowIndex)", "--json"])
+        XCTAssertTrue(listed.data?.arrayValue?.contains(where: { $0.objectValue?["id"]?.stringValue == id }) == true)
+
+        let closed = try context.runCLI(["safari", "tabs", "close", "--id", id, "--json"])
+        XCTAssertTrue(closed.ok)
+    }
+
+    func testHostSafeFinderLifecycleAgainstDedicatedTempPaths() throws {
+        try requireHostSafe()
+        guard HostFixtures.appExists("Finder") else {
+            throw XCTSkip("Finder is not installed on this host")
+        }
+
+        let context = try TestContext(testMode: false, hostSafe: true)
+        defer { context.cleanup() }
+        try context.grant("finder.read")
+        try context.grant("finder.write")
+
+        func assertFinderDoctor(_ reason: String) throws {
+            let doctor = try context.runCLI(["system", "doctor", "run", "--json"])
+            let finderHealth = doctor.data?.objectValue?["adapter_health"]?.objectValue?["finder"]?.objectValue
+            XCTAssertEqual(finderHealth?["availability"]?.stringValue, "degraded")
+            XCTAssertEqual(finderHealth?["reason"]?.stringValue, reason)
+        }
+
+        let folder = context.tmp.appendingPathComponent("finder-host", isDirectory: true)
+        let revealFile = folder.appendingPathComponent("reveal.txt")
+        let trashFile = folder.appendingPathComponent("trash.txt")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try "reveal".write(to: revealFile, atomically: true, encoding: .utf8)
+        try "trash".write(to: trashFile, atomically: true, encoding: .utf8)
+
+        let reveal = try context.runCLIUnchecked([
+            "finder", "entries", "reveal",
+            "--path", revealFile.path,
+            "--json",
+        ])
+        if reveal.error?.code == "adapter_unavailable", reveal.error?.message == "Finder automation timed out" {
+            try assertFinderDoctor("automation_timeout")
+            throw XCTSkip("Finder automation timed out on this host")
+        }
+        if reveal.error?.code == "permission_denied", reveal.error?.message == "Finder automation denied" {
+            try assertFinderDoctor("automation_denied")
+            throw XCTSkip("Finder automation is denied on this host")
+        }
+        XCTAssertTrue(reveal.ok)
+        XCTAssertEqual(reveal.meta.validationMode, .hostIsolated)
+
+        let open = try context.runCLIUnchecked([
+            "finder", "entries", "open",
+            "--path", folder.path,
+            "--json",
+        ])
+        if open.error?.code == "adapter_unavailable", open.error?.message == "Finder automation timed out" {
+            try assertFinderDoctor("automation_timeout")
+            throw XCTSkip("Finder open timed out on this host")
+        }
+        if open.error?.code == "permission_denied", open.error?.message == "Finder automation denied" {
+            try assertFinderDoctor("automation_denied")
+            throw XCTSkip("Finder open is denied on this host")
+        }
+        XCTAssertTrue(open.ok)
+        XCTAssertEqual(open.meta.validationMode, .hostIsolated)
+
+        let trash = try context.runCLIUnchecked([
+            "finder", "entries", "trash",
+            "--path", trashFile.path,
+            "--json",
+        ])
+        if trash.error?.code == "adapter_unavailable", trash.error?.message == "Finder automation timed out" {
+            try assertFinderDoctor("automation_timeout")
+            throw XCTSkip("Finder trash timed out on this host")
+        }
+        if trash.error?.code == "permission_denied", trash.error?.message == "Finder automation denied" {
+            try assertFinderDoctor("automation_denied")
+            throw XCTSkip("Finder trash is denied on this host")
+        }
+        XCTAssertTrue(trash.ok)
+        XCTAssertEqual(trash.meta.validationMode, .hostIsolated)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: trashFile.path))
+    }
+
+    func testHostSafeMailDraftLifecycleRequiresInstalledApp() throws {
+        try requireHostSafe()
+        guard HostFixtures.appExists("Mail") else {
+            throw XCTSkip("Mail is not installed on this host")
+        }
+
+        let context = try TestContext(testMode: false, hostSafe: true)
+        defer { context.cleanup() }
+        try context.grant("mail.read")
+        try context.grant("mail.send")
+        try context.grant("mail.delete")
+
+        func assertMailDoctor(_ reason: String) throws {
+            let doctor = try context.runCLI(["system", "doctor", "run", "--json"])
+            let mailHealth = doctor.data?.objectValue?["adapter_health"]?.objectValue?["mail"]?.objectValue
+            XCTAssertEqual(mailHealth?["availability"]?.stringValue, "degraded")
+            XCTAssertEqual(mailHealth?["reason"]?.stringValue, reason)
+        }
+
+        let created = try context.runCLIUnchecked([
+            "mail", "messages", "create",
+            "--subject", "Commander host draft",
+            "--to", "noreply@example.com",
+            "--body", "isolated draft",
+            "--mailbox", "Drafts",
+            "--json",
+        ])
+        if created.error?.code == "adapter_unavailable", created.error?.message == "Mail automation timed out" {
+            try assertMailDoctor("automation_timeout")
+            throw XCTSkip("Mail automation timed out on this host")
+        }
+        if created.error?.code == "permission_denied", created.error?.message == "Mail automation denied" {
+            try assertMailDoctor("automation_denied")
+            throw XCTSkip("Mail automation is denied on this host")
+        }
+        XCTAssertTrue(created.ok)
+        let id = try XCTUnwrap(created.data?.objectValue?["id"]?.stringValue)
+        defer { _ = try? context.runCLIUnchecked(["mail", "messages", "delete", "--id", id, "--json"]) }
+
+        var listed: CommandResponse?
+        var foundDraft = false
+        for attempt in 0..<5 {
+            let response = try context.runCLIUnchecked(["mail", "messages", "list", "--mailbox", "Drafts", "--json"])
+            if response.error?.code == "adapter_unavailable", response.error?.message == "Mail automation timed out" {
+                try assertMailDoctor("automation_timeout")
+                throw XCTSkip("Mail list timed out on this host")
+            }
+            if response.error?.code == "permission_denied", response.error?.message == "Mail automation denied" {
+                try assertMailDoctor("automation_denied")
+                throw XCTSkip("Mail list is denied on this host")
+            }
+            listed = response
+            foundDraft = response.data?.arrayValue?.contains(where: { $0.objectValue?["id"]?.stringValue == id }) == true
+            if foundDraft {
+                break
+            }
+            if attempt < 4 {
+                Thread.sleep(forTimeInterval: 0.5)
+            }
+        }
+        guard foundDraft else {
+            throw XCTSkip("Mail draft was not observable consistently on this host")
+        }
+        XCTAssertNotNil(listed)
+
+        let deleted = try context.runCLIUnchecked(["mail", "messages", "delete", "--id", id, "--json"])
+        if deleted.error?.code == "adapter_unavailable", deleted.error?.message == "Mail automation timed out" {
+            try assertMailDoctor("automation_timeout")
+            throw XCTSkip("Mail delete timed out on this host")
+        }
+        if deleted.error?.code == "permission_denied", deleted.error?.message == "Mail automation denied" {
+            try assertMailDoctor("automation_denied")
+            throw XCTSkip("Mail delete is denied on this host")
+        }
+        XCTAssertTrue(deleted.ok)
+    }
+
+    func testHostSafeThingsCrudAgainstDedicatedProject() throws {
+        try requireHostSafe()
+        guard HostFixtures.appExists("Things3") else {
+            throw XCTSkip("Things3 is not installed on this host")
+        }
+
+        let projectName = "Commander Host Tests \(UUID().uuidString.prefix(8))"
+        let projectID: String
+        do {
+            projectID = try HostFixtures.createThingsProject(named: projectName)
+        } catch let error as CommanderError where error.payload.code == "adapter_unavailable" {
+            throw XCTSkip("Things automation timed out on this host")
+        }
+        defer { try? HostFixtures.deleteThingsProject(named: projectName) }
+
+        let context = try TestContext(testMode: false, hostSafe: true)
+        defer { context.cleanup() }
+        try context.grant("things.read")
+        try context.grant("things.write")
+
+        let created = try context.runCLI([
+            "things", "todos", "create",
+            "--title", "Host todo",
+            "--notes", "isolated resource",
+            "--project", projectID,
+            "--json",
+        ])
+        let id = try XCTUnwrap(created.data?.objectValue?["id"]?.stringValue)
+
+        let searched = try context.runCLI([
+            "things", "todos", "search",
+            "--query", "Host todo",
+            "--project", projectID,
+            "--json",
+        ])
+        XCTAssertTrue(searched.data?.arrayValue?.contains(where: { $0.objectValue?["id"]?.stringValue == id }) == true)
+
+        let completed = try context.runCLI(["things", "todos", "complete", "--id", id, "--json"])
+        XCTAssertEqual(completed.data?.objectValue?["status"]?.stringValue, "completed")
+
+        let deleted = try context.runCLI(["things", "todos", "delete", "--id", id, "--json"])
+        XCTAssertTrue(deleted.ok)
+    }
+}
+
+private struct TestContext {
+    let tmp: URL
+    let binDir: URL
+    let launchAgentsDir: URL
+    let environment: [String: String]
+
+    init(testMode: Bool = true, hostSafe: Bool = false) throws {
+        tmp = URL(fileURLWithPath: "/tmp/commander-tests-\(UUID().uuidString.prefix(8))", isDirectory: true)
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        binDir = tmp.appendingPathComponent("bin", isDirectory: true)
+        launchAgentsDir = tmp.appendingPathComponent("LaunchAgents", isDirectory: true)
+        var baseEnvironment = [
+            "COMMANDER_HOME": tmp.appendingPathComponent("state").path,
+            "COMMANDER_BIN_DIR": binDir.path,
+            "COMMANDER_LAUNCH_AGENTS_DIR": launchAgentsDir.path,
+            "COMMANDER_RUNTIME_TRANSPORT": RuntimeInstaller.legacySocketRuntimeTransport,
+            "PATH": ProcessInfo.processInfo.environment["PATH"] ?? "",
+        ]
+        if testMode {
+            baseEnvironment["COMMANDER_TEST_MODE"] = "1"
+        }
+        if hostSafe {
+            baseEnvironment["COMMANDER_HOST_SAFE"] = "1"
+        }
+        environment = baseEnvironment
+    }
+
+    func grant(_ scope: String) throws {
+        let response = try runCLI(["system", "capabilities", "grant", "--scope", scope, "--json"])
+        XCTAssertTrue(response.ok)
+    }
+
+    func cleanup() {
+        _ = try? runCLIUnchecked(["system", "daemon", "stop", "--json"])
+        if let pid = daemonPID() {
+            kill(pid, SIGTERM)
+        }
+        try? FileManager.default.removeItem(at: tmp)
+    }
+
+    func runCLI(_ arguments: [String], expectSuccess: Bool = true, environmentOverride: [String: String] = [:]) throws -> CommandResponse {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: binary(named: "commander"))
+        process.arguments = arguments
+        process.environment = environment.merging(environmentOverride) { _, new in new }
+
+        let stdout = Pipe()
+        let stderr = Pipe()
+        process.standardOutput = stdout
+        process.standardError = stderr
+        try process.run()
+        process.waitUntilExit()
+
+        let output = stdout.fileHandleForReading.readDataToEndOfFile()
+        let response = try CLIJSON.decodeResponse(output)
+
+        if expectSuccess {
+            XCTAssertEqual(process.terminationStatus, 0)
+        } else {
+            XCTAssertNotEqual(process.terminationStatus, 0)
+        }
+
+        return response
+    }
+
+    func runCLIUnchecked(_ arguments: [String], environmentOverride: [String: String] = [:]) throws -> CommandResponse {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: binary(named: "commander"))
+        process.arguments = arguments
+        process.environment = environment.merging(environmentOverride) { _, new in new }
+        let stdout = Pipe()
+        process.standardOutput = stdout
+        process.standardError = Pipe()
+        try process.run()
+        process.waitUntilExit()
+        return try CLIJSON.decodeResponse(stdout.fileHandleForReading.readDataToEndOfFile())
+    }
+
+    private func daemonPID() -> Int32? {
+        let statusURL = tmp.appendingPathComponent("state/daemon-status.json")
+        guard let data = try? Data(contentsOf: statusURL),
+              let health = try? JSONDecoder().decode(DaemonHealth.self, from: data),
+              let pid = health.pid else {
+            return nil
+        }
+        return pid
+    }
+
+    func binary(named name: String) -> String {
+        let packageRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+
+        let debugBinary = packageRoot.appendingPathComponent(".build/debug/\(name)")
+        if FileManager.default.isExecutableFile(atPath: debugBinary.path) {
+            return debugBinary.path
+        }
+
+        let platformBinary = packageRoot.appendingPathComponent(".build/arm64-apple-macosx/debug/\(name)")
+        if FileManager.default.isExecutableFile(atPath: platformBinary.path) {
+            return platformBinary.path
+        }
+
+        XCTFail("Missing binary \(name)")
+        return debugBinary.path
+    }
+}
+
+private func isoDate(hoursFromNow hours: Int) -> String {
+    let date = Date().addingTimeInterval(TimeInterval(hours * 3600))
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime]
+    return formatter.string(from: date)
+}
+
+private func requireHostSafe() throws {
+    guard ProcessInfo.processInfo.environment["COMMANDER_HOST_SAFE"] == "1" else {
+        throw XCTSkip("Set COMMANDER_HOST_SAFE=1 to run host-safe validation")
+    }
+}
+
+private enum HostFixtures {
+    static func appExists(_ appName: String) -> Bool {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        return [
+            "/System/Applications/\(appName).app",
+            "/System/Library/CoreServices/\(appName).app",
+            "/Applications/\(appName).app",
+            "\(home)/Applications/\(appName).app",
+        ].contains(where: { FileManager.default.fileExists(atPath: $0) })
+    }
+
+    static func createCalendar(named name: String, store: EKEventStore) throws -> EKCalendar {
+        let calendar = EKCalendar(for: .event, eventStore: store)
+        calendar.title = name
+        let source: EKSource
+        if let defaultSource = store.defaultCalendarForNewEvents?.source {
+            source = defaultSource
+        } else {
+            source = try XCTUnwrap(store.sources.first)
+        }
+        calendar.source = source
+        try store.saveCalendar(calendar, commit: true)
+        return calendar
+    }
+
+    static func deleteCalendar(_ calendar: EKCalendar, store: EKEventStore) throws {
+        try store.removeCalendar(calendar, commit: true)
+    }
+
+    static func createReminderList(named name: String, store: EKEventStore) throws -> EKCalendar {
+        var candidateSources: [EKSource] = []
+        if let defaultSource = store.defaultCalendarForNewReminders()?.source {
+            candidateSources.append(defaultSource)
+        }
+        candidateSources.append(contentsOf: store.calendars(for: .reminder).map(\.source))
+        candidateSources.append(contentsOf: store.sources)
+
+        var attemptedSourceIDs = Set<String>()
+        for source in candidateSources where attemptedSourceIDs.insert(source.sourceIdentifier).inserted {
+            let calendar = EKCalendar(for: .reminder, eventStore: store)
+            calendar.title = name
+            calendar.source = source
+            do {
+                try store.saveCalendar(calendar, commit: true)
+                return calendar
+            } catch {
+                continue
+            }
+        }
+
+        throw XCTSkip("No writable reminders source is available on this host")
+    }
+
+    static func deleteReminderList(_ calendar: EKCalendar, store: EKEventStore) throws {
+        try store.removeCalendar(calendar, commit: true)
+    }
+
+    static func deleteContact(id: String) throws {
+        let store = CNContactStore()
+        let contact = try store.unifiedContact(
+            withIdentifier: id,
+            keysToFetch: [CNContactIdentifierKey as CNKeyDescriptor]
+        ).mutableCopy() as! CNMutableContact
+        let save = CNSaveRequest()
+        save.delete(contact)
+        try store.execute(save)
+    }
+
+    static func createSafariWindow() throws -> Int {
+        let script = """
+        tell application "Safari"
+            activate
+            make new document
+            return count of windows
+        end tell
+        """
+        return Int(try AdapterSupport.runAppleScript(script, timeout: 5).trimmingCharacters(in: .whitespacesAndNewlines)) ?? 1
+    }
+
+    static func closeSafariWindow(windowIndex: Int) throws {
+        let script = """
+        tell application "Safari"
+            if (count of windows) >= \(windowIndex) then
+                close window \(windowIndex)
+            end if
+        end tell
+        """
+        _ = try AdapterSupport.runAppleScript(script, timeout: 5)
+    }
+
+    static func createThingsProject(named name: String) throws -> String {
+        let escapedName = escapeAppleScript(name)
+        let script = """
+        tell application "Things3"
+            set projectRef to make new project with properties {name:"\(escapedName)"}
+            return id of projectRef as text
+        end tell
+        """
+        return try AdapterSupport.runAppleScript(script, timeout: 5).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func deleteThingsProject(named name: String) throws {
+        let escapedName = escapeAppleScript(name)
+        let script = """
+        tell application "Things3"
+            delete project "\(escapedName)"
+        end tell
+        """
+        _ = try AdapterSupport.runAppleScript(script, timeout: 5)
+    }
+
+    private static func escapeAppleScript(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+    }
+}
