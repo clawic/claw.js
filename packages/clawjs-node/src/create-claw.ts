@@ -3443,6 +3443,14 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     };
   }
 
+  function extractTelegramLanguageHint(message: ChannelMessageRecord): string | undefined {
+    const rawMessage = (message.raw?.message ?? message.raw?.edited_message) as Record<string, unknown> | undefined;
+    const from = rawMessage?.from as Record<string, unknown> | undefined;
+    const languageCode = typeof from?.language_code === "string" ? from.language_code.trim().toLowerCase() : "";
+    const normalized = languageCode.split(/[-_]/)[0];
+    return /^[a-z]{2,3}$/.test(normalized) ? normalized : undefined;
+  }
+
   async function ingestTelegramVoiceNote(message: ChannelMessageRecord): Promise<ChannelMessageRecord> {
     if (message.provider !== "telegram" || message.text?.trim()) return message;
     const media = extractTelegramVoiceMedia(message);
@@ -3486,9 +3494,11 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       },
     });
     const config = readSttConfig();
+    const languageHint = config.language === "auto" || !config.language ? extractTelegramLanguageHint(message) : undefined;
+    const transcriptionConfig = languageHint ? { ...config, language: languageHint } : config;
     const transcribed = config.enabled === false && !config.modelPath
       ? note
-      : await voiceNoteStore.transcribe(note.id, config);
+      : await voiceNoteStore.transcribe(note.id, transcriptionConfig);
     const transcript = transcribed.transcript?.text?.trim();
     if (!transcript) return message;
     return {

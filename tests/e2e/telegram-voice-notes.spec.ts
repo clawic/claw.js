@@ -15,7 +15,7 @@ function writeFakeSecretsProxy(rootDir: string): { proxyPath: string; statePath:
         message_id: 71,
         message_thread_id: 12,
         chat: { id: -1001, type: "supergroup", title: "Voice Lab", is_forum: true },
-        from: { id: 501, first_name: "Owner" },
+        from: { id: 501, first_name: "Owner", language_code: "es" },
         voice: {
           file_id: "voice-file-id",
           file_unique_id: "voice-unique-id",
@@ -92,6 +92,7 @@ test("telegram voice notes are stored, transcribed, and delivered to the process
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-telegram-voice-"));
   const workspaceRoot = path.join(tempRoot, "workspace");
   const whisperPath = path.join(tempRoot, "fake-whisper.cjs");
+  const whisperArgsPath = path.join(tempRoot, "fake-whisper-args.json");
   const ffmpegPath = path.join(tempRoot, "fake-ffmpeg.cjs");
   const processorPath = path.join(tempRoot, "processor.cjs");
   fs.mkdirSync(workspaceRoot, { recursive: true });
@@ -108,6 +109,7 @@ const fs = require("fs");
 const args = process.argv.slice(2);
 const input = args[args.indexOf("-f") + 1];
 if (!input.endsWith(".wav")) process.exit(3);
+fs.writeFileSync(${JSON.stringify(whisperArgsPath)}, JSON.stringify(args));
 const outIndex = args.indexOf("-of");
 if (outIndex !== -1) fs.writeFileSync(args[outIndex + 1] + ".txt", "transcribed telegram voice");
 `, { mode: 0o755 });
@@ -156,6 +158,8 @@ process.stdin.on("end", () => {
   const notes = await run(["voice-notes", "list", "--workspace", workspaceRoot, "--origin", "telegram", "--query", "transcribed", "--json"]);
   expect(notes.exitCode).toBe(0);
   expect(notes.stdout).toContain("transcribed telegram voice");
+  const whisperArgs = JSON.parse(fs.readFileSync(whisperArgsPath, "utf8")) as string[];
+  expect(whisperArgs.slice(whisperArgs.indexOf("-l"), whisperArgs.indexOf("-l") + 2)).toEqual(["-l", "es"]);
   const state = JSON.parse(fs.readFileSync(statePath, "utf8")) as { lastSend?: { text?: string; message_thread_id?: number } };
   expect(state.lastSend?.text).toBe("processor saw: transcribed telegram voice");
   expect(state.lastSend?.message_thread_id).toBe(12);
