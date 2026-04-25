@@ -3129,6 +3129,45 @@ test("runCli supports auth login dry-run and workspace validate", async () => {
   assert.match(codexLoginStdout.getOutput(), /"login"/);
 });
 
+test("runCli supports forced Codex login by logging out first", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-codex-force-login-"));
+  const binDir = path.join(workspaceRoot, "bin");
+  const fakeCodex = path.join(binDir, "codex");
+  const logPath = path.join(workspaceRoot, "codex.log");
+  fs.mkdirSync(binDir, { recursive: true });
+  fs.writeFileSync(fakeCodex, `#!/usr/bin/env node
+const fs = require("fs");
+fs.appendFileSync(${JSON.stringify(logPath)}, process.argv.slice(2).join(" ") + "\\n");
+if (process.argv[2] === "logout") process.exit(0);
+process.exit(0);
+`, { mode: 0o755 });
+
+  const previousCodexPath = process.env.CLAWJS_CODEX_PATH;
+  process.env.CLAWJS_CODEX_PATH = fakeCodex;
+  try {
+    const stdout = captureStream();
+    const exitCode = await runCli(["auth", "login", "--runtime", "codex", "--force", "--workspace", workspaceRoot, "--dry-run", "--json"], {
+      stdout: stdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    assert.equal(exitCode, CLI_EXIT_OK);
+    assert.doesNotMatch(fs.existsSync(logPath) ? fs.readFileSync(logPath, "utf8") : "", /logout/);
+
+    const removeExitCode = await runCli(["auth", "remove", "--runtime", "codex", "--workspace", workspaceRoot, "--json"], {
+      stdout: captureStream().stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(removeExitCode, CLI_EXIT_OK);
+    assert.match(fs.readFileSync(logPath, "utf8"), /logout/);
+  } finally {
+    if (previousCodexPath === undefined) delete process.env.CLAWJS_CODEX_PATH;
+    else process.env.CLAWJS_CODEX_PATH = previousCodexPath;
+  }
+});
+
 test("runCli can repair a workspace and normalize compat snapshots", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-repair-"));
   fs.mkdirSync(path.join(workspaceRoot, ".clawjs", "compat"), { recursive: true });

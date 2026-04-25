@@ -5,6 +5,7 @@ import { createHash } from "crypto";
 import { fileURLToPath } from "url";
 
 import {
+  buildCodexCommand,
   buildSetDefaultModelCommand,
   createClaw,
   createLocalLibraryStore,
@@ -873,6 +874,32 @@ function readStdin(): Promise<string> {
     });
     process.stdin.on("error", reject);
     process.stdin.on("end", () => resolve(input));
+  });
+}
+
+function runForegroundProcess(
+  command: string,
+  args: string[],
+  options: {
+    cwd: string;
+    env?: NodeJS.ProcessEnv;
+    stdout: NodeJS.WritableStream;
+    stderr: NodeJS.WritableStream;
+  },
+): Promise<number> {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, {
+      cwd: options.cwd,
+      env: options.env,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    child.stdout?.on("data", (chunk) => options.stdout.write(chunk));
+    child.stderr?.on("data", (chunk) => options.stderr.write(chunk));
+    child.on("error", (error) => {
+      options.stderr.write(`${error.message}\n`);
+      resolve(CLI_EXIT_FAILURE);
+    });
+    child.on("close", (exitCode) => resolve(exitCode ?? CLI_EXIT_FAILURE));
   });
 }
 
@@ -2803,6 +2830,19 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       context.stderr.write("--provider is required\n");
       return CLI_EXIT_USAGE;
     }
+    if (runtimeAdapterId === "codex" && readBooleanFlag(argv, flags, "force", false) && !argv.includes("--dry-run")) {
+      const logoutCommand = buildCodexCommand(["logout"], {
+        homeDir: flags["home-dir"],
+        env: process.env,
+      });
+      const logoutExitCode = await runForegroundProcess(logoutCommand.command, logoutCommand.args, {
+        cwd: workspaceRoot,
+        env: logoutCommand.env,
+        stdout: context.stdout,
+        stderr: context.stderr,
+      });
+      if (logoutExitCode !== CLI_EXIT_OK) return logoutExitCode;
+    }
     if (argv.includes("--dry-run")) {
       const launched = await runtimeAdapter.login(provider, {
         spawnDetachedPty(command, args) {
@@ -2839,10 +2879,22 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   }
 
   if (group === "auth" && command === "remove") {
-    const provider = flags.provider;
+    const provider = flags.provider || (runtimeAdapterId === "codex" ? "openai-codex" : undefined);
     if (!provider) {
       context.stderr.write("--provider is required\n");
       return CLI_EXIT_USAGE;
+    }
+    if (runtimeAdapterId === "codex") {
+      const logoutCommand = buildCodexCommand(["logout"], {
+        homeDir: flags["home-dir"],
+        env: process.env,
+      });
+      return await runForegroundProcess(logoutCommand.command, logoutCommand.args, {
+        cwd: workspaceRoot,
+        env: logoutCommand.env,
+        stdout: context.stdout,
+        stderr: context.stderr,
+      });
     }
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const removed = claw.auth.removeProvider(provider);
