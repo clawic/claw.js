@@ -175,7 +175,7 @@ function buildRunnerEnv(env?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   };
 }
 
-async function callTelegramApi<TResult>(
+export async function callTelegramApi<TResult>(
   runner: CommandRunner,
   env: NodeJS.ProcessEnv | undefined,
   secretName: string,

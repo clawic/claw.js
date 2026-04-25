@@ -27,7 +27,7 @@ real installed runtime.
 | Targeting a real runtime | `openclaw` setup | `openclaw` is the production-supported adapter. |
 | Exposing a remote client | Relay after local setup | Relay routes requests to a connected workspace; it is not the first local bootstrap step. |
 
-Supported adapters are `demo`, `openclaw`, `zeroclaw`, `picoclaw`,
+Supported adapters are `demo`, `openclaw`, `codex`, `zeroclaw`, `picoclaw`,
 `nanobot`, `nanoclaw`, `nullclaw`, `ironclaw`, `nemoclaw`, and
 `hermes`. Every CLI command that depends on runtime behavior accepts
 `--runtime`.
@@ -75,6 +75,10 @@ Other v1 project types:
 - `claw new workspace my-workspace`
 - `claw new skill summarize-ticket`
 - `claw new plugin jira-integration`
+
+Generated skills are registered in the local personal library by default so
+they can be assigned to other agents later. Use `--no-library` when you want a
+one-off scaffold only.
 
 Compatibility note:
 
@@ -157,6 +161,7 @@ claw info --json
 Examples:
 
 - `openclaw` seeds `SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`, `IDENTITY.md`, `HEARTBEAT.md`
+- `codex` seeds `AGENTS.md` and uses Codex CLI auth via `codex login`
 - `zeroclaw` seeds `SOUL.md`, `USER.md`, `AGENTS.md`, `IDENTITY.md`, `MEMORY.md`
 - `picoclaw` seeds `SOUL.md`, `USER.md`, `AGENTS.md`, `IDENTITY.md`, `memory/MEMORY.md`
 

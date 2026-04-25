@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
+import Database from "better-sqlite3";
 
 import {
   Claw,
@@ -16,13 +17,19 @@ import type {
   AssignmentRecord,
   ArtifactRecord,
   AreaRecord,
+  AttachmentRecord,
   Attachment,
   BlockerRecord,
   CapacityRecord,
+  CommentRecord,
+  CustomFieldRecord,
+  CycleRecord,
   DecisionRecord,
   DeadlineRecord,
+  EpicRecord,
   EventRecord,
   FeedbackRecord,
+  FieldValueRecord,
   GoalRecord,
   HandoffRecord,
   IncidentRecord,
@@ -43,18 +50,24 @@ import type {
   ProductivityReview,
   ProductivityTeamWork,
   ProjectRecord,
+  RecurrenceRecord,
   PromptContextBlock,
   ReleaseRecord,
   ReminderRecord,
+  SavedViewRecord,
+  SectionRecord,
+  ListRecord,
   MilestoneRecord,
   TaskChecklistItem,
   TaskRecord,
+  TemplateRecord,
   WorkSessionRecord,
   WorkspaceBadgeSummary,
   WorkspaceContextBundle,
   WorkspaceContextRequest,
   WorkspaceDomain,
   WorkspaceEntitySource,
+  WorkspaceRecordBase,
   WorkspaceSearchQuery,
   WorkspaceSearchResult,
   WorkspaceSearchStrategy,
@@ -66,9 +79,20 @@ import { createSqliteWorkspaceCollectionStore } from "./sqlite-store.ts";
 
 type WorkspaceEntityRecord =
   | AreaRecord
+  | ListRecord
+  | SectionRecord
   | TaskRecord
   | GoalRecord
   | ProjectRecord
+  | CommentRecord
+  | AttachmentRecord
+  | SavedViewRecord
+  | RecurrenceRecord
+  | CycleRecord
+  | EpicRecord
+  | CustomFieldRecord
+  | FieldValueRecord
+  | TemplateRecord
   | MilestoneRecord
   | ActivityEntryRecord
   | BlockerRecord
@@ -120,10 +144,33 @@ export interface WorkspaceSemanticSearchOptions {
 
 export interface WorkspaceExtensionOptions {
   semanticSearch?: WorkspaceSemanticSearchOptions;
+  useTimeService?: boolean;
 }
 
 export interface CreateWorkspaceClawOptions extends CreateClawOptions {
   productivity?: WorkspaceExtensionOptions;
+}
+
+export interface WorkspaceCollectionApi<TRecord, TCreate, TUpdate> {
+  list: (options?: {
+    includeArchived?: boolean;
+    status?: string | string[];
+    kind?: string | string[];
+    entityType?: string;
+    entityId?: string;
+    projectId?: string;
+    goalId?: string;
+    areaId?: string;
+    listId?: string;
+    anchorId?: string;
+    limit?: number;
+  }) => Promise<TRecord[]>;
+  get: (id: string) => Promise<TRecord | null>;
+  create: (input: TCreate) => Promise<TRecord>;
+  update: (id: string, input: TUpdate) => Promise<TRecord>;
+  archive: (id: string) => Promise<TRecord>;
+  remove: (id: string) => Promise<boolean>;
+  search: (query: string, options?: Omit<WorkspaceSearchQuery, "query" | "domains">) => Promise<WorkspaceSearchResult[]>;
 }
 
 export interface CreateTaskInput {
@@ -131,24 +178,43 @@ export interface CreateTaskInput {
   title: string;
   description?: string;
   status?: TaskRecord["status"];
+  type?: TaskRecord["type"];
   priority?: TaskRecord["priority"];
+  rank?: number;
   labels?: string[];
   areaId?: string;
+  listId?: string;
+  sectionId?: string;
   assigneePersonId?: string;
+  reporterPersonId?: string;
   watcherPersonIds?: string[];
+  startAt?: string;
+  deferUntil?: string;
   dueAt?: string;
+  deadlineAt?: string;
+  snoozedUntil?: string;
+  recurrenceRule?: string;
   estimateMinutes?: number;
   actualMinutes?: number;
+  storyPoints?: number;
   blockedReason?: string;
+  waitingOn?: string;
   startedAt?: string;
   completedAt?: string;
+  cancelledAt?: string;
   scheduledEventId?: string;
   eventId?: string;
   projectId?: string;
   goalId?: string;
+  cycleId?: string;
+  epicId?: string;
   parentTaskId?: string;
   childTaskIds?: string[];
   dependsOnTaskIds?: string[];
+  commentIds?: string[];
+  attachmentIds?: string[];
+  createdBy?: string;
+  updatedBy?: string;
   assignedToAgentId?: string;
   assignedBy?: string;
   delegatedBy?: string;
@@ -244,10 +310,19 @@ export interface CreateProjectInput {
   portfolioItemId?: string;
   color?: string;
   kind?: ProjectRecord["kind"];
+  rank?: number;
+  statusCategory?: ProjectRecord["statusCategory"];
   healthStatus?: ProjectRecord["healthStatus"];
+  startAt?: string;
   startDate?: string;
   targetDate?: string;
+  deadlineAt?: string;
   milestoneIds?: string[];
+  defaultSectionIds?: string[];
+  templateId?: string;
+  reviewAt?: string;
+  reviewCadence?: ProjectRecord["reviewCadence"];
+  archiveReason?: string;
   completedAt?: string;
   source?: WorkspaceEntitySource;
   links?: LinkedEntityRef[];
@@ -256,6 +331,234 @@ export interface CreateProjectInput {
 
 export interface UpdateProjectInput extends Partial<Omit<CreateProjectInput, "id" | "name">> {
   name?: string;
+  archivedAt?: string | null;
+}
+
+export interface CreateListInput {
+  id?: string;
+  title: string;
+  kind?: ListRecord["kind"];
+  status?: ListRecord["status"];
+  description?: string;
+  areaId?: string;
+  projectId?: string;
+  rank?: number;
+  filter?: Record<string, unknown>;
+  source?: WorkspaceEntitySource;
+  links?: LinkedEntityRef[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateListInput extends Partial<Omit<CreateListInput, "id" | "title">> {
+  title?: string;
+  archivedAt?: string | null;
+}
+
+export interface CreateSectionInput {
+  id?: string;
+  title: string;
+  status?: SectionRecord["status"];
+  description?: string;
+  listId?: string;
+  projectId?: string;
+  areaId?: string;
+  rank?: number;
+  source?: WorkspaceEntitySource;
+  links?: LinkedEntityRef[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateSectionInput extends Partial<Omit<CreateSectionInput, "id" | "title">> {
+  title?: string;
+  archivedAt?: string | null;
+}
+
+export interface CreateCommentInput {
+  id?: string;
+  entityType: CommentRecord["entityType"];
+  entityId: string;
+  body: string;
+  authorPersonId?: string;
+  authorAgentId?: string;
+  visibility?: CommentRecord["visibility"];
+  source?: WorkspaceEntitySource;
+  links?: LinkedEntityRef[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateCommentInput extends Partial<Omit<CreateCommentInput, "id" | "entityType" | "entityId" | "body">> {
+  entityType?: CommentRecord["entityType"];
+  entityId?: string;
+  body?: string;
+  archivedAt?: string | null;
+}
+
+export interface CreateAttachmentInput {
+  id?: string;
+  title: string;
+  entityType: AttachmentRecord["entityType"];
+  entityId: string;
+  name?: string;
+  mimeType?: string;
+  uri?: string;
+  path?: string;
+  sizeBytes?: number;
+  preview?: string;
+  uploadedBy?: string;
+  source?: WorkspaceEntitySource;
+  links?: LinkedEntityRef[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateAttachmentInput extends Partial<Omit<CreateAttachmentInput, "id" | "title" | "entityType" | "entityId">> {
+  title?: string;
+  entityType?: AttachmentRecord["entityType"];
+  entityId?: string;
+  archivedAt?: string | null;
+}
+
+export interface CreateSavedViewInput {
+  id?: string;
+  name: string;
+  domain: SavedViewRecord["domain"];
+  query?: string;
+  filters?: Record<string, unknown>;
+  sort?: Record<string, unknown>;
+  groupBy?: string;
+  favorite?: boolean;
+  rank?: number;
+  source?: WorkspaceEntitySource;
+  links?: LinkedEntityRef[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateSavedViewInput extends Partial<Omit<CreateSavedViewInput, "id" | "name" | "domain">> {
+  name?: string;
+  domain?: SavedViewRecord["domain"];
+  archivedAt?: string | null;
+}
+
+export interface CreateRecurrenceInput {
+  id?: string;
+  title: string;
+  status?: RecurrenceRecord["status"];
+  rule: string;
+  timezone?: string;
+  anchorType?: RecurrenceRecord["anchorType"];
+  anchorId?: string;
+  nextRunAt?: string;
+  lastRunAt?: string;
+  source?: WorkspaceEntitySource;
+  links?: LinkedEntityRef[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateRecurrenceInput extends Partial<Omit<CreateRecurrenceInput, "id" | "title" | "rule">> {
+  title?: string;
+  rule?: string;
+  archivedAt?: string | null;
+}
+
+export interface CreateCycleInput {
+  id?: string;
+  name: string;
+  status?: CycleRecord["status"];
+  description?: string;
+  teamId?: string;
+  projectId?: string;
+  goalId?: string;
+  startsAt?: string;
+  endsAt?: string;
+  capacityPoints?: number;
+  taskIds?: string[];
+  source?: WorkspaceEntitySource;
+  links?: LinkedEntityRef[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateCycleInput extends Partial<Omit<CreateCycleInput, "id" | "name">> {
+  name?: string;
+  archivedAt?: string | null;
+}
+
+export interface CreateEpicInput {
+  id?: string;
+  title: string;
+  status?: EpicRecord["status"];
+  kind?: EpicRecord["kind"];
+  description?: string;
+  projectId?: string;
+  goalId?: string;
+  ownerPersonId?: string;
+  rank?: number;
+  targetDate?: string;
+  healthStatus?: EpicRecord["healthStatus"];
+  taskIds?: string[];
+  source?: WorkspaceEntitySource;
+  links?: LinkedEntityRef[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateEpicInput extends Partial<Omit<CreateEpicInput, "id" | "title">> {
+  title?: string;
+  archivedAt?: string | null;
+}
+
+export interface CreateCustomFieldInput {
+  id?: string;
+  name: string;
+  entityType: CustomFieldRecord["entityType"];
+  fieldType: CustomFieldRecord["fieldType"];
+  description?: string;
+  options?: unknown[];
+  required?: boolean;
+  rank?: number;
+  source?: WorkspaceEntitySource;
+  links?: LinkedEntityRef[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateCustomFieldInput extends Partial<Omit<CreateCustomFieldInput, "id" | "name" | "entityType" | "fieldType">> {
+  name?: string;
+  entityType?: CustomFieldRecord["entityType"];
+  fieldType?: CustomFieldRecord["fieldType"];
+  archivedAt?: string | null;
+}
+
+export interface CreateFieldValueInput {
+  id?: string;
+  fieldId: string;
+  entityType: FieldValueRecord["entityType"];
+  entityId: string;
+  value?: unknown;
+  source?: WorkspaceEntitySource;
+  links?: LinkedEntityRef[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateFieldValueInput extends Partial<Omit<CreateFieldValueInput, "id" | "fieldId" | "entityType" | "entityId">> {
+  fieldId?: string;
+  entityType?: FieldValueRecord["entityType"];
+  entityId?: string;
+  archivedAt?: string | null;
+}
+
+export interface CreateTemplateInput {
+  id?: string;
+  name: string;
+  entityType: TemplateRecord["entityType"];
+  status?: TemplateRecord["status"];
+  description?: string;
+  body?: Record<string, unknown>;
+  rank?: number;
+  source?: WorkspaceEntitySource;
+  links?: LinkedEntityRef[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateTemplateInput extends Partial<Omit<CreateTemplateInput, "id" | "name" | "entityType">> {
+  name?: string;
+  entityType?: TemplateRecord["entityType"];
   archivedAt?: string | null;
 }
 
@@ -277,6 +580,99 @@ export interface CreateMilestoneInput {
 export interface UpdateMilestoneInput extends Partial<Omit<CreateMilestoneInput, "id" | "title">> {
   title?: string;
   archivedAt?: string | null;
+}
+
+export interface ProductivityTimelineInput {
+  start: string;
+  end: string;
+  projectId?: string;
+  includeDone?: boolean;
+}
+
+export interface ProductivityTimelineDependencyState {
+  ready: boolean;
+  total: number;
+  completed: number;
+  blockedByIds: string[];
+}
+
+export interface ProductivityTimelineTaskItem {
+  kind: "task";
+  id: string;
+  title: string;
+  status: TaskRecord["status"];
+  priority: TaskRecord["priority"];
+  projectId?: string;
+  goalId?: string;
+  cycleId?: string;
+  epicId?: string;
+  start: string;
+  end: string;
+  startSource: "startAt" | "deferUntil" | "dueAt" | "deadlineAt";
+  endSource: "dueAt" | "deadlineAt" | "start";
+  dependencyState: ProductivityTimelineDependencyState;
+}
+
+export interface ProductivityTimelineMilestoneItem {
+  kind: "milestone";
+  id: string;
+  title: string;
+  status: MilestoneRecord["status"];
+  projectId?: string;
+  goalId?: string;
+  date: string;
+}
+
+export interface ProductivityTimelineDeadlineItem {
+  kind: "deadline";
+  id: string;
+  title: string;
+  status: DeadlineRecord["status"];
+  anchorType?: DeadlineRecord["anchorType"];
+  anchorId?: string;
+  projectId?: string;
+  date: string;
+}
+
+export interface ProductivityTimelineCycleItem {
+  kind: "cycle";
+  id: string;
+  name: string;
+  status: CycleRecord["status"];
+  projectId?: string;
+  goalId?: string;
+  start: string;
+  end: string;
+  capacityPoints?: number;
+}
+
+export interface ProductivityTimelineProjectGroup {
+  projectId?: string;
+  title: string;
+  start?: string;
+  end?: string;
+  tasks: ProductivityTimelineTaskItem[];
+  milestones: ProductivityTimelineMilestoneItem[];
+  deadlines: ProductivityTimelineDeadlineItem[];
+  cycles: ProductivityTimelineCycleItem[];
+}
+
+export interface ProductivityTimelineNow {
+  primary?: ProductivityTimelineTaskItem;
+  readyTasks: ProductivityTimelineTaskItem[];
+  blockedTasks: ProductivityTimelineTaskItem[];
+}
+
+export interface ProductivityTimeline {
+  start: string;
+  end: string;
+  generatedAt: string;
+  projects: ProductivityTimelineProjectGroup[];
+  tasks: ProductivityTimelineTaskItem[];
+  milestones: ProductivityTimelineMilestoneItem[];
+  deadlines: ProductivityTimelineDeadlineItem[];
+  cycles: ProductivityTimelineCycleItem[];
+  now: ProductivityTimelineNow;
 }
 
 export interface CreateReminderInput {
@@ -797,6 +1193,10 @@ export interface WorkspaceClawInstance extends Omit<ClawInstance, "workspace" | 
       projectId?: string;
       goalId?: string;
       areaId?: string;
+      listId?: string;
+      sectionId?: string;
+      cycleId?: string;
+      epicId?: string;
       blocked?: boolean;
       overdue?: boolean;
       hasReminder?: boolean;
@@ -811,6 +1211,17 @@ export interface WorkspaceClawInstance extends Omit<ClawInstance, "workspace" | 
     remove: (id: string) => Promise<boolean>;
     search: (query: string, options?: Omit<WorkspaceSearchQuery, "query" | "domains">) => Promise<WorkspaceSearchResult[]>;
   };
+  lists: WorkspaceCollectionApi<ListRecord, CreateListInput, UpdateListInput>;
+  sections: WorkspaceCollectionApi<SectionRecord, CreateSectionInput, UpdateSectionInput>;
+  comments: WorkspaceCollectionApi<CommentRecord, CreateCommentInput, UpdateCommentInput>;
+  attachments: WorkspaceCollectionApi<AttachmentRecord, CreateAttachmentInput, UpdateAttachmentInput>;
+  savedViews: WorkspaceCollectionApi<SavedViewRecord, CreateSavedViewInput, UpdateSavedViewInput>;
+  recurrences: WorkspaceCollectionApi<RecurrenceRecord, CreateRecurrenceInput, UpdateRecurrenceInput>;
+  cycles: WorkspaceCollectionApi<CycleRecord, CreateCycleInput, UpdateCycleInput>;
+  epics: WorkspaceCollectionApi<EpicRecord, CreateEpicInput, UpdateEpicInput>;
+  customFields: WorkspaceCollectionApi<CustomFieldRecord, CreateCustomFieldInput, UpdateCustomFieldInput>;
+  fieldValues: WorkspaceCollectionApi<FieldValueRecord, CreateFieldValueInput, UpdateFieldValueInput>;
+  templates: WorkspaceCollectionApi<TemplateRecord, CreateTemplateInput, UpdateTemplateInput>;
   areas: {
     list: (options?: { includeArchived?: boolean; status?: AreaRecord["status"] | AreaRecord["status"][]; limit?: number }) => Promise<AreaRecord[]>;
     get: (id: string) => Promise<AreaRecord | null>;
@@ -1207,6 +1618,7 @@ export interface WorkspaceClawInstance extends Omit<ClawInstance, "workspace" | 
     operationsCockpit: (input?: { limit?: number }) => Promise<ProductivityOperationsCockpit>;
     inspect: () => Promise<{
       schemaVersion: number;
+      schemaHash: string;
       dataPath: string;
       collectionCounts: Record<string, number>;
       indexCount: number;
@@ -1221,6 +1633,7 @@ export interface WorkspaceClawInstance extends Omit<ClawInstance, "workspace" | 
     importSnapshot: (input: Record<string, unknown>, options?: { replace?: boolean }) => Promise<{ importedCollections: Record<string, number>; importedTemporalItems: number }>;
     backup: (targetDir: string) => Promise<{ files: string[] }>;
     repair: () => Promise<{ repairedRecords: number; reindexed: number; embeddings: number; recomputedTemporalItems: number }>;
+    timeline: (input: ProductivityTimelineInput) => Promise<ProductivityTimeline>;
   };
 }
 
@@ -1228,7 +1641,8 @@ const DEFAULT_SOURCE: WorkspaceEntitySource = { kind: "local" };
 const DEFAULT_CONTEXT_LIMIT = 6;
 const EMBEDDING_COLLECTION = "workspace_embeddings";
 const INDEX_COLLECTION = "workspace_indexes";
-const PRODUCTIVITY_SCHEMA_VERSION = 5;
+const PRODUCTIVITY_SCHEMA_VERSION = 6;
+const PRODUCTIVITY_SCHEMA_HASH = "productivity-v6-human-productivity-core";
 const TOOL_DESCRIPTORS: WorkspaceToolDescriptor[] = [
   { id: "areas.create", title: "Create area", description: "Create an area in the local workspace.", domain: "areas" },
   { id: "areas.update", title: "Update area", description: "Update area state or ownership.", domain: "areas" },
@@ -1482,6 +1896,25 @@ function isOverdue(timestamp: string | undefined, now = nowIso()): boolean {
   return Boolean(timestamp && timestamp < now);
 }
 
+function toTimestamp(value: string): number {
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function timelineOverlaps(start: string, end: string, rangeStart: string, rangeEnd: string): boolean {
+  return toTimestamp(start) <= toTimestamp(rangeEnd) && toTimestamp(end) >= toTimestamp(rangeStart);
+}
+
+function minIso(values: Array<string | undefined>): string | undefined {
+  const present = values.filter((value): value is string => Boolean(value));
+  return present.length ? present.sort((left, right) => left.localeCompare(right))[0] : undefined;
+}
+
+function maxIso(values: Array<string | undefined>): string | undefined {
+  const present = values.filter((value): value is string => Boolean(value));
+  return present.length ? present.sort((left, right) => right.localeCompare(left))[0] : undefined;
+}
+
 function temporalToEventRecord(item: {
   id: string;
   createdAt: string;
@@ -1587,16 +2020,26 @@ function taskSearchText(task: TaskRecord): string {
     task.title,
     task.description,
     task.status,
+    task.type,
     task.priority,
     task.areaId,
+    task.listId,
+    task.sectionId,
     task.projectId,
     task.goalId,
+    task.cycleId,
+    task.epicId,
     task.assignedToAgentId,
+    task.reporterPersonId,
     task.reviewerAgentId,
     task.handoffTo,
     task.approvedBy,
     task.blockedReason,
+    task.waitingOn,
+    task.recurrenceRule,
     ...task.labels,
+    ...task.commentIds,
+    ...task.attachmentIds,
     ...task.assignmentIds,
     ...task.handoffIds,
     ...task.approvalIds,
@@ -1623,9 +2066,13 @@ function projectSearchText(project: ProjectRecord): string {
     project.name,
     project.description,
     project.status,
+    project.statusCategory,
     project.areaId,
     project.kind,
     project.goalId,
+    project.reviewCadence,
+    project.archiveReason,
+    project.templateId,
   ].filter(Boolean).join(" ");
 }
 
@@ -1908,6 +2355,28 @@ function eventSearchText(event: EventRecord): string {
   ].filter(Boolean).join(" ");
 }
 
+function simpleRecordTitle(record: Record<string, unknown>): string {
+  return String(record.title ?? record.name ?? record.body ?? record.fieldId ?? record.id ?? "");
+}
+
+function simpleRecordSearchText(record: Record<string, unknown>): string {
+  return [
+    record.title,
+    record.name,
+    record.description,
+    record.body,
+    record.status,
+    record.kind,
+    record.entityType,
+    record.entityId,
+    record.rule,
+    record.query,
+    record.mimeType,
+    record.uri,
+    record.path,
+  ].filter((value) => typeof value === "string" || typeof value === "number" || typeof value === "boolean").join(" ");
+}
+
 function isArchived(record: { archivedAt?: string }, includeArchived = false): boolean {
   return !includeArchived && Boolean(record.archivedAt);
 }
@@ -1919,10 +2388,22 @@ async function createWorkspaceExtension(
 ): Promise<WorkspaceClawInstance> {
   const audit = new WorkspaceAuditLog();
   const data = createSqliteWorkspaceCollectionStore(workspaceDir);
+  const useTimeService = options.useTimeService === true;
   const areasCollection = data.collection<AreaRecord>("areas");
+  const listsCollection = data.collection<ListRecord>("lists");
+  const sectionsCollection = data.collection<SectionRecord>("sections");
   const tasksCollection = data.collection<TaskRecord>("tasks");
   const goalsCollection = data.collection<GoalRecord>("goals");
   const projectsCollection = data.collection<ProjectRecord>("projects");
+  const commentsCollection = data.collection<CommentRecord>("comments");
+  const attachmentsCollection = data.collection<AttachmentRecord>("attachments");
+  const savedViewsCollection = data.collection<SavedViewRecord>("saved_views");
+  const recurrencesCollection = data.collection<RecurrenceRecord>("recurrences");
+  const cyclesCollection = data.collection<CycleRecord>("cycles");
+  const epicsCollection = data.collection<EpicRecord>("epics");
+  const customFieldsCollection = data.collection<CustomFieldRecord>("custom_fields");
+  const fieldValuesCollection = data.collection<FieldValueRecord>("field_values");
+  const templatesCollection = data.collection<TemplateRecord>("templates");
   const milestonesCollection = data.collection<MilestoneRecord>("milestones");
   const activityCollection = data.collection<ActivityEntryRecord>("activity_entries");
   const blockersCollection = data.collection<BlockerRecord>("blockers");
@@ -2039,6 +2520,158 @@ async function createWorkspaceExtension(
 
   function removeIndex(domain: WorkspaceDomain, entityId: string): void {
     indexCollection.remove(toCollectionId(domain, entityId));
+  }
+
+  async function syncSimpleIndex(domain: WorkspaceDomain, record: WorkspaceRecordBase): Promise<void> {
+    const searchable = record as WorkspaceRecordBase & Record<string, unknown>;
+    const title = simpleRecordTitle(searchable);
+    putIndex({
+      id: toCollectionId(domain, record.id),
+      domain,
+      entityId: record.id,
+      title,
+      searchText: simpleRecordSearchText(searchable),
+      snippet: summarizeSnippet(String(searchable.description ?? searchable.body ?? searchable.query ?? title)),
+      updatedAt: record.updatedAt,
+      ...(record.archivedAt ? { archivedAt: record.archivedAt } : {}),
+      ...(record.links ? { links: record.links } : {}),
+    });
+  }
+
+  function createSimpleApi<TRecord extends WorkspaceRecordBase & Record<string, any>, TCreate extends Record<string, any>, TUpdate extends Record<string, any>>(config: {
+    domain: WorkspaceDomain;
+    entityType: ActivityEntryRecord["entityType"];
+    collection: ReturnType<typeof data.collection<TRecord>>;
+    prefix: string;
+    titleField: "title" | "name" | "body" | "fieldId";
+    defaults?: Record<string, unknown>;
+    arrayFields?: string[];
+    archiveStatus?: string;
+  }): WorkspaceCollectionApi<TRecord, TCreate, TUpdate> {
+    const normalizeArrayFields = (record: TRecord): TRecord => {
+      const mutable = record as Record<string, unknown>;
+      for (const field of config.arrayFields ?? []) {
+        if (Array.isArray(mutable[field])) mutable[field] = uniqueStrings(mutable[field]);
+        else mutable[field] = [];
+      }
+      return record;
+    };
+    return {
+      list: async (options = {}) => config.collection.list()
+        .filter((record) => !isArchived(record, options.includeArchived))
+        .filter((record) => {
+          if (!options.status) return true;
+          const statuses = Array.isArray(options.status) ? options.status : [options.status];
+          return statuses.includes(String(record.status));
+        })
+        .filter((record) => {
+          if (!options.kind) return true;
+          const kinds = Array.isArray(options.kind) ? options.kind : [options.kind];
+          return kinds.includes(String(record.kind));
+        })
+        .filter((record) => !options.entityType || record.entityType === options.entityType)
+        .filter((record) => !options.entityId || record.entityId === options.entityId)
+        .filter((record) => !options.projectId || record.projectId === options.projectId)
+        .filter((record) => !options.goalId || record.goalId === options.goalId)
+        .filter((record) => !options.areaId || record.areaId === options.areaId)
+        .filter((record) => !options.listId || record.listId === options.listId)
+        .filter((record) => !options.anchorId || record.anchorId === options.anchorId)
+        .sort((left, right) => {
+          if (typeof left.rank === "number" && typeof right.rank === "number" && left.rank !== right.rank) return left.rank - right.rank;
+          return right.updatedAt.localeCompare(left.updatedAt);
+        })
+        .slice(0, options.limit ?? Number.MAX_SAFE_INTEGER),
+      get: async (id) => config.collection.get(id),
+      create: async (input) => {
+        const timestamp = nowIso();
+        const { id, source, links, metadata, ...rest } = input;
+        const rawTitle = rest[config.titleField];
+        const record = normalizeArrayFields({
+          id: toId(config.prefix, typeof id === "string" ? id : undefined),
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          source: defaultSource(source),
+          ...config.defaults,
+          ...removeUndefined(rest),
+          ...(typeof rawTitle === "string" ? { [config.titleField]: rawTitle.trim() } : {}),
+          ...(links ? { links } : {}),
+          ...(metadata ? { metadata } : {}),
+        } as TRecord);
+        config.collection.put(record.id, record);
+        await syncSimpleIndex(config.domain, record);
+        await recordActivity({
+          entityType: config.entityType,
+          entityId: record.id,
+          kind: "created",
+          title: `${config.domain} created: ${simpleRecordTitle(record)}`,
+          projectId: typeof record.projectId === "string" ? record.projectId : undefined,
+          goalId: typeof record.goalId === "string" ? record.goalId : undefined,
+          taskId: typeof record.taskId === "string" ? record.taskId : undefined,
+        });
+        appendAudit(`${config.domain}.created`, config.domain, { id: record.id });
+        return record;
+      },
+      update: async (id, input) => {
+        const current = assertRecord(config.collection.get(id), String(config.domain), id);
+        const { source: _source, links, metadata, ...rest } = input;
+        const rawTitle = rest[config.titleField];
+        const record = normalizeArrayFields({
+          ...current,
+          ...removeUndefined({
+            ...rest,
+            archivedAt: rest.archivedAt === null ? undefined : rest.archivedAt,
+          }),
+          ...(typeof rawTitle === "string" ? { [config.titleField]: rawTitle.trim() } : {}),
+          links: links ?? current.links,
+          metadata: metadata ?? current.metadata,
+          updatedAt: nowIso(),
+        } as TRecord);
+        config.collection.put(id, record);
+        await syncSimpleIndex(config.domain, record);
+        await recordActivity({
+          entityType: config.entityType,
+          entityId: id,
+          kind: rest.archivedAt ? "archived" : "updated",
+          title: `${config.domain} ${rest.archivedAt ? "archived" : "updated"}: ${simpleRecordTitle(record)}`,
+          projectId: typeof record.projectId === "string" ? record.projectId : undefined,
+          goalId: typeof record.goalId === "string" ? record.goalId : undefined,
+          taskId: typeof record.taskId === "string" ? record.taskId : undefined,
+        });
+        appendAudit(`${config.domain}.updated`, config.domain, { id });
+        return record;
+      },
+      archive: async (id) => {
+        const current = assertRecord(config.collection.get(id), String(config.domain), id);
+        const record = normalizeArrayFields({
+          ...current,
+          ...(typeof current.status === "string" && config.archiveStatus ? { status: config.archiveStatus } : {}),
+          archivedAt: nowIso(),
+          updatedAt: nowIso(),
+        } as TRecord);
+        config.collection.put(id, record);
+        await syncSimpleIndex(config.domain, record);
+        await recordActivity({
+          entityType: config.entityType,
+          entityId: id,
+          kind: "archived",
+          title: `${config.domain} archived: ${simpleRecordTitle(record)}`,
+          projectId: typeof record.projectId === "string" ? record.projectId : undefined,
+          goalId: typeof record.goalId === "string" ? record.goalId : undefined,
+          taskId: typeof record.taskId === "string" ? record.taskId : undefined,
+        });
+        appendAudit(`${config.domain}.updated`, config.domain, { id });
+        return record;
+      },
+      remove: async (id) => {
+        const existing = config.collection.get(id);
+        if (!existing) return false;
+        config.collection.remove(id);
+        removeIndex(config.domain, id);
+        appendAudit(`${config.domain}.removed`, config.domain, { id });
+        return true;
+      },
+      search: async (query, options = {}) => searchWorkspace({ ...options, query, domains: [config.domain] }),
+    };
   }
 
   function readInboxMessagesForThread(threadId: string): InboxMessageRecord[] {
@@ -2413,6 +3046,69 @@ async function createWorkspaceExtension(
     }
   }
 
+  function migrateLegacyGenericDbCoreCollections(): void {
+    const migrationKey = "legacy_generic_db_core_imported_at";
+    if (readMeta(migrationKey)) return;
+    const legacyPath = path.join(workspaceDir, ".clawjs", "data", "database.sqlite");
+    if (!fs.existsSync(legacyPath)) {
+      writeMeta(migrationKey, nowIso());
+      return;
+    }
+
+    const collectionMap = new Map<string, ReturnType<typeof data.collection>>([
+      ["tasks", tasksCollection],
+      ["goals", goalsCollection],
+      ["projects", projectsCollection],
+      ["reminders", remindersCollection],
+      ["deadlines", deadlinesCollection],
+      ["notes", notesCollection],
+      ["people", peopleCollection],
+      ["events", eventsCollection],
+    ]);
+    if (Array.from(collectionMap.values()).some((collection) => collection.listIds().length > 0)) {
+      writeMeta(migrationKey, nowIso());
+      return;
+    }
+
+    try {
+      const legacyDb = new Database(legacyPath, { readonly: true });
+      try {
+        const hasRecordsTable = legacyDb.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'records'").get();
+        if (!hasRecordsTable) return;
+        const rows = legacyDb.prepare(`
+          SELECT collection_name, id, data_json, created_at, updated_at
+          FROM records
+          WHERE namespace_id = 'main'
+            AND collection_name IN ('tasks','goals','projects','reminders','deadlines','notes','people','events')
+          ORDER BY collection_name ASC, id ASC
+        `).all() as Array<{ collection_name: string; id: string; data_json: string; created_at: string; updated_at: string }>;
+        for (const row of rows) {
+          const target = collectionMap.get(row.collection_name);
+          if (!target || target.get(row.id)) continue;
+          const payload = JSON.parse(row.data_json) as Record<string, unknown>;
+          if (row.collection_name === "people" && payload.displayName === undefined && typeof payload.title === "string") {
+            payload.displayName = payload.title;
+          }
+          if (row.collection_name === "projects" && payload.name === undefined && typeof payload.title === "string") {
+            payload.name = payload.title;
+          }
+          target.put(row.id, {
+            ...payload,
+            id: row.id,
+            createdAt: typeof payload.createdAt === "string" ? payload.createdAt : row.created_at,
+            updatedAt: typeof payload.updatedAt === "string" ? payload.updatedAt : row.updated_at,
+          });
+        }
+      } finally {
+        legacyDb.close();
+      }
+    } catch {
+      // Broken legacy stores should not block the canonical productivity DB.
+    } finally {
+      writeMeta(migrationKey, nowIso());
+    }
+  }
+
   async function migrateProductivitySchema(): Promise<void> {
     const currentVersion = Number(readMeta("productivity_schema_version") ?? "1");
     if (currentVersion >= PRODUCTIVITY_SCHEMA_VERSION) return;
@@ -2424,6 +3120,8 @@ async function createWorkspaceExtension(
         watcherPersonIds: uniqueStrings(task.watcherPersonIds ?? []),
         childTaskIds: uniqueStrings(task.childTaskIds ?? []),
         dependsOnTaskIds: uniqueStrings(task.dependsOnTaskIds ?? []),
+        commentIds: uniqueStrings(task.commentIds ?? []),
+        attachmentIds: uniqueStrings(task.attachmentIds ?? []),
         blockedByIds: uniqueStrings(task.blockedByIds ?? []),
         evidenceIds: uniqueStrings(task.evidenceIds ?? []),
         decisionIds: uniqueStrings(task.decisionIds ?? []),
@@ -2442,6 +3140,7 @@ async function createWorkspaceExtension(
       projectsCollection.put(project.id, {
         ...project,
         milestoneIds: normalizeMilestoneIds(project.milestoneIds ?? []),
+        defaultSectionIds: uniqueStrings(project.defaultSectionIds ?? []),
       });
     }
     for (const blocker of blockersCollection.list()) {
@@ -2532,6 +3231,14 @@ async function createWorkspaceExtension(
       await syncAreaIndex(area);
       reindexed += 1;
     }
+    for (const item of listsCollection.list()) {
+      await syncSimpleIndex("lists", item);
+      reindexed += 1;
+    }
+    for (const item of sectionsCollection.list()) {
+      await syncSimpleIndex("sections", item);
+      reindexed += 1;
+    }
     for (const task of tasksCollection.list()) {
       await syncTaskIndex(task);
       reindexed += 1;
@@ -2542,6 +3249,42 @@ async function createWorkspaceExtension(
     }
     for (const project of projectsCollection.list()) {
       await syncProjectIndex(project);
+      reindexed += 1;
+    }
+    for (const item of commentsCollection.list()) {
+      await syncSimpleIndex("comments", item);
+      reindexed += 1;
+    }
+    for (const item of attachmentsCollection.list()) {
+      await syncSimpleIndex("attachments", item);
+      reindexed += 1;
+    }
+    for (const item of savedViewsCollection.list()) {
+      await syncSimpleIndex("saved_views", item);
+      reindexed += 1;
+    }
+    for (const item of recurrencesCollection.list()) {
+      await syncSimpleIndex("recurrences", item);
+      reindexed += 1;
+    }
+    for (const item of cyclesCollection.list()) {
+      await syncSimpleIndex("cycles", item);
+      reindexed += 1;
+    }
+    for (const item of epicsCollection.list()) {
+      await syncSimpleIndex("epics", item);
+      reindexed += 1;
+    }
+    for (const item of customFieldsCollection.list()) {
+      await syncSimpleIndex("custom_fields", item);
+      reindexed += 1;
+    }
+    for (const item of fieldValuesCollection.list()) {
+      await syncSimpleIndex("field_values", item);
+      reindexed += 1;
+    }
+    for (const item of templatesCollection.list()) {
+      await syncSimpleIndex("templates", item);
       reindexed += 1;
     }
     for (const milestone of milestonesCollection.list()) {
@@ -2600,7 +3343,7 @@ async function createWorkspaceExtension(
       await syncCheckIndex(check);
       reindexed += 1;
     }
-    if (claw.time.configured) {
+    if (useTimeService) {
       for (const reminder of (await claw.time.list({ kind: "reminder" })).items.map((item) => temporalToReminderRecord(item))) {
         await syncReminderIndex(reminder);
         reindexed += 1;
@@ -2627,7 +3370,7 @@ async function createWorkspaceExtension(
       await syncPersonIndex(person);
       reindexed += 1;
     }
-    if (claw.time.configured) {
+    if (useTimeService) {
       for (const event of (await claw.time.list({ kind: "event" })).items.map((item) => temporalToEventRecord(item))) {
         await syncEventIndex(event);
         reindexed += 1;
@@ -2652,7 +3395,7 @@ async function createWorkspaceExtension(
   }
 
   async function migrateTemporalCollectionsToTime(): Promise<void> {
-    if (!claw.time.configured) return;
+    if (!useTimeService) return;
     const migrationId = "time_embedded_projection_imported_at";
     if (workspaceMetaCollection.get(migrationId)) return;
 
@@ -3157,11 +3900,112 @@ async function createWorkspaceExtension(
     search: async (query, options = {}) => searchWorkspace({ ...options, query, domains: ["areas"] }),
   };
 
+  const listsApi: WorkspaceClawInstance["lists"] = createSimpleApi<ListRecord, CreateListInput, UpdateListInput>({
+    domain: "lists",
+    entityType: "list",
+    collection: listsCollection,
+    prefix: "list",
+    titleField: "title",
+    defaults: { kind: "custom", status: "active" },
+    archiveStatus: "archived",
+  });
+
+  const sectionsApi: WorkspaceClawInstance["sections"] = createSimpleApi<SectionRecord, CreateSectionInput, UpdateSectionInput>({
+    domain: "sections",
+    entityType: "section",
+    collection: sectionsCollection,
+    prefix: "section",
+    titleField: "title",
+    defaults: { status: "active" },
+    archiveStatus: "archived",
+  });
+
+  const commentsApi: WorkspaceClawInstance["comments"] = createSimpleApi<CommentRecord, CreateCommentInput, UpdateCommentInput>({
+    domain: "comments",
+    entityType: "comment",
+    collection: commentsCollection,
+    prefix: "comment",
+    titleField: "body",
+  });
+
+  const attachmentsApi: WorkspaceClawInstance["attachments"] = createSimpleApi<AttachmentRecord, CreateAttachmentInput, UpdateAttachmentInput>({
+    domain: "attachments",
+    entityType: "attachment",
+    collection: attachmentsCollection,
+    prefix: "attachment",
+    titleField: "title",
+  });
+
+  const savedViewsApi: WorkspaceClawInstance["savedViews"] = createSimpleApi<SavedViewRecord, CreateSavedViewInput, UpdateSavedViewInput>({
+    domain: "saved_views",
+    entityType: "saved_view",
+    collection: savedViewsCollection,
+    prefix: "view",
+    titleField: "name",
+  });
+
+  const recurrencesApi: WorkspaceClawInstance["recurrences"] = createSimpleApi<RecurrenceRecord, CreateRecurrenceInput, UpdateRecurrenceInput>({
+    domain: "recurrences",
+    entityType: "recurrence",
+    collection: recurrencesCollection,
+    prefix: "recurrence",
+    titleField: "title",
+    defaults: { status: "active" },
+  });
+
+  const cyclesApi: WorkspaceClawInstance["cycles"] = createSimpleApi<CycleRecord, CreateCycleInput, UpdateCycleInput>({
+    domain: "cycles",
+    entityType: "cycle",
+    collection: cyclesCollection,
+    prefix: "cycle",
+    titleField: "name",
+    defaults: { status: "planned", taskIds: [] },
+    arrayFields: ["taskIds"],
+    archiveStatus: "archived",
+  });
+
+  const epicsApi: WorkspaceClawInstance["epics"] = createSimpleApi<EpicRecord, CreateEpicInput, UpdateEpicInput>({
+    domain: "epics",
+    entityType: "epic",
+    collection: epicsCollection,
+    prefix: "epic",
+    titleField: "title",
+    defaults: { status: "planned", kind: "epic", taskIds: [] },
+    arrayFields: ["taskIds"],
+    archiveStatus: "archived",
+  });
+
+  const customFieldsApi: WorkspaceClawInstance["customFields"] = createSimpleApi<CustomFieldRecord, CreateCustomFieldInput, UpdateCustomFieldInput>({
+    domain: "custom_fields",
+    entityType: "custom_field",
+    collection: customFieldsCollection,
+    prefix: "field",
+    titleField: "name",
+  });
+
+  const fieldValuesApi: WorkspaceClawInstance["fieldValues"] = createSimpleApi<FieldValueRecord, CreateFieldValueInput, UpdateFieldValueInput>({
+    domain: "field_values",
+    entityType: "field_value",
+    collection: fieldValuesCollection,
+    prefix: "field-value",
+    titleField: "fieldId",
+  });
+
+  const templatesApi: WorkspaceClawInstance["templates"] = createSimpleApi<TemplateRecord, CreateTemplateInput, UpdateTemplateInput>({
+    domain: "templates",
+    entityType: "template",
+    collection: templatesCollection,
+    prefix: "template",
+    titleField: "name",
+    defaults: { status: "active" },
+    archiveStatus: "archived",
+  });
+
   const tasksApi: WorkspaceClawInstance["tasks"] = {
     list: async (options = {}) => {
       const reminderAnchorIds = options.hasReminder
         ? new Set(
-            claw.time.configured
+            useTimeService
               ? (await claw.time.list({ kind: "reminder" })).items
                 .filter((item) => item.anchorType === "task" && item.anchorId)
                 .map((item) => item.anchorId as string)
@@ -3181,6 +4025,10 @@ async function createWorkspaceExtension(
         .filter((task) => !options.projectId || task.projectId === options.projectId)
         .filter((task) => !options.goalId || task.goalId === options.goalId)
         .filter((task) => !options.areaId || task.areaId === options.areaId)
+        .filter((task) => !options.listId || task.listId === options.listId)
+        .filter((task) => !options.sectionId || task.sectionId === options.sectionId)
+        .filter((task) => !options.cycleId || task.cycleId === options.cycleId)
+        .filter((task) => !options.epicId || task.epicId === options.epicId)
         .filter((task) => !options.blocked || task.status === "blocked" || Boolean(task.blockedReason))
         .filter((task) => !options.overdue || isOverdue(task.dueAt))
         .filter((task) => !options.ids || options.ids.includes(task.id))
@@ -3199,24 +4047,43 @@ async function createWorkspaceExtension(
         title: input.title.trim(),
         ...(input.description ? { description: input.description } : {}),
         status: input.status ?? "todo",
+        ...(input.type ? { type: input.type } : {}),
         priority: input.priority ?? "medium",
+        ...(clampNonNegativeNumber(input.rank) !== undefined ? { rank: clampNonNegativeNumber(input.rank) } : {}),
         labels: uniqueStrings(input.labels ?? []),
         ...(input.areaId ? { areaId: input.areaId } : {}),
+        ...(input.listId ? { listId: input.listId } : {}),
+        ...(input.sectionId ? { sectionId: input.sectionId } : {}),
         ...(input.assigneePersonId ? { assigneePersonId: input.assigneePersonId } : {}),
+        ...(input.reporterPersonId ? { reporterPersonId: input.reporterPersonId } : {}),
         watcherPersonIds: uniqueStrings(input.watcherPersonIds ?? []),
+        ...(input.startAt ? { startAt: input.startAt } : {}),
+        ...(input.deferUntil ? { deferUntil: input.deferUntil } : {}),
         ...(input.dueAt ? { dueAt: input.dueAt } : {}),
+        ...(input.deadlineAt ? { deadlineAt: input.deadlineAt } : {}),
+        ...(input.snoozedUntil ? { snoozedUntil: input.snoozedUntil } : {}),
+        ...(input.recurrenceRule ? { recurrenceRule: input.recurrenceRule } : {}),
         ...(clampNonNegativeNumber(input.estimateMinutes) !== undefined ? { estimateMinutes: clampNonNegativeNumber(input.estimateMinutes) } : {}),
         ...(clampNonNegativeNumber(input.actualMinutes) !== undefined ? { actualMinutes: clampNonNegativeNumber(input.actualMinutes) } : {}),
+        ...(clampNonNegativeNumber(input.storyPoints) !== undefined ? { storyPoints: clampNonNegativeNumber(input.storyPoints) } : {}),
         ...(input.blockedReason ? { blockedReason: input.blockedReason } : {}),
+        ...(input.waitingOn ? { waitingOn: input.waitingOn } : {}),
         ...(input.startedAt ? { startedAt: input.startedAt } : {}),
         ...(input.completedAt ? { completedAt: input.completedAt } : {}),
+        ...(input.cancelledAt ? { cancelledAt: input.cancelledAt } : {}),
         ...(input.scheduledEventId ? { scheduledEventId: input.scheduledEventId } : {}),
         ...(input.eventId ? { eventId: input.eventId } : {}),
         ...(input.projectId ? { projectId: input.projectId } : {}),
         ...(input.goalId ? { goalId: input.goalId } : {}),
+        ...(input.cycleId ? { cycleId: input.cycleId } : {}),
+        ...(input.epicId ? { epicId: input.epicId } : {}),
         ...(input.parentTaskId ? { parentTaskId: input.parentTaskId } : {}),
         childTaskIds: uniqueStrings(input.childTaskIds ?? []),
         dependsOnTaskIds: uniqueStrings(input.dependsOnTaskIds ?? []),
+        commentIds: uniqueStrings(input.commentIds ?? []),
+        attachmentIds: uniqueStrings(input.attachmentIds ?? []),
+        ...(input.createdBy ? { createdBy: input.createdBy } : {}),
+        ...(input.updatedBy ? { updatedBy: input.updatedBy } : {}),
         ...(input.assignedToAgentId ? { assignedToAgentId: input.assignedToAgentId } : {}),
         ...(input.assignedBy ? { assignedBy: input.assignedBy } : {}),
         ...(input.delegatedBy ? { delegatedBy: input.delegatedBy } : {}),
@@ -3261,22 +4128,39 @@ async function createWorkspaceExtension(
         ...current,
         title: input.title?.trim() || current.title,
         status: input.status ?? current.status,
+        type: input.type ?? current.type,
         priority: input.priority ?? current.priority,
         ...removeUndefined({
           description: input.description,
+          rank: clampNonNegativeNumber(input.rank),
           areaId: input.areaId,
+          listId: input.listId,
+          sectionId: input.sectionId,
           assigneePersonId: input.assigneePersonId,
+          reporterPersonId: input.reporterPersonId,
+          startAt: input.startAt,
+          deferUntil: input.deferUntil,
           dueAt: input.dueAt,
+          deadlineAt: input.deadlineAt,
+          snoozedUntil: input.snoozedUntil,
+          recurrenceRule: input.recurrenceRule,
           estimateMinutes: clampNonNegativeNumber(input.estimateMinutes),
           actualMinutes: clampNonNegativeNumber(input.actualMinutes),
+          storyPoints: clampNonNegativeNumber(input.storyPoints),
           blockedReason: input.blockedReason,
+          waitingOn: input.waitingOn,
           startedAt: input.startedAt,
           completedAt: input.completedAt,
+          cancelledAt: input.cancelledAt,
           scheduledEventId: input.scheduledEventId,
           eventId: input.eventId,
           projectId: input.projectId,
           goalId: input.goalId,
+          cycleId: input.cycleId,
+          epicId: input.epicId,
           parentTaskId: input.parentTaskId,
+          createdBy: input.createdBy,
+          updatedBy: input.updatedBy,
           assignedToAgentId: input.assignedToAgentId,
           assignedBy: input.assignedBy,
           delegatedBy: input.delegatedBy,
@@ -3294,6 +4178,8 @@ async function createWorkspaceExtension(
         watcherPersonIds: input.watcherPersonIds ? uniqueStrings(input.watcherPersonIds) : current.watcherPersonIds,
         childTaskIds: input.childTaskIds ? uniqueStrings(input.childTaskIds) : current.childTaskIds,
         dependsOnTaskIds: input.dependsOnTaskIds ? uniqueStrings(input.dependsOnTaskIds) : current.dependsOnTaskIds,
+        commentIds: input.commentIds ? uniqueStrings(input.commentIds) : current.commentIds,
+        attachmentIds: input.attachmentIds ? uniqueStrings(input.attachmentIds) : current.attachmentIds,
         blockedByIds: input.blockedByIds ? uniqueStrings(input.blockedByIds) : current.blockedByIds,
         evidenceIds: input.evidenceIds ? uniqueStrings(input.evidenceIds) : current.evidenceIds,
         decisionIds: input.decisionIds ? uniqueStrings(input.decisionIds) : current.decisionIds,
@@ -3307,7 +4193,7 @@ async function createWorkspaceExtension(
       };
       if (task.status === "in_progress" && !task.startedAt) task.startedAt = nowIso();
       tasksCollection.put(id, task);
-      if (current.status !== "done" && task.status === "done" && claw.time.configured) {
+      if (current.status !== "done" && task.status === "done" && useTimeService) {
         await claw.time.signalAnchor({ anchorId: id, signal: "task_completed" });
       }
       if (current.status !== "done" && task.status === "done" && !task.completedAt) {
@@ -3496,10 +4382,19 @@ async function createWorkspaceExtension(
         ...(input.portfolioItemId ? { portfolioItemId: input.portfolioItemId } : {}),
         ...(input.color ? { color: input.color } : {}),
         ...(input.kind ? { kind: input.kind } : {}),
+        ...(clampNonNegativeNumber(input.rank) !== undefined ? { rank: clampNonNegativeNumber(input.rank) } : {}),
+        ...(input.statusCategory ? { statusCategory: input.statusCategory } : {}),
         ...(input.healthStatus ? { healthStatus: input.healthStatus } : {}),
+        ...(input.startAt ? { startAt: input.startAt } : {}),
         ...(input.startDate ? { startDate: input.startDate } : {}),
         ...(input.targetDate ? { targetDate: input.targetDate } : {}),
+        ...(input.deadlineAt ? { deadlineAt: input.deadlineAt } : {}),
         milestoneIds: normalizeMilestoneIds(input.milestoneIds ?? []),
+        defaultSectionIds: uniqueStrings(input.defaultSectionIds ?? []),
+        ...(input.templateId ? { templateId: input.templateId } : {}),
+        ...(input.reviewAt ? { reviewAt: input.reviewAt } : {}),
+        ...(input.reviewCadence ? { reviewCadence: input.reviewCadence } : {}),
+        ...(input.archiveReason ? { archiveReason: input.archiveReason } : {}),
         ...(input.completedAt ? { completedAt: input.completedAt } : {}),
         ...(input.links ? { links: input.links } : {}),
         ...(input.metadata ? { metadata: input.metadata } : {}),
@@ -3536,13 +4431,22 @@ async function createWorkspaceExtension(
           portfolioItemId: input.portfolioItemId,
           color: input.color,
           kind: input.kind,
+          rank: clampNonNegativeNumber(input.rank),
+          statusCategory: input.statusCategory,
           healthStatus: input.healthStatus,
+          startAt: input.startAt,
           startDate: input.startDate,
           targetDate: input.targetDate,
+          deadlineAt: input.deadlineAt,
+          templateId: input.templateId,
+          reviewAt: input.reviewAt,
+          reviewCadence: input.reviewCadence,
+          archiveReason: input.archiveReason,
           completedAt: input.completedAt,
           archivedAt: input.archivedAt === null ? undefined : input.archivedAt,
         }),
         milestoneIds: input.milestoneIds ? normalizeMilestoneIds(input.milestoneIds) : current.milestoneIds,
+        defaultSectionIds: input.defaultSectionIds ? uniqueStrings(input.defaultSectionIds) : current.defaultSectionIds,
         links: input.links ?? current.links,
         metadata: input.metadata ?? current.metadata,
         updatedAt: nowIso(),
@@ -5349,7 +6253,7 @@ async function createWorkspaceExtension(
   };
 
   const remindersApi: WorkspaceClawInstance["reminders"] = {
-    list: async (options = {}) => claw.time.configured
+    list: async (options = {}) => useTimeService
       ? (await claw.time.list({ kind: "reminder" })).items
         .map((item) => temporalToReminderRecord(item))
         .filter((reminder) => !isArchived(reminder, options.includeArchived))
@@ -5376,14 +6280,14 @@ async function createWorkspaceExtension(
         .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
         .slice(0, options.limit ?? Number.MAX_SAFE_INTEGER),
     get: async (id) => {
-      if (claw.time.configured) {
+      if (useTimeService) {
         const payload = await claw.time.get(id).catch(() => null);
         return payload ? temporalToReminderRecord(payload.item) : null;
       }
       return remindersCollection.get(id);
     },
     create: async (input) => {
-      if (claw.time.configured) {
+      if (useTimeService) {
         const created = await claw.time.create({
           kind: "reminder",
           title: input.title,
@@ -5426,7 +6330,7 @@ async function createWorkspaceExtension(
       return reminder;
     },
     update: async (id, input) => {
-      if (claw.time.configured) {
+      if (useTimeService) {
         const updated = await claw.time.update(id, {
           title: input.title,
           description: input.description,
@@ -5468,7 +6372,7 @@ async function createWorkspaceExtension(
     resume: async (id) => remindersApi.update(id, { status: "active" }),
     archive: async (id) => remindersApi.update(id, { archivedAt: nowIso() }),
     remove: async (id) => {
-      if (claw.time.configured) {
+      if (useTimeService) {
         await claw.time.delete(id);
         removeIndex("reminders", id);
         appendAudit("reminders.removed", "reminders", { reminderId: id });
@@ -5485,7 +6389,7 @@ async function createWorkspaceExtension(
   };
 
   const deadlinesApi: WorkspaceClawInstance["deadlines"] = {
-    list: async (options = {}) => claw.time.configured
+    list: async (options = {}) => useTimeService
       ? (await claw.time.list({ kind: "deadline" })).items
         .map((item) => temporalToDeadlineRecord(item))
         .filter((deadline) => !isArchived(deadline, options.includeArchived))
@@ -5512,14 +6416,14 @@ async function createWorkspaceExtension(
         .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
         .slice(0, options.limit ?? Number.MAX_SAFE_INTEGER),
     get: async (id) => {
-      if (claw.time.configured) {
+      if (useTimeService) {
         const payload = await claw.time.get(id).catch(() => null);
         return payload ? temporalToDeadlineRecord(payload.item) : null;
       }
       return deadlinesCollection.get(id);
     },
     create: async (input) => {
-      if (claw.time.configured) {
+      if (useTimeService) {
         const created = await claw.time.create({
           kind: "deadline",
           title: input.title,
@@ -5560,7 +6464,7 @@ async function createWorkspaceExtension(
       return deadline;
     },
     update: async (id, input) => {
-      if (claw.time.configured) {
+      if (useTimeService) {
         const updated = await claw.time.update(id, {
           title: input.title,
           description: input.description,
@@ -5600,7 +6504,7 @@ async function createWorkspaceExtension(
     resume: async (id) => deadlinesApi.update(id, { status: "active" }),
     archive: async (id) => deadlinesApi.update(id, { archivedAt: nowIso() }),
     remove: async (id) => {
-      if (claw.time.configured) {
+      if (useTimeService) {
         await claw.time.delete(id);
         removeIndex("deadlines", id);
         appendAudit("deadlines.removed", "deadlines", { deadlineId: id });
@@ -5989,7 +6893,7 @@ async function createWorkspaceExtension(
   };
 
   const eventsApi: WorkspaceClawInstance["events"] = {
-    list: async (options = {}) => claw.time.configured
+    list: async (options = {}) => useTimeService
       ? (await claw.time.list({ kind: "event" })).items
         .filter((item) => !options.upcomingOnly || Boolean(item.startsAt && item.startsAt >= nowIso()))
         .slice(0, options.limit ?? Number.MAX_SAFE_INTEGER)
@@ -6000,14 +6904,14 @@ async function createWorkspaceExtension(
       .sort((left, right) => left.startsAt.localeCompare(right.startsAt))
       .slice(0, options.limit ?? Number.MAX_SAFE_INTEGER),
     get: async (id) => {
-      if (claw.time.configured) {
+      if (useTimeService) {
         const payload = await claw.time.get(id).catch(() => null);
         return payload ? temporalToEventRecord(payload.item) : null;
       }
       return eventsCollection.get(id);
     },
     create: async (input) => {
-      if (claw.time.configured) {
+      if (useTimeService) {
         const created = await claw.time.create({
           kind: "event",
           title: input.title,
@@ -6056,7 +6960,7 @@ async function createWorkspaceExtension(
       return event;
     },
     update: async (id, input) => {
-      if (claw.time.configured) {
+      if (useTimeService) {
         const updated = await claw.time.update(id, {
           title: input.title,
           description: input.description,
@@ -6107,7 +7011,7 @@ async function createWorkspaceExtension(
     },
     archive: async (id) => eventsApi.update(id, { archivedAt: nowIso() }),
     remove: async (id) => {
-      if (claw.time.configured) {
+      if (useTimeService) {
         const removed = await claw.time.delete(id);
         removeIndex("events", id);
         appendAudit("events.removed", "events", { eventId: id });
@@ -6120,7 +7024,7 @@ async function createWorkspaceExtension(
       appendAudit("events.removed", "events", { eventId: id });
       return true;
     },
-    search: async (query, options = {}) => claw.time.configured
+    search: async (query, options = {}) => useTimeService
       ? (await eventsApi.list({ includeArchived: options.includeArchived, limit: options.limit }))
         .filter((event) => event.title.toLowerCase().includes(query.toLowerCase()) || (event.description ?? "").toLowerCase().includes(query.toLowerCase()) || (event.location ?? "").toLowerCase().includes(query.toLowerCase()))
         .map((event) => ({
@@ -6145,7 +7049,7 @@ async function createWorkspaceExtension(
       const reminders = await remindersApi.list({ includeArchived: false, limit: Number.MAX_SAFE_INTEGER });
       const deadlines = await deadlinesApi.list({ includeArchived: false, limit: Number.MAX_SAFE_INTEGER });
       const events = await eventsApi.list({ includeArchived: false, upcomingOnly: true, limit: Number.MAX_SAFE_INTEGER });
-      const temporalItems = claw.time.configured ? (await claw.time.list()).items : [];
+      const temporalItems = useTimeService ? (await claw.time.list()).items : [];
 
       const items: ProductivityAgenda["items"] = [
         ...tasks
@@ -6293,7 +7197,253 @@ async function createWorkspaceExtension(
     weekly: async () => buildReview("weekly"),
   };
 
+  async function buildProductivityTimeline(input: ProductivityTimelineInput): Promise<ProductivityTimeline> {
+    const start = input.start;
+    const end = input.end;
+    if (!start || !end || toTimestamp(start) > toTimestamp(end)) {
+      throw new Error("Timeline requires a valid start and end range.");
+    }
+
+    const [projects, goals, tasks, milestones, deadlines, cycles] = await Promise.all([
+      projectsApi.list({ includeArchived: false, limit: Number.MAX_SAFE_INTEGER }),
+      goalsApi.list({ includeArchived: false, limit: Number.MAX_SAFE_INTEGER }),
+      tasksApi.list({ includeArchived: false, limit: Number.MAX_SAFE_INTEGER }),
+      milestonesApi.list({ includeArchived: false, limit: Number.MAX_SAFE_INTEGER }),
+      deadlinesApi.list({ includeArchived: false, limit: Number.MAX_SAFE_INTEGER }),
+      cyclesApi.list({ includeArchived: false, limit: Number.MAX_SAFE_INTEGER }),
+    ]);
+    const projectMap = new Map(projects.map((project) => [project.id, project]));
+    const goalMap = new Map(goals.map((goal) => [goal.id, goal]));
+    const taskMap = new Map(tasks.map((task) => [task.id, task]));
+    const doneTaskIds = new Set(tasks.filter((task) => task.status === "done").map((task) => task.id));
+    const groupMap = new Map<string, ProductivityTimelineProjectGroup>();
+    const groupKey = (projectId?: string) => projectId ?? "__unassigned";
+    const ensureGroup = (projectId?: string) => {
+      const key = groupKey(projectId);
+      const existing = groupMap.get(key);
+      if (existing) return existing;
+      const group: ProductivityTimelineProjectGroup = {
+        ...(projectId ? { projectId } : {}),
+        title: projectId ? projectMap.get(projectId)?.name ?? projectId : "Unassigned",
+        tasks: [],
+        milestones: [],
+        deadlines: [],
+        cycles: [],
+      };
+      groupMap.set(key, group);
+      return group;
+    };
+    const projectForDeadline = (deadline: DeadlineRecord): string | undefined => {
+      if (deadline.anchorType === "project") return deadline.anchorId;
+      if (deadline.anchorType === "task" && deadline.anchorId) return taskMap.get(deadline.anchorId)?.projectId;
+      if (deadline.anchorType === "goal" && deadline.anchorId) return goalMap.get(deadline.anchorId)?.projectId;
+      return undefined;
+    };
+    const taskTimelineDate = (task: TaskRecord): { value: string; source: ProductivityTimelineTaskItem["startSource"] } | null => {
+      if (task.startAt) return { value: task.startAt, source: "startAt" };
+      if (task.deferUntil) return { value: task.deferUntil, source: "deferUntil" };
+      if (task.dueAt) return { value: task.dueAt, source: "dueAt" };
+      if (task.deadlineAt) return { value: task.deadlineAt, source: "deadlineAt" };
+      return null;
+    };
+
+    const timelineTasks = tasks
+      .filter((task) => !input.projectId || task.projectId === input.projectId)
+      .filter((task) => input.includeDone || (task.status !== "done" && task.status !== "cancelled"))
+      .flatMap((task): ProductivityTimelineTaskItem[] => {
+        const startDate = taskTimelineDate(task);
+        if (!startDate) return [];
+        const endValue = task.dueAt ?? task.deadlineAt ?? startDate.value;
+        if (!timelineOverlaps(startDate.value, endValue, start, end)) return [];
+        const blockedByIds = task.dependsOnTaskIds.filter((taskId) => !doneTaskIds.has(taskId));
+        const dependencyState: ProductivityTimelineDependencyState = {
+          ready: blockedByIds.length === 0 && task.status !== "blocked",
+          total: task.dependsOnTaskIds.length,
+          completed: task.dependsOnTaskIds.length - blockedByIds.length,
+          blockedByIds,
+        };
+        return [{
+          kind: "task",
+          id: task.id,
+          title: task.title,
+          status: task.status,
+          priority: task.priority,
+          ...(task.projectId ? { projectId: task.projectId } : {}),
+          ...(task.goalId ? { goalId: task.goalId } : {}),
+          ...(task.cycleId ? { cycleId: task.cycleId } : {}),
+          ...(task.epicId ? { epicId: task.epicId } : {}),
+          start: startDate.value,
+          end: endValue,
+          startSource: startDate.source,
+          endSource: task.dueAt ? "dueAt" : task.deadlineAt ? "deadlineAt" : "start",
+          dependencyState,
+        }];
+      });
+
+    const timelineMilestones = milestones
+      .filter((milestone) => Boolean(milestone.targetDate))
+      .filter((milestone) => !input.projectId || milestone.projectId === input.projectId)
+      .filter((milestone) => input.includeDone || milestone.status !== "done")
+      .filter((milestone) => milestone.targetDate! >= start && milestone.targetDate! <= end)
+      .map((milestone): ProductivityTimelineMilestoneItem => ({
+        kind: "milestone",
+        id: milestone.id,
+        title: milestone.title,
+        status: milestone.status,
+        ...(milestone.projectId ? { projectId: milestone.projectId } : {}),
+        ...(milestone.goalId ? { goalId: milestone.goalId } : {}),
+        date: milestone.targetDate!,
+      }));
+
+    const timelineDeadlines = deadlines
+      .map((deadline) => ({ deadline, projectId: projectForDeadline(deadline) }))
+      .filter(({ projectId }) => !input.projectId || projectId === input.projectId)
+      .filter(({ deadline }) => input.includeDone || deadline.status !== "done")
+      .filter(({ deadline }) => deadline.dueAt >= start && deadline.dueAt <= end)
+      .map(({ deadline, projectId }): ProductivityTimelineDeadlineItem => ({
+        kind: "deadline",
+        id: deadline.id,
+        title: deadline.title,
+        status: deadline.status,
+        ...(deadline.anchorType ? { anchorType: deadline.anchorType } : {}),
+        ...(deadline.anchorId ? { anchorId: deadline.anchorId } : {}),
+        ...(projectId ? { projectId } : {}),
+        date: deadline.dueAt,
+      }));
+    const taskDeadlineItems = tasks
+      .filter((task) => !input.projectId || task.projectId === input.projectId)
+      .filter((task) => input.includeDone || (task.status !== "done" && task.status !== "cancelled"))
+      .flatMap((task): ProductivityTimelineDeadlineItem[] => {
+        const taskDates = [
+          task.dueAt ? { id: `${task.id}:due`, title: `${task.title} due`, date: task.dueAt } : null,
+          task.deadlineAt && task.deadlineAt !== task.dueAt ? { id: `${task.id}:deadline`, title: `${task.title} deadline`, date: task.deadlineAt } : null,
+        ].filter((item): item is { id: string; title: string; date: string } => Boolean(item));
+        return taskDates
+          .filter((item) => item.date >= start && item.date <= end)
+          .map((item) => ({
+            kind: "deadline" as const,
+            id: item.id,
+            title: item.title,
+            status: task.status === "done" ? "done" : "active",
+            anchorType: "task" as const,
+            anchorId: task.id,
+            ...(task.projectId ? { projectId: task.projectId } : {}),
+            date: item.date,
+          }));
+      });
+    timelineDeadlines.push(...taskDeadlineItems);
+
+    const timelineCycles = cycles
+      .filter((cycle) => Boolean(cycle.startsAt || cycle.endsAt))
+      .filter((cycle) => !input.projectId || cycle.projectId === input.projectId)
+      .filter((cycle) => input.includeDone || (cycle.status !== "completed" && cycle.status !== "archived"))
+      .flatMap((cycle): ProductivityTimelineCycleItem[] => {
+        const cycleStart = cycle.startsAt ?? cycle.endsAt!;
+        const cycleEnd = cycle.endsAt ?? cycle.startsAt!;
+        if (!timelineOverlaps(cycleStart, cycleEnd, start, end)) return [];
+        return [{
+          kind: "cycle",
+          id: cycle.id,
+          name: cycle.name,
+          status: cycle.status,
+          ...(cycle.projectId ? { projectId: cycle.projectId } : {}),
+          ...(cycle.goalId ? { goalId: cycle.goalId } : {}),
+          start: cycleStart,
+          end: cycleEnd,
+          ...(cycle.capacityPoints !== undefined ? { capacityPoints: cycle.capacityPoints } : {}),
+        }];
+      });
+
+    for (const task of timelineTasks) ensureGroup(task.projectId).tasks.push(task);
+    for (const milestone of timelineMilestones) ensureGroup(milestone.projectId).milestones.push(milestone);
+    for (const deadline of timelineDeadlines) ensureGroup(deadline.projectId).deadlines.push(deadline);
+    for (const cycle of timelineCycles) ensureGroup(cycle.projectId).cycles.push(cycle);
+    const groups = [...groupMap.values()].map((group) => {
+      const starts = [
+        ...group.tasks.map((task) => task.start),
+        ...group.milestones.map((milestone) => milestone.date),
+        ...group.deadlines.map((deadline) => deadline.date),
+        ...group.cycles.map((cycle) => cycle.start),
+      ];
+      const ends = [
+        ...group.tasks.map((task) => task.end),
+        ...group.milestones.map((milestone) => milestone.date),
+        ...group.deadlines.map((deadline) => deadline.date),
+        ...group.cycles.map((cycle) => cycle.end),
+      ];
+      return {
+        ...group,
+        start: minIso(starts),
+        end: maxIso(ends),
+        tasks: group.tasks.sort((left, right) => left.start.localeCompare(right.start) || left.title.localeCompare(right.title)),
+        milestones: group.milestones.sort((left, right) => left.date.localeCompare(right.date)),
+        deadlines: group.deadlines.sort((left, right) => left.date.localeCompare(right.date)),
+        cycles: group.cycles.sort((left, right) => left.start.localeCompare(right.start)),
+      };
+    }).sort((left, right) => (left.start ?? "").localeCompare(right.start ?? "") || left.title.localeCompare(right.title));
+
+    const generatedAt = nowIso();
+    const openTimelineTasks = tasks
+      .filter((task) => !input.projectId || task.projectId === input.projectId)
+      .filter((task) => task.status !== "done" && task.status !== "cancelled")
+      .flatMap((task) => {
+        const startDate = taskTimelineDate(task)
+          ?? (task.status === "in_progress" || task.labels.includes("today") ? { value: generatedAt, source: "startAt" as const } : null);
+        if (!startDate) return [];
+        const blockedByIds = task.dependsOnTaskIds.filter((taskId) => !doneTaskIds.has(taskId));
+        return [{
+          kind: "task" as const,
+          id: task.id,
+          title: task.title,
+          status: task.status,
+          priority: task.priority,
+          ...(task.projectId ? { projectId: task.projectId } : {}),
+          ...(task.goalId ? { goalId: task.goalId } : {}),
+          ...(task.cycleId ? { cycleId: task.cycleId } : {}),
+          ...(task.epicId ? { epicId: task.epicId } : {}),
+          start: startDate.value,
+          end: task.dueAt ?? task.deadlineAt ?? startDate.value,
+          startSource: startDate.source,
+          endSource: task.dueAt ? "dueAt" as const : task.deadlineAt ? "deadlineAt" as const : "start" as const,
+          dependencyState: {
+            ready: blockedByIds.length === 0 && task.status !== "blocked",
+            total: task.dependsOnTaskIds.length,
+            completed: task.dependsOnTaskIds.length - blockedByIds.length,
+            blockedByIds,
+          },
+        }];
+      });
+    const readyTasks = openTimelineTasks
+      .filter((task) => task.dependencyState.ready)
+      .filter((task) => task.status === "in_progress" || task.start <= generatedAt || task.end <= end)
+      .sort((left, right) => {
+        const leftActive = left.status === "in_progress" ? 0 : 1;
+        const rightActive = right.status === "in_progress" ? 0 : 1;
+        return leftActive - rightActive || left.end.localeCompare(right.end) || left.start.localeCompare(right.start);
+      });
+    const blockedTasks = openTimelineTasks
+      .filter((task) => !task.dependencyState.ready || task.status === "blocked")
+      .sort((left, right) => left.end.localeCompare(right.end) || left.start.localeCompare(right.start));
+
+    return {
+      start,
+      end,
+      generatedAt,
+      projects: groups,
+      tasks: timelineTasks,
+      milestones: timelineMilestones,
+      deadlines: timelineDeadlines,
+      cycles: timelineCycles,
+      now: {
+        ...(readyTasks[0] ? { primary: readyTasks[0] } : {}),
+        readyTasks: readyTasks.slice(0, 10),
+        blockedTasks: blockedTasks.slice(0, 10),
+      },
+    };
+  }
+
   const productivityApi: WorkspaceClawInstance["productivity"] = {
+    timeline: buildProductivityTimeline,
     myWork: async (input = {}) => {
       const limit = input.limit ?? 5;
       const [triageThreads, readyTasks, blockedTasks, activeBlockers, pendingDecisions, activeWorkSessions, recentArtifacts] = await Promise.all([
@@ -6421,16 +7571,28 @@ async function createWorkspaceExtension(
       };
     },
     inspect: async () => {
-      const timeItems = claw.time.configured ? (await claw.time.list()).items : [];
-      const executions = claw.time.configured ? (await claw.time.listExecutions()).executions : [];
+      const timeItems = useTimeService ? (await claw.time.list()).items : [];
+      const executions = useTimeService ? (await claw.time.listExecutions()).executions : [];
       return {
         schemaVersion: Number(readMeta("productivity_schema_version") ?? PRODUCTIVITY_SCHEMA_VERSION),
+        schemaHash: PRODUCTIVITY_SCHEMA_HASH,
         dataPath: data.dbPath(),
         collectionCounts: {
           areas: areasCollection.listIds().length,
+          lists: listsCollection.listIds().length,
+          sections: sectionsCollection.listIds().length,
           tasks: tasksCollection.listIds().length,
           goals: goalsCollection.listIds().length,
           projects: projectsCollection.listIds().length,
+          comments: commentsCollection.listIds().length,
+          attachments: attachmentsCollection.listIds().length,
+          saved_views: savedViewsCollection.listIds().length,
+          recurrences: recurrencesCollection.listIds().length,
+          cycles: cyclesCollection.listIds().length,
+          epics: epicsCollection.listIds().length,
+          custom_fields: customFieldsCollection.listIds().length,
+          field_values: fieldValuesCollection.listIds().length,
+          templates: templatesCollection.listIds().length,
           milestones: milestonesCollection.listIds().length,
           activity: activityCollection.listIds().length,
           blockers: blockersCollection.listIds().length,
@@ -6457,22 +7619,34 @@ async function createWorkspaceExtension(
         indexCount: indexCollection.listIds().length,
         embeddingCount: embeddingCollection.listIds().length,
         time: {
-          configured: claw.time.configured,
+          configured: useTimeService,
           itemCount: timeItems.length,
           executionCount: executions.length,
         },
       };
     },
     exportSnapshot: async () => {
-      const timeItems = claw.time.configured ? (await claw.time.list()).items : [];
+      const timeItems = useTimeService ? (await claw.time.list()).items : [];
       return {
         schemaVersion: Number(readMeta("productivity_schema_version") ?? PRODUCTIVITY_SCHEMA_VERSION),
+        schemaHash: PRODUCTIVITY_SCHEMA_HASH,
         exportedAt: nowIso(),
         collections: {
           areas: areasCollection.list(),
+          lists: listsCollection.list(),
+          sections: sectionsCollection.list(),
           tasks: tasksCollection.list(),
           goals: goalsCollection.list(),
           projects: projectsCollection.list(),
+          comments: commentsCollection.list(),
+          attachments: attachmentsCollection.list(),
+          saved_views: savedViewsCollection.list(),
+          recurrences: recurrencesCollection.list(),
+          cycles: cyclesCollection.list(),
+          epics: epicsCollection.list(),
+          custom_fields: customFieldsCollection.list(),
+          field_values: fieldValuesCollection.list(),
+          templates: templatesCollection.list(),
           milestones: milestonesCollection.list(),
           activity: activityCollection.list(),
           blockers: blockersCollection.list(),
@@ -6505,22 +7679,22 @@ async function createWorkspaceExtension(
         temporalItems?: TemporalItem[];
       };
       const importedCollections: Record<string, number> = {};
-      if (options.replace) {
-        for (const collection of [areasCollection, tasksCollection, goalsCollection, projectsCollection, milestonesCollection, activityCollection, blockersCollection, artifactsCollection, decisionsCollection, workSessionsCollection, assignmentsCollection, handoffsCollection, approvalsCollection, capacityCollection, agentsCollection, releasesCollection, incidentsCollection, feedbackCollection, checksCollection, notesCollection, peopleCollection, inboxThreadsCollection, inboxMessagesCollection, eventsCollection, remindersCollection, deadlinesCollection, indexCollection, embeddingCollection]) {
-          for (const id of collection.listIds()) collection.remove(id);
-        }
-        if (claw.time.configured) {
-          for (const item of (await claw.time.list()).items) {
-            await claw.time.delete(item.id);
-          }
-        }
-      }
-
       const writableCollections: Array<[string, ReturnType<typeof data.collection>]> = [
         ["areas", areasCollection],
+        ["lists", listsCollection],
+        ["sections", sectionsCollection],
         ["tasks", tasksCollection],
         ["goals", goalsCollection],
         ["projects", projectsCollection],
+        ["comments", commentsCollection],
+        ["attachments", attachmentsCollection],
+        ["saved_views", savedViewsCollection],
+        ["recurrences", recurrencesCollection],
+        ["cycles", cyclesCollection],
+        ["epics", epicsCollection],
+        ["custom_fields", customFieldsCollection],
+        ["field_values", fieldValuesCollection],
+        ["templates", templatesCollection],
         ["milestones", milestonesCollection],
         ["activity", activityCollection],
         ["blockers", blockersCollection],
@@ -6544,8 +7718,43 @@ async function createWorkspaceExtension(
         ["reminders", remindersCollection],
         ["deadlines", deadlinesCollection],
       ];
+
+      if (snapshot.collections !== undefined && (!snapshot.collections || typeof snapshot.collections !== "object" || Array.isArray(snapshot.collections))) {
+        throw new Error("Invalid productivity snapshot: collections must be an object.");
+      }
+      if (snapshot.temporalItems !== undefined && !Array.isArray(snapshot.temporalItems)) {
+        throw new Error("Invalid productivity snapshot: temporalItems must be an array.");
+      }
+
+      const normalizedCollections = new Map<string, Array<{ id: string }>>();
+      for (const [name] of writableCollections) {
+        const rawRecords = snapshot.collections?.[name] ?? [];
+        if (!Array.isArray(rawRecords)) {
+          throw new Error(`Invalid productivity snapshot: collections.${name} must be an array.`);
+        }
+        const records: Array<{ id: string }> = [];
+        for (const record of rawRecords) {
+          if (!record || typeof record !== "object" || Array.isArray(record) || typeof (record as { id?: unknown }).id !== "string" || !(record as { id: string }).id.trim()) {
+            throw new Error(`Invalid productivity snapshot: collections.${name} contains a record without a string id.`);
+          }
+          records.push({ ...(record as { id: string }) });
+        }
+        normalizedCollections.set(name, records);
+      }
+
+      if (options.replace) {
+        for (const collection of [areasCollection, listsCollection, sectionsCollection, tasksCollection, goalsCollection, projectsCollection, commentsCollection, attachmentsCollection, savedViewsCollection, recurrencesCollection, cyclesCollection, epicsCollection, customFieldsCollection, fieldValuesCollection, templatesCollection, milestonesCollection, activityCollection, blockersCollection, artifactsCollection, decisionsCollection, workSessionsCollection, assignmentsCollection, handoffsCollection, approvalsCollection, capacityCollection, agentsCollection, releasesCollection, incidentsCollection, feedbackCollection, checksCollection, notesCollection, peopleCollection, inboxThreadsCollection, inboxMessagesCollection, eventsCollection, remindersCollection, deadlinesCollection, indexCollection, embeddingCollection]) {
+          for (const id of collection.listIds()) collection.remove(id);
+        }
+        if (useTimeService) {
+          for (const item of (await claw.time.list()).items) {
+            await claw.time.delete(item.id);
+          }
+        }
+      }
+
       for (const [name, collection] of writableCollections) {
-        const records = Array.isArray(snapshot.collections?.[name]) ? snapshot.collections?.[name] as Array<{ id: string }> : [];
+        const records = normalizedCollections.get(name) ?? [];
         for (const record of records) {
           if (record?.id) collection.put(record.id, record);
         }
@@ -6553,7 +7762,7 @@ async function createWorkspaceExtension(
       }
 
       let importedTemporalItems = 0;
-      if (claw.time.configured) {
+      if (useTimeService) {
         for (const item of snapshot.temporalItems ?? []) {
           const existing = await claw.time.get(item.id).catch(() => null);
           if (!existing) {
@@ -6632,6 +7841,12 @@ async function createWorkspaceExtension(
       const goalIds = new Set(goalsCollection.listIds());
       const projectIds = new Set(projectsCollection.listIds());
       const milestoneIds = new Set(milestonesCollection.listIds());
+      const listIds = new Set(listsCollection.listIds());
+      const sectionIds = new Set(sectionsCollection.listIds());
+      const commentIds = new Set(commentsCollection.listIds());
+      const attachmentIds = new Set(attachmentsCollection.listIds());
+      const cycleIds = new Set(cyclesCollection.listIds());
+      const epicIds = new Set(epicsCollection.listIds());
       const blockerIds = new Set(blockersCollection.listIds());
       const artifactIds = new Set(artifactsCollection.listIds());
       const decisionIds = new Set(decisionsCollection.listIds());
@@ -6640,23 +7855,70 @@ async function createWorkspaceExtension(
       const approvalIds = new Set(approvalsCollection.listIds());
       const personIds = new Set(peopleCollection.listIds());
       const noteIds = new Set(notesCollection.listIds());
+      const pushMap = (map: Map<string, string[]>, key: string | undefined, value: string) => {
+        if (!key) return;
+        const current = map.get(key) ?? [];
+        current.push(value);
+        map.set(key, current);
+      };
+      const uniqueExisting = (values: string[], ids: Set<string>, additions?: string[]) => Array.from(new Set([
+        ...values.filter((id) => ids.has(id)),
+        ...(additions ?? []).filter((id) => ids.has(id)),
+      ]));
+      const taskBlockerIds = new Map<string, string[]>();
+      const taskEvidenceIds = new Map<string, string[]>();
+      const taskDecisionIds = new Map<string, string[]>();
+      const taskAssignmentIds = new Map<string, string[]>();
+      const taskHandoffIds = new Map<string, string[]>();
+      const taskApprovalIds = new Map<string, string[]>();
+      const projectMilestoneIds = new Map<string, string[]>();
+      const handoffApprovalIds = new Map<string, string[]>();
+      for (const blocker of blockersCollection.list()) {
+        if (blocker.taskId && taskIds.has(blocker.taskId)) pushMap(taskBlockerIds, blocker.taskId, blocker.id);
+      }
+      for (const artifact of artifactsCollection.list()) {
+        if (artifact.taskId && taskIds.has(artifact.taskId)) pushMap(taskEvidenceIds, artifact.taskId, artifact.id);
+      }
+      for (const decision of decisionsCollection.list()) {
+        if (decision.taskId && taskIds.has(decision.taskId)) pushMap(taskDecisionIds, decision.taskId, decision.id);
+      }
+      for (const assignment of assignmentsCollection.list()) {
+        if (assignment.taskId && taskIds.has(assignment.taskId)) pushMap(taskAssignmentIds, assignment.taskId, assignment.id);
+      }
+      for (const handoff of handoffsCollection.list()) {
+        if (handoff.taskId && taskIds.has(handoff.taskId)) pushMap(taskHandoffIds, handoff.taskId, handoff.id);
+      }
+      for (const approval of approvalsCollection.list()) {
+        if (approval.taskId && taskIds.has(approval.taskId)) pushMap(taskApprovalIds, approval.taskId, approval.id);
+        if (approval.handoffId && handoffIds.has(approval.handoffId)) pushMap(handoffApprovalIds, approval.handoffId, approval.id);
+      }
+      for (const milestone of milestonesCollection.list()) {
+        if (milestone.projectId && projectIds.has(milestone.projectId)) pushMap(projectMilestoneIds, milestone.projectId, milestone.id);
+      }
 
       for (const task of tasksCollection.list()) {
         const repaired: TaskRecord = {
           ...task,
           ...(task.areaId && !areaIds.has(task.areaId) ? { areaId: undefined } : {}),
+          ...(task.listId && !listIds.has(task.listId) ? { listId: undefined } : {}),
+          ...(task.sectionId && !sectionIds.has(task.sectionId) ? { sectionId: undefined } : {}),
           ...(task.projectId && !projectIds.has(task.projectId) ? { projectId: undefined } : {}),
           ...(task.goalId && !goalIds.has(task.goalId) ? { goalId: undefined } : {}),
+          ...(task.cycleId && !cycleIds.has(task.cycleId) ? { cycleId: undefined } : {}),
+          ...(task.epicId && !epicIds.has(task.epicId) ? { epicId: undefined } : {}),
           ...(task.assigneePersonId && !personIds.has(task.assigneePersonId) ? { assigneePersonId: undefined } : {}),
-          watcherPersonIds: task.watcherPersonIds.filter((id) => personIds.has(id)),
-          childTaskIds: task.childTaskIds.filter((id) => taskIds.has(id) && id !== task.id),
-          dependsOnTaskIds: task.dependsOnTaskIds.filter((id) => taskIds.has(id) && id !== task.id),
-          blockedByIds: task.blockedByIds.filter((id) => blockerIds.has(id)),
-          evidenceIds: task.evidenceIds.filter((id) => artifactIds.has(id)),
-          decisionIds: task.decisionIds.filter((id) => decisionIds.has(id)),
-          assignmentIds: task.assignmentIds.filter((id) => assignmentIds.has(id)),
-          handoffIds: task.handoffIds.filter((id) => handoffIds.has(id)),
-          approvalIds: task.approvalIds.filter((id) => approvalIds.has(id)),
+          ...(task.reporterPersonId && !personIds.has(task.reporterPersonId) ? { reporterPersonId: undefined } : {}),
+          watcherPersonIds: (task.watcherPersonIds ?? []).filter((id) => personIds.has(id)),
+          childTaskIds: (task.childTaskIds ?? []).filter((id) => taskIds.has(id) && id !== task.id),
+          dependsOnTaskIds: (task.dependsOnTaskIds ?? []).filter((id) => taskIds.has(id) && id !== task.id),
+          commentIds: (task.commentIds ?? []).filter((id) => commentIds.has(id)),
+          attachmentIds: (task.attachmentIds ?? []).filter((id) => attachmentIds.has(id)),
+          blockedByIds: uniqueExisting(task.blockedByIds ?? [], blockerIds, taskBlockerIds.get(task.id)),
+          evidenceIds: uniqueExisting(task.evidenceIds ?? [], artifactIds, taskEvidenceIds.get(task.id)),
+          decisionIds: uniqueExisting(task.decisionIds ?? [], decisionIds, taskDecisionIds.get(task.id)),
+          assignmentIds: uniqueExisting(task.assignmentIds ?? [], assignmentIds, taskAssignmentIds.get(task.id)),
+          handoffIds: uniqueExisting(task.handoffIds ?? [], handoffIds, taskHandoffIds.get(task.id)),
+          approvalIds: uniqueExisting(task.approvalIds ?? [], approvalIds, taskApprovalIds.get(task.id)),
         };
         if (JSON.stringify(repaired) !== JSON.stringify(task)) {
           tasksCollection.put(task.id, repaired);
@@ -6682,7 +7944,8 @@ async function createWorkspaceExtension(
           ...(project.areaId && !areaIds.has(project.areaId) ? { areaId: undefined } : {}),
           ...(project.goalId && !goalIds.has(project.goalId) ? { goalId: undefined } : {}),
           ...(project.ownerPersonId && !personIds.has(project.ownerPersonId) ? { ownerPersonId: undefined } : {}),
-          milestoneIds: project.milestoneIds.filter((id) => milestoneIds.has(id)),
+          milestoneIds: uniqueExisting(project.milestoneIds ?? [], milestoneIds, projectMilestoneIds.get(project.id)),
+          defaultSectionIds: uniqueExisting(project.defaultSectionIds ?? [], sectionIds),
         };
         if (JSON.stringify(repaired) !== JSON.stringify(project)) {
           projectsCollection.put(project.id, repaired);
@@ -6768,12 +8031,18 @@ async function createWorkspaceExtension(
         }
       }
       for (const handoff of handoffsCollection.list()) {
+        const derivedApprovalIds = handoffApprovalIds.get(handoff.id) ?? [];
+        const approvalId = handoff.approvalId && approvalIds.has(handoff.approvalId)
+          ? handoff.approvalId
+          : derivedApprovalIds.length === 1
+            ? derivedApprovalIds[0]
+            : undefined;
         const repaired: HandoffRecord = {
           ...handoff,
           ...(handoff.taskId && !taskIds.has(handoff.taskId) ? { taskId: undefined } : {}),
           ...(handoff.projectId && !projectIds.has(handoff.projectId) ? { projectId: undefined } : {}),
           ...(handoff.goalId && !goalIds.has(handoff.goalId) ? { goalId: undefined } : {}),
-          ...(handoff.approvalId && !approvalIds.has(handoff.approvalId) ? { approvalId: undefined } : {}),
+          approvalId,
           artifactIds: handoff.artifactIds.filter((id) => artifactIds.has(id)),
           blockerIds: handoff.blockerIds.filter((id) => blockerIds.has(id)),
         };
@@ -6834,7 +8103,7 @@ async function createWorkspaceExtension(
       }
 
       let recomputedTemporalItems = 0;
-      if (claw.time.configured) {
+      if (useTimeService) {
         for (const item of (await claw.time.list()).items) {
           await claw.time.update(item.id, {});
           recomputedTemporalItems += 1;
@@ -6943,6 +8212,7 @@ async function createWorkspaceExtension(
     },
   };
 
+  migrateLegacyGenericDbCoreCollections();
   await migrateProductivitySchema();
   await migrateTemporalCollectionsToTime();
 
@@ -6988,9 +8258,20 @@ async function createWorkspaceExtension(
     },
     sessions,
     areas: areasApi,
+    lists: listsApi,
+    sections: sectionsApi,
     tasks: tasksApi,
     goals: goalsApi,
     projects: projectsApi,
+    comments: commentsApi,
+    attachments: attachmentsApi,
+    savedViews: savedViewsApi,
+    recurrences: recurrencesApi,
+    cycles: cyclesApi,
+    epics: epicsApi,
+    customFields: customFieldsApi,
+    fieldValues: fieldValuesApi,
+    templates: templatesApi,
     milestones: milestonesApi,
     activity: activityApi,
     blockers: blockersApi,
@@ -7029,7 +8310,10 @@ async function createWorkspaceExtension(
 export async function createWorkspaceClaw(options: CreateWorkspaceClawOptions): Promise<WorkspaceClawInstance> {
   const { productivity, ...baseOptions } = options;
   const claw = await createClaw(baseOptions);
-  return createWorkspaceExtension(claw, options.workspace.rootDir, productivity);
+  return createWorkspaceExtension(claw, options.workspace.rootDir, {
+    ...productivity,
+    useTimeService: Boolean(baseOptions.time?.baseUrl),
+  });
 }
 
 export async function extendClawWithWorkspace(

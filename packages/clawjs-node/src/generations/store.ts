@@ -7,6 +7,7 @@ import type { RuntimeAdapterId } from "@clawjs/core";
 import { createWorkspaceDataStore, type WorkspaceDataStore } from "../data/store.ts";
 import { NodeFileSystemHost } from "../host/filesystem.ts";
 import { NodeProcessHost } from "../host/process.ts";
+import type { LocalStorageStore } from "../storage/store.ts";
 
 export type GenerationKind = "image" | "video" | "audio" | "document";
 export type GenerationBackendType = "command";
@@ -246,10 +247,27 @@ function buildAssetRelativePath(kind: GenerationKind, id: string, extension: str
 function enrichAssetRecord(
   dataStore: WorkspaceDataStore,
   filesystem: NodeFileSystemHost,
+  storage: LocalStorageStore | undefined,
   relativePath: string | undefined,
   mimeType: string | undefined,
 ): GenerationAssetRecord | null {
   if (!relativePath) return null;
+  if (storage) {
+    try {
+      const object = storage.head({ key: relativePath });
+      if (object) {
+        return {
+          relativePath,
+          filePath: object.filePath,
+          exists: filesystem.exists(object.filePath),
+          size: object.sizeBytes,
+          mimeType: object.contentType || mimeType || null,
+        };
+      }
+    } catch {
+      // Fall back to legacy workspace assets.
+    }
+  }
   const asset = dataStore.asset(relativePath);
   const filePath = asset.path();
   if (!filesystem.exists(filePath)) {
@@ -285,10 +303,11 @@ function hydrateRecord(
   record: PersistedGenerationRecord,
   dataStore: WorkspaceDataStore,
   filesystem: NodeFileSystemHost,
+  storage?: LocalStorageStore,
 ): GenerationRecord {
   return {
     ...record,
-    output: enrichAssetRecord(dataStore, filesystem, record.outputRelativePath, record.outputMimeType),
+    output: enrichAssetRecord(dataStore, filesystem, storage, record.outputRelativePath, record.outputMimeType),
   };
 }
 
@@ -570,11 +589,13 @@ export function createGenerationStore(options: {
   filesystem?: NodeFileSystemHost;
   processHost?: NodeProcessHost;
   dataStore?: WorkspaceDataStore;
+  storage?: LocalStorageStore;
   env?: NodeJS.ProcessEnv;
 }): GenerationStore {
   const filesystem = options.filesystem ?? new NodeFileSystemHost();
   const processHost = options.processHost ?? new NodeProcessHost();
   const dataStore = options.dataStore ?? createWorkspaceDataStore(options.workspaceDir, filesystem);
+  const storage = options.storage;
   const runtimeEnv = normalizeEnv(options.env);
   const generationCollection = dataStore.collection<PersistedGenerationRecord>(GENERATIONS_COLLECTION);
   const backendCollection = dataStore.collection<CommandGenerationBackendRecord>(BACKENDS_COLLECTION);
@@ -832,7 +853,9 @@ export function createGenerationStore(options: {
       const extension = normalizeOutputExtension(inferOutputExtension(input, backend), kind);
       const mimeType = resolveMimeType(kind, extension, input.mimeType || backend.mimeType);
       const outputRelativePath = buildAssetRelativePath(kind, id, extension);
-      const outputPath = dataStore.asset(outputRelativePath).path();
+      const outputPath = storage
+        ? path.join(options.workspaceDir, ".clawjs", "tmp", "generations", kind, `${id}.${extension}`)
+        : dataStore.asset(outputRelativePath).path();
       filesystem.ensureDir(path.dirname(outputPath));
 
       const tokens = {
@@ -861,6 +884,22 @@ export function createGenerationStore(options: {
         if (!filesystem.exists(outputPath)) {
           throw new Error(`Generation command completed without creating output: ${outputPath}`);
         }
+        let persistedOutputRelativePath = outputRelativePath;
+        if (storage) {
+          const object = storage.putFile({
+            key: outputRelativePath,
+            filePath: outputPath,
+            contentType: mimeType,
+            visibility: "drive",
+            metadata: {
+              kind,
+              generationId: id,
+              backendId: backend.id,
+            },
+          });
+          persistedOutputRelativePath = object.key;
+          fs.rmSync(outputPath, { force: true });
+        }
         const persisted: PersistedGenerationRecord = {
           id,
           kind,
@@ -876,11 +915,11 @@ export function createGenerationStore(options: {
           updatedAt: createdAt,
           ...(input.metadata ? { metadata: input.metadata } : {}),
           command: commandSpec,
-          outputRelativePath,
+          outputRelativePath: persistedOutputRelativePath,
           outputMimeType: mimeType,
         };
         generationCollection.put(id, persisted);
-        return hydrateRecord(persisted, dataStore, filesystem);
+        return hydrateRecord(persisted, dataStore, filesystem, storage);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         const failed: PersistedGenerationRecord = {
@@ -909,7 +948,7 @@ export function createGenerationStore(options: {
     list(query = {}) {
       const limit = Math.max(1, query.limit ?? Number.MAX_SAFE_INTEGER);
       return generationCollection.list()
-        .map((record) => hydrateRecord(record, dataStore, filesystem))
+        .map((record) => hydrateRecord(record, dataStore, filesystem, storage))
         .filter((record) => !query.kind || record.kind === query.kind)
         .filter((record) => !query.backendId || record.backendId === query.backendId)
         .filter((record) => !query.status || record.status === query.status)
@@ -919,14 +958,18 @@ export function createGenerationStore(options: {
     get(id) {
       const normalized = normalizeId(id, "generation id");
       const record = generationCollection.get(normalized);
-      return record ? hydrateRecord(record, dataStore, filesystem) : null;
+      return record ? hydrateRecord(record, dataStore, filesystem, storage) : null;
     },
     remove(id) {
       const normalized = normalizeId(id, "generation id");
       const record = generationCollection.get(normalized);
       if (!record) return false;
       if (record.outputRelativePath) {
-        dataStore.asset(record.outputRelativePath).remove();
+        if (storage) {
+          storage.delete({ key: record.outputRelativePath });
+        } else {
+          dataStore.asset(record.outputRelativePath).remove();
+        }
       }
       generationCollection.remove(normalized);
       return true;

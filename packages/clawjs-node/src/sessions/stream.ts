@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { spawn } from "child_process";
 
 import type { DocumentRef, Message, PromptContextBlock, StreamChunk } from "@clawjs/core";
 
@@ -148,6 +149,78 @@ export function extractJsonPayloadText(stdout: string): string {
 
 export const extractOpenClawCliText = extractJsonPayloadText;
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function normalizeExtractedText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeOutputText(value: unknown): string {
+  return typeof value === "string" && value.trim() ? value : "";
+}
+
+function collectCodexText(value: unknown, output: string[]): void {
+  const record = asRecord(value);
+  if (!record) return;
+
+  const type = normalizeExtractedText(record.type);
+  const role = normalizeExtractedText(record.role);
+  const method = normalizeExtractedText(record.method);
+  const isAssistantish = role === "assistant"
+    || type.includes("assistant")
+    || type.includes("agent_message")
+    || type.includes("output")
+    || method.includes("turn")
+    || method.includes("codex");
+
+  if (isAssistantish) {
+    for (const key of ["delta", "text", "message", "lastMessage", "last_message", "output_text"]) {
+      const text = normalizeOutputText(record[key]);
+      if (text) output.push(text);
+    }
+  }
+
+  const content = record.content;
+  if (Array.isArray(content)) {
+    for (const item of content) {
+      const itemRecord = asRecord(item);
+      if (!itemRecord) continue;
+      const contentType = normalizeExtractedText(itemRecord.type);
+      if (contentType.includes("text") || contentType.includes("output")) {
+        const text = normalizeOutputText(itemRecord.text) || normalizeOutputText(itemRecord.delta);
+        if (text) output.push(text);
+      }
+    }
+  }
+
+  for (const key of ["msg", "params", "result", "event", "item", "data"]) {
+    collectCodexText(record[key], output);
+  }
+}
+
+export function extractCodexJsonlText(stdout: string): string {
+  const chunks: string[] = [];
+  for (const line of stdout.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      collectCodexText(JSON.parse(trimmed), chunks);
+    } catch {
+      continue;
+    }
+  }
+
+  return chunks
+    .filter(Boolean)
+    .filter((entry, index, entries) => index === 0 || entry !== entries[index - 1])
+    .join("")
+    .trim();
+}
+
 export function splitTextIntoChunks(text: string, chunkSize = 24): string[] {
   const normalized = text.trim();
   if (!normalized) return [];
@@ -185,6 +258,168 @@ export function extractResponseOutputText(payload: unknown): string {
     .join("")
     .trim();
   return text;
+}
+
+function isCodexAppServerComplete(message: unknown): boolean {
+  const record = asRecord(message);
+  if (!record) return false;
+  const method = normalizeExtractedText(record.method);
+  const type = normalizeExtractedText(record.type);
+  const status = normalizeExtractedText(record.status);
+  if (/turn\/(completed|complete|finished)|codex\/turn_completed/.test(method)) return true;
+  if (/turn_(completed|complete|finished)|completed|complete/.test(type)) return true;
+  if (["completed", "complete", "finished", "done"].includes(status)) return true;
+
+  for (const key of ["params", "result", "msg", "event"]) {
+    if (isCodexAppServerComplete(record[key])) return true;
+  }
+  return false;
+}
+
+async function runCodexAppServerTurn(
+  input: StreamSessionInput,
+  gatewayConfig: SessionGatewayDescriptor,
+): Promise<string> {
+  const command = gatewayConfig.command ?? "codex";
+  const args = gatewayConfig.args ?? ["app-server"];
+  const prompt = buildOpenClawCliPrompt({
+    systemPrompt: input.systemPrompt,
+    contextBlocks: input.contextBlocks,
+    messages: input.messages,
+  });
+
+  return await new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: gatewayConfig.cwd,
+      env: gatewayConfig.env,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    const chunks: string[] = [];
+    let buffer = "";
+    let stderr = "";
+    let settled = false;
+    let threadId: string | null = null;
+    let nextId = 0;
+
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+      child.kill();
+      if (error) {
+        reject(error);
+        return;
+      }
+      const text = chunks.join("").trim();
+      if (!text) {
+        reject(new Error(stderr.trim() || "Codex app-server returned no text"));
+        return;
+      }
+      resolve(text);
+    };
+
+    const send = (message: unknown) => {
+      child.stdin.write(`${JSON.stringify(message)}\n`);
+    };
+
+    const startTurn = () => {
+      if (!threadId) return;
+      send({
+        method: "turn/start",
+        id: nextId++,
+        params: {
+          threadId,
+          input: [{ type: "text", text: prompt }],
+        },
+      });
+    };
+
+    const timeoutId = setTimeout(() => {
+      finish(new Error("Codex app-server timed out"));
+    }, 130_000);
+
+    child.on("error", (error) => finish(error instanceof Error ? error : new Error(String(error))));
+    child.stderr?.on("data", (chunk: Buffer | string) => {
+      stderr += chunk.toString();
+    });
+    child.stdout?.on("data", (chunk: Buffer | string) => {
+      buffer += chunk.toString();
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        let message: unknown;
+        try {
+          message = JSON.parse(trimmed);
+        } catch {
+          continue;
+        }
+
+        const extracted: string[] = [];
+        collectCodexText(message, extracted);
+        chunks.push(...extracted);
+
+        const record = asRecord(message);
+        const result = asRecord(record?.result);
+        const thread = asRecord(result?.thread);
+        const candidateThreadId = normalizeExtractedText(thread?.id) || normalizeExtractedText(result?.threadId);
+        if (!threadId && candidateThreadId) {
+          threadId = candidateThreadId;
+          startTurn();
+        }
+
+        if (isCodexAppServerComplete(message)) {
+          finish();
+        }
+      }
+    });
+    child.on("close", () => {
+      finish();
+    });
+
+    send({
+      method: "initialize",
+      id: nextId++,
+      params: {
+        clientInfo: {
+          name: "clawjs",
+          title: "ClawJS",
+          version: "0.1.0",
+        },
+      },
+    });
+    send({ method: "initialized", params: {} });
+    send({
+      method: "thread/start",
+      id: nextId++,
+      params: {
+        model: input.model || gatewayConfig.model || "gpt-5.4",
+      },
+    });
+  });
+}
+
+async function* streamCodexAppServerChunks(
+  input: StreamSessionInput,
+  gatewayConfig: SessionGatewayDescriptor,
+): AsyncGenerator<StreamChunk> {
+  const text = await runCodexAppServerTurn(input, gatewayConfig);
+  const messageId = randomUUID();
+  for (const chunk of splitTextIntoChunks(text, input.chunkSize ?? 24)) {
+    yield {
+      sessionId: input.sessionId,
+      messageId,
+      delta: chunk,
+      done: false,
+    };
+  }
+  yield {
+    sessionId: input.sessionId,
+    messageId,
+    delta: "",
+    done: true,
+  };
 }
 
 function buildGatewayHeaders(
@@ -449,6 +684,9 @@ async function* streamGatewayChunks(
 ): AsyncGenerator<StreamChunk> {
   throwIfAborted(input.signal);
   switch (gatewayConfig.kind) {
+    case "codex-app-server":
+      yield* streamCodexAppServerChunks(input, gatewayConfig);
+      return;
     case "openai-chat-completions":
       yield* streamChatCompletionsChunks(input, fetchImpl, gatewayConfig);
       return;
@@ -485,7 +723,9 @@ async function* streamCliChunks(
   const combinedOutput = [result.stdout, result.stderr].filter((value) => value && value.trim()).join("\n");
   const text = invocation.parser === "json-payloads"
     ? extractJsonPayloadText(combinedOutput)
-    : result.stdout.trim();
+    : invocation.parser === "codex-jsonl"
+      ? extractCodexJsonlText(combinedOutput)
+      : result.stdout.trim();
   if (!text) {
     throw new Error("Runtime CLI returned no text");
   }

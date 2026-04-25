@@ -79,6 +79,7 @@ ClawJS keeps a stable internal layer under `.clawjs/` even when runtimes disagre
 
 - [Workspace](/workspace) for the stable `.clawjs` layout and the `@clawjs/workspace` productivity layer.
 - [Sessions](/sessions) for stored conversations, streaming, documents, title generation, and native runtime chat boundaries.
+- [Local Agent Asset Library](/local-library) for reusable skills, instruction modules, and bundles assigned to local agents.
 - [Files & Templates](/files) for template packs, bindings, and managed blocks.
 - [Plugin Authoring](/plugins) for scaffolded distributable plugins and the OpenClaw bridge.
 

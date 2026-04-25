@@ -7,6 +7,7 @@ import { randomUUID, createHash } from "crypto";
 import type { DocumentIndexStatus, DocumentOrigin, DocumentRecord, DocumentRef, DocumentSearchResult } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
+import type { LocalStorageStore } from "../storage/store.ts";
 
 interface DocumentManifest extends DocumentRecord {}
 
@@ -123,6 +124,25 @@ function documentBlobDir(workspaceDir: string): string {
 
 function documentBlobPath(workspaceDir: string, sha256: string, extension: string): string {
   return path.join(documentBlobDir(workspaceDir), `${sha256}${extension}`);
+}
+
+function documentStorageKey(sha256: string, extension: string): string {
+  return `documents/blobs/${sha256}${extension}`;
+}
+
+function documentStorageUrl(bucket: string, key: string): string {
+  return `storage://${bucket}/${key}`;
+}
+
+function parseDocumentStorageUrl(value: string): { bucket: string; key: string } | null {
+  if (!value.startsWith("storage://")) return null;
+  const withoutScheme = value.slice("storage://".length);
+  const slashIndex = withoutScheme.indexOf("/");
+  if (slashIndex === -1) return null;
+  return {
+    bucket: withoutScheme.slice(0, slashIndex),
+    key: withoutScheme.slice(slashIndex + 1),
+  };
 }
 
 function documentIndexDir(workspaceDir: string): string {
@@ -345,7 +365,10 @@ function resolveDocumentRef(document: DocumentRecord): DocumentRef {
 export function createDocumentStore(
   workspaceDir: string,
   filesystem = new NodeFileSystemHost(),
+  options: { storage?: LocalStorageStore } = {},
 ): DocumentStore {
+  const storage = options.storage;
+
   function ensureStructure(): void {
     filesystem.ensureDir(manifestsDir(workspaceDir));
     filesystem.ensureDir(documentIndexDir(workspaceDir));
@@ -444,18 +467,33 @@ export function createDocumentStore(
       const buffer = toBuffer(input.data);
       const sha256 = hashBuffer(buffer);
       const extension = inferExtension(input.name, input.mimeType);
-      const blobPath = documentBlobPath(workspaceDir, sha256, extension);
-      filesystem.withLockRetry(resolveFileLockPath(blobPath), () => {
-        if (!filesystem.exists(blobPath)) {
-          filesystem.ensureDir(path.dirname(blobPath));
-          fs.writeFileSync(blobPath, buffer);
-        }
-      });
+      const storageKey = documentStorageKey(sha256, extension);
+      const storageObject = storage
+        ? storage.put({
+            key: storageKey,
+            data: buffer,
+            contentType: input.mimeType,
+            visibility: "drive",
+            metadata: {
+              kind: "document",
+              origin: input.origin ?? "user_upload",
+            },
+          })
+        : null;
+      const blobPath = storageObject?.filePath ?? documentBlobPath(workspaceDir, sha256, extension);
+      if (!storage) {
+        filesystem.withLockRetry(resolveFileLockPath(blobPath), () => {
+          if (!filesystem.exists(blobPath)) {
+            filesystem.ensureDir(path.dirname(blobPath));
+            fs.writeFileSync(blobPath, buffer);
+          }
+        });
+      }
       return registerResolvedPath({
         ...input,
         origin: input.origin ?? "user_upload",
         filePath: blobPath,
-      }, blobPath, blobPath, "blob");
+      }, blobPath, storageObject ? documentStorageUrl(storageObject.bucket, storageObject.key) : blobPath, "blob");
     },
     registerPath(input) {
       ensureStructure();
@@ -537,6 +575,16 @@ export function createDocumentStore(
     download(documentId) {
       const document = findDocument(documentId);
       if (!document) return null;
+      const storageRef = parseDocumentStorageUrl(document.storage.path);
+      if (storage && storageRef) {
+        const object = storage.get(storageRef);
+        if (!object) return null;
+        return {
+          document,
+          filePath: object.filePath,
+          buffer: object.buffer,
+        };
+      }
       const filePath = path.isAbsolute(document.storage.path)
         ? document.storage.path
         : path.resolve(workspaceDir, document.storage.path);

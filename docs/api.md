@@ -42,8 +42,8 @@ const same = await createClaw({
 
 | Path | Description |
 |----|----|
-| `runtime.adapter` | Required runtime adapter id such as `openclaw`, `demo`, `hermes`, or `ironclaw`. |
-| `runtime.binaryPath` | Optional executable override for runtimes such as OpenClaw when the binary is outside `PATH`. |
+| `runtime.adapter` | Required runtime adapter id such as `openclaw`, `codex`, `demo`, `hermes`, or `ironclaw`. |
+| `runtime.binaryPath` | Optional executable override for runtimes such as OpenClaw or Codex when the binary is outside `PATH`. |
 | `runtime.agentDir` | Optional runtime agent directory override. |
 | `runtime.homeDir`, `configPath`, `workspacePath`, `authStorePath` | Optional adapter-specific path overrides. |
 | `runtime.gateway` | Optional gateway `url`, `token`, `port`, and `configPath` overrides. |
@@ -81,10 +81,11 @@ const same = await createClaw({
 | `claw.scheduler` | `list`, `run`, `enable`, `disable` |
 | `claw.memory` | `list`, `search` |
 | `claw.skills` | `list`, `sync`, `sources`, `search`, `install` |
+| `claw.library` | `list`, `get`, `create`, `update`, `remove`, `importSkill`, `createInstruction`, `createBundle`, `assign`, `unassign`, `resolve`, `sync` |
 | `claw.generations` | backend registry plus generic generation create/list/read/delete |
 | `claw.image`, `claw.audio`, `claw.video` | typed generation facades over the generic store |
 | `claw.tts` | synthesize, config helpers, provider catalog, text segmentation, playback planning |
-| `claw.channels` | `list` |
+| `claw.channels` | `list`, account registry, target registry, agent bindings, message read/send/sync, command menus |
 | `claw.telegram` | secret provisioning, bot connection, webhook and polling control, commands, chat inspection, moderation, invite links, update sync |
 | `claw.slack` | bot connection, status, channel lookup, message send |
 | `claw.whatsapp` | connection lifecycle, status, send, disconnect |
@@ -96,9 +97,17 @@ const same = await createClaw({
 | `claw.notify` | notification send/cancel, receipts, feed sync, read/ack flows, push tokens, glances, and subscriptions |
 | `claw.sessions` | session CRUD, title generation, structured reply streaming, chunk streaming |
 | `claw.documents` | list, get, search, upload, register, chunked upload, download, ref resolution |
+| `claw.storage` | local-first buckets/keys, raw object read/write/list/delete, scoped tokens, and read-only revocable shares |
 | `claw.data` | `document`, `collection`, `asset`, `rootDir` |
 | `claw.orchestration` | `snapshot` |
 | `claw.watch` | `file`, `transcript`, `runtimeStatus`, `providerStatus`, `events`, `eventsIterator` |
+
+`claw.storage` is a local-first object layer for agent outputs and
+handoffs. Raw writes are internal by default; images, generations, documents,
+and writes marked with `visibility: "drive"` are the objects intended for the
+Drive-facing search and share layer. Storage permissions are an SDK/API
+ownership boundary, not a filesystem sandbox against code that can read the
+workspace database and blob directory directly.
 
 The public surface is intentionally tiered:
 
@@ -416,9 +425,56 @@ await claw.skills.list();
 await claw.skills.sync();
 
 await claw.channels.list();
+await claw.channels.accounts.registerTelegramBot({
+  accountId: "support",
+  secretName: "telegram_support_bot_token",
+});
+claw.channels.processors.register({
+  id: "support-router",
+  command: "node ./support-router.js",
+});
+claw.channels.bindings.grant({
+  agentId: "support-router",
+  provider: "telegram",
+  accountId: "support",
+  targetId: "-1001234567890",
+  permissions: ["read", "write", "ingest"],
+});
+await claw.channels.listen.run({
+  provider: "telegram",
+  accountId: "support",
+  processorId: "support-router",
+});
+await claw.channels.messages.sync({ provider: "telegram", accountId: "support" });
+await claw.channels.messages.send({
+  provider: "telegram",
+  accountId: "support",
+  targetId: "-1001234567890",
+  text: "hello",
+  agentId: "support-router",
+});
 ```
 Always check `status.capabilityMap` before assuming these subsystems are
 supported by the current adapter.
+
+## Local Agent Asset Library
+
+```ts
+claw.library.importSkill("namecheap", { id: "namecheap", path: "/skills/namecheap" });
+claw.library.createInstruction({
+  id: "ceo-soul",
+  title: "CEO Soul",
+  projection: { target: "agents" },
+  content: "Operate like a pragmatic CEO.",
+});
+claw.library.assign({ assetId: "namecheap", scope: "agent", targetId: "ada" });
+const resolved = claw.library.resolve({ agentId: "ada", tags: ["domains"] });
+await claw.library.sync({ agentId: "ada", availableSecrets: ["namecheap_api_token"] });
+```
+
+The library is local-personal by default and can be isolated with
+`library.rootDir`. It stores secret references and required metadata, not
+secret values.
 
 ## Generations And Typed Media Facades
 
@@ -445,14 +501,30 @@ const image = await claw.image.generate({
   prompt: "Minimal line-art cat",
 });
 
+const imported = claw.image.import({
+  filePath: "/tmp/codex-logo.png",
+  prompt: "Codex generated logo exploration",
+  provenance: "imported-codex",
+  imageType: "logo",
+  tags: ["brand", "codex"],
+});
+
+const edit = await claw.image.edit({
+  parentId: imported.id,
+  prompt: "Make the logo monochrome",
+});
+
 const audio = await claw.audio.generate({
   prompt: "Read the summary aloud",
 });
 ```
 
-Records and generated files are stored under the workspace data layer,
-so the same app can browse prior outputs later with `list()`, `get()`,
-and `remove()`.
+Image records are stored in the local image library so agents and
+workspaces can browse generated, edited, and imported assets later with
+`list()`, `search()`, `get()`, and `remove()`. Edits are immutable child
+records with parent/source ids; imported Codex or ChatGPT images can carry
+the same prompt, provider, tag, type, and provenance metadata as native
+generations.
 
 ## Telegram and Secrets
 
@@ -636,6 +708,8 @@ On the `openclaw` adapter, session routing is capability-based:
 - `streamAssistantReply*()` prefers `/v1/responses`
 - text-only fallback can use `/v1/chat/completions`
 - title generation keeps using the lighter text path when appropriate
+
+On the `codex` adapter, session routing prefers the Codex app-server protocol and falls back to `codex exec --json`. Authentication remains owned by the Codex CLI: ClawJS checks `codex login status` and can launch `codex login`, but does not read or store Codex credentials.
 ## Data Store and Orchestration
 
 ```ts

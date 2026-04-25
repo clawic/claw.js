@@ -1,12 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "fs";
 import http from "http";
+import type { AddressInfo } from "net";
 import os from "os";
 import path from "path";
 import { once } from "events";
 
+import Database from "better-sqlite3";
 import { createClaw, saveAuthStore } from "@clawjs/claw";
 import { buildTimeApp } from "../../../time/src/server/app.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CLI_USAGE, runCli } from "./index.ts";
@@ -49,6 +51,19 @@ function runInstalledClaw(binPath: string, cwd: string, args: string[]): string 
     encoding: "utf8",
     env: process.env,
   });
+}
+
+function runInstalledClawProcess(binPath: string, cwd: string, args: string[]): { stdout: string; stderr: string } {
+  const result = spawnSync(process.execPath, [binPath, ...args], {
+    cwd,
+    encoding: "utf8",
+    env: process.env,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  return {
+    stdout: result.stdout,
+    stderr: result.stderr,
+  };
 }
 
 async function createFakeVaultCliServer() {
@@ -115,6 +130,41 @@ async function createFakeVaultCliServer() {
   const port = typeof address === "object" && address ? address.port : 0;
   return {
     baseUrl: `http://127.0.0.1:${port}`,
+    async close() {
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    },
+  };
+}
+
+const ONE_PIXEL_PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7KJcsAAAAASUVORK5CYII=";
+
+async function createFakeOpenAIImageCliServer() {
+  const requests: Array<{ pathname: string; body: Record<string, unknown> }> = [];
+  const server = http.createServer((request, response) => {
+    let raw = "";
+    request.on("data", (chunk) => {
+      raw += String(chunk);
+    });
+    request.on("end", () => {
+      const url = new URL(request.url || "/", "http://127.0.0.1");
+      const body = raw ? JSON.parse(raw) as Record<string, unknown> : {};
+      requests.push({ pathname: url.pathname, body });
+      response.setHeader("content-type", "application/json");
+      response.end(JSON.stringify({
+        id: `imgreq-${requests.length}`,
+        data: [{ b64_json: ONE_PIXEL_PNG, revised_prompt: String(body.prompt ?? "") }],
+      }));
+    });
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  assert.equal(typeof address, "object");
+  assert.ok(address);
+  const info = address as AddressInfo;
+  return {
+    baseUrl: `http://127.0.0.1:${info.port}/v1`,
+    requests,
     async close() {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     },
@@ -260,6 +310,19 @@ function createFakeTelegramSecretsProxy(): { proxyPath: string; statePath: strin
   fs.writeFileSync(statePath, JSON.stringify({
     webhookUrl: "",
     commands: [],
+    updates: [{
+      update_id: 11,
+      message: {
+        message_id: 21,
+        text: "hello telegram",
+        chat: {
+          id: 1001,
+          type: "private",
+          username: "alice",
+          first_name: "Alice",
+        },
+      },
+    }],
   }, null, 2));
   fs.writeFileSync(proxyPath, `#!/usr/bin/env node
 const fs = require("fs");
@@ -269,9 +332,30 @@ function readFlag(name) {
   return index === -1 ? undefined : args[index + 1];
 }
 const statePath = process.env.FAKE_TELEGRAM_PROXY_STATE;
+const secrets = [{
+  name: "telegram_support_bot_token",
+  allowedHosts: ["api.telegram.org"],
+  allowedHeaderNames: [],
+  readOnly: false,
+  allowInURL: true,
+  allowInRequestBody: false,
+  allowInsecureTransport: false,
+  allowLocalNetwork: false
+}];
+if (args[0] === "list-secrets") {
+  process.stdout.write(JSON.stringify(secrets));
+  process.exit(0);
+}
+if (args[0] === "describe-secret") {
+  const name = readFlag("--name");
+  process.stdout.write(JSON.stringify(secrets.filter((entry) => entry.name === name)));
+  process.exit(0);
+}
 const url = readFlag("--url") || "";
 const body = JSON.parse(readFlag("--body") || "{}");
 const method = url.split("/").pop();
+const tokenMatch = url.match(/\\/bot([^/]+)\\//);
+const token = tokenMatch ? tokenMatch[1] : "";
 const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
 let result;
 switch (method) {
@@ -288,6 +372,26 @@ switch (method) {
   case "deleteWebhook":
     state.webhookUrl = "";
     result = true;
+    break;
+  case "getUpdates": {
+    const offset = typeof body.offset === "number" ? body.offset : 0;
+    const updates = (state.updates || []).filter((entry) => entry.update_id >= offset);
+    const limited = typeof body.limit === "number" ? updates.slice(0, body.limit) : updates;
+    state.updates = (state.updates || []).filter((entry) => !limited.some((selected) => selected.update_id === entry.update_id));
+    result = limited;
+    break;
+  }
+  case "sendMessage":
+    state.lastSend = body;
+    state.lastSendToken = token;
+    result = { message_id: 91, chat: { id: body.chat_id, type: "private" }, text: body.text };
+    break;
+  case "setMyCommands":
+    state.commands = body.commands || [];
+    result = true;
+    break;
+  case "getMyCommands":
+    result = state.commands || [];
     break;
   default:
     result = true;
@@ -406,6 +510,98 @@ test("runCli prints help and exits successfully", async () => {
 
   assert.equal(exitCode, CLI_EXIT_OK);
   assert.equal(stdout.getOutput().trim(), CLI_USAGE);
+  assert.match(stdout.getOutput(), /Primary workflow:/);
+  assert.match(stdout.getOutput(), /db <collection> <title>/);
+});
+
+test("runCli prints db-specific help and database admin help", async () => {
+  const dbStdout = captureStream();
+  assert.equal(await runCli(["db", "--help"], {
+    stdout: dbStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+  assert.match(dbStdout.getOutput(), /Magic database commands:/);
+  assert.match(dbStdout.getOutput(), /db <collection> schema/);
+
+  const adminStdout = captureStream();
+  assert.equal(await runCli(["database", "--help"], {
+    stdout: adminStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+  assert.match(adminStdout.getOutput(), /Advanced database admin commands:/);
+  assert.match(adminStdout.getOutput(), /Use `claw db \.\.\.` for local-first CRUD/);
+});
+
+test("runCli supports implicit db create, schema inspection, human output, and alias parity", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-magic-db-"));
+
+  const createStdout = captureStream();
+  const createStderr = captureStream();
+  assert.equal(await runCli(["db", "task", "Comprar leche"], {
+    stdout: createStdout.stream,
+    stderr: createStderr.stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(createStderr.getOutput(), /Using local database for this project/);
+  assert.match(createStdout.getOutput(), /Created task (\S+) "Comprar leche"/);
+  const taskId = createStdout.getOutput().match(/Created task (\S+) "Comprar leche"/)?.[1] ?? "";
+  assert.ok(taskId);
+
+  const listStdout = captureStream();
+  assert.equal(await runCli(["db", "tasks", "list"], {
+    stdout: listStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(listStdout.getOutput(), new RegExp(taskId));
+
+  const getStdout = captureStream();
+  assert.equal(await runCli(["db", "tasks", "get", taskId], {
+    stdout: getStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(getStdout.getOutput(), /title: Comprar leche/);
+  assert.match(getStdout.getOutput(), /status: todo/);
+
+  const emptyStdout = captureStream();
+  assert.equal(await runCli(["db", "leads", "list"], {
+    stdout: emptyStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(emptyStdout.getOutput(), /No leads yet/);
+  assert.match(emptyStdout.getOutput(), /Try: claw db lead "First lead"/);
+
+  const leadStdout = captureStream();
+  const leadStderr = captureStream();
+  assert.equal(await runCli(["db", "leads", "--set", "name=Ada", "--set", "website=https://ada.dev"], {
+    stdout: leadStdout.stream,
+    stderr: leadStderr.stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(leadStderr.getOutput(), /Created collection "leads"/);
+  assert.match(leadStderr.getOutput(), /Mapped "name" to "title"/);
+  assert.match(leadStdout.getOutput(), /Created lead \S+ "Ada"/);
+
+  const schemaStdout = captureStream();
+  assert.equal(await runCli(["db", "leads", "schema"], {
+    stdout: schemaStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(schemaStdout.getOutput(), /collection: leads/);
+  assert.match(schemaStdout.getOutput(), /protected: no/);
+
+  const aliasStdout = captureStream();
+  assert.equal(await runCli(["tasks", "create", "Alias task"], {
+    stdout: aliasStdout.stream,
+    stderr: captureStream().stream,
+    cwd: fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-magic-db-alias-")),
+  }), CLI_EXIT_OK);
+  assert.match(aliasStdout.getOutput(), /\S+/);
 });
 
 test("runCli can scaffold a workspace-first project with the new command surface", async () => {
@@ -572,6 +768,116 @@ test("runCli can create and list images through the image alias and an auto-dete
   });
 });
 
+test("runCli supports native image create, edit, import, list, and show", async () => {
+  const server = await createFakeOpenAIImageCliServer();
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-images-workspace-"));
+  const imageLibrary = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-images-library-"));
+  const codexImagePath = path.join(workspaceDir, "codex.png");
+  fs.writeFileSync(codexImagePath, Buffer.from(ONE_PIXEL_PNG, "base64"));
+
+  try {
+    await withPatchedEnv({ OPENAI_API_KEY: "test-key" }, async () => {
+      const createStdout = captureStream();
+      const createStderr = captureStream();
+      assert.equal(await runCli([
+        "image",
+        "create",
+        "--workspace", workspaceDir,
+        "--image-library", imageLibrary,
+        "--openai-base-url", server.baseUrl,
+        "--allow-env-credentials",
+        "--prompt", "library logo",
+        "--type", "logo",
+        "--tags", "brand,library",
+        "--json",
+      ], {
+        stdout: createStdout.stream,
+        stderr: createStderr.stream,
+        cwd: workspaceDir,
+      }), CLI_EXIT_OK, `${createStdout.getOutput()}\n${createStderr.getOutput()}`);
+      const created = JSON.parse(createStdout.getOutput()) as { id: string; operation: string; imageType: string };
+      assert.equal(created.operation, "create");
+      assert.equal(created.imageType, "logo");
+
+      const editStdout = captureStream();
+      assert.equal(await runCli([
+        "image",
+        "edit",
+        "--workspace", workspaceDir,
+        "--image-library", imageLibrary,
+        "--openai-base-url", server.baseUrl,
+        "--allow-env-credentials",
+        "--id", created.id,
+        "--prompt", "make the logo monochrome",
+        "--json",
+      ], {
+        stdout: editStdout.stream,
+        stderr: captureStream().stream,
+        cwd: workspaceDir,
+      }), CLI_EXIT_OK);
+      const edited = JSON.parse(editStdout.getOutput()) as { id: string; parentId: string; editDepth: number };
+      assert.equal(edited.parentId, created.id);
+      assert.equal(edited.editDepth, 1);
+
+      const importStdout = captureStream();
+      assert.equal(await runCli([
+        "image",
+        "import",
+        "--workspace", workspaceDir,
+        "--image-library", imageLibrary,
+        "--file", codexImagePath,
+        "--prompt", "Codex generated brand variant",
+        "--provenance", "imported-codex",
+        "--external-generator", "codex",
+        "--type", "logo",
+        "--parent-id", edited.id,
+        "--tags", "codex,brand",
+        "--json",
+      ], {
+        stdout: importStdout.stream,
+        stderr: captureStream().stream,
+        cwd: workspaceDir,
+      }), CLI_EXIT_OK);
+      const imported = JSON.parse(importStdout.getOutput()) as { id: string; provenance: string; parentId: string };
+      assert.equal(imported.provenance, "imported-codex");
+      assert.equal(imported.parentId, edited.id);
+
+      const listStdout = captureStream();
+      assert.equal(await runCli([
+        "image",
+        "list",
+        "--workspace", workspaceDir,
+        "--image-library", imageLibrary,
+        "--query", "codex",
+        "--json",
+      ], {
+        stdout: listStdout.stream,
+        stderr: captureStream().stream,
+        cwd: workspaceDir,
+      }), CLI_EXIT_OK);
+      assert.match(listStdout.getOutput(), /imported-codex/);
+
+      const showStdout = captureStream();
+      assert.equal(await runCli([
+        "image",
+        "show",
+        "--workspace", workspaceDir,
+        "--image-library", imageLibrary,
+        "--id", imported.id,
+        "--json",
+      ], {
+        stdout: showStdout.stream,
+        stderr: captureStream().stream,
+        cwd: workspaceDir,
+      }), CLI_EXIT_OK);
+      assert.match(showStdout.getOutput(), /Codex generated brand variant/);
+    });
+    assert.deepEqual(server.requests.map((entry) => entry.pathname), ["/v1/images/generations", "/v1/images/edits"]);
+  } finally {
+    await server.close();
+  }
+});
+
 test("runCli generate, add, and info operate on claw projects", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-generate-"));
 
@@ -698,6 +1004,115 @@ test("runCli add workspace and workspace command groups operate on local product
 test("runCli zero-config productivity commands bootstrap local sqlite in an empty directory", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-productivity-zero-config-"));
 
+  const magicTaskStdout = captureStream();
+  const magicTaskStderr = captureStream();
+  assert.equal(await runCli([
+    "db",
+    "task",
+    "Ship CLI",
+  ], {
+    stdout: magicTaskStdout.stream,
+    stderr: magicTaskStderr.stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(magicTaskStdout.getOutput(), /Created task (\S+) "Ship CLI"/);
+  assert.match(magicTaskStderr.getOutput(), /Using local database for this project/);
+  const taskId = magicTaskStdout.getOutput().match(/Created task (\S+) "Ship CLI"/)?.[1] ?? "";
+  assert.ok(taskId);
+
+  const magicLeadStdout = captureStream();
+  assert.equal(await runCli([
+    "db",
+    "leads",
+    "--set", "name=Ada",
+    "--set", "website=https://ada.dev",
+    "--json",
+  ], {
+    stdout: magicLeadStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const lead = JSON.parse(magicLeadStdout.getOutput()) as { title: string; metadata?: { website?: string } };
+  assert.equal(lead.title, "Ada");
+  assert.equal(lead.metadata?.website, "https://ada.dev");
+
+  const magicAliasStdout = captureStream();
+  assert.equal(await runCli([
+    "tasks",
+    "create",
+    "Alias task",
+    "--json",
+  ], {
+    stdout: magicAliasStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const aliasTask = JSON.parse(magicAliasStdout.getOutput()) as { id: string; title: string };
+  assert.equal(aliasTask.title, "Alias task");
+
+  const magicTasksListStdout = captureStream();
+  assert.equal(await runCli([
+    "tasks",
+    "list",
+    "--json",
+  ], {
+    stdout: magicTasksListStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const tasksList = JSON.parse(magicTasksListStdout.getOutput()) as Array<{ id: string }>;
+  assert.equal(tasksList.some((item) => item.id === taskId), true);
+  assert.equal(tasksList.some((item) => item.id === aliasTask.id), true);
+
+  const magicSchemaStdout = captureStream();
+  assert.equal(await runCli([
+    "db",
+    "leads",
+    "schema",
+    "--json",
+  ], {
+    stdout: magicSchemaStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const schema = JSON.parse(magicSchemaStdout.getOutput()) as { exists: boolean; collection: { name: string; fields: Array<{ name: string }> } };
+  assert.equal(schema.exists, true);
+  assert.equal(schema.collection.name, "leads");
+  assert.equal(schema.collection.fields.some((field) => field.name === "title"), true);
+
+  const magicWorkspaceSearchStdout = captureStream();
+  assert.equal(await runCli([
+    "workspace-search",
+    "query",
+    "Ship",
+    "--domains", "tasks,people,notes,events",
+    "--json",
+  ], {
+    stdout: magicWorkspaceSearchStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(magicWorkspaceSearchStdout.getOutput(), /"domain": "tasks"/);
+
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "data", "database.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "data", "productivity.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "workspace.manifest.json")), false);
+
+  const areaStdout = captureStream();
+  assert.equal(await runCli([
+    "areas",
+    "create",
+    "Platform",
+    "--status", "active",
+    "--json",
+  ], {
+    stdout: areaStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const area = JSON.parse(areaStdout.getOutput()) as { id: string; status?: string };
+  assert.equal(area.status, "active");
+
   const personStdout = captureStream();
   assert.equal(await runCli([
     "people",
@@ -718,6 +1133,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     "create",
     "Workspace Core",
     "--status", "in_progress",
+    "--area-id", area.id,
     "--owner-person-id", person.id,
     "--json",
   ], {
@@ -725,8 +1141,9 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const project = JSON.parse(projectStdout.getOutput()) as { id: string; ownerPersonId?: string };
+  const project = JSON.parse(projectStdout.getOutput()) as { id: string; ownerPersonId?: string; areaId?: string };
   assert.equal(project.ownerPersonId, person.id);
+  assert.equal(project.areaId, area.id);
 
   const goalStdout = captureStream();
   assert.equal(await runCli([
@@ -734,9 +1151,11 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     "create",
     "Ship zero-config productivity",
     "--status", "active",
+    "--area-id", area.id,
     "--project-id", project.id,
     "--owner-person-id", person.id,
     "--metric-key", "cli_crud",
+    "--review-cadence", "weekly",
     "--target-value", "1",
     "--json",
   ], {
@@ -744,25 +1163,231 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const goal = JSON.parse(goalStdout.getOutput()) as { id: string; projectId?: string };
+  const goal = JSON.parse(goalStdout.getOutput()) as { id: string; projectId?: string; areaId?: string; reviewCadence?: string };
   assert.equal(goal.projectId, project.id);
+  assert.equal(goal.areaId, area.id);
+  assert.equal(goal.reviewCadence, "weekly");
+
+  const milestoneStdout = captureStream();
+  assert.equal(await runCli([
+    "milestones",
+    "create",
+    "CLI beta",
+    "--status", "active",
+    "--area-id", area.id,
+    "--project-id", project.id,
+    "--goal-id", goal.id,
+    "--target-date", "2026-04-18T17:00:00.000Z",
+    "--json",
+  ], {
+    stdout: milestoneStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const milestone = JSON.parse(milestoneStdout.getOutput()) as { id: string; projectId?: string; areaId?: string };
+  assert.equal(milestone.projectId, project.id);
+  assert.equal(milestone.areaId, area.id);
 
   const taskStdout = captureStream();
   assert.equal(await runCli([
     "tasks",
     "create",
     "Ship workspace",
+    "--status", "blocked",
+    "--area-id", area.id,
     "--project-id", project.id,
     "--goal-id", goal.id,
+    "--estimate-minutes", "45",
+    "--blocked-reason", "waiting on release notes",
+    "--checklist-json", '[{"text":"cut release"},{"text":"announce beta","completed":true}]',
     "--json",
   ], {
     stdout: taskStdout.stream,
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const task = JSON.parse(taskStdout.getOutput()) as { id: string; status?: string; projectId?: string; goalId?: string };
+  const task = JSON.parse(taskStdout.getOutput()) as {
+    id: string;
+    status?: string;
+    projectId?: string;
+    goalId?: string;
+    areaId?: string;
+    estimateMinutes?: number;
+    blockedReason?: string;
+    checklist?: Array<{ text: string }>;
+  };
   assert.equal(task.projectId, project.id);
   assert.equal(task.goalId, goal.id);
+  assert.equal(task.areaId, area.id);
+  assert.equal(task.estimateMinutes, 45);
+  assert.equal(task.blockedReason, "waiting on release notes");
+  assert.equal(task.checklist?.length, 2);
+
+  const blockerStdout = captureStream();
+  assert.equal(await runCli([
+    "blockers",
+    "create",
+    "Need product approval",
+    "--kind", "policy_block",
+    "--task-id", task.id,
+    "--project-id", project.id,
+    "--goal-id", goal.id,
+    "--owner-agent-id", "reviewer",
+    "--json",
+  ], {
+    stdout: blockerStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const blocker = JSON.parse(blockerStdout.getOutput()) as { id: string; taskId?: string; kind?: string };
+  assert.equal(blocker.taskId, task.id);
+  assert.equal(blocker.kind, "policy_block");
+
+  const artifactStdout = captureStream();
+  assert.equal(await runCli([
+    "artifacts",
+    "create",
+    "Final screenshot",
+    "--kind", "screenshot",
+    "--task-id", task.id,
+    "--summary", "Hermetic validation screenshot",
+    "--json",
+  ], {
+    stdout: artifactStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const artifact = JSON.parse(artifactStdout.getOutput()) as { id: string; taskId?: string; kind?: string };
+  assert.equal(artifact.taskId, task.id);
+  assert.equal(artifact.kind, "screenshot");
+
+  const decisionStdout = captureStream();
+  assert.equal(await runCli([
+    "decisions",
+    "create",
+    "Keep rollout local-first",
+    "--status", "accepted",
+    "--task-id", task.id,
+    "--project-id", project.id,
+    "--artifact-ids", artifact.id,
+    "--alternatives", "remote-only,hybrid",
+    "--json",
+  ], {
+    stdout: decisionStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const decision = JSON.parse(decisionStdout.getOutput()) as { id: string; status?: string; artifactIds?: string[] };
+  assert.equal(decision.status, "accepted");
+  assert.equal(decision.artifactIds?.includes(artifact.id), true);
+
+  const sessionStdout = captureStream();
+  assert.equal(await runCli([
+    "work-sessions",
+    "create",
+    "Focus shipping block",
+    "--task-ids", task.id,
+    "--blocker-ids", blocker.id,
+    "--timebox-minutes", "30",
+    "--json",
+  ], {
+    stdout: sessionStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const workSession = JSON.parse(sessionStdout.getOutput()) as { id: string; taskIds?: string[]; blockerIds?: string[]; status?: string };
+  assert.equal(workSession.status, "active");
+  assert.equal(workSession.taskIds?.includes(task.id), true);
+  assert.equal(workSession.blockerIds?.includes(blocker.id), true);
+
+  const assignmentStdout = captureStream();
+  assert.equal(await runCli([
+    "assignments",
+    "create",
+    "Reviewer owns release gate",
+    "--task-id", task.id,
+    "--assigned-to-agent-id", "reviewer",
+    "--assigned-by", "planner",
+    "--reviewer-agent-id", "lead",
+    "--status", "accepted",
+    "--json",
+  ], {
+    stdout: assignmentStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const assignment = JSON.parse(assignmentStdout.getOutput()) as { id: string; taskId?: string; assignedToAgentId?: string; status?: string };
+  assert.equal(assignment.taskId, task.id);
+  assert.equal(assignment.assignedToAgentId, "reviewer");
+  assert.equal(assignment.status, "accepted");
+
+  const handoffStdout = captureStream();
+  assert.equal(await runCli([
+    "handoffs",
+    "create",
+    "Pass release validation to reviewer",
+    "--task-id", task.id,
+    "--from-agent-id", "planner",
+    "--to-agent-id", "reviewer",
+    "--artifact-ids", artifact.id,
+    "--blocker-ids", blocker.id,
+    "--objective", "Finish the release gate",
+    "--next-step", "Confirm the last blocker is gone",
+    "--json",
+  ], {
+    stdout: handoffStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const handoff = JSON.parse(handoffStdout.getOutput()) as { id: string; taskId?: string; toAgentId?: string; artifactIds?: string[] };
+  assert.equal(handoff.taskId, task.id);
+  assert.equal(handoff.toAgentId, "reviewer");
+  assert.equal(handoff.artifactIds?.includes(artifact.id), true);
+
+  const approvalStdout = captureStream();
+  assert.equal(await runCli([
+    "approvals",
+    "create",
+    "Approve publish",
+    "--kind", "publish",
+    "--task-id", task.id,
+    "--handoff-id", handoff.id,
+    "--approver-agent-id", "lead",
+    "--requested-by-agent-id", "reviewer",
+    "--policy-reason", "Publishing requires reviewer sign-off",
+    "--evidence-ids", artifact.id,
+    "--decision-ids", decision.id,
+    "--json",
+  ], {
+    stdout: approvalStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const approval = JSON.parse(approvalStdout.getOutput()) as { id: string; taskId?: string; kind?: string; status?: string };
+  assert.equal(approval.taskId, task.id);
+  assert.equal(approval.kind, "publish");
+  assert.equal(approval.status, "pending");
+
+  const capacityStdout = captureStream();
+  assert.equal(await runCli([
+    "capacity",
+    "create",
+    "Reviewer capacity",
+    "--agent-id", "reviewer",
+    "--team-id", "release",
+    "--max-wip", "2",
+    "--current-wip", "1",
+    "--queue-depth", "2",
+    "--blocked-count", "1",
+    "--overdue-count", "0",
+    "--json",
+  ], {
+    stdout: capacityStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const capacity = JSON.parse(capacityStdout.getOutput()) as { id: string; agentId?: string };
+  assert.equal(capacity.agentId, "reviewer");
 
   const reminderStdout = captureStream();
   assert.equal(await runCli([
@@ -782,7 +1407,8 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   assert.equal(reminder.anchorId, task.id);
 
   const deadlineStdout = captureStream();
-  assert.equal(await runCli([
+  const deadlineStderr = captureStream();
+  const deadlineExitCode = await runCli([
     "deadlines",
     "create",
     "Launch date",
@@ -792,9 +1418,10 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     "--json",
   ], {
     stdout: deadlineStdout.stream,
-    stderr: captureStream().stream,
+    stderr: deadlineStderr.stream,
     cwd: workspaceRoot,
-  }), CLI_EXIT_OK);
+  });
+  assert.equal(deadlineExitCode, CLI_EXIT_OK, `${deadlineStdout.getOutput()}\n${deadlineStderr.getOutput()}`);
   const deadline = JSON.parse(deadlineStdout.getOutput()) as { id: string; anchorId?: string };
   assert.equal(deadline.anchorId, project.id);
 
@@ -829,22 +1456,6 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   const event = JSON.parse(eventStdout.getOutput()) as { id: string };
   assert.ok(event.id);
 
-  const timeStdout = captureStream();
-  assert.equal(await runCli([
-    "time",
-    "create",
-    "routine",
-    "Daily check",
-    "--cron", "0 * * * *",
-    "--json",
-  ], {
-    stdout: timeStdout.stream,
-    stderr: captureStream().stream,
-    cwd: workspaceRoot,
-  }), CLI_EXIT_OK);
-  const routine = JSON.parse(timeStdout.getOutput()) as { item: { id: string; kind: string } };
-  assert.equal(routine.item.kind, "routine");
-
   const inboxStdout = captureStream();
   assert.equal(await runCli([
     "inbox",
@@ -861,6 +1472,75 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   const thread = JSON.parse(inboxStdout.getOutput()) as { thread: { id: string } };
   assert.ok(thread.thread.id);
 
+  const inboxProcessStdout = captureStream();
+  assert.equal(await runCli([
+    "inbox",
+    "process",
+    thread.thread.id,
+    "--task-title", "Reply to workspace core thread",
+    "--note-title", "Workspace core thread summary",
+    "--reminder-title", "Follow up thread",
+    "--trigger-at", "2026-04-16T09:30:00.000Z",
+    "--area-id", area.id,
+    "--project-id", project.id,
+    "--goal-id", goal.id,
+    "--json",
+  ], {
+    stdout: inboxProcessStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const processed = JSON.parse(inboxProcessStdout.getOutput()) as {
+    thread: { id: string; linkedTaskIds?: string[]; linkedNoteIds?: string[] };
+    task?: { id: string };
+    note?: { id: string };
+    reminder?: { id: string };
+  };
+  assert.equal(processed.thread.id, thread.thread.id);
+  assert.equal(processed.thread.linkedTaskIds?.includes(processed.task?.id || ""), true);
+  assert.equal(processed.thread.linkedNoteIds?.includes(processed.note?.id || ""), true);
+  assert.ok(processed.reminder?.id);
+
+  const teamWorkStdout = captureStream();
+  assert.equal(await runCli([
+    "team-work",
+    "--json",
+  ], {
+    stdout: teamWorkStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(teamWorkStdout.getOutput(), /"pendingApprovals":/);
+  assert.match(teamWorkStdout.getOutput(), new RegExp(approval.id));
+
+  const myWorkStdout = captureStream();
+  assert.equal(await runCli([
+    "my-work",
+    "--json",
+  ], {
+    stdout: myWorkStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(myWorkStdout.getOutput(), /"activeBlockers":/);
+  assert.match(myWorkStdout.getOutput(), new RegExp(blocker.id));
+
+  const taskMoveStdout = captureStream();
+  assert.equal(await runCli([
+    "tasks",
+    "move",
+    "--ids", task.id,
+    "--area-id", area.id,
+    "--project-id", project.id,
+    "--goal-id", goal.id,
+    "--json",
+  ], {
+    stdout: taskMoveStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(taskMoveStdout.getOutput(), new RegExp(task.id));
+
   const completeStdout = captureStream();
   assert.equal(await runCli([
     "tasks",
@@ -873,6 +1553,47 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
   assert.match(completeStdout.getOutput(), /"status": "done"/);
+
+  const blockerResolveStdout = captureStream();
+  assert.equal(await runCli([
+    "blockers",
+    "update",
+    blocker.id,
+    "--status", "resolved",
+    "--json",
+  ], {
+    stdout: blockerResolveStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(blockerResolveStdout.getOutput(), /"status": "resolved"/);
+
+  const workSessionCompleteStdout = captureStream();
+  assert.equal(await runCli([
+    "work-sessions",
+    "complete",
+    workSession.id,
+    "--outcome", "Focus loop shipped",
+    "--json",
+  ], {
+    stdout: workSessionCompleteStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(workSessionCompleteStdout.getOutput(), /"status": "completed"/);
+
+  const reviewStdout = captureStream();
+  assert.equal(await runCli([
+    "review",
+    "daily",
+    "--json",
+  ], {
+    stdout: reviewStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(reviewStdout.getOutput(), /"activeProjects":/);
+  assert.match(reviewStdout.getOutput(), /"pendingDecisions":/);
 
   const remindersListStdout = captureStream();
   assert.equal(await runCli([
@@ -902,18 +1623,32 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   }), CLI_EXIT_OK);
   assert.match(deadlinesListStdout.getOutput(), new RegExp(deadline.id));
 
-  const timeListStdout = captureStream();
+  const agendaStdout = captureStream();
   assert.equal(await runCli([
-    "time",
-    "list",
-    "--kind", "routine",
+    "agenda",
+    "--start", "2026-04-15T00:00:00.000Z",
+    "--end", "2026-04-21T00:00:00.000Z",
     "--json",
   ], {
-    stdout: timeListStdout.stream,
+    stdout: agendaStdout.stream,
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  assert.match(timeListStdout.getOutput(), new RegExp(routine.item.id));
+  assert.match(agendaStdout.getOutput(), /"domain": "milestones"/);
+  assert.match(agendaStdout.getOutput(), /"domain": "deadlines"/);
+
+  const activityStdout = captureStream();
+  assert.equal(await runCli([
+    "activity",
+    "list",
+    "--task-id", task.id,
+    "--json",
+  ], {
+    stdout: activityStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(activityStdout.getOutput(), /Task created/);
 
   const workspaceSearchStdout = captureStream();
   assert.equal(await runCli([
@@ -930,18 +1665,126 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   assert.match(workspaceSearchStdout.getOutput(), /"domain": "tasks"/);
   assert.match(workspaceSearchStdout.getOutput(), /"domain": "notes"/);
 
+  const exportStdout = captureStream();
+  assert.equal(await runCli([
+    "export",
+    "snapshot.json",
+    "--workspace", workspaceRoot,
+    "--json",
+  ], {
+    stdout: exportStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const exported = JSON.parse(exportStdout.getOutput()) as { path: string };
+  assert.equal(fs.existsSync(exported.path), true);
+
+  const backupStdout = captureStream();
+  assert.equal(await runCli([
+    "backup",
+    "backups",
+    "--workspace", workspaceRoot,
+    "--json",
+  ], {
+    stdout: backupStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const backup = JSON.parse(backupStdout.getOutput()) as { files: string[] };
+  assert.equal(backup.files.length > 0, true);
+
+  const importRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-productivity-import-"));
+  const importStdout = captureStream();
+  assert.equal(await runCli([
+    "import",
+    exported.path,
+    "--replace",
+    "--workspace", importRoot,
+    "--json",
+  ], {
+    stdout: importStdout.stream,
+    stderr: captureStream().stream,
+    cwd: importRoot,
+  }), CLI_EXIT_OK);
+  assert.match(importStdout.getOutput(), /"areas": 1/);
+
+  const importedAreasStdout = captureStream();
+  assert.equal(await runCli([
+    "areas",
+    "list",
+    "--workspace", importRoot,
+    "--json",
+  ], {
+    stdout: importedAreasStdout.stream,
+    stderr: captureStream().stream,
+    cwd: importRoot,
+  }), CLI_EXIT_OK);
+  assert.match(importedAreasStdout.getOutput(), /Platform/);
+
+  const inspectStdout = captureStream();
+  assert.equal(await runCli([
+    "workspace",
+    "inspect",
+    "--workspace", workspaceRoot,
+    "--json",
+  ], {
+    stdout: inspectStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(inspectStdout.getOutput(), /"schemaVersion": 6/);
+
+  const productivityDbPath = path.join(workspaceRoot, ".clawjs", "data", "productivity.sqlite");
+  const corruptionDb = new Database(productivityDbPath);
+  const corruptedTaskRow = corruptionDb.prepare("SELECT payload_json FROM workspace_records WHERE collection_name = ? AND record_id = ?").get("tasks", task.id) as { payload_json: string };
+  const corruptedTask = JSON.parse(corruptedTaskRow.payload_json) as Record<string, unknown>;
+  corruptedTask.areaId = "area-missing";
+  corruptedTask.dependsOnTaskIds = ["task-missing"];
+  corruptionDb.prepare("UPDATE workspace_records SET payload_json = ? WHERE collection_name = ? AND record_id = ?").run(JSON.stringify(corruptedTask), "tasks", task.id);
+  corruptionDb.close();
+
+  const repairStdout = captureStream();
+  assert.equal(await runCli([
+    "workspace",
+    "repair",
+    "--workspace", workspaceRoot,
+    "--json",
+  ], {
+    stdout: repairStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(repairStdout.getOutput(), /"repairedRecords":/);
+
+  const repairedTaskStdout = captureStream();
+  assert.equal(await runCli([
+    "tasks",
+    "get",
+    task.id,
+    "--workspace", workspaceRoot,
+    "--json",
+  ], {
+    stdout: repairedTaskStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const repairedTask = JSON.parse(repairedTaskStdout.getOutput()) as { areaId?: string; dependsOnTaskIds: string[] };
+  assert.equal(repairedTask.areaId, undefined);
+  assert.deepEqual(repairedTask.dependsOnTaskIds, []);
+
   assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "data", "productivity.sqlite")), true);
   assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "workspace.manifest.json")), false);
   assert.ok(note.id);
 });
 
-test("published CLI tarballs install with npm and manage productivity zero-config from the real binary", async () => {
+test("published CLI tarballs install with npm and manage local-first productivity zero-config from the real binary", async () => {
   const packDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-packages-"));
   const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-installed-"));
   const packageRoots = {
     core: path.resolve(process.cwd(), "packages/clawjs-core"),
     claw: path.resolve(process.cwd(), "packages/clawjs-node"),
     workspace: path.resolve(process.cwd(), "packages/clawjs-workspace"),
+    database: path.resolve(process.cwd(), "packages/clawjs-database"),
     cli: path.resolve(process.cwd(), "packages/clawjs"),
   };
 
@@ -949,6 +1792,7 @@ test("published CLI tarballs install with npm and manage productivity zero-confi
     packWorkspacePackage(packageRoots.core, packDir),
     packWorkspacePackage(packageRoots.claw, packDir),
     packWorkspacePackage(packageRoots.workspace, packDir),
+    packWorkspacePackage(packageRoots.database, packDir),
     packWorkspacePackage(packageRoots.cli, packDir),
   ];
 
@@ -958,48 +1802,361 @@ test("published CLI tarballs install with npm and manage productivity zero-confi
   const binPath = path.join(installRoot, "node_modules", "@clawjs", "cli", "bin", "clawjs.mjs");
   assert.equal(fs.existsSync(binPath), true);
 
-  const person = JSON.parse(runInstalledClaw(binPath, installRoot, [
-    "people",
-    "upsert",
-    "Alice Example",
-    "--email", "alice@example.com",
+  const magicDbTask = runInstalledClawProcess(binPath, installRoot, [
+    "db",
+    "task",
+    "Magic fallback",
+  ]);
+  assert.match(magicDbTask.stderr, /Using local database for this project/);
+  assert.match(magicDbTask.stdout, /Created task \S+ "Magic fallback"/);
+
+  const magicDbLead = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "db",
+    "leads",
+    "--set",
+    "name=Ada",
+    "--set",
+    "website=https://ada.dev",
     "--json",
-  ])) as { id: string };
+  ])) as { title: string; metadata?: { website?: string } };
+  assert.equal(magicDbLead.title, "Ada");
+  assert.equal(magicDbLead.metadata?.website, "https://ada.dev");
+
+  const magicAliasTask = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "tasks",
+    "create",
+    "Alias task",
+    "--json",
+  ])) as { id: string; title: string };
+  assert.equal(magicAliasTask.title, "Alias task");
+
+  const listedTasks = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "db",
+    "tasks",
+    "list",
+    "--json",
+  ])) as Array<{ id: string; title?: string }>;
+  assert.equal(listedTasks.some((item) => item.title === "Alias task"), true);
+  assert.equal(listedTasks.some((item) => item.title === "Magic fallback"), true);
+
+  const magicSchema = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "db",
+    "leads",
+    "schema",
+    "--json",
+  ])) as { exists: boolean; collection: { name: string } };
+  assert.equal(magicSchema.exists, true);
+  assert.equal(magicSchema.collection.name, "leads");
+
+  assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "data", "database.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "data", "productivity.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "workspace.manifest.json")), false);
+
+  const area = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "areas",
+    "create",
+    "Personal Ops",
+    "--status",
+    "active",
+    "--json",
+  ])) as { id: string; status: string; name: string };
+  assert.equal(area.status, "active");
+  assert.equal(area.name, "Personal Ops");
 
   const project = JSON.parse(runInstalledClaw(binPath, installRoot, [
     "projects",
     "create",
-    "Workspace Core",
-    "--status", "in_progress",
-    "--owner-person-id", person.id,
+    "Ship CLI",
+    "--area-id",
+    area.id,
+    "--status",
+    "in_progress",
+    "--status-category",
+    "active",
+    "--review-at",
+    "2026-04-20T09:00:00.000Z",
     "--json",
-  ])) as { id: string };
+  ])) as { id: string; areaId?: string; name: string; statusCategory?: string; reviewAt?: string };
+  assert.equal(project.areaId, area.id);
+  assert.equal(project.statusCategory, "active");
+  assert.equal(project.reviewAt, "2026-04-20T09:00:00.000Z");
+
+  const todayList = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "lists",
+    "create",
+    "Today",
+    "--kind",
+    "today",
+    "--rank",
+    "1",
+    "--json",
+  ])) as { id: string; kind: string; title: string };
+  assert.equal(todayList.kind, "today");
+
+  const upcomingList = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "lists",
+    "create",
+    "Upcoming",
+    "--kind",
+    "upcoming",
+    "--json",
+  ])) as { id: string; kind: string };
+  assert.equal(upcomingList.kind, "upcoming");
+
+  const section = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "sections",
+    "create",
+    "Next",
+    "--list-id",
+    todayList.id,
+    "--project-id",
+    project.id,
+    "--rank",
+    "10",
+    "--json",
+  ])) as { id: string; listId?: string; projectId?: string; rank?: number };
+  assert.equal(section.listId, todayList.id);
+  assert.equal(section.projectId, project.id);
+  assert.equal(section.rank, 10);
+
+  const savedView = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "saved-views",
+    "create",
+    "Due today",
+    "--domain",
+    "tasks",
+    "--query",
+    "today",
+    "--favorite",
+    "true",
+    "--json",
+  ])) as { id: string; domain: string; favorite?: boolean };
+  assert.equal(savedView.domain, "tasks");
+  assert.equal(savedView.favorite, true);
 
   const goal = JSON.parse(runInstalledClaw(binPath, installRoot, [
     "goals",
     "create",
-    "Ship productivity",
-    "--project-id", project.id,
-    "--owner-person-id", person.id,
+    "CLI daily workflow",
+    "--area-id",
+    area.id,
+    "--project-id",
+    project.id,
+    "--review-cadence",
+    "weekly",
     "--json",
-  ])) as { id: string };
+  ])) as { id: string; areaId?: string; projectId?: string };
+  assert.equal(goal.areaId, area.id);
+  assert.equal(goal.projectId, project.id);
+
+  const milestone = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "milestones",
+    "create",
+    "Beta ready",
+    "--area-id",
+    area.id,
+    "--project-id",
+    project.id,
+    "--goal-id",
+    goal.id,
+    "--status",
+    "active",
+    "--target-date",
+    "2026-04-18T17:00:00.000Z",
+    "--json",
+  ])) as { id: string; projectId?: string };
+  assert.equal(milestone.projectId, project.id);
 
   const task = JSON.parse(runInstalledClaw(binPath, installRoot, [
     "tasks",
     "create",
-    "Ship workspace",
-    "--project-id", project.id,
-    "--goal-id", goal.id,
+    "Ship CLI",
+    "--area-id",
+    area.id,
+    "--list-id",
+    todayList.id,
+    "--section-id",
+    section.id,
+    "--project-id",
+    project.id,
+    "--goal-id",
+    goal.id,
+    "--type",
+    "task",
+    "--rank",
+    "100",
+    "--start-at",
+    "2026-04-17T09:00:00.000Z",
+    "--due-at",
+    "2026-04-17T12:00:00.000Z",
+    "--deadline-at",
+    "2026-04-18T18:00:00.000Z",
+    "--recurrence-rule",
+    "FREQ=WEEKLY;BYDAY=FR",
+    "--estimate-minutes",
+    "30",
+    "--story-points",
+    "3",
+    "--checklist-json",
+    '[{"text":"pack tarballs"},{"text":"publish npm"}]',
     "--json",
-  ])) as { id: string };
+  ])) as { id: string; areaId?: string; listId?: string; sectionId?: string; projectId?: string; goalId?: string; estimateMinutes?: number; storyPoints?: number; checklist?: Array<{ text: string }>; recurrenceRule?: string };
+  assert.equal(task.areaId, area.id);
+  assert.equal(task.listId, todayList.id);
+  assert.equal(task.sectionId, section.id);
+  assert.equal(task.projectId, project.id);
+  assert.equal(task.goalId, goal.id);
+  assert.equal(task.estimateMinutes, 30);
+  assert.equal(task.storyPoints, 3);
+  assert.equal(task.recurrenceRule, "FREQ=WEEKLY;BYDAY=FR");
+  assert.equal(task.checklist?.length, 2);
+
+  const recurrence = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "recurrences",
+    "create",
+    "Weekly CLI review",
+    "--rule",
+    "FREQ=WEEKLY;BYDAY=FR",
+    "--anchor-type",
+    "task",
+    "--anchor-id",
+    task.id,
+    "--next-run-at",
+    "2026-04-24T09:00:00.000Z",
+    "--json",
+  ])) as { id: string; anchorId?: string; rule: string };
+  assert.equal(recurrence.anchorId, task.id);
+
+  const cycle = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "cycles",
+    "create",
+    "Sprint 17",
+    "--status",
+    "active",
+    "--project-id",
+    project.id,
+    "--starts-at",
+    "2026-04-15T00:00:00.000Z",
+    "--ends-at",
+    "2026-04-29T00:00:00.000Z",
+    "--capacity-points",
+    "20",
+    "--json",
+  ])) as { id: string; status: string; projectId?: string; capacityPoints?: number };
+  assert.equal(cycle.status, "active");
+  assert.equal(cycle.projectId, project.id);
+
+  const epic = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "epics",
+    "create",
+    "CLI productivity core",
+    "--kind",
+    "initiative",
+    "--project-id",
+    project.id,
+    "--goal-id",
+    goal.id,
+    "--json",
+  ])) as { id: string; kind: string; projectId?: string };
+  assert.equal(epic.kind, "initiative");
+
+  const typedTask = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "tasks",
+    "update",
+    task.id,
+    "--cycle-id",
+    cycle.id,
+    "--epic-id",
+    epic.id,
+    "--json",
+  ])) as { id: string; cycleId?: string; epicId?: string };
+  assert.equal(typedTask.cycleId, cycle.id);
+  assert.equal(typedTask.epicId, epic.id);
+
+  const comment = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "comments",
+    "create",
+    "Ready for review",
+    "--entity-type",
+    "task",
+    "--entity-id",
+    task.id,
+    "--visibility",
+    "internal",
+    "--json",
+  ])) as { id: string; entityId?: string; body?: string };
+  assert.equal(comment.entityId, task.id);
+
+  const attachment = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "attachments",
+    "create",
+    "CLI screenshot",
+    "--entity-type",
+    "task",
+    "--entity-id",
+    task.id,
+    "--mime-type",
+    "image/png",
+    "--uri",
+    "file://cli.png",
+    "--json",
+  ])) as { id: string; entityId?: string; mimeType?: string };
+  assert.equal(attachment.entityId, task.id);
+  assert.equal(attachment.mimeType, "image/png");
+
+  const annotatedTask = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "tasks",
+    "update",
+    task.id,
+    "--comment-ids",
+    comment.id,
+    "--attachment-ids",
+    attachment.id,
+    "--json",
+  ])) as { id: string; commentIds?: string[]; attachmentIds?: string[] };
+  assert.deepEqual(annotatedTask.commentIds, [comment.id]);
+  assert.deepEqual(annotatedTask.attachmentIds, [attachment.id]);
+
+  const customField = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "custom-fields",
+    "create",
+    "Impact",
+    "--entity-type",
+    "task",
+    "--field-type",
+    "select",
+    "--data",
+    '{"options":["low","high"]}',
+    "--json",
+  ])) as { id: string; name: string; fieldType: string; options?: string[] };
+  assert.equal(customField.fieldType, "select");
+
+  const fieldValue = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "field-values",
+    "create",
+    customField.id,
+    "--entity-type",
+    "task",
+    "--entity-id",
+    task.id,
+    "--data",
+    '{"value":"high"}',
+    "--json",
+  ])) as { id: string; fieldId: string; entityId: string; value?: string };
+  assert.equal(fieldValue.fieldId, customField.id);
+  assert.equal(fieldValue.entityId, task.id);
+  assert.equal(fieldValue.value, "high");
 
   const reminder = JSON.parse(runInstalledClaw(binPath, installRoot, [
     "reminders",
     "create",
-    "Follow up",
-    "--trigger-at", "2026-04-15T09:00:00.000Z",
-    "--anchor-type", "task",
-    "--anchor-id", task.id,
+    "Follow up publish",
+    "--trigger-at",
+    "2026-04-15T09:00:00.000Z",
+    "--anchor-type",
+    "task",
+    "--anchor-id",
+    task.id,
     "--json",
   ])) as { id: string; anchorId?: string };
   assert.equal(reminder.anchorId, task.id);
@@ -1007,10 +2164,13 @@ test("published CLI tarballs install with npm and manage productivity zero-confi
   const deadline = JSON.parse(runInstalledClaw(binPath, installRoot, [
     "deadlines",
     "create",
-    "Launch date",
-    "--due-at", "2026-04-20T18:00:00.000Z",
-    "--anchor-type", "project",
-    "--anchor-id", project.id,
+    "Release cutoff",
+    "--due-at",
+    "2026-04-18T18:00:00.000Z",
+    "--anchor-type",
+    "project",
+    "--anchor-id",
+    project.id,
     "--json",
   ])) as { id: string; anchorId?: string };
   assert.equal(deadline.anchorId, project.id);
@@ -1018,68 +2178,175 @@ test("published CLI tarballs install with npm and manage productivity zero-confi
   const event = JSON.parse(runInstalledClaw(binPath, installRoot, [
     "events",
     "create",
-    "Launch review",
-    "--starts-at", "2026-04-16T10:00:00.000Z",
-    "--attendees", person.id,
+    "Release review",
+    "--starts-at",
+    "2026-04-16T10:00:00.000Z",
     "--json",
   ])) as { id: string };
   assert.ok(event.id);
 
-  const note = JSON.parse(runInstalledClaw(binPath, installRoot, [
-    "notes",
-    "create",
-    "Workspace notes",
-    "--content", "Zero-config workspace launch checklist",
+  const taskList = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "tasks",
+    "list",
+    "--section-id",
+    section.id,
     "--json",
-  ])) as { id: string };
-  assert.ok(note.id);
+  ])) as Array<{ id: string }>;
+  assert.equal(taskList.some((item) => item.id === task.id), true);
 
-  const inbox = JSON.parse(runInstalledClaw(binPath, installRoot, [
-    "inbox",
-    "draft",
-    "Need update on workspace core",
-    "--channel", "email",
-    "--participants", person.id,
+  const workspaceSearch = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "workspace-search",
+    "query",
+    "CLI",
+    "--domains",
+    "tasks,epics,attachments",
     "--json",
-  ])) as { thread: { id: string } };
-  assert.ok(inbox.thread.id);
+  ])) as Array<{ domain: string; id: string }>;
+  assert.equal(workspaceSearch.some((item) => item.domain === "tasks" && item.id === task.id), true);
+  assert.equal(workspaceSearch.some((item) => item.domain === "epics" && item.id === epic.id), true);
 
-  const completed = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const commentSearch = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "workspace-search",
+    "query",
+    "review",
+    "--domains",
+    "comments",
+    "--json",
+  ])) as Array<{ domain: string; id: string }>;
+  assert.equal(commentSearch.some((item) => item.domain === "comments" && item.id === comment.id), true);
+
+  const timeline = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "timeline",
+    "week",
+    "--start",
+    "2026-04-15T00:00:00.000Z",
+    "--project-id",
+    project.id,
+    "--json",
+  ])) as {
+    projects: Array<{ projectId?: string; tasks: unknown[]; milestones: unknown[]; deadlines: unknown[]; cycles: unknown[] }>;
+    tasks: Array<{ id: string; dependencyState: { ready: boolean } }>;
+    milestones: Array<{ id: string }>;
+    deadlines: Array<{ id: string }>;
+    cycles: Array<{ id: string }>;
+    now: { readyTasks: Array<{ id: string }> };
+  };
+  assert.equal(timeline.projects.some((item) => item.projectId === project.id), true);
+  assert.equal(timeline.tasks.some((item) => item.id === task.id && item.dependencyState.ready), true);
+  assert.equal(timeline.milestones.some((item) => item.id === milestone.id), true);
+  assert.equal(timeline.deadlines.some((item) => item.id === deadline.id), true);
+  assert.equal(timeline.cycles.some((item) => item.id === cycle.id), true);
+  assert.equal(timeline.now.readyTasks.some((item) => item.id === task.id), true);
+
+  const completedTask = JSON.parse(runInstalledClaw(binPath, installRoot, [
     "tasks",
     "complete",
     task.id,
     "--json",
-  ])) as { status: string };
-  assert.equal(completed.status, "done");
+  ])) as { id: string; status: string };
+  assert.equal(completedTask.status, "done");
 
-  const reminders = JSON.parse(runInstalledClaw(binPath, installRoot, [
-    "reminders",
+  const milestoneList = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "milestones",
     "list",
     "--json",
   ])) as Array<{ id: string }>;
-  const deadlines = JSON.parse(runInstalledClaw(binPath, installRoot, [
-    "deadlines",
-    "list",
-    "--json",
-  ])) as Array<{ id: string }>;
-  const events = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  assert.equal(milestoneList.some((item) => item.id === milestone.id), true);
+
+  const eventList = JSON.parse(runInstalledClaw(binPath, installRoot, [
     "events",
     "list",
     "--json",
   ])) as Array<{ id: string }>;
+  assert.equal(eventList.some((item) => item.id === event.id), true);
 
-  assert.equal(reminders.some((item) => item.id === reminder.id), true);
-  assert.equal(deadlines.some((item) => item.id === deadline.id), true);
-  assert.equal(events.some((item) => item.id === event.id), true);
+  const agenda = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "agenda",
+    "--start",
+    "2026-04-15T00:00:00.000Z",
+    "--end",
+    "2026-04-19T00:00:00.000Z",
+    "--include-completed",
+    "--json",
+  ])) as { items: Array<{ domain: string; id: string }> };
+  assert.equal(agenda.items.some((item) => item.domain === "tasks" && item.id === task.id), true);
+  assert.equal(agenda.items.some((item) => item.domain === "deadlines" && item.id === deadline.id), true);
+
+  const exported = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "export",
+    "snapshot.json",
+    "--json",
+  ])) as { path: string };
+  assert.equal(fs.existsSync(exported.path), true);
+  const snapshot = JSON.parse(fs.readFileSync(exported.path, "utf8")) as { collections?: Record<string, unknown[]> };
+  assert.equal(Array.isArray(snapshot.collections?.lists), true);
+  assert.equal(Array.isArray(snapshot.collections?.sections), true);
+  assert.equal(Array.isArray(snapshot.collections?.comments), true);
+  assert.equal(Array.isArray(snapshot.collections?.attachments), true);
+  assert.equal(Array.isArray(snapshot.collections?.saved_views), true);
+  assert.equal(Array.isArray(snapshot.collections?.recurrences), true);
+  assert.equal(Array.isArray(snapshot.collections?.cycles), true);
+  assert.equal(Array.isArray(snapshot.collections?.epics), true);
+  assert.equal(Array.isArray(snapshot.collections?.custom_fields), true);
+  assert.equal(Array.isArray(snapshot.collections?.field_values), true);
+  assert.equal(Array.isArray(snapshot.collections?.templates), true);
+
+  const backup = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "backup",
+    "backups",
+    "--json",
+  ])) as { files: string[] };
+  assert.equal(backup.files.some((filePath) => filePath.endsWith("productivity.sqlite")), true);
+
+  const importRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-installed-import-"));
+  const imported = JSON.parse(runInstalledClaw(binPath, importRoot, [
+    "import",
+    exported.path,
+    "--replace",
+    "--json",
+  ])) as { importedCollections?: Record<string, number> };
+  assert.equal(imported.importedCollections?.sections, 1);
+  assert.equal(imported.importedCollections?.cycles, 1);
+
+  const importedSections = JSON.parse(runInstalledClaw(binPath, importRoot, [
+    "sections",
+    "list",
+    "--json",
+  ])) as Array<{ title?: string }>;
+  assert.equal(importedSections.some((item) => item.title === "Next"), true);
+
+  const dbTask = runInstalledClawProcess(binPath, installRoot, [
+    "db",
+    "task",
+    "Magic fallback",
+  ]);
+  assert.match(dbTask.stderr, /Using local database for this project/);
+  assert.match(dbTask.stdout, /Created task \S+ "Magic fallback"/);
+
+  assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "data", "database.sqlite")), true);
   assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "data", "productivity.sqlite")), true);
   assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "workspace.manifest.json")), false);
 });
 
-test("runCli migrates legacy workspace JSON productivity data into local sqlite automatically", async () => {
+test("runCli migrates legacy workspace sqlite productivity data into the local database automatically", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-productivity-migration-"));
-  const legacyTasksDir = path.join(workspaceRoot, ".clawjs", "data", "collections", "tasks");
-  fs.mkdirSync(legacyTasksDir, { recursive: true });
-  fs.writeFileSync(path.join(legacyTasksDir, "task-legacy.json"), JSON.stringify({
+  const legacyDbPath = path.join(workspaceRoot, ".clawjs", "data", "productivity.sqlite");
+  fs.mkdirSync(path.dirname(legacyDbPath), { recursive: true });
+  const legacyDb = new Database(legacyDbPath);
+  legacyDb.exec(`
+    CREATE TABLE workspace_records (
+      collection_name TEXT NOT NULL,
+      record_id TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      updated_at TEXT,
+      archived_at TEXT,
+      PRIMARY KEY (collection_name, record_id)
+    );
+  `);
+  legacyDb.prepare(`
+    INSERT INTO workspace_records (collection_name, record_id, payload_json, updated_at, archived_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).run("tasks", "task-legacy", JSON.stringify({
     id: "task-legacy",
     createdAt: "2026-04-01T09:00:00.000Z",
     updatedAt: "2026-04-01T09:00:00.000Z",
@@ -1092,7 +2359,8 @@ test("runCli migrates legacy workspace JSON productivity data into local sqlite 
     childTaskIds: [],
     dependsOnTaskIds: [],
     checklist: [],
-  }, null, 2));
+  }), "2026-04-01T09:00:00.000Z", null);
+  legacyDb.close();
 
   const listStdout = captureStream();
   assert.equal(await runCli([
@@ -1105,6 +2373,7 @@ test("runCli migrates legacy workspace JSON productivity data into local sqlite 
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
   assert.match(listStdout.getOutput(), /Imported task/);
+  assert.equal(fs.existsSync(legacyDbPath), true);
   assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "data", "productivity.sqlite")), true);
 });
 
@@ -1227,6 +2496,190 @@ test("runCli can connect and inspect telegram state through the CLI", async () =
     assert.equal(statusExitCode, CLI_EXIT_OK);
     assert.match(connectStdout.getOutput(), /claw_support_bot/);
     assert.match(statusStdout.getOutput(), /"mode": "webhook"/);
+  });
+});
+
+test("runCli exposes structured channel accounts and permissions", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-channels-"));
+  const { proxyPath, statePath } = createFakeTelegramSecretsProxy();
+
+  await withPatchedEnv({
+    CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+    FAKE_TELEGRAM_PROXY_STATE: statePath,
+  }, async () => {
+    const addStdout = captureStream();
+    const addExitCode = await runCli([
+      "channels",
+      "accounts",
+      "add",
+      "telegram",
+      "--workspace",
+      workspaceRoot,
+      "--account",
+      "support",
+      "--secret-name",
+      "telegram_support_bot_token",
+      "--json",
+    ], {
+      stdout: addStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    const grantStdout = captureStream();
+    const grantExitCode = await runCli([
+      "channels",
+      "permissions",
+      "grant",
+      "--workspace",
+      workspaceRoot,
+      "--agent",
+      "support-agent",
+      "--channel",
+      "telegram",
+      "--account",
+      "support",
+      "--target-id",
+      "1001",
+      "--permissions",
+      "read,write,ingest",
+      "--json",
+    ], {
+      stdout: grantStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    const listStdout = captureStream();
+    const listExitCode = await runCli([
+      "channels",
+      "accounts",
+      "list",
+      "--workspace",
+      workspaceRoot,
+      "--provider",
+      "telegram",
+      "--json",
+    ], {
+      stdout: listStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    assert.equal(addExitCode, CLI_EXIT_OK);
+    assert.equal(grantExitCode, CLI_EXIT_OK);
+    assert.equal(listExitCode, CLI_EXIT_OK);
+    assert.match(addStdout.getOutput(), /"id": "telegram:support"/);
+    assert.match(grantStdout.getOutput(), /support-agent:telegram:support:1001/);
+    assert.match(listStdout.getOutput(), /telegram:support/);
+  });
+});
+
+test("runCli connects Telegram through channels and runs a processor listener once", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-channels-listener-"));
+  const processorPath = path.join(workspaceRoot, "processor.cjs");
+  fs.mkdirSync(workspaceRoot, { recursive: true });
+  fs.writeFileSync(processorPath, `
+process.stdin.setEncoding("utf8");
+let input = "";
+process.stdin.on("data", (chunk) => input += chunk);
+process.stdin.on("end", () => {
+  const event = JSON.parse(input);
+  process.stdout.write(JSON.stringify({ actions: [{ type: "send_message", targetId: event.targetId, text: "cli reply: " + event.message.text }] }));
+});
+`);
+  const { proxyPath, statePath } = createFakeTelegramSecretsProxy();
+
+  await withPatchedEnv({
+    CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+    FAKE_TELEGRAM_PROXY_STATE: statePath,
+  }, async () => {
+    const connectExitCode = await runCli([
+      "channels",
+      "telegram",
+      "connect",
+      "--workspace",
+      workspaceRoot,
+      "--account",
+      "support",
+      "--secret-name",
+      "telegram_support_bot_token",
+      "--json",
+    ], {
+      stdout: captureStream().stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    const processorExitCode = await runCli([
+      "channels",
+      "processors",
+      "add",
+      "--workspace",
+      workspaceRoot,
+      "--id",
+      "support-router",
+      "--command",
+      `${process.execPath} ${processorPath}`,
+      "--json",
+    ], {
+      stdout: captureStream().stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    const grantExitCode = await runCli([
+      "channels",
+      "permissions",
+      "grant",
+      "--workspace",
+      workspaceRoot,
+      "--agent",
+      "support-router",
+      "--channel",
+      "telegram",
+      "--account",
+      "support",
+      "--target-id",
+      "1001",
+      "--permissions",
+      "write",
+      "--json",
+    ], {
+      stdout: captureStream().stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    const listenStdout = captureStream();
+    const listenExitCode = await runCli([
+      "channels",
+      "listen",
+      "start",
+      "--workspace",
+      workspaceRoot,
+      "--account",
+      "support",
+      "--processor",
+      "support-router",
+      "--once",
+      "--timeout",
+      "0",
+      "--json",
+    ], {
+      stdout: listenStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    const proxyState = JSON.parse(fs.readFileSync(statePath, "utf8")) as { lastSend?: { text?: string }; lastSendToken?: string };
+
+    assert.equal(connectExitCode, CLI_EXIT_OK);
+    assert.equal(processorExitCode, CLI_EXIT_OK);
+    assert.equal(grantExitCode, CLI_EXIT_OK);
+    assert.equal(listenExitCode, CLI_EXIT_OK);
+    assert.match(listenStdout.getOutput(), /"status": "stopped"/);
+    assert.equal(proxyState.lastSend?.text, "cli reply: hello telegram");
+    assert.equal(proxyState.lastSendToken, "{{telegram_support_bot_token}}");
   });
 });
 
@@ -2131,7 +3584,6 @@ test("runCli runtime memory search returns ok for empty results when explicitly 
   });
 });
 
-
 test("runCli lists external skill sources", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-skill-sources-"));
   const { binDir } = createFakeSkillSourceToolchain();
@@ -2235,6 +3687,123 @@ test("runCli can resolve exact skills.sh refs and install clawhub skills", async
     assert.equal(fs.existsSync(path.join(workspaceRoot, "skills", "support-triage", "SKILL.md")), true);
     assert.match(fs.readFileSync(clawhubLog, "utf8"), /install support-triage/);
   });
+});
+
+test("runCli manages the local library and syncs assigned assets", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-library-workspace-"));
+  const libraryDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-library-store-"));
+  const skillSourceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-library-skill-"));
+  fs.writeFileSync(path.join(skillSourceDir, "skill.json"), JSON.stringify({
+    id: "namecheap",
+    name: "Namecheap",
+    version: "0.1.0",
+  }, null, 2));
+
+  const stderr = captureStream();
+  const createSkill = await runCli([
+    "library", "import-skill", "namecheap",
+    "--id", "namecheap",
+    "--path", skillSourceDir,
+    "--library-dir", libraryDir,
+    "--workspace", workspaceRoot,
+    "--json",
+  ], {
+    stdout: captureStream().stream,
+    stderr: stderr.stream,
+    cwd: process.cwd(),
+  });
+  assert.equal(createSkill, CLI_EXIT_OK, stderr.getOutput());
+
+  const createInstruction = await runCli([
+    "library", "create", "ceo-soul",
+    "--kind", "instruction",
+    "--title", "CEO Soul",
+    "--content", "Operate like a pragmatic CEO.",
+    "--projection", "agents",
+    "--library-dir", libraryDir,
+    "--workspace", workspaceRoot,
+    "--json",
+  ], {
+    stdout: captureStream().stream,
+    stderr: stderr.stream,
+    cwd: process.cwd(),
+  });
+  assert.equal(createInstruction, CLI_EXIT_OK, stderr.getOutput());
+
+  for (const asset of ["namecheap", "ceo-soul"]) {
+    const assigned = await runCli([
+      "library", "assign", asset,
+      "--agent", "ada",
+      "--library-dir", libraryDir,
+      "--workspace", workspaceRoot,
+      "--json",
+    ], {
+      stdout: captureStream().stream,
+      stderr: stderr.stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(assigned, CLI_EXIT_OK, stderr.getOutput());
+  }
+
+  const syncStdout = captureStream();
+  const synced = await runCli([
+    "library", "sync",
+    "--agent", "ada",
+    "--library-dir", libraryDir,
+    "--workspace", workspaceRoot,
+    "--json",
+  ], {
+    stdout: syncStdout.stream,
+    stderr: stderr.stream,
+    cwd: process.cwd(),
+  });
+  assert.equal(synced, CLI_EXIT_OK, stderr.getOutput());
+  assert.match(syncStdout.getOutput(), /"assetId": "ceo-soul"/);
+  assert.equal(fs.existsSync(path.join(workspaceRoot, "skills", "namecheap", "skill.json")), true);
+  assert.match(fs.readFileSync(path.join(workspaceRoot, "AGENTS.md"), "utf8"), /Operate like a pragmatic CEO/);
+});
+
+test("runCli registers generated skills in the local library by default", async () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-library-project-"));
+  const libraryDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-library-generated-"));
+
+  const created = await runCli([
+    "new", "workspace", "workspace",
+    "--dir", projectRoot,
+    "--skip-install",
+    "--library-dir", libraryDir,
+    "--json",
+  ], {
+    stdout: captureStream().stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal(created, CLI_EXIT_OK);
+
+  const generated = await runCli([
+    "generate", "skill", "domain-check",
+    "--project", projectRoot,
+    "--library-dir", libraryDir,
+    "--json",
+  ], {
+    stdout: captureStream().stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal(generated, CLI_EXIT_OK);
+
+  const listStdout = captureStream();
+  const listed = await runCli([
+    "library", "list",
+    "--library-dir", libraryDir,
+    "--json",
+  ], {
+    stdout: listStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal(listed, CLI_EXIT_OK);
+  assert.match(listStdout.getOutput(), /"id": "domain-check"/);
 });
 
 test("runCli can stream a session reply through gateway config", async () => {
@@ -2981,8 +4550,8 @@ test("runCli supports time commands and schedule sugar", async () => {
     const afterExitCode = await runCli([
       "schedule",
       "after",
-      "24h if no reply",
-      "nudge owner",
+      "24h",
+      "if no reply nudge owner",
       "--time-url", timeUrl,
       "--workspace", tmpDir,
       "--anchor-type", "thread",

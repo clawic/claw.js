@@ -176,6 +176,8 @@ test("workspace productivity schemas validate linked records and search queries"
     watcherPersonIds: [],
     childTaskIds: [],
     dependsOnTaskIds: [],
+    commentIds: [],
+    attachmentIds: [],
     blockedByIds: [],
     evidenceIds: [],
     decisionIds: [],
@@ -216,6 +218,7 @@ test("workspace productivity schemas validate linked records and search queries"
     areaId: "area-1",
     leadAgentId: "agent-1",
     milestoneIds: ["milestone-1"],
+    defaultSectionIds: [],
   });
   assert.equal(project.milestoneIds[0], "milestone-1");
 
@@ -520,12 +523,49 @@ test("workspace productivity schemas validate linked records and search queries"
 
 test("productivity collection definitions expose the unified local and remote contract", () => {
   const collectionNames = PRODUCTIVITY_COLLECTION_DEFINITIONS.map((definition) => definition.name);
-  assert.deepEqual(collectionNames.slice(0, 21), [
+  assert.deepEqual(collectionNames.slice(0, 5), [
     "areas",
     "people",
     "tasks",
     "goals",
     "projects",
+  ]);
+  assert.equal(collectionNames.includes("lists"), true);
+  assert.equal(collectionNames.includes("sections"), true);
+  assert.equal(collectionNames.includes("comments"), true);
+  assert.equal(collectionNames.includes("attachments"), true);
+  assert.equal(collectionNames.includes("saved_views"), true);
+  assert.equal(collectionNames.includes("recurrences"), true);
+  assert.equal(collectionNames.includes("cycles"), true);
+  assert.equal(collectionNames.includes("epics"), true);
+  assert.equal(collectionNames.includes("custom_fields"), true);
+  assert.equal(collectionNames.includes("field_values"), true);
+  assert.equal(collectionNames.includes("templates"), true);
+  assert.deepEqual(collectionNames.slice(-5), [
+    "reminders",
+    "deadlines",
+    "notes",
+    "inbox_threads",
+    "inbox_messages",
+  ]);
+  assert.deepEqual(collectionNames.filter((name) => [
+    "milestones",
+    "events",
+    "activity_entries",
+    "blockers",
+    "artifacts",
+    "decisions",
+    "work_sessions",
+    "assignments",
+    "handoffs",
+    "approvals",
+    "capacity",
+    "agents",
+    "releases",
+    "incidents",
+    "feedback",
+    "checks",
+  ].includes(name)), [
     "milestones",
     "events",
     "activity_entries",
@@ -544,14 +584,6 @@ test("productivity collection definitions expose the unified local and remote co
     "checks",
   ]);
 
-  assert.deepEqual(collectionNames.slice(21), [
-    "reminders",
-    "deadlines",
-    "notes",
-    "inbox_threads",
-    "inbox_messages",
-  ]);
-
   const goalFields = PRODUCTIVITY_COLLECTION_DEFINITIONS.find((definition) => definition.name === "goals")?.fields ?? [];
   assert.equal(goalFields.some((field) => field.name === "parentId"), true);
   assert.equal(goalFields.some((field) => field.name === "parentGoalId"), true);
@@ -559,10 +591,14 @@ test("productivity collection definitions expose the unified local and remote co
 
   const projectFields = PRODUCTIVITY_COLLECTION_DEFINITIONS.find((definition) => definition.name === "projects")?.fields ?? [];
   assert.equal(projectFields.some((field) => field.name === "leadAgentId"), true);
+  assert.equal(projectFields.some((field) => field.name === "reviewAt"), true);
+  assert.equal(projectFields.some((field) => field.name === "defaultSectionIds"), true);
 
   const taskFields = PRODUCTIVITY_COLLECTION_DEFINITIONS.find((definition) => definition.name === "tasks")?.fields ?? [];
   assert.equal(taskFields.some((field) => field.name === "blockedByIds"), true);
   assert.equal(taskFields.some((field) => field.name === "approvalIds"), true);
+  assert.equal(taskFields.some((field) => field.name === "startAt"), true);
+  assert.equal(taskFields.some((field) => field.name === "sectionId"), true);
 
   const blockerFields = PRODUCTIVITY_COLLECTION_DEFINITIONS.find((definition) => definition.name === "blockers")?.fields ?? [];
   assert.equal(blockerFields.some((field) => field.name === "kind"), true);

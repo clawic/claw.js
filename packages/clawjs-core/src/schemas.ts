@@ -186,6 +186,69 @@ export const skillInstallResultSchema = z.object({
   warnings: z.array(z.string()).optional(),
 });
 
+export const libraryRequiredSecretSchema = z.object({
+  name: z.string().min(1),
+  label: z.string().min(1).optional(),
+  allowedHosts: z.array(z.string().min(1)).optional(),
+  allowedHeaders: z.array(z.string().min(1)).optional(),
+  readOnly: z.boolean().optional(),
+  notes: z.string().optional(),
+});
+
+export const libraryAssetSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(["skill", "instruction", "bundle"]),
+  title: z.string().min(1),
+  description: z.string().optional(),
+  tags: z.array(z.string().min(1)).default([]),
+  version: z.string().min(1).default("0.1.0"),
+  source: z.object({
+    source: z.string().min(1).optional(),
+    installRef: z.string().min(1).optional(),
+    path: z.string().min(1).optional(),
+  }).optional(),
+  projection: z.object({
+    target: z.enum(["soul", "identity", "agents", "tools", "heartbeat", "user"]),
+    blockId: z.string().min(1).optional(),
+  }).optional(),
+  requiredSecrets: z.array(libraryRequiredSecretSchema).default([]),
+  autoApplyTags: z.array(z.string().min(1)).optional(),
+  bundleAssetIds: z.array(z.string().min(1)).optional(),
+  contentPath: z.string().min(1).optional(),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+});
+
+export const libraryAssignmentSchema = z.object({
+  assetId: z.string().min(1),
+  scope: z.enum(["agent", "workspace"]),
+  targetId: z.string().min(1),
+  mode: z.enum(["include", "exclude"]),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+});
+
+export const libraryStateSchema = z.object({
+  schemaVersion: z.number().int().positive(),
+  assets: z.array(libraryAssetSchema),
+  assignments: z.array(libraryAssignmentSchema),
+  updatedAt: z.string().min(1),
+});
+
+export const libraryResolveResultSchema = z.object({
+  agentId: z.string().min(1).optional(),
+  workspaceId: z.string().min(1).optional(),
+  tags: z.array(z.string().min(1)),
+  assets: z.array(libraryAssetSchema.extend({
+    includedBy: z.array(z.enum(["explicit", "tag", "bundle"])),
+  })),
+  missingSecrets: z.array(z.object({
+    assetId: z.string().min(1),
+    name: z.string().min(1),
+    label: z.string().min(1).optional(),
+  })),
+});
+
 export const channelsStateSnapshotSchema = z.object({
   schemaVersion: z.number().int().positive(),
   updatedAt: z.string().min(1),
@@ -200,6 +263,120 @@ export const channelsStateSnapshotSchema = z.object({
     lastError: z.string().nullable().optional(),
     metadata: z.record(z.unknown()).optional(),
   })),
+  accounts: z.array(z.object({
+    id: z.string().min(1),
+    provider: z.string().min(1),
+    accountId: z.string().min(1),
+    label: z.string().min(1),
+    enabled: z.boolean(),
+    status: z.enum(["connected", "disconnected", "configured", "degraded", "unknown"]),
+    secretRef: z.string().nullable().optional(),
+    maskedCredential: z.string().nullable().optional(),
+    profile: z.record(z.unknown()).nullable().optional(),
+    transport: z.record(z.unknown()).nullable().optional(),
+    createdAt: z.string().min(1),
+    updatedAt: z.string().min(1),
+    metadata: z.record(z.unknown()).optional(),
+  })).optional(),
+  targets: z.array(z.object({
+    id: z.string().min(1),
+    provider: z.string().min(1),
+    accountId: z.string().min(1),
+    targetId: z.string().min(1),
+    kind: z.enum(["dm", "group", "supergroup", "channel", "topic", "unknown"]),
+    label: z.string().min(1).optional(),
+    title: z.string().min(1).optional(),
+    username: z.string().min(1).optional(),
+    parentTargetId: z.string().min(1).optional(),
+    threadId: z.string().min(1).optional(),
+    lastSeenAt: z.string().min(1).optional(),
+    createdAt: z.string().min(1),
+    updatedAt: z.string().min(1),
+    metadata: z.record(z.unknown()).optional(),
+  })).optional(),
+  messages: z.array(z.object({
+    id: z.string().min(1),
+    provider: z.string().min(1),
+    accountId: z.string().min(1),
+    targetId: z.string().min(1),
+    direction: z.enum(["inbound", "outbound"]),
+    status: z.enum(["received", "sent", "failed", "pending"]),
+    text: z.string().optional(),
+    providerMessageId: z.string().min(1).optional(),
+    threadId: z.string().min(1).optional(),
+    senderId: z.string().min(1).optional(),
+    senderLabel: z.string().min(1).optional(),
+    receivedAt: z.string().min(1).optional(),
+    sentAt: z.string().min(1).optional(),
+    createdAt: z.string().min(1),
+    updatedAt: z.string().min(1),
+    metadata: z.record(z.unknown()).optional(),
+    raw: z.record(z.unknown()).optional(),
+  })).optional(),
+  bindings: z.array(z.object({
+    id: z.string().min(1),
+    agentId: z.string().min(1),
+    provider: z.string().min(1).optional(),
+    accountId: z.string().min(1).optional(),
+    targetId: z.string().min(1).optional(),
+    permissions: z.array(z.enum(["read", "write", "ingest", "admin"])),
+    priority: z.number().int(),
+    enabled: z.boolean(),
+    createdAt: z.string().min(1),
+    updatedAt: z.string().min(1),
+    metadata: z.record(z.unknown()).optional(),
+  })).optional(),
+  processors: z.array(z.object({
+    id: z.string().min(1),
+    label: z.string().min(1).optional(),
+    command: z.string().min(1),
+    cwd: z.string().min(1).optional(),
+    agentId: z.string().min(1).optional(),
+    enabled: z.boolean(),
+    createdAt: z.string().min(1),
+    updatedAt: z.string().min(1),
+    metadata: z.record(z.unknown()).optional(),
+  })).optional(),
+  listeners: z.array(z.object({
+    id: z.string().min(1),
+    provider: z.string().min(1),
+    accountId: z.string().min(1),
+    processorId: z.string().min(1).optional(),
+    mode: z.enum(["foreground", "background"]),
+    status: z.enum(["running", "stopped", "stale", "error"]),
+    pid: z.number().int().positive().optional(),
+    pidPath: z.string().min(1).optional(),
+    logPath: z.string().min(1).optional(),
+    stopPath: z.string().min(1).optional(),
+    startedAt: z.string().min(1).optional(),
+    stoppedAt: z.string().min(1).optional(),
+    lastHeartbeatAt: z.string().min(1).optional(),
+    lastError: z.string().nullable().optional(),
+    createdAt: z.string().min(1),
+    updatedAt: z.string().min(1),
+    metadata: z.record(z.unknown()).optional(),
+  })).optional(),
+  events: z.array(z.object({
+    id: z.string().min(1),
+    type: z.enum([
+      "channel.message.received",
+      "channel.message.sent",
+      "channel.target.discovered",
+      "channel.listener.started",
+      "channel.listener.stopped",
+      "channel.listener.error",
+      "channel.processor.invoked",
+    ]),
+    provider: z.string().min(1),
+    accountId: z.string().min(1),
+    targetId: z.string().min(1).optional(),
+    messageId: z.string().min(1).optional(),
+    processorId: z.string().min(1).optional(),
+    status: z.enum(["ok", "error", "ignored"]).optional(),
+    createdAt: z.string().min(1),
+    payload: z.record(z.unknown()).optional(),
+    metadata: z.record(z.unknown()).optional(),
+  })).optional(),
   details: z.record(z.unknown()).optional(),
 });
 
@@ -561,7 +738,7 @@ export const runtimeFeatureDescriptorSchema = z.object({
 });
 
 export const linkedEntityRefSchema = z.object({
-  domain: z.enum(["area", "task", "goal", "project", "milestone", "activity_entry", "blocker", "artifact", "decision", "work_session", "assignment", "handoff", "approval", "capacity", "agent", "release", "incident", "feedback_item", "operational_check", "reminder", "deadline", "note", "person", "inbox_thread", "inbox_message", "event"]),
+  domain: z.enum(["area", "list", "section", "task", "goal", "project", "comment", "attachment", "saved_view", "recurrence", "cycle", "epic", "custom_field", "field_value", "template", "milestone", "activity_entry", "blocker", "artifact", "decision", "work_session", "assignment", "handoff", "approval", "capacity", "agent", "release", "incident", "feedback_item", "operational_check", "reminder", "deadline", "note", "person", "inbox_thread", "inbox_message", "event"]),
   id: z.string().min(1),
   label: z.string().min(1).optional(),
   relationship: z.string().min(1).optional(),
@@ -603,24 +780,43 @@ export const taskRecordSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
   status: z.enum(["todo", "in_progress", "blocked", "done", "cancelled"]),
+  type: z.enum(["todo", "task", "bug", "story", "feature", "chore"]).optional(),
   priority: z.enum(["low", "medium", "high", "urgent"]),
+  rank: z.number().optional(),
   labels: z.array(z.string()),
   areaId: z.string().min(1).optional(),
+  listId: z.string().min(1).optional(),
+  sectionId: z.string().min(1).optional(),
   assigneePersonId: z.string().min(1).optional(),
+  reporterPersonId: z.string().min(1).optional(),
   watcherPersonIds: z.array(z.string()),
+  startAt: z.string().min(1).optional(),
+  deferUntil: z.string().min(1).optional(),
   dueAt: z.string().min(1).optional(),
+  deadlineAt: z.string().min(1).optional(),
+  snoozedUntil: z.string().min(1).optional(),
+  recurrenceRule: z.string().min(1).optional(),
   estimateMinutes: z.number().int().nonnegative().optional(),
   actualMinutes: z.number().int().nonnegative().optional(),
+  storyPoints: z.number().nonnegative().optional(),
   blockedReason: z.string().min(1).optional(),
+  waitingOn: z.string().min(1).optional(),
   startedAt: z.string().min(1).optional(),
   completedAt: z.string().min(1).optional(),
+  cancelledAt: z.string().min(1).optional(),
   scheduledEventId: z.string().min(1).optional(),
   eventId: z.string().min(1).optional(),
   projectId: z.string().min(1).optional(),
   goalId: z.string().min(1).optional(),
+  cycleId: z.string().min(1).optional(),
+  epicId: z.string().min(1).optional(),
   parentTaskId: z.string().min(1).optional(),
   childTaskIds: z.array(z.string()),
   dependsOnTaskIds: z.array(z.string()),
+  commentIds: z.array(z.string()),
+  attachmentIds: z.array(z.string()),
+  createdBy: z.string().min(1).optional(),
+  updatedBy: z.string().min(1).optional(),
   assignedToAgentId: z.string().min(1).optional(),
   assignedBy: z.string().min(1).optional(),
   delegatedBy: z.string().min(1).optional(),
@@ -683,11 +879,151 @@ export const projectRecordSchema = z.object({
   portfolioItemId: z.string().min(1).optional(),
   color: z.string().min(1).optional(),
   kind: z.enum(["delivery", "growth", "ops", "research", "migration", "other"]).optional(),
+  rank: z.number().optional(),
+  statusCategory: z.enum(["active", "someday", "planned", "done", "archived"]).optional(),
   healthStatus: z.enum(["green", "yellow", "red", "unknown"]).optional(),
+  startAt: z.string().min(1).optional(),
   startDate: z.string().min(1).optional(),
   targetDate: z.string().min(1).optional(),
+  deadlineAt: z.string().min(1).optional(),
   milestoneIds: z.array(z.string()),
+  defaultSectionIds: z.array(z.string()),
+  templateId: z.string().min(1).optional(),
+  reviewAt: z.string().min(1).optional(),
+  reviewCadence: z.enum(["daily", "weekly", "monthly", "quarterly"]).optional(),
+  archiveReason: z.string().min(1).optional(),
   completedAt: z.string().min(1).optional(),
+});
+
+export const listRecordSchema = z.object({
+  ...workspaceRecordBaseShape,
+  title: z.string().min(1),
+  kind: z.enum(["inbox", "today", "upcoming", "anytime", "someday", "backlog", "project", "custom"]),
+  status: z.enum(["active", "archived"]),
+  description: z.string().optional(),
+  areaId: z.string().min(1).optional(),
+  projectId: z.string().min(1).optional(),
+  rank: z.number().optional(),
+  filter: z.record(z.unknown()).optional(),
+});
+
+export const sectionRecordSchema = z.object({
+  ...workspaceRecordBaseShape,
+  title: z.string().min(1),
+  status: z.enum(["active", "archived"]),
+  description: z.string().optional(),
+  listId: z.string().min(1).optional(),
+  projectId: z.string().min(1).optional(),
+  areaId: z.string().min(1).optional(),
+  rank: z.number().optional(),
+});
+
+const productivityCommentEntityTypeSchema = z.enum(["task", "project", "goal", "epic", "cycle", "note", "inbox_thread", "event"]);
+
+export const commentRecordSchema = z.object({
+  ...workspaceRecordBaseShape,
+  entityType: productivityCommentEntityTypeSchema,
+  entityId: z.string().min(1),
+  body: z.string().min(1),
+  authorPersonId: z.string().min(1).optional(),
+  authorAgentId: z.string().min(1).optional(),
+  visibility: z.enum(["internal", "shared"]).optional(),
+});
+
+export const attachmentRecordSchema = z.object({
+  ...workspaceRecordBaseShape,
+  title: z.string().min(1),
+  entityType: productivityCommentEntityTypeSchema,
+  entityId: z.string().min(1),
+  name: z.string().min(1).optional(),
+  mimeType: z.string().min(1).optional(),
+  uri: z.string().min(1).optional(),
+  path: z.string().min(1).optional(),
+  sizeBytes: z.number().int().nonnegative().optional(),
+  preview: z.string().optional(),
+  uploadedBy: z.string().min(1).optional(),
+});
+
+export const savedViewRecordSchema = z.object({
+  ...workspaceRecordBaseShape,
+  name: z.string().min(1),
+  domain: z.enum(["tasks", "projects", "goals", "inbox", "events", "workspace"]),
+  query: z.string().optional(),
+  filters: z.record(z.unknown()).optional(),
+  sort: z.record(z.unknown()).optional(),
+  groupBy: z.string().min(1).optional(),
+  favorite: z.boolean().optional(),
+  rank: z.number().optional(),
+});
+
+export const recurrenceRecordSchema = z.object({
+  ...workspaceRecordBaseShape,
+  title: z.string().min(1),
+  status: z.enum(["active", "paused", "ended"]),
+  rule: z.string().min(1),
+  timezone: z.string().min(1).optional(),
+  anchorType: z.enum(["task", "project", "goal", "event", "standalone"]).optional(),
+  anchorId: z.string().min(1).optional(),
+  nextRunAt: z.string().min(1).optional(),
+  lastRunAt: z.string().min(1).optional(),
+});
+
+export const cycleRecordSchema = z.object({
+  ...workspaceRecordBaseShape,
+  name: z.string().min(1),
+  status: z.enum(["planned", "active", "completed", "archived"]),
+  description: z.string().optional(),
+  teamId: z.string().min(1).optional(),
+  projectId: z.string().min(1).optional(),
+  goalId: z.string().min(1).optional(),
+  startsAt: z.string().min(1).optional(),
+  endsAt: z.string().min(1).optional(),
+  capacityPoints: z.number().nonnegative().optional(),
+  taskIds: z.array(z.string()),
+});
+
+export const epicRecordSchema = z.object({
+  ...workspaceRecordBaseShape,
+  title: z.string().min(1),
+  status: z.enum(["planned", "active", "done", "archived"]),
+  kind: z.enum(["epic", "initiative"]),
+  description: z.string().optional(),
+  projectId: z.string().min(1).optional(),
+  goalId: z.string().min(1).optional(),
+  ownerPersonId: z.string().min(1).optional(),
+  rank: z.number().optional(),
+  targetDate: z.string().min(1).optional(),
+  healthStatus: z.enum(["green", "yellow", "red", "unknown"]).optional(),
+  taskIds: z.array(z.string()),
+});
+
+export const customFieldRecordSchema = z.object({
+  ...workspaceRecordBaseShape,
+  name: z.string().min(1),
+  entityType: z.enum(["task", "project", "goal", "epic", "cycle", "person"]),
+  fieldType: z.enum(["text", "number", "boolean", "date", "select", "multi_select", "person", "relation", "url", "json"]),
+  description: z.string().optional(),
+  options: z.array(z.unknown()).optional(),
+  required: z.boolean().optional(),
+  rank: z.number().optional(),
+});
+
+export const fieldValueRecordSchema = z.object({
+  ...workspaceRecordBaseShape,
+  fieldId: z.string().min(1),
+  entityType: z.enum(["task", "project", "goal", "epic", "cycle", "person"]),
+  entityId: z.string().min(1),
+  value: z.unknown().optional(),
+});
+
+export const productivityTemplateRecordSchema = z.object({
+  ...workspaceRecordBaseShape,
+  name: z.string().min(1),
+  entityType: z.enum(["task", "project", "goal", "epic", "cycle", "note"]),
+  status: z.enum(["active", "archived"]),
+  description: z.string().optional(),
+  body: z.record(z.unknown()).optional(),
+  rank: z.number().optional(),
 });
 
 export const milestoneRecordSchema = z.object({
@@ -704,7 +1040,7 @@ export const milestoneRecordSchema = z.object({
 
 export const activityEntryRecordSchema = z.object({
   ...workspaceRecordBaseShape,
-  entityType: z.enum(["area", "task", "goal", "project", "milestone", "activity_entry", "blocker", "artifact", "decision", "work_session", "assignment", "handoff", "approval", "capacity", "agent", "release", "incident", "feedback_item", "operational_check", "reminder", "deadline", "note", "person", "inbox_thread", "inbox_message", "event"]),
+  entityType: z.enum(["area", "list", "section", "task", "goal", "project", "comment", "attachment", "saved_view", "recurrence", "cycle", "epic", "custom_field", "field_value", "template", "milestone", "activity_entry", "blocker", "artifact", "decision", "work_session", "assignment", "handoff", "approval", "capacity", "agent", "release", "incident", "feedback_item", "operational_check", "reminder", "deadline", "note", "person", "inbox_thread", "inbox_message", "event"]),
   entityId: z.string().min(1),
   kind: z.enum(["created", "updated", "completed", "archived", "processed", "commented"]),
   title: z.string().min(1),
@@ -1139,14 +1475,14 @@ export const temporalItemSchema = z.object({
 
 export const workspaceSearchQuerySchema = z.object({
   query: z.string().min(1),
-  domains: z.array(z.enum(["areas", "tasks", "goals", "projects", "milestones", "activity", "blockers", "artifacts", "decisions", "work_sessions", "assignments", "handoffs", "approvals", "capacity", "agents", "releases", "incidents", "feedback", "checks", "reminders", "deadlines", "notes", "people", "inbox", "events"])).optional(),
+  domains: z.array(z.enum(["areas", "lists", "sections", "tasks", "goals", "projects", "comments", "attachments", "saved_views", "recurrences", "cycles", "epics", "custom_fields", "field_values", "templates", "milestones", "activity", "blockers", "artifacts", "decisions", "work_sessions", "assignments", "handoffs", "approvals", "capacity", "agents", "releases", "incidents", "feedback", "checks", "reminders", "deadlines", "notes", "people", "inbox", "events"])).optional(),
   strategy: z.enum(["auto", "keyword", "semantic", "hybrid"]).optional(),
   limit: z.number().int().positive().optional(),
   includeArchived: z.boolean().optional(),
 });
 
 export const workspaceSearchResultSchema = z.object({
-  domain: z.enum(["areas", "tasks", "goals", "projects", "milestones", "activity", "blockers", "artifacts", "decisions", "work_sessions", "assignments", "handoffs", "approvals", "capacity", "agents", "releases", "incidents", "feedback", "checks", "reminders", "deadlines", "notes", "people", "inbox", "events"]),
+  domain: z.enum(["areas", "lists", "sections", "tasks", "goals", "projects", "comments", "attachments", "saved_views", "recurrences", "cycles", "epics", "custom_fields", "field_values", "templates", "milestones", "activity", "blockers", "artifacts", "decisions", "work_sessions", "assignments", "handoffs", "approvals", "capacity", "agents", "releases", "incidents", "feedback", "checks", "reminders", "deadlines", "notes", "people", "inbox", "events"]),
   id: z.string().min(1),
   title: z.string().min(1),
   snippet: z.string(),
@@ -1181,9 +1517,20 @@ export const auditEventSchema = z.object({
     "sandbox",
     "plugins",
     "areas",
+    "lists",
+    "sections",
     "tasks",
     "goals",
     "projects",
+    "comments",
+    "attachments",
+    "saved_views",
+    "recurrences",
+    "cycles",
+    "epics",
+    "custom_fields",
+    "field_values",
+    "templates",
     "milestones",
     "activity",
     "reminders",

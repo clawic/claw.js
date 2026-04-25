@@ -14,6 +14,7 @@ export interface StructuredLogSink {
 }
 
 const SENSITIVE_KEY_PATTERN = /(key|token|secret|authorization|apiKey)/i;
+const SAFE_SECRET_METADATA_KEYS = new Set(["missingSecrets", "requiredSecrets"]);
 const INLINE_SECRET_PATTERNS: RegExp[] = [
   /\bBearer\s+([A-Za-z0-9._-]{6,})/gi,
   /\b(sk-[A-Za-z0-9._-]{6,})\b/g,
@@ -49,7 +50,7 @@ export function redactSecrets<TValue>(value: TValue): TValue {
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
         key,
-        SENSITIVE_KEY_PATTERN.test(key)
+          SENSITIVE_KEY_PATTERN.test(key) && !SAFE_SECRET_METADATA_KEYS.has(key)
           ? (typeof entry === "string" ? redactString(entry) : "[REDACTED]")
           : redactSecrets(entry),
       ]),

@@ -98,9 +98,17 @@ const results = await claw.search.query({ query: "docs", domains: ["tasks", "not
 The productivity instance adds:
 
 - `areas` for long-lived responsibility areas
+- `lists` and `sections` for inbox, today, upcoming, someday, backlog, and ordered project breakdowns
 - `tasks` for task CRUD, completion, archive, and search
 - `goals` for goal CRUD, archive, and search
 - `projects` for project CRUD, archive, and search
+- `comments` and `attachments` for discussion and evidence linked to work records
+- `savedViews` for reusable filters, grouping, sorting, and favorite views
+- `recurrences` for recurring work rules and next-run state
+- `cycles` for sprint-style planning windows and capacity
+- `epics` for epic or initiative grouping above tasks
+- `customFields` and `fieldValues` for typed team-specific metadata
+- `templates` for reusable task, project, goal, epic, cycle, or note bodies
 - `milestones` for milestone CRUD, archive, and search
 - `activity` for activity/history reads and search
 - `blockers` for explicit blockers, dependency state, and blocker search
@@ -118,7 +126,7 @@ The productivity instance adds:
 - `people` for person upserts, identity matching, and search
 - `inbox` for draft creation, routing replies, ingesting incoming messages, and thread reads
 - `events` for calendar-style records and search
-- `agenda`, `review`, and `productivity` helpers for higher-level daily workflows, my-work views, team coordination, operations cockpit summaries, export/import, backup, inspect, and repair
+- `agenda`, `review`, and `productivity` helpers for higher-level daily workflows, day/week timelines, my-work views, team coordination, operations cockpit summaries, export/import, backup, inspect, and repair
 - `search`, `context`, and `ui` helpers for cross-domain workflows
 - `workspace.tools.describe()` so UIs can render tool metadata from the same runtime-aware source
 
@@ -155,9 +163,20 @@ claw db tasks list
 claw db leads create --set name=Ada --set website=https://ada.dev
 
 claw areas create "Personal Ops"
+claw lists create "Today" --kind today
+claw sections create "Deep Work" --list-id list-123
 claw tasks list
+claw tasks create --title "Triage docs drift" --list-id list-123 --section-id section-123 --start-at 2026-04-21T09:00:00Z --deadline-at 2026-04-24T17:00:00Z
 claw goals create "Ship workspace productivity"
 claw projects create "Workspace Core"
+claw cycles create "Sprint 14"
+claw epics create "Productivity core" --kind initiative
+claw timeline week --start 2026-04-21T00:00:00Z --project-id project-123 --json
+claw comments create "Needs design review" --entity-type task --entity-id task-123
+claw attachments create "Spec" --entity-type task --entity-id task-123 --uri file:///tmp/spec.md
+claw saved-views create "Upcoming" --domain tasks
+claw custom-fields create "Story points" --entity-type task --field-type number
+claw field-values create field-123 --entity-type task --entity-id task-123 --value 3
 claw milestones create "CLI beta" --project-id project-123
 claw activity list --task-id task-123
 claw blockers create "Waiting on approval" --kind policy_block --task-id task-123
@@ -185,8 +204,9 @@ claw workspace-index rebuild
 ```
 
 Use `workspace-search query` for keyword, semantic, or hybrid search
-over areas, tasks, goals, projects,
-milestones, blockers, artifacts, decisions, work sessions,
+over areas, lists, sections, tasks, goals, projects, comments,
+attachments, saved views, recurrences, cycles, epics, custom fields,
+field values, templates, milestones, blockers, artifacts, decisions, work sessions,
 assignments, handoffs, approvals, capacity, reminders, deadlines,
 notes, people, inbox, events, activity, agents, releases, incidents,
 feedback, and checks. Use `my-work` for the single-agent loop summary,

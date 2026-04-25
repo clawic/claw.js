@@ -42,6 +42,7 @@ The official flow is now `claw new` for project creation,
 | `--gateway-url`, `--gateway-token`, `--gateway-port`, `--gateway-config` | Gateway overrides passed through to the runtime adapter. |
 | `--vault-url`, `--vault-token`, `--vault-tenant-id`, `--vault-sidecar` | Vault connection and compatibility-sidecar overrides for `claw secrets ...`. |
 | `--template-pack` | Template-pack path used by `workspace init` or `files apply-template-pack`. |
+| `--library-dir` | Overrides the local personal library root. Defaults to `~/.clawjs/library` or `CLAWJS_LIBRARY_DIR`. |
 
 ## Project Commands
 
@@ -92,19 +93,34 @@ claw areas create "Personal Ops" --status active
 claw areas list
 
 claw tasks list
-claw tasks create --title "Triage docs drift"
+claw lists create "Today" --kind today --rank 10
+claw sections create "Deep Work" --list-id list-123 --rank 20
+claw tasks create --title "Triage docs drift" --type task --list-id list-123 --section-id section-123 --start-at 2026-04-21T09:00:00Z --deadline-at 2026-04-24T17:00:00Z --rank 100
 claw tasks move --ids task-123 --project-id project-123 --goal-id goal-123
 claw tasks complete --id task-123
+claw saved-views create "Upcoming" --domain tasks --filters '{"listId":"list-123"}'
+claw recurrences create "Weekly review" --rule "FREQ=WEEKLY;BYDAY=FR"
 
 claw goals list
 claw goals create "Ship local-first productivity" --project-id project-123
 
 claw projects list
-claw projects create "Workspace Core" --status in_progress
+claw projects create "Workspace Core" --status in_progress --status-category active --review-cadence weekly
 claw projects archive project-123 --cascade
 
+claw cycles create "Sprint 14" --starts-at 2026-04-20T09:00:00Z --ends-at 2026-05-01T17:00:00Z
+claw epics create "Productivity core" --kind initiative --project-id project-123
+claw comments create "Needs design review" --entity-type task --entity-id task-123
+claw attachments create "Spec" --entity-type task --entity-id task-123 --uri file:///tmp/spec.md
+claw custom-fields create "Story points" --entity-type task --field-type number
+claw field-values create field-123 --entity-type task --entity-id task-123 --value 3
+claw templates create "Launch checklist" --entity-type project
+
 claw milestones list
-claw milestones create "CLI beta" --project-id project-123 --area-id area-123
+claw milestones create "CLI beta" --project-id project-123 --area-id area-123 --target-date 2026-04-23T12:00:00Z
+
+claw timeline day --start 2026-04-21T00:00:00Z --project-id project-123 --json
+claw timeline week --start 2026-04-21T00:00:00Z --include-done --json
 
 claw activity list --task-id task-123
 
@@ -160,7 +176,12 @@ claw workspace-index rebuild
 
 For overlapping CRUD verbs, `claw tasks ...`, `claw notes ...`,
 `claw people ...`, `claw projects ...`, `claw goals ...`,
-`claw reminders ...`, `claw deadlines ...`, and `claw events ...`
+`claw lists ...`, `claw sections ...`, `claw comments ...`,
+`claw attachments ...`, `claw saved-views ...`, `claw recurrences ...`,
+`claw cycles ...`, `claw sprints ...`, `claw epics ...`,
+`claw initiatives ...`, `claw custom-fields ...`,
+`claw field-values ...`, `claw templates ...`, `claw reminders ...`,
+`claw deadlines ...`, and `claw events ...`
 follow the same local-first behavior and record normalization as
 `claw db <collection> ...`. `workspace-search query` also accepts
 `--strategy auto|keyword|semantic|hybrid`,
@@ -171,6 +192,10 @@ artifacts. `team-work` returns the coordination view across assignments,
 handoffs, approvals, and capacity. `reminders list` and `deadlines
 list` also accept `--before` and `--after` filters over their due
 timestamps.
+
+`timeline day|week` returns a shared planning view for Gantt-style
+screens: project groups, task bars, milestone markers, deadline markers,
+cycle bands, dependency readiness, and the current "now" recommendation.
 
 ## Time Commands
 
@@ -465,7 +490,44 @@ claw skills install support-triage --source clawhub
 
 claw channels list
 claw channels status
+claw channels telegram connect --account support --secret-name telegram_support_bot_token
+claw channels accounts add telegram --account support --secret-name telegram_support_bot_token
+claw channels accounts list --provider telegram
+claw channels targets register --channel telegram --account support --target-id -100123 --kind supergroup
+claw channels targets list --channel telegram --account support
+claw channels targets inspect --channel telegram --account support --target-id -100123 --thread-id 77
+claw channels targets update --channel telegram --account support --target-id -100123 --thread-id 77 --instructions "Route this topic to support."
+claw channels permissions grant --agent support-agent --channel telegram --account support --target-id -100123 --permissions read,write,ingest
+claw channels permissions list --agent support-agent --channel telegram --account support
+claw channels processors add --id support-router --command "node ./support-router.js"
+claw channels processors list
+claw channels listen start --channel telegram --account support --processor support-router --background
+claw channels listen status --channel telegram --account support
+claw channels listen logs --channel telegram --account support
+claw channels listen stop --channel telegram --account support
+claw channels messages sync --channel telegram --account support
+claw channels messages send --channel telegram --account support --target-id -100123 --text "hello" --agent support-agent
+claw channels messages read --channel telegram --account support --target-id -100123 --agent support-agent
+claw channels commands set --channel telegram --account support --commands '[{"command":"help","description":"Show help"}]'
+claw channels commands get --channel telegram --account support
 ```
+
+## Local Library Commands
+
+```bash
+claw library list
+claw library inspect namecheap
+claw library import-skill namecheap --id namecheap --path /path/to/namecheap-skill
+claw library create ceo-soul --kind instruction --projection agents --content "Operate like a pragmatic CEO."
+claw library create developer-kit --kind bundle --assets namecheap,ceo-soul
+claw library assign developer-kit --agent ada
+claw library resolve --workspace /path/to/workspace --agent ada
+claw library sync --workspace /path/to/workspace --agent ada
+```
+
+`new skill` and `generate skill` register local library assets by default.
+Pass `--no-library` to skip that registration. Assets can declare required
+secret names with `--required-secret`; the library stores references only.
 ## Telegram
 
 ```bash
@@ -551,6 +613,13 @@ claw generations create --kind image --prompt "Minimal line-art cat"
 claw generations list --kind image
 claw generations read --id gen_123
 claw generations delete --id gen_123
+
+claw image create --prompt "Minimal line-art cat" --type illustration --tags demo
+claw image edit --id img_123 --prompt "Make it monochrome"
+claw image import --file ./codex-logo.png --prompt "Codex generated logo" --provenance imported-codex --type logo
+claw image list --query codex --type logo
+claw image show --id img_123
+claw image delete --id img_123
 
 claw image backends
 claw image generate --prompt "Minimal line-art cat"

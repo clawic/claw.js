@@ -27,6 +27,18 @@ test("redactSecrets masks inline secrets inside error and message strings", () =
   assert.equal((redacted.message as string).includes("sk-live-12345678"), false);
 });
 
+test("redactSecrets preserves safe secret metadata containers", () => {
+  const redacted = redactSecrets({
+    missingSecrets: [{ name: "namecheap_api_token", label: "Namecheap API token" }],
+    requiredSecrets: [{ name: "namecheap_api_token" }],
+    secretValue: "secret-token-12345678",
+  });
+
+  assert.equal((redacted.missingSecrets as Array<{ name: string }>)[0]?.name, "namecheap_api_token");
+  assert.equal((redacted.requiredSecrets as Array<{ name: string }>)[0]?.name, "namecheap_api_token");
+  assert.equal((redacted.secretValue as string).includes("secret-token"), false);
+});
+
 test("StructuredLogger writes sanitized structured entries", () => {
   const sink = new MemoryStructuredLogSink();
   const logger = new StructuredLogger(sink).child({ workspaceId: "demo" });

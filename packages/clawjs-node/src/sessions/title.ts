@@ -3,7 +3,7 @@ import type { Message } from "@clawjs/core";
 import { buildOpenAIResponseMessages } from "./prompt.ts";
 import { summarizeTitle } from "./transcript.ts";
 import type { CommandRunner, SessionGatewayDescriptor, RuntimeSessionAdapter } from "../runtime/contracts.ts";
-import { extractJsonPayloadText, extractResponseOutputText } from "./stream.ts";
+import { extractCodexJsonlText, extractJsonPayloadText, extractResponseOutputText } from "./stream.ts";
 import { buildOpenClawCommand } from "../runtime/openclaw-command.ts";
 
 function normalizeText(value: string): string {
@@ -114,7 +114,9 @@ async function generateTitleViaCli(
   const combinedOutput = [result.stdout, result.stderr].filter((value) => value && value.trim()).join("\n");
   const text = invocation.parser === "json-payloads"
     ? extractJsonPayloadText(combinedOutput)
-    : result.stdout.trim();
+    : invocation.parser === "codex-jsonl"
+      ? extractCodexJsonlText(combinedOutput)
+      : result.stdout.trim();
   return summarizeTitle(text);
 }
 

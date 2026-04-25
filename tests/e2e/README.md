@@ -74,6 +74,9 @@ The current Playwright specs are:
 - [generator-smoke.spec.ts](./generator-smoke.spec.ts)
   Scaffolds `create-claw-app` and `create-claw-agent` projects into temp directories, verifies the app can boot, and verifies the agent scaffold keeps the Claude Code instruction redirect plus safe prompt-testing guidance.
 
+- [library-cli.spec.ts](./library-cli.spec.ts)
+  Verifies the local personal library can import, assign, resolve, and sync skill/instruction assets into an isolated workspace without real services, and confirms required secrets stay reference-only.
+
 - [sdk-openclaw-binary-path.spec.ts](./sdk-openclaw-binary-path.spec.ts)
   Verifies the published SDK can target an explicit OpenClaw binary path even when the binary is not available on `PATH`, and captures a final validation screenshot.
 

@@ -19,9 +19,20 @@ export type CapabilityName =
   | "sandbox"
   | "plugins"
   | "areas"
+  | "lists"
+  | "sections"
   | "tasks"
   | "goals"
   | "projects"
+  | "comments"
+  | "attachments"
+  | "saved_views"
+  | "recurrences"
+  | "cycles"
+  | "epics"
+  | "custom_fields"
+  | "field_values"
+  | "templates"
   | "milestones"
   | "activity"
   | "reminders"
@@ -59,6 +70,7 @@ export type FileMutationMode =
 export type KnownRuntimeAdapterId =
   | "demo"
   | "openclaw"
+  | "codex"
   | "zeroclaw"
   | "picoclaw"
   | "nanobot"
@@ -369,6 +381,13 @@ export interface ChannelsStateSnapshot {
   schemaVersion: number;
   updatedAt: string;
   channels: ChannelDescriptor[];
+  accounts?: ChannelAccountDescriptor[];
+  targets?: ChannelTargetDescriptor[];
+  messages?: ChannelMessageRecord[];
+  bindings?: ChannelAgentBinding[];
+  processors?: ChannelProcessorDescriptor[];
+  listeners?: ChannelListenerDescriptor[];
+  events?: ChannelEventRecord[];
   details?: Record<string, unknown>;
 }
 
@@ -560,9 +579,20 @@ export interface AuditEvent {
 
 export type WorkspaceDomain =
   | "areas"
+  | "lists"
+  | "sections"
   | "tasks"
   | "goals"
   | "projects"
+  | "comments"
+  | "attachments"
+  | "saved_views"
+  | "recurrences"
+  | "cycles"
+  | "epics"
+  | "custom_fields"
+  | "field_values"
+  | "templates"
   | "milestones"
   | "activity"
   | "blockers"
@@ -593,9 +623,20 @@ export type WorkspaceSearchStrategy =
 
 export type LinkedEntityDomain =
   | "area"
+  | "list"
+  | "section"
   | "task"
   | "goal"
   | "project"
+  | "comment"
+  | "attachment"
+  | "saved_view"
+  | "recurrence"
+  | "cycle"
+  | "epic"
+  | "custom_field"
+  | "field_value"
+  | "template"
   | "milestone"
   | "activity_entry"
   | "blocker"
@@ -660,24 +701,43 @@ export interface TaskRecord extends WorkspaceRecordBase {
   title: string;
   description?: string;
   status: "todo" | "in_progress" | "blocked" | "done" | "cancelled";
+  type?: "todo" | "task" | "bug" | "story" | "feature" | "chore";
   priority: "low" | "medium" | "high" | "urgent";
+  rank?: number;
   labels: string[];
   areaId?: string;
+  listId?: string;
+  sectionId?: string;
   assigneePersonId?: string;
+  reporterPersonId?: string;
   watcherPersonIds: string[];
+  startAt?: string;
+  deferUntil?: string;
   dueAt?: string;
+  deadlineAt?: string;
+  snoozedUntil?: string;
+  recurrenceRule?: string;
   estimateMinutes?: number;
   actualMinutes?: number;
+  storyPoints?: number;
   blockedReason?: string;
+  waitingOn?: string;
   startedAt?: string;
   completedAt?: string;
+  cancelledAt?: string;
   scheduledEventId?: string;
   eventId?: string;
   projectId?: string;
   goalId?: string;
+  cycleId?: string;
+  epicId?: string;
   parentTaskId?: string;
   childTaskIds: string[];
   dependsOnTaskIds: string[];
+  commentIds: string[];
+  attachmentIds: string[];
+  createdBy?: string;
+  updatedBy?: string;
   assignedToAgentId?: string;
   assignedBy?: string;
   delegatedBy?: string;
@@ -738,11 +798,140 @@ export interface ProjectRecord extends WorkspaceRecordBase {
   portfolioItemId?: string;
   color?: string;
   kind?: "delivery" | "growth" | "ops" | "research" | "migration" | "other";
+  rank?: number;
+  statusCategory?: "active" | "someday" | "planned" | "done" | "archived";
   healthStatus?: "green" | "yellow" | "red" | "unknown";
+  startAt?: string;
   startDate?: string;
   targetDate?: string;
+  deadlineAt?: string;
   milestoneIds: string[];
+  defaultSectionIds: string[];
+  templateId?: string;
+  reviewAt?: string;
+  reviewCadence?: "daily" | "weekly" | "monthly" | "quarterly";
+  archiveReason?: string;
   completedAt?: string;
+}
+
+export interface ListRecord extends WorkspaceRecordBase {
+  title: string;
+  kind: "inbox" | "today" | "upcoming" | "anytime" | "someday" | "backlog" | "project" | "custom";
+  status: "active" | "archived";
+  description?: string;
+  areaId?: string;
+  projectId?: string;
+  rank?: number;
+  filter?: Record<string, unknown>;
+}
+
+export interface SectionRecord extends WorkspaceRecordBase {
+  title: string;
+  status: "active" | "archived";
+  description?: string;
+  listId?: string;
+  projectId?: string;
+  areaId?: string;
+  rank?: number;
+}
+
+export type ProductivityCommentEntityType = "task" | "project" | "goal" | "epic" | "cycle" | "note" | "inbox_thread" | "event";
+
+export interface CommentRecord extends WorkspaceRecordBase {
+  entityType: ProductivityCommentEntityType;
+  entityId: string;
+  body: string;
+  authorPersonId?: string;
+  authorAgentId?: string;
+  visibility?: "internal" | "shared";
+}
+
+export interface AttachmentRecord extends WorkspaceRecordBase {
+  title: string;
+  entityType: ProductivityCommentEntityType;
+  entityId: string;
+  name?: string;
+  mimeType?: string;
+  uri?: string;
+  path?: string;
+  sizeBytes?: number;
+  preview?: string;
+  uploadedBy?: string;
+}
+
+export interface SavedViewRecord extends WorkspaceRecordBase {
+  name: string;
+  domain: "tasks" | "projects" | "goals" | "inbox" | "events" | "workspace";
+  query?: string;
+  filters?: Record<string, unknown>;
+  sort?: Record<string, unknown>;
+  groupBy?: string;
+  favorite?: boolean;
+  rank?: number;
+}
+
+export interface RecurrenceRecord extends WorkspaceRecordBase {
+  title: string;
+  status: "active" | "paused" | "ended";
+  rule: string;
+  timezone?: string;
+  anchorType?: "task" | "project" | "goal" | "event" | "standalone";
+  anchorId?: string;
+  nextRunAt?: string;
+  lastRunAt?: string;
+}
+
+export interface CycleRecord extends WorkspaceRecordBase {
+  name: string;
+  status: "planned" | "active" | "completed" | "archived";
+  description?: string;
+  teamId?: string;
+  projectId?: string;
+  goalId?: string;
+  startsAt?: string;
+  endsAt?: string;
+  capacityPoints?: number;
+  taskIds: string[];
+}
+
+export interface EpicRecord extends WorkspaceRecordBase {
+  title: string;
+  status: "planned" | "active" | "done" | "archived";
+  kind: "epic" | "initiative";
+  description?: string;
+  projectId?: string;
+  goalId?: string;
+  ownerPersonId?: string;
+  rank?: number;
+  targetDate?: string;
+  healthStatus?: "green" | "yellow" | "red" | "unknown";
+  taskIds: string[];
+}
+
+export interface CustomFieldRecord extends WorkspaceRecordBase {
+  name: string;
+  entityType: "task" | "project" | "goal" | "epic" | "cycle" | "person";
+  fieldType: "text" | "number" | "boolean" | "date" | "select" | "multi_select" | "person" | "relation" | "url" | "json";
+  description?: string;
+  options?: unknown[];
+  required?: boolean;
+  rank?: number;
+}
+
+export interface FieldValueRecord extends WorkspaceRecordBase {
+  fieldId: string;
+  entityType: "task" | "project" | "goal" | "epic" | "cycle" | "person";
+  entityId: string;
+  value?: unknown;
+}
+
+export interface TemplateRecord extends WorkspaceRecordBase {
+  name: string;
+  entityType: "task" | "project" | "goal" | "epic" | "cycle" | "note";
+  status: "active" | "archived";
+  description?: string;
+  body?: Record<string, unknown>;
+  rank?: number;
 }
 
 export interface MilestoneRecord extends WorkspaceRecordBase {
@@ -1475,7 +1664,7 @@ export interface AuthState {
 export interface SessionTransport {
   kind: "cli" | "gateway" | "hybrid";
   streaming: boolean;
-  gatewayKind?: "openai-chat-completions" | "openai-responses" | "openclaw-gateway" | "sse" | "ws";
+  gatewayKind?: "openai-chat-completions" | "openai-responses" | "openclaw-gateway" | "codex-app-server" | "sse" | "ws";
   primaryTransport?: "cli" | "gateway";
   fallbackTransport?: "cli" | "gateway" | "none";
   sessionPersistence?: "ephemeral" | "workspace" | "runtime" | "agent";
@@ -1565,6 +1754,91 @@ export interface SkillInstallResult {
   warnings?: string[];
 }
 
+export type LibraryAssetKind = "skill" | "instruction" | "bundle";
+export type LibraryInstructionProjectionTarget = "soul" | "identity" | "agents" | "tools" | "heartbeat" | "user";
+
+export interface LibraryRequiredSecret {
+  name: string;
+  label?: string;
+  allowedHosts?: string[];
+  allowedHeaders?: string[];
+  readOnly?: boolean;
+  notes?: string;
+}
+
+export interface LibrarySkillSource {
+  source?: string;
+  installRef?: string;
+  path?: string;
+}
+
+export interface LibraryInstructionProjection {
+  target: LibraryInstructionProjectionTarget;
+  blockId?: string;
+}
+
+export interface LibraryAsset {
+  id: string;
+  kind: LibraryAssetKind;
+  title: string;
+  description?: string;
+  tags: string[];
+  version: string;
+  source?: LibrarySkillSource;
+  projection?: LibraryInstructionProjection;
+  requiredSecrets: LibraryRequiredSecret[];
+  autoApplyTags?: string[];
+  bundleAssetIds?: string[];
+  contentPath?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LibraryAssignment {
+  assetId: string;
+  scope: "agent" | "workspace";
+  targetId: string;
+  mode: "include" | "exclude";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LibraryState {
+  schemaVersion: number;
+  assets: LibraryAsset[];
+  assignments: LibraryAssignment[];
+  updatedAt: string;
+}
+
+export interface LibraryResolvedAsset extends LibraryAsset {
+  includedBy: Array<"explicit" | "tag" | "bundle">;
+}
+
+export interface LibraryMissingSecret {
+  assetId: string;
+  name: string;
+  label?: string;
+}
+
+export interface LibraryResolveResult {
+  agentId?: string;
+  workspaceId?: string;
+  tags: string[];
+  assets: LibraryResolvedAsset[];
+  missingSecrets: LibraryMissingSecret[];
+}
+
+export interface LibrarySyncResult {
+  resolved: LibraryResolveResult;
+  syncedSkills: SkillDescriptor[];
+  writtenInstructionBlocks: Array<{
+    assetId: string;
+    targetFile: string;
+    blockId: string;
+    changed: boolean;
+  }>;
+}
+
 export interface ChannelDescriptor {
   id: string;
   label: string;
@@ -1579,6 +1853,128 @@ export interface ChannelDescriptor {
 
 export interface ChannelCatalog {
   channels: ChannelDescriptor[];
+}
+
+export type ChannelPermission = "read" | "write" | "ingest" | "admin";
+
+export interface ChannelAccountDescriptor {
+  id: string;
+  provider: string;
+  accountId: string;
+  label: string;
+  enabled: boolean;
+  status: ChannelDescriptor["status"];
+  secretRef?: string | null;
+  maskedCredential?: string | null;
+  profile?: Record<string, unknown> | null;
+  transport?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ChannelTargetDescriptor {
+  id: string;
+  provider: string;
+  accountId: string;
+  targetId: string;
+  kind: "dm" | "group" | "supergroup" | "channel" | "topic" | "unknown";
+  label?: string;
+  title?: string;
+  username?: string;
+  parentTargetId?: string;
+  threadId?: string;
+  lastSeenAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ChannelMessageRecord {
+  id: string;
+  provider: string;
+  accountId: string;
+  targetId: string;
+  direction: "inbound" | "outbound";
+  status: "received" | "sent" | "failed" | "pending";
+  text?: string;
+  providerMessageId?: string;
+  threadId?: string;
+  senderId?: string;
+  senderLabel?: string;
+  receivedAt?: string;
+  sentAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, unknown>;
+  raw?: Record<string, unknown>;
+}
+
+export interface ChannelAgentBinding {
+  id: string;
+  agentId: string;
+  provider?: string;
+  accountId?: string;
+  targetId?: string;
+  permissions: ChannelPermission[];
+  priority: number;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ChannelProcessorDescriptor {
+  id: string;
+  label?: string;
+  command: string;
+  cwd?: string;
+  agentId?: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ChannelListenerDescriptor {
+  id: string;
+  provider: string;
+  accountId: string;
+  processorId?: string;
+  mode: "foreground" | "background";
+  status: "running" | "stopped" | "stale" | "error";
+  pid?: number;
+  pidPath?: string;
+  logPath?: string;
+  stopPath?: string;
+  startedAt?: string;
+  stoppedAt?: string;
+  lastHeartbeatAt?: string;
+  lastError?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ChannelEventRecord {
+  id: string;
+  type:
+    | "channel.message.received"
+    | "channel.message.sent"
+    | "channel.target.discovered"
+    | "channel.listener.started"
+    | "channel.listener.stopped"
+    | "channel.listener.error"
+    | "channel.processor.invoked";
+  provider: string;
+  accountId: string;
+  targetId?: string;
+  messageId?: string;
+  processorId?: string;
+  status?: "ok" | "error" | "ignored";
+  createdAt: string;
+  payload?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface RuntimePluginDescriptor {

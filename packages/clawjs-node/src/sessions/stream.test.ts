@@ -1,7 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "fs";
+import os from "os";
+import path from "path";
+import { execFile } from "child_process";
+import { promisify } from "util";
 
-import { extractOpenClawCliText, splitTextIntoChunks, streamOpenClawSession, streamOpenClawSessionEvents, type StreamSessionDependencies } from "./stream.ts";
+import { extractCodexJsonlText, extractOpenClawCliText, splitTextIntoChunks, streamOpenClawSession, streamOpenClawSessionEvents, type StreamSessionDependencies } from "./stream.ts";
+
+const execFileAsync = promisify(execFile);
 
 test("extractOpenClawCliText and splitTextIntoChunks normalize CLI output", () => {
   const text = extractOpenClawCliText(JSON.stringify({
@@ -28,6 +35,105 @@ Gateway target: ws://127.0.0.1:18789
 }`);
 
   assert.equal(text, "Hi. What can I help you with?");
+});
+
+test("extractCodexJsonlText normalizes Codex exec JSONL events", () => {
+  const text = extractCodexJsonlText([
+    JSON.stringify({ type: "turn_started" }),
+    JSON.stringify({ type: "agent_message", message: "hello " }),
+    JSON.stringify({ method: "codex/event", params: { msg: { type: "agent_message", message: "world" } } }),
+    JSON.stringify({ type: "turn_completed" }),
+  ].join("\n"));
+
+  assert.equal(text, "hello world");
+});
+
+test("streamOpenClawSession streams Codex app-server and can fall back to Codex exec JSONL", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-codex-stream-"));
+  const codexBin = path.join(tempRoot, "codex");
+  fs.writeFileSync(codexBin, `#!/usr/bin/env node
+const readline = require("readline");
+const args = process.argv.slice(2);
+
+if (args[0] === "app-server") {
+  const rl = readline.createInterface({ input: process.stdin });
+  rl.on("line", (line) => {
+    const message = JSON.parse(line);
+    if (message.method === "initialize") {
+      process.stdout.write(JSON.stringify({ id: message.id, result: {} }) + "\\n");
+    }
+    if (message.method === "thread/start") {
+      process.stdout.write(JSON.stringify({ id: message.id, result: { thread: { id: "thread-1" } } }) + "\\n");
+    }
+    if (message.method === "turn/start") {
+      process.stdout.write(JSON.stringify({ method: "codex/event", params: { msg: { type: "agent_message", message: "app server reply" } } }) + "\\n");
+      process.stdout.write(JSON.stringify({ method: "turn/completed", params: {} }) + "\\n");
+    }
+  });
+  return;
+}
+
+if (args[0] === "exec") {
+  process.stdout.write(JSON.stringify({ type: "agent_message", message: "exec reply" }) + "\\n");
+  process.exit(0);
+}
+
+process.exit(1);
+`, { mode: 0o755 });
+
+  const adapter: StreamSessionDependencies["sessionAdapter"] = {
+    transport: {
+      kind: "hybrid",
+      streaming: true,
+      gatewayKind: "codex-app-server",
+    },
+    gateway: {
+      kind: "codex-app-server",
+      url: "stdio://codex-app-server",
+      command: codexBin,
+      args: ["app-server"],
+    },
+    fallbackGateway: null,
+    buildCliInvocation(input) {
+      return {
+        command: codexBin,
+        args: ["exec", "--json", input.prompt],
+        parser: "codex-jsonl",
+      };
+    },
+    supportsGateway: true,
+  };
+
+  const appServerChunks: string[] = [];
+  for await (const chunk of streamOpenClawSession({
+    sessionId: "codex-app-server",
+    messages: [{ role: "user", content: "hello" }],
+    chunkSize: 32,
+  }, {
+    sessionAdapter: adapter,
+  })) {
+    if (!chunk.done) appServerChunks.push(chunk.delta);
+  }
+  assert.deepEqual(appServerChunks, ["app server reply"]);
+
+  const execChunks: string[] = [];
+  for await (const chunk of streamOpenClawSession({
+    sessionId: "codex-exec",
+    messages: [{ role: "user", content: "hello" }],
+    transport: "cli",
+    chunkSize: 32,
+  }, {
+    sessionAdapter: adapter,
+    runner: {
+      exec: async (command, args) => {
+        const { stdout, stderr } = await execFileAsync(command, args, { encoding: "utf8" });
+        return { stdout, stderr, exitCode: 0 };
+      },
+    },
+  })) {
+    if (!chunk.done) execChunks.push(chunk.delta);
+  }
+  assert.deepEqual(execChunks, ["exec reply"]);
 });
 
 test("streamOpenClawSession streams via OpenAI responses when available", async () => {

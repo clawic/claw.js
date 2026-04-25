@@ -27,6 +27,7 @@ const publicDocPages = [
   "iot.md",
   "drive.md",
   "execution-plane.md",
+  "delegation-plane.md",
   "models.md",
   "sessions.md",
   "files.md",

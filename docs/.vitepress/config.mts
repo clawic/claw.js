@@ -65,6 +65,7 @@ export default defineConfig({
           { text: "Vault", link: "/vault" },
           { text: "Models", link: "/models" },
           { text: "Sessions", link: "/sessions" },
+          { text: "Local Agent Asset Library", link: "/local-library" },
           { text: "Files & Templates", link: "/files" },
           { text: "Watchers & Events", link: "/watchers" },
           { text: "Diagnostics & Repair", link: "/diagnostics" },
@@ -84,12 +85,14 @@ export default defineConfig({
         items: [
           { text: "Database", link: "/database" },
           { text: "Time Service", link: "/time" },
+          { text: "Day", link: "/day" },
           { text: "Content Service", link: "/content" },
           { text: "Notify", link: "/notify" },
           { text: "IoT", link: "/iot" },
           { text: "Vault", link: "/vault" },
           { text: "Drive", link: "/drive" },
           { text: "Execution Plane", link: "/execution-plane" },
+          { text: "Delegation Plane", link: "/delegation-plane" },
         ],
       },
       {

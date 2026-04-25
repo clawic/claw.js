@@ -153,6 +153,10 @@ The Relay also exposes equivalent project-scoped routes under:
 | Skills sources | `claw.skills.sources()` | `claw skills sources` | `GET WS/skills/sources` |
 | Skills search | `claw.skills.search()` | `claw skills search` | `GET WS/skills/search` |
 | Skills install | `claw.skills.install()` | `claw skills install` | `-` |
+| Local library list / inspect | `claw.library.list()`, `get()` | `claw library list`, `inspect` | `-` |
+| Local library create / update / remove | `claw.library.create()`, `update()`, `remove()` | `claw library create`, `update`, `remove` | `-` |
+| Local library import skill / bundle | `claw.library.importSkill()`, `createBundle()` | `claw library import-skill`, `create --kind bundle` | `-` |
+| Local library assign / resolve / sync | `claw.library.assign()`, `resolve()`, `sync()` | `claw library assign`, `resolve`, `sync` | `-` |
 | Channels list | `claw.channels.list()` | `claw channels list`, `claw channels status` | `GET WS/integrations/status` |
 
 ### Sessions, Inference, TTS, and Documents
@@ -236,9 +240,11 @@ These methods come from the `@clawjs/workspace` extension, not from the base
 | Generic generation delete | `claw.generations.remove()` | `claw generations delete` | `-` |
 | Register command backend | `claw.generations.registerCommandBackend()` | `claw generations register-command` | `-` |
 | Remove generation backend | `claw.generations.removeBackend()` | `claw generations remove-backend` | `-` |
-| Image generate | `claw.image.generate()` | `claw image generate` | `POST WS/images` |
+| Image create | `claw.image.create()` / `claw.image.generate()` | `claw image create` / `claw image generate` | `POST WS/images` |
+| Image edit | `claw.image.edit()` | `claw image edit` | `-` |
+| Image import | `claw.image.import()` | `claw image import` | `-` |
 | Image list | `claw.image.list()` | `claw image list` | `GET WS/images` |
-| Image read | `claw.image.get()` | `claw image read` | `GET WS/images/:imageId` |
+| Image read | `claw.image.get()` | `claw image show` / `claw image read` | `GET WS/images/:imageId` |
 | Image delete | `claw.image.remove()` | `claw image delete` | `DELETE WS/images/:imageId` |
 | Audio generate / list / read / delete | `claw.audio.*` | `claw audio ...` | `-` |
 | Video generate / list / read / delete | `claw.video.*` | `claw video ...` | `-` |
