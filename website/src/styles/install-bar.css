@@ -1,0 +1,48 @@
+/* ---- Install bar ---- */
+.install-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.install-bar__code {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--gray-900);
+  border: 1px solid var(--gray-800);
+  border-radius: var(--radius);
+  padding: 12px 20px;
+  font-family: "SF Mono", ui-monospace, Menlo, monospace;
+  font-size: 0.9rem;
+  color: var(--gray-300);
+}
+
+.install-bar__code .prompt {
+  color: var(--pink-400);
+  user-select: none;
+}
+
+.install-bar__copy {
+  background: none;
+  border: none;
+  color: var(--gray-500);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color var(--transition);
+  display: flex;
+  align-items: center;
+}
+
+.install-bar__copy:hover {
+  color: var(--gray-200);
+}
+
+.install-bar__copy svg {
+  width: 18px;
+  height: 18px;
+}
+

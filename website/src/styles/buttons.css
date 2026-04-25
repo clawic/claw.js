@@ -1,0 +1,41 @@
+/* ---- Buttons ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition);
+  text-decoration: none;
+}
+
+.btn--primary {
+  background: var(--pink-500);
+  color: white;
+  box-shadow: 0 0 20px rgba(255, 27, 107, 0.3);
+}
+
+.btn--primary:hover {
+  background: var(--pink-600);
+  box-shadow: 0 0 30px rgba(255, 27, 107, 0.4);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.btn--secondary {
+  background: var(--gray-800);
+  color: var(--gray-200);
+  border: 1px solid var(--gray-700);
+}
+
+.btn--secondary:hover {
+  background: var(--gray-700);
+  color: var(--gray-50);
+  transform: translateY(-1px);
+}
+

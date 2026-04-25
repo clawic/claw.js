@@ -1,0 +1,42 @@
+  <section class="section">
+    <div class="container">
+      <div class="section__header">
+        <p class="section__label">Settings Preview</p>
+        <h2 class="section__title">Built-in Runtime Management</h2>
+        <p class="section__desc">Select, install, and manage runtime adapters directly from your app. Everything is wired through the SDK.</p>
+      </div>
+      <div class="demo-stack">
+        <div class="demo-stack__tabs">
+          <button class="demo-stack__tab demo-stack__tab--active" data-target="front">Preview</button>
+          <button class="demo-stack__tab" data-target="back">Code</button>
+        </div>
+        <div class="demo-stack__layer demo-stack__layer--front demo-stack__layer--visible" data-layer="front">
+          <div class="demo-panel" id="demo-openclaw"></div>
+        </div>
+        <div class="demo-stack__layer demo-stack__layer--back" data-layer="back">
+          <div class="code-block">
+            <div class="code-block__header">
+              <span class="code-block__dot"></span>
+              <span class="code-block__dot"></span>
+              <span class="code-block__dot"></span>
+              <span class="code-block__filename">runtime.ts</span>
+            </div>
+            <pre><code><span class="keyword">import</span> <span class="punctuation">{</span> <span class="function">Claw</span> <span class="punctuation">}</span> <span class="keyword">from</span> <span class="string">"@clawjs/claw"</span><span class="punctuation">;</span>
+
+<span class="keyword">const</span> claw <span class="punctuation">=</span> <span class="keyword">await</span> <span class="function">Claw</span><span class="punctuation">({</span>
+  <span class="property">runtime</span><span class="punctuation">:</span> <span class="punctuation">{</span> <span class="property">adapter</span><span class="punctuation">:</span> <span class="string">"openclaw"</span> <span class="punctuation">}</span>
+<span class="punctuation">});</span>
+
+<span class="keyword">const</span> status <span class="punctuation">=</span> <span class="keyword">await</span> claw<span class="punctuation">.</span><span class="property">runtime</span><span class="punctuation">.</span><span class="function">status</span><span class="punctuation">();</span>
+console<span class="punctuation">.</span><span class="function">log</span><span class="punctuation">(</span>status<span class="punctuation">.</span><span class="property">ready</span><span class="punctuation">,</span> status<span class="punctuation">.</span><span class="property">capabilityMap</span><span class="punctuation">);</span>
+
+<span class="keyword">await</span> claw<span class="punctuation">.</span><span class="property">runtime</span><span class="punctuation">.</span><span class="function">switchAdapter</span><span class="punctuation">(</span><span class="string">"zeroclaw"</span><span class="punctuation">);</span>
+
+<span class="keyword">for await</span> <span class="punctuation">(</span><span class="keyword">const</span> ev <span class="keyword">of</span> claw<span class="punctuation">.</span><span class="property">runtime</span><span class="punctuation">.</span><span class="function">install</span><span class="punctuation">(</span><span class="string">"picoclaw"</span><span class="punctuation">))</span> <span class="punctuation">{</span>
+  console<span class="punctuation">.</span><span class="function">log</span><span class="punctuation">(</span>ev<span class="punctuation">.</span><span class="property">percent</span><span class="punctuation">,</span> ev<span class="punctuation">.</span><span class="property">message</span><span class="punctuation">);</span>
+<span class="punctuation">}</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>

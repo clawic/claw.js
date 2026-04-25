@@ -1,0 +1,49 @@
+  <section class="section" id="section-images">
+    <div class="section__aurora-orb" style="top: 14%; right: -4%;"></div>
+    <div class="container">
+      <div class="section__header">
+        <p class="section__label">Images</p>
+        <h2 class="section__title">Generate and Edit Images with One Command</h2>
+        <p class="section__desc">A full image dashboard, built in. Type a prompt, watch the model paint. Edit, re-roll, and tag, all from the CLI or a single function call.</p>
+      </div>
+      <div class="demo-stack demo-stack--wide demo-stack--images">
+        <div class="demo-stack__layer demo-stack__layer--front">
+          <div class="demo-panel demo-panel--images" id="demo-images"></div>
+        </div>
+        <div class="demo-stack__layer demo-stack__layer--back demo-stack__layer--narrow demo-stack__layer--split">
+          <div class="cli-terminal images-terminal" id="images-terminal">
+            <div class="cli-terminal__bar">
+              <span class="cli-terminal__dot"></span>
+              <span class="cli-terminal__dot"></span>
+              <span class="cli-terminal__dot"></span>
+              <span class="cli-terminal__title">Terminal</span>
+            </div>
+            <div class="cli-terminal__body" id="images-terminal-body"></div>
+          </div>
+          <div class="code-block images-code">
+            <div class="code-block__header">
+              <span class="code-block__dot"></span>
+              <span class="code-block__dot"></span>
+              <span class="code-block__dot"></span>
+              <span class="code-block__filename">images.ts</span>
+            </div>
+            <pre><code><span class="comment">// Generate a new image</span>
+<span class="keyword">const</span> img <span class="punctuation">=</span> <span class="keyword">await</span> claw
+  <span class="punctuation">.</span><span class="property">images</span><span class="punctuation">.</span><span class="function">create</span><span class="punctuation">({</span>
+    <span class="property">prompt</span><span class="punctuation">:</span> <span class="string">"logo for Claw, pink orbit"</span><span class="punctuation">,</span>
+    <span class="property">type</span><span class="punctuation">:</span> <span class="string">"logo"</span>
+  <span class="punctuation">});</span>
+
+<span class="comment">// Edit an existing one</span>
+<span class="keyword">await</span> claw<span class="punctuation">.</span><span class="property">images</span><span class="punctuation">.</span><span class="function">edit</span><span class="punctuation">(</span>img<span class="punctuation">.</span><span class="property">id</span><span class="punctuation">,</span> <span class="punctuation">{</span>
+  <span class="property">prompt</span><span class="punctuation">:</span> <span class="string">"make it warmer, add glow"</span>
+<span class="punctuation">});</span>
+
+<span class="comment">// List &amp; filter</span>
+<span class="keyword">const</span> logos <span class="punctuation">=</span> <span class="keyword">await</span> claw
+  <span class="punctuation">.</span><span class="property">images</span><span class="punctuation">.</span><span class="function">list</span><span class="punctuation">({</span> <span class="property">type</span><span class="punctuation">:</span> <span class="string">"logo"</span> <span class="punctuation">});</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>

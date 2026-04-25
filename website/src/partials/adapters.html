@@ -1,0 +1,50 @@
+  <section class="section">
+    <div class="container">
+      <div class="code-section">
+        <div class="code-section__text">
+          <p class="section__label">Quick Start</p>
+          <h3>Swap runtimes without rewriting your app</h3>
+          <p>
+            The API is built around runtime adapters, workspace contracts, provider catalogs, and normalized conversation transports.
+          </p>
+          <p>
+            Capabilities such as scheduler, memory, skills, channels, sandbox, and plugins are declared explicitly per adapter.
+          </p>
+          <div class="quickstart__highlights">
+            <div class="quickstart__highlight">
+              <div class="quickstart__highlight-icon"><svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg></div>
+              <span>Runtime adapters with typed capability contracts</span>
+            </div>
+            <div class="quickstart__highlight">
+              <div class="quickstart__highlight-icon"><svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg></div>
+              <span>Streaming conversations across any transport</span>
+            </div>
+            <div class="quickstart__highlight">
+              <div class="quickstart__highlight-icon"><svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg></div>
+              <span>Hot-swap adapters without restarting</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="code-block">
+          <div class="code-block__header">
+            <span class="code-block__dot"></span>
+            <span class="code-block__dot"></span>
+            <span class="code-block__dot"></span>
+            <span class="code-block__filename">app.ts</span>
+          </div>
+          <pre><code><span class="keyword">import</span> <span class="punctuation">{</span> <span class="function">Claw</span> <span class="punctuation">}</span> <span class="keyword">from</span> <span class="string">"@clawjs/claw"</span><span class="punctuation">;</span>
+
+<span class="keyword">const</span> claw <span class="punctuation">=</span> <span class="keyword">await</span> <span class="function">Claw</span><span class="punctuation">({</span>
+  <span class="property">runtime</span><span class="punctuation">:</span> <span class="punctuation">{</span> <span class="property">adapter</span><span class="punctuation">:</span> <span class="string">"openclaw"</span> <span class="punctuation">},</span>
+<span class="punctuation">});</span>
+
+<span class="keyword">for await</span> <span class="punctuation">(</span><span class="keyword">const</span> ev <span class="keyword">of</span> claw<span class="punctuation">.</span><span class="property">conversations</span><span class="punctuation">.</span><span class="function">stream</span><span class="punctuation">({</span>
+  <span class="property">sessionId</span><span class="punctuation">:</span> <span class="string">"demo"</span><span class="punctuation">,</span>
+<span class="punctuation">}))</span> <span class="punctuation">{</span>
+  console<span class="punctuation">.</span><span class="function">log</span><span class="punctuation">(</span>ev<span class="punctuation">.</span><span class="property">text</span><span class="punctuation">);</span>
+<span class="punctuation">}</span></code></pre>
+        </div>
+      </div>
+    </div>
+  </section>

@@ -1,0 +1,41 @@
+  <section class="section section--alt" id="section-tasks">
+    <div class="section__aurora-orb" style="top: 30%; right: -5%;"></div>
+    <div class="container">
+      <div class="section__header">
+        <p class="section__label">Productivity</p>
+        <h2 class="section__title">AI Agents Running Your Operations</h2>
+        <p class="section__desc">Specialized agents pick up tasks, execute them, and report back. Like handing your company's ops to a team of AI workers.</p>
+      </div>
+      <div class="demo-stack demo-stack--wide">
+        <div class="demo-stack__layer demo-stack__layer--front">
+          <div class="demo-panel demo-panel--tasks" id="demo-tasks"></div>
+        </div>
+        <div class="demo-stack__layer demo-stack__layer--back demo-stack__layer--narrow">
+          <div class="code-block">
+            <div class="code-block__header">
+              <span class="code-block__dot"></span>
+              <span class="code-block__dot"></span>
+              <span class="code-block__dot"></span>
+              <span class="code-block__filename">tasks.ts</span>
+            </div>
+            <pre><code><span class="comment">// Create a task</span>
+<span class="keyword">await</span> claw<span class="punctuation">.</span><span class="property">tasks</span><span class="punctuation">.</span><span class="function">create</span><span class="punctuation">({</span>
+  <span class="property">title</span><span class="punctuation">:</span> <span class="string">"Draft Q2 report"</span><span class="punctuation">,</span>
+  <span class="property">agent</span><span class="punctuation">:</span> <span class="string">"analyst"</span><span class="punctuation">,</span>
+<span class="punctuation">});</span>
+
+<span class="comment">// List by status</span>
+<span class="keyword">const</span> open <span class="punctuation">=</span> <span class="keyword">await</span> claw
+  <span class="punctuation">.</span><span class="property">tasks</span><span class="punctuation">.</span><span class="function">list</span><span class="punctuation">({</span>
+    <span class="property">status</span><span class="punctuation">:</span> <span class="string">"in_progress"</span>
+  <span class="punctuation">});</span>
+
+<span class="comment">// Assign to agent</span>
+<span class="keyword">await</span> claw<span class="punctuation">.</span><span class="property">tasks</span><span class="punctuation">.</span><span class="function">assign</span><span class="punctuation">(</span>
+  <span class="string">"task_id"</span><span class="punctuation">,</span> <span class="string">"ops-agent"</span>
+<span class="punctuation">);</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>

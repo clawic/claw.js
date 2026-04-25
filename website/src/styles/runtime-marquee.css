@@ -1,0 +1,200 @@
+/* ---- Runtime Marquee ---- */
+.runtime-marquee {
+  margin-top: 48px;
+  text-align: center;
+}
+
+.runtime-marquee__label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gray-500);
+  margin-bottom: 16px;
+}
+
+.runtime-marquee__track {
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.runtime-marquee__inner {
+  display: flex;
+  gap: 16px;
+  width: max-content;
+  animation: marquee-scroll 30s linear infinite;
+}
+
+.runtime-marquee__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  background: var(--gray-900);
+  border: 1px solid var(--gray-800);
+  border-radius: var(--radius);
+  padding: 8px 16px 8px 10px;
+  transition: border-color 0.3s, background 0.3s;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.runtime-marquee__item:hover {
+  border-color: var(--gray-600);
+  background: var(--gray-850);
+}
+
+.runtime-marquee__item img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 6px;
+  filter: grayscale(100%) brightness(0.7);
+  opacity: 0.55;
+  transition: filter 0.3s, opacity 0.3s;
+}
+
+.runtime-marquee__item span {
+  font-family: "SF Mono", ui-monospace, Menlo, monospace;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--gray-500);
+  white-space: nowrap;
+  transition: color 0.3s;
+}
+
+.runtime-marquee__item:hover img {
+  filter: grayscale(0%) brightness(1);
+  opacity: 1;
+}
+
+.runtime-marquee__item:hover span {
+  color: var(--gray-200);
+}
+
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.runtime-marquee__track:hover .runtime-marquee__inner {
+  animation-play-state: paused;
+}
+
+.sponsor-strip {
+  margin-top: 34px;
+  text-align: center;
+}
+
+.sponsor-strip .container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sponsor-strip__header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 20px;
+}
+
+.sponsor-strip__rule {
+  flex: 1;
+  height: 1px;
+  background: var(--gray-800);
+}
+
+.sponsor-strip__label {
+  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--gray-500);
+  white-space: nowrap;
+}
+
+.sponsor-strip__row {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.sponsor-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.sponsor-card--inline {
+  flex-direction: row;
+  gap: 12px;
+}
+
+.sponsor-card__media {
+  display: block;
+  line-height: 0;
+  transition: transform 220ms ease, opacity 220ms ease;
+}
+
+.sponsor-card__media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+}
+
+.sponsor-card__name {
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--gray-300);
+}
+
+.sponsor-card:hover .sponsor-card__media {
+  transform: translateY(-2px);
+  opacity: 0.96;
+}
+
+.sponsor-card:hover .sponsor-card__name {
+  color: var(--gray-50);
+}
+
+.sponsor-card--compact .sponsor-card__media {
+  width: 44px;
+}
+
+.sponsor-strip__cta {
+  display: inline-block;
+  margin-top: 16px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--gray-500);
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.sponsor-strip__cta:hover {
+  color: var(--gray-300);
+}
+
+.sponsor-strip--footer {
+  margin-top: 0;
+  padding: 0 0 56px;
+}
+

@@ -1,0 +1,43 @@
+  <section class="section section--alt" id="section-sheet">
+    <div class="section__aurora-orb" style="top: 18%; right: -6%;"></div>
+    <div class="container">
+      <div class="section__header">
+        <p class="section__label">Spreadsheets</p>
+        <h2 class="section__title">AI Agents Build Your Sheets</h2>
+        <p class="section__desc">Agents fill cells, write formulas, apply formatting, and insert charts. A real spreadsheet where every edit is agent-driven.</p>
+      </div>
+      <div class="demo-stack demo-stack--wide">
+        <div class="demo-stack__layer demo-stack__layer--front">
+          <div class="demo-panel demo-panel--sheet" id="demo-sheet"></div>
+        </div>
+        <div class="demo-stack__layer demo-stack__layer--back demo-stack__layer--narrow">
+          <div class="code-block">
+            <div class="code-block__header">
+              <span class="code-block__dot"></span>
+              <span class="code-block__dot"></span>
+              <span class="code-block__dot"></span>
+              <span class="code-block__filename">sheets.ts</span>
+            </div>
+            <pre><code><span class="comment">// Create a sheet</span>
+<span class="keyword">const</span> sheet <span class="punctuation">=</span> <span class="keyword">await</span> claw
+  <span class="punctuation">.</span><span class="property">sheets</span><span class="punctuation">.</span><span class="function">create</span><span class="punctuation">({</span>
+    <span class="property">title</span><span class="punctuation">:</span> <span class="string">"Q2 Sales Report"</span>
+  <span class="punctuation">});</span>
+
+<span class="comment">// Fill a range of cells</span>
+<span class="keyword">await</span> claw<span class="punctuation">.</span><span class="property">sheets</span>
+  <span class="punctuation">.</span><span class="function">setRange</span><span class="punctuation">(</span>sheet<span class="punctuation">.</span><span class="property">id</span><span class="punctuation">,</span> <span class="punctuation">{</span>
+    <span class="property">range</span><span class="punctuation">:</span> <span class="string">"A1:D7"</span><span class="punctuation">,</span>
+    <span class="property">values</span><span class="punctuation">:</span> data
+  <span class="punctuation">});</span>
+
+<span class="comment">// Write a formula</span>
+<span class="keyword">await</span> claw<span class="punctuation">.</span><span class="property">sheets</span>
+  <span class="punctuation">.</span><span class="function">setCell</span><span class="punctuation">(</span>sheet<span class="punctuation">.</span><span class="property">id</span><span class="punctuation">,</span> <span class="string">"E2"</span><span class="punctuation">,</span> <span class="punctuation">{</span>
+    <span class="property">formula</span><span class="punctuation">:</span> <span class="string">"=C2*D2"</span>
+  <span class="punctuation">});</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>

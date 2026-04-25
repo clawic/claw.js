@@ -1,0 +1,81 @@
+  <section class="hero">
+    <!-- AURORA: Animated floating orbs -->
+    <div class="hero__aurora">
+      <div class="hero__orb hero__orb--1"></div>
+      <div class="hero__orb hero__orb--2"></div>
+      <div class="hero__orb hero__orb--3"></div>
+    </div>
+
+    <div class="container">
+      <!-- Animated orchestration visual -->
+      <div class="hero__orbit hero__enter hero__enter--1" id="heroOrbit">
+        <div class="hero__orbit-hub" id="heroHub"><img src="/logo.png" alt="ClawJS" /></div>
+      </div>
+      <!-- Canvas lives at section level, no clipping -->
+      <canvas class="hero__trails-canvas" id="heroCanvas"></canvas>
+
+      <h1 class="hero__title hero__enter hero__enter--2">
+        Ship <span>AI Agents</span> Fast.<br/>Declarative. Portable.
+      </h1>
+
+      <p class="hero__subtitle hero__enter hero__enter--3">
+        Skills, memory, channels, models. Declare what your agent does. ClawJS handles the rest across 9+ runtime adapters.
+      </p>
+
+      <p class="hero__tagline hero__enter hero__enter--4">Open Source · MIT License</p>
+
+      <div class="hero__actions hero__enter hero__enter--5">
+        <a href="https://docs.clawjs.ai/getting-started" class="btn btn--primary" target="_blank" rel="noopener">
+          Get Started
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+        <a href="https://github.com/clawic/clawjs" class="btn btn--secondary" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+      </div>
+
+      <div class="install-bar hero__enter hero__enter--6">
+        <div class="install-bar__code">
+          <span class="prompt">$</span>
+          <span>npm install -g @clawjs/cli</span>
+          <button class="install-bar__copy" onclick="navigator.clipboard.writeText('npm install -g @clawjs/cli')" title="Copy to clipboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="runtime-marquee hero__enter hero__enter--7">
+        <div class="runtime-marquee__label">Supported Runtimes</div>
+        <div class="runtime-marquee__track">
+          <div class="runtime-marquee__inner">
+            <a class="runtime-marquee__item" href="https://github.com/nullclaw/nullclaw" target="_blank" rel="noopener"><img src="/runtimes/nullclaw.png" alt="NullClaw" /><span>NullClaw</span></a>
+            <a class="runtime-marquee__item" href="https://github.com/qwibitai/nanoclaw" target="_blank" rel="noopener"><img src="/runtimes/nanoclaw.png" alt="NanoClaw" /><span>NanoClaw</span></a>
+            <a class="runtime-marquee__item" href="https://github.com/nearai/ironclaw" target="_blank" rel="noopener"><img src="/runtimes/ironclaw.png" alt="IronClaw" /><span>IronClaw</span></a>
+            <a class="runtime-marquee__item" href="https://github.com/openclaw/openclaw" target="_blank" rel="noopener"><img src="/runtimes/openclaw.png" alt="OpenClaw" /><span>OpenClaw</span></a>
+            <a class="runtime-marquee__item" href="https://github.com/zeroclaw-labs/zeroclaw" target="_blank" rel="noopener"><img src="/runtimes/zeroclaw.png" alt="ZeroClaw" /><span>ZeroClaw</span></a>
+            <a class="runtime-marquee__item" href="https://github.com/sipeed/picoclaw" target="_blank" rel="noopener"><img src="/runtimes/picoclaw.png" alt="PicoClaw" /><span>PicoClaw</span></a>
+            <a class="runtime-marquee__item" href="https://github.com/NousResearch/hermes-agent" target="_blank" rel="noopener"><img src="/runtimes/hermes.png" alt="Hermes Agent" /><span>Hermes</span></a>
+            <a class="runtime-marquee__item" href="https://github.com/HKUDS/nanobot" target="_blank" rel="noopener"><img src="/runtimes/nanobot.png" alt="Nanobot" /><span>Nanobot</span></a>
+            <a class="runtime-marquee__item" href="https://github.com/NVIDIA/NemoClaw" target="_blank" rel="noopener"><img src="/runtimes/nemoclaw.png" alt="NemoClaw" /><span>NemoClaw</span></a>
+            <!-- Duplicated for seamless loop -->
+            <a class="runtime-marquee__item" href="https://github.com/nullclaw/nullclaw" target="_blank" rel="noopener"><img src="/runtimes/nullclaw.png" alt="NullClaw" /><span>NullClaw</span></a>
+            <a class="runtime-marquee__item" href="https://github.com/qwibitai/nanoclaw" target="_blank" rel="noopener"><img src="/runtimes/nanoclaw.png" alt="NanoClaw" /><span>NanoClaw</span></a>
+            <a class="runtime-marquee__item" href="https://github.com/nearai/ironclaw" target="_blank" rel="noopener"><img src="/runtimes/ironclaw.png" alt="IronClaw" /><span>IronClaw</span></a>
+            <a class="runtime-marquee__item" href="https://github.com/openclaw/openclaw" target="_blank" rel="noopener"><img src="/runtimes/openclaw.png" alt="OpenClaw" /><span>OpenClaw</span></a>
+            <a class="runtime-marquee__item" href="https://github.com/zeroclaw-labs/zeroclaw" target="_blank" rel="noopener"><img src="/runtimes/zeroclaw.png" alt="ZeroClaw" /><span>ZeroClaw</span></a>
+            <a class="runtime-marquee__item" href="https://github.com/sipeed/picoclaw" target="_blank" rel="noopener"><img src="/runtimes/picoclaw.png" alt="PicoClaw" /><span>PicoClaw</span></a>
+            <a class="runtime-marquee__item" href="https://github.com/NousResearch/hermes-agent" target="_blank" rel="noopener"><img src="/runtimes/hermes.png" alt="Hermes Agent" /><span>Hermes</span></a>
+            <a class="runtime-marquee__item" href="https://github.com/HKUDS/nanobot" target="_blank" rel="noopener"><img src="/runtimes/nanobot.png" alt="Nanobot" /><span>Nanobot</span></a>
+            <a class="runtime-marquee__item" href="https://github.com/NVIDIA/NemoClaw" target="_blank" rel="noopener"><img src="/runtimes/nemoclaw.png" alt="NemoClaw" /><span>NemoClaw</span></a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>

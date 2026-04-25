@@ -17,6 +17,7 @@ import { mountRelay } from "./relay.js";
 import { mountDatabase } from "./database.js";
 import { mountDeck } from "./deck.js";
 import { mountSheet } from "./sheet.js";
+import { mountImages } from "./images.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const oc = document.getElementById("demo-openclaw");
@@ -57,4 +58,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (deck) mountDeck(deck);
   const sheet = document.getElementById("demo-sheet");
   if (sheet) mountSheet(sheet);
+  const imgs = document.getElementById("demo-images");
+  if (imgs) mountImages(imgs);
 });

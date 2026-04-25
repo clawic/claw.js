@@ -1,0 +1,176 @@
+/* ---- Hero ---- */
+.hero {
+  padding: 160px 0 100px;
+  text-align: center;
+  position: relative;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 560px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 27, 107, 0.15) 0%,
+    rgba(255, 27, 107, 0.05) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.hero__tagline {
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gray-400);
+  margin-bottom: 28px;
+}
+
+/* ── Hero Orchestration Visual ── */
+/* ── Hero entrance stagger ── */
+
+/* Nav: slides down from above, keeps its translateX centering */
+.hero-nav-enter {
+  animation: hero-nav-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
+}
+@keyframes hero-nav-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-16px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Logo: scale up + fade (slower, prominent) */
+.hero__enter--1 {
+  animation: hero-scale-in 1.6s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+@keyframes hero-scale-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Title: fade up */
+.hero__enter--2 {
+  animation: hero-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+}
+
+/* Subtitle: just fade in, no movement */
+.hero__enter--3 {
+  animation: hero-fade 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both;
+}
+
+/* Tagline: fade in */
+.hero__enter--4 {
+  animation: hero-fade 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.65s both;
+}
+
+/* Buttons: fade up subtle */
+.hero__enter--5 {
+  animation: hero-up-sm 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.8s both;
+}
+
+/* Install bar: fade in */
+.hero__enter--6 {
+  animation: hero-fade 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.95s both;
+}
+
+/* Runtime marquee: fade in last */
+.hero__enter--7 {
+  animation: hero-fade 1s cubic-bezier(0.16, 1, 0.3, 1) 1.2s both;
+}
+
+@keyframes hero-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes hero-up-sm {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes hero-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Scroll reveal ── */
+.sr {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sr--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hero__orbit {
+  position: relative;
+  width: 100%;
+  height: 420px;
+  margin: 0 auto 24px;
+}
+
+.hero__orbit-hub {
+  position: absolute;
+  top: 48%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  animation: hero-hub-pulse 2.5s ease-in-out infinite;
+}
+
+.hero__orbit-hub img {
+  width: 200px; height: 200px;
+  border-radius: 40px;
+  filter:
+    drop-shadow(0 0 40px rgba(212, 50, 74, .15))
+    drop-shadow(0 0 100px rgba(212, 50, 74, .08));
+}
+
+/* Double-beat heartbeat: two quick pulses then rest */
+@keyframes hero-hub-pulse {
+  0%   { transform: translate(-50%,-50%) scale(1);    filter: drop-shadow(0 0 35px rgba(212,50,74,.12)) drop-shadow(0 0 90px rgba(212,50,74,.05)); }
+  10%  { transform: translate(-50%,-50%) scale(1.07);  filter: drop-shadow(0 0 60px rgba(212,50,74,.25)) drop-shadow(0 0 140px rgba(212,50,74,.1)); }
+  20%  { transform: translate(-50%,-50%) scale(1);    filter: drop-shadow(0 0 35px rgba(212,50,74,.12)) drop-shadow(0 0 90px rgba(212,50,74,.05)); }
+  30%  { transform: translate(-50%,-50%) scale(1.04);  filter: drop-shadow(0 0 50px rgba(212,50,74,.18)) drop-shadow(0 0 110px rgba(212,50,74,.07)); }
+  40%  { transform: translate(-50%,-50%) scale(1);    filter: drop-shadow(0 0 35px rgba(212,50,74,.12)) drop-shadow(0 0 90px rgba(212,50,74,.05)); }
+  100% { transform: translate(-50%,-50%) scale(1);    filter: drop-shadow(0 0 35px rgba(212,50,74,.12)) drop-shadow(0 0 90px rgba(212,50,74,.05)); }
+}
+
+/* Canvas covers the entire hero section, no clipping */
+.hero__trails-canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* hero__orbit visibility handled in mobile section below */
+
+.hero__title {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 800;
+  color: var(--gray-50);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-bottom: 20px;
+}
+
+.hero__title span {
+  background: linear-gradient(135deg, var(--pink-400), var(--pink-600));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero__subtitle {
+  font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+  color: var(--gray-400);
+  max-width: 640px;
+  margin: 0 auto 40px;
+  line-height: 1.6;
+}
+

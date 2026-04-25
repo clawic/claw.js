@@ -1,0 +1,43 @@
+  <section class="section" id="section-social">
+    <div class="section__aurora-orb" style="top: 18%; right: -4%;"></div>
+    <div class="container">
+      <div class="section__header">
+        <p class="section__label">Social Media</p>
+        <h2 class="section__title">Your Content Calendar, on Autopilot</h2>
+        <p class="section__desc">AI agents draft posts, schedule across platforms, reply to comments, and track engagement. A full Buffer-class dashboard where every action is agent-driven.</p>
+      </div>
+      <div class="demo-stack demo-stack--wide">
+        <div class="demo-stack__layer demo-stack__layer--front">
+          <div class="demo-panel demo-panel--social" id="demo-social"></div>
+        </div>
+        <div class="demo-stack__layer demo-stack__layer--back demo-stack__layer--narrow">
+          <div class="code-block">
+            <div class="code-block__header">
+              <span class="code-block__dot"></span>
+              <span class="code-block__dot"></span>
+              <span class="code-block__dot"></span>
+              <span class="code-block__filename">social.ts</span>
+            </div>
+            <pre><code><span class="comment">// Schedule a post</span>
+<span class="keyword">await</span> claw<span class="punctuation">.</span><span class="property">social</span><span class="punctuation">.</span><span class="function">schedule</span><span class="punctuation">({</span>
+  <span class="property">platform</span><span class="punctuation">:</span> <span class="string">"instagram"</span><span class="punctuation">,</span>
+  <span class="property">content</span><span class="punctuation">:</span> <span class="string">"Launch day!"</span><span class="punctuation">,</span>
+  <span class="property">time</span><span class="punctuation">:</span> <span class="string">"9:00 AM"</span><span class="punctuation">,</span>
+<span class="punctuation">});</span>
+
+<span class="comment">// Get analytics</span>
+<span class="keyword">const</span> stats <span class="punctuation">=</span> <span class="keyword">await</span> claw
+  <span class="punctuation">.</span><span class="property">social</span><span class="punctuation">.</span><span class="function">analytics</span><span class="punctuation">(</span>
+    <span class="string">"instagram"</span>
+  <span class="punctuation">);</span>
+
+<span class="comment">// Auto-reply</span>
+<span class="keyword">await</span> claw<span class="punctuation">.</span><span class="property">social</span>
+  <span class="punctuation">.</span><span class="function">autoReply</span><span class="punctuation">({</span>
+    <span class="property">platforms</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="string">"x"</span><span class="punctuation">,</span> <span class="string">"ig"</span><span class="punctuation">]</span>
+  <span class="punctuation">});</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
