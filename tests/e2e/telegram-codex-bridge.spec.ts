@@ -96,9 +96,11 @@ async function startHermeticUpstream() {
 function writeFakeCodexBinary(rootDir: string) {
   const binDir = path.join(rootDir, "bin");
   const binaryPath = path.join(binDir, "codex");
+  const payloadPath = path.join(rootDir, "codex-payloads.jsonl");
   fs.mkdirSync(binDir, { recursive: true });
   fs.writeFileSync(binaryPath, `#!/usr/bin/env node
 const readline = require("readline");
+const fs = require("fs");
 const args = process.argv.slice(2);
 if (args[0] === "--version") {
   process.stdout.write("codex-cli 0.122.0-test\\n");
@@ -125,7 +127,11 @@ if (args[0] === "app-server") {
       return;
     }
     if (message.method === "turn/start") {
-      const text = JSON.stringify(message.params || {}).includes("long")
+      const payload = JSON.stringify(message.params || {});
+      fs.appendFileSync(${JSON.stringify(payloadPath)}, payload + "\\n");
+      const text = payload.includes("Voice note transcript:")
+        ? "voice-aware reply"
+        : payload.includes("long")
         ? "x".repeat(8200)
         : "codex reply";
       process.stdout.write(JSON.stringify({ method: "codex/event", params: { msg: { type: "agent_message", message: text } } }) + "\\n");
@@ -150,6 +156,7 @@ function telegramEvent(input: {
   text: string;
   threadId?: number;
   replyToBot?: boolean;
+  voiceNoteId?: string;
 }) {
   return {
     type: "channel.message.received",
@@ -162,6 +169,7 @@ function telegramEvent(input: {
       ...(input.threadId ? { threadId: input.threadId } : {}),
       senderId: input.senderId,
       senderLabel: `user-${input.senderId}`,
+      ...(input.voiceNoteId ? { metadata: { voiceNoteId: input.voiceNoteId } } : {}),
       raw: {
         message: {
           message_id: 10,
@@ -284,6 +292,21 @@ test("telegram codex bridge owns, authorizes topics, applies reply policy, and s
     codexHome,
   });
   expect(sendActions(authorizedNonOwner.actions)[0]).toMatchObject({ type: "send_message", targetId: "-1001", threadId: 77 });
+
+  const voiceNote = await runProcessor(rootDir, {
+    event: telegramEvent({
+      chatId: "501",
+      chatType: "private",
+      senderId: "501",
+      text: "quiero que me digas la transcripción exacta de lo que estás ahora mismo escuchando",
+      voiceNoteId: "voice-note-1",
+    }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  expect(sendActions(voiceNote.actions)[0]).toMatchObject({ type: "send_message", targetId: "501", text: "voice-aware reply" });
 
   const ignoredByPolicy = await runProcessor(rootDir, {
     event: telegramEvent({ chatId: "-1001", chatType: "supergroup", senderId: "999", text: "plain text", threadId: 77 }),

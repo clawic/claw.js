@@ -863,6 +863,7 @@ interface TelegramCodexProcessorEvent {
     senderId?: string;
     senderLabel?: string;
     providerMessageId?: string;
+    metadata?: Record<string, unknown>;
     raw?: Record<string, unknown>;
   };
 }
@@ -992,6 +993,18 @@ function stripTelegramCodexCommand(text: string, botUsername?: string): string {
   return next || text.trim();
 }
 
+function formatTelegramCodexPrompt(event: TelegramCodexProcessorEvent, text: string): string {
+  const metadata = event.message?.metadata ?? {};
+  if (!metadata.voiceNoteId) return text;
+  return [
+    "The user sent a Telegram voice note. It has already been downloaded and transcribed by ClawJS STT.",
+    "Treat the transcript below as the user's actual message. Do not say you cannot hear or access audio.",
+    "",
+    "Voice note transcript:",
+    text,
+  ].join("\n");
+}
+
 function splitTelegramMessage(text: string, maxLength = 3900): string[] {
   const trimmed = text.trim();
   if (!trimmed) return [];
@@ -1080,7 +1093,7 @@ async function runTelegramCodexProcessor(input: {
   }
   if (changed) writeTelegramCodexBridgeState(statePath, state);
 
-  const prompt = stripTelegramCodexCommand(rawText, botUsername);
+  const prompt = formatTelegramCodexPrompt(event, stripTelegramCodexCommand(rawText, botUsername));
   const targetLabel = threadId ? `${targetId} topic ${threadId}` : targetId;
   const systemPrompt = input.flags["system-prompt"] || [
     "You are Codex responding through a Telegram bot.",
