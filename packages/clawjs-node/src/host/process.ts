@@ -37,11 +37,21 @@ export interface DetachedPtySpec {
   shell?: boolean;
 }
 
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
 export function buildDetachedPtySpec(command: string, args: string[], platform = process.platform): DetachedPtySpec {
   if (platform === "darwin") {
+    const shellCommand = [command, ...args].map(shellQuote).join(" ");
     return {
-      command: "script",
-      args: ["-q", "/dev/null", command, ...args],
+      command: "osascript",
+      args: [
+        "-e",
+        `tell application "Terminal" to do script ${JSON.stringify(shellCommand)}`,
+        "-e",
+        "tell application \"Terminal\" to activate",
+      ],
     };
   }
 

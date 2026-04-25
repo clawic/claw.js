@@ -34,8 +34,9 @@ test("buildDetachedPtySpec wraps commands for the current platform", () => {
   const spec = buildDetachedPtySpec("openclaw", ["models", "status", "--json"]);
 
   if (process.platform === "darwin") {
-    assert.equal(spec.command, "script");
-    assert.deepEqual(spec.args, ["-q", "/dev/null", "openclaw", "models", "status", "--json"]);
+    assert.equal(spec.command, "osascript");
+    assert.match(spec.args.join("\n"), /Terminal/);
+    assert.match(spec.args.join("\n"), /openclaw/);
     return;
   }
 
