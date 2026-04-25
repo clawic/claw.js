@@ -838,8 +838,15 @@ export class DriveStore {
     const children = this.listItems({ view: "my-drive", parentId: itemId });
     for (const child of children) this.deleteItemForever(child.id);
     if (row.storage_path) {
-      const filePath = path.isAbsolute(row.storage_path) ? row.storage_path : path.join(this.blobsDir, row.storage_path);
-      fs.rmSync(filePath, { force: true });
+      const remaining = Number((this.sqlite.prepare(`
+        SELECT COUNT(*) AS count
+        FROM items
+        WHERE storage_path = ? AND id != ?
+      `).get(row.storage_path, itemId) as { count: number }).count);
+      if (remaining === 0) {
+        const filePath = path.isAbsolute(row.storage_path) ? row.storage_path : path.join(this.blobsDir, row.storage_path);
+        fs.rmSync(filePath, { force: true });
+      }
     }
     this.sqlite.prepare("DELETE FROM revisions WHERE item_id = ?").run(itemId);
     this.sqlite.prepare("DELETE FROM comments WHERE item_id = ?").run(itemId);

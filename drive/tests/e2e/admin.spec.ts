@@ -24,6 +24,28 @@ test("drive console covers home, docs, sheets, slides, uploads, comments, and sh
   await page.getByTestId("create-sheet").click();
   await expect(page.getByTestId("sheet-editor")).toBeVisible();
   await page.getByTestId("sheet-cell-b2").fill("=1+2");
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("sheet-cell-b2")).toHaveValue("3");
+
+  await page.getByTestId("sheet-cell-a1").fill("1");
+  await page.keyboard.press("Tab");
+  await page.getByTestId("sheet-cell-b1").fill("2");
+  await page.keyboard.press("Tab");
+  await page.getByTestId("sheet-cell-c1").fill("3");
+  await page.keyboard.press("Tab");
+  await page.getByTestId("sheet-cell-d1").fill("=SUM(A1:C1)");
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("sheet-cell-d1")).toHaveValue("6");
+
+  const importCsv = page.getByTestId("sheet-import-csv-input");
+  await importCsv.setInputFiles({
+    name: "data.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("10,20\n30,40\n", "utf8"),
+  });
+  await expect(page.getByTestId("sheet-cell-a1")).toHaveValue("10");
+  await expect(page.getByTestId("sheet-cell-b2")).toHaveValue("40");
+
   await page.getByTestId("save-sheet").click();
   await saveBrowserScreenshot(page, "drive-sheet-editor.png");
 

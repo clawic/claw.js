@@ -1,0 +1,276 @@
+.sheet-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 400px;
+}
+
+.sheet-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.sheet-toolbar .group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sheet-toolbar .divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 0 4px;
+  background: var(--border);
+}
+
+.sheet-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: transparent;
+}
+
+.sheet-toolbar button:hover:not([disabled]) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.sheet-toolbar button[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sheet-toolbar button.primary {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.sheet-toolbar button.primary:hover { background: var(--accent-hover); }
+
+.sheet-formula-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.sheet-formula-bar .ref {
+  min-width: 56px;
+  font-family: "Ubuntu Mono", monospace;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.sheet-formula-bar input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: "Ubuntu Mono", monospace;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.sheet-grid-shell {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.sheet-grid {
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.sheet-grid th,
+.sheet-grid td {
+  margin: 0;
+  padding: 0;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  box-sizing: border-box;
+}
+
+.sheet-grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface-dim);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+  user-select: none;
+  height: 24px;
+}
+
+.sheet-grid thead th.corner {
+  left: 0;
+  z-index: 3;
+}
+
+.sheet-grid tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface-dim);
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+  user-select: none;
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+}
+
+.sheet-grid th.active-header {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.sheet-grid td {
+  position: relative;
+  height: 26px;
+  padding: 0;
+}
+
+.sheet-grid td input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  padding: 0 6px;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text);
+  font-family: inherit;
+  cursor: cell;
+}
+
+.sheet-grid td.active {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 4;
+}
+
+.sheet-grid td.in-range {
+  background: var(--accent-soft);
+}
+
+.sheet-grid td.error input {
+  color: var(--danger);
+}
+
+.sheet-grid td.numeric input {
+  text-align: right;
+}
+
+.sheet-col-resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+}
+
+.sheet-col-resize-handle:hover { background: var(--accent-soft); }
+
+.sheet-col-resize-handle.active { background: var(--accent); }
+
+.sheet-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow-x: auto;
+}
+
+.sheet-tabs button.tab {
+  padding: 4px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: transparent;
+  white-space: nowrap;
+}
+
+.sheet-tabs button.tab.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+.sheet-tabs button.add {
+  padding: 4px 8px;
+  color: var(--text-secondary);
+}
+
+.sheet-context-menu {
+  position: fixed;
+  z-index: 50;
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+}
+
+.sheet-context-menu button {
+  display: flex;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+  background: transparent;
+  text-align: left;
+}
+
+.sheet-context-menu button:hover {
+  background: var(--surface-hover);
+}
+
+.sheet-context-menu .separator {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 2px;
+}
+
+.sheet-status {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  padding: 0 4px;
+}

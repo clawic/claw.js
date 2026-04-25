@@ -1,0 +1,9 @@
+export const DEFAULT_COL_WIDTH = 110;
+export const ROW_HEADER_WIDTH = 44;
+export const ROW_HEIGHT = 26;
+export const MIN_COL_WIDTH = 48;
+export const MAX_UNDO = 100;
+export const UNDO_COALESCE_MS = 500;
+export const VIRTUALIZE_THRESHOLD = 200;
+export const DRAFT_DEBOUNCE_MS = 300;
+export const DRAFT_STORAGE_PREFIX = "sheet-draft:";

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
@@ -455,8 +456,14 @@ export function buildDriveApp(options: BuildDriveAppOptions = {}) {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:write" });
     if (!principal) return null;
     const upload = await readUpload(request);
-    const filePath = path.join(store.blobsDir, `${Date.now()}-${upload.fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`);
-    fs.writeFileSync(filePath, upload.buffer);
+    const digest = crypto.createHash("sha256").update(upload.buffer).digest("hex");
+    const safeName = upload.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const relativeStoragePath = path.join("storage", digest.slice(0, 2), `${digest}-${safeName}`);
+    const filePath = path.join(store.blobsDir, relativeStoragePath);
+    if (!fs.existsSync(filePath)) {
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, upload.buffer);
+    }
     const uploadContent = converters.inspectUpload(filePath, upload.fileName, upload.mimeType);
     return await reply.code(201).send(store.createItem({
       kind: "upload",
@@ -464,7 +471,7 @@ export function buildDriveApp(options: BuildDriveAppOptions = {}) {
       parentId: upload.parentId,
       mimeType: upload.mimeType,
       sizeBytes: upload.buffer.byteLength,
-      storagePath: path.basename(filePath),
+      storagePath: relativeStoragePath,
       previewKind: uploadContent.previewKind as DrivePreviewKind,
       content: uploadContent,
     }, actorFromPrincipal(principal)));

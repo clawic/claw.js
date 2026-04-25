@@ -4,10 +4,10 @@ import {
   startTransition,
   useDeferredValue,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
+import SheetEditor from "./components/sheet/SheetEditor";
 import {
   ArrowLeft,
   ChevronRight,
@@ -126,30 +126,6 @@ function request<T>(token: string | null, path: string, init: RequestInit = {}) 
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
-}
-
-function evaluateCell(rows: string[][], rowIndex: number, colIndex: number, stack = new Set<string>()): string {
-  const raw = rows[rowIndex]?.[colIndex] ?? "";
-  if (!raw.startsWith("=")) return raw;
-  const expression = raw.slice(1).replace(/[A-Z]+\d+/g, (reference) => {
-    const columnLabel = reference.match(/[A-Z]+/)?.[0] ?? "A";
-    const rowLabel = Number(reference.match(/\d+/)?.[0] ?? "1") - 1;
-    let column = 0;
-    for (const char of columnLabel) {
-      column = column * 26 + (char.charCodeAt(0) - 64);
-    }
-    const key = `${rowLabel}:${column - 1}`;
-    if (stack.has(key)) return "0";
-    stack.add(key);
-    const nested = evaluateCell(rows, rowLabel, column - 1, stack);
-    stack.delete(key);
-    const numeric = Number(nested);
-    return Number.isFinite(numeric) ? String(numeric) : "0";
-  });
-  const parts = expression.split("+").map((piece) => piece.trim()).filter(Boolean);
-  if (parts.length === 0) return "";
-  const total = parts.reduce((sum, piece) => sum + (Number(piece) || 0), 0);
-  return String(total);
 }
 
 export function App() {
@@ -439,14 +415,6 @@ export function App() {
     await loadDetail(item.id);
   }
 
-  const sheetPreviewRows = useMemo(() => {
-    if (!sheetDraft) return [];
-    const activeTab = sheetDraft.tabs[0];
-    return (activeTab?.rows ?? []).map((row, rowIndex) =>
-      row.map((_, colIndex) => evaluateCell(activeTab.rows, rowIndex, colIndex)),
-    );
-  }, [sheetDraft]);
-
   /* ── login ── */
   if (!token) {
     return (
@@ -710,37 +678,13 @@ export function App() {
 
                 {/* sheet editor */}
                 {selectedItem.kind === "sheet" && sheetDraft ? (
-                  <section className="native-editor" data-testid="sheet-editor">
-                    <div className="toolbar-inline">
-                      <button className="btn-ghost" onClick={() => setSheetDraft({ ...sheetDraft, tabs: [...sheetDraft.tabs, { id: crypto.randomUUID(), name: `Sheet ${sheetDraft.tabs.length + 1}`, freeze: { row: 1, col: 1 }, rows: [["", "", "", ""]] }] })}>
-                        <Plus size={14} /> Tab
-                      </button>
-                      <span className="toolbar-divider" />
-                      <button className="btn-primary" data-testid="save-sheet" onClick={saveCurrentContent}>Save</button>
-                    </div>
-                    <table className="sheet-grid">
-                      <tbody>
-                        {sheetDraft.tabs[0].rows.map((row, rowIndex) => (
-                          <tr key={`row-${rowIndex}`}>
-                            {row.map((cell, colIndex) => (
-                              <td key={`cell-${rowIndex}-${colIndex}`}>
-                                <input
-                                  data-testid={rowIndex === 1 && colIndex === 1 ? "sheet-cell-b2" : undefined}
-                                  value={cell}
-                                  onChange={(event) => {
-                                    const next = clone(sheetDraft);
-                                    next.tabs[0].rows[rowIndex][colIndex] = event.target.value;
-                                    setSheetDraft(next);
-                                  }}
-                                />
-                                <small>{sheetPreviewRows[rowIndex]?.[colIndex] ?? ""}</small>
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </section>
+                  <SheetEditor
+                    value={sheetDraft}
+                    onChange={setSheetDraft}
+                    onSave={saveCurrentContent}
+                    draftKey={selectedItem.id}
+                    onExportCsv={() => exportSelected("csv")}
+                  />
                 ) : null}
 
                 {/* slide editor */}
@@ -862,7 +806,7 @@ export function App() {
               </div>
               {selectedItem ? (
                 <>
-                  <textarea value={commentBody} onChange={(event) => setCommentBody(event.target.value)} placeholder="Write a comment..." />
+                  <textarea value={commentBody} onChange={(event) => setCommentBody(event.target.value)} placeholder="Add a comment..." />
                   <button className="btn-secondary" data-testid="add-comment" onClick={addComment}>Post</button>
                 </>
               ) : null}
