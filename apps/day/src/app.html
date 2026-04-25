@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claw Day</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+
+  :root{
+    --bg:#fafaf9;--surface:#fff;--surface-hover:#f5f5f4;
+    --border:#e7e5e4;--border-focus:#2563eb;
+    --text:#1c1917;--text-sec:#78716c;--text-muted:#a8a29e;
+    --accent:#2563eb;--accent-hover:#1d4ed8;
+    --green:#16a34a;--yellow:#ca8a04;--red:#dc2626;
+    --done-bg:#f0fdf4;--active-bg:#eff6ff;--blocked-bg:#fef2f2;--todo-bg:#f5f5f4;
+    --radius:8px;--radius-sm:6px;
+  }
+
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
+
+  /* ── Layout ── */
+  .app{max-width:1180px;margin:0 auto;padding:32px 24px 80px}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px}
+  header .left h1{font-size:1.4rem;font-weight:700;letter-spacing:-.02em}
+  header .left .date{font-size:.8rem;color:var(--text-sec);margin-top:2px}
+  header .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+
+  /* ── Tabs ── */
+  .tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:0;flex-wrap:wrap}
+  .tab{padding:8px 16px;font-size:.8rem;font-weight:500;color:var(--text-sec);cursor:pointer;border:none;background:none;
+    border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+  .tab:hover{color:var(--text)}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .tab-panel{display:none}.tab-panel.active{display:block}
+
+  /* ── Stats ── */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:12px;margin-bottom:28px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center}
+  .stat .n{font-size:1.6rem;font-weight:700;line-height:1}
+  .stat .l{font-size:.7rem;color:var(--text-sec);margin-top:3px;text-transform:uppercase;letter-spacing:.05em}
+
+  /* ── Cards ── */
+  section{margin-bottom:24px}
+  section h2{font-size:.75rem;font-weight:500;color:var(--text-sec);text-transform:uppercase;letter-spacing:.06em;
+    margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .count{background:var(--border);color:var(--text-sec);font-size:.65rem;padding:1px 7px;border-radius:99px;font-weight:500}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+
+  .row{padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);transition:background .1s}
+  .row:last-child{border-bottom:none}
+  .row:hover{background:var(--surface-hover)}
+
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .dot.active{background:var(--green)}.dot.blocked{background:var(--red)}.dot.todo{background:var(--text-muted)}
+  .dot.done{background:var(--green);opacity:.4}.dot.yellow{background:var(--yellow)}
+
+  .row .title{font-size:.83rem;font-weight:450;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .title.struck{text-decoration:line-through;color:var(--text-muted)}
+  .task-row{align-items:flex-start;flex-wrap:wrap}
+  .task-row .title{flex:1 1 260px;white-space:normal;overflow:visible;text-overflow:clip}
+  .task-row .meta-wrap{flex:1 1 100%;justify-content:flex-start;margin-left:18px}
+
+  .tag{font-size:.65rem;padding:2px 7px;border-radius:99px;font-weight:500;white-space:nowrap}
+  .tag.p-urgent{background:#fef2f2;color:var(--red)}.tag.p-high{background:#fff7ed;color:#c2410c}
+  .tag.p-medium{background:#f5f5f4;color:var(--text-sec)}.tag.p-low{background:#f5f5f4;color:var(--text-muted)}
+  .tag.s-in_progress{background:var(--active-bg);color:var(--accent)}.tag.s-blocked{background:var(--blocked-bg);color:var(--red)}
+  .tag.s-todo{background:var(--todo-bg);color:var(--text-sec)}.tag.s-done{background:var(--done-bg);color:var(--green)}
+
+  .meta{font-size:.72rem;color:var(--text-muted);white-space:nowrap}
+  .meta-wrap{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+  .pill{font-size:.65rem;padding:2px 6px;border-radius:4px;background:var(--todo-bg);color:var(--text-sec);white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis}
+  .pill.blue{background:var(--active-bg);color:var(--accent)}.pill.red{background:var(--blocked-bg);color:var(--red)}
+  .pill.green{background:var(--done-bg);color:var(--green)}
+
+  .progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;width:56px}
+  .progress-bar .fill{height:100%;border-radius:2px;transition:width .3s}
+  .fill.green{background:var(--green)}.fill.yellow{background:var(--yellow)}.fill.red{background:var(--red)}
+
+  .empty{padding:20px 14px;text-align:center;color:var(--text-muted);font-size:.82rem}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .dense .row{padding:8px 12px}
+  .collection-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+  .collection-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+  .collection-card .n{font-size:1.5rem;font-weight:700;line-height:1}
+  .collection-card .l{font-size:.72rem;color:var(--text-sec);margin-top:4px}
+  .timeline-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .timeline-toolbar select,.timeline-toolbar input{padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font:inherit;font-size:.78rem}
+  .timeline-layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px}
+  .timeline-axis{display:grid;grid-template-columns:repeat(var(--cols),1fr);font-size:.65rem;color:var(--text-muted);border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:10px}
+  .timeline-project{margin-bottom:18px}
+  .timeline-project h3{font-size:.78rem;font-weight:600;margin:0 0 8px;color:var(--text-sec);text-transform:uppercase;letter-spacing:.06em}
+  .timeline-track{position:relative;height:34px;border:1px solid var(--border);border-radius:var(--radius-sm);background:linear-gradient(90deg,rgba(231,229,228,.7) 1px,transparent 1px);background-size:calc(100% / var(--cols)) 100%;margin-bottom:7px;overflow:hidden}
+  .tl-bar{position:absolute;top:8px;height:16px;border-radius:4px;background:var(--accent);color:#fff;font-size:.65rem;line-height:16px;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:16px}
+  .tl-bar.blocked{background:var(--red)}.tl-bar.done{background:var(--green);opacity:.45}.tl-cycle{position:absolute;top:2px;height:30px;border-radius:5px;background:rgba(22,163,74,.12);border:1px solid rgba(22,163,74,.25)}
+  .tl-marker{position:absolute;top:9px;width:13px;height:13px;transform:translateX(-50%) rotate(45deg);background:var(--yellow);border:1px solid #a16207}
+  .tl-deadline{position:absolute;top:3px;width:2px;height:28px;background:var(--red);transform:translateX(-50%)}
+  .tl-today{position:absolute;top:0;width:2px;height:100%;background:var(--accent);opacity:.7;transform:translateX(-50%)}
+  .now-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;position:sticky;top:12px}
+  .now-card h3{font-size:.75rem;color:var(--text-sec);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+  .now-title{font-weight:650;font-size:.95rem;margin-bottom:8px}
+  .now-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+
+  /* ── Row actions ── */
+  .row-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s}
+  .row:hover .row-actions{opacity:1}
+  .row-btn{border:none;background:var(--border);color:var(--text-sec);font-size:.65rem;padding:3px 8px;border-radius:4px;
+    cursor:pointer;font-family:inherit;transition:all .1s}
+  .row-btn:hover{background:var(--accent);color:#fff}
+  .row-btn.danger:hover{background:var(--red);color:#fff}
+  .row-btn.green:hover{background:var(--green);color:#fff}
+
+  /* ── Buttons ── */
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;font-size:.78rem;font-weight:500;
+    border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;
+    background:var(--surface);color:var(--text);transition:all .15s}
+  .btn:hover{border-color:var(--text-muted)}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn.primary:hover{background:var(--accent-hover)}
+  .btn.sm{padding:5px 10px;font-size:.72rem}
+
+  /* ── Quick log ── */
+  .quick-log{display:flex;gap:8px;margin-bottom:24px}
+  .quick-log input{flex:1;padding:9px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);
+    font-size:.83rem;font-family:inherit;outline:none;transition:border .15s}
+  .quick-log input:focus{border-color:var(--border-focus)}
+
+  /* ── Modal ── */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);display:flex;align-items:center;
+    justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .15s}
+  .modal-overlay.open{opacity:1;pointer-events:auto}
+  .modal{background:var(--surface);border-radius:8px;padding:28px;width:90%;max-width:480px;
+    max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.15);transform:translateY(10px);transition:transform .15s}
+  .modal-overlay.open .modal{transform:translateY(0)}
+  .modal h3{font-size:1rem;font-weight:600;margin-bottom:20px}
+  .modal label{display:block;font-size:.75rem;font-weight:500;color:var(--text-sec);margin-bottom:4px;margin-top:14px}
+  .modal label:first-of-type{margin-top:0}
+  .modal input,.modal select,.modal textarea{width:100%;padding:8px 12px;border:1px solid var(--border);
+    border-radius:var(--radius-sm);font-size:.83rem;font-family:inherit;outline:none;transition:border .15s}
+  .modal input:focus,.modal select:focus,.modal textarea:focus{border-color:var(--border-focus)}
+  .modal textarea{resize:vertical;min-height:60px}
+  .modal .row-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .modal .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:24px}
+  .modal .field-group{margin-top:14px}
+  .modal .field-group:first-child{margin-top:0}
+
+  /* ── Toast ── */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;
+    padding:10px 20px;border-radius:8px;font-size:.82rem;z-index:200;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:1}
+
+  @media(max-width:640px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .grid-2{grid-template-columns:1fr}
+    .grid-3{grid-template-columns:1fr}
+    .timeline-layout{grid-template-columns:1fr}
+    .app{padding:20px 14px 60px}
+    header{flex-direction:column;align-items:flex-start;gap:12px}
+    .row-actions{opacity:1}
+    .modal .row-fields{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<div class="app" data-testid="day-dashboard">
+  <header>
+    <div class="left">
+      <h1>Claw Day</h1>
+      <div class="date" id="date"></div>
+    </div>
+    <div class="actions">
+      <button class="btn" data-testid="new-list-button" onclick="openModal('list')">+ List</button>
+      <button class="btn" data-testid="new-section-button" onclick="openModal('section')">+ Section</button>
+      <button class="btn" data-testid="new-cycle-button" onclick="openModal('cycle')">+ Cycle</button>
+      <button class="btn" data-testid="new-epic-button" onclick="openModal('epic')">+ Epic</button>
+      <button class="btn" data-testid="new-milestone-button" onclick="openModal('milestone')">+ Milestone</button>
+      <button class="btn" data-testid="new-project-button" onclick="openModal('project')">+ Project</button>
+      <button class="btn" data-testid="new-goal-button" onclick="openModal('goal')">+ Goal</button>
+      <button class="btn primary" data-testid="new-task-button" onclick="openModal('task')">+ Task</button>
+    </div>
+  </header>
+
+  <div class="quick-log">
+    <input type="text" id="log-input" data-testid="quick-log-input" placeholder="Quick log... press Enter to save" onkeydown="if(event.key==='Enter')submitLog()">
+    <button class="btn sm" data-testid="quick-log-submit" onclick="submitLog()">Log</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-testid="tab-today" data-tab="today">Today</button>
+    <button class="tab" data-testid="tab-all-tasks" data-tab="all-tasks">All Tasks</button>
+    <button class="tab" data-testid="tab-projects" data-tab="projects">Projects</button>
+    <button class="tab" data-testid="tab-goals" data-tab="goals">Goals</button>
+    <button class="tab" data-testid="tab-timeline" data-tab="timeline">Timeline</button>
+    <button class="tab" data-testid="tab-planning" data-tab="planning">Planning</button>
+    <button class="tab" data-testid="tab-collaboration" data-tab="collaboration">Collaboration</button>
+    <button class="tab" data-testid="tab-system" data-tab="system">System</button>
+    <button class="tab" data-testid="tab-logs" data-tab="logs">Logs</button>
+  </div>
+
+  <!-- ── Today ── -->
+  <div class="tab-panel active" id="panel-today">
+    <div class="stats" id="stats"></div>
+    <div class="grid-2">
+      <section id="sec-projects"></section>
+      <section id="sec-goals"></section>
+    </div>
+    <section id="sec-focus"></section>
+    <section id="sec-queue"></section>
+    <div class="grid-2">
+      <section id="sec-done"></section>
+      <section id="sec-logs"></section>
+    </div>
+  </div>
+
+  <!-- ── All Tasks ── -->
+  <div class="tab-panel" id="panel-all-tasks">
+    <section id="sec-all-tasks"></section>
+  </div>
+
+  <!-- ── Projects ── -->
+  <div class="tab-panel" id="panel-projects">
+    <section id="sec-all-projects"></section>
+  </div>
+
+  <!-- ── Goals ── -->
+  <div class="tab-panel" id="panel-goals">
+    <section id="sec-all-goals"></section>
+  </div>
+
+  <!-- ── Timeline ── -->
+  <div class="tab-panel" id="panel-timeline">
+    <section id="sec-timeline"></section>
+  </div>
+
+  <!-- ── Planning ── -->
+  <div class="tab-panel" id="panel-planning">
+    <div class="grid-2">
+      <section id="sec-lists"></section>
+      <section id="sec-sections"></section>
+    </div>
+    <div class="grid-2">
+      <section id="sec-cycles"></section>
+      <section id="sec-epics"></section>
+    </div>
+    <section id="sec-milestones"></section>
+    <div class="grid-2">
+      <section id="sec-saved-views"></section>
+      <section id="sec-recurrences"></section>
+    </div>
+    <section id="sec-templates"></section>
+  </div>
+
+  <!-- ── Collaboration ── -->
+  <div class="tab-panel" id="panel-collaboration">
+    <div class="grid-2">
+      <section id="sec-comments"></section>
+      <section id="sec-attachments"></section>
+    </div>
+    <div class="grid-2">
+      <section id="sec-custom-fields"></section>
+      <section id="sec-field-values"></section>
+    </div>
+  </div>
+
+  <!-- ── System ── -->
+  <div class="tab-panel" id="panel-system">
+    <section id="sec-system-map"></section>
+    <div class="grid-2">
+      <section id="sec-reminders"></section>
+      <section id="sec-deadlines"></section>
+    </div>
+  </div>
+
+  <!-- ── Logs ── -->
+  <div class="tab-panel" id="panel-logs">
+    <section id="sec-all-logs"></section>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── State ── */
+let DATA = {
+  projects: [], goals: [], tasks: [], milestones: [], notes: [],
+  lists: [], sections: [], comments: [], attachments: [], savedViews: [],
+  recurrences: [], cycles: [], epics: [], customFields: [], fieldValues: [],
+  templates: [], reminders: [], deadlines: []
+};
+let TIMELINE = null;
+let TL = { mode: "week", start: today(), projectId: "", readiness: "all" };
+const SL = { in_progress:"In progress", todo:"To do", blocked:"Blocked", done:"Done", cancelled:"Cancelled",
+  active:"Active", paused:"Paused", draft:"Draft", archived:"Archived", planned:"Planned", completed:"Completed",
+  ended:"Ended", someday:"Someday" };
+
+/* ── Helpers ── */
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+function dot(status, health) {
+  if (health==="red"||status==="blocked") return "blocked";
+  if (health==="yellow") return "yellow";
+  if (health==="green"||status==="in_progress"||status==="active") return "active";
+  if (status==="done") return "done";
+  return "todo";
+}
+function today() { return new Date().toISOString().slice(0,10); }
+function timeOf(iso) { return (iso||"").slice(11,16); }
+function projMap() { return Object.fromEntries(DATA.projects.map(p=>[p.id,p.name])); }
+function goalMap() { return Object.fromEntries(DATA.goals.map(g=>[g.id,g.title])); }
+function listMap() { return Object.fromEntries(DATA.lists.map(x=>[x.id,x.title])); }
+function sectionMap() { return Object.fromEntries(DATA.sections.map(x=>[x.id,x.title])); }
+function cycleMap() { return Object.fromEntries(DATA.cycles.map(x=>[x.id,x.name])); }
+function epicMap() { return Object.fromEntries(DATA.epics.map(x=>[x.id,x.title])); }
+function taskMap() { return Object.fromEntries(DATA.tasks.map(x=>[x.id,x.title])); }
+function projectOptions(selected) { return DATA.projects.map(p=>'<option value="'+p.id+'"'+(selected===p.id?' selected':'')+'>'+esc(p.name)+'</option>').join(""); }
+function goalOptions(selected) { return DATA.goals.map(g=>'<option value="'+g.id+'"'+(selected===g.id?' selected':'')+'>'+esc(g.title)+'</option>').join(""); }
+function listOptions(selected) { return DATA.lists.map(x=>'<option value="'+x.id+'"'+(selected===x.id?' selected':'')+'>'+esc(x.title)+'</option>').join(""); }
+function sectionOptions(selected) { return DATA.sections.map(x=>'<option value="'+x.id+'"'+(selected===x.id?' selected':'')+'>'+esc(x.title)+'</option>').join(""); }
+function cycleOptions(selected) { return DATA.cycles.map(x=>'<option value="'+x.id+'"'+(selected===x.id?' selected':'')+'>'+esc(x.name)+'</option>').join(""); }
+function epicOptions(selected) { return DATA.epics.map(x=>'<option value="'+x.id+'"'+(selected===x.id?' selected':'')+'>'+esc(x.title)+'</option>').join(""); }
+function entityLabel(type, id) {
+  if (!id) return "";
+  if (type==="task") return taskMap()[id] || id;
+  if (type==="project") return projMap()[id] || id;
+  if (type==="goal") return goalMap()[id] || id;
+  if (type==="epic") return epicMap()[id] || id;
+  if (type==="cycle") return cycleMap()[id] || id;
+  return id;
+}
+function fmtDate(iso) { return iso ? iso.slice(0,10) : ""; }
+function countLinked(collection, type, id) { return collection.filter(x=>x.entityType===type&&x.entityId===id).length; }
+function dayMs() { return 24 * 60 * 60 * 1000; }
+function addDays(dateText, days) { const d = new Date(dateText + "T00:00:00.000Z"); d.setUTCDate(d.getUTCDate()+days); return d.toISOString().slice(0,10); }
+function datePct(iso, startIso, endIso) {
+  const min = new Date(startIso).getTime(), max = new Date(endIso).getTime(), val = new Date(iso).getTime();
+  if (max <= min) return 0;
+  return Math.max(0, Math.min(100, ((val-min)/(max-min))*100));
+}
+
+function sortTasks(ts) {
+  const sw={in_progress:0,todo:1,blocked:2,done:3,cancelled:4};
+  const pw={urgent:0,high:1,medium:2,low:3};
+  return [...ts].sort((a,b)=>(sw[a.status]??9)-(sw[b.status]??9)||(pw[a.priority]??9)-(pw[b.priority]??9)||a.title.localeCompare(b.title));
+}
+
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.classList.add("show");
+  setTimeout(()=>el.classList.remove("show"), 2000);
+}
+
+/* ── API ── */
+async function api(method, path, body) {
+  const opts = { method, headers: { "Content-Type": "application/json" } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || "Request failed");
+  return d;
+}
+
+async function reload() {
+  DATA = await api("GET", "/api/data");
+  render();
+  await loadTimeline();
+}
+
+async function loadTimeline() {
+  const params = new URLSearchParams({
+    mode: TL.mode,
+    start: TL.start,
+    includeDone: "true",
+  });
+  if (TL.projectId) params.set("projectId", TL.projectId);
+  TIMELINE = await api("GET", "/api/timeline?" + params.toString());
+  renderTimeline();
+}
+
+/* ── Task actions ── */
+async function taskAction(id, status) {
+  await api("PATCH", "/api/tasks/" + id, { status });
+  toast(status === "done" ? "Completed!" : "Updated");
+  reload();
+}
+
+async function editTaskField(id, field, currentVal) {
+  const val = prompt("New value for " + field + ":", currentVal || "");
+  if (val === null) return;
+  await api("PATCH", "/api/tasks/" + id, { [field]: val });
+  toast("Updated"); reload();
+}
+
+async function toggleToday(id, labels) {
+  const has = labels.includes("today");
+  const next = has ? labels.filter(l=>l!=="today") : [...labels, "today"];
+  await api("PATCH", "/api/tasks/" + id, { labels: next });
+  toast(has ? "Removed from today" : "Added to today"); reload();
+}
+
+/* ── Render: task row ── */
+function taskRowHTML(t, opts = {}) {
+  const pm = projMap(), gm = goalMap(), lm = listMap(), sm = sectionMap(), cm = cycleMap(), em = epicMap();
+  const proj = t.projectId ? pm[t.projectId] : "";
+  const goal = t.goalId ? gm[t.goalId] : "";
+  const list = t.listId ? lm[t.listId] : "";
+  const section = t.sectionId ? sm[t.sectionId] : "";
+  const cycle = t.cycleId ? cm[t.cycleId] : "";
+  const epic = t.epicId ? em[t.epicId] : "";
+  const isDone = t.status === "done";
+  const labels = t.labels || [];
+  const isToday = labels.includes("today");
+  const commentCount = countLinked(DATA.comments, "task", t.id) + (t.commentIds?.length || 0);
+  const attachmentCount = countLinked(DATA.attachments, "task", t.id) + (t.attachmentIds?.length || 0);
+  const timing = [
+    t.startAt ? "start " + fmtDate(t.startAt) : "",
+    t.deferUntil ? "defer " + fmtDate(t.deferUntil) : "",
+    t.deadlineAt ? "deadline " + fmtDate(t.deadlineAt) : "",
+    t.recurrenceRule ? "recurring" : "",
+    t.storyPoints !== undefined ? t.storyPoints + " pts" : "",
+  ].filter(Boolean);
+  const chips = [
+    t.type ? '<span class="pill blue">'+esc(t.type)+'</span>' : "",
+    list ? '<span class="pill">'+esc(list)+'</span>' : "",
+    section ? '<span class="pill">'+esc(section)+'</span>' : "",
+    cycle ? '<span class="pill green">'+esc(cycle)+'</span>' : "",
+    epic ? '<span class="pill blue">'+esc(epic)+'</span>' : "",
+    goal ? '<span class="pill">'+esc(goal)+'</span>' : "",
+    ...timing.map(x=>'<span class="pill">'+esc(x)+'</span>'),
+    commentCount ? '<span class="pill">'+commentCount+' comments</span>' : "",
+    attachmentCount ? '<span class="pill">'+attachmentCount+' files</span>' : "",
+    t.waitingOn ? '<span class="pill red">waiting</span>' : "",
+  ].filter(Boolean).join("");
+
+  let actions = "";
+  if (!isDone) {
+    if (t.status !== "in_progress") actions += '<button class="row-btn" data-testid="task-start-button" onclick="taskAction(\'' + t.id + '\',\'in_progress\')">Start</button>';
+    if (t.status !== "blocked") actions += '<button class="row-btn danger" data-testid="task-block-button" onclick="taskAction(\'' + t.id + '\',\'blocked\')">Block</button>';
+    actions += '<button class="row-btn green" data-testid="task-done-button" onclick="taskAction(\'' + t.id + '\',\'done\')">Done</button>';
+    actions += '<button class="row-btn" data-testid="task-today-button" onclick="toggleToday(\'' + t.id + '\',' + JSON.stringify(labels) + ')">' + (isToday ? "- Today" : "+ Today") + '</button>';
+  }
+  actions += '<button class="row-btn" data-testid="task-edit-button" onclick="openModal(\'task\',\'' + t.id + '\')">Edit</button>';
+
+  return '<div class="row task-row" data-testid="task-row">' +
+    '<span class="dot ' + dot(t.status) + '"></span>' +
+    '<span class="title' + (isDone ? ' struck' : '') + '">' + esc(t.title) + '</span>' +
+    (proj ? '<span class="meta">' + esc(proj) + '</span>' : '') +
+    (chips ? '<span class="meta-wrap">' + chips + '</span>' : '') +
+    '<span class="tag p-' + t.priority + '">' + t.priority + '</span>' +
+    '<span class="tag s-' + t.status + '">' + (SL[t.status]||t.status) + '</span>' +
+    '<span class="row-actions">' + actions + '</span>' +
+    '</div>';
+}
+
+/* ── Render: today panel ── */
+function renderToday() {
+  const t = today();
+  const pending = DATA.tasks.filter(x=>!["done","cancelled"].includes(x.status));
+  const doneToday = DATA.tasks.filter(x=>x.status==="done"&&(x.updatedAt||"").slice(0,10)===t);
+  const todayListIds = new Set(DATA.lists.filter(x=>x.kind==="today").map(x=>x.id));
+  const todayTasks = pending.filter(x=>(x.labels||[]).includes("today")||todayListIds.has(x.listId)||x.status==="in_progress"||(x.startAt||"").slice(0,10)===t||(x.dueAt||"").slice(0,10)===t);
+  const queued = pending.filter(x=>!todayTasks.some(y=>y.id===x.id));
+  const activeProjects = DATA.projects.filter(p=>["in_progress","active","draft","paused"].includes(p.status));
+  const activeGoals = DATA.goals.filter(g=>g.status==="active");
+  const activeCycles = DATA.cycles.filter(c=>["active","planned"].includes(c.status));
+  const pm = projMap();
+
+  // Stats
+  document.getElementById("stats").innerHTML = [
+    {n:activeProjects.length, l:"Projects"}, {n:activeGoals.length, l:"Goals"},
+    {n:todayTasks.length, l:"Today"}, {n:queued.length, l:"Queued"}, {n:doneToday.length, l:"Done"},
+    {n:DATA.lists.length, l:"Lists"}, {n:DATA.epics.length, l:"Epics"}, {n:activeCycles.length, l:"Cycles"}
+  ].map(s=>'<div class="stat"><div class="n">'+s.n+'</div><div class="l">'+s.l+'</div></div>').join("");
+
+  // Projects mini
+  const sp = document.getElementById("sec-projects");
+  sp.innerHTML = '<h2>Projects <span class="count">'+activeProjects.length+'</span></h2>';
+  if (!activeProjects.length) sp.innerHTML += '<div class="card"><div class="empty">No active projects</div></div>';
+  else sp.innerHTML += '<div class="card">' + activeProjects.map(p=>
+    '<div class="row" data-testid="project-row"><span class="dot '+dot(p.status,p.healthStatus)+'"></span><span class="title">'+esc(p.name)+'</span>' +
+    '<span class="tag s-'+p.status+'">'+(SL[p.status]||p.status)+'</span>' +
+    '<span class="row-actions"><button class="row-btn" onclick="openModal(\'project\',\''+p.id+'\')">Edit</button></span></div>'
+  ).join("") + '</div>';
+
+  // Goals mini
+  const sg = document.getElementById("sec-goals");
+  sg.innerHTML = '<h2>Goals <span class="count">'+activeGoals.length+'</span></h2>';
+  if (!activeGoals.length) sg.innerHTML += '<div class="card"><div class="empty">No active goals</div></div>';
+  else sg.innerHTML += '<div class="card">' + activeGoals.map(g=>{
+    const pct = g.targetValue ? Math.min(100, Math.round(((g.currentValue||0)/g.targetValue)*100)) : 0;
+    const clr = g.healthStatus==="red"?"red":g.healthStatus==="yellow"?"yellow":"green";
+    const proj = g.projectId ? pm[g.projectId] : "";
+    return '<div class="row" data-testid="goal-row"><span class="dot '+dot("active",g.healthStatus)+'"></span><span class="title">'+esc(g.title)+'</span>' +
+      (g.targetValue?'<div class="progress-bar"><div class="fill '+clr+'" style="width:'+pct+'%"></div></div><span class="meta">'+(g.currentValue||0)+'/'+g.targetValue+'</span>':'') +
+      (proj?'<span class="meta">'+esc(proj)+'</span>':'') +
+      '<span class="row-actions"><button class="row-btn" onclick="openModal(\'goal\',\''+g.id+'\')">Edit</button></span></div>';
+  }).join("") + '</div>';
+
+  // Focus
+  const sf = document.getElementById("sec-focus");
+  const sorted = sortTasks(todayTasks);
+  sf.innerHTML = '<h2>Today Focus <span class="count">'+sorted.length+'</span></h2>';
+  if (!sorted.length) sf.innerHTML += '<div class="card"><div class="empty">No tasks for today. Use + Task to add one.</div></div>';
+  else sf.innerHTML += '<div class="card">' + sorted.map(x=>taskRowHTML(x)).join("") + '</div>';
+
+  // Queue
+  const sq = document.getElementById("sec-queue");
+  const qSorted = sortTasks(queued).slice(0,8);
+  sq.innerHTML = '<h2>Next Up <span class="count">'+queued.length+'</span></h2>';
+  if (!qSorted.length) sq.innerHTML += '<div class="card"><div class="empty">No queued tasks</div></div>';
+  else sq.innerHTML += '<div class="card">' + qSorted.map(x=>taskRowHTML(x)).join("") + '</div>';
+
+  // Done
+  const sd = document.getElementById("sec-done");
+  sd.innerHTML = '<h2>Completed <span class="count">'+doneToday.length+'</span></h2>';
+  if (!doneToday.length) sd.innerHTML += '<div class="card"><div class="empty">Nothing done yet</div></div>';
+  else sd.innerHTML += '<div class="card">' + sortTasks(doneToday).map(x=>taskRowHTML(x)).join("") + '</div>';
+
+  // Logs mini
+  renderLogsMini();
+}
+
+function renderLogsMini() {
+  const logs = DATA.notes.filter(n=>n.tags.includes("day-log")).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,5);
+  const sl = document.getElementById("sec-logs");
+  sl.innerHTML = '<h2>Logs <span class="count">'+logs.length+'</span></h2>';
+  if (!logs.length) { sl.innerHTML += '<div class="card"><div class="empty">No logs yet</div></div>'; return; }
+  sl.innerHTML += '<div class="card">' + logs.map(n=>
+    '<div class="row" data-testid="log-row"><span class="meta" style="font-variant-numeric:tabular-nums">'+timeOf(n.createdAt)+'</span>' +
+    '<span class="title">'+esc(n.blocks?.[0]?.text||n.content||"")+'</span></div>'
+  ).join("") + '</div>';
+}
+
+/* ── Render: All Tasks ── */
+function renderAllTasks() {
+  const el = document.getElementById("sec-all-tasks");
+  const sorted = sortTasks(DATA.tasks);
+  el.innerHTML = '<h2>All Tasks <span class="count">'+sorted.length+'</span></h2>';
+  if (!sorted.length) { el.innerHTML += '<div class="card"><div class="empty">No tasks yet</div></div>'; return; }
+  el.innerHTML += '<div class="card">' + sorted.map(x=>taskRowHTML(x)).join("") + '</div>';
+}
+
+/* ── Render: All Projects ── */
+function renderAllProjects() {
+  const el = document.getElementById("sec-all-projects");
+  const all = DATA.projects;
+  el.innerHTML = '<h2>All Projects <span class="count">'+all.length+'</span></h2>';
+  if (!all.length) { el.innerHTML += '<div class="card"><div class="empty">No projects</div></div>'; return; }
+  el.innerHTML += '<div class="card">' + all.map(p=>
+    '<div class="row" data-testid="project-row"><span class="dot '+dot(p.status,p.healthStatus)+'"></span><span class="title">'+esc(p.name)+'</span>' +
+    (p.description?'<span class="meta">'+esc(p.description)+'</span>':'') +
+    '<span class="tag s-'+(p.status==="in_progress"?"in_progress":p.status)+'">'+(SL[p.status]||p.status)+'</span>' +
+    '<span class="row-actions"><button class="row-btn" onclick="openModal(\'project\',\''+p.id+'\')">Edit</button></span></div>'
+  ).join("") + '</div>';
+}
+
+/* ── Render: All Goals ── */
+function renderAllGoals() {
+  const el = document.getElementById("sec-all-goals");
+  const all = DATA.goals;
+  const pm = projMap();
+  el.innerHTML = '<h2>All Goals <span class="count">'+all.length+'</span></h2>';
+  if (!all.length) { el.innerHTML += '<div class="card"><div class="empty">No goals</div></div>'; return; }
+  el.innerHTML += '<div class="card">' + all.map(g=>{
+    const pct = g.targetValue ? Math.min(100,Math.round(((g.currentValue||0)/g.targetValue)*100)) : 0;
+    const clr = g.healthStatus==="red"?"red":g.healthStatus==="yellow"?"yellow":"green";
+    const proj = g.projectId ? pm[g.projectId] : "";
+    return '<div class="row" data-testid="goal-row"><span class="dot '+dot(g.status==="active"?"in_progress":"todo",g.healthStatus)+'"></span>' +
+      '<span class="title">'+esc(g.title)+'</span>' +
+      (g.targetValue?'<div class="progress-bar"><div class="fill '+clr+'" style="width:'+pct+'%"></div></div><span class="meta">'+(g.currentValue||0)+'/'+g.targetValue+'</span>':'') +
+      (proj?'<span class="meta">'+esc(proj)+'</span>':'') +
+      '<span class="tag s-'+(g.status==="active"?"in_progress":g.status)+'">'+(SL[g.status]||g.status)+'</span>' +
+      '<span class="row-actions"><button class="row-btn" onclick="openModal(\'goal\',\''+g.id+'\')">Edit</button></span></div>';
+  }).join("") + '</div>';
+}
+
+function simpleRow(title, meta, tag, testId) {
+  return '<div class="row" data-testid="'+testId+'"><span class="dot todo"></span><span class="title">'+esc(title||"Untitled")+'</span>' +
+    (meta ? '<span class="meta">'+esc(meta)+'</span>' : '') +
+    (tag ? '<span class="pill blue">'+esc(tag)+'</span>' : '') + '</div>';
+}
+
+function renderPlanning() {
+  const lm = listMap(), pm = projMap(), gm = goalMap();
+
+  const listEl = document.getElementById("sec-lists");
+  listEl.innerHTML = '<h2>Lists <span class="count">'+DATA.lists.length+'</span></h2>';
+  listEl.innerHTML += DATA.lists.length ? '<div class="card dense">' + DATA.lists.map(x=>
+    simpleRow(x.title, x.projectId ? pm[x.projectId] : "", x.kind, "list-row")
+  ).join("") + '</div>' : '<div class="card"><div class="empty">No lists</div></div>';
+
+  const sectionEl = document.getElementById("sec-sections");
+  sectionEl.innerHTML = '<h2>Sections <span class="count">'+DATA.sections.length+'</span></h2>';
+  sectionEl.innerHTML += DATA.sections.length ? '<div class="card dense">' + DATA.sections.map(x=>
+    simpleRow(x.title, [x.listId ? lm[x.listId] : "", x.projectId ? pm[x.projectId] : ""].filter(Boolean).join(" · "), "section", "section-row")
+  ).join("") + '</div>' : '<div class="card"><div class="empty">No sections</div></div>';
+
+  const cycleEl = document.getElementById("sec-cycles");
+  cycleEl.innerHTML = '<h2>Cycles / Sprints <span class="count">'+DATA.cycles.length+'</span></h2>';
+  cycleEl.innerHTML += DATA.cycles.length ? '<div class="card dense">' + DATA.cycles.map(x=>
+    simpleRow(x.name, [x.projectId ? pm[x.projectId] : "", x.capacityPoints ? x.capacityPoints + " pts" : "", fmtDate(x.startsAt) + (x.endsAt ? " -> " + fmtDate(x.endsAt) : "")].filter(Boolean).join(" · "), x.status, "cycle-row")
+  ).join("") + '</div>' : '<div class="card"><div class="empty">No cycles</div></div>';
+
+  const epicEl = document.getElementById("sec-epics");
+  epicEl.innerHTML = '<h2>Epics / Initiatives <span class="count">'+DATA.epics.length+'</span></h2>';
+  epicEl.innerHTML += DATA.epics.length ? '<div class="card dense">' + DATA.epics.map(x=>
+    simpleRow(x.title, [x.projectId ? pm[x.projectId] : "", x.goalId ? gm[x.goalId] : ""].filter(Boolean).join(" · "), x.kind + " · " + x.status, "epic-row")
+  ).join("") + '</div>' : '<div class="card"><div class="empty">No epics</div></div>';
+
+  const milestoneEl = document.getElementById("sec-milestones");
+  milestoneEl.innerHTML = '<h2>Milestones <span class="count">'+DATA.milestones.length+'</span></h2>';
+  milestoneEl.innerHTML += DATA.milestones.length ? '<div class="card dense">' + DATA.milestones.map(x=>
+    '<div class="row" data-testid="milestone-row"><span class="dot '+dot(x.status)+'"></span><span class="title">'+esc(x.title)+'</span>' +
+    (x.projectId ? '<span class="meta">'+esc(pm[x.projectId]||x.projectId)+'</span>' : '') +
+    (x.targetDate ? '<span class="pill">'+fmtDate(x.targetDate)+'</span>' : '') +
+    '<span class="tag s-'+x.status+'">'+(SL[x.status]||x.status)+'</span>' +
+    '<span class="row-actions"><button class="row-btn" onclick="openModal(\'milestone\',\''+x.id+'\')">Edit</button></span></div>'
+  ).join("") + '</div>' : '<div class="card"><div class="empty">No milestones</div></div>';
+
+  const viewsEl = document.getElementById("sec-saved-views");
+  viewsEl.innerHTML = '<h2>Saved Views <span class="count">'+DATA.savedViews.length+'</span></h2>';
+  viewsEl.innerHTML += DATA.savedViews.length ? '<div class="card dense">' + DATA.savedViews.map(x=>
+    simpleRow(x.name, x.query || "", x.domain + (x.favorite ? " · favorite" : ""), "saved-view-row")
+  ).join("") + '</div>' : '<div class="card"><div class="empty">No saved views</div></div>';
+
+  const recEl = document.getElementById("sec-recurrences");
+  recEl.innerHTML = '<h2>Recurrences <span class="count">'+DATA.recurrences.length+'</span></h2>';
+  recEl.innerHTML += DATA.recurrences.length ? '<div class="card dense">' + DATA.recurrences.map(x=>
+    simpleRow(x.title, x.rule, x.status, "recurrence-row")
+  ).join("") + '</div>' : '<div class="card"><div class="empty">No recurrences</div></div>';
+
+  const tmplEl = document.getElementById("sec-templates");
+  tmplEl.innerHTML = '<h2>Templates <span class="count">'+DATA.templates.length+'</span></h2>';
+  tmplEl.innerHTML += DATA.templates.length ? '<div class="card dense">' + DATA.templates.map(x=>
+    simpleRow(x.name, x.description || "", x.entityType, "template-row")
+  ).join("") + '</div>' : '<div class="card"><div class="empty">No templates</div></div>';
+}
+
+function renderCollaboration() {
+  const commentsEl = document.getElementById("sec-comments");
+  commentsEl.innerHTML = '<h2>Comments <span class="count">'+DATA.comments.length+'</span></h2>';
+  commentsEl.innerHTML += DATA.comments.length ? '<div class="card dense">' + DATA.comments.map(x=>
+    simpleRow(x.body, entityLabel(x.entityType, x.entityId), x.visibility || "comment", "comment-row")
+  ).join("") + '</div>' : '<div class="card"><div class="empty">No comments</div></div>';
+
+  const filesEl = document.getElementById("sec-attachments");
+  filesEl.innerHTML = '<h2>Attachments <span class="count">'+DATA.attachments.length+'</span></h2>';
+  filesEl.innerHTML += DATA.attachments.length ? '<div class="card dense">' + DATA.attachments.map(x=>
+    simpleRow(x.title, entityLabel(x.entityType, x.entityId), x.mimeType || "file", "attachment-row")
+  ).join("") + '</div>' : '<div class="card"><div class="empty">No attachments</div></div>';
+
+  const fieldsEl = document.getElementById("sec-custom-fields");
+  fieldsEl.innerHTML = '<h2>Custom Fields <span class="count">'+DATA.customFields.length+'</span></h2>';
+  fieldsEl.innerHTML += DATA.customFields.length ? '<div class="card dense">' + DATA.customFields.map(x=>
+    simpleRow(x.name, x.description || "", x.entityType + " · " + x.fieldType, "custom-field-row")
+  ).join("") + '</div>' : '<div class="card"><div class="empty">No custom fields</div></div>';
+
+  const valuesEl = document.getElementById("sec-field-values");
+  valuesEl.innerHTML = '<h2>Field Values <span class="count">'+DATA.fieldValues.length+'</span></h2>';
+  valuesEl.innerHTML += DATA.fieldValues.length ? '<div class="card dense">' + DATA.fieldValues.map(x=>
+    simpleRow(String(x.value ?? ""), entityLabel(x.entityType, x.entityId), x.fieldId, "field-value-row")
+  ).join("") + '</div>' : '<div class="card"><div class="empty">No field values</div></div>';
+}
+
+function renderSystem() {
+  const collections = [
+    ["Projects", DATA.projects.length], ["Goals", DATA.goals.length], ["Tasks", DATA.tasks.length],
+    ["Milestones", DATA.milestones.length], ["Lists", DATA.lists.length], ["Sections", DATA.sections.length], ["Comments", DATA.comments.length],
+    ["Attachments", DATA.attachments.length], ["Views", DATA.savedViews.length], ["Recurrences", DATA.recurrences.length],
+    ["Cycles", DATA.cycles.length], ["Epics", DATA.epics.length], ["Fields", DATA.customFields.length],
+    ["Values", DATA.fieldValues.length], ["Templates", DATA.templates.length], ["Reminders", DATA.reminders.length],
+    ["Deadlines", DATA.deadlines.length], ["Logs", DATA.notes.length],
+  ];
+  const mapEl = document.getElementById("sec-system-map");
+  mapEl.innerHTML = '<h2>Productivity System Map</h2><div class="collection-grid">' + collections.map(([label,count])=>
+    '<div class="collection-card" data-testid="system-card"><div class="n">'+count+'</div><div class="l">'+label+'</div></div>'
+  ).join("") + '</div>';
+
+  const remindersEl = document.getElementById("sec-reminders");
+  remindersEl.innerHTML = '<h2>Reminders <span class="count">'+DATA.reminders.length+'</span></h2>';
+  remindersEl.innerHTML += DATA.reminders.length ? '<div class="card dense">' + DATA.reminders.map(x=>
+    simpleRow(x.title, x.triggerAt || "", x.status || "reminder", "reminder-row")
+  ).join("") + '</div>' : '<div class="card"><div class="empty">No reminders</div></div>';
+
+  const deadlinesEl = document.getElementById("sec-deadlines");
+  deadlinesEl.innerHTML = '<h2>Deadlines <span class="count">'+DATA.deadlines.length+'</span></h2>';
+  deadlinesEl.innerHTML += DATA.deadlines.length ? '<div class="card dense">' + DATA.deadlines.map(x=>
+    simpleRow(x.title, x.dueAt || "", x.status || "deadline", "deadline-row")
+  ).join("") + '</div>' : '<div class="card"><div class="empty">No deadlines</div></div>';
+}
+
+function timelineTaskVisible(task) {
+  if (TL.readiness === "ready") return task.dependencyState.ready && task.status !== "blocked";
+  if (TL.readiness === "blocked") return !task.dependencyState.ready || task.status === "blocked";
+  return true;
+}
+
+function timelineItemStyle(startIso, endIso) {
+  const left = datePct(startIso, TIMELINE.start, TIMELINE.end);
+  const right = datePct(endIso, TIMELINE.start, TIMELINE.end);
+  return "left:"+left+"%;width:"+Math.max(2,right-left)+"%";
+}
+
+function renderTimeline() {
+  const el = document.getElementById("sec-timeline");
+  if (!el) return;
+  const projectSelect = '<select data-testid="timeline-project-filter" onchange="TL.projectId=this.value;loadTimeline()"><option value="">All projects</option>'+projectOptions(TL.projectId)+'</select>';
+  el.innerHTML =
+    '<div class="timeline-toolbar">' +
+      '<button class="btn sm" data-testid="timeline-prev" onclick="TL.start=addDays(TL.start, TL.mode===\'week\'?-7:-1);loadTimeline()">Prev</button>' +
+      '<select data-testid="timeline-mode" onchange="TL.mode=this.value;loadTimeline()">' +
+        '<option value="day"'+(TL.mode==="day"?" selected":"")+'>Day</option><option value="week"'+(TL.mode==="week"?" selected":"")+'>Week</option>' +
+      '</select>' +
+      '<input data-testid="timeline-start" type="date" value="'+TL.start+'" onchange="TL.start=this.value;loadTimeline()">' +
+      '<button class="btn sm" data-testid="timeline-next" onclick="TL.start=addDays(TL.start, TL.mode===\'week\'?7:1);loadTimeline()">Next</button>' +
+      projectSelect +
+      '<select data-testid="timeline-readiness-filter" onchange="TL.readiness=this.value;renderTimeline()">' +
+        '<option value="all"'+(TL.readiness==="all"?" selected":"")+'>All</option><option value="ready"'+(TL.readiness==="ready"?" selected":"")+'>Ready</option><option value="blocked"'+(TL.readiness==="blocked"?" selected":"")+'>Blocked</option>' +
+      '</select>' +
+    '</div>';
+  if (!TIMELINE) {
+    el.innerHTML += '<div class="card"><div class="empty">Loading timeline</div></div>';
+    return;
+  }
+  const days = Math.max(1, Math.round((new Date(TIMELINE.end).getTime() - new Date(TIMELINE.start).getTime()) / dayMs()));
+  const labels = Array.from({length: days}, (_, index) => addDays(TIMELINE.start.slice(0,10), index));
+  const todayIso = new Date().toISOString();
+  const todayLine = new Date(todayIso) >= new Date(TIMELINE.start) && new Date(todayIso) <= new Date(TIMELINE.end)
+    ? '<div class="tl-today" style="left:'+datePct(todayIso, TIMELINE.start, TIMELINE.end)+'%"></div>' : "";
+  const groups = TIMELINE.projects.map(project => ({
+    ...project,
+    tasks: project.tasks.filter(timelineTaskVisible),
+  })).filter(project => project.tasks.length || project.milestones.length || project.deadlines.length || project.cycles.length);
+  const chart = '<div class="card" style="padding:14px;overflow:visible;--cols:'+days+'">' +
+    '<div class="timeline-axis">' + labels.map(label=>'<span>'+label.slice(5)+'</span>').join("") + '</div>' +
+    (groups.length ? groups.map(project => {
+      const cycleBands = project.cycles.map(c=>'<div class="tl-cycle" data-testid="timeline-cycle-band" title="'+esc(c.name)+'" style="'+timelineItemStyle(c.start,c.end)+'"></div>').join("");
+      const markers = project.milestones.map(m=>'<div class="tl-marker" data-testid="timeline-milestone-marker" title="'+esc(m.title)+'" style="left:'+datePct(m.date,TIMELINE.start,TIMELINE.end)+'%"></div>').join("");
+      const deadlines = project.deadlines.map(d=>'<div class="tl-deadline" data-testid="timeline-deadline-marker" title="'+esc(d.title)+'" style="left:'+datePct(d.date,TIMELINE.start,TIMELINE.end)+'%"></div>').join("");
+      const overview = (cycleBands || markers || deadlines) ? '<div class="timeline-track">'+cycleBands+todayLine+markers+deadlines+'</div>' : "";
+      const taskRows = project.tasks.map(t=>{
+        const readiness = (!t.dependencyState.ready || t.status==="blocked") ? "blocked" : "ready";
+        const cls = t.status==="done" ? " done" : readiness === "blocked" ? " blocked" : "";
+        const deps = t.dependencyState.total ? " · deps "+t.dependencyState.completed+"/"+t.dependencyState.total : "";
+        return '<div class="timeline-track">'+todayLine+'<div class="tl-bar'+cls+'" data-testid="timeline-task-bar" data-readiness="'+readiness+'" title="'+esc(t.title+deps)+'" style="'+timelineItemStyle(t.start,t.end)+'">'+esc(t.title)+'</div></div>';
+      }).join("");
+      return '<div class="timeline-project" data-testid="timeline-project"><h3>'+esc(project.title)+'</h3>'+overview+taskRows+'</div>';
+    }).join("") : '<div class="empty">No timeline items in this range</div>') + '</div>';
+  const now = TIMELINE.now || { readyTasks: [], blockedTasks: [] };
+  const nowPanel = '<aside class="now-card" data-testid="timeline-now"><h3>Now</h3>' +
+    (now.primary ? '<div class="now-title">'+esc(now.primary.title)+'</div><span class="pill green">ready</span>' : '<div class="empty">No ready task now</div>') +
+    '<div class="now-list">' +
+      now.readyTasks.slice(0,4).map(t=>'<div class="pill green" data-testid="timeline-now-ready">'+esc(t.title)+'</div>').join("") +
+      now.blockedTasks.slice(0,4).map(t=>'<div class="pill red" data-testid="timeline-now-blocked">'+esc(t.title)+'</div>').join("") +
+    '</div></aside>';
+  el.innerHTML += '<div class="timeline-layout">'+chart+nowPanel+'</div>';
+}
+
+/* ── Render: All Logs ── */
+function renderAllLogs() {
+  const el = document.getElementById("sec-all-logs");
+  const logs = DATA.notes.filter(n=>n.tags.includes("day-log")).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  el.innerHTML = '<h2>All Logs <span class="count">'+logs.length+'</span></h2>';
+  if (!logs.length) { el.innerHTML += '<div class="card"><div class="empty">No logs</div></div>'; return; }
+  el.innerHTML += '<div class="card">' + logs.map(n=>{
+    const dateStr = (n.createdAt||"").slice(0,10);
+    const time = timeOf(n.createdAt);
+    return '<div class="row" data-testid="log-row"><span class="meta" style="font-variant-numeric:tabular-nums">'+dateStr+' '+time+'</span>' +
+      '<span class="title">'+esc(n.blocks?.[0]?.text||n.content||"")+'</span></div>';
+  }).join("") + '</div>';
+}
+
+/* ── Master render ── */
+function render() {
+  document.getElementById("date").textContent = new Intl.DateTimeFormat("es-ES",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}).format(new Date());
+  renderToday();
+  renderAllTasks();
+  renderAllProjects();
+  renderAllGoals();
+  renderTimeline();
+  renderPlanning();
+  renderCollaboration();
+  renderSystem();
+  renderAllLogs();
+}
+
+/* ── Quick log ── */
+async function submitLog() {
+  const input = document.getElementById("log-input");
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = "";
+  await api("POST", "/api/notes", { content: text });
+  toast("Log saved"); reload();
+}
+
+/* ── Tabs ── */
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("panel-" + tab.dataset.tab).classList.add("active");
+  });
+});
+
+/* ── Modal ── */
+function openModal(type, editId) {
+  const overlay = document.getElementById("modal-overlay");
+  const body = document.getElementById("modal-body");
+  const isEdit = !!editId;
+
+  if (type === "task") {
+    const t = isEdit ? DATA.tasks.find(x=>x.id===editId) : null;
+    const projOpts = projectOptions(t?.projectId);
+    const goalOpts = goalOptions(t?.goalId);
+    const lOpts = listOptions(t?.listId);
+    const sOpts = sectionOptions(t?.sectionId);
+    const cOpts = cycleOptions(t?.cycleId);
+    const eOpts = epicOptions(t?.epicId);
+    const depOpts = DATA.tasks.filter(x=>x.id!==editId).map(x=>'<option value="'+x.id+'"'+((t?.dependsOnTaskIds||[]).includes(x.id)?' selected':'')+'>'+esc(x.title)+'</option>').join("");
+
+    body.innerHTML =
+      '<h3>'+(isEdit?"Edit Task":"New Task")+'</h3>' +
+      '<div class="field-group"><label>Title</label><input id="f-title" value="'+esc(t?.title||"")+'"></div>' +
+      '<div class="field-group"><label>Description</label><textarea id="f-desc">'+(t?.description||"")+'</textarea></div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Type</label><select id="f-type">' +
+          ['todo','task','bug','story','feature','chore'].map(v=>'<option value="'+v+'"'+((t?.type||"task")===v?' selected':'')+'>'+v+'</option>').join("") +
+        '</select></div>' +
+        '<div class="field-group"><label>Priority</label><select id="f-priority">' +
+          ['urgent','high','medium','low'].map(v=>'<option value="'+v+'"'+(t?.priority===v?' selected':'')+'>'+v+'</option>').join("") +
+        '</select></div>' +
+      '</div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Status</label><select id="f-status">' +
+          ['todo','in_progress','blocked','done','cancelled'].map(v=>'<option value="'+v+'"'+((t?.status||"todo")===v?' selected':'')+'>'+(SL[v]||v)+'</option>').join("") +
+        '</select></div>' +
+        '<div class="field-group"><label>Rank</label><input type="number" id="f-rank" value="'+(t?.rank||"")+'"></div>' +
+      '</div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Project</label><select id="f-project"><option value="">None</option>'+projOpts+'</select></div>' +
+        '<div class="field-group"><label>Goal</label><select id="f-goal"><option value="">None</option>'+goalOpts+'</select></div>' +
+      '</div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>List</label><select id="f-list"><option value="">None</option>'+lOpts+'</select></div>' +
+        '<div class="field-group"><label>Section</label><select id="f-section"><option value="">None</option>'+sOpts+'</select></div>' +
+      '</div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Cycle / sprint</label><select id="f-cycle"><option value="">None</option>'+cOpts+'</select></div>' +
+        '<div class="field-group"><label>Epic / initiative</label><select id="f-epic"><option value="">None</option>'+eOpts+'</select></div>' +
+      '</div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Start date</label><input type="date" id="f-start" value="'+(t?.startAt?.slice(0,10)||"")+'"></div>' +
+        '<div class="field-group"><label>Due date</label><input type="date" id="f-due" value="'+(t?.dueAt?.slice(0,10)||"")+'"></div>' +
+      '</div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Defer until</label><input type="date" id="f-defer" value="'+(t?.deferUntil?.slice(0,10)||"")+'"></div>' +
+        '<div class="field-group"><label>Deadline</label><input type="date" id="f-deadline" value="'+(t?.deadlineAt?.slice(0,10)||"")+'"></div>' +
+      '</div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Story points</label><input type="number" id="f-story" value="'+(t?.storyPoints||"")+'"></div>' +
+        '<div class="field-group"><label>Recurrence rule</label><input id="f-recurrence" value="'+esc(t?.recurrenceRule||"")+'"></div>' +
+      '</div>' +
+      '<div class="field-group"><label>Depends on</label><select id="f-depends" multiple size="3">'+depOpts+'</select></div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Waiting on</label><input id="f-waiting" value="'+esc(t?.waitingOn||"")+'"></div>' +
+        '<div class="field-group" style="display:flex;align-items:center;gap:8px;padding-top:22px">' +
+          '<input type="checkbox" id="f-today" style="width:auto"'+(t?.labels?.includes("today")?' checked':'')+' ><label for="f-today" style="margin:0">Include in Today</label>' +
+        '</div>' +
+      '</div>' +
+      '<div class="btns">' +
+        '<button class="btn" onclick="closeModal()">Cancel</button>' +
+        '<button class="btn primary" onclick="submitTask(\''+( editId||"")+'\')">'+( isEdit?"Save":"Create")+'</button>' +
+      '</div>';
+  }
+
+  if (type === "list") {
+    body.innerHTML =
+      '<h3>New List</h3>' +
+      '<div class="field-group"><label>Title</label><input id="f-title"></div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Kind</label><select id="f-kind">' +
+          ['inbox','today','upcoming','anytime','someday','backlog','project','custom'].map(v=>'<option value="'+v+'">'+v+'</option>').join("") +
+        '</select></div>' +
+        '<div class="field-group"><label>Rank</label><input type="number" id="f-rank"></div>' +
+      '</div>' +
+      '<div class="field-group"><label>Project</label><select id="f-project"><option value="">None</option>'+projectOptions("")+'</select></div>' +
+      '<div class="btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="submitList()">Create</button></div>';
+  }
+
+  if (type === "section") {
+    body.innerHTML =
+      '<h3>New Section</h3>' +
+      '<div class="field-group"><label>Title</label><input id="f-title"></div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>List</label><select id="f-list"><option value="">None</option>'+listOptions("")+'</select></div>' +
+        '<div class="field-group"><label>Project</label><select id="f-project"><option value="">None</option>'+projectOptions("")+'</select></div>' +
+      '</div>' +
+      '<div class="field-group"><label>Rank</label><input type="number" id="f-rank"></div>' +
+      '<div class="btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="submitSection()">Create</button></div>';
+  }
+
+  if (type === "cycle") {
+    body.innerHTML =
+      '<h3>New Cycle</h3>' +
+      '<div class="field-group"><label>Name</label><input id="f-name"></div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Status</label><select id="f-status">' +
+          ['planned','active','completed','archived'].map(v=>'<option value="'+v+'">'+(SL[v]||v)+'</option>').join("") +
+        '</select></div>' +
+        '<div class="field-group"><label>Capacity points</label><input type="number" id="f-capacity"></div>' +
+      '</div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Start</label><input type="date" id="f-start"></div>' +
+        '<div class="field-group"><label>End</label><input type="date" id="f-end"></div>' +
+      '</div>' +
+      '<div class="field-group"><label>Project</label><select id="f-project"><option value="">None</option>'+projectOptions("")+'</select></div>' +
+      '<div class="btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="submitCycle()">Create</button></div>';
+  }
+
+  if (type === "epic") {
+    body.innerHTML =
+      '<h3>New Epic / Initiative</h3>' +
+      '<div class="field-group"><label>Title</label><input id="f-title"></div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Kind</label><select id="f-kind">' +
+          ['epic','initiative'].map(v=>'<option value="'+v+'">'+v+'</option>').join("") +
+        '</select></div>' +
+        '<div class="field-group"><label>Status</label><select id="f-status">' +
+          ['planned','active','done','archived'].map(v=>'<option value="'+v+'">'+(SL[v]||v)+'</option>').join("") +
+        '</select></div>' +
+      '</div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Project</label><select id="f-project"><option value="">None</option>'+projectOptions("")+'</select></div>' +
+        '<div class="field-group"><label>Goal</label><select id="f-goal"><option value="">None</option>'+goalOptions("")+'</select></div>' +
+      '</div>' +
+      '<div class="field-group"><label>Health</label><select id="f-health">' +
+        ['green','yellow','red','unknown'].map(v=>'<option value="'+v+'">'+v+'</option>').join("") +
+      '</select></div>' +
+      '<div class="btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="submitEpic()">Create</button></div>';
+  }
+
+  if (type === "project") {
+    const p = isEdit ? DATA.projects.find(x=>x.id===editId) : null;
+    body.innerHTML =
+      '<h3>'+(isEdit?"Edit Project":"New Project")+'</h3>' +
+      '<div class="field-group"><label>Name</label><input id="f-name" value="'+esc(p?.name||"")+'"></div>' +
+      '<div class="field-group"><label>Description</label><textarea id="f-desc">'+(p?.description||"")+'</textarea></div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Status</label><select id="f-status">' +
+          ['draft','in_progress','paused','done','archived'].map(v=>'<option value="'+v+'"'+((p?.status||"in_progress")===v?' selected':'')+'>'+(SL[v]||v)+'</option>').join("") +
+        '</select></div>' +
+        '<div class="field-group"><label>Kind</label><select id="f-kind">' +
+          ['delivery','growth','ops','research','migration','other'].map(v=>'<option value="'+v+'"'+(p?.kind===v?' selected':'')+'>'+v+'</option>').join("") +
+        '</select></div>' +
+      '</div>' +
+      '<div class="field-group"><label>Health</label><select id="f-health">' +
+        ['green','yellow','red','unknown'].map(v=>'<option value="'+v+'"'+((p?.healthStatus||"green")===v?' selected':'')+'>'+v+'</option>').join("") +
+      '</select></div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Status category</label><select id="f-status-category">' +
+          ['active','planned','someday','done','archived'].map(v=>'<option value="'+v+'"'+((p?.statusCategory||"active")===v?' selected':'')+'>'+v+'</option>').join("") +
+        '</select></div>' +
+        '<div class="field-group"><label>Target date</label><input type="date" id="f-target-date" value="'+(p?.targetDate?.slice(0,10)||"")+'"></div>' +
+      '</div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Start date</label><input type="date" id="f-project-start" value="'+(p?.startAt?.slice(0,10)||"")+'"></div>' +
+        '<div class="field-group"><label>Deadline</label><input type="date" id="f-project-deadline" value="'+(p?.deadlineAt?.slice(0,10)||"")+'"></div>' +
+      '</div>' +
+      '<div class="btns">' +
+        '<button class="btn" onclick="closeModal()">Cancel</button>' +
+        '<button class="btn primary" onclick="submitProject(\''+(editId||"")+'\')">'+( isEdit?"Save":"Create")+'</button>' +
+      '</div>';
+  }
+
+  if (type === "milestone") {
+    const m = isEdit ? DATA.milestones.find(x=>x.id===editId) : null;
+    body.innerHTML =
+      '<h3>'+(isEdit?"Edit Milestone":"New Milestone")+'</h3>' +
+      '<div class="field-group"><label>Title</label><input id="f-title" value="'+esc(m?.title||"")+'"></div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Project</label><select id="f-project"><option value="">None</option>'+projectOptions(m?.projectId)+'</select></div>' +
+        '<div class="field-group"><label>Goal</label><select id="f-goal"><option value="">None</option>'+goalOptions(m?.goalId)+'</select></div>' +
+      '</div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Status</label><select id="f-status">' +
+          ['planned','active','done','archived'].map(v=>'<option value="'+v+'"'+((m?.status||"planned")===v?' selected':'')+'>'+(SL[v]||v)+'</option>').join("") +
+        '</select></div>' +
+        '<div class="field-group"><label>Target date</label><input type="date" id="f-target-date" value="'+(m?.targetDate?.slice(0,10)||"")+'"></div>' +
+      '</div>' +
+      '<div class="btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="submitMilestone(\''+(editId||"")+'\')">'+(isEdit?"Save":"Create")+'</button></div>';
+  }
+
+  if (type === "goal") {
+    const g = isEdit ? DATA.goals.find(x=>x.id===editId) : null;
+    const projOpts = DATA.projects.map(p=>'<option value="'+p.id+'"'+(g&&g.projectId===p.id?' selected':'')+'>'+esc(p.name)+'</option>').join("");
+    body.innerHTML =
+      '<h3>'+(isEdit?"Edit Goal":"New Goal")+'</h3>' +
+      '<div class="field-group"><label>Title</label><input id="f-title" value="'+esc(g?.title||"")+'"></div>' +
+      '<div class="field-group"><label>Description</label><textarea id="f-desc">'+(g?.description||"")+'</textarea></div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Project</label><select id="f-project"><option value="">None</option>'+projOpts+'</select></div>' +
+        '<div class="field-group"><label>Status</label><select id="f-status">' +
+          ['active','paused','done'].map(v=>'<option value="'+v+'"'+((g?.status||"active")===v?' selected':'')+'>'+(SL[v]||v)+'</option>').join("") +
+        '</select></div>' +
+      '</div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Target value</label><input type="number" id="f-target" value="'+(g?.targetValue||"")+'"></div>' +
+        '<div class="field-group"><label>Current value</label><input type="number" id="f-current" value="'+(g?.currentValue||"")+'"></div>' +
+      '</div>' +
+      '<div class="row-fields">' +
+        '<div class="field-group"><label>Unit</label><input id="f-unit" value="'+(g?.unit||"")+'"></div>' +
+        '<div class="field-group"><label>Health</label><select id="f-health">' +
+          ['green','yellow','red','unknown'].map(v=>'<option value="'+v+'"'+((g?.healthStatus||"green")===v?' selected':'')+'>'+v+'</option>').join("") +
+        '</select></div>' +
+      '</div>' +
+      '<div class="btns">' +
+        '<button class="btn" onclick="closeModal()">Cancel</button>' +
+        '<button class="btn primary" onclick="submitGoal(\''+(editId||"")+'\')">'+( isEdit?"Save":"Create")+'</button>' +
+      '</div>';
+  }
+
+  overlay.classList.add("open");
+  setTimeout(()=>{const first = body.querySelector("input,textarea"); if(first) first.focus();}, 50);
+}
+
+function closeModal() { document.getElementById("modal-overlay").classList.remove("open"); }
+
+/* ── Submit handlers ── */
+async function submitTask(editId) {
+  const body = {
+    title: document.getElementById("f-title").value.trim(),
+    description: document.getElementById("f-desc").value.trim() || undefined,
+    type: document.getElementById("f-type").value,
+    priority: document.getElementById("f-priority").value,
+    status: document.getElementById("f-status").value,
+    rank: document.getElementById("f-rank").value || undefined,
+    projectId: document.getElementById("f-project").value || undefined,
+    goalId: document.getElementById("f-goal").value || undefined,
+    listId: document.getElementById("f-list").value || undefined,
+    sectionId: document.getElementById("f-section").value || undefined,
+    cycleId: document.getElementById("f-cycle").value || undefined,
+    epicId: document.getElementById("f-epic").value || undefined,
+    startAt: document.getElementById("f-start").value ? document.getElementById("f-start").value + "T09:00:00.000Z" : undefined,
+    deferUntil: document.getElementById("f-defer").value ? document.getElementById("f-defer").value + "T09:00:00.000Z" : undefined,
+    dueAt: document.getElementById("f-due").value ? document.getElementById("f-due").value + "T18:00:00.000Z" : undefined,
+    deadlineAt: document.getElementById("f-deadline").value ? document.getElementById("f-deadline").value + "T18:00:00.000Z" : undefined,
+    storyPoints: document.getElementById("f-story").value || undefined,
+    recurrenceRule: document.getElementById("f-recurrence").value.trim() || undefined,
+    dependsOnTaskIds: Array.from(document.getElementById("f-depends").selectedOptions).map(option=>option.value),
+    waitingOn: document.getElementById("f-waiting").value.trim() || undefined,
+    today: document.getElementById("f-today").checked,
+    labels: document.getElementById("f-today").checked ? ["today"] : [],
+  };
+  if (!body.title) { toast("Title is required"); return; }
+  if (editId) {
+    await api("PATCH", "/api/tasks/" + editId, body);
+    toast("Task updated");
+  } else {
+    await api("POST", "/api/tasks", body);
+    toast("Task created");
+  }
+  closeModal(); reload();
+}
+
+async function submitList() {
+  const body = {
+    title: document.getElementById("f-title").value.trim(),
+    kind: document.getElementById("f-kind").value,
+    rank: document.getElementById("f-rank").value || undefined,
+    projectId: document.getElementById("f-project").value || undefined,
+  };
+  if (!body.title) { toast("Title is required"); return; }
+  await api("POST", "/api/lists", body);
+  toast("List created"); closeModal(); reload();
+}
+
+async function submitSection() {
+  const body = {
+    title: document.getElementById("f-title").value.trim(),
+    listId: document.getElementById("f-list").value || undefined,
+    projectId: document.getElementById("f-project").value || undefined,
+    rank: document.getElementById("f-rank").value || undefined,
+  };
+  if (!body.title) { toast("Title is required"); return; }
+  await api("POST", "/api/sections", body);
+  toast("Section created"); closeModal(); reload();
+}
+
+async function submitCycle() {
+  const body = {
+    name: document.getElementById("f-name").value.trim(),
+    status: document.getElementById("f-status").value,
+    capacityPoints: document.getElementById("f-capacity").value || undefined,
+    startsAt: document.getElementById("f-start").value ? document.getElementById("f-start").value + "T00:00:00.000Z" : undefined,
+    endsAt: document.getElementById("f-end").value ? document.getElementById("f-end").value + "T23:59:59.000Z" : undefined,
+    projectId: document.getElementById("f-project").value || undefined,
+  };
+  if (!body.name) { toast("Name is required"); return; }
+  await api("POST", "/api/cycles", body);
+  toast("Cycle created"); closeModal(); reload();
+}
+
+async function submitEpic() {
+  const body = {
+    title: document.getElementById("f-title").value.trim(),
+    kind: document.getElementById("f-kind").value,
+    status: document.getElementById("f-status").value,
+    projectId: document.getElementById("f-project").value || undefined,
+    goalId: document.getElementById("f-goal").value || undefined,
+    healthStatus: document.getElementById("f-health").value,
+  };
+  if (!body.title) { toast("Title is required"); return; }
+  await api("POST", "/api/epics", body);
+  toast("Epic created"); closeModal(); reload();
+}
+
+async function submitMilestone(editId) {
+  const body = {
+    title: document.getElementById("f-title").value.trim(),
+    status: document.getElementById("f-status").value,
+    projectId: document.getElementById("f-project").value || undefined,
+    goalId: document.getElementById("f-goal").value || undefined,
+    targetDate: document.getElementById("f-target-date").value ? document.getElementById("f-target-date").value + "T12:00:00.000Z" : undefined,
+  };
+  if (!body.title) { toast("Title is required"); return; }
+  if (editId) {
+    await api("PATCH", "/api/milestones/" + editId, body);
+    toast("Milestone updated");
+  } else {
+    await api("POST", "/api/milestones", body);
+    toast("Milestone created");
+  }
+  closeModal(); reload();
+}
+
+async function submitProject(editId) {
+  const body = {
+    name: document.getElementById("f-name").value.trim(),
+    description: document.getElementById("f-desc").value.trim() || undefined,
+    status: document.getElementById("f-status").value,
+    kind: document.getElementById("f-kind").value,
+    healthStatus: document.getElementById("f-health").value,
+    statusCategory: document.getElementById("f-status-category").value,
+    targetDate: document.getElementById("f-target-date").value ? document.getElementById("f-target-date").value + "T12:00:00.000Z" : undefined,
+    startAt: document.getElementById("f-project-start").value ? document.getElementById("f-project-start").value + "T09:00:00.000Z" : undefined,
+    deadlineAt: document.getElementById("f-project-deadline").value ? document.getElementById("f-project-deadline").value + "T18:00:00.000Z" : undefined,
+  };
+  if (!body.name) { toast("Name is required"); return; }
+  if (editId) {
+    await api("PATCH", "/api/projects/" + editId, body);
+    toast("Project updated");
+  } else {
+    await api("POST", "/api/projects", body);
+    toast("Project created");
+  }
+  closeModal(); reload();
+}
+
+async function submitGoal(editId) {
+  const body = {
+    title: document.getElementById("f-title").value.trim(),
+    description: document.getElementById("f-desc").value.trim() || undefined,
+    status: document.getElementById("f-status").value,
+    projectId: document.getElementById("f-project").value || undefined,
+    targetValue: document.getElementById("f-target").value || undefined,
+    currentValue: document.getElementById("f-current").value || undefined,
+    unit: document.getElementById("f-unit").value.trim() || undefined,
+    healthStatus: document.getElementById("f-health").value,
+  };
+  if (!body.title) { toast("Title is required"); return; }
+  if (editId) {
+    await api("PATCH", "/api/goals/" + editId, body);
+    toast("Goal updated");
+  } else {
+    await api("POST", "/api/goals", body);
+    toast("Goal created");
+  }
+  closeModal(); reload();
+}
+
+/* ── Keyboard ── */
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+/* ── Init ── */
+reload();
+</script>
+</body>
+</html>

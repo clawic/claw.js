@@ -84,6 +84,18 @@ Time v1 adds:
 
 Docs: [docs/time.md](docs/time.md)
 
+## Claw Day
+
+The repository also includes `apps/day/`, a private visual planning app for ClawJS projects, goals, tasks, timelines, and progress logs.
+
+Claw Day v1 adds:
+
+- a browser UI for today's focus, queued work, completed work, timelines, and logs
+- forms and visual views over the shared WorkOS productivity model
+- direct storage in the ClawJS workspace productivity layer; CLI workflows remain on the main `claw` productivity commands
+
+Docs: [docs/day.md](docs/day.md)
+
 ## ERP
 
 The repository also includes `erp/`, a standalone ERP backend with its own transactional SQLite store, CLI, domain API, app read-model API, frontend contract fixtures, and a reserved SPA mount for a future `erp/ui/`.
@@ -176,6 +188,20 @@ The current implementation ships as a self-contained top-level service with:
 - a bundled React UI for operators
 
 Docs: [execution-plane/README.md](execution-plane/README.md)
+
+## Delegation Plane
+
+The repository also includes `delegation-plane/`, a standalone durable control plane for async agent delegation trees, bounded worker execution, leases, retries, and continuation-based parent resumption.
+
+Delegation Plane v1 adds:
+
+- persistent graphs, nodes, dependencies, workers, runs, logs, and events
+- scheduler ticks for lease reclamation, retry policy, terminal propagation, and continuation creation
+- structured agent-facing endpoints for child delegation, completion, failure, blocking, and status inspection
+- a generic runtime adapter contract with deterministic and command adapters
+- an operator CLI for graph creation, inspection, retry, cancel, worker claim, and stuck-work views
+
+Docs: [docs/delegation-plane.md](docs/delegation-plane.md)
 
 ## Install
 
@@ -291,7 +317,7 @@ the Relay API:
 | Search skills | `await claw.skills.search({ query: "calendar" })` | `claw skills search --query "calendar"` | `GET WS/skills/search?q=calendar` |
 | List tasks | `await workspace.tasks.list()` | `claw tasks list` | `GET WS/tasks` |
 | List temporal items | `await claw.time.list()` | `claw time list` | `GET WS/time` |
-| Generate an image | `await claw.image.generate(...)` | `claw image generate --prompt "..."` | `POST WS/images` |
+| Generate or register an image | `await claw.image.create(...)` / `await claw.image.import(...)` | `claw image create --prompt "..."` / `claw image import --file ...` | `POST WS/images` |
 
 In the rows that use `workspace.*`, that surface comes from
 `@clawjs/workspace` on top of the base SDK.
@@ -380,6 +406,7 @@ ClawJS now treats adapter support level as part of the public contract.
 | Adapter | Stability | Support level | Recommended |
 | --- | --- | --- | --- |
 | `openclaw` | stable | production | yes |
+| `codex` | experimental | experimental | no |
 | `zeroclaw` | experimental | experimental | no |
 | `picoclaw` | experimental | experimental | no |
 | `nanobot` | experimental | experimental | no |
