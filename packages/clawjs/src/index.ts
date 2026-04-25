@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { spawn } from "child_process";
+import { createHash } from "crypto";
 import { fileURLToPath } from "url";
 
 import {
@@ -201,7 +202,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} workspace-search query | workspace-index rebuild`,
     `  ${binName} skills list|inspect|sync|sources|search|install`,
     `  ${binName} library list|inspect|create|update|remove|import-skill|assign|unassign|resolve|sync`,
-    `  ${binName} channels list|status|telegram|processors|listen|targets|messages|permissions|commands`,
+    `  ${binName} channels list|status|telegram|processors|listen|codex-processor|targets|messages|permissions|commands`,
     `  ${binName} browser status|ensure|share --relay-url URL --access-token TOKEN --tenant-id ID --agent-id ID --workspace-id ID`,
     `  ${binName} telegram connect|status|webhook set|clear|polling start|stop|commands set|get|chats list|inspect|send`,
     `  ${binName} sessions create|list|search|read|stream|generate-title`,
@@ -220,7 +221,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} compat [--refresh] [--json]`,
     "",
     "Global options:",
-    "  --runtime demo|openclaw|zeroclaw|picoclaw|nanobot|nanoclaw|nullclaw|ironclaw|nemoclaw|hermes",
+    "  --runtime demo|openclaw|codex|zeroclaw|picoclaw|nanobot|nanoclaw|nullclaw|ironclaw|nemoclaw|hermes",
     "  --workspace PATH",
     "  --json",
     "  --dry-run",
@@ -828,6 +829,281 @@ function parseInferenceMessages(
     return null;
   }
   return [{ role: "user", content: prompt.trim() }];
+}
+
+type TelegramCodexReplyPolicy = "all" | "mention_or_reply" | "commands";
+
+interface TelegramCodexBridgeState {
+  schemaVersion: 1;
+  ownerUserId?: string;
+  replyPolicy: TelegramCodexReplyPolicy;
+  authorizedTargets: Array<{
+    provider: string;
+    accountId: string;
+    targetId: string;
+    threadId?: string | number;
+    authorizedByUserId: string;
+    authorizedAt: string;
+  }>;
+  sessions: Record<string, string>;
+}
+
+interface TelegramCodexProcessorEvent {
+  type?: string;
+  provider?: string;
+  accountId?: string;
+  targetId?: string;
+  message?: {
+    text?: string;
+    targetId?: string;
+    threadId?: string | number;
+    senderId?: string;
+    senderLabel?: string;
+    providerMessageId?: string;
+    raw?: Record<string, unknown>;
+  };
+}
+
+function readStdin(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let input = "";
+    process.stdin.setEncoding("utf8");
+    process.stdin.on("data", (chunk) => {
+      input += chunk;
+    });
+    process.stdin.on("error", reject);
+    process.stdin.on("end", () => resolve(input));
+  });
+}
+
+function sanitizeStableId(value: string): string {
+  return value.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "default";
+}
+
+function hashStableId(value: string): string {
+  return createHash("sha256").update(value).digest("hex").slice(0, 16);
+}
+
+function normalizeTelegramCodexReplyPolicy(value?: string): TelegramCodexReplyPolicy {
+  return value === "mention_or_reply" || value === "commands" || value === "all" ? value : "all";
+}
+
+function telegramCodexStatePath(workspaceRoot: string, flags: Record<string, string>): string {
+  return path.resolve(flags["bridge-state"] || path.join(workspaceRoot, ".clawjs", "telegram-codex-bridge.json"));
+}
+
+function readTelegramCodexBridgeState(statePath: string, replyPolicy: TelegramCodexReplyPolicy): TelegramCodexBridgeState {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(statePath, "utf8")) as Partial<TelegramCodexBridgeState>;
+    return {
+      schemaVersion: 1,
+      ...(typeof parsed.ownerUserId === "string" ? { ownerUserId: parsed.ownerUserId } : {}),
+      replyPolicy: normalizeTelegramCodexReplyPolicy(parsed.replyPolicy ?? replyPolicy),
+      authorizedTargets: Array.isArray(parsed.authorizedTargets) ? parsed.authorizedTargets.filter((entry) => (
+        entry
+        && typeof entry.provider === "string"
+        && typeof entry.accountId === "string"
+        && typeof entry.targetId === "string"
+        && typeof entry.authorizedByUserId === "string"
+        && typeof entry.authorizedAt === "string"
+      )) as TelegramCodexBridgeState["authorizedTargets"] : [],
+      sessions: parsed.sessions && typeof parsed.sessions === "object" ? parsed.sessions as Record<string, string> : {},
+    };
+  } catch {
+    return {
+      schemaVersion: 1,
+      replyPolicy,
+      authorizedTargets: [],
+      sessions: {},
+    };
+  }
+}
+
+function writeTelegramCodexBridgeState(statePath: string, state: TelegramCodexBridgeState): void {
+  fs.mkdirSync(path.dirname(statePath), { recursive: true });
+  fs.writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 });
+}
+
+function telegramCodexTargetKey(input: { provider: string; accountId: string; targetId: string; threadId?: string | number }): string {
+  return [input.provider, input.accountId, input.targetId, input.threadId ? `topic:${String(input.threadId)}` : "chat"].join(":");
+}
+
+function isTelegramPrivateMessage(event: TelegramCodexProcessorEvent): boolean {
+  const rawMessage = event.message?.raw?.message as Record<string, unknown> | undefined;
+  const chat = rawMessage?.chat as Record<string, unknown> | undefined;
+  return chat?.type === "private";
+}
+
+function isTelegramReplyToBot(event: TelegramCodexProcessorEvent): boolean {
+  const rawMessage = event.message?.raw?.message as Record<string, unknown> | undefined;
+  const reply = rawMessage?.reply_to_message as Record<string, unknown> | undefined;
+  const from = reply?.from as Record<string, unknown> | undefined;
+  return from?.is_bot === true;
+}
+
+function shouldReplyToTelegramCodexMessage(
+  event: TelegramCodexProcessorEvent,
+  policy: TelegramCodexReplyPolicy,
+  botUsername?: string,
+): boolean {
+  if (policy === "all") return true;
+  const text = event.message?.text?.trim() ?? "";
+  if (text.startsWith("/codex") || text.startsWith("/start")) return true;
+  if (policy === "commands") return false;
+  if (isTelegramReplyToBot(event)) return true;
+  return !!(botUsername && text.toLowerCase().includes(`@${botUsername.toLowerCase()}`));
+}
+
+function stripTelegramCodexCommand(text: string, botUsername?: string): string {
+  let next = text.trim();
+  next = next.replace(/^\/codex(?:@\w+)?\s*/i, "");
+  if (botUsername) {
+    next = next.replace(new RegExp(`@${botUsername.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "ig"), "").trim();
+  }
+  return next || text.trim();
+}
+
+function splitTelegramMessage(text: string, maxLength = 3900): string[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+  const chunks: string[] = [];
+  let remaining = trimmed;
+  while (remaining.length > maxLength) {
+    let index = remaining.lastIndexOf("\n", maxLength);
+    if (index < Math.floor(maxLength * 0.5)) index = remaining.lastIndexOf(" ", maxLength);
+    if (index < Math.floor(maxLength * 0.5)) index = maxLength;
+    chunks.push(remaining.slice(0, index).trim());
+    remaining = remaining.slice(index).trim();
+  }
+  if (remaining) chunks.push(remaining);
+  return chunks;
+}
+
+async function runTelegramCodexProcessor(input: {
+  context: CliContext;
+  flags: Record<string, string>;
+  argv: string[];
+  workspaceRoot: string;
+  appId: string;
+  workspaceId: string;
+  agentId: string;
+  runtimeAdapterId: RuntimeAdapterId;
+}): Promise<number> {
+  const raw = await readStdin();
+  const event = JSON.parse(raw || "{}") as TelegramCodexProcessorEvent;
+  const provider = event.provider || "telegram";
+  const accountId = event.accountId || "default";
+  const targetId = event.targetId || event.message?.targetId;
+  const threadId = event.message?.threadId;
+  const senderId = event.message?.senderId;
+  const rawText = event.message?.text?.trim();
+  if (!targetId || !senderId || !rawText) {
+    writeJson(input.context.stdout, { actions: [{ type: "ignore", reason: "missing target, sender, or text" }] });
+    return CLI_EXIT_OK;
+  }
+
+  const replyPolicy = normalizeTelegramCodexReplyPolicy(input.flags["reply-policy"]);
+  const botUsername = input.flags["bot-username"];
+  const statePath = telegramCodexStatePath(input.workspaceRoot, input.flags);
+  const state = readTelegramCodexBridgeState(statePath, replyPolicy);
+  state.replyPolicy = replyPolicy;
+
+  const isPrivate = isTelegramPrivateMessage(event);
+  const key = telegramCodexTargetKey({ provider, accountId, targetId, ...(threadId ? { threadId } : {}) });
+  const now = new Date().toISOString();
+  let changed = false;
+
+  if (!state.ownerUserId) {
+    state.ownerUserId = senderId;
+    changed = true;
+  }
+
+  const isOwner = state.ownerUserId === senderId;
+  const authorized = state.authorizedTargets.some((target) => telegramCodexTargetKey(target) === key);
+  if (!authorized && (isPrivate || isOwner)) {
+    state.authorizedTargets.push({
+      provider,
+      accountId,
+      targetId,
+      ...(threadId ? { threadId } : {}),
+      authorizedByUserId: senderId,
+      authorizedAt: now,
+    });
+    changed = true;
+  }
+
+  const nowAuthorized = authorized || isPrivate || isOwner;
+  if (!isOwner && !nowAuthorized) {
+    if (changed) writeTelegramCodexBridgeState(statePath, state);
+    writeJson(input.context.stdout, { actions: [{ type: "ignore", reason: "target not authorized by owner" }] });
+    return CLI_EXIT_OK;
+  }
+  if (!shouldReplyToTelegramCodexMessage(event, state.replyPolicy, botUsername)) {
+    if (changed) writeTelegramCodexBridgeState(statePath, state);
+    writeJson(input.context.stdout, { actions: [{ type: "ignore", reason: "reply policy did not match" }] });
+    return CLI_EXIT_OK;
+  }
+
+  const sessionId = state.sessions[key] ?? `telegram-${sanitizeStableId(targetId)}-${hashStableId(key)}`;
+  if (!state.sessions[key]) {
+    state.sessions[key] = sessionId;
+    changed = true;
+  }
+  if (changed) writeTelegramCodexBridgeState(statePath, state);
+
+  const prompt = stripTelegramCodexCommand(rawText, botUsername);
+  const targetLabel = threadId ? `${targetId} topic ${threadId}` : targetId;
+  const systemPrompt = input.flags["system-prompt"] || [
+    "You are Codex responding through a Telegram bot.",
+    "Be concise, useful, and clear.",
+    "You are running on the Kappa Mac mini for the ClawJS dev workflow.",
+  ].join(" ");
+  const claw = await createCliClaw(input.runtimeAdapterId, input.flags, input.workspaceRoot, input.appId, input.workspaceId, input.agentId, input.argv);
+  const result = await claw.inference.generateText({
+    sessionId,
+    systemPrompt,
+    contextBlocks: [
+      { title: "Telegram", content: `provider=${provider}\naccount=${accountId}\ntarget=${targetLabel}\nsender=${event.message?.senderLabel ?? senderId}` },
+    ],
+    messages: [{ role: "user", content: prompt }],
+    transport: (input.flags.transport as "auto" | "gateway" | "cli" | undefined) ?? "auto",
+    ...(input.flags.model ? { model: input.flags.model } : {}),
+    ...(input.flags["gateway-retries"] ? { gatewayRetries: Number(input.flags["gateway-retries"]) } : { gatewayRetries: 1 }),
+  });
+
+  const chunks = splitTelegramMessage(result.text);
+  const actions = chunks.length > 0
+    ? [
+        {
+          type: "grant_permission",
+          targetId,
+          agentId: input.agentId,
+          permissions: ["write"],
+          priority: 100,
+          metadata: {
+            source: "telegram-codex-bridge",
+            ownerUserId: state.ownerUserId,
+          },
+        },
+        ...chunks.map((text) => ({
+          type: "send_message",
+          targetId,
+          text,
+          ...(threadId ? { threadId } : {}),
+          agentId: input.agentId,
+          metadata: {
+            sessionId,
+            transport: result.transport,
+            fallback: result.fallback,
+            ownerUserId: state.ownerUserId,
+          },
+        })),
+      ]
+    : [{ type: "ignore", reason: "codex returned empty response" }];
+  writeJson(input.context.stdout, {
+    actions,
+  });
+  return CLI_EXIT_OK;
 }
 
 function buildMediaMetadata(
@@ -5491,6 +5767,23 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       else context.stdout.write(output ? `${output}\n` : "");
       return output ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
+  }
+
+  if (group === "channels" && command === "codex-processor") {
+    if (subcommand && subcommand !== "run") {
+      context.stderr.write(`Usage: ${binName} channels codex-processor run --runtime codex --workspace PATH\n`);
+      return CLI_EXIT_USAGE;
+    }
+    return await runTelegramCodexProcessor({
+      context,
+      flags,
+      argv,
+      workspaceRoot,
+      appId,
+      workspaceId,
+      agentId,
+      runtimeAdapterId,
+    });
   }
 
   if (group === "channels" && command === "accounts" && subcommand === "add") {
