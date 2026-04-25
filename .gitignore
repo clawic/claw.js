@@ -21,6 +21,7 @@ output/
 database/.data/
 database/output/playwright/
 tmp-cli-workspace/
+tmp/
 .tmp-pack-smoke/
 demo/.tmp/
 .next-e2e/
