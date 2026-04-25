@@ -1,4 +1,4 @@
-import type { WebSocket } from "ws";
+import type { RawData, WebSocket } from "ws";
 
 import type { AuthPrincipal } from "./auth.ts";
 import type { DatabaseOperation, RecordChangeEvent } from "./types.ts";
@@ -33,7 +33,7 @@ export class RealtimeHub {
     const client: ClientState = { socket, principal, subscriptions: [] };
     this.clients.add(client);
 
-    socket.on("message", (buffer) => {
+    socket.on("message", (buffer: RawData) => {
       try {
         const payload = JSON.parse(buffer.toString()) as {
           type?: string;

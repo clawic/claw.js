@@ -49,5 +49,8 @@
     "fastify": "^5.6.1",
     "jose": "^6.1.0",
     "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1"
   }
 }
