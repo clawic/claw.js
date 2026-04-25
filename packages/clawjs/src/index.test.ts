@@ -4429,10 +4429,21 @@ test("runCli stores and transcribes voice notes locally", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-voice-notes-"));
   const audioPath = path.join(workspaceRoot, "note.ogg");
   const whisperPath = path.join(workspaceRoot, "fake-whisper");
+  const ffmpegPath = path.join(workspaceRoot, "fake-ffmpeg");
   fs.writeFileSync(audioPath, "fake-audio");
+  fs.writeFileSync(ffmpegPath, `#!/usr/bin/env node
+const fs = require("fs");
+const args = process.argv.slice(2);
+const input = args[args.indexOf("-i") + 1];
+const output = args[args.length - 1];
+if (!input || !output.endsWith(".wav")) process.exit(2);
+fs.writeFileSync(output, fs.readFileSync(input));
+`, { mode: 0o755 });
   fs.writeFileSync(whisperPath, `#!/usr/bin/env node
 const fs = require("fs");
 const args = process.argv.slice(2);
+const input = args[args.indexOf("-f") + 1];
+if (!input.endsWith(".wav")) process.exit(3);
 const outIndex = args.indexOf("-of");
 if (outIndex !== -1) fs.writeFileSync(args[outIndex + 1] + ".txt", "hola desde nota de voz");
 `, { mode: 0o755 });
@@ -4464,6 +4475,7 @@ if (outIndex !== -1) fs.writeFileSync(args[outIndex + 1] + ".txt", "hola desde n
     note.id,
     "--workspace", workspaceRoot,
     "--binary-path", whisperPath,
+    "--ffmpeg-path", ffmpegPath,
     "--model-path", path.join(workspaceRoot, "model.bin"),
     "--json",
   ], {

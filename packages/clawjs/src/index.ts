@@ -6841,6 +6841,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       provider: "local-whisper",
       ...(flags.enabled !== undefined || argv.includes("--enabled") ? { enabled: readBooleanFlag(argv, flags, "enabled", false) } : {}),
       ...(flags["binary-path"] ? { binaryPath: flags["binary-path"] } : {}),
+      ...(flags["ffmpeg-path"] ? { ffmpegPath: flags["ffmpeg-path"] } : {}),
       ...(flags["model-path"] ? { modelPath: flags["model-path"] } : {}),
       ...(flags.language || flags.lang ? { language: flags.language ?? flags.lang } : {}),
       ...(flags.translate !== undefined || argv.includes("--translate") ? { translate: readBooleanFlag(argv, flags, "translate", false) } : {}),
@@ -6867,6 +6868,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       filePath: path.resolve(context.cwd, filePath),
       provider: "local-whisper",
       ...(flags["binary-path"] ? { binaryPath: flags["binary-path"] } : {}),
+      ...(flags["ffmpeg-path"] ? { ffmpegPath: flags["ffmpeg-path"] } : {}),
       ...(flags["model-path"] ? { modelPath: flags["model-path"] } : {}),
       ...(flags.language || flags.lang ? { language: flags.language ?? flags.lang } : {}),
       ...(flags.translate !== undefined || argv.includes("--translate") ? { translate: readBooleanFlag(argv, flags, "translate", false) } : {}),
@@ -6964,6 +6966,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       ? await claw.voiceNotes.transcribe(id, {
         provider: "local-whisper",
         ...(flags["binary-path"] ? { binaryPath: flags["binary-path"] } : {}),
+        ...(flags["ffmpeg-path"] ? { ffmpegPath: flags["ffmpeg-path"] } : {}),
         ...(flags["model-path"] ? { modelPath: flags["model-path"] } : {}),
         ...(flags.language || flags.lang ? { language: flags.language ?? flags.lang } : {}),
         ...(flags.translate !== undefined || argv.includes("--translate") ? { translate: readBooleanFlag(argv, flags, "translate", false) } : {}),
@@ -6978,6 +6981,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         return claw.voiceNotes.transcribe(created.id, {
           provider: "local-whisper",
           ...(flags["binary-path"] ? { binaryPath: flags["binary-path"] } : {}),
+          ...(flags["ffmpeg-path"] ? { ffmpegPath: flags["ffmpeg-path"] } : {}),
           ...(flags["model-path"] ? { modelPath: flags["model-path"] } : {}),
           ...(flags.language || flags.lang ? { language: flags.language ?? flags.lang } : {}),
           ...(flags.translate !== undefined || argv.includes("--translate") ? { translate: readBooleanFlag(argv, flags, "translate", false) } : {}),

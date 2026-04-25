@@ -2700,6 +2700,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       ...input,
       provider: "local-whisper",
       binaryPath: input.binaryPath ?? defaults.binaryPath,
+      ffmpegPath: input.ffmpegPath ?? defaults.ffmpegPath,
       modelPath: input.modelPath ?? defaults.modelPath,
       language: input.language ?? defaults.language,
       translate: input.translate ?? defaults.translate,
