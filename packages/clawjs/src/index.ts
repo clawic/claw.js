@@ -5,6 +5,7 @@ import { createHash } from "crypto";
 import { fileURLToPath } from "url";
 
 import {
+  buildCodexCommand,
   buildSetDefaultModelCommand,
   createClaw,
   createLocalLibraryStore,
@@ -873,6 +874,32 @@ function readStdin(): Promise<string> {
     });
     process.stdin.on("error", reject);
     process.stdin.on("end", () => resolve(input));
+  });
+}
+
+function runForegroundProcess(
+  command: string,
+  args: string[],
+  options: {
+    cwd: string;
+    env?: NodeJS.ProcessEnv;
+    stdout: NodeJS.WritableStream;
+    stderr: NodeJS.WritableStream;
+  },
+): Promise<number> {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, {
+      cwd: options.cwd,
+      env: options.env,
+      stdio: ["inherit", "pipe", "pipe"],
+    });
+    child.stdout?.on("data", (chunk) => options.stdout.write(chunk));
+    child.stderr?.on("data", (chunk) => options.stderr.write(chunk));
+    child.on("error", (error) => {
+      options.stderr.write(`${error.message}\n`);
+      resolve(CLI_EXIT_FAILURE);
+    });
+    child.on("close", (exitCode) => resolve(exitCode ?? CLI_EXIT_FAILURE));
   });
 }
 
@@ -2799,6 +2826,18 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "auth" && command === "login") {
     const provider = flags.provider;
+    if (runtimeAdapterId === "codex" && readBooleanFlag(argv, flags, "device-auth", false)) {
+      const codexCommand = buildCodexCommand(["login", "--device-auth"], {
+        homeDir: flags["home-dir"],
+        env: process.env,
+      });
+      return await runForegroundProcess(codexCommand.command, codexCommand.args, {
+        cwd: workspaceRoot,
+        env: codexCommand.env,
+        stdout: context.stdout,
+        stderr: context.stderr,
+      });
+    }
     if (!provider) {
       context.stderr.write("--provider is required\n");
       return CLI_EXIT_USAGE;

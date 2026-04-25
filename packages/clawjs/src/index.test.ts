@@ -3119,6 +3119,31 @@ test("runCli supports auth login dry-run and workspace validate", async () => {
   assert.match(loginStdout.getOutput(), /openai-codex/);
 });
 
+test("runCli supports Codex device auth in the foreground", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-codex-device-auth-"));
+  const binDir = path.join(workspaceRoot, "bin");
+  const fakeCodex = path.join(binDir, "codex");
+  fs.mkdirSync(binDir, { recursive: true });
+  fs.writeFileSync(fakeCodex, "#!/usr/bin/env node\nprocess.stdout.write('device code: TEST-CODE\\n');\n", { mode: 0o755 });
+
+  const previousCodexPath = process.env.CLAWJS_CODEX_PATH;
+  process.env.CLAWJS_CODEX_PATH = fakeCodex;
+  try {
+    const stdout = captureStream();
+    const exitCode = await runCli(["auth", "login", "--runtime", "codex", "--device-auth", "--workspace", workspaceRoot], {
+      stdout: stdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    assert.equal(exitCode, CLI_EXIT_OK);
+    assert.match(stdout.getOutput(), /TEST-CODE/);
+  } finally {
+    if (previousCodexPath === undefined) delete process.env.CLAWJS_CODEX_PATH;
+    else process.env.CLAWJS_CODEX_PATH = previousCodexPath;
+  }
+});
+
 test("runCli can repair a workspace and normalize compat snapshots", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-repair-"));
   fs.mkdirSync(path.join(workspaceRoot, ".clawjs", "compat"), { recursive: true });
