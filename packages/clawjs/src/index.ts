@@ -14,7 +14,7 @@ import {
   normalizeLibraryId,
   redactSecrets,
 } from "@clawjs/claw";
-import type { ClawInstance, ImageOperation, ImageProvenance, ImageType, TelegramSendMediaInput, TelegramSendMessageInput } from "@clawjs/claw";
+import type { ClawInstance, ImageOperation, ImageProvenance, ImageType, TelegramSendMediaInput, TelegramSendMessageInput, VoiceNoteStatus } from "@clawjs/claw";
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
 import type { RuntimeAdapterId, TemporalItem } from "@clawjs/core";
@@ -210,6 +210,8 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} documents list|read|search|upload|register|download`,
     `  ${binName} inference generate-text`,
     `  ${binName} tts synthesize|config|set-config|providers|catalog`,
+    `  ${binName} stt transcribe|config|set-config|providers`,
+    `  ${binName} voice-notes add|list|get|transcribe`,
     `  ${binName} image create|edit|import|list|show|delete|backends`,
     `  ${binName} audio generate|list|read|delete|backends`,
     `  ${binName} video generate|list|read|delete|backends`,
@@ -6810,6 +6812,184 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       context.stdout.write(`${outputPath}\n`);
     }
     return CLI_EXIT_OK;
+  }
+
+  if (group === "stt" && command === "providers") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const providers = claw.stt.providers();
+    if (wantsJson) {
+      writeJson(context.stdout, providers);
+    } else {
+      context.stdout.write(`${providers.map((provider) => provider.id).join("\n")}\n`);
+    }
+    return providers.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "stt" && command === "config") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const config = claw.stt.config();
+    if (wantsJson) {
+      writeJson(context.stdout, config);
+    } else {
+      context.stdout.write(`${config.provider ?? "local-whisper"}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "stt" && command === "set-config") {
+    const config = parseJsonFlag<Record<string, unknown>>(flags["config-json"], "--config-json") ?? {
+      provider: "local-whisper",
+      ...(flags.enabled !== undefined || argv.includes("--enabled") ? { enabled: readBooleanFlag(argv, flags, "enabled", false) } : {}),
+      ...(flags["binary-path"] ? { binaryPath: flags["binary-path"] } : {}),
+      ...(flags["model-path"] ? { modelPath: flags["model-path"] } : {}),
+      ...(flags.language || flags.lang ? { language: flags.language ?? flags.lang } : {}),
+      ...(flags.translate !== undefined || argv.includes("--translate") ? { translate: readBooleanFlag(argv, flags, "translate", false) } : {}),
+      ...(flags.threads ? { threads: Number(flags.threads) } : {}),
+    };
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const next = claw.stt.setConfig(config);
+    if (wantsJson) {
+      writeJson(context.stdout, next);
+    } else {
+      context.stdout.write(`${next.provider ?? "local-whisper"}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "stt" && command === "transcribe") {
+    const filePath = flags.file || flags.input || subcommand;
+    if (!filePath?.trim()) {
+      context.stderr.write("--file is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const result = await claw.stt.transcribe({
+      filePath: path.resolve(context.cwd, filePath),
+      provider: "local-whisper",
+      ...(flags["binary-path"] ? { binaryPath: flags["binary-path"] } : {}),
+      ...(flags["model-path"] ? { modelPath: flags["model-path"] } : {}),
+      ...(flags.language || flags.lang ? { language: flags.language ?? flags.lang } : {}),
+      ...(flags.translate !== undefined || argv.includes("--translate") ? { translate: readBooleanFlag(argv, flags, "translate", false) } : {}),
+      ...(flags.threads ? { threads: Number(flags.threads) } : {}),
+    });
+    if (wantsJson) {
+      writeJson(context.stdout, result);
+    } else {
+      context.stdout.write(`${result.text}\n`);
+    }
+    return result.text ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "voice-notes" && (command === "add" || command === "create")) {
+    const filePath = flags.file || flags.input || subcommand;
+    if (!filePath?.trim()) {
+      context.stderr.write("--file is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const note = claw.voiceNotes.registerPath({
+      filePath: path.resolve(context.cwd, filePath),
+      mimeType: flags["mime-type"] || inferMimeTypeFromPath(filePath),
+      fileName: flags.name,
+      durationSeconds: flags.duration ? Number(flags.duration) : undefined,
+      source: {
+        origin: flags.origin || "cli",
+        provider: flags.provider,
+        accountId: flags.account,
+        targetId: flags["target-id"],
+        threadId: flags["thread-id"],
+        providerMessageId: flags["message-id"],
+        senderId: flags["sender-id"],
+        senderLabel: flags["sender-label"],
+        metadata: parseJsonFlag<Record<string, unknown>>(flags["metadata-json"], "--metadata-json") ?? undefined,
+      },
+      tags: parseCsvFlag(flags.tags),
+    });
+    if (wantsJson) {
+      writeJson(context.stdout, note);
+    } else {
+      context.stdout.write(`${note.id}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "voice-notes" && command === "list") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const notes = claw.voiceNotes.list({
+      origin: flags.origin,
+      provider: flags.provider,
+      accountId: flags.account,
+      targetId: flags["target-id"],
+      threadId: flags["thread-id"],
+      status: flags.status as VoiceNoteStatus | undefined,
+      query: flags.query,
+      limit: flags.limit ? Number(flags.limit) : undefined,
+    });
+    if (wantsJson) {
+      writeJson(context.stdout, notes);
+    } else {
+      context.stdout.write(`${notes.map((note) => `${note.id}\t${note.status}\t${note.source.origin}\t${note.transcript?.text ?? ""}`).join("\n")}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "voice-notes" && (command === "get" || command === "read" || command === "inspect")) {
+    const id = subcommand || flags.id;
+    if (!id) {
+      context.stderr.write("voice note id is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const note = claw.voiceNotes.get(id);
+    if (!note) {
+      context.stderr.write(`voice note not found: ${id}\n`);
+      return CLI_EXIT_DEGRADED;
+    }
+    if (wantsJson) {
+      writeJson(context.stdout, note);
+    } else {
+      context.stdout.write(`${note.transcript?.text ?? note.id}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "voice-notes" && command === "transcribe") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const id = subcommand || flags.id;
+    if (!id && !(flags.file || flags.input)) {
+      context.stderr.write("voice note id or --file is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const note = id
+      ? await claw.voiceNotes.transcribe(id, {
+        provider: "local-whisper",
+        ...(flags["binary-path"] ? { binaryPath: flags["binary-path"] } : {}),
+        ...(flags["model-path"] ? { modelPath: flags["model-path"] } : {}),
+        ...(flags.language || flags.lang ? { language: flags.language ?? flags.lang } : {}),
+        ...(flags.translate !== undefined || argv.includes("--translate") ? { translate: readBooleanFlag(argv, flags, "translate", false) } : {}),
+        ...(flags.threads ? { threads: Number(flags.threads) } : {}),
+      })
+      : await (async () => {
+        const created = claw.voiceNotes.registerPath({
+          filePath: path.resolve(context.cwd, flags.file || flags.input),
+          mimeType: flags["mime-type"] || inferMimeTypeFromPath(flags.file || flags.input),
+          source: { origin: flags.origin || "cli", provider: flags.provider },
+        });
+        return claw.voiceNotes.transcribe(created.id, {
+          provider: "local-whisper",
+          ...(flags["binary-path"] ? { binaryPath: flags["binary-path"] } : {}),
+          ...(flags["model-path"] ? { modelPath: flags["model-path"] } : {}),
+          ...(flags.language || flags.lang ? { language: flags.language ?? flags.lang } : {}),
+          ...(flags.translate !== undefined || argv.includes("--translate") ? { translate: readBooleanFlag(argv, flags, "translate", false) } : {}),
+          ...(flags.threads ? { threads: Number(flags.threads) } : {}),
+        });
+      })();
+    if (wantsJson) {
+      writeJson(context.stdout, note);
+    } else {
+      context.stdout.write(`${note.transcript?.text ?? ""}\n`);
+    }
+    return note.status === "transcribed" ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   }
 
   if (group === "generations" && command === "backends") {

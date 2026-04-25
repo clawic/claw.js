@@ -4425,6 +4425,72 @@ test("runCli can manage TTS config and synthesize audio", async () => {
   }
 });
 
+test("runCli stores and transcribes voice notes locally", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-voice-notes-"));
+  const audioPath = path.join(workspaceRoot, "note.ogg");
+  const whisperPath = path.join(workspaceRoot, "fake-whisper");
+  fs.writeFileSync(audioPath, "fake-audio");
+  fs.writeFileSync(whisperPath, `#!/usr/bin/env node
+const fs = require("fs");
+const args = process.argv.slice(2);
+const outIndex = args.indexOf("-of");
+if (outIndex !== -1) fs.writeFileSync(args[outIndex + 1] + ".txt", "hola desde nota de voz");
+`, { mode: 0o755 });
+
+  const addStdout = captureStream();
+  const addExitCode = await runCli([
+    "voice-notes",
+    "add",
+    "--workspace", workspaceRoot,
+    "--file", audioPath,
+    "--origin", "telegram",
+    "--provider", "telegram",
+    "--account", "support",
+    "--target-id", "1001",
+    "--json",
+  ], {
+    stdout: addStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal(addExitCode, CLI_EXIT_OK);
+  const note = JSON.parse(addStdout.getOutput()) as { id: string; status: string };
+  assert.equal(note.status, "stored");
+
+  const transcribeStdout = captureStream();
+  const transcribeExitCode = await runCli([
+    "voice-notes",
+    "transcribe",
+    note.id,
+    "--workspace", workspaceRoot,
+    "--binary-path", whisperPath,
+    "--model-path", path.join(workspaceRoot, "model.bin"),
+    "--json",
+  ], {
+    stdout: transcribeStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal(transcribeExitCode, CLI_EXIT_OK);
+  assert.match(transcribeStdout.getOutput(), /hola desde nota de voz/);
+
+  const listStdout = captureStream();
+  const listExitCode = await runCli([
+    "voice-notes",
+    "list",
+    "--workspace", workspaceRoot,
+    "--origin", "telegram",
+    "--query", "hola",
+    "--json",
+  ], {
+    stdout: listStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal(listExitCode, CLI_EXIT_OK);
+  assert.match(listStdout.getOutput(), /"status": "transcribed"/);
+});
+
 test("runCli honors --runtime for alternate workspace layouts", async () => {
   const zeroWorkspace = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-zeroclaw-"));
   const picoWorkspace = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-picoclaw-"));

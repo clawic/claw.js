@@ -212,6 +212,35 @@ export async function callTelegramApi<TResult>(
   return payload.result as TResult;
 }
 
+export async function downloadTelegramFile(
+  runner: CommandRunner,
+  env: NodeJS.ProcessEnv | undefined,
+  secretName: string,
+  apiBaseUrl: string,
+  filePath: string,
+  timeoutMs = 30_000,
+): Promise<Buffer> {
+  const spec = resolveSecretsCommandSpec(env);
+  const normalizedBase = normalizeApiBaseUrl(apiBaseUrl);
+  const fileBase = normalizedBase.replace(/\/api\/?$/, "");
+  const url = `${fileBase}/file/bot{{${secretName}}}/${filePath.replace(/^\/+/, "")}`;
+  const args = [
+    ...spec.argsPrefix,
+    "request",
+    "--method",
+    "GET",
+    "--url",
+    url,
+    "--timeout",
+    String(Math.max(1, Math.ceil(timeoutMs / 1000))),
+  ];
+  const result = await runner.exec(spec.command, args, {
+    env: buildRunnerEnv(spec.env),
+    timeoutMs: timeoutMs + 1_000,
+  });
+  return Buffer.from(result.stdout, "utf8");
+}
+
 function asStringId(value: string | number | bigint): string {
   return String(value);
 }

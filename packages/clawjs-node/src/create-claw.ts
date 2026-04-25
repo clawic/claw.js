@@ -245,7 +245,7 @@ import {
   resolveSkillSourceFromRef,
   type SkillSourceAdapter,
 } from "./skills/index.ts";
-import { createTelegramService, type TelegramConnectBotInput, type TelegramSendMediaInput, type TelegramSendMessageInput, type TelegramStatusResult, type TelegramWebhookConfigInput, type TelegramSyncUpdatesOptions, type TelegramBanOrRestrictInput, type TelegramInviteLinkOptions } from "./telegram/index.ts";
+import { callTelegramApi, createTelegramService, downloadTelegramFile, type TelegramConnectBotInput, type TelegramSendMediaInput, type TelegramSendMessageInput, type TelegramStatusResult, type TelegramWebhookConfigInput, type TelegramSyncUpdatesOptions, type TelegramBanOrRestrictInput, type TelegramInviteLinkOptions } from "./telegram/index.ts";
 import { createChannelsRegistry, type GrantChannelBindingInput, type ReadChannelMessagesInput, type RegisterChannelProcessorInput, type RegisterChannelTargetInput, type RegisterTelegramBotAccountInput, type SendChannelMessageInput, type UpsertChannelListenerInput } from "./channels/index.ts";
 import { invokeChannelProcessor, type ChannelProcessorAction } from "./channels/processors.ts";
 import {
@@ -310,6 +310,21 @@ import {
   type TtsSynthesizeResult,
   type TtsProvider,
 } from "./tts/index.ts";
+import {
+  listSttProviders,
+  normalizeSttConfig,
+  transcribe as transcribeAudio,
+  type SttProviderConfig,
+  type SttTranscribeInput,
+  type SttTranscribeResult,
+} from "./stt/index.ts";
+import {
+  createVoiceNoteStore,
+  type CreateVoiceNoteInput,
+  type RegisterVoiceNotePathInput,
+  type VoiceNoteListInput,
+  type VoiceNoteRecord,
+} from "./voice-notes/index.ts";
 import {
   patchIntentDomain,
   readAllIntentDomains,
@@ -800,6 +815,21 @@ export interface ClawInstance {
     segmentText: (text: string, options?: { maxSegmentLength?: number }) => string[];
     createPlaybackPlan: (input: { text: string; maxSegmentLength?: number }) => TtsPlaybackPlan;
   };
+  stt: {
+    transcribe: (input: SttTranscribeInput) => Promise<SttTranscribeResult>;
+    config: () => SttProviderConfig;
+    setConfig: (input?: SttProviderConfig | null) => SttProviderConfig;
+    providers: () => ReturnType<typeof listSttProviders>;
+    normalizeConfig: (input?: SttProviderConfig | null) => SttProviderConfig;
+  };
+  voiceNotes: {
+    create: (input: CreateVoiceNoteInput) => VoiceNoteRecord;
+    registerPath: (input: RegisterVoiceNotePathInput) => VoiceNoteRecord;
+    list: (input?: VoiceNoteListInput) => VoiceNoteRecord[];
+    get: (id: string) => VoiceNoteRecord | null;
+    download: (id: string) => { note: VoiceNoteRecord; filePath: string; buffer: Buffer } | null;
+    transcribe: (id: string, input?: SttProviderConfig) => Promise<VoiceNoteRecord>;
+  };
   channels: {
     list: () => Promise<ChannelDescriptor[]>;
     accounts: {
@@ -1249,6 +1279,11 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       : undefined,
   });
   const documentStore = createDocumentStore(workspaceDir, filesystem, { storage: storageStore });
+  const voiceNoteStore = createVoiceNoteStore({
+    dataStore,
+    storage: storageStore,
+    transcribe: async (input) => transcribeAudio(resolveSttInput(input)),
+  });
   const adapter = getRuntimeAdapter(options.runtime.adapter);
   const runtimeEnv = adapter.id === "openclaw"
     ? withOpenClawCommandEnv(options.runtime.env, {
@@ -2646,6 +2681,32 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     return normalized;
   }
 
+  function readSttConfig(): SttProviderConfig {
+    const current = readIntent("speech") as {
+      stt?: SttProviderConfig | null;
+    };
+    return normalizeSttConfig(current.stt);
+  }
+
+  function writeSttConfig(input?: SttProviderConfig | null): SttProviderConfig {
+    const normalized = normalizeSttConfig(input);
+    patchIntent("speech", { stt: normalized });
+    return normalized;
+  }
+
+  function resolveSttInput(input: SttTranscribeInput): SttTranscribeInput {
+    const defaults = readSttConfig();
+    return {
+      ...input,
+      provider: "local-whisper",
+      binaryPath: input.binaryPath ?? defaults.binaryPath,
+      modelPath: input.modelPath ?? defaults.modelPath,
+      language: input.language ?? defaults.language,
+      translate: input.translate ?? defaults.translate,
+      threads: input.threads ?? defaults.threads,
+    };
+  }
+
   function resolveTtsInput(input: TtsSynthesizeInput): TtsSynthesizeInput {
     const defaults = readSpeechConfig();
     return {
@@ -3245,6 +3306,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           break;
         case "speech":
           writeSpeechConfig((intent.tts ?? {}) as TtsProviderConfig | null);
+          writeSttConfig((intent.stt ?? {}) as SttProviderConfig | null);
           break;
       }
 
@@ -3357,6 +3419,89 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     }
   }
 
+  function extractTelegramVoiceMedia(message: ChannelMessageRecord): {
+    kind: "voice" | "audio";
+    fileId: string;
+    fileUniqueId?: string;
+    mimeType?: string;
+    durationSeconds?: number;
+    fileName?: string;
+  } | null {
+    const rawMessage = (message.raw?.message ?? message.raw?.edited_message) as Record<string, unknown> | undefined;
+    const voice = rawMessage?.voice as Record<string, unknown> | undefined;
+    const audio = rawMessage?.audio as Record<string, unknown> | undefined;
+    const media = voice ?? audio;
+    if (!media || typeof media.file_id !== "string") return null;
+    return {
+      kind: voice ? "voice" : "audio",
+      fileId: media.file_id,
+      fileUniqueId: typeof media.file_unique_id === "string" ? media.file_unique_id : undefined,
+      mimeType: typeof media.mime_type === "string" ? media.mime_type : undefined,
+      durationSeconds: typeof media.duration === "number" ? media.duration : undefined,
+      fileName: typeof media.file_name === "string" ? media.file_name : undefined,
+    };
+  }
+
+  async function ingestTelegramVoiceNote(message: ChannelMessageRecord): Promise<ChannelMessageRecord> {
+    if (message.provider !== "telegram" || message.text?.trim()) return message;
+    const media = extractTelegramVoiceMedia(message);
+    if (!media) return message;
+    const account = channelsRegistry.accounts.get("telegram", message.accountId);
+    if (!account?.secretRef) return message;
+    const apiBaseUrl = typeof account.metadata?.apiBaseUrl === "string" && account.metadata.apiBaseUrl.trim()
+      ? account.metadata.apiBaseUrl
+      : "https://api.telegram.org";
+    const fileInfo = await callTelegramApi<Record<string, unknown>>(
+      processHost,
+      secretsEnv,
+      account.secretRef,
+      apiBaseUrl,
+      "getFile",
+      { file_id: media.fileId },
+    );
+    const telegramFilePath = typeof fileInfo.file_path === "string" ? fileInfo.file_path : null;
+    if (!telegramFilePath) throw new Error("Telegram getFile did not return file_path");
+    const buffer = await downloadTelegramFile(processHost, secretsEnv, account.secretRef, apiBaseUrl, telegramFilePath);
+    const note = voiceNoteStore.create({
+      data: buffer,
+      mimeType: media.mimeType ?? (media.kind === "voice" ? "audio/ogg" : "application/octet-stream"),
+      fileName: media.fileName ?? path.basename(telegramFilePath),
+      durationSeconds: media.durationSeconds,
+      source: {
+        origin: "telegram",
+        provider: "telegram",
+        accountId: message.accountId,
+        targetId: message.targetId,
+        threadId: message.threadId,
+        providerMessageId: message.providerMessageId,
+        senderId: message.senderId,
+        senderLabel: message.senderLabel,
+        receivedAt: message.receivedAt,
+        metadata: {
+          fileId: media.fileId,
+          fileUniqueId: media.fileUniqueId,
+          kind: media.kind,
+        },
+      },
+    });
+    const config = readSttConfig();
+    const transcribed = config.enabled === false && !config.modelPath
+      ? note
+      : await voiceNoteStore.transcribe(note.id, config);
+    const transcript = transcribed.transcript?.text?.trim();
+    if (!transcript) return message;
+    return {
+      ...message,
+      text: transcript,
+      metadata: {
+        ...(message.metadata ?? {}),
+        voiceNoteId: transcribed.id,
+        voiceNoteStatus: transcribed.status,
+        transcriptProvider: transcribed.transcript?.provider,
+      },
+    };
+  }
+
   async function runChannelListener(input: {
     provider?: string;
     accountId?: string;
@@ -3435,20 +3580,21 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         for (const message of messages) {
           if (!processor) continue;
           try {
+            const processorMessage = await ingestTelegramVoiceNote(message);
             const result = await invokeChannelProcessor(processor, {
               type: "channel.message.received",
               provider,
               accountId,
-              targetId: message.targetId,
-              message,
+              targetId: processorMessage.targetId,
+              message: processorMessage,
               processorId: processor.id,
             }, { env: secretsEnv });
             channelsRegistry.events.record({
               type: "channel.processor.invoked",
               provider,
               accountId,
-              targetId: message.targetId,
-              messageId: message.id,
+              targetId: processorMessage.targetId,
+              messageId: processorMessage.id,
               processorId: processor.id,
               status: result.actions.length > 0 ? "ok" : "ignored",
               payload: { actionCount: result.actions.length },
@@ -3456,7 +3602,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
             await applyChannelProcessorActions(result.actions, {
               provider,
               accountId,
-              message,
+              message: processorMessage,
               processorId: processor.id,
               processorAgentId: processor.agentId,
             });
@@ -4480,6 +4626,21 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       segmentText: (text, options) => segmentTextForTts(text, options),
       createPlaybackPlan: (input) => createTtsPlaybackPlan(input),
     },
+    stt: {
+      transcribe: async (input) => transcribeAudio(resolveSttInput(input)),
+      config: () => readSttConfig(),
+      setConfig: (input) => writeSttConfig(input),
+      providers: () => listSttProviders(),
+      normalizeConfig: (input) => normalizeSttConfig(input),
+    },
+    voiceNotes: {
+      create: (input) => voiceNoteStore.create(input),
+      registerPath: (input) => voiceNoteStore.registerPath(input),
+      list: (input) => voiceNoteStore.list(input),
+      get: (id) => voiceNoteStore.get(id),
+      download: (id) => voiceNoteStore.download(id),
+      transcribe: (id, input) => voiceNoteStore.transcribe(id, input),
+    },
     channels: {
       list: async () => {
         const channels = await readChannels();
@@ -4607,8 +4768,12 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
             runner: processHost,
             env: secretsEnv,
           }, input);
+          const processedRecords = [];
+          for (const record of records) {
+            processedRecords.push(await ingestTelegramVoiceNote(record));
+          }
           await refreshChannelSnapshots();
-          return records;
+          return processedRecords;
         },
       },
       commands: {

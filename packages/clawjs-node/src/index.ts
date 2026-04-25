@@ -54,6 +54,8 @@ export * from "./whatsapp/index.ts";
 export * from "./secrets/index.ts";
 export * from "./skills/index.ts";
 export * from "./tts/index.ts";
+export * from "./stt/index.ts";
+export * from "./voice-notes/index.ts";
 export * from "./wiki/index.ts";
 export * from "./notify/index.ts";
 export * from "./time/index.ts";
