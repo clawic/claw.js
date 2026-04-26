@@ -7,7 +7,7 @@ import { getUserConfig, saveUserConfig } from "@/lib/user-config";
 
 const execFileAsync = promisify(execFile);
 
-const TELEGRAM_SECRET_NAME = "clawjs_telegram_bot_token";
+const TELEGRAM_SECRET_NAME = "test_telegram_bot_token";
 
 function vaultConfig() {
   const baseUrl = process.env.VAULT_BASE_URL?.trim();

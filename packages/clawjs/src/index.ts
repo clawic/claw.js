@@ -1095,7 +1095,7 @@ async function runTelegramCodexProcessor(input: {
   const systemPrompt = input.flags["system-prompt"] || [
     "You are Codex responding through a Telegram bot.",
     "Be concise, useful, and clear.",
-    "You are running on the Kappa Mac mini for the ClawJS dev workflow.",
+    "You are running in the configured ClawJS runtime environment.",
   ].join(" ");
   const claw = await createCliClaw(input.runtimeAdapterId, input.flags, input.workspaceRoot, input.appId, input.workspaceId, input.agentId, input.argv);
   const resolvedSession = claw.sessions.resolveChannelSession({

@@ -53,7 +53,7 @@ function appendChannelMessages(workspacePath: string, messages: Array<{
       ...messages.map((message) => ({
         ...message,
         provider: "telegram",
-        accountId: "kappa",
+        accountId: "test-account",
         status: message.direction === "outbound" ? "sent" : "received",
         createdAt: now,
         updatedAt: now,
@@ -168,9 +168,9 @@ if (args[0] === "app-server") {
     if (message.method === "turn/start") {
       const payload = JSON.stringify(message.params || {});
       fs.appendFileSync(${JSON.stringify(payloadPath)}, payload + "\\n");
-      const text = payload.includes("Envíame de nuevo lo de los artículos") && payload.includes("Artículo A sobre robótica")
+      const text = payload.includes("Repeat the prior summary") && payload.includes("Prior summary about product planning")
         ? "context preserved"
-        : payload.includes("Envíame de nuevo lo de los artículos")
+        : payload.includes("Repeat the prior summary")
         ? "context missing"
         : payload.includes("Voice note transcript:")
         ? "voice-aware reply"
@@ -208,7 +208,7 @@ function telegramEvent(input: {
   return {
     type: "channel.message.received",
     provider: "telegram",
-    accountId: "kappa",
+    accountId: "test-account",
     targetId: input.chatId,
     message: {
       text: input.text,
@@ -394,15 +394,15 @@ test("telegram codex bridge owns, authorizes topics, applies reply policy, and s
 
   appendChannelMessages(workspacePath, [
     {
-      id: "telegram:kappa:message:300",
+      id: "telegram:test-account:message:300",
       targetId: "501",
       direction: "outbound",
-      text: "Artículo A sobre robótica",
+      text: "Prior summary about product planning",
       providerMessageId: "300",
     },
   ]);
   const contextualReply = await runProcessor(rootDir, {
-    event: telegramEvent({ chatId: "501", chatType: "private", senderId: "501", text: "Envíame de nuevo lo de los artículos", messageId: 5010 }),
+    event: telegramEvent({ chatId: "501", chatType: "private", senderId: "501", text: "Repeat the prior summary", messageId: 5010 }),
     statePath,
     workspacePath,
     runtimeWorkspace,
@@ -410,18 +410,18 @@ test("telegram codex bridge owns, authorizes topics, applies reply policy, and s
   });
   expect(sendActions(contextualReply.actions)[0]).toMatchObject({ type: "send_message", targetId: "501", text: "context preserved" });
   const stateWithCentralSession = JSON.parse(fs.readFileSync(statePath, "utf8")) as BridgeState;
-  const dmSessionId = stateWithCentralSession.sessions["telegram:kappa:501:chat"];
+  const dmSessionId = stateWithCentralSession.sessions["telegram:test-account:501:chat"];
   const dmSession = await runClawJson(rootDir, ["sessions", "read", "--session-id", dmSessionId], {
     workspacePath,
     runtimeWorkspace,
     codexHome,
   }) as { messages: Array<{ role: string; content: string; metadata?: Record<string, unknown> }> };
-  expect(dmSession.messages.some((message) => message.role === "assistant" && message.content.includes("Artículo A sobre robótica"))).toBeTruthy();
-  expect(dmSession.messages.some((message) => message.role === "user" && message.content.includes("Envíame de nuevo"))).toBeTruthy();
+  expect(dmSession.messages.some((message) => message.role === "assistant" && message.content.includes("Prior summary about product planning"))).toBeTruthy();
+  expect(dmSession.messages.some((message) => message.role === "user" && message.content.includes("Repeat the prior summary"))).toBeTruthy();
 
   const beforeDuplicateCount = dmSession.messages.length;
   const duplicateReply = await runProcessor(rootDir, {
-    event: telegramEvent({ chatId: "501", chatType: "private", senderId: "501", text: "Envíame de nuevo lo de los artículos", messageId: 5010 }),
+    event: telegramEvent({ chatId: "501", chatType: "private", senderId: "501", text: "Repeat the prior summary", messageId: 5010 }),
     statePath,
     workspacePath,
     runtimeWorkspace,
@@ -511,8 +511,8 @@ test("vault sidecar resolves telegram bot token placeholders without exposing pl
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        secretName: "clawjs_telegram_bot_token",
-        secretValue: "telegram-test-token",
+        secretName: "test_telegram_bot_token",
+        secretValue: "test-token-placeholder",
         typeId: "telegram.bot_token",
         allowedHosts: [upstreamHost],
         allowedHeaderNames: ["Authorization"],
@@ -542,7 +542,7 @@ test("vault sidecar resolves telegram bot token placeholders without exposing pl
         body: JSON.stringify({
           subjectType: "sidecar_principal",
           subjectId: principalPayload.principal.id,
-          secretName: "clawjs_telegram_bot_token",
+          secretName: "test_telegram_bot_token",
           capability,
           effect: "allow",
         }),
@@ -565,9 +565,9 @@ test("vault sidecar resolves telegram bot token placeholders without exposing pl
         "--method",
         "GET",
         "--url",
-        `${upstream.baseUrl}/echo?token={{clawjs_telegram_bot_token}}`,
+        `${upstream.baseUrl}/echo?token={{test_telegram_bot_token}}`,
         "--header",
-        "Authorization: Bearer {{clawjs_telegram_bot_token}}",
+        "Authorization: Bearer {{test_telegram_bot_token}}",
       ], { env });
       const stdout: Buffer[] = [];
       const stderr: Buffer[] = [];
@@ -582,18 +582,18 @@ test("vault sidecar resolves telegram bot token placeholders without exposing pl
     expect(request.stderr).toBe("");
     expect(request.exitCode).toBe(0);
     const payload = JSON.parse(request.stdout) as { authorization: string; queryToken: string };
-    expect(payload.authorization).toBe("Bearer telegram-test-token");
-    expect(payload.queryToken).toBe("telegram-test-token");
+    expect(payload.authorization).toBe("Bearer test-token-placeholder");
+    expect(payload.queryToken).toBe("test-token-placeholder");
 
     const describe = await new Promise<{ stdout: string; exitCode: number | null }>((resolve) => {
-      const child = spawn(process.execPath, [sidecarPath, "describe-secret", "--name", "clawjs_telegram_bot_token"], { env });
+      const child = spawn(process.execPath, [sidecarPath, "describe-secret", "--name", "test_telegram_bot_token"], { env });
       const stdout: Buffer[] = [];
       child.stdout.on("data", (chunk) => stdout.push(Buffer.from(chunk)));
       child.on("close", (exitCode) => resolve({ stdout: Buffer.concat(stdout).toString("utf8"), exitCode }));
     });
     expect(describe.exitCode).toBe(0);
-    expect(describe.stdout).toContain("clawjs_telegram_bot_token");
-    expect(describe.stdout).not.toContain("telegram-test-token");
+    expect(describe.stdout).toContain("test_telegram_bot_token");
+    expect(describe.stdout).not.toContain("test-token-placeholder");
   } finally {
     await upstream.close();
     await vault.close();
