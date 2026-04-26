@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { createHash } from "crypto";
 
 import type {
   Attachment,
@@ -1120,6 +1121,34 @@ export interface ClawInstance {
   sessions: {
     createSession: (title?: string) => ReturnType<SessionStore["createSession"]>;
     appendMessage: (sessionId: string, message: Parameters<SessionStore["appendMessage"]>[1]) => ReturnType<SessionStore["appendMessage"]>;
+    appendMessageOnce: (sessionId: string, message: Parameters<SessionStore["appendMessage"]>[1]) => ReturnType<SessionStore["appendMessageOnce"]>;
+    resolveChannelSession: (input: {
+      provider: string;
+      accountId?: string;
+      targetId: string;
+      threadId?: string | number;
+    }) => { sessionId: string; session: ReturnType<SessionStore["getSession"]> };
+    appendChannelMessage: (input: {
+      provider: string;
+      accountId?: string;
+      targetId: string;
+      threadId?: string | number;
+      direction: "inbound" | "outbound";
+      role?: "user" | "assistant";
+      content: string;
+      providerMessageId?: string;
+      senderId?: string;
+      senderLabel?: string;
+      metadata?: Record<string, unknown>;
+      createdAt?: number;
+    }) => ReturnType<SessionStore["appendMessageOnce"]> & { sessionId: string };
+    backfillChannelSession: (input: {
+      provider: string;
+      accountId?: string;
+      targetId: string;
+      threadId?: string | number;
+      limit?: number;
+    }) => ReturnType<SessionStore["getSession"]>;
     listSessions: SessionStore["listSessions"];
     searchSessions: (input: SessionSearchInput) => Promise<SessionSearchResult[]>;
     getSession: SessionStore["getSession"];
@@ -2176,6 +2205,136 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       ...(legacyAttachments.length > 0 ? { attachments: legacyAttachments } : {}),
       documents: [...directDocuments, ...uploadedDocuments, ...legacyDocuments],
     };
+  }
+
+  function sanitizeSessionPart(value: string): string {
+    return value.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "default";
+  }
+
+  function hashSessionPart(value: string): string {
+    return createHash("sha256").update(value).digest("hex").slice(0, 16);
+  }
+
+  function resolveChannelSessionKey(input: {
+    provider: string;
+    accountId?: string;
+    targetId: string;
+    threadId?: string | number;
+  }): string {
+    return [
+      input.provider,
+      input.accountId ?? "default",
+      input.targetId,
+      input.threadId === undefined ? "chat" : `topic:${String(input.threadId)}`,
+    ].join(":");
+  }
+
+  function resolveChannelSessionId(input: {
+    provider: string;
+    accountId?: string;
+    targetId: string;
+    threadId?: string | number;
+  }): string {
+    const key = resolveChannelSessionKey(input);
+    return `channel-${sanitizeSessionPart(input.provider)}-${sanitizeSessionPart(input.targetId)}-${hashSessionPart(key)}`;
+  }
+
+  function resolveChannelMessageId(input: {
+    provider: string;
+    accountId?: string;
+    targetId: string;
+    threadId?: string | number;
+    direction: "inbound" | "outbound";
+    providerMessageId?: string;
+    content: string;
+  }): string {
+    const stablePart = input.providerMessageId?.trim()
+      || hashSessionPart(`${input.direction}:${input.content}`);
+    return `channel-${hashSessionPart([
+      resolveChannelSessionKey(input),
+      input.direction,
+      stablePart,
+    ].join(":"))}`;
+  }
+
+  function appendChannelSessionMessage(input: {
+    provider: string;
+    accountId?: string;
+    targetId: string;
+    threadId?: string | number;
+    direction: "inbound" | "outbound";
+    role?: "user" | "assistant";
+    content: string;
+    providerMessageId?: string;
+    senderId?: string;
+    senderLabel?: string;
+    metadata?: Record<string, unknown>;
+    createdAt?: number;
+  }): ReturnType<SessionStore["appendMessageOnce"]> & { sessionId: string } {
+    const sessionId = resolveChannelSessionId(input);
+    const id = resolveChannelMessageId(input);
+    const message = prepareMessageDocuments(sessionId, {
+      id,
+      role: input.role ?? (input.direction === "outbound" ? "assistant" : "user"),
+      content: input.content,
+      ...(input.createdAt ? { createdAt: input.createdAt } : {}),
+      metadata: {
+        source: "channel",
+        provider: input.provider,
+        accountId: input.accountId ?? "default",
+        targetId: input.targetId,
+        ...(input.threadId !== undefined ? { threadId: String(input.threadId) } : {}),
+        direction: input.direction,
+        ...(input.providerMessageId ? { providerMessageId: input.providerMessageId } : {}),
+        ...(input.senderId ? { senderId: input.senderId } : {}),
+        ...(input.senderLabel ? { senderLabel: input.senderLabel } : {}),
+        ...(input.metadata ?? {}),
+      },
+    });
+    return {
+      sessionId,
+      ...sessionStore.appendMessageOnce(sessionId, message),
+    };
+  }
+
+  function backfillChannelSession(input: {
+    provider: string;
+    accountId?: string;
+    targetId: string;
+    threadId?: string | number;
+    limit?: number;
+  }): ReturnType<SessionStore["getSession"]> {
+    const sessionId = resolveChannelSessionId(input);
+    const threadKey = input.threadId === undefined ? undefined : String(input.threadId);
+    const records = channelsRegistry.messages.read({
+      provider: input.provider,
+      accountId: input.accountId,
+      targetId: input.targetId,
+      limit: input.limit ?? 50,
+    })
+      .filter((message) => message.threadId === threadKey && !!message.text?.trim())
+      .reverse();
+
+    for (const record of records) {
+      const parsedCreatedAt = Date.parse(record.receivedAt ?? record.sentAt ?? record.createdAt);
+      appendChannelSessionMessage({
+        provider: record.provider,
+        accountId: record.accountId,
+        targetId: record.targetId,
+        ...(record.threadId !== undefined ? { threadId: record.threadId } : {}),
+        direction: record.direction,
+        content: record.text?.trim() ?? "",
+        ...(record.providerMessageId ? { providerMessageId: record.providerMessageId } : {}),
+        ...(record.senderId ? { senderId: record.senderId } : {}),
+        ...(record.senderLabel ? { senderLabel: record.senderLabel } : {}),
+        ...(!Number.isNaN(parsedCreatedAt) ? { createdAt: parsedCreatedAt } : {}),
+        metadata: {
+          backfilled: true,
+        },
+      });
+    }
+
+    return sessionStore.getSession(sessionId);
   }
 
   async function resolveSessionDocumentAssets(documents: DocumentRef[]): Promise<Array<{
@@ -5043,17 +5202,46 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       },
     },
     inference: {
-      generateText: async (input) => generateRuntimeText({
-        ...input,
-        agentId: input.agentId ?? runtimeAgentId,
-      }, {
-        fetchImpl: input.transport === "cli" ? undefined : globalThis.fetch,
-        runner: input.transport === "gateway" ? undefined : processHost,
-        documentResolver: resolveSessionDocumentAssets,
-        sessionAdapter: input.transport === "cli"
-          ? { ...sessionAdapter, gateway: null }
-          : sessionAdapter,
-      }),
+      generateText: async (input) => {
+        if (!input.sessionId) {
+          return generateRuntimeText({
+            ...input,
+            agentId: input.agentId ?? runtimeAgentId,
+          }, {
+            fetchImpl: input.transport === "cli" ? undefined : globalThis.fetch,
+            runner: input.transport === "gateway" ? undefined : processHost,
+            documentResolver: resolveSessionDocumentAssets,
+            sessionAdapter: input.transport === "cli"
+              ? { ...sessionAdapter, gateway: null }
+              : sessionAdapter,
+          });
+        }
+
+        for (const message of input.messages) {
+          const preparedMessage = prepareMessageDocuments(input.sessionId, message);
+          sessionStore.appendMessage(input.sessionId, preparedMessage);
+        }
+        const session = sessionStore.getSession(input.sessionId);
+        const result = await generateRuntimeText({
+          ...input,
+          agentId: input.agentId ?? runtimeAgentId,
+          messages: session?.messages ?? input.messages,
+        }, {
+          fetchImpl: input.transport === "cli" ? undefined : globalThis.fetch,
+          runner: input.transport === "gateway" ? undefined : processHost,
+          documentResolver: resolveSessionDocumentAssets,
+          sessionAdapter: input.transport === "cli"
+            ? { ...sessionAdapter, gateway: null }
+            : sessionAdapter,
+        });
+        if (result.text) {
+          sessionStore.appendMessage(input.sessionId, {
+            role: "assistant",
+            content: result.text,
+          });
+        }
+        return result;
+      },
     },
     secrets: {
       list: async (search) => listSecrets(processHost, { search, env: secretsEnv }),
@@ -5263,6 +5451,46 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         });
         return session;
       },
+      appendMessageOnce: (sessionId, message) => {
+        const preparedMessage = prepareMessageDocuments(sessionId, message);
+        const result = sessionStore.appendMessageOnce(sessionId, preparedMessage);
+        if (result.appended) {
+          appendAuditEvent("sessions.message_appended", "sessions", {
+            sessionId,
+            role: message.role,
+            idempotent: true,
+          });
+          eventBus.emit("sessions.message_appended", {
+            sessionId,
+            role: message.role,
+          });
+        }
+        return result;
+      },
+      resolveChannelSession: (input) => {
+        const sessionId = resolveChannelSessionId(input);
+        return {
+          sessionId,
+          session: sessionStore.getSession(sessionId),
+        };
+      },
+      appendChannelMessage: (input) => {
+        const result = appendChannelSessionMessage(input);
+        if (result.appended) {
+          appendAuditEvent("sessions.channel_message_appended", "sessions", {
+            sessionId: result.sessionId,
+            provider: input.provider,
+            targetId: input.targetId,
+          });
+          eventBus.emit("sessions.channel_message_appended", {
+            sessionId: result.sessionId,
+            provider: input.provider,
+            targetId: input.targetId,
+          });
+        }
+        return result;
+      },
+      backfillChannelSession,
       listSessions: sessionStore.listSessions.bind(sessionStore),
       searchSessions: searchSessions,
       getSession: sessionStore.getSession.bind(sessionStore),

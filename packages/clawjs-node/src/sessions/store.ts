@@ -181,6 +181,7 @@ export class SessionStore {
       ...(Array.isArray(message.attachments) && message.attachments.length > 0 ? { attachments: message.attachments } : {}),
       ...(Array.isArray(message.documents) && message.documents.length > 0 ? { documents: message.documents } : {}),
       ...(Array.isArray(message.contextChips) && message.contextChips.length > 0 ? { contextChips: message.contextChips } : {}),
+      ...(message.metadata && typeof message.metadata === "object" ? { metadata: message.metadata } : {}),
     };
 
     this.filesystem.withLockRetry(resolveSessionLockPath(this.workspaceDir, sessionId), () => {
@@ -203,6 +204,7 @@ export class SessionStore {
         ...(message.attachments ? { attachments: message.attachments } : {}),
         ...(message.documents ? { documents: message.documents } : {}),
         ...(message.contextChips ? { contextChips: message.contextChips } : {}),
+        ...(message.metadata ? { metadata: message.metadata } : {}),
       }),
       messages: [{
         id: event.id,
@@ -212,8 +214,19 @@ export class SessionStore {
         ...(message.attachments ? { attachments: message.attachments } : {}),
         ...(message.documents ? { documents: message.documents } : {}),
         ...(message.contextChips ? { contextChips: message.contextChips } : {}),
+        ...(message.metadata ? { metadata: message.metadata } : {}),
       }],
     };
+  }
+
+  appendMessageOnce(sessionId: string, message: AppendMessageInput): { session: SessionRecord; appended: boolean } {
+    if (message.id) {
+      const existing = this.getSession(sessionId);
+      if (existing?.messages.some((entry) => entry.id === message.id)) {
+        return { session: existing, appended: false };
+      }
+    }
+    return { session: this.appendMessage(sessionId, message), appended: true };
   }
 
   updateSessionTitle(sessionId: string, title: string): boolean {

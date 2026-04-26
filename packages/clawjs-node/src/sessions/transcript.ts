@@ -119,6 +119,11 @@ function normalizeContextChips(input: unknown): ContextChip[] | undefined {
   return chips.length > 0 ? chips : undefined;
 }
 
+function normalizeMetadata(input: unknown): Record<string, unknown> | undefined {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return undefined;
+  return input as Record<string, unknown>;
+}
+
 function resolveRole(input: unknown): Message["role"] | null {
   return input === "system" || input === "user" || input === "assistant" || input === "tool" ? input : null;
 }
@@ -140,6 +145,7 @@ export function normalizeTranscriptMessage(input: TranscriptMessageInput | unkno
   const attachments = normalizeAttachments(record.attachments);
   const documents = normalizeDocuments(record.documents);
   const contextChips = normalizeContextChips(record.contextChips);
+  const metadata = normalizeMetadata(record.metadata);
 
   if (!content && !attachments?.length && !documents?.length) return null;
 
@@ -151,6 +157,7 @@ export function normalizeTranscriptMessage(input: TranscriptMessageInput | unkno
     ...(attachments ? { attachments } : {}),
     ...(documents ? { documents } : {}),
     ...(contextChips ? { contextChips } : {}),
+    ...(metadata ? { metadata } : {}),
   };
 
   if (!documents && attachments?.length) {
@@ -183,6 +190,7 @@ export function normalizeTranscriptEvents(raw: string): Message[] {
       attachments: event.attachments,
       documents: event.documents,
       contextChips: event.contextChips,
+      metadata: event.metadata,
     };
 
     const normalizedMessageInput: TranscriptMessageInput = {
@@ -190,6 +198,7 @@ export function normalizeTranscriptEvents(raw: string): Message[] {
       ...(Array.isArray(event.attachments) ? { attachments: event.attachments } : {}),
       ...(Array.isArray(event.documents) ? { documents: event.documents } : {}),
       ...(Array.isArray(event.contextChips) ? { contextChips: event.contextChips } : {}),
+      ...(event.metadata && typeof event.metadata === "object" ? { metadata: event.metadata } : {}),
     };
 
     const message = normalizeTranscriptMessage(normalizedMessageInput);
@@ -202,7 +211,7 @@ export function normalizeTranscriptEvents(raw: string): Message[] {
     }
 
     const last = parsed[parsed.length - 1];
-    if (last && last.role === message.role && last.content === message.content) {
+    if (last && last.id === message.id) {
       continue;
     }
 

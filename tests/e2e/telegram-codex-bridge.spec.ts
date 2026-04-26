@@ -192,15 +192,19 @@ process.exit(1);
   return binaryPath;
 }
 
+let nextTelegramMessageId = 10;
+
 function telegramEvent(input: {
   chatId: string;
   chatType: "private" | "group" | "supergroup";
   senderId: string;
   text: string;
+  messageId?: number;
   threadId?: number;
   replyToBot?: boolean;
   voiceNoteId?: string;
 }) {
+  const messageId = input.messageId ?? nextTelegramMessageId++;
   return {
     type: "channel.message.received",
     provider: "telegram",
@@ -209,13 +213,14 @@ function telegramEvent(input: {
     message: {
       text: input.text,
       targetId: input.chatId,
+      providerMessageId: String(messageId),
       ...(input.threadId ? { threadId: input.threadId } : {}),
       senderId: input.senderId,
       senderLabel: `user-${input.senderId}`,
       ...(input.voiceNoteId ? { metadata: { voiceNoteId: input.voiceNoteId } } : {}),
       raw: {
         message: {
-          message_id: 10,
+          message_id: messageId,
           ...(input.threadId ? { message_thread_id: input.threadId } : {}),
           chat: { id: Number(input.chatId), type: input.chatType, is_forum: input.chatType === "supergroup" },
           from: { id: Number(input.senderId), first_name: `User ${input.senderId}` },
@@ -225,6 +230,42 @@ function telegramEvent(input: {
       },
     },
   };
+}
+
+async function runClawJson(rootDir: string, args: string[], input: {
+  workspacePath: string;
+  codexHome: string;
+  runtimeWorkspace: string;
+}) {
+  const child = spawn(process.execPath, [
+    path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs"),
+    ...args,
+    "--runtime",
+    "codex",
+    "--workspace",
+    input.workspacePath,
+    "--runtime-workspace",
+    input.runtimeWorkspace,
+    "--home-dir",
+    input.codexHome,
+    "--json",
+  ], {
+    cwd: rootDir,
+    env: {
+      ...process.env,
+      PATH: `${path.join(path.dirname(input.codexHome), "bin")}${path.delimiter}${process.env.PATH ?? ""}`,
+      CI: "1",
+    },
+  });
+  const stdout: Buffer[] = [];
+  const stderr: Buffer[] = [];
+  child.stdout.on("data", (chunk) => stdout.push(Buffer.from(chunk)));
+  child.stderr.on("data", (chunk) => stderr.push(Buffer.from(chunk)));
+  const exitCode = await new Promise<number | null>((resolve) => child.on("close", resolve));
+  if (exitCode !== 0) {
+    throw new Error(`claw exited ${exitCode}: ${Buffer.concat(stderr).toString("utf8")}`);
+  }
+  return JSON.parse(Buffer.concat(stdout).toString("utf8")) as unknown;
 }
 
 async function runProcessor(rootDir: string, input: {
@@ -361,13 +402,38 @@ test("telegram codex bridge owns, authorizes topics, applies reply policy, and s
     },
   ]);
   const contextualReply = await runProcessor(rootDir, {
-    event: telegramEvent({ chatId: "501", chatType: "private", senderId: "501", text: "Envíame de nuevo lo de los artículos" }),
+    event: telegramEvent({ chatId: "501", chatType: "private", senderId: "501", text: "Envíame de nuevo lo de los artículos", messageId: 5010 }),
     statePath,
     workspacePath,
     runtimeWorkspace,
     codexHome,
   });
   expect(sendActions(contextualReply.actions)[0]).toMatchObject({ type: "send_message", targetId: "501", text: "context preserved" });
+  const stateWithCentralSession = JSON.parse(fs.readFileSync(statePath, "utf8")) as BridgeState;
+  const dmSessionId = stateWithCentralSession.sessions["telegram:kappa:501:chat"];
+  const dmSession = await runClawJson(rootDir, ["sessions", "read", "--session-id", dmSessionId], {
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  }) as { messages: Array<{ role: string; content: string; metadata?: Record<string, unknown> }> };
+  expect(dmSession.messages.some((message) => message.role === "assistant" && message.content.includes("Artículo A sobre robótica"))).toBeTruthy();
+  expect(dmSession.messages.some((message) => message.role === "user" && message.content.includes("Envíame de nuevo"))).toBeTruthy();
+
+  const beforeDuplicateCount = dmSession.messages.length;
+  const duplicateReply = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "501", chatType: "private", senderId: "501", text: "Envíame de nuevo lo de los artículos", messageId: 5010 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  expect(duplicateReply.actions[0]).toMatchObject({ type: "ignore", reason: "duplicate message" });
+  const afterDuplicateSession = await runClawJson(rootDir, ["sessions", "read", "--session-id", dmSessionId], {
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  }) as { messages: Array<{ role: string; content: string }> };
+  expect(afterDuplicateSession.messages).toHaveLength(beforeDuplicateCount);
 
   const ignoredByPolicy = await runProcessor(rootDir, {
     event: telegramEvent({ chatId: "-1001", chatType: "supergroup", senderId: "999", text: "plain text", threadId: 77 }),
@@ -390,6 +456,43 @@ test("telegram codex bridge owns, authorizes topics, applies reply policy, and s
   const longReplyChunks = sendActions(commandWithLongReply.actions);
   expect(longReplyChunks).toHaveLength(3);
   expect(longReplyChunks.every((action) => (action.text?.length ?? 0) <= 3900)).toBeTruthy();
+});
+
+test("inference with a session id persists user and assistant messages", async () => {
+  test.setTimeout(120_000);
+
+  const rootDir = process.cwd();
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-inference-session-"));
+  const workspacePath = path.join(tempRoot, "workspace");
+  const runtimeWorkspace = path.join(tempRoot, "runtime-workspace");
+  const codexHome = path.join(tempRoot, "codex-home");
+  fs.mkdirSync(workspacePath, { recursive: true });
+  fs.mkdirSync(runtimeWorkspace, { recursive: true });
+  fs.mkdirSync(codexHome, { recursive: true });
+  writeFakeCodexBinary(tempRoot);
+
+  const generated = await runClawJson(rootDir, [
+    "inference",
+    "generate-text",
+    "--session-id",
+    "central-session",
+    "--prompt",
+    "remember this session detail",
+  ], {
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  }) as { text: string };
+  expect(generated.text).toBe("codex reply");
+
+  const session = await runClawJson(rootDir, ["sessions", "read", "--session-id", "central-session"], {
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  }) as { messages: Array<{ role: string; content: string }> };
+  expect(session.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
+  expect(session.messages[0]?.content).toBe("remember this session detail");
+  expect(session.messages[1]?.content).toBe("codex reply");
 });
 
 test("vault sidecar resolves telegram bot token placeholders without exposing plaintext metadata", async () => {

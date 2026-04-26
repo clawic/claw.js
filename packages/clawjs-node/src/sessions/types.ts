@@ -24,6 +24,7 @@ export interface TranscriptMessageInput {
   attachments?: unknown;
   documents?: unknown;
   contextChips?: unknown;
+  metadata?: unknown;
 }
 
 export interface TranscriptEventInput {
@@ -37,4 +38,5 @@ export interface TranscriptEventInput {
   attachments?: unknown;
   documents?: unknown;
   contextChips?: unknown;
+  metadata?: unknown;
 }

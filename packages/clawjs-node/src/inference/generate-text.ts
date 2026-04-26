@@ -12,7 +12,7 @@ export interface GenerateTextInput {
   agentId?: string;
   systemPrompt?: string;
   contextBlocks?: PromptContextBlock[];
-  messages: Array<Pick<Message, "role" | "content" | "attachments" | "contextChips">>;
+  messages: Array<Pick<Message, "role" | "content" | "attachments" | "documents" | "contextChips" | "metadata">>;
   transport?: "auto" | "gateway" | "cli";
   model?: string;
   chunkSize?: number;

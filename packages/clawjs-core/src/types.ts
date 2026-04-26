@@ -2379,6 +2379,7 @@ export interface Message {
   attachments?: Attachment[];
   documents?: DocumentRef[];
   contextChips?: ContextChip[];
+  metadata?: Record<string, unknown>;
 }
 
 export interface SessionSummary {
