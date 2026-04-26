@@ -246,6 +246,7 @@ Add capabilities inside an existing project:
 claw generate skill support-triage
 claw add telegram
 claw add workspace
+claw channels telegram codex setup --runtime codex --start
 claw info --json
 ```
 

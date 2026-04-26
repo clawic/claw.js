@@ -252,6 +252,7 @@ async function runClawJson(rootDir: string, args: string[], input: {
   workspacePath: string;
   codexHome: string;
   runtimeWorkspace: string;
+  env?: NodeJS.ProcessEnv;
 }) {
   const child = spawn(process.execPath, [
     path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs"),
@@ -269,6 +270,7 @@ async function runClawJson(rootDir: string, args: string[], input: {
     cwd: rootDir,
     env: {
       ...process.env,
+      ...(input.env ?? {}),
       PATH: `${path.join(path.dirname(input.codexHome), "bin")}${path.delimiter}${process.env.PATH ?? ""}`,
       CI: "1",
     },
@@ -282,6 +284,69 @@ async function runClawJson(rootDir: string, args: string[], input: {
     throw new Error(`claw exited ${exitCode}: ${Buffer.concat(stderr).toString("utf8")}`);
   }
   return JSON.parse(Buffer.concat(stdout).toString("utf8")) as unknown;
+}
+
+function writeFakeTelegramSecretsProxy(rootDir: string): { proxyPath: string; statePath: string } {
+  const proxyPath = path.join(rootDir, "telegram-secrets-proxy.cjs");
+  const statePath = path.join(rootDir, "telegram-proxy-state.json");
+  fs.writeFileSync(statePath, JSON.stringify({
+    commands: [],
+    updates: [],
+    webhookUrl: "",
+  }, null, 2));
+  fs.writeFileSync(proxyPath, `#!/usr/bin/env node
+const fs = require("fs");
+const args = process.argv.slice(2);
+function flag(name) {
+  const index = args.indexOf(name);
+  return index === -1 ? undefined : args[index + 1];
+}
+const statePath = process.env.FAKE_TELEGRAM_PROXY_STATE;
+const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
+if (args[0] === "list-secrets" || args[0] === "describe-secret") {
+  process.stdout.write(JSON.stringify([{ name: "test_telegram_bot_token", allowedHosts: ["api.telegram.org"], allowedHeaderNames: [], allowInURL: true }]));
+  process.exit(0);
+}
+const body = JSON.parse(flag("--body") || "{}");
+const url = flag("--url") || "";
+const method = url.split("/").pop();
+let result;
+switch (method) {
+  case "getMe":
+    result = { id: 42, is_bot: true, username: "test_codex_bot", first_name: "Test Codex" };
+    break;
+  case "setMyCommands":
+    state.commands = Array.isArray(body.commands) ? body.commands : [];
+    result = true;
+    break;
+  case "getMyCommands":
+    result = state.commands || [];
+    break;
+  case "getUpdates": {
+    const offset = typeof body.offset === "number" ? body.offset : 0;
+    const updates = (state.updates || []).filter((entry) => entry.update_id >= offset);
+    state.updates = (state.updates || []).filter((entry) => !updates.some((selected) => selected.update_id === entry.update_id));
+    result = updates;
+    break;
+  }
+  case "getWebhookInfo":
+    result = { url: state.webhookUrl || "", pending_update_count: 0 };
+    break;
+  case "deleteWebhook":
+    state.webhookUrl = "";
+    result = true;
+    break;
+  case "sendMessage":
+    state.lastSend = body;
+    result = { message_id: 99, chat: { id: body.chat_id, type: "private" }, text: body.text };
+    break;
+  default:
+    result = true;
+}
+fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
+process.stdout.write(JSON.stringify({ ok: true, result }));
+`, { mode: 0o755 });
+  return { proxyPath, statePath };
 }
 
 async function runProcessor(rootDir: string, input: {
@@ -714,6 +779,134 @@ test("telegram codex bridge orchestrates queued steering, operational commands, 
     codexHome,
   });
   expect(sendActions(afterContinue.actions)[0]).toMatchObject({ text: "Queue is empty." });
+});
+
+test("telegram codex channel CLI setup is idempotent and controls the listener", async () => {
+  test.setTimeout(120_000);
+
+  const rootDir = process.cwd();
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-telegram-codex-cli-"));
+  const workspacePath = path.join(tempRoot, "workspace");
+  const runtimeWorkspace = path.join(tempRoot, "runtime-workspace");
+  const codexHome = path.join(tempRoot, "codex-home");
+  fs.mkdirSync(workspacePath, { recursive: true });
+  fs.mkdirSync(runtimeWorkspace, { recursive: true });
+  fs.mkdirSync(codexHome, { recursive: true });
+  writeFakeCodexBinary(tempRoot);
+  const { proxyPath, statePath } = writeFakeTelegramSecretsProxy(tempRoot);
+  const env = {
+    CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+    FAKE_TELEGRAM_PROXY_STATE: statePath,
+  };
+  const base = { workspacePath, runtimeWorkspace, codexHome, env };
+
+  const setup = await runClawJson(rootDir, [
+    "channels",
+    "telegram",
+    "codex",
+    "setup",
+    "--account",
+    "test-account",
+    "--secret-name",
+    "test_telegram_bot_token",
+  ], base) as { processor: { id: string }; status: { commandsSynced: boolean; listenerStatus: string } };
+  expect(setup.processor.id).toBe("telegram-codex");
+  expect(setup.status.commandsSynced).toBe(true);
+  expect(setup.status.listenerStatus).toBe("stopped");
+
+  const stale = await runClawJson(rootDir, [
+    "channels",
+    "commands",
+    "set",
+    "--channel",
+    "telegram",
+    "--account",
+    "test-account",
+    "--commands",
+    "[{\"command\":\"codex\",\"description\":\"Send a prompt to Codex\"}]",
+  ], base) as Array<{ command: string }>;
+  expect(stale.map((command) => command.command)).toEqual(["codex"]);
+
+  const secondSetup = await runClawJson(rootDir, [
+    "channels",
+    "telegram",
+    "codex",
+    "setup",
+    "--account",
+    "test-account",
+  ], base) as { status: { commandsSynced: boolean } };
+  expect(secondSetup.status.commandsSynced).toBe(true);
+  const commands = await runClawJson(rootDir, [
+    "channels",
+    "telegram",
+    "codex",
+    "commands",
+    "sync",
+    "--account",
+    "test-account",
+  ], base) as Array<{ command: string }>;
+  expect(commands.some((command) => command.command === "status")).toBe(true);
+  expect(commands.some((command) => command.command === "codex")).toBe(false);
+
+  const started = await runClawJson(rootDir, [
+    "channels",
+    "telegram",
+    "codex",
+    "start",
+    "--account",
+    "test-account",
+    "--interval-ms",
+    "200",
+    "--timeout",
+    "0",
+    "--processor-timeout-ms",
+    "5000",
+  ], base) as { status: string; pid: number };
+  expect(started.status).toBe("running");
+  expect(started.pid).toBeGreaterThan(0);
+
+  const startedAgain = await runClawJson(rootDir, [
+    "channels",
+    "telegram",
+    "codex",
+    "start",
+    "--account",
+    "test-account",
+  ], base) as { status: string; pid: number };
+  expect(startedAgain.status).toBe("running");
+  expect(startedAgain.pid).toBe(started.pid);
+
+  const status = await runClawJson(rootDir, [
+    "channels",
+    "telegram",
+    "codex",
+    "status",
+    "--account",
+    "test-account",
+  ], base) as { listenerStatus: string; processorRegistered: boolean; commandsSynced: boolean };
+  expect(status).toMatchObject({ listenerStatus: "running", processorRegistered: true, commandsSynced: true });
+
+  const logs = await runClawJson(rootDir, [
+    "channels",
+    "telegram",
+    "codex",
+    "logs",
+    "--account",
+    "test-account",
+    "--lines",
+    "20",
+  ], base) as { log: string };
+  expect(logs.log).toContain("listener started");
+
+  const stopped = await runClawJson(rootDir, [
+    "channels",
+    "telegram",
+    "codex",
+    "stop",
+    "--account",
+    "test-account",
+  ], base) as { status: string };
+  expect(stopped.status).toBe("stopped");
 });
 
 test("inference with a session id persists user and assistant messages", async () => {

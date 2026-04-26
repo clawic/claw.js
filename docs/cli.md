@@ -491,6 +491,12 @@ claw skills install support-triage --source clawhub
 claw channels list
 claw channels status
 claw channels telegram connect --account support --secret-name telegram_support_bot_token
+claw channels telegram codex setup --account support --runtime codex --start
+claw channels telegram codex start --account support
+claw channels telegram codex status --account support
+claw channels telegram codex logs --account support
+claw channels telegram codex stop --account support
+claw channels telegram codex commands sync --account support
 claw channels accounts add telegram --account support --secret-name telegram_support_bot_token
 claw channels accounts list --provider telegram
 claw channels targets register --channel telegram --account support --target-id -100123 --kind supergroup

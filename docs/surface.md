@@ -85,10 +85,10 @@ The docs check script validates that every current export from
     BlockerRecord
     blockerRecordSchema
     brokerSecretHttp
+    buildCodexCommand
     buildCombinedDoctorReport
     buildCompatDriftReport
     buildCompatReport
-    buildCodexCommand
     buildDemoRuntimeEnv
     buildDetachedPtySpec
     buildDoctorReport
@@ -110,6 +110,7 @@ The docs check script validates that every current export from
     buildTitleSessionSnippet
     buildWorkspaceResetPlan
     callOpenClawGateway
+    callTelegramApi
     CANONICAL_RUNTIME_FILES
     CAPABILITY_REPORT_FILE
     CapabilityDescriptor
@@ -135,6 +136,14 @@ The docs check script validates that every current export from
     ChannelProcessorDescriptor
     ChannelProcessorEvent
     ChannelProcessorResult
+    ChannelRunDeliveryMode
+    ChannelRunMessage
+    ChannelRunOptions
+    ChannelRunQueuePolicy
+    ChannelRunRecord
+    ChannelRunStatus
+    ChannelRunStore
+    ChannelRunTarget
     CHANNELS_STATE_FILE
     ChannelsIntentState
     ChannelsRegistry
@@ -155,16 +164,17 @@ The docs check script validates that every current export from
     CLAWJS_DIR
     CLAWJS_NON_SYNONYMS
     ClawManifest
-    callTelegramApi
     cleanupOpenClawAuthLoginState
     CleanupOpenClawAuthLoginStateOptions
     CleanupOpenClawAuthLoginStateResult
+    codexAdapter
+    CodexCommandOptions
     CombinedDoctorIssue
     CombinedDoctorReport
-    CommentRecord
-    commentRecordSchema
     CommandGenerationBackendRecord
     CommandRunner
+    CommentRecord
+    commentRecordSchema
     COMPAT_SNAPSHOT_FILE
     CompatDriftIssue
     CompatDriftReport
@@ -197,20 +207,18 @@ The docs check script validates that every current export from
     ContentVariant
     ContentVariantStatus
     ContextChip
-    CodexCommandOptions
     createChannelsRegistry
+    CreateChannelsRegistryOptions
     createClaw
     CreateClawOptions
-    CreateChannelsRegistryOptions
     createDocumentStore
     createDriveStorageShareAdapter
     CreateGenerationInput
     createGenerationStore
-    GrantChannelBindingInput
     createImageLibraryStore
     CreateImageLibraryStoreOptions
+    createLocalLibraryStore
     createLocalStorageStore
-    startStorageHttpServer
     createManifest
     createSlackService
     CreateSlackServiceOptions
@@ -220,12 +228,13 @@ The docs check script validates that every current export from
     CreateTemporalItemInput
     createTemporaryDownloadPath
     createTtsPlaybackPlan
+    CreateVoiceNoteInput
+    createVoiceNoteStore
     createWhatsAppService
     CreateWhatsAppServiceOptions
     CreateWikiPageInput
     createWorkspaceDataStore
     CredentialSource
-    createLocalLibraryStore
     CustomFieldRecord
     customFieldRecordSchema
     CycleRecord
@@ -244,7 +253,6 @@ The docs check script validates that every current export from
     DEFAULT_SESSION_TITLE
     DefaultModelRef
     DeliveryState
-    codexAdapter
     demoAdapter
     DemoScenario
     DemoScenarioId
@@ -279,6 +287,7 @@ The docs check script validates that every current export from
     DocumentSearchResult
     DocumentStorageDescriptor
     DocumentStore
+    downloadTelegramFile
     EffectiveAccessPolicy
     EmbeddedTimeEngine
     EmbeddedTimeEngineOptions
@@ -306,9 +315,9 @@ The docs check script validates that every current export from
     featureOwnershipSchema
     FeedbackRecord
     feedbackRecordSchema
-    FileMutationMode
     FieldValueRecord
     fieldValueRecordSchema
+    FileMutationMode
     FilesIntentState
     filterOpenClawProviderAuthByIntent
     formatOpenClawConversation
@@ -348,6 +357,7 @@ The docs check script validates that every current export from
     getTtsCatalog
     GoalRecord
     goalRecordSchema
+    GrantChannelBindingInput
     HandoffRecord
     handoffRecordSchema
     hasConfirmedOpenClawOAuthSubscription
@@ -363,8 +373,8 @@ The docs check script validates that every current export from
     ImageLibraryStore
     ImageListOptions
     ImageOperation
-    ImageProviderProfile
     ImageProvenance
+    ImageProviderProfile
     ImageRecord
     ImageStatus
     ImageType
@@ -408,9 +418,9 @@ The docs check script validates that every current export from
     LibraryAssetKind
     libraryAssetSchema
     LibraryAssetUpdate
+    LibraryAssignInput
     LibraryAssignment
     libraryAssignmentSchema
-    LibraryAssignInput
     LibraryInstructionProjection
     LibraryInstructionProjectionTarget
     LibraryMissingSecret
@@ -429,8 +439,6 @@ The docs check script validates that every current export from
     LinkedEntityDomain
     LinkedEntityRef
     linkedEntityRefSchema
-    ListRecord
-    listRecordSchema
     listDemoScenarios
     listManagedBlockProblems
     listManagedBlocks
@@ -438,19 +446,22 @@ The docs check script validates that every current export from
     listOpenClawAgents
     listOpenClawChannels
     listOpenClawModels
+    ListRecord
+    listRecordSchema
     listRuntimeAdapters
     listSecretActions
     listSecretLeases
     listSecrets
     listSecretTypes
     listSkillSources
+    listSttProviders
     listTtsProviders
     loadAuthStore
     loadTemplatePack
-    LockHandle
-    LockRetryOptions
     LocalLibraryStore
     LocalStorageStore
+    LockHandle
+    LockRetryOptions
     LogLevel
     ManagedBlockInspection
     managedBlockMarkers
@@ -491,6 +502,7 @@ The docs check script validates that every current export from
     normalizeLibraryId
     normalizeProviderAuth
     normalizeRuntimeSessionAdapter
+    normalizeSttConfig
     normalizeTranscriptEvents
     normalizeTranscriptMessage
     normalizeTtsConfig
@@ -511,6 +523,7 @@ The docs check script validates that every current export from
     ObservedDomain
     observedDomainSchema
     ObservedStateByDomain
+    OPENAI_BACKEND_ID
     OpenAIChatMessage
     OpenAIResponseContentPart
     OpenAIResponseInputMessage
@@ -553,7 +566,6 @@ The docs check script validates that every current export from
     OpenClawSetupStatus
     OpenClawVersionParseResult
     OpenClawVersionParseStrategy
-    OPENAI_BACKEND_ID
     OperationalCheckRecord
     operationalCheckRecordSchema
     OrchestrationReadiness
@@ -598,9 +610,9 @@ The docs check script validates that every current export from
     ProductivityOperationsAgent
     ProductivityOperationsCockpit
     ProductivityRelationDefinition
-    productivityTemplateRecordSchema
     ProductivityReview
     ProductivityTeamWork
+    productivityTemplateRecordSchema
     ProgressEvent
     Project
     ProjectAgentAssignment
@@ -624,12 +636,11 @@ The docs check script validates that every current export from
     QuietHoursPolicy
     RawIoTInvocation
     rawIotInvocationSchema
-    RecordChannelEventInput
     readAllIntentDomains
     readAllObservedDomains
-    ReadChannelMessagesInput
     readBindingStore
     readCapabilityReport
+    ReadChannelMessagesInput
     readChannelsStateSnapshot
     readCompatSnapshot
     readDirectOpenClawAuthState
@@ -651,14 +662,16 @@ The docs check script validates that every current export from
     readWorkspaceFile
     readWorkspaceManifest
     readWorkspaceStateSnapshot
-    redactSecrets
-    RegisterCommandGenerationBackendInput
-    RegisterChannelProcessorInput
-    RegisterChannelTargetInput
-    RegisterTelegramBotAccountInput
-    RegisterDocumentPathInput
+    RecordChannelEventInput
     RecurrenceRecord
     recurrenceRecordSchema
+    redactSecrets
+    RegisterChannelProcessorInput
+    RegisterChannelTargetInput
+    RegisterCommandGenerationBackendInput
+    RegisterDocumentPathInput
+    RegisterTelegramBotAccountInput
+    RegisterVoiceNotePathInput
     ReleaseRecord
     releaseRecordSchema
     ReminderRecord
@@ -674,7 +687,9 @@ The docs check script validates that every current export from
     resolveAuthStorePath
     resolveBindingsPath
     resolveCapabilityReportPath
+    resolveChannelRunKey
     resolveChannelsStatePath
+    resolveCodexBinaryPath
     resolveCompatSnapshotPath
     resolveDemoScenarioId
     ResolvedSessionAsset
@@ -687,7 +702,6 @@ The docs check script validates that every current export from
     resolveMemoryHitLabel
     resolveMemoryStatePath
     resolveModelId
-    resolveCodexBinaryPath
     resolveObservedDir
     resolveObservedDomainPath
     resolveOpenClawConfigPath
@@ -755,15 +769,13 @@ The docs check script validates that every current export from
     RuntimeSetupInput
     RuntimeWorkspaceContract
     RuntimeWorkspaceHandlers
-    SavedViewRecord
-    savedViewRecordSchema
     SaveApiKeyResult
     saveAuthStore
+    SavedViewRecord
+    savedViewRecordSchema
     saveProviderApiKey
     SceneRecord
     sceneRecordSchema
-    SectionRecord
-    sectionRecordSchema
     SCHEDULER_STATE_FILE
     SchedulerCatalog
     SchedulerDescriptor
@@ -778,9 +790,11 @@ The docs check script validates that every current export from
     SecretTypedActionDescriptor
     SecretTypeDescriptor
     SecretTypeFieldDescriptor
+    SectionRecord
+    sectionRecordSchema
     segmentTextForTts
-    SendNotificationInput
     SendChannelMessageInput
+    SendNotificationInput
     SESSION_FILE_EXTENSION
     SessionAttachment
     SessionCliInvocation
@@ -851,9 +865,13 @@ The docs check script validates that every current export from
     SpeechIntentState
     splitTextIntoChunks
     startOpenClawGateway
+    startStorageHttpServer
+    stopOpenClawGateway
+    StorageDriveIndexAdapter
     StorageGetResult
     StorageGrant
-    StorageDriveIndexAdapter
+    StorageHttpServer
+    StorageHttpServerOptions
     StorageListInput
     StorageObject
     StorageOperation
@@ -862,11 +880,8 @@ The docs check script validates that every current export from
     StorageScopedToken
     StorageShare
     StorageShareAdapter
-    StorageHttpServer
-    StorageHttpServerOptions
     StorageStoreOptions
     StorageVisibility
-    stopOpenClawGateway
     StreamChunk
     streamOpenClawSession
     streamOpenClawSessionEvents
@@ -879,6 +894,11 @@ The docs check script validates that every current export from
     StructuredLogEntry
     StructuredLogger
     StructuredLogSink
+    SttProvider
+    SttProviderConfig
+    SttProviderDescriptor
+    SttTranscribeInput
+    SttTranscribeResult
     SubscriptionFilter
     suggestSessionTitle
     summarizeAuthProfiles
@@ -922,9 +942,9 @@ The docs check script validates that every current export from
     telegramWebhookStatusSchema
     TemplateMutation
     templateMutationSchema
-    TemplateRecord
     TemplatePack
     templatePackSchema
+    TemplateRecord
     TemporalAction
     temporalActionSchema
     TemporalExecution
@@ -950,6 +970,7 @@ The docs check script validates that every current export from
     toBase64Payload
     toClawError
     toDataUrl
+    transcribe
     TranscriptEventInput
     TranscriptMessageInput
     TtsCatalog
@@ -972,12 +993,17 @@ The docs check script validates that every current export from
     UpdateUserPreferencesInput
     UpdateWikiPageInput
     UploadDocumentInput
+    UpsertChannelListenerInput
     UpsertSubscriptionInput
     UserNotificationPreferences
     validateSettingsUpdate
     validateWorkspace
+    VoiceNoteListInput
+    VoiceNoteRecord
+    VoiceNoteSource
+    VoiceNoteStatus
+    VoiceNoteStore
     waitForOpenClawGateway
-    withCodexCommandEnv
     WatchCallback
     WatchOptions
     watchPolledValue
@@ -1007,6 +1033,7 @@ The docs check script validates that every current export from
     WikiRevision
     WikiSearchOptions
     WikiSearchResult
+    withCodexCommandEnv
     WorkSessionRecord
     workSessionRecordSchema
     WORKSPACE_STATE_FILE
@@ -1052,7 +1079,6 @@ The docs check script validates that every current export from
     writeSlackStateSnapshot
     writeTelegramStateSnapshot
     WriteTextOptions
-    UpsertChannelListenerInput
     writeWhatsAppStateSnapshot
     writeWorkspaceFile
     writeWorkspaceFilePreservingManagedBlocks

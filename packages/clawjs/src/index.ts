@@ -203,7 +203,8 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} workspace-search query | workspace-index rebuild`,
     `  ${binName} skills list|inspect|sync|sources|search|install`,
     `  ${binName} library list|inspect|create|update|remove|import-skill|assign|unassign|resolve|sync`,
-    `  ${binName} channels list|status|telegram|processors|listen|codex-processor|targets|messages|permissions|commands`,
+    `  ${binName} channels list|status|telegram|processors|listen|targets|messages|permissions|commands`,
+    `  ${binName} channels telegram codex setup|start|stop|status|logs|commands sync`,
     `  ${binName} browser status|ensure|share --relay-url URL --access-token TOKEN --tenant-id ID --agent-id ID --workspace-id ID`,
     `  ${binName} telegram connect|status|webhook set|clear|polling start|stop|commands set|get|chats list|inspect|send`,
     `  ${binName} sessions create|list|search|read|stream|generate-title`,
@@ -921,6 +922,79 @@ function normalizeTelegramCodexReplyPolicy(value?: string): TelegramCodexReplyPo
 
 function telegramCodexStatePath(workspaceRoot: string, flags: Record<string, string>): string {
   return path.resolve(flags["bridge-state"] || path.join(workspaceRoot, ".clawjs", "telegram-codex-bridge.json"));
+}
+
+const TELEGRAM_CODEX_PROCESSOR_ID = "telegram-codex";
+const TELEGRAM_CODEX_DEFAULT_INTERVAL_MS = 2_000;
+const TELEGRAM_CODEX_DEFAULT_TIMEOUT_SECONDS = 10;
+const TELEGRAM_CODEX_DEFAULT_PROCESSOR_TIMEOUT_MS = 600_000;
+const TELEGRAM_CODEX_BOT_COMMANDS = [
+  { command: "new", description: "Start a fresh session" },
+  { command: "reset", description: "Reset this session" },
+  { command: "status", description: "Show session status" },
+  { command: "queue", description: "Show queued messages" },
+  { command: "stop", description: "Stop current run" },
+  { command: "continue", description: "Process queued messages" },
+  { command: "compact", description: "Compact session context" },
+  { command: "summary", description: "Show active summary" },
+  { command: "debug", description: "Show debug status" },
+];
+
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+function currentCliEntryPath(): string {
+  const entry = fileURLToPath(import.meta.url);
+  const packagedBin = path.resolve(path.dirname(entry), "..", "bin", "clawjs.mjs");
+  return fs.existsSync(packagedBin) ? packagedBin : entry;
+}
+
+function buildTelegramCodexProcessorCommand(input: {
+  workspaceRoot: string;
+  runtimeAdapterId: RuntimeAdapterId;
+  flags: Record<string, string>;
+}): string {
+  const args = [
+    currentCliEntryPath(),
+    "channels",
+    "codex-processor",
+    "run",
+    "--runtime",
+    input.runtimeAdapterId,
+    "--workspace",
+    input.workspaceRoot,
+    "--runtime-workspace",
+    input.flags["runtime-workspace"] || input.workspaceRoot,
+    "--bridge-state",
+    telegramCodexStatePath(input.workspaceRoot, input.flags),
+    "--reply-policy",
+    input.flags["reply-policy"] || "all",
+    "--agent-id",
+    TELEGRAM_CODEX_PROCESSOR_ID,
+  ];
+  if (input.flags["home-dir"]) args.push("--home-dir", input.flags["home-dir"]);
+  if (input.flags["bot-username"]) args.push("--bot-username", input.flags["bot-username"]);
+  if (input.flags["system-prompt"]) args.push("--system-prompt", input.flags["system-prompt"]);
+  if (input.flags.transport) args.push("--transport", input.flags.transport);
+  if (input.flags.model) args.push("--model", input.flags.model);
+  if (input.flags["gateway-retries"]) args.push("--gateway-retries", input.flags["gateway-retries"]);
+  if (input.flags["coalescing-window-ms"]) args.push("--coalescing-window-ms", input.flags["coalescing-window-ms"]);
+  if (input.flags["compaction-threshold-chars"]) args.push("--compaction-threshold-chars", input.flags["compaction-threshold-chars"]);
+  if (input.flags["max-recent-messages"]) args.push("--max-recent-messages", input.flags["max-recent-messages"]);
+  return [process.execPath, ...args].map(shellQuote).join(" ");
+}
+
+function normalizeTelegramCodexAccount(flags: Record<string, string>): string | undefined {
+  return flags.account?.trim() || undefined;
+}
+
+function resolveTelegramCodexListenerOptions(flags: Record<string, string>): { intervalMs: number; timeoutSeconds: number; processorTimeoutMs: number } {
+  return {
+    intervalMs: flags["interval-ms"] ? Number(flags["interval-ms"]) : TELEGRAM_CODEX_DEFAULT_INTERVAL_MS,
+    timeoutSeconds: flags.timeout ? Number(flags.timeout) : TELEGRAM_CODEX_DEFAULT_TIMEOUT_SECONDS,
+    processorTimeoutMs: flags["processor-timeout-ms"] ? Number(flags["processor-timeout-ms"]) : TELEGRAM_CODEX_DEFAULT_PROCESSOR_TIMEOUT_MS,
+  };
 }
 
 function readTelegramCodexBridgeState(statePath: string, replyPolicy: TelegramCodexReplyPolicy): TelegramCodexBridgeState {
@@ -6041,6 +6115,270 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       context.stdout.write(`${channels.map((entry) => `${entry.id}:${entry.status}`).join("\n")}\n`);
     }
     return channels.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "channels" && command === "telegram" && subcommand === "codex") {
+    const codexCommand = positionals[3] || "status";
+    const codexSubcommand = positionals[4];
+    const account = normalizeTelegramCodexAccount(flags);
+    const listenerOptions = resolveTelegramCodexListenerOptions(flags);
+    const provider = "telegram";
+
+    const registerProcessor = (claw: Awaited<ReturnType<typeof createCliClaw>>) => claw.channels.processors.register({
+      id: TELEGRAM_CODEX_PROCESSOR_ID,
+      label: "Telegram Codex",
+      command: buildTelegramCodexProcessorCommand({ workspaceRoot, runtimeAdapterId, flags }),
+      cwd: workspaceRoot,
+      agentId: TELEGRAM_CODEX_PROCESSOR_ID,
+    });
+
+    const syncCommands = async (claw: Awaited<ReturnType<typeof createCliClaw>>) => {
+      const accountRecord = claw.channels.accounts.get(provider, account);
+      if (!accountRecord) return null;
+      return await claw.channels.commands.set(provider, TELEGRAM_CODEX_BOT_COMMANDS, { accountId: account });
+    };
+
+    const stopListener = async (claw: Awaited<ReturnType<typeof createCliClaw>>) => {
+      const paths = channelListenerPaths(workspaceRoot, provider, account);
+      fs.mkdirSync(paths.runDir, { recursive: true });
+      fs.writeFileSync(paths.stopPath, `${Date.now()}\n`);
+      const pid = readListenerPid(paths.pidPath) ?? claw.channels.listeners.get(provider, account)?.pid;
+      const startedAt = Date.now();
+      while (pid && isProcessRunning(pid) && Date.now() - startedAt < 5_000) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      if (pid && isProcessRunning(pid)) {
+        try {
+          process.kill(pid, "SIGTERM");
+        } catch {
+          // already stopped
+        }
+      }
+      return claw.channels.listeners.upsert({
+        provider,
+        accountId: account,
+        processorId: TELEGRAM_CODEX_PROCESSOR_ID,
+        mode: "background",
+        status: "stopped",
+        pid,
+        pidPath: paths.pidPath,
+        stopPath: paths.stopPath,
+        logPath: paths.logPath,
+        stoppedAt: new Date().toISOString(),
+      });
+    };
+
+    const startListener = async (claw: Awaited<ReturnType<typeof createCliClaw>>, options: { restart?: boolean } = {}) => {
+      registerProcessor(claw);
+      await syncCommands(claw);
+      if (options.restart) {
+        await stopListener(claw);
+      }
+      const paths = channelListenerPaths(workspaceRoot, provider, account);
+      const current = claw.channels.listeners.get(provider, account);
+      const currentPid = current?.pid ?? readListenerPid(paths.pidPath);
+      if (!options.restart && isProcessRunning(currentPid)) {
+        return claw.channels.listeners.upsert({
+          ...(current ?? {
+            provider,
+            accountId: account,
+            processorId: TELEGRAM_CODEX_PROCESSOR_ID,
+            mode: "background" as const,
+            startedAt: new Date().toISOString(),
+          }),
+          provider,
+          accountId: account,
+          processorId: TELEGRAM_CODEX_PROCESSOR_ID,
+          status: "running",
+          pid: currentPid,
+          pidPath: paths.pidPath,
+          stopPath: paths.stopPath,
+          logPath: paths.logPath,
+          lastHeartbeatAt: new Date().toISOString(),
+        });
+      }
+      fs.mkdirSync(paths.runDir, { recursive: true });
+      fs.rmSync(paths.stopPath, { force: true });
+      if (readBooleanFlag(argv, flags, "foreground", false)) {
+        return await claw.channels.listen.run({
+          provider,
+          accountId: account,
+          processorId: TELEGRAM_CODEX_PROCESSOR_ID,
+          intervalMs: listenerOptions.intervalMs,
+          timeoutSeconds: listenerOptions.timeoutSeconds,
+          processorTimeoutMs: listenerOptions.processorTimeoutMs,
+          pidPath: paths.pidPath,
+          stopPath: paths.stopPath,
+          logPath: paths.logPath,
+          mode: "foreground",
+        });
+      }
+      const args = [
+        currentCliEntryPath(),
+        "channels",
+        "listen",
+        "run",
+        "--provider",
+        provider,
+        "--workspace",
+        workspaceRoot,
+        "--runtime",
+        runtimeAdapterId,
+        "--background",
+        "--processor",
+        TELEGRAM_CODEX_PROCESSOR_ID,
+        "--interval-ms",
+        String(listenerOptions.intervalMs),
+        "--timeout",
+        String(listenerOptions.timeoutSeconds),
+        "--processor-timeout-ms",
+        String(listenerOptions.processorTimeoutMs),
+      ];
+      if (account) args.push("--account", account);
+      const logFd = fs.openSync(paths.logPath, "a");
+      const child = spawn(process.execPath, args, {
+        cwd: context.cwd,
+        env: process.env,
+        detached: true,
+        stdio: ["ignore", logFd, logFd],
+      });
+      fs.closeSync(logFd);
+      child.unref();
+      const pid = await waitForListenerPid(paths.pidPath);
+      return claw.channels.listeners.upsert({
+        provider,
+        accountId: account,
+        processorId: TELEGRAM_CODEX_PROCESSOR_ID,
+        mode: "background",
+        status: pid ? "running" : "stale",
+        pid: pid ?? child.pid,
+        pidPath: paths.pidPath,
+        stopPath: paths.stopPath,
+        logPath: paths.logPath,
+        startedAt: new Date().toISOString(),
+        lastHeartbeatAt: new Date().toISOString(),
+      });
+    };
+
+    const readStatus = async (claw: Awaited<ReturnType<typeof createCliClaw>>) => {
+      const paths = channelListenerPaths(workspaceRoot, provider, account);
+      const listener = claw.channels.listeners.get(provider, account);
+      const pid = listener?.pid ?? readListenerPid(paths.pidPath);
+      const running = isProcessRunning(pid);
+      const processor = claw.channels.processors.get(TELEGRAM_CODEX_PROCESSOR_ID);
+      let commands: Array<{ command: string; description: string }> | null = null;
+      try {
+        commands = await claw.channels.commands.get(provider, { accountId: account });
+      } catch {
+        commands = null;
+      }
+      const commandsSynced = !!commands && TELEGRAM_CODEX_BOT_COMMANDS.every((expected) => (
+        commands?.some((actual) => actual.command === expected.command && actual.description === expected.description)
+      ));
+      return {
+        provider,
+        accountId: account ?? "default",
+        processorId: TELEGRAM_CODEX_PROCESSOR_ID,
+        processorRegistered: !!processor,
+        listenerStatus: running ? "running" : listener?.status ?? "stopped",
+        pid,
+        commandsSynced,
+        commandCount: commands?.length ?? 0,
+        lastError: listener?.lastError,
+        logPath: paths.logPath,
+      };
+    };
+
+    if (codexCommand === "setup") {
+      const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+      let accountRecord = claw.channels.accounts.get(provider, account);
+      if (flags["secret-name"] || flags.secret) {
+        const secretName = flags["secret-name"] || flags.secret;
+        const secret = await claw.telegram.provisionSecretReference({
+          secretName,
+          apiBaseUrl: flags["api-base-url"],
+        });
+        if (secret.status !== "configured") {
+          if (wantsJson) writeJson(context.stdout, secret);
+          else context.stderr.write(`${secret.instructions.summary}\n`);
+          return CLI_EXIT_DEGRADED;
+        }
+        accountRecord = await claw.channels.accounts.registerTelegramBot({
+          accountId: account,
+          label: flags.name,
+          secretName,
+          apiBaseUrl: flags["api-base-url"],
+          webhookUrl: flags["webhook-url"],
+          webhookSecretToken: flags["webhook-secret-token"],
+          allowedUpdates: parseJsonFlag<string[]>(flags["allowed-updates"], "--allowed-updates"),
+          ...(flags["drop-pending-updates"] !== undefined ? { dropPendingUpdates: readBooleanFlag(argv, flags, "drop-pending-updates", false) } : {}),
+        });
+      }
+      const processor = registerProcessor(claw);
+      const commands = accountRecord ? await syncCommands(claw) : null;
+      const shouldStart = readBooleanFlag(argv, flags, "start", false) || readBooleanFlag(argv, flags, "restart", false);
+      const listener = shouldStart ? await startListener(claw, { restart: readBooleanFlag(argv, flags, "restart", false) }) : claw.channels.listeners.get(provider, account);
+      const status = await readStatus(claw);
+      const payload = { account: accountRecord, processor, commands, listener, status };
+      if (wantsJson) writeJson(context.stdout, payload);
+      else context.stdout.write(`telegram codex setup ${status.listenerStatus} commands=${status.commandsSynced ? "synced" : "pending"}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (codexCommand === "start") {
+      const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+      const listener = await startListener(claw, { restart: readBooleanFlag(argv, flags, "restart", false) });
+      if (wantsJson) writeJson(context.stdout, listener);
+      else context.stdout.write(`${listener.status} ${listener.pid ?? "unknown"}\n`);
+      return listener.status === "running" ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+
+    if (codexCommand === "stop") {
+      const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+      const listener = await stopListener(claw);
+      if (wantsJson) writeJson(context.stdout, listener);
+      else context.stdout.write("stopped\n");
+      return CLI_EXIT_OK;
+    }
+
+    if (codexCommand === "status" || !codexCommand) {
+      const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+      const status = await readStatus(claw);
+      if (wantsJson) writeJson(context.stdout, status);
+      else context.stdout.write([
+        `account=${status.accountId}`,
+        `listener=${status.listenerStatus}`,
+        `pid=${status.pid ?? "unknown"}`,
+        `processor=${status.processorRegistered ? "registered" : "missing"}`,
+        `commands=${status.commandsSynced ? "synced" : "pending"}`,
+        ...(status.lastError ? [`lastError=${status.lastError}`] : []),
+      ].join(" ") + "\n");
+      return CLI_EXIT_OK;
+    }
+
+    if (codexCommand === "logs") {
+      const paths = channelListenerPaths(workspaceRoot, provider, account);
+      const lines = flags.lines ? Number(flags.lines) : 80;
+      const output = readTail(paths.logPath, lines);
+      if (wantsJson) writeJson(context.stdout, { log: output, logPath: paths.logPath });
+      else context.stdout.write(output ? `${output}\n` : "");
+      return output ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+
+    if (codexCommand === "commands" && codexSubcommand === "sync") {
+      const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+      const commands = await syncCommands(claw);
+      if (!commands) {
+        context.stderr.write("Telegram account is not configured. Run setup with --secret-name first.\n");
+        return CLI_EXIT_DEGRADED;
+      }
+      if (wantsJson) writeJson(context.stdout, commands);
+      else context.stdout.write(`synced ${commands.length} commands\n`);
+      return CLI_EXIT_OK;
+    }
+
+    context.stderr.write(`Usage: ${binName} channels telegram codex setup|start|stop|status|logs|commands sync\n`);
+    return CLI_EXIT_USAGE;
   }
 
   if (group === "channels" && command === "telegram" && subcommand === "connect") {
