@@ -369,8 +369,14 @@ import {
 
 const TELEGRAM_CODEX_BRIDGE_COMMANDS: TelegramCommand[] = [
   { command: "new", description: "Start a fresh session" },
-  { command: "reset", description: "Start a fresh session" },
-  { command: "codex", description: "Send a prompt to Codex" },
+  { command: "reset", description: "Reset this session" },
+  { command: "status", description: "Show session status" },
+  { command: "queue", description: "Show queued messages" },
+  { command: "stop", description: "Stop current run" },
+  { command: "continue", description: "Process queued messages" },
+  { command: "compact", description: "Compact session context" },
+  { command: "summary", description: "Show active summary" },
+  { command: "debug", description: "Show debug status" },
 ];
 
 export interface CreateClawOptions {
@@ -3720,7 +3726,14 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   async function ensureTelegramCodexBridgeCommands(accountId?: string): Promise<void> {
     const account = channelsRegistry.accounts.get("telegram", accountId);
     const existingCommands = account?.metadata?.commands;
-    if (Array.isArray(existingCommands) && existingCommands.length > 0) return;
+    if (
+      Array.isArray(existingCommands) &&
+      existingCommands.length === TELEGRAM_CODEX_BRIDGE_COMMANDS.length &&
+      existingCommands.every((command, index) => {
+        const expected = TELEGRAM_CODEX_BRIDGE_COMMANDS[index];
+        return command.command === expected?.command && command.description === expected.description;
+      })
+    ) return;
     await setTelegramAccountCommands({
       registry: channelsRegistry,
       runner: processHost,

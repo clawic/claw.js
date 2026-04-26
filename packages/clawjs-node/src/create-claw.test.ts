@@ -1346,6 +1346,54 @@ process.stdin.on("end", () => {
   assert.equal(events.some((event) => event.type === "channel.processor.invoked" && event.status === "ok"), true);
 });
 
+test("createClaw telegram codex listener refreshes stale command menus", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-telegram-codex-commands-"));
+  const { proxyPath, statePath } = createFakeSecretsProxy();
+  const claw = await createClaw({
+    runtime: {
+      adapter: "openclaw",
+      env: {
+        ...process.env,
+        CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+        FAKE_TELEGRAM_PROXY_STATE: statePath,
+      },
+    },
+    workspace: {
+      appId: "demo",
+      workspaceId: "telegram-codex-commands",
+      agentId: "telegram-codex-commands",
+      rootDir: workspaceDir,
+    },
+  });
+
+  await claw.channels.accounts.registerTelegramBot({
+    accountId: "support",
+    secretName: "telegram_support_bot_token",
+  });
+  await claw.channels.commands.set("telegram", [
+    { command: "new", description: "Start a fresh session" },
+    { command: "codex", description: "Send a prompt to Codex" },
+  ], { accountId: "support" });
+  const proxyState = JSON.parse(fs.readFileSync(statePath, "utf8")) as { updates?: unknown[] };
+  proxyState.updates = [];
+  fs.writeFileSync(statePath, JSON.stringify(proxyState, null, 2));
+  claw.channels.processors.register({
+    id: "telegram-codex",
+    command: `${process.execPath} -e "process.stdin.resume()"`,
+  });
+
+  await claw.channels.listen.run({
+    accountId: "support",
+    processorId: "telegram-codex",
+    once: true,
+    timeoutSeconds: 0,
+  });
+  const commands = await claw.channels.commands.get("telegram", { accountId: "support" });
+
+  assert.equal(commands.some((command) => command.command === "status"), true);
+  assert.equal(commands.some((command) => command.command === "codex"), false);
+});
+
 test("createClaw can diff and sync binding output", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-binding-"));
   const claw = await createClaw({
