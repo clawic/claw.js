@@ -377,6 +377,26 @@ test("telegram codex bridge owns, authorizes topics, applies reply policy, and s
   });
   expect(sendActions(authorizedNonOwner.actions)[0]).toMatchObject({ type: "send_message", targetId: "-1001", threadId: 77 });
 
+  appendChannelMessages(workspacePath, [
+    {
+      id: "telegram:test-account:update:780",
+      targetId: "-2002",
+      direction: "inbound",
+      text: "hello group",
+      providerMessageId: "780",
+      senderId: "501",
+    },
+  ]);
+  const preSyncedGroup = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "-2002", chatType: "group", senderId: "501", text: "hello group", messageId: 780 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  expect(preSyncedGroup.actions[0]).toMatchObject({ type: "grant_permission", targetId: "-2002" });
+  expect(sendActions(preSyncedGroup.actions)[0]).toMatchObject({ type: "send_message", targetId: "-2002", text: "codex reply" });
+
   const voiceNote = await runProcessor(rootDir, {
     event: telegramEvent({
       chatId: "501",
