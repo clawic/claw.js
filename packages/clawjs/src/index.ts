@@ -188,6 +188,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} auth status|login|remove`,
     `  ${binName} models list|default|set-default`,
     `  ${binName} providers list|catalog|auth-state`,
+    `  ${binName} agents codex setup|status|models|auth status`,
     `  ${binName} secrets list|describe|types|capabilities|broker http|leases list`,
     `  ${binName} scheduler list|run|enable|disable`,
     `  ${binName} time list|get|create|update|delete|pause|resume|run|executions|calendar|timeline`,
@@ -203,8 +204,8 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} workspace-search query | workspace-index rebuild`,
     `  ${binName} skills list|inspect|sync|sources|search|install`,
     `  ${binName} library list|inspect|create|update|remove|import-skill|assign|unassign|resolve|sync`,
-    `  ${binName} channels list|status|telegram|processors|listen|targets|messages|permissions|commands`,
-    `  ${binName} channels telegram codex setup|start|stop|status|logs|commands sync`,
+    `  ${binName} channels list|status|telegram|assign|unassign|assignments|processors|listen|targets|messages|permissions|commands`,
+    `  ${binName} channels telegram setup|codex setup|codex status`,
     `  ${binName} browser status|ensure|share --relay-url URL --access-token TOKEN --tenant-id ID --agent-id ID --workspace-id ID`,
     `  ${binName} telegram connect|status|webhook set|clear|polling start|stop|commands set|get|chats list|inspect|send`,
     `  ${binName} sessions create|list|search|read|stream|generate-title`,
@@ -924,7 +925,8 @@ function telegramCodexStatePath(workspaceRoot: string, flags: Record<string, str
   return path.resolve(flags["bridge-state"] || path.join(workspaceRoot, ".clawjs", "telegram-codex-bridge.json"));
 }
 
-const TELEGRAM_CODEX_PROCESSOR_ID = "telegram-codex";
+const CODEX_AGENT_ID = "codex";
+const LEGACY_TELEGRAM_CODEX_PROCESSOR_ID = "telegram-codex";
 const TELEGRAM_CODEX_DEFAULT_INTERVAL_MS = 2_000;
 const TELEGRAM_CODEX_DEFAULT_TIMEOUT_SECONDS = 10;
 const TELEGRAM_CODEX_DEFAULT_PROCESSOR_TIMEOUT_MS = 600_000;
@@ -954,6 +956,7 @@ function buildTelegramCodexProcessorCommand(input: {
   workspaceRoot: string;
   runtimeAdapterId: RuntimeAdapterId;
   flags: Record<string, string>;
+  agentId?: string;
 }): string {
   const args = [
     currentCliEntryPath(),
@@ -971,7 +974,7 @@ function buildTelegramCodexProcessorCommand(input: {
     "--reply-policy",
     input.flags["reply-policy"] || "all",
     "--agent-id",
-    TELEGRAM_CODEX_PROCESSOR_ID,
+    input.agentId || CODEX_AGENT_ID,
   ];
   if (input.flags["home-dir"]) args.push("--home-dir", input.flags["home-dir"]);
   if (input.flags["bot-username"]) args.push("--bot-username", input.flags["bot-username"]);
@@ -983,6 +986,37 @@ function buildTelegramCodexProcessorCommand(input: {
   if (input.flags["compaction-threshold-chars"]) args.push("--compaction-threshold-chars", input.flags["compaction-threshold-chars"]);
   if (input.flags["max-recent-messages"]) args.push("--max-recent-messages", input.flags["max-recent-messages"]);
   return [process.execPath, ...args].map(shellQuote).join(" ");
+}
+
+function resolveCodexRuntimeAdapterId(flags: Record<string, string>): RuntimeAdapterId {
+  return (flags.runtime?.trim() as RuntimeAdapterId | undefined) || "codex";
+}
+
+function registerCodexAgentProcessor(input: {
+  claw: Awaited<ReturnType<typeof createCliClaw>>;
+  workspaceRoot: string;
+  runtimeAdapterId: RuntimeAdapterId;
+  flags: Record<string, string>;
+  id?: string;
+}) {
+  const id = input.id || CODEX_AGENT_ID;
+  return input.claw.channels.processors.register({
+    id,
+    label: id === CODEX_AGENT_ID ? "Codex" : "Telegram Codex",
+    command: buildTelegramCodexProcessorCommand({
+      workspaceRoot: input.workspaceRoot,
+      runtimeAdapterId: input.runtimeAdapterId,
+      flags: input.flags,
+      agentId: id,
+    }),
+    cwd: input.workspaceRoot,
+    agentId: id,
+    metadata: {
+      kind: "agent",
+      agentKind: "codex",
+      runtimeAdapter: input.runtimeAdapterId,
+    },
+  });
 }
 
 function normalizeTelegramCodexAccount(flags: Record<string, string>): string | undefined {
@@ -6106,6 +6140,42 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return CLI_EXIT_OK;
   }
 
+  if (group === "agents" && command === "codex") {
+    const codexCommand = subcommand || "status";
+    const codexRuntimeAdapterId = resolveCodexRuntimeAdapterId(flags);
+    const claw = await createCliClaw(codexRuntimeAdapterId, flags, workspaceRoot, appId, workspaceId, CODEX_AGENT_ID, argv);
+    if (codexCommand === "setup") {
+      const processor = registerCodexAgentProcessor({ claw, workspaceRoot, runtimeAdapterId: codexRuntimeAdapterId, flags });
+      const status = await claw.runtime.status();
+      const payload = { agentId: CODEX_AGENT_ID, runtime: codexRuntimeAdapterId, processor, status };
+      if (wantsJson) writeJson(context.stdout, payload);
+      else context.stdout.write(`codex setup processor=${processor.id} runtime=${codexRuntimeAdapterId}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (codexCommand === "status") {
+      const processor = claw.channels.processors.get(CODEX_AGENT_ID);
+      const status = await claw.runtime.status();
+      const payload = { agentId: CODEX_AGENT_ID, runtime: codexRuntimeAdapterId, processorRegistered: !!processor, processor, status };
+      if (wantsJson) writeJson(context.stdout, payload);
+      else context.stdout.write(`agent=codex runtime=${codexRuntimeAdapterId} processor=${processor ? "registered" : "missing"}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (codexCommand === "models") {
+      const models = await claw.models.list();
+      if (wantsJson) writeJson(context.stdout, models);
+      else context.stdout.write(`${models.map((model) => `${model.isDefault ? "*" : "-"} ${model.id}`).join("\n")}\n`);
+      return CLI_EXIT_OK;
+    }
+    if (codexCommand === "auth" && positionals[3] === "status") {
+      const auth = await claw.auth.status();
+      if (wantsJson) writeJson(context.stdout, auth);
+      else context.stdout.write(`${Object.entries(auth).map(([provider, summary]) => `${provider}:${summary.hasAuth ? "authenticated" : "missing"}`).join("\n")}\n`);
+      return CLI_EXIT_OK;
+    }
+    context.stderr.write(`Usage: ${binName} agents codex setup|status|models|auth status\n`);
+    return CLI_EXIT_USAGE;
+  }
+
   if (group === "channels" && (command === "list" || command === "status")) {
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const channels = await claw.channels.list();
@@ -6117,19 +6187,146 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return channels.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   }
 
+  if (group === "channels" && command === "telegram" && subcommand === "setup") {
+    const account = normalizeTelegramCodexAccount(flags);
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+    let accountRecord = claw.channels.accounts.get("telegram", account);
+    if (flags["secret-name"] || flags.secret) {
+      const secretName = flags["secret-name"] || flags.secret;
+      const secret = await claw.telegram.provisionSecretReference({
+        secretName,
+        apiBaseUrl: flags["api-base-url"],
+      });
+      if (secret.status !== "configured") {
+        if (wantsJson) writeJson(context.stdout, secret);
+        else context.stderr.write(`${secret.instructions.summary}\n`);
+        return CLI_EXIT_DEGRADED;
+      }
+      accountRecord = await claw.channels.accounts.registerTelegramBot({
+        accountId: account,
+        label: flags.name,
+        secretName,
+        apiBaseUrl: flags["api-base-url"],
+        webhookUrl: flags["webhook-url"],
+        webhookSecretToken: flags["webhook-secret-token"],
+        allowedUpdates: parseJsonFlag<string[]>(flags["allowed-updates"], "--allowed-updates"),
+        ...(flags["drop-pending-updates"] !== undefined ? { dropPendingUpdates: readBooleanFlag(argv, flags, "drop-pending-updates", false) } : {}),
+      });
+    }
+    if (!accountRecord) {
+      context.stderr.write("Telegram account is not configured. Pass --secret-name to set it up.\n");
+      return CLI_EXIT_DEGRADED;
+    }
+    if (wantsJson) writeJson(context.stdout, accountRecord);
+    else context.stdout.write(`${accountRecord.id} ${accountRecord.status}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "channels" && (command === "assign" || command === "unassign")) {
+    const provider = flags.channel || flags.provider || "telegram";
+    const account = flags.account;
+    const assignedAgent = flags.agent || flags["agent-id"];
+    if (!assignedAgent) {
+      context.stderr.write("--agent is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const targetId = flags["target-id"] || flags.target || flags["chat-id"];
+    const assignmentRuntimeAdapterId = assignedAgent === CODEX_AGENT_ID ? resolveCodexRuntimeAdapterId(flags) : runtimeAdapterId;
+    const claw = await createCliClaw(assignmentRuntimeAdapterId, flags, workspaceRoot, appId, workspaceId, assignedAgent, argv);
+    if (command === "assign") {
+      let processorId = assignedAgent;
+      if (assignedAgent === CODEX_AGENT_ID) {
+        registerCodexAgentProcessor({ claw, workspaceRoot, runtimeAdapterId: assignmentRuntimeAdapterId, flags });
+      } else if (flags.processor) {
+        processorId = flags.processor;
+      }
+      const binding = claw.channels.bindings.grant({
+        agentId: assignedAgent,
+        provider,
+        accountId: account,
+        targetId,
+        permissions: ["read", "write", "ingest"],
+        priority: flags.priority ? Number(flags.priority) : 100,
+        metadata: {
+          assignmentType: "channel-agent",
+          processorId,
+          agentKind: assignedAgent,
+        },
+      });
+      let commands: unknown = null;
+      if (provider === "telegram" && assignedAgent === CODEX_AGENT_ID && claw.channels.accounts.get("telegram", account)) {
+        commands = await claw.channels.commands.set("telegram", TELEGRAM_CODEX_BOT_COMMANDS, { accountId: account });
+      }
+      const payload = { assignment: binding, commands };
+      if (wantsJson) writeJson(context.stdout, payload);
+      else context.stdout.write(`assigned ${provider}:${account || "default"} -> ${assignedAgent}\n`);
+      return CLI_EXIT_OK;
+    }
+    const bindings = claw.channels.bindings.list({ agentId: assignedAgent, provider, accountId: account, ...(targetId ? { targetId } : {}) });
+    const matching = bindings.filter((binding) => binding.metadata?.assignmentType === "channel-agent");
+    for (const binding of matching) {
+      claw.channels.bindings.revoke(binding.id);
+    }
+    if (wantsJson) writeJson(context.stdout, { removed: matching.length });
+    else context.stdout.write(`unassigned ${matching.length}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "channels" && command === "assignments") {
+    const assignmentsCommand = subcommand || "list";
+    const provider = flags.channel || flags.provider;
+    const account = flags.account;
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+    const assignments = claw.channels.bindings.list({ provider, accountId: account, agentId: flags.agent })
+      .filter((binding) => binding.metadata?.assignmentType === "channel-agent")
+      .map((binding) => {
+        const processorId = typeof binding.metadata?.processorId === "string" ? binding.metadata.processorId : binding.agentId;
+        const processor = claw.channels.processors.get(processorId);
+        const listener = binding.provider ? claw.channels.listeners.get(binding.provider, binding.accountId) : null;
+        const pid = listener?.pid;
+        const running = isProcessRunning(pid);
+        return {
+          ...binding,
+          processorId,
+          processorRegistered: !!processor,
+          listenerStatus: running ? "running" : listener?.status ?? "stopped",
+          pid,
+        };
+      });
+    if (assignmentsCommand === "list" || assignmentsCommand === "status") {
+      if (wantsJson) writeJson(context.stdout, assignments);
+      else context.stdout.write(`${assignments.map((entry) => `${entry.provider ?? "*"}:${entry.accountId ?? "*"} -> ${entry.agentId} ${assignmentsCommand === "status" ? entry.listenerStatus : ""}`.trim()).join("\n")}\n`);
+      return assignments.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+    context.stderr.write(`Usage: ${binName} channels assignments list|status\n`);
+    return CLI_EXIT_USAGE;
+  }
+
   if (group === "channels" && command === "telegram" && subcommand === "codex") {
     const codexCommand = positionals[3] || "status";
     const codexSubcommand = positionals[4];
     const account = normalizeTelegramCodexAccount(flags);
     const listenerOptions = resolveTelegramCodexListenerOptions(flags);
     const provider = "telegram";
+    const codexRuntimeAdapterId = resolveCodexRuntimeAdapterId(flags);
 
-    const registerProcessor = (claw: Awaited<ReturnType<typeof createCliClaw>>) => claw.channels.processors.register({
-      id: TELEGRAM_CODEX_PROCESSOR_ID,
-      label: "Telegram Codex",
-      command: buildTelegramCodexProcessorCommand({ workspaceRoot, runtimeAdapterId, flags }),
-      cwd: workspaceRoot,
-      agentId: TELEGRAM_CODEX_PROCESSOR_ID,
+    const registerProcessor = (claw: Awaited<ReturnType<typeof createCliClaw>>) => {
+      const processor = registerCodexAgentProcessor({ claw, workspaceRoot, runtimeAdapterId: codexRuntimeAdapterId, flags });
+      registerCodexAgentProcessor({ claw, workspaceRoot, runtimeAdapterId: codexRuntimeAdapterId, flags, id: LEGACY_TELEGRAM_CODEX_PROCESSOR_ID });
+      return processor;
+    };
+
+    const assignCodex = (claw: Awaited<ReturnType<typeof createCliClaw>>) => claw.channels.bindings.grant({
+      agentId: CODEX_AGENT_ID,
+      provider,
+      accountId: account,
+      permissions: ["read", "write", "ingest"],
+      priority: 100,
+      metadata: {
+        assignmentType: "channel-agent",
+        processorId: CODEX_AGENT_ID,
+        agentKind: "codex",
+      },
     });
 
     const syncCommands = async (claw: Awaited<ReturnType<typeof createCliClaw>>) => {
@@ -6157,7 +6354,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       return claw.channels.listeners.upsert({
         provider,
         accountId: account,
-        processorId: TELEGRAM_CODEX_PROCESSOR_ID,
+        processorId: CODEX_AGENT_ID,
         mode: "background",
         status: "stopped",
         pid,
@@ -6170,6 +6367,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
     const startListener = async (claw: Awaited<ReturnType<typeof createCliClaw>>, options: { restart?: boolean } = {}) => {
       registerProcessor(claw);
+      assignCodex(claw);
       await syncCommands(claw);
       if (options.restart) {
         await stopListener(claw);
@@ -6182,13 +6380,13 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
           ...(current ?? {
             provider,
             accountId: account,
-            processorId: TELEGRAM_CODEX_PROCESSOR_ID,
+            processorId: CODEX_AGENT_ID,
             mode: "background" as const,
             startedAt: new Date().toISOString(),
           }),
           provider,
           accountId: account,
-          processorId: TELEGRAM_CODEX_PROCESSOR_ID,
+          processorId: CODEX_AGENT_ID,
           status: "running",
           pid: currentPid,
           pidPath: paths.pidPath,
@@ -6203,7 +6401,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         return await claw.channels.listen.run({
           provider,
           accountId: account,
-          processorId: TELEGRAM_CODEX_PROCESSOR_ID,
+          processorId: CODEX_AGENT_ID,
           intervalMs: listenerOptions.intervalMs,
           timeoutSeconds: listenerOptions.timeoutSeconds,
           processorTimeoutMs: listenerOptions.processorTimeoutMs,
@@ -6223,10 +6421,8 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         "--workspace",
         workspaceRoot,
         "--runtime",
-        runtimeAdapterId,
+        codexRuntimeAdapterId,
         "--background",
-        "--processor",
-        TELEGRAM_CODEX_PROCESSOR_ID,
         "--interval-ms",
         String(listenerOptions.intervalMs),
         "--timeout",
@@ -6248,7 +6444,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       return claw.channels.listeners.upsert({
         provider,
         accountId: account,
-        processorId: TELEGRAM_CODEX_PROCESSOR_ID,
+        processorId: CODEX_AGENT_ID,
         mode: "background",
         status: pid ? "running" : "stale",
         pid: pid ?? child.pid,
@@ -6265,7 +6461,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       const listener = claw.channels.listeners.get(provider, account);
       const pid = listener?.pid ?? readListenerPid(paths.pidPath);
       const running = isProcessRunning(pid);
-      const processor = claw.channels.processors.get(TELEGRAM_CODEX_PROCESSOR_ID);
+      const processor = claw.channels.processors.get(CODEX_AGENT_ID) ?? claw.channels.processors.get(LEGACY_TELEGRAM_CODEX_PROCESSOR_ID);
       let commands: Array<{ command: string; description: string }> | null = null;
       try {
         commands = await claw.channels.commands.get(provider, { accountId: account });
@@ -6278,7 +6474,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       return {
         provider,
         accountId: account ?? "default",
-        processorId: TELEGRAM_CODEX_PROCESSOR_ID,
+        processorId: CODEX_AGENT_ID,
         processorRegistered: !!processor,
         listenerStatus: running ? "running" : listener?.status ?? "stopped",
         pid,
@@ -6290,7 +6486,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     };
 
     if (codexCommand === "setup") {
-      const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+      const claw = await createCliClaw(codexRuntimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
       let accountRecord = claw.channels.accounts.get(provider, account);
       if (flags["secret-name"] || flags.secret) {
         const secretName = flags["secret-name"] || flags.secret;
@@ -6315,18 +6511,19 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         });
       }
       const processor = registerProcessor(claw);
+      const assignment = assignCodex(claw);
       const commands = accountRecord ? await syncCommands(claw) : null;
       const shouldStart = readBooleanFlag(argv, flags, "start", false) || readBooleanFlag(argv, flags, "restart", false);
       const listener = shouldStart ? await startListener(claw, { restart: readBooleanFlag(argv, flags, "restart", false) }) : claw.channels.listeners.get(provider, account);
       const status = await readStatus(claw);
-      const payload = { account: accountRecord, processor, commands, listener, status };
+      const payload = { account: accountRecord, processor, assignment, commands, listener, status };
       if (wantsJson) writeJson(context.stdout, payload);
       else context.stdout.write(`telegram codex setup ${status.listenerStatus} commands=${status.commandsSynced ? "synced" : "pending"}\n`);
       return CLI_EXIT_OK;
     }
 
     if (codexCommand === "start") {
-      const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+      const claw = await createCliClaw(codexRuntimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
       const listener = await startListener(claw, { restart: readBooleanFlag(argv, flags, "restart", false) });
       if (wantsJson) writeJson(context.stdout, listener);
       else context.stdout.write(`${listener.status} ${listener.pid ?? "unknown"}\n`);
@@ -6334,7 +6531,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     }
 
     if (codexCommand === "stop") {
-      const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+      const claw = await createCliClaw(codexRuntimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
       const listener = await stopListener(claw);
       if (wantsJson) writeJson(context.stdout, listener);
       else context.stdout.write("stopped\n");
@@ -6342,7 +6539,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     }
 
     if (codexCommand === "status" || !codexCommand) {
-      const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+      const claw = await createCliClaw(codexRuntimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
       const status = await readStatus(claw);
       if (wantsJson) writeJson(context.stdout, status);
       else context.stdout.write([
@@ -6366,7 +6563,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     }
 
     if (codexCommand === "commands" && codexSubcommand === "sync") {
-      const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+      const claw = await createCliClaw(codexRuntimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
       const commands = await syncCommands(claw);
       if (!commands) {
         context.stderr.write("Telegram account is not configured. Run setup with --secret-name first.\n");

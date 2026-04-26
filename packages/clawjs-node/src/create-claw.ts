@@ -3761,13 +3761,27 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       throw new Error(`unsupported channel provider: ${provider}`);
     }
     const listenerId = `${provider}:${accountId}`;
-    const processor = input.processorId ? channelsRegistry.processors.get(input.processorId) : null;
-    if (input.processorId && !processor) {
+    const configuredProcessor = input.processorId ? channelsRegistry.processors.get(input.processorId) : null;
+    if (input.processorId && !configuredProcessor) {
       throw new Error(`channel processor not found: ${input.processorId}`);
     }
-    if (provider === "telegram" && processor?.id === "telegram-codex") {
+    if (provider === "telegram" && configuredProcessor?.id === "telegram-codex") {
       await ensureTelegramCodexBridgeCommands(accountId);
     }
+    const resolveProcessorForMessage = (message: ChannelMessageRecord): ChannelProcessorDescriptor | null => {
+      if (configuredProcessor) return configuredProcessor;
+      const assignment = channelsRegistry.bindings.list({ provider, accountId })
+        .filter((binding) => {
+          if (!binding.enabled) return false;
+          if (binding.targetId && binding.targetId !== message.targetId) return false;
+          return binding.metadata?.assignmentType === "channel-agent";
+        })
+        .sort((left, right) => right.priority - left.priority)[0];
+      const processorId = typeof assignment?.metadata?.processorId === "string"
+        ? assignment.metadata.processorId
+        : assignment?.agentId;
+      return processorId ? channelsRegistry.processors.get(processorId) : null;
+    };
     const startedAt = new Date().toISOString();
     if (input.pidPath) {
       filesystem.ensureDir(path.dirname(input.pidPath));
@@ -3780,7 +3794,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       id: listenerId,
       provider,
       accountId,
-      processorId: processor?.id,
+      processorId: configuredProcessor?.id,
       mode: input.mode ?? "foreground",
       status: "running",
       pid: process.pid,
@@ -3790,9 +3804,9 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       startedAt,
       lastHeartbeatAt: startedAt,
     });
-    channelsRegistry.events.record({ type: "channel.listener.started", provider, accountId, processorId: processor?.id, status: "ok" });
-    eventBus.emit("channel.listener.started", { provider, accountId, processorId: processor?.id, pid: process.pid });
-    appendChannelListenerLog(input.logPath, `listener started provider=${provider} account=${accountId} processor=${processor?.id ?? "none"}`);
+    channelsRegistry.events.record({ type: "channel.listener.started", provider, accountId, processorId: configuredProcessor?.id, status: "ok" });
+    eventBus.emit("channel.listener.started", { provider, accountId, processorId: configuredProcessor?.id, pid: process.pid });
+    appendChannelListenerLog(input.logPath, `listener started provider=${provider} account=${accountId} processor=${configuredProcessor?.id ?? "assigned"}`);
 
     while (true) {
       if (input.stopPath && fs.existsSync(input.stopPath)) break;
@@ -3801,7 +3815,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           id: listenerId,
           provider,
           accountId,
-          processorId: processor?.id,
+          processorId: configuredProcessor?.id,
           mode: input.mode ?? "foreground",
           status: "running",
           pid: process.pid,
@@ -3822,6 +3836,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         });
         appendChannelListenerLog(input.logPath, `synced ${messages.length} messages`);
         for (const message of messages) {
+          const processor = resolveProcessorForMessage(message);
           if (!processor) continue;
           try {
             const processorMessage = await ingestTelegramVoiceNote(message);
@@ -3867,12 +3882,12 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         }
       } catch (error) {
         const messageText = error instanceof Error ? error.message : String(error);
-        channelsRegistry.events.record({ type: "channel.listener.error", provider, accountId, processorId: processor?.id, status: "error", payload: { error: messageText } });
+        channelsRegistry.events.record({ type: "channel.listener.error", provider, accountId, processorId: configuredProcessor?.id, status: "error", payload: { error: messageText } });
         listener = channelsRegistry.listeners.upsert({
           id: listenerId,
           provider,
           accountId,
-          processorId: processor?.id,
+          processorId: configuredProcessor?.id,
           mode: input.mode ?? "foreground",
           status: "error",
           pid: process.pid,
@@ -3894,7 +3909,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       id: listenerId,
       provider,
       accountId,
-      processorId: processor?.id,
+      processorId: configuredProcessor?.id,
       mode: input.mode ?? "foreground",
       status: "stopped",
       pid: process.pid,
@@ -3905,8 +3920,8 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       stoppedAt: new Date().toISOString(),
       lastHeartbeatAt: new Date().toISOString(),
     });
-    channelsRegistry.events.record({ type: "channel.listener.stopped", provider, accountId, processorId: processor?.id, status: "ok" });
-    eventBus.emit("channel.listener.stopped", { provider, accountId, processorId: processor?.id, pid: process.pid });
+    channelsRegistry.events.record({ type: "channel.listener.stopped", provider, accountId, processorId: configuredProcessor?.id, status: "ok" });
+    eventBus.emit("channel.listener.stopped", { provider, accountId, processorId: configuredProcessor?.id, pid: process.pid });
     appendChannelListenerLog(input.logPath, `listener stopped provider=${provider} account=${accountId}`);
     return listener;
   }

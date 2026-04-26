@@ -781,7 +781,7 @@ test("telegram codex bridge orchestrates queued steering, operational commands, 
   expect(sendActions(afterContinue.actions)[0]).toMatchObject({ text: "Queue is empty." });
 });
 
-test("telegram codex channel CLI setup is idempotent and controls the listener", async () => {
+test("channel CLI assigns Telegram to Codex and controls the listener", async () => {
   test.setTimeout(120_000);
 
   const rootDir = process.cwd();
@@ -800,19 +800,25 @@ test("telegram codex channel CLI setup is idempotent and controls the listener",
   };
   const base = { workspacePath, runtimeWorkspace, codexHome, env };
 
-  const setup = await runClawJson(rootDir, [
+  const agentSetup = await runClawJson(rootDir, [
+    "agents",
+    "codex",
+    "setup",
+  ], base) as { processor: { id: string }; runtime: string };
+  expect(agentSetup.processor.id).toBe("codex");
+  expect(agentSetup.runtime).toBe("codex");
+
+  const channelSetup = await runClawJson(rootDir, [
     "channels",
     "telegram",
-    "codex",
     "setup",
     "--account",
     "test-account",
     "--secret-name",
     "test_telegram_bot_token",
-  ], base) as { processor: { id: string }; status: { commandsSynced: boolean; listenerStatus: string } };
-  expect(setup.processor.id).toBe("telegram-codex");
-  expect(setup.status.commandsSynced).toBe(true);
-  expect(setup.status.listenerStatus).toBe("stopped");
+  ], base) as { id: string; status: string };
+  expect(channelSetup.id).toBe("telegram:test-account");
+  expect(channelSetup.status).toBe("connected");
 
   const stale = await runClawJson(rootDir, [
     "channels",
@@ -827,15 +833,42 @@ test("telegram codex channel CLI setup is idempotent and controls the listener",
   ], base) as Array<{ command: string }>;
   expect(stale.map((command) => command.command)).toEqual(["codex"]);
 
-  const secondSetup = await runClawJson(rootDir, [
+  const assignment = await runClawJson(rootDir, [
+    "channels",
+    "assign",
+    "--channel",
+    "telegram",
+    "--account",
+    "test-account",
+    "--agent",
+    "codex",
+  ], base) as { assignment: { agentId: string; metadata: { processorId: string } } };
+  expect(assignment.assignment.agentId).toBe("codex");
+  expect(assignment.assignment.metadata.processorId).toBe("codex");
+
+  const assignments = await runClawJson(rootDir, [
+    "channels",
+    "assignments",
+    "status",
+    "--channel",
+    "telegram",
+    "--account",
+    "test-account",
+  ], base) as Array<{ agentId: string; processorId: string; processorRegistered: boolean }>;
+  expect(Array.isArray(assignments)).toBe(true);
+  expect(assignments[0]).toMatchObject({ agentId: "codex", processorId: "codex", processorRegistered: true });
+
+  const aliasSetup = await runClawJson(rootDir, [
     "channels",
     "telegram",
     "codex",
     "setup",
     "--account",
     "test-account",
-  ], base) as { status: { commandsSynced: boolean } };
-  expect(secondSetup.status.commandsSynced).toBe(true);
+  ], base) as { processor: { id: string }; status: { commandsSynced: boolean } };
+  expect(aliasSetup.processor.id).toBe("codex");
+  expect(aliasSetup.status.commandsSynced).toBe(true);
+
   const commands = await runClawJson(rootDir, [
     "channels",
     "telegram",
@@ -848,13 +881,27 @@ test("telegram codex channel CLI setup is idempotent and controls the listener",
   expect(commands.some((command) => command.command === "status")).toBe(true);
   expect(commands.some((command) => command.command === "codex")).toBe(false);
 
+  const proxyState = JSON.parse(fs.readFileSync(statePath, "utf8")) as { updates?: unknown[]; lastSend?: { text?: string } };
+  proxyState.updates = [{
+    update_id: 101,
+    message: {
+      message_id: 201,
+      text: "hello through assignment",
+      chat: { id: 1001, type: "private", first_name: "Ada" },
+      from: { id: 1001, first_name: "Ada" },
+    },
+  }];
+  fs.writeFileSync(statePath, JSON.stringify(proxyState, null, 2));
+
   const started = await runClawJson(rootDir, [
     "channels",
-    "telegram",
-    "codex",
+    "listen",
     "start",
+    "--channel",
+    "telegram",
     "--account",
     "test-account",
+    "--background",
     "--interval-ms",
     "200",
     "--timeout",
@@ -867,30 +914,37 @@ test("telegram codex channel CLI setup is idempotent and controls the listener",
 
   const startedAgain = await runClawJson(rootDir, [
     "channels",
-    "telegram",
-    "codex",
+    "listen",
     "start",
+    "--channel",
+    "telegram",
     "--account",
     "test-account",
+    "--background",
   ], base) as { status: string; pid: number };
   expect(startedAgain.status).toBe("running");
   expect(startedAgain.pid).toBe(started.pid);
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+  const afterPoll = JSON.parse(fs.readFileSync(statePath, "utf8")) as { lastSend?: { text?: string } };
+  expect(afterPoll.lastSend?.text).toBe("codex reply");
 
   const status = await runClawJson(rootDir, [
     "channels",
-    "telegram",
-    "codex",
+    "listen",
     "status",
+    "--channel",
+    "telegram",
     "--account",
     "test-account",
-  ], base) as { listenerStatus: string; processorRegistered: boolean; commandsSynced: boolean };
-  expect(status).toMatchObject({ listenerStatus: "running", processorRegistered: true, commandsSynced: true });
+  ], base) as { status: string; processorId?: string };
+  expect(status.status).toBe("running");
 
   const logs = await runClawJson(rootDir, [
     "channels",
-    "telegram",
-    "codex",
+    "listen",
     "logs",
+    "--channel",
+    "telegram",
     "--account",
     "test-account",
     "--lines",
@@ -900,13 +954,26 @@ test("telegram codex channel CLI setup is idempotent and controls the listener",
 
   const stopped = await runClawJson(rootDir, [
     "channels",
-    "telegram",
-    "codex",
+    "listen",
     "stop",
+    "--channel",
+    "telegram",
     "--account",
     "test-account",
   ], base) as { status: string };
   expect(stopped.status).toBe("stopped");
+
+  const unassigned = await runClawJson(rootDir, [
+    "channels",
+    "unassign",
+    "--channel",
+    "telegram",
+    "--account",
+    "test-account",
+    "--agent",
+    "codex",
+  ], base) as { removed: number };
+  expect(unassigned.removed).toBe(1);
 });
 
 test("inference with a session id persists user and assistant messages", async () => {

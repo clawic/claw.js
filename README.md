@@ -246,7 +246,10 @@ Add capabilities inside an existing project:
 claw generate skill support-triage
 claw add telegram
 claw add workspace
-claw channels telegram codex setup --runtime codex --start
+claw agents codex setup
+claw channels telegram setup --account support --secret-name telegram_support_bot_token
+claw channels assign --channel telegram --account support --agent codex
+claw channels listen start --channel telegram --account support --background
 claw info --json
 ```
 

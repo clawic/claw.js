@@ -488,15 +488,19 @@ claw skills sources
 claw skills search --query support
 claw skills install support-triage --source clawhub
 
+claw agents codex setup
+claw agents codex status
+claw agents codex models
+claw agents codex auth status
+
 claw channels list
 claw channels status
 claw channels telegram connect --account support --secret-name telegram_support_bot_token
-claw channels telegram codex setup --account support --runtime codex --start
-claw channels telegram codex start --account support
-claw channels telegram codex status --account support
-claw channels telegram codex logs --account support
-claw channels telegram codex stop --account support
-claw channels telegram codex commands sync --account support
+claw channels telegram setup --account support --secret-name telegram_support_bot_token
+claw channels assign --channel telegram --account support --agent codex
+claw channels assignments list
+claw channels assignments status --channel telegram --account support
+claw channels unassign --channel telegram --account support --agent codex
 claw channels accounts add telegram --account support --secret-name telegram_support_bot_token
 claw channels accounts list --provider telegram
 claw channels targets register --channel telegram --account support --target-id -100123 --kind supergroup
@@ -507,7 +511,7 @@ claw channels permissions grant --agent support-agent --channel telegram --accou
 claw channels permissions list --agent support-agent --channel telegram --account support
 claw channels processors add --id support-router --command "node ./support-router.js"
 claw channels processors list
-claw channels listen start --channel telegram --account support --processor support-router --background
+claw channels listen start --channel telegram --account support --background
 claw channels listen status --channel telegram --account support
 claw channels listen logs --channel telegram --account support
 claw channels listen stop --channel telegram --account support
@@ -516,6 +520,14 @@ claw channels messages send --channel telegram --account support --target-id -10
 claw channels messages read --channel telegram --account support --target-id -100123 --agent support-agent
 claw channels commands set --channel telegram --account support --commands '[{"command":"help","description":"Show help"}]'
 claw channels commands get --channel telegram --account support
+
+# Compatibility alias for the pre-assignment Telegram/Codex flow.
+claw channels telegram codex setup --account support --start
+claw channels telegram codex start --account support
+claw channels telegram codex status --account support
+claw channels telegram codex logs --account support
+claw channels telegram codex stop --account support
+claw channels telegram codex commands sync --account support
 ```
 
 ## Local Library Commands
