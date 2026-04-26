@@ -10,6 +10,7 @@ dist/
 .claude/
 demo/.claude/
 .clawjs/
+.runtime/
 .playwright-cli/
 .tmp/
 .tmp-*/
