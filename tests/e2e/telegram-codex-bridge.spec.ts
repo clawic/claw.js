@@ -172,6 +172,10 @@ if (args[0] === "app-server") {
       fs.appendFileSync(${JSON.stringify(payloadPath)}, payload + "\\n");
       const text = payload.includes("Repeat the prior summary") && payload.includes("Prior summary about product planning")
         ? "context preserved"
+        : payload.includes("Messages received while the agent was already working")
+        ? "queued steering reply"
+        : payload.includes("slow first")
+        ? "slow first reply"
         : payload.includes("Repeat the prior summary")
         ? "context missing"
         : payload.includes("send a product photo")
@@ -185,8 +189,12 @@ if (args[0] === "app-server") {
         : payload.includes("fresh topic")
         ? "fresh reply"
         : "codex reply";
-      process.stdout.write(JSON.stringify({ method: "codex/event", params: { msg: { type: "agent_message", message: text } } }) + "\\n");
-      process.stdout.write(JSON.stringify({ method: "turn/completed", params: {} }) + "\\n");
+      const finish = () => {
+        process.stdout.write(JSON.stringify({ method: "codex/event", params: { msg: { type: "agent_message", message: text } } }) + "\\n");
+        process.stdout.write(JSON.stringify({ method: "turn/completed", params: {} }) + "\\n");
+      };
+      if (payload.includes("slow first")) setTimeout(finish, 1200);
+      else finish();
     }
   });
   return;
@@ -598,6 +606,114 @@ test("telegram codex bridge owns, authorizes topics, applies reply policy, and s
   const longReplyChunks = sendActions(commandWithLongReply.actions);
   expect(longReplyChunks).toHaveLength(3);
   expect(longReplyChunks.every((action) => (action.text?.length ?? 0) <= 3900)).toBeTruthy();
+});
+
+test("telegram codex bridge orchestrates queued steering, operational commands, stop, and compaction", async () => {
+  test.setTimeout(120_000);
+
+  const rootDir = process.cwd();
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-telegram-runs-"));
+  const workspacePath = path.join(tempRoot, "workspace");
+  const runtimeWorkspace = path.join(tempRoot, "runtime-workspace");
+  const codexHome = path.join(tempRoot, "codex-home");
+  const statePath = path.join(tempRoot, "state", "bridge.json");
+  fs.mkdirSync(workspacePath, { recursive: true });
+  fs.mkdirSync(runtimeWorkspace, { recursive: true });
+  fs.mkdirSync(codexHome, { recursive: true });
+  writeFakeCodexBinary(tempRoot);
+
+  const firstRun = runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "610", chatType: "private", senderId: "610", text: "slow first", messageId: 6101 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  const queued = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "610", chatType: "private", senderId: "610", text: "please adjust this", messageId: 6102 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  expect(queued.actions[0]).toMatchObject({ type: "ignore", reason: "queued while run is active" });
+  const firstResult = await firstRun;
+  expect(sendActions(firstResult.actions).map((action) => action.text)).toEqual(["slow first reply", "queued steering reply"]);
+
+  const status = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "610", chatType: "private", senderId: "610", text: "/status", messageId: 6103 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  expect(sendActions(status.actions)[0]?.text).toContain("Status: idle");
+  expect(sendActions(status.actions)[0]?.text).toContain("Queue: 0");
+
+  const queue = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "610", chatType: "private", senderId: "610", text: "/queue", messageId: 6104 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  expect(sendActions(queue.actions)[0]).toMatchObject({ text: "Queue is empty." });
+
+  const debug = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "610", chatType: "private", senderId: "610", text: "/debug", messageId: 6105 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  expect(sendActions(debug.actions)[0]?.text).toContain("status=idle");
+
+  const compact = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "610", chatType: "private", senderId: "610", text: "/compact", messageId: 6106 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  expect(sendActions(compact.actions)[0]?.text).toContain("Earlier conversation summary:");
+  const summary = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "610", chatType: "private", senderId: "610", text: "/summary", messageId: 6107 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  expect(sendActions(summary.actions)[0]?.text).toContain("slow first");
+
+  const stopRun = runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "611", chatType: "private", senderId: "610", text: "slow first", messageId: 6111 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  const stop = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "611", chatType: "private", senderId: "610", text: "/stop", messageId: 6112 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  expect(sendActions(stop.actions)[0]).toMatchObject({ text: "Stop requested." });
+  const stoppedResult = await stopRun;
+  expect(sendActions(stoppedResult.actions)).toHaveLength(0);
+  expect(stoppedResult.actions[0]).toMatchObject({ type: "ignore" });
+
+  const afterContinue = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "611", chatType: "private", senderId: "610", text: "/continue", messageId: 6113 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  expect(sendActions(afterContinue.actions)[0]).toMatchObject({ text: "Queue is empty." });
 });
 
 test("inference with a session id persists user and assistant messages", async () => {

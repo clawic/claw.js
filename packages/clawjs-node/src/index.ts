@@ -48,6 +48,7 @@ export * from "./workspace/manager.ts";
 export * from "./state/store.ts";
 export * from "./channels/index.ts";
 export * from "./channels/processors.ts";
+export * from "./channel-runs/index.ts";
 export * from "./telegram/index.ts";
 export * from "./slack/index.ts";
 export * from "./whatsapp/index.ts";

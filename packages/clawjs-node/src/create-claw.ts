@@ -141,6 +141,8 @@ import { watchSessionTranscript } from "./watch/transcript.ts";
 import { ClawEventBus, type ClawEvent, type EventListener } from "./watch/events.ts";
 import { watchProviderStatus, watchRuntimeStatus, type PollWatchOptions } from "./watch/status.ts";
 import { SessionStore } from "./sessions/store.ts";
+import { ChannelRunStore } from "./channel-runs/index.ts";
+import type { ChannelRunOptions, ChannelRunTarget, ChannelRunMessage } from "./channel-runs/index.ts";
 import { streamRuntimeSession, streamRuntimeSessionEvents, type SessionStreamEvent } from "./sessions/stream.ts";
 import { generateRuntimeSessionTitle } from "./sessions/title.ts";
 import { createWorkspaceDataStore, type WorkspaceDataStore } from "./data/store.ts";
@@ -1184,6 +1186,16 @@ export interface ClawInstance {
       signal?: AbortSignal;
     }) => AsyncGenerator<{ sessionId: string; messageId?: string; delta: string; done: boolean }>;
   };
+  channelRuns: {
+    resolveOrCreateChannelRun: (input: ChannelRunTarget & { sessionId: string; options?: ChannelRunOptions }) => ReturnType<ChannelRunStore["resolveOrCreateChannelRun"]>;
+    enqueueChannelMessage: (runKey: string, message: Omit<ChannelRunMessage, "id" | "createdAt"> & { id?: string; createdAt?: number }) => ReturnType<ChannelRunStore["enqueueChannelMessage"]>;
+    processChannelRun: (input: Parameters<ChannelRunStore["processChannelRun"]>[0]) => ReturnType<ChannelRunStore["processChannelRun"]>;
+    getChannelRunStatus: (runKey: string) => ReturnType<ChannelRunStore["getChannelRunStatus"]>;
+    requestChannelRunStop: (runKey: string) => ReturnType<ChannelRunStore["requestChannelRunStop"]>;
+    compactChannelSession: (input: Parameters<ChannelRunStore["compactChannelSession"]>[0]) => ReturnType<ChannelRunStore["compactChannelSession"]>;
+    drainQueuedChannelMessages: (runKey: string) => ReturnType<ChannelRunStore["drainQueuedChannelMessages"]>;
+    resetChannelRun: (input: ChannelRunTarget & { sessionId: string; options?: ChannelRunOptions }) => ReturnType<ChannelRunStore["resetChannelRun"]>;
+  };
   conversations: {
     searchSessions: (input: SessionSearchInput) => Promise<SessionSearchResult[]>;
   };
@@ -1302,6 +1314,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   const logicalAgentId = options.workspace.logicalAgentId ?? options.workspace.agentId;
   const runtimeAgentId = options.workspace.runtimeAgentId ?? logicalAgentId;
   const sessionStore = new SessionStore(workspaceDir, { filesystem });
+  const channelRunStore = new ChannelRunStore(workspaceDir, sessionStore, { filesystem });
   const dataStore = createWorkspaceDataStore(workspaceDir, filesystem);
   const storageStore = createLocalStorageStore({
     workspaceDir,
@@ -5691,6 +5704,16 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           });
         }
       },
+    },
+    channelRuns: {
+      resolveOrCreateChannelRun: (input) => channelRunStore.resolveOrCreateChannelRun(input),
+      enqueueChannelMessage: (runKey, message) => channelRunStore.enqueueChannelMessage(runKey, message),
+      processChannelRun: (input) => channelRunStore.processChannelRun(input),
+      getChannelRunStatus: (runKey) => channelRunStore.getChannelRunStatus(runKey),
+      requestChannelRunStop: (runKey) => channelRunStore.requestChannelRunStop(runKey),
+      compactChannelSession: (input) => channelRunStore.compactChannelSession(input),
+      drainQueuedChannelMessages: (runKey) => channelRunStore.drainQueuedChannelMessages(runKey),
+      resetChannelRun: (input) => channelRunStore.resetChannelRun(input),
     },
     conversations: {
       searchSessions,

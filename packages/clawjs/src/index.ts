@@ -985,11 +985,64 @@ function shouldReplyToTelegramCodexMessage(
   return !!(botUsername && text.toLowerCase().includes(`@${botUsername.toLowerCase()}`));
 }
 
-function parseTelegramCodexSessionCommand(text: string): { command: "new" | "reset"; rest: string } | null {
-  const match = text.trim().match(/^\/(new|reset)(?:@\w+)?(?:\s+([\s\S]*))?$/i);
+type TelegramCodexCommand = "new" | "reset" | "status" | "stop" | "queue" | "continue" | "compact" | "summary" | "debug";
+
+interface TelegramCodexQueuedMessage {
+  id: string;
+  content: string;
+  providerMessageId?: string;
+  senderId?: string;
+  senderLabel?: string;
+  createdAt: number;
+  metadata?: Record<string, unknown>;
+}
+
+interface TelegramCodexChannelRun {
+  runKey: string;
+  sessionId: string;
+  status: "idle" | "running" | "queued" | "stopping" | "failed";
+  queue: TelegramCodexQueuedMessage[];
+  summary?: string;
+  summaryMessageId?: string;
+  activeRunId?: string;
+  stopRequestedRunId?: string;
+  lastError?: string;
+  compactionThresholdChars: number;
+  maxRecentMessages: number;
+}
+
+type TelegramCodexClaw = ClawInstance & {
+  channelRuns: {
+    resolveOrCreateChannelRun: (input: {
+      provider: string;
+      accountId?: string;
+      targetId: string;
+      threadId?: string | number;
+      sessionId: string;
+      options?: Record<string, number | undefined>;
+    }) => TelegramCodexChannelRun;
+    resetChannelRun: (input: {
+      provider: string;
+      accountId?: string;
+      targetId: string;
+      threadId?: string | number;
+      sessionId: string;
+      options?: Record<string, number | undefined>;
+    }) => TelegramCodexChannelRun;
+    enqueueChannelMessage: (runKey: string, message: Omit<TelegramCodexQueuedMessage, "createdAt"> & { createdAt?: number }) => TelegramCodexChannelRun | null;
+    processChannelRun: (input: { runKey: string; sessionId?: string; phase: "start" | "succeed" | "fail"; runId?: string; error?: string }) => TelegramCodexChannelRun | null;
+    getChannelRunStatus: (runKey: string) => TelegramCodexChannelRun | null;
+    requestChannelRunStop: (runKey: string) => TelegramCodexChannelRun | null;
+    compactChannelSession: (input: { runKey: string; sessionId?: string; force?: boolean }) => { run: TelegramCodexChannelRun | null; summary: string; compacted: boolean };
+    drainQueuedChannelMessages: (runKey: string) => TelegramCodexQueuedMessage[];
+  };
+};
+
+function parseTelegramCodexSessionCommand(text: string): { command: TelegramCodexCommand; rest: string } | null {
+  const match = text.trim().match(/^\/(new|reset|status|stop|queue|continue|compact|summary|debug)(?:@\w+)?(?:\s+([\s\S]*))?$/i);
   if (!match) return null;
   return {
-    command: match[1].toLowerCase() as "new" | "reset",
+    command: match[1].toLowerCase() as TelegramCodexCommand,
     rest: (match[2] ?? "").trim(),
   };
 }
@@ -1010,6 +1063,41 @@ function telegramCodexResetPrompt(command: "new" | "reset"): string {
     "Greet the user briefly and ask what they want to do next.",
     `Current time: ${new Date().toISOString()}.`,
   ].join(" ");
+}
+
+function formatTelegramCodexQueuedPrompt(messages: Array<{ content: string; senderLabel?: string; createdAt: number }>): string {
+  const lines = messages.map((message, index) => {
+    const label = message.senderLabel?.trim() || `message ${index + 1}`;
+    return `- ${new Date(message.createdAt).toISOString()} ${label}: ${message.content}`;
+  });
+  return [
+    "Messages received while the agent was already working. Treat these as the user's latest steering/follow-up context.",
+    ...lines,
+  ].join("\n");
+}
+
+function formatTelegramCodexStatus(run: TelegramCodexChannelRun | null, sessionId: string): string {
+  if (!run) return `Status: idle\nSession: ${sessionId}\nQueue: 0`;
+  return [
+    `Status: ${run.status}`,
+    `Session: ${run.sessionId}`,
+    `Queue: ${run.queue.length}`,
+    run.summary ? "Summary: available" : "Summary: none",
+    run.lastError ? `Last error: ${run.lastError}` : "",
+  ].filter(Boolean).join("\n");
+}
+
+function buildTelegramCodexEffectiveMessages(
+  session: NonNullable<ReturnType<ClawInstance["sessions"]["getSession"]>>,
+  options: { summaryMessageId?: string; maxRecentMessages?: number },
+) {
+  const maxRecentMessages = options.maxRecentMessages ?? 16;
+  const summary = options.summaryMessageId
+    ? session.messages.find((message) => message.id === options.summaryMessageId)
+    : undefined;
+  const nonSummary = session.messages.filter((message) => message.metadata?.source !== "channel-run-compaction");
+  if (!summary) return nonSummary;
+  return [summary, ...nonSummary.slice(-maxRecentMessages)];
 }
 
 function formatTelegramCodexPrompt(event: TelegramCodexProcessorEvent, text: string): string {
@@ -1159,14 +1247,6 @@ async function runTelegramCodexProcessor(input: {
 
   if (changed) writeTelegramCodexBridgeState(statePath, state);
 
-  const sessionCommand = parseTelegramCodexSessionCommand(rawText);
-  const promptText = sessionCommand?.rest
-    ? sessionCommand.rest
-    : sessionCommand
-      ? telegramCodexResetPrompt(sessionCommand.command)
-      : stripTelegramCodexCommand(rawText, botUsername);
-  const prompt = formatTelegramCodexPrompt(event, promptText);
-  const persistUserMessage = !(sessionCommand && !sessionCommand.rest);
   const targetLabel = threadId ? `${targetId} topic ${threadId}` : targetId;
   const baseSystemPrompt = input.flags["system-prompt"] || [
     "You are Codex responding through a Telegram bot.",
@@ -1174,10 +1254,17 @@ async function runTelegramCodexProcessor(input: {
     "You are running in the configured ClawJS runtime environment.",
   ].join(" ");
   const systemPrompt = `${baseSystemPrompt}\n\n${TELEGRAM_CODEX_ATTACHMENT_INSTRUCTIONS}`;
-  const claw = await createCliClaw(input.runtimeAdapterId, input.flags, input.workspaceRoot, input.appId, input.workspaceId, input.agentId, input.argv);
+  const claw = await createCliClaw(input.runtimeAdapterId, input.flags, input.workspaceRoot, input.appId, input.workspaceId, input.agentId, input.argv) as TelegramCodexClaw;
+  const sessionCommand = parseTelegramCodexSessionCommand(rawText);
+  const runOptions = {
+    coalescingWindowMs: input.flags["coalescing-window-ms"] ? Number(input.flags["coalescing-window-ms"]) : undefined,
+    compactionThresholdChars: input.flags["compaction-threshold-chars"] ? Number(input.flags["compaction-threshold-chars"]) : undefined,
+    maxRecentMessages: input.flags["max-recent-messages"] ? Number(input.flags["max-recent-messages"]) : undefined,
+  };
   let sessionId = state.sessions[key];
-  if (sessionCommand || !sessionId) {
-    sessionId = sessionCommand
+  const rotatesSession = sessionCommand?.command === "new" || sessionCommand?.command === "reset";
+  if (rotatesSession || !sessionId) {
+    sessionId = rotatesSession
       ? claw.sessions.createSession(`Telegram ${targetLabel}`).sessionId
       : claw.sessions.resolveChannelSession({
         provider,
@@ -1190,7 +1277,10 @@ async function runTelegramCodexProcessor(input: {
       writeTelegramCodexBridgeState(statePath, state);
     }
   }
-  const useChannelSessionHelpers = !sessionCommand && sessionId.startsWith("channel-");
+  const run = rotatesSession
+    ? claw.channelRuns.resetChannelRun({ provider, accountId, targetId, ...(threadId ? { threadId } : {}), sessionId, options: runOptions })
+    : claw.channelRuns.resolveOrCreateChannelRun({ provider, accountId, targetId, ...(threadId ? { threadId } : {}), sessionId, options: runOptions });
+  const useChannelSessionHelpers = !rotatesSession && sessionId.startsWith("channel-");
   if (useChannelSessionHelpers) {
     claw.sessions.backfillChannelSession({
       provider,
@@ -1206,8 +1296,83 @@ async function runTelegramCodexProcessor(input: {
     "inbound",
     providerMessageId || rawText,
   ].join(":"))}`;
-  const userMessage = persistUserMessage
-    ? useChannelSessionHelpers
+  if (!state.sessions[key]) {
+    state.sessions[key] = sessionId;
+    writeTelegramCodexBridgeState(statePath, state);
+  }
+
+  const sendTextAction = (text: string, metadata: Record<string, unknown> = {}) => ({
+    type: "send_message",
+    targetId,
+    text,
+    ...(threadId ? { threadId } : {}),
+    agentId: input.agentId,
+    metadata: {
+      sessionId,
+      ownerUserId: state.ownerUserId,
+      ...metadata,
+    },
+  });
+
+  const command = sessionCommand?.command;
+  if (command === "status") {
+    writeJson(input.context.stdout, { actions: [sendTextAction(formatTelegramCodexStatus(run, sessionId))] });
+    return CLI_EXIT_OK;
+  }
+  if (command === "queue") {
+    const current = claw.channelRuns.getChannelRunStatus(run.runKey);
+    const queued = current?.queue ?? [];
+    writeJson(input.context.stdout, { actions: [sendTextAction(queued.length ? `Queued messages: ${queued.length}` : "Queue is empty.")] });
+    return CLI_EXIT_OK;
+  }
+  if (command === "stop") {
+    const stopped = claw.channelRuns.requestChannelRunStop(run.runKey);
+    writeJson(input.context.stdout, { actions: [sendTextAction(stopped?.activeRunId ? "Stop requested." : "No active run.")] });
+    return CLI_EXIT_OK;
+  }
+  if (command === "summary") {
+    const current = claw.channelRuns.getChannelRunStatus(run.runKey);
+    writeJson(input.context.stdout, { actions: [sendTextAction(current?.summary || "No summary yet.")] });
+    return CLI_EXIT_OK;
+  }
+  if (command === "debug") {
+    const current = claw.channelRuns.getChannelRunStatus(run.runKey);
+    writeJson(input.context.stdout, {
+      actions: [sendTextAction([
+        `runKey=${run.runKey}`,
+        `status=${current?.status ?? "idle"}`,
+        `queue=${current?.queue.length ?? 0}`,
+        `session=${sessionId}`,
+        `summary=${current?.summary ? "yes" : "no"}`,
+      ].join("\n"))],
+    });
+    return CLI_EXIT_OK;
+  }
+  if (command === "compact") {
+    const compacted = claw.channelRuns.compactChannelSession({ runKey: run.runKey, sessionId, force: true });
+    writeJson(input.context.stdout, { actions: [sendTextAction(compacted.summary || "Nothing to compact.")] });
+    return CLI_EXIT_OK;
+  }
+
+  const activeRun = claw.channelRuns.getChannelRunStatus(run.runKey);
+  if (activeRun && (activeRun.status === "running" || activeRun.status === "stopping") && command !== "continue") {
+    claw.channelRuns.enqueueChannelMessage(run.runKey, {
+      id: userMessageId,
+      content: formatTelegramCodexPrompt(event, stripTelegramCodexCommand(rawText, botUsername)),
+      ...(providerMessageId ? { providerMessageId } : {}),
+      senderId,
+      ...(event.message?.senderLabel ? { senderLabel: event.message.senderLabel } : {}),
+      metadata: {
+        source: "telegram-codex-bridge",
+        ...(event.message?.metadata ?? {}),
+      },
+    });
+    writeJson(input.context.stdout, { actions: [{ type: "ignore", reason: "queued while run is active" }] });
+    return CLI_EXIT_OK;
+  }
+
+  const appendUserTurn = (content: string, metadata: Record<string, unknown>, id: string) => (
+    useChannelSessionHelpers
       ? claw.sessions.appendChannelMessage({
         provider,
         accountId,
@@ -1215,19 +1380,19 @@ async function runTelegramCodexProcessor(input: {
         ...(threadId ? { threadId } : {}),
         direction: "inbound",
         role: "user",
-        content: prompt,
-        ...(providerMessageId ? { providerMessageId } : {}),
-        senderId,
-        ...(event.message?.senderLabel ? { senderLabel: event.message.senderLabel } : {}),
+        content,
+        ...(metadata.providerMessageId ? { providerMessageId: String(metadata.providerMessageId) } : {}),
+        senderId: typeof metadata.senderId === "string" ? metadata.senderId : senderId,
+        ...(typeof metadata.senderLabel === "string" ? { senderLabel: metadata.senderLabel } : event.message?.senderLabel ? { senderLabel: event.message.senderLabel } : {}),
         metadata: {
           source: "telegram-codex-bridge",
-          ...(event.message?.metadata ?? {}),
+          ...metadata,
         },
       })
       : claw.sessions.appendMessageOnce(sessionId, {
-        id: userMessageId,
+        id,
         role: "user",
-        content: prompt,
+        content,
         metadata: {
           source: "telegram-codex-bridge",
           provider,
@@ -1235,34 +1400,12 @@ async function runTelegramCodexProcessor(input: {
           targetId,
           ...(threadId ? { threadId: String(threadId) } : {}),
           direction: "inbound",
-          ...(providerMessageId ? { providerMessageId } : {}),
-          senderId,
-          ...(event.message?.senderLabel ? { senderLabel: event.message.senderLabel } : {}),
-          ...(sessionCommand ? { command: sessionCommand.command, sessionReset: true } : {}),
-          ...(event.message?.metadata ?? {}),
+          ...metadata,
         },
       })
-    : { appended: true };
-  if (!userMessage.appended) {
-    writeJson(input.context.stdout, { actions: [{ type: "ignore", reason: "duplicate message" }] });
-    return CLI_EXIT_OK;
-  }
-  if (!state.sessions[key]) {
-    state.sessions[key] = sessionId;
-    writeTelegramCodexBridgeState(statePath, state);
-  }
-  const session = claw.sessions.getSession(sessionId);
-  const result = await claw.inference.generateText({
-    systemPrompt,
-    contextBlocks: [
-      { title: "Telegram", content: `provider=${provider}\naccount=${accountId}\ntarget=${targetLabel}\nsender=${event.message?.senderLabel ?? senderId}` },
-    ],
-    messages: session?.messages.length ? session.messages : [{ role: "user", content: prompt }],
-    transport: (input.flags.transport as "auto" | "gateway" | "cli" | undefined) ?? "auto",
-    ...(input.flags.model ? { model: input.flags.model } : {}),
-    ...(input.flags["gateway-retries"] ? { gatewayRetries: Number(input.flags["gateway-retries"]) } : { gatewayRetries: 1 }),
-  });
-  if (result.text) {
+  );
+
+  const appendAssistantTurn = (text: string, metadata: Record<string, unknown>) => {
     if (useChannelSessionHelpers) {
       claw.sessions.appendChannelMessage({
         provider,
@@ -1271,18 +1414,17 @@ async function runTelegramCodexProcessor(input: {
         ...(threadId ? { threadId } : {}),
         direction: "outbound",
         role: "assistant",
-        content: result.text,
+        content: text,
         metadata: {
           source: "telegram-codex-bridge",
-          transport: result.transport,
-          fallback: result.fallback,
+          ...metadata,
         },
       });
     } else {
       claw.sessions.appendMessageOnce(sessionId, {
-        id: `telegram-codex-${hashStableId([key, "outbound", userMessageId, result.text].join(":"))}`,
+        id: `telegram-codex-${hashStableId([key, "outbound", userMessageId, text].join(":"))}`,
         role: "assistant",
-        content: result.text,
+        content: text,
         metadata: {
           source: "telegram-codex-bridge",
           provider,
@@ -1290,72 +1432,156 @@ async function runTelegramCodexProcessor(input: {
           targetId,
           ...(threadId ? { threadId: String(threadId) } : {}),
           direction: "outbound",
-          transport: result.transport,
-          fallback: result.fallback,
+          ...metadata,
         },
       });
     }
+  };
+
+  const replies: Array<{ text: string; transport?: string; fallback?: boolean }> = [];
+  const processPrompt = async (content: string, metadata: Record<string, unknown>, messageId: string): Promise<"processed" | "duplicate" | "stopped"> => {
+    const userMessage = appendUserTurn(content, metadata, messageId);
+    if (!userMessage.appended) return "duplicate";
+    const runId = `telegram-codex-${hashStableId([run.runKey, messageId, Date.now()].join(":"))}`;
+    claw.channelRuns.processChannelRun({ runKey: run.runKey, sessionId, phase: "start", runId });
+    try {
+      const currentSession = claw.sessions.getSession(sessionId);
+      const currentRun = claw.channelRuns.getChannelRunStatus(run.runKey);
+      const charCount = currentSession?.messages.reduce((sum, message) => sum + message.content.length, 0) ?? 0;
+      if (currentSession && currentRun && charCount > currentRun.compactionThresholdChars) {
+        claw.channelRuns.compactChannelSession({ runKey: run.runKey, sessionId });
+      }
+      const latestRun = claw.channelRuns.getChannelRunStatus(run.runKey);
+      const session = claw.sessions.getSession(sessionId);
+      const messages = session?.messages.length
+        ? buildTelegramCodexEffectiveMessages(session, {
+          summaryMessageId: latestRun?.summaryMessageId,
+          maxRecentMessages: latestRun?.maxRecentMessages,
+        })
+        : [{ role: "user" as const, content }];
+      const result = await claw.inference.generateText({
+        systemPrompt,
+        contextBlocks: [
+          { title: "Telegram", content: `provider=${provider}\naccount=${accountId}\ntarget=${targetLabel}\nsender=${event.message?.senderLabel ?? senderId}` },
+        ],
+        messages,
+        transport: (input.flags.transport as "auto" | "gateway" | "cli" | undefined) ?? "auto",
+        ...(input.flags.model ? { model: input.flags.model } : {}),
+        ...(input.flags["gateway-retries"] ? { gatewayRetries: Number(input.flags["gateway-retries"]) } : { gatewayRetries: 1 }),
+      });
+      const afterRun = claw.channelRuns.getChannelRunStatus(run.runKey);
+      if (afterRun?.stopRequestedRunId === runId || afterRun?.status === "stopping") {
+        claw.channelRuns.processChannelRun({ runKey: run.runKey, sessionId, phase: "succeed", runId });
+        return "stopped";
+      }
+      if (result.text) {
+        appendAssistantTurn(result.text, { ...(result.transport ? { transport: result.transport } : {}), fallback: result.fallback });
+        replies.push({ text: result.text, ...(result.transport ? { transport: result.transport } : {}), fallback: result.fallback });
+      }
+      claw.channelRuns.processChannelRun({ runKey: run.runKey, sessionId, phase: "succeed", runId });
+      return "processed";
+    } catch (error) {
+      claw.channelRuns.processChannelRun({
+        runKey: run.runKey,
+        sessionId,
+        phase: "fail",
+        runId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  };
+
+  const promptText = sessionCommand?.rest
+    ? sessionCommand.rest
+    : rotatesSession && sessionCommand
+      ? telegramCodexResetPrompt(sessionCommand.command === "reset" ? "reset" : "new")
+      : command === "continue"
+        ? ""
+        : stripTelegramCodexCommand(rawText, botUsername);
+  const persistUserMessage = !(rotatesSession && sessionCommand && !sessionCommand.rest) && command !== "continue";
+  if (!persistUserMessage && rotatesSession && sessionCommand) {
+    const runId = `telegram-codex-${hashStableId([run.runKey, userMessageId, Date.now()].join(":"))}`;
+    claw.channelRuns.processChannelRun({ runKey: run.runKey, sessionId, phase: "start", runId });
+    const result = await claw.inference.generateText({
+      systemPrompt,
+      contextBlocks: [
+        { title: "Telegram", content: `provider=${provider}\naccount=${accountId}\ntarget=${targetLabel}\nsender=${event.message?.senderLabel ?? senderId}` },
+      ],
+      messages: [{ role: "user", content: formatTelegramCodexPrompt(event, promptText) }],
+      transport: (input.flags.transport as "auto" | "gateway" | "cli" | undefined) ?? "auto",
+      ...(input.flags.model ? { model: input.flags.model } : {}),
+      ...(input.flags["gateway-retries"] ? { gatewayRetries: Number(input.flags["gateway-retries"]) } : { gatewayRetries: 1 }),
+    });
+    const afterRun = claw.channelRuns.getChannelRunStatus(run.runKey);
+    if (!(afterRun?.stopRequestedRunId === runId || afterRun?.status === "stopping") && result.text) {
+      appendAssistantTurn(result.text, { ...(result.transport ? { transport: result.transport } : {}), fallback: result.fallback });
+      replies.push({ text: result.text, ...(result.transport ? { transport: result.transport } : {}), fallback: result.fallback });
+    }
+    claw.channelRuns.processChannelRun({ runKey: run.runKey, sessionId, phase: "succeed", runId });
+  } else if (persistUserMessage) {
+    const processed = await processPrompt(formatTelegramCodexPrompt(event, promptText), {
+      ...(providerMessageId ? { providerMessageId } : {}),
+      senderId,
+      ...(event.message?.senderLabel ? { senderLabel: event.message.senderLabel } : {}),
+      ...(sessionCommand ? { command: sessionCommand.command, sessionReset: rotatesSession } : {}),
+      ...(event.message?.metadata ?? {}),
+    }, userMessageId);
+    if (processed === "duplicate") {
+      writeJson(input.context.stdout, { actions: [{ type: "ignore", reason: "duplicate message" }] });
+      return CLI_EXIT_OK;
+    }
   }
 
-  const parsedReply = parseTelegramCodexMediaActions(result.text);
-  const chunks = splitTelegramMessage(parsedReply.text);
-  const mediaActions = parsedReply.mediaActions.map((action) => ({
-    ...action,
-    targetId: action.targetId ?? targetId,
-    ...(action.threadId !== undefined ? { threadId: action.threadId } : threadId ? { threadId } : {}),
-    agentId: input.agentId,
-    metadata: {
-      ...(action.metadata ?? {}),
-      sessionId,
-      transport: result.transport,
-      fallback: result.fallback,
-      ownerUserId: state.ownerUserId,
-    },
-  }));
-  const actions = chunks.length > 0
-    ? [
-        {
-          type: "grant_permission",
-          targetId,
-          agentId: input.agentId,
-          permissions: ["write"],
-          priority: 100,
-          metadata: {
-            source: "telegram-codex-bridge",
-            ownerUserId: state.ownerUserId,
-          },
-        },
-        ...chunks.map((text) => ({
-          type: "send_message",
-          targetId,
-          text,
-          ...(threadId ? { threadId } : {}),
-          agentId: input.agentId,
-          metadata: {
-            sessionId,
-            transport: result.transport,
-            fallback: result.fallback,
-            ownerUserId: state.ownerUserId,
-          },
-        })),
-        ...mediaActions,
-      ]
-    : mediaActions.length > 0
-      ? [
-          {
-            type: "grant_permission",
-            targetId,
-            agentId: input.agentId,
-            permissions: ["write"],
-            priority: 100,
-            metadata: {
-              source: "telegram-codex-bridge",
-              ownerUserId: state.ownerUserId,
-            },
-          },
-          ...mediaActions,
-        ]
-      : [{ type: "ignore", reason: "codex returned empty response" }];
+  const queued = claw.channelRuns.drainQueuedChannelMessages(run.runKey);
+  if (queued.length > 0) {
+    await processPrompt(formatTelegramCodexQueuedPrompt(queued), {
+      queued: true,
+      queuedCount: queued.length,
+    }, `telegram-codex-${hashStableId([run.runKey, "queued", queued.map((message) => message.id).join(":")].join(":"))}`);
+  } else if (command === "continue" && !persistUserMessage) {
+    writeJson(input.context.stdout, { actions: [sendTextAction("Queue is empty.")] });
+    return CLI_EXIT_OK;
+  }
+
+  const actions: Array<Record<string, unknown>> = [];
+  const mediaActions: Array<Record<string, unknown>> = [];
+  for (const reply of replies) {
+    const parsedReply = parseTelegramCodexMediaActions(reply.text);
+    for (const text of splitTelegramMessage(parsedReply.text)) {
+      actions.push(sendTextAction(text, { transport: reply.transport, fallback: reply.fallback }));
+    }
+    mediaActions.push(...parsedReply.mediaActions.map((action) => ({
+      ...action,
+      targetId: action.targetId ?? targetId,
+      ...(action.threadId !== undefined ? { threadId: action.threadId } : threadId ? { threadId } : {}),
+      agentId: input.agentId,
+      metadata: {
+        ...(action.metadata ?? {}),
+        sessionId,
+        transport: reply.transport,
+        fallback: reply.fallback,
+        ownerUserId: state.ownerUserId,
+      },
+    })));
+  }
+  if (actions.length > 0 || mediaActions.length > 0) {
+    actions.unshift({
+      type: "grant_permission",
+      targetId,
+      agentId: input.agentId,
+      permissions: ["write"],
+      priority: 100,
+      metadata: {
+        source: "telegram-codex-bridge",
+        ownerUserId: state.ownerUserId,
+      },
+    });
+    actions.push(...mediaActions);
+  }
+  if (actions.length === 0) {
+    actions.push({ type: "ignore", reason: "codex returned empty response" });
+  }
   writeJson(input.context.stdout, {
     actions,
   });

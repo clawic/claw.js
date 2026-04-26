@@ -214,6 +214,16 @@ export function normalizeTranscriptEvents(raw: string): Message[] {
     if (last && last.id === message.id) {
       continue;
     }
+    if (
+      last &&
+      last.role === message.role &&
+      last.content === message.content &&
+      JSON.stringify(last.attachments ?? []) === JSON.stringify(message.attachments ?? []) &&
+      JSON.stringify(last.documents ?? []) === JSON.stringify(message.documents ?? []) &&
+      JSON.stringify(last.contextChips ?? []) === JSON.stringify(message.contextChips ?? [])
+    ) {
+      continue;
+    }
 
     parsed.push(message);
   }
