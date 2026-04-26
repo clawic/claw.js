@@ -1148,6 +1148,7 @@ export interface ClawInstance {
       targetId: string;
       threadId?: string | number;
       limit?: number;
+      excludeProviderMessageIds?: string[];
     }) => ReturnType<SessionStore["getSession"]>;
     listSessions: SessionStore["listSessions"];
     searchSessions: (input: SessionSearchInput) => Promise<SessionSearchResult[]>;
@@ -2272,6 +2273,21 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     createdAt?: number;
   }): ReturnType<SessionStore["appendMessageOnce"]> & { sessionId: string } {
     const sessionId = resolveChannelSessionId(input);
+    if (input.direction === "outbound" && input.providerMessageId) {
+      const existing = sessionStore.getSession(sessionId);
+      const duplicate = existing?.messages.some((message) => (
+        message.role === (input.role ?? "assistant")
+        && message.content.trim() === input.content.trim()
+        && message.metadata?.provider === input.provider
+        && message.metadata?.accountId === (input.accountId ?? "default")
+        && message.metadata?.targetId === input.targetId
+        && message.metadata?.direction === "outbound"
+        && (input.threadId === undefined || message.metadata?.threadId === String(input.threadId))
+      ));
+      if (duplicate && existing) {
+        return { sessionId, session: existing, appended: false };
+      }
+    }
     const id = resolveChannelMessageId(input);
     const message = prepareMessageDocuments(sessionId, {
       id,
@@ -2303,16 +2319,22 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     targetId: string;
     threadId?: string | number;
     limit?: number;
+    excludeProviderMessageIds?: string[];
   }): ReturnType<SessionStore["getSession"]> {
     const sessionId = resolveChannelSessionId(input);
     const threadKey = input.threadId === undefined ? undefined : String(input.threadId);
+    const excludedProviderMessageIds = new Set(input.excludeProviderMessageIds ?? []);
     const records = channelsRegistry.messages.read({
       provider: input.provider,
       accountId: input.accountId,
       targetId: input.targetId,
       limit: input.limit ?? 50,
     })
-      .filter((message) => message.threadId === threadKey && !!message.text?.trim())
+      .filter((message) => (
+        message.threadId === threadKey
+        && !!message.text?.trim()
+        && !(message.providerMessageId && excludedProviderMessageIds.has(message.providerMessageId))
+      ))
       .reverse();
 
     for (const record of records) {

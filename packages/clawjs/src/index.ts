@@ -1109,6 +1109,13 @@ async function runTelegramCodexProcessor(input: {
     state.sessions[key] = sessionId;
     writeTelegramCodexBridgeState(statePath, state);
   }
+  claw.sessions.backfillChannelSession({
+    provider,
+    accountId,
+    targetId,
+    ...(threadId ? { threadId } : {}),
+    ...(event.message?.providerMessageId ? { excludeProviderMessageIds: [event.message.providerMessageId] } : {}),
+  });
   const userMessage = claw.sessions.appendChannelMessage({
     provider,
     accountId,
@@ -1129,12 +1136,6 @@ async function runTelegramCodexProcessor(input: {
     writeJson(input.context.stdout, { actions: [{ type: "ignore", reason: "duplicate message" }] });
     return CLI_EXIT_OK;
   }
-  claw.sessions.backfillChannelSession({
-    provider,
-    accountId,
-    targetId,
-    ...(threadId ? { threadId } : {}),
-  });
   const session = claw.sessions.getSession(sessionId);
   const result = await claw.inference.generateText({
     systemPrompt,

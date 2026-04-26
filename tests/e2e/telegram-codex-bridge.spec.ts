@@ -172,6 +172,8 @@ if (args[0] === "app-server") {
         ? "context preserved"
         : payload.includes("Repeat the prior summary")
         ? "context missing"
+        : payload.includes("follow up")
+        ? "follow up reply"
         : payload.includes("Voice note transcript:")
         ? "voice-aware reply"
         : payload.includes("long")
@@ -396,6 +398,31 @@ test("telegram codex bridge owns, authorizes topics, applies reply policy, and s
   });
   expect(preSyncedGroup.actions[0]).toMatchObject({ type: "grant_permission", targetId: "-2002" });
   expect(sendActions(preSyncedGroup.actions)[0]).toMatchObject({ type: "send_message", targetId: "-2002", text: "codex reply" });
+  appendChannelMessages(workspacePath, [
+    {
+      id: "telegram:test-account:message:781",
+      targetId: "-2002",
+      direction: "outbound",
+      text: "codex reply",
+      providerMessageId: "781",
+    },
+  ]);
+  const groupFollowUp = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "-2002", chatType: "group", senderId: "501", text: "follow up", messageId: 782 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  expect(sendActions(groupFollowUp.actions)[0]).toMatchObject({ type: "send_message", targetId: "-2002", text: "follow up reply" });
+  const preSyncedState = JSON.parse(fs.readFileSync(statePath, "utf8")) as BridgeState;
+  const preSyncedSessionId = preSyncedState.sessions["telegram:test-account:-2002:chat"];
+  const preSyncedSession = await runClawJson(rootDir, ["sessions", "read", "--session-id", preSyncedSessionId], {
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  }) as { messages: Array<{ role: string; content: string }> };
+  expect(preSyncedSession.messages.map((message) => message.content)).toEqual(["hello group", "codex reply", "follow up", "follow up reply"]);
 
   const voiceNote = await runProcessor(rootDir, {
     event: telegramEvent({
