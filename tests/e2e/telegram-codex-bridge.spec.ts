@@ -178,6 +178,8 @@ if (args[0] === "app-server") {
         ? "voice-aware reply"
         : payload.includes("long")
         ? "x".repeat(8200)
+        : payload.includes("fresh topic")
+        ? "fresh reply"
         : "codex reply";
       process.stdout.write(JSON.stringify({ method: "codex/event", params: { msg: { type: "agent_message", message: text } } }) + "\\n");
       process.stdout.write(JSON.stringify({ method: "turn/completed", params: {} }) + "\\n");
@@ -348,6 +350,42 @@ test("telegram codex bridge owns, authorizes topics, applies reply policy, and s
   const bootstrappedState = JSON.parse(fs.readFileSync(statePath, "utf8")) as BridgeState;
   expect(bootstrappedState.ownerUserId).toBe("501");
   expect(bootstrappedState.authorizedTargets.some((target) => target.targetId === "501")).toBeTruthy();
+
+  const resetSeed = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "777", chatType: "private", senderId: "777", text: "old topic", messageId: 7701 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  expect(sendActions(resetSeed.actions)[0]).toMatchObject({ type: "send_message", targetId: "777", text: "codex reply" });
+  const beforeResetState = JSON.parse(fs.readFileSync(statePath, "utf8")) as BridgeState;
+  const oldResetSessionId = beforeResetState.sessions["telegram:test-account:777:chat"];
+  expect(typeof oldResetSessionId).toBe("string");
+  const resetCommand = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "777", chatType: "private", senderId: "777", text: "/new fresh topic", messageId: 7702 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+    replyPolicy: "commands",
+  });
+  expect(sendActions(resetCommand.actions)[0]).toMatchObject({ type: "send_message", targetId: "777", text: "fresh reply" });
+  const afterResetState = JSON.parse(fs.readFileSync(statePath, "utf8")) as BridgeState;
+  const newResetSessionId = afterResetState.sessions["telegram:test-account:777:chat"];
+  expect(newResetSessionId).not.toBe(oldResetSessionId);
+  const oldResetSession = await runClawJson(rootDir, ["sessions", "read", "--session-id", oldResetSessionId], {
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  }) as { messages: Array<{ role: string; content: string }> };
+  expect(oldResetSession.messages.map((message) => message.content)).toEqual(["old topic", "codex reply"]);
+  const newResetSession = await runClawJson(rootDir, ["sessions", "read", "--session-id", newResetSessionId], {
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  }) as { messages: Array<{ role: string; content: string }> };
+  expect(newResetSession.messages.map((message) => message.content)).toEqual(["fresh topic", "fresh reply"]);
 
   const rejectedGroup = await runProcessor(rootDir, {
     event: telegramEvent({ chatId: "-1001", chatType: "supergroup", senderId: "999", text: "activate?", threadId: 77 }),

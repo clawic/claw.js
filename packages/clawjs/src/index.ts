@@ -979,19 +979,37 @@ function shouldReplyToTelegramCodexMessage(
 ): boolean {
   if (policy === "all") return true;
   const text = event.message?.text?.trim() ?? "";
-  if (text.startsWith("/codex") || text.startsWith("/start")) return true;
+  if (text.startsWith("/codex") || text.startsWith("/start") || text.startsWith("/new") || text.startsWith("/reset")) return true;
   if (policy === "commands") return false;
   if (isTelegramReplyToBot(event)) return true;
   return !!(botUsername && text.toLowerCase().includes(`@${botUsername.toLowerCase()}`));
 }
 
+function parseTelegramCodexSessionCommand(text: string): { command: "new" | "reset"; rest: string } | null {
+  const match = text.trim().match(/^\/(new|reset)(?:@\w+)?(?:\s+([\s\S]*))?$/i);
+  if (!match) return null;
+  return {
+    command: match[1].toLowerCase() as "new" | "reset",
+    rest: (match[2] ?? "").trim(),
+  };
+}
+
 function stripTelegramCodexCommand(text: string, botUsername?: string): string {
   let next = text.trim();
   next = next.replace(/^\/codex(?:@\w+)?\s*/i, "");
+  next = next.replace(/^\/(?:new|reset)(?:@\w+)?\s*/i, "");
   if (botUsername) {
     next = next.replace(new RegExp(`@${botUsername.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "ig"), "").trim();
   }
   return next || text.trim();
+}
+
+function telegramCodexResetPrompt(command: "new" | "reset"): string {
+  return [
+    `A new session was started via /${command}.`,
+    "Greet the user briefly and ask what they want to do next.",
+    `Current time: ${new Date().toISOString()}.`,
+  ].join(" ");
 }
 
 function formatTelegramCodexPrompt(event: TelegramCodexProcessorEvent, text: string): string {
@@ -1087,10 +1105,15 @@ async function runTelegramCodexProcessor(input: {
     return CLI_EXIT_OK;
   }
 
-  let sessionId = state.sessions[key] ?? `telegram-${sanitizeStableId(targetId)}-${hashStableId(key)}`;
   if (changed) writeTelegramCodexBridgeState(statePath, state);
 
-  const prompt = formatTelegramCodexPrompt(event, stripTelegramCodexCommand(rawText, botUsername));
+  const sessionCommand = parseTelegramCodexSessionCommand(rawText);
+  const promptText = sessionCommand?.rest
+    ? sessionCommand.rest
+    : sessionCommand
+      ? telegramCodexResetPrompt(sessionCommand.command)
+      : stripTelegramCodexCommand(rawText, botUsername);
+  const prompt = formatTelegramCodexPrompt(event, promptText);
   const targetLabel = threadId ? `${targetId} topic ${threadId}` : targetId;
   const systemPrompt = input.flags["system-prompt"] || [
     "You are Codex responding through a Telegram bot.",
@@ -1098,43 +1121,79 @@ async function runTelegramCodexProcessor(input: {
     "You are running in the configured ClawJS runtime environment.",
   ].join(" ");
   const claw = await createCliClaw(input.runtimeAdapterId, input.flags, input.workspaceRoot, input.appId, input.workspaceId, input.agentId, input.argv);
-  const resolvedSession = claw.sessions.resolveChannelSession({
-    provider,
-    accountId,
-    targetId,
-    ...(threadId ? { threadId } : {}),
-  });
-  sessionId = resolvedSession.sessionId;
-  if (state.sessions[key] !== sessionId) {
-    state.sessions[key] = sessionId;
-    writeTelegramCodexBridgeState(statePath, state);
+  let sessionId = state.sessions[key];
+  if (sessionCommand || !sessionId) {
+    sessionId = sessionCommand
+      ? claw.sessions.createSession(`Telegram ${targetLabel}`).sessionId
+      : claw.sessions.resolveChannelSession({
+        provider,
+        accountId,
+        targetId,
+        ...(threadId ? { threadId } : {}),
+      }).sessionId;
+    if (state.sessions[key] !== sessionId) {
+      state.sessions[key] = sessionId;
+      writeTelegramCodexBridgeState(statePath, state);
+    }
   }
-  claw.sessions.backfillChannelSession({
-    provider,
-    accountId,
-    targetId,
-    ...(threadId ? { threadId } : {}),
-    ...(event.message?.providerMessageId ? { excludeProviderMessageIds: [event.message.providerMessageId] } : {}),
-  });
-  const userMessage = claw.sessions.appendChannelMessage({
-    provider,
-    accountId,
-    targetId,
-    ...(threadId ? { threadId } : {}),
-    direction: "inbound",
-    role: "user",
-    content: prompt,
-    ...(event.message?.providerMessageId ? { providerMessageId: event.message.providerMessageId } : {}),
-    senderId,
-    ...(event.message?.senderLabel ? { senderLabel: event.message.senderLabel } : {}),
-    metadata: {
-      source: "telegram-codex-bridge",
-      ...(event.message?.metadata ?? {}),
-    },
-  });
+  const useChannelSessionHelpers = !sessionCommand && sessionId.startsWith("channel-");
+  if (useChannelSessionHelpers) {
+    claw.sessions.backfillChannelSession({
+      provider,
+      accountId,
+      targetId,
+      ...(threadId ? { threadId } : {}),
+      ...(event.message?.providerMessageId ? { excludeProviderMessageIds: [event.message.providerMessageId] } : {}),
+    });
+  }
+  const providerMessageId = event.message?.providerMessageId;
+  const userMessageId = `telegram-codex-${hashStableId([
+    key,
+    "inbound",
+    providerMessageId || rawText,
+  ].join(":"))}`;
+  const userMessage = useChannelSessionHelpers
+    ? claw.sessions.appendChannelMessage({
+      provider,
+      accountId,
+      targetId,
+      ...(threadId ? { threadId } : {}),
+      direction: "inbound",
+      role: "user",
+      content: prompt,
+      ...(providerMessageId ? { providerMessageId } : {}),
+      senderId,
+      ...(event.message?.senderLabel ? { senderLabel: event.message.senderLabel } : {}),
+      metadata: {
+        source: "telegram-codex-bridge",
+        ...(event.message?.metadata ?? {}),
+      },
+    })
+    : claw.sessions.appendMessageOnce(sessionId, {
+      id: userMessageId,
+      role: "user",
+      content: prompt,
+      metadata: {
+        source: "telegram-codex-bridge",
+        provider,
+        accountId,
+        targetId,
+        ...(threadId ? { threadId: String(threadId) } : {}),
+        direction: "inbound",
+        ...(providerMessageId ? { providerMessageId } : {}),
+        senderId,
+        ...(event.message?.senderLabel ? { senderLabel: event.message.senderLabel } : {}),
+        ...(sessionCommand ? { command: sessionCommand.command, sessionReset: true } : {}),
+        ...(event.message?.metadata ?? {}),
+      },
+    });
   if (!userMessage.appended) {
     writeJson(input.context.stdout, { actions: [{ type: "ignore", reason: "duplicate message" }] });
     return CLI_EXIT_OK;
+  }
+  if (!state.sessions[key]) {
+    state.sessions[key] = sessionId;
+    writeTelegramCodexBridgeState(statePath, state);
   }
   const session = claw.sessions.getSession(sessionId);
   const result = await claw.inference.generateText({
@@ -1148,20 +1207,38 @@ async function runTelegramCodexProcessor(input: {
     ...(input.flags["gateway-retries"] ? { gatewayRetries: Number(input.flags["gateway-retries"]) } : { gatewayRetries: 1 }),
   });
   if (result.text) {
-    claw.sessions.appendChannelMessage({
-      provider,
-      accountId,
-      targetId,
-      ...(threadId ? { threadId } : {}),
-      direction: "outbound",
-      role: "assistant",
-      content: result.text,
-      metadata: {
-        source: "telegram-codex-bridge",
-        transport: result.transport,
-        fallback: result.fallback,
-      },
-    });
+    if (useChannelSessionHelpers) {
+      claw.sessions.appendChannelMessage({
+        provider,
+        accountId,
+        targetId,
+        ...(threadId ? { threadId } : {}),
+        direction: "outbound",
+        role: "assistant",
+        content: result.text,
+        metadata: {
+          source: "telegram-codex-bridge",
+          transport: result.transport,
+          fallback: result.fallback,
+        },
+      });
+    } else {
+      claw.sessions.appendMessageOnce(sessionId, {
+        id: `telegram-codex-${hashStableId([key, "outbound", userMessageId, result.text].join(":"))}`,
+        role: "assistant",
+        content: result.text,
+        metadata: {
+          source: "telegram-codex-bridge",
+          provider,
+          accountId,
+          targetId,
+          ...(threadId ? { threadId: String(threadId) } : {}),
+          direction: "outbound",
+          transport: result.transport,
+          fallback: result.fallback,
+        },
+      });
+    }
   }
 
   const chunks = splitTelegramMessage(result.text);
