@@ -508,10 +508,12 @@ test("telegram codex bridge owns, authorizes topics, applies reply policy, and s
     workspacePath,
     runtimeWorkspace,
     codexHome,
+    systemPrompt: "Keep replies short.",
   });
   expect(sendActions(customSystemPromptPhotoReply.actions).some((action) => action.mediaType === "photo")).toBeTruthy();
   const codexPayloads = fs.readFileSync(path.join(tempRoot, "codex-payloads.jsonl"), "utf8").trim().split("\n");
   const lastCodexPayload = codexPayloads[codexPayloads.length - 1] ?? "";
+  expect(lastCodexPayload).toContain("Keep replies short.");
   expect(lastCodexPayload).toContain("Telegram delivery supports photos");
 
   appendChannelMessages(workspacePath, [
