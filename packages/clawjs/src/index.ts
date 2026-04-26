@@ -1166,6 +1166,7 @@ async function runTelegramCodexProcessor(input: {
       ? telegramCodexResetPrompt(sessionCommand.command)
       : stripTelegramCodexCommand(rawText, botUsername);
   const prompt = formatTelegramCodexPrompt(event, promptText);
+  const persistUserMessage = !(sessionCommand && !sessionCommand.rest);
   const targetLabel = threadId ? `${targetId} topic ${threadId}` : targetId;
   const baseSystemPrompt = input.flags["system-prompt"] || [
     "You are Codex responding through a Telegram bot.",
@@ -1205,41 +1206,43 @@ async function runTelegramCodexProcessor(input: {
     "inbound",
     providerMessageId || rawText,
   ].join(":"))}`;
-  const userMessage = useChannelSessionHelpers
-    ? claw.sessions.appendChannelMessage({
-      provider,
-      accountId,
-      targetId,
-      ...(threadId ? { threadId } : {}),
-      direction: "inbound",
-      role: "user",
-      content: prompt,
-      ...(providerMessageId ? { providerMessageId } : {}),
-      senderId,
-      ...(event.message?.senderLabel ? { senderLabel: event.message.senderLabel } : {}),
-      metadata: {
-        source: "telegram-codex-bridge",
-        ...(event.message?.metadata ?? {}),
-      },
-    })
-    : claw.sessions.appendMessageOnce(sessionId, {
-      id: userMessageId,
-      role: "user",
-      content: prompt,
-      metadata: {
-        source: "telegram-codex-bridge",
+  const userMessage = persistUserMessage
+    ? useChannelSessionHelpers
+      ? claw.sessions.appendChannelMessage({
         provider,
         accountId,
         targetId,
-        ...(threadId ? { threadId: String(threadId) } : {}),
+        ...(threadId ? { threadId } : {}),
         direction: "inbound",
+        role: "user",
+        content: prompt,
         ...(providerMessageId ? { providerMessageId } : {}),
         senderId,
         ...(event.message?.senderLabel ? { senderLabel: event.message.senderLabel } : {}),
-        ...(sessionCommand ? { command: sessionCommand.command, sessionReset: true } : {}),
-        ...(event.message?.metadata ?? {}),
-      },
-    });
+        metadata: {
+          source: "telegram-codex-bridge",
+          ...(event.message?.metadata ?? {}),
+        },
+      })
+      : claw.sessions.appendMessageOnce(sessionId, {
+        id: userMessageId,
+        role: "user",
+        content: prompt,
+        metadata: {
+          source: "telegram-codex-bridge",
+          provider,
+          accountId,
+          targetId,
+          ...(threadId ? { threadId: String(threadId) } : {}),
+          direction: "inbound",
+          ...(providerMessageId ? { providerMessageId } : {}),
+          senderId,
+          ...(event.message?.senderLabel ? { senderLabel: event.message.senderLabel } : {}),
+          ...(sessionCommand ? { command: sessionCommand.command, sessionReset: true } : {}),
+          ...(event.message?.metadata ?? {}),
+        },
+      })
+    : { appended: true };
   if (!userMessage.appended) {
     writeJson(input.context.stdout, { actions: [{ type: "ignore", reason: "duplicate message" }] });
     return CLI_EXIT_OK;
@@ -1254,7 +1257,7 @@ async function runTelegramCodexProcessor(input: {
     contextBlocks: [
       { title: "Telegram", content: `provider=${provider}\naccount=${accountId}\ntarget=${targetLabel}\nsender=${event.message?.senderLabel ?? senderId}` },
     ],
-    messages: session?.messages ?? [{ role: "user", content: prompt }],
+    messages: session?.messages.length ? session.messages : [{ role: "user", content: prompt }],
     transport: (input.flags.transport as "auto" | "gateway" | "cli" | undefined) ?? "auto",
     ...(input.flags.model ? { model: input.flags.model } : {}),
     ...(input.flags["gateway-retries"] ? { gatewayRetries: Number(input.flags["gateway-retries"]) } : { gatewayRetries: 1 }),

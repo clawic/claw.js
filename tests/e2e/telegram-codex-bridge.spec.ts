@@ -394,6 +394,24 @@ test("telegram codex bridge owns, authorizes topics, applies reply policy, and s
   }) as { messages: Array<{ role: string; content: string }> };
   expect(newResetSession.messages.map((message) => message.content)).toEqual(["fresh topic", "fresh reply"]);
 
+  const bareNewCommand = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "888", chatType: "private", senderId: "888", text: "/new", messageId: 8801 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+    replyPolicy: "commands",
+  });
+  expect(sendActions(bareNewCommand.actions)[0]).toMatchObject({ type: "send_message", targetId: "888", text: "codex reply" });
+  const afterBareNewState = JSON.parse(fs.readFileSync(statePath, "utf8")) as BridgeState;
+  const bareNewSessionId = afterBareNewState.sessions["telegram:test-account:888:chat"];
+  const bareNewSession = await runClawJson(rootDir, ["sessions", "read", "--session-id", bareNewSessionId], {
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  }) as { messages: Array<{ role: string; content: string }> };
+  expect(bareNewSession.messages.map((message) => message.content)).toEqual(["codex reply"]);
+
   const rejectedGroup = await runProcessor(rootDir, {
     event: telegramEvent({ chatId: "-1001", chatType: "supergroup", senderId: "999", text: "activate?", threadId: 77 }),
     statePath,
