@@ -126,6 +126,16 @@ function buildTelegramTextPayload(input: SendChannelMessageInput): {
   return { text: renderTelegramMarkdownHtml(plainText), parseMode: "HTML", plainText };
 }
 
+function telegramMediaMethod(type: NonNullable<SendChannelMessageInput["mediaType"]>): string {
+  return ({
+    photo: "sendPhoto",
+    video: "sendVideo",
+    document: "sendDocument",
+    audio: "sendAudio",
+    animation: "sendAnimation",
+  })[type];
+}
+
 function isTelegramHtmlParseError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return /parse|entity|can't parse|unsupported start tag|bad request/i.test(message);
@@ -426,16 +436,17 @@ export async function sendTelegramAccountMessage(
 ): Promise<ChannelMessageRecord> {
   const account = requireTelegramAccount(options.registry, input.accountId);
   const textPayload = buildTelegramTextPayload(input);
+  const mediaType = input.mediaType ?? "photo";
   const send = (text: string, parseMode?: "HTML" | "Markdown" | "MarkdownV2") => input.media
     ? callTelegramApi<JsonRecord>(
       options.runner,
       options.env,
       account.secretRef!,
       accountApiBaseUrl(account),
-      "sendPhoto",
+      telegramMediaMethod(mediaType),
       {
         chat_id: input.targetId,
-        photo: input.media,
+        [mediaType]: input.media,
         ...(input.text ? { caption: text } : {}),
         ...(input.text && parseMode ? { parse_mode: parseMode } : {}),
         ...(input.threadId !== undefined ? { message_thread_id: Number(input.threadId) } : {}),

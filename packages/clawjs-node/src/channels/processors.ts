@@ -8,6 +8,7 @@ export type ChannelProcessorAction =
       targetId?: string;
       text?: string;
       media?: string;
+      mediaType?: "photo" | "video" | "document" | "audio" | "animation";
       threadId?: string | number;
       parseMode?: "HTML" | "Markdown" | "MarkdownV2";
       agentId?: string;

@@ -104,6 +104,11 @@ switch (method) {
     state.lastSendToken = token;
     result = { message_id: 91, chat: { id: body.chat_id, type: "supergroup" }, text: body.text };
     break;
+  case "sendDocument":
+    state.lastMediaSend = body;
+    state.lastSendToken = token;
+    result = { message_id: 92, chat: { id: body.chat_id, type: "supergroup" }, document: { file_id: body.document } };
+    break;
   case "setMyCommands":
     state.commands = body.commands || [];
     result = true;
@@ -177,6 +182,16 @@ const sent = await claw.channels.messages.send({
   threadId: 77,
   agentId: "support-agent",
 });
+const sentMedia = await claw.channels.messages.send({
+  provider: "telegram",
+  accountId: "support",
+  targetId: "-1001",
+  text: "Spec sheet",
+  mediaType: "document",
+  media: "https://example.local/spec.pdf",
+  threadId: 77,
+  agentId: "support-agent",
+});
 await claw.channels.commands.set("telegram", [{ command: "start", description: "Start" }], { accountId: "support" });
 
 const accounts = claw.channels.accounts.list("telegram");
@@ -206,12 +221,16 @@ process.stdout.write(JSON.stringify({
   syncedText: synced[0]?.text,
   syncedSender: synced[0]?.senderLabel,
   sentThreadId: sent.threadId,
+  sentMediaThreadId: sentMedia.threadId,
   allowedCount: allowedMessages.length,
   deniedCount: deniedMessages.length,
   commands,
   lastThreadId: proxyState.lastSend?.message_thread_id,
   lastParseMode: proxyState.lastSend?.parse_mode,
   lastText: proxyState.lastSend?.text,
+  lastMediaThreadId: proxyState.lastMediaSend?.message_thread_id,
+  lastMediaDocument: proxyState.lastMediaSend?.document,
+  lastMediaCaption: proxyState.lastMediaSend?.caption,
 }, null, 2));
 `;
 
@@ -233,12 +252,16 @@ process.stdout.write(JSON.stringify({
       syncedText: string;
       syncedSender?: string;
       sentThreadId: string;
+      sentMediaThreadId: string;
       allowedCount: number;
       deniedCount: number;
       commands: Array<{ command: string; description: string }>;
       lastThreadId: number;
       lastParseMode?: string;
       lastText?: string;
+      lastMediaThreadId?: number;
+      lastMediaDocument?: string;
+      lastMediaCaption?: string;
     };
 
     expect(payload.accountIds).toEqual(["telegram:ops", "telegram:support"]);
@@ -249,6 +272,7 @@ process.stdout.write(JSON.stringify({
     expect(payload.syncedText).toBe("hello from telegram topic");
     expect(payload.syncedSender).toBe("alice");
     expect(payload.sentThreadId).toBe("77");
+    expect(payload.sentMediaThreadId).toBe("77");
     expect(payload.allowedCount).toBeGreaterThanOrEqual(2);
     expect(payload.deniedCount).toBe(0);
     expect(payload.commands[0]?.command).toBe("start");
@@ -257,6 +281,9 @@ process.stdout.write(JSON.stringify({
     expect(payload.lastText).toContain("<b>topic</b>");
     expect(payload.lastText).toContain('<a href="https://example.com">docs</a>');
     expect(payload.lastText).toContain("<code>code</code>");
+    expect(payload.lastMediaThreadId).toBe(77);
+    expect(payload.lastMediaDocument).toBe("https://example.local/spec.pdf");
+    expect(payload.lastMediaCaption).toBe("Spec sheet");
 
     const processorPath = path.join(tempRoot, "processor.cjs");
     fs.writeFileSync(processorPath, `

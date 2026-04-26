@@ -2671,13 +2671,14 @@ process.stdin.on("end", () => {
       stderr: captureStream().stream,
       cwd: process.cwd(),
     });
-    const proxyState = JSON.parse(fs.readFileSync(statePath, "utf8")) as { lastSend?: { text?: string }; lastSendToken?: string };
+    const proxyState = JSON.parse(fs.readFileSync(statePath, "utf8")) as { commands?: Array<{ command: string; description: string }>; lastSend?: { text?: string }; lastSendToken?: string };
 
     assert.equal(connectExitCode, CLI_EXIT_OK);
     assert.equal(processorExitCode, CLI_EXIT_OK);
     assert.equal(grantExitCode, CLI_EXIT_OK);
     assert.equal(listenExitCode, CLI_EXIT_OK);
     assert.match(listenStdout.getOutput(), /"status": "stopped"/);
+    assert.deepEqual(proxyState.commands?.map((entry) => entry.command), ["new", "reset", "codex"]);
     assert.equal(proxyState.lastSend?.text, "cli reply: hello telegram");
     assert.equal(proxyState.lastSendToken, "{{telegram_support_bot_token}}");
   });

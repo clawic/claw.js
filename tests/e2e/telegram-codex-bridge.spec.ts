@@ -13,6 +13,8 @@ type ProcessorAction = {
   targetId?: string;
   threadId?: string | number;
   text?: string;
+  media?: string;
+  mediaType?: string;
   reason?: string;
   metadata?: Record<string, unknown>;
 };
@@ -172,6 +174,8 @@ if (args[0] === "app-server") {
         ? "context preserved"
         : payload.includes("Repeat the prior summary")
         ? "context missing"
+        : payload.includes("send a product photo")
+        ? ${JSON.stringify("Here is the photo.\n\n```clawjs-telegram-actions\n{\"actions\":[{\"type\":\"send_message\",\"mediaType\":\"photo\",\"media\":\"https://example.local/product.png\",\"text\":\"Product preview\"}]}\n```")}
         : payload.includes("follow up")
         ? "follow up reply"
         : payload.includes("Voice note transcript:")
@@ -280,6 +284,7 @@ async function runProcessor(rootDir: string, input: {
   runtimeWorkspace: string;
   replyPolicy?: string;
   botUsername?: string;
+  systemPrompt?: string;
 }) {
   const args = [
     path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs"),
@@ -302,6 +307,7 @@ async function runProcessor(rootDir: string, input: {
     "telegram-codex",
     "--bot-username",
     input.botUsername ?? "ClawCodexBot",
+    ...(input.systemPrompt ? ["--system-prompt", input.systemPrompt] : []),
   ];
   const child = spawn(process.execPath, args, {
     cwd: rootDir,
@@ -344,6 +350,7 @@ test("telegram codex bridge owns, authorizes topics, applies reply policy, and s
     workspacePath,
     runtimeWorkspace,
     codexHome,
+    systemPrompt: "Keep replies short.",
   });
   expect(dm.actions[0]).toMatchObject({ type: "grant_permission", targetId: "501" });
   expect(sendActions(dm.actions)[0]).toMatchObject({ type: "send_message", targetId: "501", text: "codex reply" });
@@ -476,6 +483,36 @@ test("telegram codex bridge owns, authorizes topics, applies reply policy, and s
     codexHome,
   });
   expect(sendActions(voiceNote.actions)[0]).toMatchObject({ type: "send_message", targetId: "501", text: "voice-aware reply" });
+
+  const photoReply = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "501", chatType: "private", senderId: "501", text: "send a product photo", messageId: 5020 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  const photoActions = sendActions(photoReply.actions);
+  expect(photoActions).toHaveLength(2);
+  expect(photoActions[0]).toMatchObject({ type: "send_message", targetId: "501", text: "Here is the photo." });
+  expect(photoActions[1]).toMatchObject({
+    type: "send_message",
+    targetId: "501",
+    mediaType: "photo",
+    media: "https://example.local/product.png",
+    text: "Product preview",
+  });
+
+  const customSystemPromptPhotoReply = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "501", chatType: "private", senderId: "501", text: "send a product photo", messageId: 5021 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  expect(sendActions(customSystemPromptPhotoReply.actions).some((action) => action.mediaType === "photo")).toBeTruthy();
+  const codexPayloads = fs.readFileSync(path.join(tempRoot, "codex-payloads.jsonl"), "utf8").trim().split("\n");
+  const lastCodexPayload = codexPayloads[codexPayloads.length - 1] ?? "";
+  expect(lastCodexPayload).toContain("Telegram delivery supports photos");
 
   appendChannelMessages(workspacePath, [
     {

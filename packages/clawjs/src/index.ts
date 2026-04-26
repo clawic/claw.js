@@ -1040,6 +1040,58 @@ function splitTelegramMessage(text: string, maxLength = 3900): string[] {
   return chunks;
 }
 
+const TELEGRAM_CODEX_ATTACHMENT_INSTRUCTIONS = [
+  "Telegram delivery supports photos, videos, audio, animations, and documents when you have a Telegram file_id or an HTTPS URL.",
+  "If the user asks you to send a photo or file, do not say this session cannot send attachments just because the reply is mediated through Telegram.",
+  "To attach media, include a final fenced block named clawjs-telegram-actions containing JSON: {\"actions\":[{\"type\":\"send_message\",\"mediaType\":\"photo|video|document|audio|animation\",\"media\":\"file_id_or_https_url\",\"text\":\"optional caption\"}]}.",
+].join(" ");
+
+type TelegramCodexMediaAction = {
+  type: "send_message";
+  targetId?: string;
+  text?: string;
+  media?: string;
+  mediaType?: "photo" | "video" | "document" | "audio" | "animation";
+  threadId?: string | number;
+  parseMode?: "HTML" | "Markdown" | "MarkdownV2";
+  metadata?: Record<string, unknown>;
+};
+
+function parseTelegramCodexMediaActions(text: string): { text: string; mediaActions: TelegramCodexMediaAction[] } {
+  const mediaActions: TelegramCodexMediaAction[] = [];
+  const cleaned = text.replace(/```clawjs-telegram-actions\s*([\s\S]*?)```/gi, (_match, rawJson: string) => {
+    try {
+      const payload = JSON.parse(rawJson.trim()) as unknown;
+      const actions = Array.isArray(payload)
+        ? payload
+        : Array.isArray((payload as { actions?: unknown[] } | null)?.actions)
+          ? (payload as { actions: unknown[] }).actions
+          : [];
+      for (const action of actions) {
+        if (!action || typeof action !== "object") continue;
+        const candidate = action as Record<string, unknown>;
+        const media = typeof candidate.media === "string" ? candidate.media.trim() : "";
+        const mediaType = typeof candidate.mediaType === "string" ? candidate.mediaType : "photo";
+        if (candidate.type !== "send_message" || !media || !["photo", "video", "document", "audio", "animation"].includes(mediaType)) continue;
+        mediaActions.push({
+          type: "send_message",
+          ...(typeof candidate.targetId === "string" ? { targetId: candidate.targetId } : {}),
+          ...(typeof candidate.text === "string" ? { text: candidate.text } : {}),
+          media,
+          mediaType: mediaType as TelegramCodexMediaAction["mediaType"],
+          ...(typeof candidate.threadId === "string" || typeof candidate.threadId === "number" ? { threadId: candidate.threadId } : {}),
+          ...(candidate.parseMode === "HTML" || candidate.parseMode === "Markdown" || candidate.parseMode === "MarkdownV2" ? { parseMode: candidate.parseMode } : {}),
+          ...(candidate.metadata && typeof candidate.metadata === "object" && !Array.isArray(candidate.metadata) ? { metadata: candidate.metadata as Record<string, unknown> } : {}),
+        });
+      }
+    } catch {
+      return _match;
+    }
+    return "";
+  }).trim();
+  return { text: cleaned, mediaActions };
+}
+
 async function runTelegramCodexProcessor(input: {
   context: CliContext;
   flags: Record<string, string>;
@@ -1115,11 +1167,12 @@ async function runTelegramCodexProcessor(input: {
       : stripTelegramCodexCommand(rawText, botUsername);
   const prompt = formatTelegramCodexPrompt(event, promptText);
   const targetLabel = threadId ? `${targetId} topic ${threadId}` : targetId;
-  const systemPrompt = input.flags["system-prompt"] || [
+  const baseSystemPrompt = input.flags["system-prompt"] || [
     "You are Codex responding through a Telegram bot.",
     "Be concise, useful, and clear.",
     "You are running in the configured ClawJS runtime environment.",
   ].join(" ");
+  const systemPrompt = `${baseSystemPrompt}\n\n${TELEGRAM_CODEX_ATTACHMENT_INSTRUCTIONS}`;
   const claw = await createCliClaw(input.runtimeAdapterId, input.flags, input.workspaceRoot, input.appId, input.workspaceId, input.agentId, input.argv);
   let sessionId = state.sessions[key];
   if (sessionCommand || !sessionId) {
@@ -1241,7 +1294,21 @@ async function runTelegramCodexProcessor(input: {
     }
   }
 
-  const chunks = splitTelegramMessage(result.text);
+  const parsedReply = parseTelegramCodexMediaActions(result.text);
+  const chunks = splitTelegramMessage(parsedReply.text);
+  const mediaActions = parsedReply.mediaActions.map((action) => ({
+    ...action,
+    targetId: action.targetId ?? targetId,
+    ...(action.threadId !== undefined ? { threadId: action.threadId } : threadId ? { threadId } : {}),
+    agentId: input.agentId,
+    metadata: {
+      ...(action.metadata ?? {}),
+      sessionId,
+      transport: result.transport,
+      fallback: result.fallback,
+      ownerUserId: state.ownerUserId,
+    },
+  }));
   const actions = chunks.length > 0
     ? [
         {
@@ -1268,8 +1335,24 @@ async function runTelegramCodexProcessor(input: {
             ownerUserId: state.ownerUserId,
           },
         })),
+        ...mediaActions,
       ]
-    : [{ type: "ignore", reason: "codex returned empty response" }];
+    : mediaActions.length > 0
+      ? [
+          {
+            type: "grant_permission",
+            targetId,
+            agentId: input.agentId,
+            permissions: ["write"],
+            priority: 100,
+            metadata: {
+              source: "telegram-codex-bridge",
+              ownerUserId: state.ownerUserId,
+            },
+          },
+          ...mediaActions,
+        ]
+      : [{ type: "ignore", reason: "codex returned empty response" }];
   writeJson(input.context.stdout, {
     actions,
   });

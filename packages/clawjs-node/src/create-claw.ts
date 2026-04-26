@@ -290,6 +290,7 @@ import {
   type SecretTypeDescriptor,
   type SecretTypedActionDescriptor,
 } from "./secrets/index.ts";
+
 import { applyTextMutation, mergeManagedBlocks, type MergeManagedBlocksOptions } from "./files/managed-blocks.ts";
 import {
   createLocalLibraryStore,
@@ -363,6 +364,12 @@ import {
   type ContentScopedTokenRecord,
   type ContentVariant,
 } from "./content/index.ts";
+
+const TELEGRAM_CODEX_BRIDGE_COMMANDS: TelegramCommand[] = [
+  { command: "new", description: "Start a fresh session" },
+  { command: "reset", description: "Start a fresh session" },
+  { command: "codex", description: "Send a prompt to Codex" },
+];
 
 export interface CreateClawOptions {
   runtime: {
@@ -3591,6 +3598,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           targetId,
           text: action.text,
           media: action.media,
+          mediaType: action.mediaType,
           threadId: action.threadId ?? context.message.threadId,
           parseMode: action.parseMode,
           agentId,
@@ -3696,6 +3704,18 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     };
   }
 
+  async function ensureTelegramCodexBridgeCommands(accountId?: string): Promise<void> {
+    const account = channelsRegistry.accounts.get("telegram", accountId);
+    const existingCommands = account?.metadata?.commands;
+    if (Array.isArray(existingCommands) && existingCommands.length > 0) return;
+    await setTelegramAccountCommands({
+      registry: channelsRegistry,
+      runner: processHost,
+      env: secretsEnv,
+    }, accountId, TELEGRAM_CODEX_BRIDGE_COMMANDS);
+    await refreshChannelSnapshots();
+  }
+
   async function runChannelListener(input: {
     provider?: string;
     accountId?: string;
@@ -3718,6 +3738,9 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     const processor = input.processorId ? channelsRegistry.processors.get(input.processorId) : null;
     if (input.processorId && !processor) {
       throw new Error(`channel processor not found: ${input.processorId}`);
+    }
+    if (provider === "telegram" && processor?.id === "telegram-codex") {
+      await ensureTelegramCodexBridgeCommands(accountId);
     }
     const startedAt = new Date().toISOString();
     if (input.pidPath) {
@@ -4866,6 +4889,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
             accountId,
             label,
           });
+          await ensureTelegramCodexBridgeCommands(account.accountId);
           await refreshChannelSnapshots();
           appendAuditEvent("telegram.connected", "channels", {
             secretName: telegramInput.secretName,
