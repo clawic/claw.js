@@ -204,15 +204,24 @@ function collectCodexText(value: unknown, output: string[]): void {
 
 export function extractCodexJsonlText(stdout: string): string {
   const chunks: string[] = [];
+  const completedMessages: string[] = [];
   for (const line of stdout.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed) continue;
     try {
-      collectCodexText(JSON.parse(trimmed), chunks);
+      const record = JSON.parse(trimmed) as unknown;
+      const item = asRecord(asRecord(record)?.item);
+      if (normalizeExtractedText(asRecord(record)?.type) === "item.completed" && normalizeExtractedText(item?.type) === "agent_message") {
+        const text = normalizeOutputText(item?.text) || normalizeOutputText(item?.message);
+        if (text) completedMessages.push(text);
+      }
+      collectCodexText(record, chunks);
     } catch {
       continue;
     }
   }
+
+  if (completedMessages.length > 0) return completedMessages.at(-1)!.trim();
 
   return chunks
     .filter(Boolean)

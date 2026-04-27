@@ -48,6 +48,17 @@ test("extractCodexJsonlText normalizes Codex exec JSONL events", () => {
   assert.equal(text, "hello world");
 });
 
+test("extractCodexJsonlText returns the final completed Codex agent message", () => {
+  const text = extractCodexJsonlText([
+    JSON.stringify({ type: "thread.started", thread_id: "thread-1" }),
+    JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: "I am checking the workspace." } }),
+    JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: "Done. The file is attached." } }),
+    JSON.stringify({ type: "turn.completed" }),
+  ].join("\n"));
+
+  assert.equal(text, "Done. The file is attached.");
+});
+
 test("streamOpenClawSession streams Codex app-server and can fall back to Codex exec JSONL", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-codex-stream-"));
   const codexBin = path.join(tempRoot, "codex");
