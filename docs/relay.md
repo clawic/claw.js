@@ -1,11 +1,11 @@
 ---
 title: Relay
-description: Public HTTPS relay and reverse connector for remote ClawJS and OpenClaw agents.
+description: Public HTTPS relay and reverse connector for remote ClawJS runtime agents.
 ---
 
 # Relay
 
-`relay/` is a standalone Node.js service that gives remote clients a public HTTPS `/v1` API while the real ClawJS or OpenClaw runtime stays behind a reverse WebSocket connector.
+`relay/` is a standalone Node.js service that gives remote clients a public HTTPS `/v1` API while the real ClawJS runtime stays behind a reverse WebSocket connector.
 
 For the side-by-side SDK, CLI, and Relay comparison, use
 [Interface Matrix](/interface-matrix).
@@ -77,11 +77,11 @@ The relay now distinguishes three layers:
 Relay v2 also distinguishes:
 
 - `device`: one authenticated mobile, web, or desktop client session
-- `connector`: one reverse WebSocket OpenClaw process behind NAT
+- `connector`: one reverse WebSocket runtime process behind NAT
 
 The public product routes are project-scoped. The low-level workspace routes remain available for compatibility.
 
-- `agent` in product terms is not the same thing as the OpenClaw runtime id used on disk or on the CLI
+- `agent` in product terms is not the same thing as the runtime id used on disk or on the CLI
 - each assignment derives its own `workspaceId` and `runtimeAgentId`
 - the connector materializes that assignment into an isolated workspace under the connector workspace root
 
@@ -104,7 +104,7 @@ The materialized workspace remains the execution target. A project is not a work
 | `agentId` | Relay product model | Reusable logical agent role and connector identity. |
 | `assignment` | Relay product model | Concrete `projectId + agentId` pairing that materializes into one runtime workspace. |
 | `workspaceId` | ClawJS workspace model | Isolated workspace context used by SDK, CLI, and Relay workspace routes. |
-| `runtimeAgentId` | Runtime adapter | Adapter-facing agent id written into the materialized workspace for OpenClaw setup and sessions. |
+| `runtimeAgentId` | Runtime adapter | Adapter-facing agent id written into the materialized workspace for runtime setup and sessions. |
 | `connectorId` | Relay connector lifecycle | One reverse WebSocket process connected behind NAT for a tenant and logical agent. |
 
 Worked request flow:
@@ -213,7 +213,8 @@ npm --prefix relay run connector -- \
   --relay-url http://127.0.0.1:4410 \
   --agent-id demo-agent \
   --workspace-root ./relay-workspaces \
-  --runtime-adapter openclaw
+  --runtime-adapter codex \
+  --runtime-binary-path /opt/homebrew/bin/codex
 ```
 
 On startup the connector either:
@@ -528,7 +529,7 @@ Current connector defaults:
 - relay URL: `http://127.0.0.1:4410`
 - agent id: `demo-agent`
 - workspace root: `./relay-workspaces`
-- runtime adapter: `openclaw`
+- runtime adapter: `openclaw` by default, or `codex` for a direct Codex connector
 
 For legacy routes, the connector still supports simple lazy workspace creation under the workspace root. For project assignments, it materializes:
 
@@ -536,7 +537,7 @@ For legacy routes, the connector still supports simple lazy workspace creation u
 - agent template files
 - one isolated runtime workspace per assignment
 
-The materialized workspace writes `projectId`, `logicalAgentId`, `runtimeAgentId`, and `materializationVersion` into the ClawJS manifest and workspace state snapshots so OpenClaw setup and CLI sessions target the derived runtime agent id instead of the reusable logical agent id.
+The materialized workspace writes `projectId`, `logicalAgentId`, `runtimeAgentId`, and `materializationVersion` into the ClawJS manifest and workspace state snapshots so runtime setup and CLI sessions target the derived runtime agent id instead of the reusable logical agent id.
 
 For some resources it also keeps compatibility data under:
 
@@ -571,12 +572,23 @@ Connector flags or env vars:
 | `--agent-id` | `RELAY_AGENT_ID` | `demo-agent` |
 | `--workspace-root` | `RELAY_WORKSPACE_ROOT` | `./relay-workspaces` |
 | `--runtime-adapter` | `RELAY_RUNTIME_ADAPTER` | `openclaw` |
+| `--runtime-binary-path` | `RELAY_RUNTIME_BINARY_PATH` | auto-detected |
+| `--codex-path` | `CLAWJS_CODEX_PATH` | auto-detected |
 
 When the runtime adapter is `openclaw`, the connector also passes through these optional host-local paths:
 
 - `OPENCLAW_STATE_DIR`
 - `OPENCLAW_CONFIG_PATH`
 - `OPENCLAW_AGENT_DIR`
+
+When the runtime adapter is `codex`, the connector passes a stable service-safe `PATH`, auto-detects Homebrew Codex binaries when possible, and honors:
+
+- `CLAWJS_CODEX_PATH`
+- `CODEX_HOME`
+- `CODEX_CONFIG_PATH`
+- `CODEX_AUTH_STORE_PATH`
+
+The connector includes runtime health in its `hello` frame and exposes `runtime:codex` plus either `runtime:ready` or `runtime:degraded` in its capabilities. Workspace status still returns the full adapter probe, including CLI, auth, app-server, and streaming transport state.
 
 ## Operational Limits
 
@@ -590,4 +602,4 @@ The current relay implementation is useful, but deliberately narrow:
 - no persisted copy of remote workspace data inside the relay database
 - no formal billing or metering model beyond estimated usage telemetry
 
-Treat the current relay as a thin remote access layer for ClawJS and OpenClaw, not as a full multi-region runtime platform.
+Treat the current relay as a thin remote access layer for ClawJS runtime adapters, not as a full multi-region runtime platform.

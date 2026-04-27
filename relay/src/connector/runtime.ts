@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { applyTextMutation, createClaw } from "@clawjs/claw";
+import type { RuntimeAdapterId, RuntimeProbeStatus } from "@clawjs/claw";
 import { extendClawWithWorkspace } from "@clawjs/workspace";
 
 import { BrowserSessionManager } from "../../../browser/host/session-manager.ts";
@@ -16,6 +17,19 @@ export interface RelayConnectorOptions {
   agentId: string;
   workspaceRoot: string;
   runtimeAdapter: string;
+  runtimeBinaryPath?: string;
+}
+
+export interface RelayConnectorRuntimeSummary {
+  adapter: RuntimeAdapterId;
+  runtimeName?: string;
+  version: string | null;
+  installed?: boolean;
+  cliAvailable: boolean;
+  gatewayAvailable: boolean;
+  online: boolean;
+  transport: string;
+  issues: string[];
 }
 
 type RelayConnectorEventEmitter = (event: string, payload: Record<string, unknown>) => void;
@@ -122,6 +136,77 @@ function writeJsonFile(filePath: string, value: unknown): void {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+function appendUniquePath(basePath: string | undefined, entries: string[]): string {
+  const seen = new Set<string>();
+  const parts = [
+    ...(basePath?.split(path.delimiter).filter(Boolean) ?? []),
+    ...entries,
+  ].filter((entry) => {
+    if (seen.has(entry)) return false;
+    seen.add(entry);
+    return true;
+  });
+  return parts.join(path.delimiter);
+}
+
+function resolveRuntimeBinaryPath(adapter: string, configured?: string): string | undefined {
+  if (configured?.trim()) return configured.trim();
+  if (adapter === "codex") {
+    for (const candidate of ["/opt/homebrew/bin/codex", "/usr/local/bin/codex"]) {
+      if (fs.existsSync(candidate)) return candidate;
+    }
+    return process.env.CLAWJS_CODEX_PATH?.trim() || undefined;
+  }
+  if (adapter === "openclaw") {
+    return process.env.CLAWJS_OPENCLAW_PATH?.trim() || undefined;
+  }
+  return undefined;
+}
+
+function buildRuntimeEnv(adapter: string, configuredBinaryPath?: string): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    PATH: appendUniquePath(process.env.PATH, [
+      "/opt/homebrew/bin",
+      "/usr/local/bin",
+      "/usr/bin",
+      "/bin",
+      "/usr/sbin",
+      "/sbin",
+    ]),
+  };
+  const binaryPath = resolveRuntimeBinaryPath(adapter, configuredBinaryPath);
+  if (adapter === "codex" && binaryPath) {
+    env.CLAWJS_CODEX_PATH = binaryPath;
+  }
+  if (adapter === "openclaw" && binaryPath) {
+    env.CLAWJS_OPENCLAW_PATH = binaryPath;
+  }
+  return env;
+}
+
+function summarizeRuntimeStatus(status: RuntimeProbeStatus): RelayConnectorRuntimeSummary {
+  const issues: string[] = [];
+  if (!status.cliAvailable) issues.push(`${status.runtimeName} CLI is not available.`);
+  if (status.cliAvailable && status.capabilityMap.auth?.status !== "ready") {
+    issues.push(`${status.runtimeName} auth is not ready.`);
+  }
+  if (status.cliAvailable && status.capabilityMap.session_gateway?.status === "degraded") {
+    issues.push(`${status.runtimeName} gateway is degraded; CLI fallback may be used.`);
+  }
+  return {
+    adapter: status.adapter,
+    runtimeName: status.runtimeName,
+    version: status.version,
+    installed: status.installed,
+    cliAvailable: status.cliAvailable,
+    gatewayAvailable: status.gatewayAvailable,
+    online: status.cliAvailable && status.capabilityMap.auth?.status === "ready",
+    transport: status.capabilityMap.streaming?.strategy ?? "unknown",
+    issues,
+  };
+}
+
 function renderRefsSection(
   title: string,
   refs: Array<{ id: string; label?: string; mode?: string; uri?: string; secretName?: string }>,
@@ -159,11 +244,15 @@ function upsertManagedBlocks(filePath: string, title: string, blocks: Array<{ bl
 export class RelayConnectorRuntime {
   private readonly contexts = new Map<string, Promise<RuntimeContext>>();
   private readonly browser: BrowserSessionManager;
+  private readonly runtimeEnv: NodeJS.ProcessEnv;
+  private readonly runtimeBinaryPath: string | undefined;
 
   constructor(
     private readonly options: RelayConnectorOptions,
     private readonly emitEvent?: RelayConnectorEventEmitter,
   ) {
+    this.runtimeEnv = buildRuntimeEnv(options.runtimeAdapter, options.runtimeBinaryPath);
+    this.runtimeBinaryPath = resolveRuntimeBinaryPath(options.runtimeAdapter, options.runtimeBinaryPath);
     this.browser = new BrowserSessionManager({
       onState: (event) => this.emitEvent?.("browser.state", event as unknown as Record<string, unknown>),
       onFrame: (event) => this.emitEvent?.("browser.frame", event as unknown as Record<string, unknown>),
@@ -214,13 +303,21 @@ export class RelayConnectorRuntime {
 
     const claw = await createClaw({
       runtime: {
-        adapter: this.options.runtimeAdapter as "openclaw",
+        adapter: this.options.runtimeAdapter as RuntimeAdapterId,
+        ...(this.runtimeBinaryPath ? { binaryPath: this.runtimeBinaryPath } : {}),
         ...(this.options.runtimeAdapter === "openclaw"
           ? {
               homeDir: process.env.OPENCLAW_STATE_DIR,
               configPath: process.env.OPENCLAW_CONFIG_PATH,
               agentDir: process.env.OPENCLAW_AGENT_DIR,
-              env: process.env,
+              env: this.runtimeEnv,
+            }
+          : { env: this.runtimeEnv }),
+        ...(this.options.runtimeAdapter === "codex"
+          ? {
+              homeDir: process.env.CODEX_HOME,
+              configPath: process.env.CODEX_CONFIG_PATH,
+              authStorePath: process.env.CODEX_AUTH_STORE_PATH,
             }
           : {}),
       },
@@ -260,6 +357,11 @@ export class RelayConnectorRuntime {
       compat: new WorkspaceCompatStore(metadata.workspaceDir),
       metadata,
     };
+  }
+
+  async getRuntimeSummary(workspaceId = "main"): Promise<RelayConnectorRuntimeSummary> {
+    const { claw } = await this.getContext(workspaceId);
+    return summarizeRuntimeStatus(await claw.runtime.status());
   }
 
   private resolveWorkspaceMaterialization(workspaceId: string): WorkspaceMaterialization {

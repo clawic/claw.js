@@ -24,6 +24,11 @@ function parseArgs(argv: string[]): RelayConnectorOptions {
   const enrollmentToken = values.get("enrollment-token") ?? process.env.RELAY_ENROLLMENT_TOKEN ?? "";
   const workspaceRoot = values.get("workspace-root") ?? process.env.RELAY_WORKSPACE_ROOT ?? "./relay-workspaces";
   const runtimeAdapter = values.get("runtime-adapter") ?? process.env.RELAY_RUNTIME_ADAPTER ?? "openclaw";
+  const runtimeBinaryPath = values.get("runtime-binary-path")
+    ?? values.get("codex-path")
+    ?? process.env.RELAY_RUNTIME_BINARY_PATH
+    ?? process.env.CLAWJS_CODEX_PATH
+    ?? process.env.CLAWJS_OPENCLAW_PATH;
 
   return {
     relayUrl,
@@ -32,6 +37,7 @@ function parseArgs(argv: string[]): RelayConnectorOptions {
     agentId,
     workspaceRoot,
     runtimeAdapter,
+    runtimeBinaryPath,
   };
 }
 
@@ -132,7 +138,20 @@ async function runOnce(options: RelayConnectorOptions): Promise<void> {
     }));
   });
 
-  socket.on("open", () => {
+  socket.on("open", async () => {
+    const runtimeSummary = await runtime.getRuntimeSummary().catch((error) => ({
+      adapter: options.runtimeAdapter,
+      version: null,
+      cliAvailable: false,
+      gatewayAvailable: false,
+      online: false,
+      transport: "unknown",
+      issues: [error instanceof Error ? error.message : String(error)],
+    }));
+    const runtimeCapabilities = [
+      `runtime:${options.runtimeAdapter}`,
+      runtimeSummary.online ? "runtime:ready" : "runtime:degraded",
+    ];
     socket.send(JSON.stringify({
       type: "hello",
       payload: {
@@ -158,7 +177,9 @@ async function runOnce(options: RelayConnectorOptions): Promise<void> {
           "integrations",
           "admin",
           "browser",
+          ...runtimeCapabilities,
         ],
+        runtime: runtimeSummary,
         workspaces: runtime.listWorkspaces(),
       },
     }));

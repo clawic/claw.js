@@ -1164,6 +1164,7 @@ describe("relay e2e", () => {
     const firstChunk = reader ? await reader.read() : { value: undefined };
     const chunkText = firstChunk.value ? Buffer.from(firstChunk.value).toString("utf8") : "";
     assert.match(chunkText, /event: ready/);
+    await reader?.cancel();
     reader?.releaseLock();
   });
 

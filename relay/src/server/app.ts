@@ -408,8 +408,14 @@ async function forwardIotEventStream(
     await reply.code(503).send({ error: "iot_unavailable", message: "Relay IoT base URL is not configured." });
     return null;
   }
-  const response = await fetch(`${config.iotBaseUrl.replace(/\/$/, "")}${input.path}`);
+  const controller = new AbortController();
+  const abortUpstream = () => controller.abort();
+  request.raw.once("close", abortUpstream);
+  const response = await fetch(`${config.iotBaseUrl.replace(/\/$/, "")}${input.path}`, {
+    signal: controller.signal,
+  });
   if (!response.ok || !response.body) {
+    request.raw.off("close", abortUpstream);
     await reply.code(response.status || 502).send({ error: "iot_stream_unavailable" });
     return null;
   }
@@ -419,14 +425,23 @@ async function forwardIotEventStream(
     connection: "keep-alive",
   });
   const reader = response.body.getReader();
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      reply.raw.write(Buffer.from(value));
+  try {
+    while (!controller.signal.aborted) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value && !reply.raw.destroyed) {
+        reply.raw.write(Buffer.from(value));
+      }
+    }
+  } catch (error) {
+    if (!controller.signal.aborted) throw error;
+  } finally {
+    request.raw.off("close", abortUpstream);
+    await reader.cancel().catch(() => {});
+    if (!reply.raw.destroyed && !reply.raw.writableEnded) {
+      reply.raw.end();
     }
   }
-  reply.raw.end();
   return reply;
 }
 

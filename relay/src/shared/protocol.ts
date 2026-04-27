@@ -19,6 +19,17 @@ export interface ConnectorHelloPayload {
   version: string;
   capabilities: string[];
   workspaces: ConnectorWorkspaceDescriptor[];
+  runtime?: {
+    adapter: string;
+    runtimeName?: string;
+    version: string | null;
+    installed?: boolean;
+    cliAvailable: boolean;
+    gatewayAvailable: boolean;
+    online: boolean;
+    transport: string;
+    issues: string[];
+  };
 }
 
 export interface ConnectorEnvelopeBase {

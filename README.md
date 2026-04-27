@@ -43,7 +43,7 @@ Repository ownership, issue tracking, and package publishing live under [`@clawi
 
 ## Relay
 
-The repository also includes `relay/`, a standalone relay backend for remote clients that need a public HTTPS API in front of remote ClawJS or OpenClaw agents.
+The repository also includes `relay/`, a standalone relay backend for remote clients that need a public HTTPS API in front of remote ClawJS runtime agents, including OpenClaw and Codex connectors.
 
 Relay v1 adds:
 

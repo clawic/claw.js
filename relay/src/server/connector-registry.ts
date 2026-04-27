@@ -184,6 +184,15 @@ export class ConnectorRegistry {
       capabilities: message.payload.capabilities,
       version: message.payload.version,
     });
+    if (message.payload.runtime) {
+      this.db.appendActivity({
+        tenantId: auth.tenantId,
+        agentId: auth.agentId,
+        capability: "runtime.status",
+        status: message.payload.runtime.online ? "success" : "error",
+        detail: JSON.stringify(message.payload.runtime),
+      });
+    }
     this.connections.set(this.key(auth.tenantId, auth.connectorId), {
       sessionId,
       socket,
