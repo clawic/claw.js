@@ -519,6 +519,7 @@ async function renderDeck(
   if (options.formats.includes("pdf") || options.formats.includes("png")) {
     let browser: Awaited<ReturnType<(typeof import("playwright"))["chromium"]["launch"]>> | null = null;
     try {
+      if (process.env.CLAWJS_SLIDES_DISABLE_BROWSER === "1") throw new Error("Browser slide renderer disabled.");
       const playwright = await import("playwright");
       browser = await playwright.chromium.launch({
         headless: true,
@@ -715,7 +716,7 @@ function buildFallbackPdf(deck: SlideDeckManifest): Buffer {
   const contentIds = deck.slides.map((_slide, index) => 5 + index * 2);
   objects[0] = "<< /Type /Catalog /Pages 2 0 R >>";
   objects[1] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${deck.slides.length} >>`;
-  objects[2] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
+  objects[2] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
   deck.slides.forEach((slide, index) => {
     const content = fallbackPdfPageContent(slide, index, deck, theme);
     objects[pageIds[index] - 1] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${SLIDE_W} ${SLIDE_H}] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentIds[index]} 0 R >>`;
@@ -729,23 +730,52 @@ function fallbackPdfPageContent(slide: SlideManifestSlide, index: number, deck: 
   const fg = pdfRgb(theme.fg);
   const muted = pdfRgb(theme.muted);
   const accent = pdfRgb(theme.accent);
-  const lines: string[] = [`q ${bg} rg 0 0 ${SLIDE_W} ${SLIDE_H} re f Q`];
-  let y = 455;
+  const panel = pdfRgb(theme.panel);
+  const lines: string[] = [
+    pdfRect(0, 0, SLIDE_W, SLIDE_H, bg),
+    pdfRect(84, 78, 112, 4, accent),
+  ];
   const heading = slide.heading ?? slide.title ?? deck.title;
-  lines.push(...pdfTextLines(heading, 64, y, 38, fg, 29));
-  y -= 72;
-  if (slide.subtitle) {
-    lines.push(...pdfTextLines(slide.subtitle, 66, y, 19, muted, 58));
-    y -= 46;
-  }
-  const body = fallbackSlideBody(slide);
-  for (const entry of body) {
-    const prefix = entry.kind === "bullet" ? "- " : "";
-    const color = entry.kind === "metric" ? accent : fg;
-    const size = entry.kind === "metric" ? 25 : 18;
-    lines.push(...pdfTextLines(`${prefix}${entry.text}`, 82, y, size, color, entry.kind === "metric" ? 24 : 70));
-    y -= entry.kind === "metric" ? 46 : 32;
-    if (y < 84) break;
+  if (["title", "section", "statement", "closing"].includes(slide.layout)) {
+    lines.push(...pdfTextLines(slide.layout === "closing" ? "CLOSE" : "PRESENTATION", 84, 470, 13, accent, 36, 18));
+    lines.push(...pdfTextLines(heading, 84, 418, 42, fg, 30, 54));
+    if (slide.subtitle) lines.push(...pdfTextLines(slide.subtitle, 84, 300, 21, muted, 68, 30));
+    if (slide.body) lines.push(...pdfTextLines(slide.body, 84, 250, 18, fg, 78, 26));
+  } else if (slide.layout === "comparison") {
+    lines.push(...pdfTextLines(heading, 84, 560, 36, fg, 34, 44));
+    lines.push(pdfRect(84, 160, 520, 290, panel));
+    lines.push(pdfRect(676, 160, 520, 290, panel));
+    lines.push(...pdfTextLines("ANTES", 118, 395, 13, muted, 30, 18));
+    lines.push(...pdfTextLines(slide.left ?? "", 118, 340, 22, fg, 36, 31));
+    lines.push(...pdfTextLines("AHORA", 710, 395, 13, accent, 30, 18));
+    lines.push(...pdfTextLines(slide.right ?? "", 710, 340, 22, fg, 36, 31));
+  } else if (slide.layout === "metric-grid") {
+    lines.push(...pdfTextLines(heading, 84, 560, 36, fg, 34, 44));
+    const metrics = (slide.metrics ?? []).slice(0, 6);
+    const positions = metrics.map((_metric, metricIndex) => ({
+      x: 84 + (metricIndex % 3) * 382,
+      y: metricIndex < 3 ? 330 : 160,
+    }));
+    metrics.forEach((metric, metricIndex) => {
+      const position = positions[metricIndex];
+      lines.push(pdfRect(position.x, position.y, 330, 118, panel));
+      lines.push(...pdfTextLines(metric.value, position.x + 24, position.y + 64, 28, accent, 14, 34));
+      lines.push(...pdfTextLines(metric.label, position.x + 24, position.y + 34, 12, muted, 28, 16));
+    });
+  } else {
+    lines.push(...pdfTextLines(heading, 84, 560, 38, fg, 34, 46));
+    if (slide.subtitle) lines.push(...pdfTextLines(slide.subtitle, 84, 502, 19, muted, 72, 28));
+    let y = slide.subtitle ? 438 : 470;
+    const body = fallbackSlideBody(slide);
+    for (const entry of body) {
+      const color = entry.kind === "metric" ? accent : fg;
+      const size = entry.kind === "metric" ? 25 : 20;
+      const text = entry.kind === "bullet" ? `- ${entry.text}` : entry.text;
+      const wrapped = pdfTextLines(text, 118, y, size, color, entry.kind === "metric" ? 26 : 72, Math.ceil(size * 1.38));
+      lines.push(...wrapped);
+      y -= Math.max(34, wrapped.length * Math.ceil(size * 1.38) + 14);
+      if (y < 112) break;
+    }
   }
   lines.push(...pdfTextLines(slide.layout, 64, 28, 10, muted, 40));
   lines.push(...pdfTextLines(String(index + 1), SLIDE_W - 92, 28, 10, muted, 8));
@@ -766,8 +796,12 @@ function fallbackSlideBody(slide: SlideManifestSlide): Array<{ kind: "text" | "b
   return entries;
 }
 
-function pdfTextLines(text: string, x: number, y: number, size: number, color: string, width: number): string[] {
-  return wrapPdfText(text, width).map((line, index) => `BT /F1 ${size} Tf ${color} rg ${x} ${y - index * Math.ceil(size * 1.32)} Td (${escapePdfText(line)}) Tj ET`);
+function pdfRect(x: number, y: number, width: number, height: number, color: string): string {
+  return `q ${color} rg ${x} ${y} ${width} ${height} re f Q`;
+}
+
+function pdfTextLines(text: string, x: number, y: number, size: number, color: string, width: number, lineHeight = Math.ceil(size * 1.32)): string[] {
+  return wrapPdfText(text, width).map((line, index) => `BT /F1 ${size} Tf ${color} rg ${x} ${y - index * lineHeight} Td (${escapePdfText(line)}) Tj ET`);
 }
 
 function wrapPdfText(text: string, width: number): string[] {
@@ -796,7 +830,16 @@ function pdfRgb(hex: string): string {
 }
 
 function escapePdfText(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/[^\x20-\x7e]/g, "");
+  const bytes = Buffer.from(value.replace(/[^\x09\x0a\x0d\x20-\xff]/g, ""), "latin1");
+  let output = "";
+  for (const byte of bytes) {
+    if (byte === 0x5c) output += "\\\\";
+    else if (byte === 0x28) output += "\\(";
+    else if (byte === 0x29) output += "\\)";
+    else if (byte < 0x20 || byte > 0x7e) output += `\\${byte.toString(8).padStart(3, "0")}`;
+    else output += String.fromCharCode(byte);
+  }
+  return output;
 }
 
 function writePdf(objects: string[]): Buffer {
@@ -1208,7 +1251,7 @@ function newestOutput(deck: SlideDeckManifest, format: SlideRenderFormat): Slide
   return deck.outputs.find((output) => output.format === format);
 }
 
-function outputRecord(format: SlideRenderFormat, filePath: string): SlideManifestOutput {
+function outputRecord(format: SlideRenderFormat, filePath: string, metadata?: Record<string, unknown>): SlideManifestOutput {
   return {
     format,
     path: filePath,
@@ -1216,6 +1259,7 @@ function outputRecord(format: SlideRenderFormat, filePath: string): SlideManifes
     sizeBytes: fs.statSync(filePath).isDirectory()
       ? directorySize(filePath)
       : fs.statSync(filePath).size,
+    ...(metadata ? { metadata } : {}),
   };
 }
 

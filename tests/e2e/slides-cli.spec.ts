@@ -12,10 +12,11 @@ function cliPath(rootDir: string) {
   return path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs");
 }
 
-async function runCli(rootDir: string, args: string[], options: { reject?: boolean } = {}) {
+async function runCli(rootDir: string, args: string[], options: { reject?: boolean; env?: NodeJS.ProcessEnv } = {}) {
   try {
     return await execFileAsync(process.execPath, [cliPath(rootDir), ...args], {
       cwd: rootDir,
+      env: { ...process.env, ...options.env },
       maxBuffer: 10 * 1024 * 1024,
     });
   } catch (error) {
@@ -160,4 +161,51 @@ test("slides validation blocks overflow by default and force preserves the repor
   expect(forced.validation.errorCount).toBeGreaterThan(0);
   expect(forced.rendered[0]?.format).toBe("pdf");
   expect(fs.existsSync(forced.rendered[0]!.path)).toBeTruthy();
+});
+
+test("slides pdf fallback remains readable when browser rendering is unavailable", async () => {
+  test.setTimeout(120_000);
+
+  const rootDir = process.cwd();
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-slides-pdf-fallback-"));
+  const workspaceDir = path.join(tempRoot, "workspace");
+  const created = parseJson<{ deck: { id: string } }>((await runCli(rootDir, [
+    "slides", "create", "Twend Launch",
+    "--theme", "executive",
+    "--workspace", workspaceDir,
+    "--json",
+  ])).stdout);
+
+  await runCli(rootDir, [
+    "slides", "add", created.deck.id,
+    "--workspace", workspaceDir,
+    "--layout", "title",
+    "--heading", "Twend: estrategia de lanzamiento",
+    "--subtitle", "Problema, prioridades, transición y cobertura V1",
+    "--json",
+  ]);
+  await runCli(rootDir, [
+    "slides", "add", created.deck.id,
+    "--workspace", workspaceDir,
+    "--layout", "title-bullets",
+    "--heading", "Prioridades de lanzamiento",
+    "--bullet", "Validar que el mensaje del producto se entienda en segundos",
+    "--bullet", "Reducir el tiempo hasta el primer resultado útil",
+    "--bullet", "Aprender rápido con señales de adopción y retención inicial",
+    "--json",
+  ]);
+
+  const rendered = parseJson<{ rendered: Array<{ format: string; path: string; metadata?: Record<string, unknown> }> }>((await runCli(rootDir, [
+    "slides", "render", created.deck.id,
+    "--workspace", workspaceDir,
+    "--format", "pdf",
+    "--json",
+  ], { env: { CLAWJS_SLIDES_DISABLE_BROWSER: "1" } })).stdout);
+  const pdf = rendered.rendered.find((entry) => entry.format === "pdf");
+  expect(pdf).toBeTruthy();
+  expect(pdf?.metadata?.renderer).toBe("node-fallback");
+  const pdfText = fs.readFileSync(pdf!.path, "latin1");
+  expect(pdfText.startsWith("%PDF")).toBeTruthy();
+  expect(pdfText).toContain("Prioridades de lanzamiento");
+  expect(pdfText).toContain("resultado \\372til");
 });
