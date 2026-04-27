@@ -31,6 +31,7 @@ import type { ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentSta
 import { runEmbeddedDatabaseCli } from "./database-advanced.ts";
 import { runMagicDbCli } from "./database-magic.ts";
 import { runMemoryCli } from "./memory-local.ts";
+import { runChatCli, runProviderCli } from "./chat.ts";
 import {
   addProjectIntegration,
   collectProjectInfo,
@@ -101,6 +102,7 @@ class CliHandledError extends Error {
 
 const RUNTIME_ADAPTER_IDS = new Set([
   "demo",
+  "claw",
   "openclaw",
   "codex",
   "zeroclaw",
@@ -217,6 +219,9 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} doctor [--workspace PATH] [--json]`,
     "",
     "Advanced command groups:",
+    `  ${binName} chat [prompt]`,
+    `  ${binName} chat list|resume`,
+    `  ${binName} provider login|status|models|use`,
     `  ${binName} runtime status|install|uninstall|repair|setup-workspace`,
     `  ${binName} workspace init|attach|inspect|discover|validate|reset|repair`,
     `  ${binName} files read|write|inspect|diff|sync|apply-template-pack`,
@@ -3681,6 +3686,13 @@ async function createCliClaw(
     runtime: {
       adapter: runtimeAdapter,
       agentDir: flags["agent-dir"],
+      provider: flags.provider,
+      model: flags.model,
+      wire: flags.wire as "chat_completions" | "responses" | undefined,
+      baseUrl: flags["base-url"],
+      secretRef: flags["secret-ref"],
+      envKey: flags["env-key"],
+      permissionMode: flags.sandbox as "read-only" | "workspace-write" | "danger-full-access" | undefined,
       homeDir: flags["home-dir"],
       configPath: flags["config-path"],
       workspacePath: flags["runtime-workspace"],
@@ -3762,6 +3774,13 @@ async function createCliWorkspaceClaw(
     runtime: {
       adapter: runtimeAdapter,
       agentDir: flags["agent-dir"],
+      provider: flags.provider,
+      model: flags.model,
+      wire: flags.wire as "chat_completions" | "responses" | undefined,
+      baseUrl: flags["base-url"],
+      secretRef: flags["secret-ref"],
+      envKey: flags["env-key"],
+      permissionMode: flags.sandbox as "read-only" | "workspace-write" | "danger-full-access" | undefined,
       homeDir: flags["home-dir"],
       configPath: flags["config-path"],
       workspacePath: flags["runtime-workspace"],
@@ -5611,6 +5630,14 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "domains") {
     return await runDomainsCli({ argv, positionals, flags, context, wantsJson, binName });
+  }
+
+  if (group === "chat") {
+    return await runChatCli({ argv, positionals, flags, wantsJson, context: { stdout: context.stdout, stderr: context.stderr, cwd: context.cwd, binName } });
+  }
+
+  if (group === "provider") {
+    return await runProviderCli({ argv, positionals, flags, wantsJson, context: { stdout: context.stdout, stderr: context.stderr, cwd: context.cwd, binName } });
   }
 
   if (group === "database" && wantsHelp) {

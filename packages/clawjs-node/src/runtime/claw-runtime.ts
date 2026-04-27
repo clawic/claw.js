@@ -503,6 +503,79 @@ async function buildResponseInput(input: StreamSessionInput, documentResolver?: 
   });
 }
 
+function buildChatTools(): Array<Record<string, unknown>> {
+  return [
+    {
+      type: "function",
+      function: {
+        name: "list_dir",
+        description: "List files and directories inside the workspace.",
+        parameters: {
+          type: "object",
+          properties: {
+            path: { type: "string", description: "Workspace-relative path to list." },
+          },
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "read_file",
+        description: "Read a UTF-8 text file inside the workspace.",
+        parameters: {
+          type: "object",
+          properties: {
+            path: { type: "string", description: "Workspace-relative file path to read." },
+          },
+          required: ["path"],
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "write_file",
+        description: "Write a UTF-8 text file inside the workspace.",
+        parameters: {
+          type: "object",
+          properties: {
+            path: { type: "string", description: "Workspace-relative file path to write." },
+            content: { type: "string", description: "Text content to write." },
+          },
+          required: ["path", "content"],
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "shell",
+        description: "Run a shell command in the workspace.",
+        parameters: {
+          type: "object",
+          properties: {
+            command: { type: "string", description: "Shell command to run." },
+          },
+          required: ["command"],
+        },
+      },
+    },
+  ];
+}
+
+function buildResponseTools(): Array<Record<string, unknown>> {
+  return buildChatTools().map((tool) => {
+    const fn = tool.function as Record<string, unknown>;
+    return {
+      type: "function",
+      name: fn.name,
+      description: fn.description,
+      parameters: fn.parameters,
+    };
+  });
+}
+
 export async function* streamClawRuntimeGatewayChunks(
   input: StreamSessionInput,
   fetchImpl: typeof fetch,
@@ -531,6 +604,7 @@ export async function* streamClawRuntimeGatewayChunks(
       model: input.model || config.model,
       user: input.sessionId,
       input: await buildResponseInput(input, dependencies.documentResolver),
+      tools: buildResponseTools(),
       stream: true,
     };
     yield* streamSseResponse(await postJson(fetchImpl, gatewayConfig, body, "/responses"), input, "responses");
@@ -544,6 +618,7 @@ export async function* streamClawRuntimeGatewayChunks(
       contextBlocks: input.contextBlocks,
       messages: input.messages,
     }) as OpenAIChatMessage[],
+    tools: buildChatTools(),
     stream: true,
   };
   yield* streamSseResponse(await postJson(fetchImpl, gatewayConfig, body, "/chat/completions"), input, "chat_completions");

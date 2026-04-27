@@ -451,6 +451,14 @@ export interface CreateClawOptions {
     adapter: RuntimeAdapterId;
     binaryPath?: string;
     agentDir?: string;
+    provider?: string;
+    model?: string;
+    wire?: "chat_completions" | "responses";
+    baseUrl?: string;
+    secretRef?: string;
+    envKey?: string;
+    headers?: Record<string, string>;
+    permissionMode?: "read-only" | "workspace-write" | "danger-full-access";
     homeDir?: string;
     configPath?: string;
     workspacePath?: string;
@@ -1713,6 +1721,14 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     binaryPath: options.runtime.binaryPath,
     agentId: runtimeAgentId,
     agentDir: options.runtime.agentDir,
+    provider: options.runtime.provider,
+    model: options.runtime.model,
+    wire: options.runtime.wire,
+    baseUrl: options.runtime.baseUrl,
+    secretRef: options.runtime.secretRef,
+    envKey: options.runtime.envKey,
+    headers: options.runtime.headers,
+    permissionMode: options.runtime.permissionMode,
     homeDir: options.runtime.homeDir,
     configPath: options.runtime.configPath,
     workspacePath: options.runtime.workspacePath ?? workspaceDir,
