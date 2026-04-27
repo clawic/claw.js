@@ -23,6 +23,7 @@ export * from "./compat/store.ts";
 export * from "./compat/drift.ts";
 export * from "./sessions/index.ts";
 export * from "./soul/store.ts";
+export * from "./user/store.ts";
 export * from "./create-claw.ts";
 export * from "./data/index.ts";
 export * from "./files/managed-blocks.ts";

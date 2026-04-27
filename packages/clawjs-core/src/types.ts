@@ -2209,6 +2209,156 @@ export interface SoulCompileResult {
   changed: boolean;
 }
 
+export type UserFactStatus = "pending" | "verified" | "archived";
+export type UserFactSensitivity = "public" | "personal" | "sensitive";
+export type UserFactVisibility = "agent" | "public" | "private";
+export type UserFacetKey =
+  | "identity"
+  | "biography"
+  | "residence"
+  | "languages"
+  | "publicContact"
+  | "work"
+  | "education"
+  | "projects"
+  | "skills"
+  | "interests"
+  | "tastes"
+  | "family"
+  | "relationships"
+  | "home"
+  | "routines"
+  | "health"
+  | "legal"
+  | "finances"
+  | "travel"
+  | "culture"
+  | "devices";
+export type UserRecordType =
+  | "education"
+  | "employment"
+  | "project"
+  | "relationship"
+  | "residence"
+  | "life_event"
+  | "achievement"
+  | "certification"
+  | "skill"
+  | "language"
+  | "affiliation"
+  | "descriptive_preference"
+  | "health_condition"
+  | "routine"
+  | "pet"
+  | "administrative_document";
+export type UserFactValue = string | number | boolean | null | Array<string | number | boolean | null> | Record<string, unknown>;
+
+export interface UserFactMetadata {
+  status: UserFactStatus;
+  source?: string;
+  verifiedAt?: string;
+  sensitivity: UserFactSensitivity;
+  confidence?: number;
+  validFrom?: string;
+  validTo?: string;
+  notes?: string;
+  visibility: UserFactVisibility;
+}
+
+export interface UserFact {
+  id: string;
+  key: string;
+  value: UserFactValue;
+  metadata: UserFactMetadata;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserRecord {
+  id: string;
+  type: UserRecordType;
+  title: string;
+  fields: Record<string, UserFactValue>;
+  metadata: UserFactMetadata;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserCustomFact {
+  id: string;
+  title: string;
+  value: UserFactValue;
+  metadata: UserFactMetadata;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserProposal {
+  id: string;
+  kind: "fact" | "record" | "custom_fact";
+  userId: string;
+  path?: string;
+  recordType?: UserRecordType;
+  title?: string;
+  value?: UserFactValue;
+  fields?: Record<string, UserFactValue>;
+  source?: string;
+  sensitivity: UserFactSensitivity;
+  confidence?: number;
+  notes?: string;
+  visibility: UserFactVisibility;
+  status: "pending" | "verified" | "rejected";
+  createdAt: string;
+  updatedAt: string;
+  verifiedAt?: string;
+}
+
+export interface UserAssignment {
+  agentId: string;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserSpec {
+  schemaVersion: 1;
+  id: string;
+  displayName: string;
+  isDefault: boolean;
+  facets: Partial<Record<UserFacetKey, UserFact[]>>;
+  records: UserRecord[];
+  customFacts: UserCustomFact[];
+  proposals: UserProposal[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserState {
+  schemaVersion: 1;
+  specs: UserSpec[];
+  assignments: UserAssignment[];
+  updatedAt: string;
+}
+
+export interface UserValidationIssue {
+  path: string;
+  message: string;
+}
+
+export interface UserValidationResult {
+  ok: boolean;
+  issues: UserValidationIssue[];
+}
+
+export interface UserCompileResult {
+  userId: string;
+  agentId?: string;
+  markdown: string;
+  targetFile: "USER.md";
+  blockId: string;
+  changed: boolean;
+}
+
 export interface LibrarySyncResult {
   resolved: LibraryResolveResult;
   syncedSkills: SkillDescriptor[];

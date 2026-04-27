@@ -88,6 +88,15 @@ import type {
   SoulCompileResult,
   SoulSpec,
   SoulValidationResult,
+  UserAssignment,
+  UserCompileResult,
+  UserFact,
+  UserFactValue,
+  UserProposal,
+  UserRecord,
+  UserRecordType,
+  UserSpec,
+  UserValidationResult,
   RuleInput,
   RuleRecord,
   RuleScope,
@@ -159,6 +168,7 @@ import { ClawEventBus, type ClawEvent, type EventListener } from "./watch/events
 import { watchProviderStatus, watchRuntimeStatus, type PollWatchOptions } from "./watch/status.ts";
 import { SessionStore } from "./sessions/store.ts";
 import { createSoulStore } from "./soul/store.ts";
+import { createUserStore } from "./user/store.ts";
 import { ChannelRunStore } from "./channel-runs/index.ts";
 import type { ChannelRunOptions, ChannelRunTarget, ChannelRunMessage } from "./channel-runs/index.ts";
 import { streamRuntimeSession, streamRuntimeSessionEvents, type SessionStreamEvent } from "./sessions/stream.ts";
@@ -737,6 +747,22 @@ export interface ClawInstance {
     preview: (input?: { soulId?: string; agentId?: string }) => SoulCompileResult;
     compile: (input?: { soulId?: string; agentId?: string; write?: boolean }) => SoulCompileResult;
     inspect: (id?: string, agentId?: string) => ReturnType<ReturnType<typeof createSoulStore>["inspect"]>;
+  };
+  user: {
+    list: () => UserSpec[];
+    get: (id: string) => UserSpec | null;
+    init: (input?: { id?: string; displayName?: string; isDefault?: boolean }) => UserSpec;
+    set: (input: { userId?: string; path: string; value: UserFactValue; source?: string; sensitivity?: "public" | "personal" | "sensitive"; confidence?: number; validFrom?: string; validTo?: string; notes?: string; visibility?: "agent" | "public" | "private" }) => UserFact;
+    add: (input: { userId?: string; type: UserRecordType; title: string; fields?: Record<string, UserFactValue>; source?: string; sensitivity?: "public" | "personal" | "sensitive"; confidence?: number; validFrom?: string; validTo?: string; notes?: string; visibility?: "agent" | "public" | "private" }) => UserRecord;
+    propose: (input: { userId?: string; path?: string; value?: UserFactValue; recordType?: UserRecordType; title?: string; fields?: Record<string, UserFactValue>; source?: string; sensitivity?: "public" | "personal" | "sensitive"; confidence?: number; notes?: string; visibility?: "agent" | "public" | "private" }) => UserProposal;
+    verify: (proposalId: string, userId?: string) => UserProposal;
+    assign: (input: { userId: string; agentId: string }) => UserAssignment;
+    assignmentForAgent: (agentId: string) => UserAssignment | null;
+    resolve: (input?: { userId?: string; agentId?: string }) => UserSpec;
+    validate: (input?: UserSpec) => UserValidationResult;
+    preview: (input?: { userId?: string; agentId?: string }) => UserCompileResult;
+    compile: (input?: { userId?: string; agentId?: string; write?: boolean }) => UserCompileResult;
+    inspect: (id?: string, agentId?: string) => ReturnType<ReturnType<typeof createUserStore>["inspect"]>;
   };
   compat: {
     refresh: () => Promise<ReturnType<typeof writeCompatSnapshot>>;
@@ -1473,6 +1499,10 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     filesystem,
   });
   const soulStore = createSoulStore({
+    workspaceDir,
+    filesystem,
+  });
+  const userStore = createUserStore({
     workspaceDir,
     filesystem,
   });
@@ -4807,6 +4837,35 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         return result;
       },
       inspect: (id, targetAgentId) => soulStore.inspect(id, targetAgentId),
+    },
+    user: {
+      list: () => userStore.list(),
+      get: (id) => userStore.get(id),
+      init: (input = {}) => userStore.init(input),
+      set: (input) => userStore.set(input),
+      add: (input) => userStore.addRecord(input),
+      propose: (input) => userStore.propose(input),
+      verify: (proposalId, targetUserId) => userStore.verify(proposalId, targetUserId),
+      assign: (input) => userStore.assign(input),
+      assignmentForAgent: (targetAgentId) => userStore.assignmentForAgent(targetAgentId),
+      resolve: (input = {}) => userStore.resolve(input),
+      validate: (input) => userStore.validate(input),
+      preview: (input = {}) => userStore.preview({ ...input, write: false }),
+      compile: (input = {}) => {
+        const result = userStore.compile(input);
+        appendAuditEvent("user.compiled", "file_sync", {
+          userId: result.userId,
+          agentId: result.agentId ?? logicalAgentId,
+          changed: result.changed,
+        });
+        eventBus.emit("user.compiled", {
+          userId: result.userId,
+          agentId: result.agentId ?? logicalAgentId,
+          changed: result.changed,
+        });
+        return result;
+      },
+      inspect: (id, targetAgentId) => userStore.inspect(id, targetAgentId),
     },
     compat: {
       refresh: async () => {

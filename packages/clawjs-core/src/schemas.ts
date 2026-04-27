@@ -483,6 +483,118 @@ export const soulStateSchema = z.object({
   updatedAt: z.string().min(1),
 }).strict();
 
+export const userFactStatusSchema = z.enum(["pending", "verified", "archived"]);
+export const userFactSensitivitySchema = z.enum(["public", "personal", "sensitive"]);
+export const userFactVisibilitySchema = z.enum(["agent", "public", "private"]);
+
+export const userFactMetadataSchema = z.object({
+  status: userFactStatusSchema.default("verified"),
+  source: z.string().min(1).optional(),
+  verifiedAt: z.string().min(1).optional(),
+  sensitivity: userFactSensitivitySchema.default("personal"),
+  confidence: z.number().min(0).max(1).optional(),
+  validFrom: z.string().min(1).optional(),
+  validTo: z.string().min(1).optional(),
+  notes: z.string().min(1).optional(),
+  visibility: userFactVisibilitySchema.default("agent"),
+}).strict();
+
+export const userFacetKeySchema = z.enum([
+  "identity", "biography", "residence", "languages", "publicContact", "work", "education",
+  "projects", "skills", "interests", "tastes", "family", "relationships", "home", "routines",
+  "health", "legal", "finances", "travel", "culture", "devices",
+]);
+
+export const userRecordTypeSchema = z.enum([
+  "education", "employment", "project", "relationship", "residence", "life_event", "achievement",
+  "certification", "skill", "language", "affiliation", "descriptive_preference", "health_condition",
+  "routine", "pet", "administrative_document",
+]);
+
+export const userFactValueSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.null(),
+  z.array(z.union([z.string(), z.number(), z.boolean(), z.null()])),
+  z.record(z.unknown()),
+]);
+
+export const userFactSchema = z.object({
+  id: z.string().min(1),
+  key: z.string().min(1),
+  value: userFactValueSchema,
+  metadata: userFactMetadataSchema,
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+}).strict();
+
+export const userRecordSchema = z.object({
+  id: z.string().min(1),
+  type: userRecordTypeSchema,
+  title: z.string().min(1),
+  fields: z.record(userFactValueSchema).default({}),
+  metadata: userFactMetadataSchema,
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+}).strict();
+
+export const userCustomFactSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  value: userFactValueSchema,
+  metadata: userFactMetadataSchema,
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+}).strict();
+
+export const userProposalSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(["fact", "record", "custom_fact"]),
+  userId: z.string().min(1),
+  path: z.string().min(1).optional(),
+  recordType: userRecordTypeSchema.optional(),
+  title: z.string().min(1).optional(),
+  value: userFactValueSchema.optional(),
+  fields: z.record(userFactValueSchema).optional(),
+  source: z.string().min(1).optional(),
+  sensitivity: userFactSensitivitySchema.default("personal"),
+  confidence: z.number().min(0).max(1).optional(),
+  notes: z.string().min(1).optional(),
+  visibility: userFactVisibilitySchema.default("agent"),
+  status: z.enum(["pending", "verified", "rejected"]).default("pending"),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+  verifiedAt: z.string().min(1).optional(),
+}).strict();
+
+export const userAssignmentSchema = z.object({
+  agentId: z.string().min(1),
+  userId: z.string().min(1),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+}).strict();
+
+export const userSpecSchema = z.object({
+  schemaVersion: z.literal(1),
+  id: z.string().min(1),
+  displayName: z.string().min(1),
+  isDefault: z.boolean().default(false),
+  facets: z.record(userFacetKeySchema, z.array(userFactSchema)).default({}),
+  records: z.array(userRecordSchema).default([]),
+  customFacts: z.array(userCustomFactSchema).default([]),
+  proposals: z.array(userProposalSchema).default([]),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+}).strict();
+
+export const userStateSchema = z.object({
+  schemaVersion: z.literal(1),
+  specs: z.array(userSpecSchema),
+  assignments: z.array(userAssignmentSchema),
+  updatedAt: z.string().min(1),
+}).strict();
+
 export const channelsStateSnapshotSchema = z.object({
   schemaVersion: z.number().int().positive(),
   updatedAt: z.string().min(1),

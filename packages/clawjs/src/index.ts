@@ -20,7 +20,7 @@ import type { ClawInstance, ImageOperation, ImageProvenance, ImageType, Telegram
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
 import { semanticPlanSchema } from "@clawjs/core";
-import type { MediaDirection, MediaKind, MediaListInput, MediaOrigin, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem } from "@clawjs/core";
+import type { MediaDirection, MediaKind, MediaListInput, MediaOrigin, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserFactValue, UserRecordType } from "@clawjs/core";
 import { runEmbeddedDatabaseCli } from "./database-advanced.ts";
 import { runMagicDbCli } from "./database-magic.ts";
 import { runMemoryCli } from "./memory-local.ts";
@@ -228,6 +228,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} library list|inspect|create|update|remove|import-skill|assign|unassign|resolve|sync`,
     `  ${binName} plan create|list|show|run|approve|reject|review|policy`,
     `  ${binName} soul init|validate|preview|compile|assign|inspect`,
+    `  ${binName} user init|set|add|propose|verify|list|get|inspect|validate|preview|compile|assign`,
     `  ${binName} channels list|status|telegram|assign|unassign|assignments|processors|listen|targets|messages|permissions|commands`,
     `  ${binName} channels telegram setup|codex setup|codex status`,
     `  ${binName} preview share --url http://127.0.0.1:PORT [--mode lan|tailscale|cloudflare]`,
@@ -495,6 +496,38 @@ function parseSoulModulesFromSetFlags(argv: string[]): Partial<Record<SoulModule
     } as SoulModule;
   }
   return modules;
+}
+
+function parseUserFactValue(raw: string | undefined, label: string): UserFactValue {
+  if (raw === undefined) throw new CliHandledError("usage_error", `${label} is required`, CLI_EXIT_USAGE);
+  const parsed = parseLooseCliValue(raw);
+  if (
+    typeof parsed === "string"
+    || typeof parsed === "number"
+    || typeof parsed === "boolean"
+    || parsed === null
+    || Array.isArray(parsed)
+    || (typeof parsed === "object" && parsed !== null)
+  ) {
+    return parsed as UserFactValue;
+  }
+  return String(parsed);
+}
+
+function parseUserFieldsFromSetFlags(argv: string[]): Record<string, UserFactValue> {
+  return parseSetFlags(argv) as Record<string, UserFactValue>;
+}
+
+function parseUserMetadataFlags(flags: Record<string, string>) {
+  return {
+    ...(flags.source ? { source: flags.source } : {}),
+    ...(flags.sensitivity ? { sensitivity: flags.sensitivity as "public" | "personal" | "sensitive" } : {}),
+    ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
+    ...(flags["valid-from"] ? { validFrom: flags["valid-from"] } : {}),
+    ...(flags["valid-to"] ? { validTo: flags["valid-to"] } : {}),
+    ...(flags.notes ? { notes: flags.notes } : {}),
+    ...(flags.visibility ? { visibility: flags.visibility as "agent" | "public" | "private" } : {}),
+  };
 }
 
 function parseObjectFlag(value: string | undefined, label: string): Record<string, unknown> {
@@ -7015,6 +7048,162 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     }
 
     context.stderr.write("Usage: claw soul init|validate|preview|compile|assign|inspect ...\n");
+    return CLI_EXIT_USAGE;
+  }
+
+  if (group === "user") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+    const targetUserId = flags.user || flags["user-id"];
+    const targetAgentId = flags.agent || flags["agent-id"] || agentId;
+    const metadata = parseUserMetadataFlags(flags);
+
+    try {
+      if (command === "init") {
+        const user = claw.user.init({
+          id: subcommand || targetUserId || "user",
+          displayName: flags.name || flags["display-name"] || flags.title,
+          ...(readBooleanFlag(argv, flags, "default", false) ? { isDefault: true } : {}),
+        });
+        if (wantsJson) writeJson(context.stdout, user);
+        else context.stdout.write(`initialized user ${user.id}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "list") {
+        const users = claw.user.list();
+        if (wantsJson) writeJson(context.stdout, { users });
+        else context.stdout.write(`${users.map((user) => `${user.id} ${user.displayName}${user.isDefault ? " default" : ""}`).join("\n")}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "get" || command === "inspect") {
+        const id = subcommand || targetUserId;
+        const result = command === "inspect"
+          ? claw.user.inspect(id, flags.agent ? targetAgentId : undefined)
+          : { user: id ? claw.user.get(id) : claw.user.resolve({ userId: targetUserId, agentId: flags.agent ? targetAgentId : undefined }) };
+        if (wantsJson) writeJson(context.stdout, result);
+        else if (command === "inspect") context.stdout.write(`${id ? (result as ReturnType<typeof claw.user.inspect>).resolved?.displayName ?? "not found" : `${(result as ReturnType<typeof claw.user.inspect>).state.specs.length} users`}\n`);
+        else context.stdout.write(`${((result as { user: { id: string; displayName: string } | null }).user)?.id ?? "not found"}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "set") {
+        const factPath = subcommand || flags.path;
+        const value = parseUserFactValue(flags.value ?? joinedPositionals(positionals, 3), "user value");
+        if (!factPath) {
+          context.stderr.write("Usage: claw user set <facet.key> <value> [--user ID]\n");
+          return CLI_EXIT_USAGE;
+        }
+        const fact = claw.user.set({
+          userId: targetUserId,
+          path: factPath,
+          value,
+          ...metadata,
+        });
+        if (wantsJson) writeJson(context.stdout, fact);
+        else context.stdout.write(`set ${factPath}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "add") {
+        const type = (subcommand || flags.type) as UserRecordType | undefined;
+        const title = flags.title || joinedPositionals(positionals, 3);
+        if (!type || !title) {
+          context.stderr.write("Usage: claw user add <record-type> --title TEXT [--set key=value ...] [--user ID]\n");
+          return CLI_EXIT_USAGE;
+        }
+        const record = claw.user.add({
+          userId: targetUserId,
+          type,
+          title,
+          fields: parseUserFieldsFromSetFlags(argv),
+          ...metadata,
+        });
+        if (wantsJson) writeJson(context.stdout, record);
+        else context.stdout.write(`added ${record.type} ${record.id}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "propose") {
+        const proposalPath = subcommand || flags.path;
+        const recordType = flags["record-type"] || flags.type;
+        const value = flags.value !== undefined || positionals[3] !== undefined ? parseUserFactValue(flags.value ?? joinedPositionals(positionals, 3), "proposal value") : undefined;
+        const proposal = claw.user.propose({
+          userId: targetUserId,
+          ...(proposalPath ? { path: proposalPath } : {}),
+          ...(value !== undefined ? { value } : {}),
+          ...(recordType ? { recordType: recordType as UserRecordType } : {}),
+          ...(flags.title ? { title: flags.title } : {}),
+          fields: parseUserFieldsFromSetFlags(argv),
+          ...metadata,
+        });
+        if (wantsJson) writeJson(context.stdout, proposal);
+        else context.stdout.write(`proposed ${proposal.id}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "verify") {
+        const proposalId = subcommand || flags.id;
+        if (!proposalId) {
+          context.stderr.write("Usage: claw user verify <proposal-id> [--user ID]\n");
+          return CLI_EXIT_USAGE;
+        }
+        const proposal = claw.user.verify(proposalId, targetUserId);
+        if (wantsJson) writeJson(context.stdout, proposal);
+        else context.stdout.write(`verified ${proposal.id}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "validate") {
+        const spec = claw.user.resolve({ userId: subcommand || targetUserId, agentId: flags.agent ? targetAgentId : undefined });
+        const result = claw.user.validate(spec);
+        if (wantsJson) writeJson(context.stdout, result);
+        else context.stdout.write(result.ok ? "valid\n" : `${result.issues.map((issue) => `${issue.path}: ${issue.message}`).join("\n")}\n`);
+        return result.ok ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
+      }
+
+      if (command === "preview") {
+        const result = claw.user.preview({
+          userId: subcommand || targetUserId,
+          agentId: targetAgentId,
+        });
+        if (wantsJson) writeJson(context.stdout, result);
+        else context.stdout.write(result.markdown);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "compile") {
+        const result = claw.user.compile({
+          userId: subcommand || targetUserId,
+          agentId: targetAgentId,
+        });
+        if (wantsJson) writeJson(context.stdout, result);
+        else context.stdout.write(`compiled ${result.userId} to ${result.targetFile}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "assign") {
+        const userId = subcommand || targetUserId;
+        if (!userId || !targetAgentId) {
+          context.stderr.write("Usage: claw user assign <user-id> --agent ID [--compile]\n");
+          return CLI_EXIT_USAGE;
+        }
+        const assignment = claw.user.assign({ userId, agentId: targetAgentId });
+        const compiled = readBooleanFlag(argv, flags, "compile", false)
+          ? claw.user.compile({ agentId: targetAgentId })
+          : null;
+        if (wantsJson) writeJson(context.stdout, { assignment, compiled });
+        else context.stdout.write(`assigned ${assignment.userId} to ${assignment.agentId}\n`);
+        return CLI_EXIT_OK;
+      }
+    } catch (error) {
+      const handled = cliErrorFromUnknown(error);
+      if (wantsJson) writeCliError(context.stdout, handled);
+      else context.stderr.write(`${handled.message}\n`);
+      return handled.exitCode;
+    }
+
+    context.stderr.write("Usage: claw user init|set|add|propose|verify|list|get|inspect|validate|preview|compile|assign\n");
     return CLI_EXIT_USAGE;
   }
 
