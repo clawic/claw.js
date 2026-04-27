@@ -577,7 +577,7 @@ function renderDeckHtml(deck: SlideDeckManifest, options: { cwd: string }): stri
 html, body { margin: 0; padding: 0; background: #111; }
 body { font-family: ${theme.font}; color: ${theme.fg}; }
 .deck { width: ${SLIDE_W}px; }
-.slide { position: relative; width: ${SLIDE_W}px; height: ${SLIDE_H}px; overflow: hidden; background: ${theme.bg}; color: ${theme.fg}; page-break-after: always; padding: 58px 72px; display: grid; gap: 24px; }
+.slide { position: relative; width: ${SLIDE_W}px; height: ${SLIDE_H}px; overflow: hidden; background: ${theme.bg}; color: ${theme.fg}; page-break-after: always; padding: 56px 72px; display: grid; gap: 24px; }
 .slide::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 86% 16%, ${hexAlpha(theme.accent, "24")}, transparent 23%), linear-gradient(135deg, transparent 0%, ${hexAlpha(theme.accent2, "14")} 100%); }
 .slide::after { content: ""; position: absolute; right: -130px; bottom: -190px; width: 430px; height: 430px; border: 62px solid ${hexAlpha(theme.accent, "22")}; border-radius: 999px; pointer-events: none; }
 .slide > * { position: relative; z-index: 1; }
@@ -585,25 +585,28 @@ body { font-family: ${theme.font}; color: ${theme.fg}; }
 h1, h2, h3, p { margin: 0; }
 h1 { font-size: 78px; line-height: .92; max-width: 980px; }
 h2 { font-size: 58px; line-height: .96; max-width: 1040px; }
-.subtitle { font-size: 30px; line-height: 1.22; color: ${theme.muted}; max-width: 880px; }
-.body { font-size: 30px; line-height: 1.23; color: ${theme.muted}; max-width: 920px; }
+.subtitle { font-size: 32px; line-height: 1.18; color: ${theme.muted}; max-width: 880px; }
+.body { font-size: 32px; line-height: 1.2; color: ${theme.muted}; max-width: 920px; }
 .bullets { counter-reset: bullet; display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; font-size: 27px; line-height: 1.14; }
 .bullets li { counter-increment: bullet; display: grid; grid-template-columns: 54px 1fr; gap: 18px; align-items: center; min-height: 74px; padding: 16px 22px 16px 16px; border-radius: 18px; background: ${hexAlpha(theme.panel, "dd")}; border: 1px solid ${hexAlpha(theme.accent, "24")}; box-shadow: 0 18px 45px ${hexAlpha("#000000", "08")}; }
 .bullets li::before { content: counter(bullet); display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: ${theme.accent}; color: ${theme.bg}; font: 800 21px/1 ${theme.font}; }
-.panel { background: ${hexAlpha(theme.panel, "ee")}; border: 1px solid ${hexAlpha(theme.accent, "28")}; border-radius: 16px; padding: 32px; box-shadow: 0 20px 54px ${hexAlpha("#000000", "09")}; }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 38px; align-items: stretch; height: 100%; }
-.image { width: 100%; height: 100%; object-fit: cover; border-radius: 22px; }
+.panel { background: ${hexAlpha(theme.panel, "f2")}; border: 1px solid ${hexAlpha(theme.accent, "28")}; border-radius: 14px; padding: 34px; box-shadow: 0 20px 54px ${hexAlpha("#000000", "09")}; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 34px; align-items: stretch; height: 100%; }
+.image { width: 100%; height: 100%; object-fit: cover; border-radius: 18px; box-shadow: 0 26px 70px ${hexAlpha("#000000", "18")}; }
 .full-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; border-radius: 0; }
-.overlay { align-self: end; max-width: 760px; padding: 34px 40px; border-radius: 24px; background: rgba(0,0,0,.62); color: #fff; }
+.full-image-scrim { position: absolute; inset: 0; z-index: 1; background: linear-gradient(90deg, rgba(0,0,0,.74), rgba(0,0,0,.34) 48%, rgba(0,0,0,.08)); }
+.overlay { align-self: end; max-width: 760px; padding: 34px 40px; border-radius: 18px; background: rgba(0,0,0,.66); color: #fff; }
+.overlay .subtitle, .overlay .body { color: rgba(255,255,255,.82); }
 .quote { font-size: 58px; line-height: 1.03; max-width: 980px; }
+.quote-mark { font: 800 150px/.75 ${theme.font}; color: ${hexAlpha(theme.accent, "32")}; height: 82px; }
 .attribution { font-size: 24px; color: ${theme.muted}; }
-.metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: stretch; }
+.metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: stretch; align-self: center; }
 .metric-value { font-size: 60px; font-weight: 800; color: ${theme.accent}; line-height: .95; }
 .metric-label { font-size: 23px; color: ${theme.fg}; font-weight: 700; }
 .metric-detail { font-size: 19px; color: ${theme.muted}; line-height: 1.2; }
-.steps { display: grid; gap: 16px; counter-reset: step; }
-.step { counter-increment: step; display: grid; grid-template-columns: 56px 1fr; gap: 18px; align-items: center; font-size: 27px; color: ${theme.fg}; }
-.step::before { content: counter(step); display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: ${theme.accent}; color: ${theme.bg}; font-weight: 800; }
+.steps { display: grid; gap: 18px; counter-reset: step; align-self: center; }
+.step { counter-increment: step; display: grid; gap: 22px; align-content: start; min-height: 184px; padding: 26px; border-radius: 14px; background: ${hexAlpha(theme.panel, "f0")}; border: 1px solid ${hexAlpha(theme.accent, "24")}; box-shadow: 0 18px 48px ${hexAlpha("#000000", "07")}; font-size: 27px; line-height: 1.14; color: ${theme.fg}; }
+.step::before { content: counter(step); display: grid; place-items: center; width: 52px; height: 52px; border-radius: 15px; background: ${theme.accent}; color: ${theme.bg}; font-weight: 800; }
 table { width: 100%; border-collapse: collapse; font-size: 22px; overflow: hidden; border-radius: 18px; }
 td, th { padding: 15px 18px; border-bottom: 1px solid ${hexAlpha(theme.muted, "34")}; text-align: left; }
 tr:first-child { color: ${theme.accent}; font-weight: 800; background: ${hexAlpha(theme.panel, "cc")}; }
@@ -613,12 +616,33 @@ tr:first-child { color: ${theme.accent}; font-weight: 800; background: ${hexAlph
 .layout-title .subtitle, .layout-section .subtitle, .layout-closing .subtitle { margin-top: 4px; max-width: 720px; }
 .layout-statement { align-content: center; }
 .layout-statement h2 { font-size: 66px; max-width: 1040px; }
-.layout-title-bullets { grid-template-rows: auto 1fr; align-content: center; }
+.layout-title-bullets { grid-template-rows: auto auto; align-content: center; gap: 26px; }
 .layout-title-bullets h2 { margin-bottom: 8px; }
-.layout-comparison .panel { display: grid; align-content: center; }
-.layout-comparison .body { color: ${theme.fg}; font-size: 30px; line-height: 1.22; }
-.layout-metric-grid .panel { min-height: 154px; display: grid; align-content: center; }
-.layout-full-bleed-image { padding: 58px; align-content: end; background: #000; }
+.layout-two-column { grid-template-rows: auto 1fr; }
+.layout-two-column .panel { display: grid; align-content: center; min-height: 318px; }
+.layout-two-column .body { color: ${theme.fg}; font-size: 34px; line-height: 1.16; }
+.layout-comparison { grid-template-rows: auto 1fr; }
+.layout-comparison .panel { display: grid; align-content: center; min-height: 312px; }
+.layout-comparison .body { color: ${theme.fg}; font-size: 34px; line-height: 1.15; }
+.layout-metric-grid { grid-template-rows: auto 1fr; }
+.layout-metric-grid .panel { min-height: 196px; display: grid; align-content: center; }
+.layout-timeline, .layout-process { grid-template-rows: auto 1fr; }
+.layout-timeline .steps { grid-template-columns: repeat(3, 1fr); }
+.layout-process .steps { grid-template-columns: repeat(4, 1fr); }
+.layout-quote { align-content: center; gap: 14px; }
+.layout-quote .quote { font-size: 68px; line-height: 1.02; max-width: 980px; }
+.layout-quote .attribution { margin-top: 16px; font-size: 28px; }
+.layout-image-left, .layout-image-right { padding: 46px 58px; }
+.layout-image-left .grid2, .layout-image-right .grid2 { gap: 42px; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); align-items: center; }
+.layout-image-right .grid2 { grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); }
+.image-copy { display: grid; align-content: center; gap: 24px; min-width: 0; }
+.image-copy .bullets { gap: 12px; font-size: 23px; }
+.image-copy .bullets li { min-height: 64px; padding: 13px 18px 13px 14px; }
+.image-copy .subtitle, .image-copy .body { font-size: 27px; max-width: 520px; }
+.image-copy h2 { font-size: 52px; max-width: 540px; }
+.layout-full-bleed-image { padding: 64px 72px; align-content: end; background: #000; }
+.layout-full-bleed-image::before, .layout-full-bleed-image::after { display: none; }
+.layout-full-bleed-image .overlay { z-index: 2; }
 @media print { body { background: transparent; } .slide { break-after: page; } }
 </style>
 </head>
@@ -648,16 +672,16 @@ function renderSlideHtml(slide: SlideManifestSlide, index: number, theme: typeof
       content = `<h2>${escapeHtml(heading)}</h2><div class="grid2"><div class="panel body">${escapeHtml(slide.left ?? "")}</div><div class="panel body">${escapeHtml(slide.right ?? "")}</div></div>`;
       break;
     case "image-left":
-      content = `<div class="grid2">${image}<div><h2>${escapeHtml(heading)}</h2>${subtitle}${body}${bullets}${caption}</div></div>`;
+      content = `<div class="grid2">${image}<div class="image-copy"><h2>${escapeHtml(heading)}</h2>${subtitle}${body}${bullets}${caption}</div></div>`;
       break;
     case "image-right":
-      content = `<div class="grid2"><div><h2>${escapeHtml(heading)}</h2>${subtitle}${body}${bullets}${caption}</div>${image}</div>`;
+      content = `<div class="grid2"><div class="image-copy"><h2>${escapeHtml(heading)}</h2>${subtitle}${body}${bullets}${caption}</div>${image}</div>`;
       break;
     case "full-bleed-image":
-      content = slide.image?.src ? `<img class="full-image" src="${escapeAttr(pathToFileURL(resolveInputPath(cwd, slide.image.src)).href)}" alt="${escapeAttr(slide.image.alt ?? "")}"><div class="overlay"><h2>${escapeHtml(heading)}</h2>${subtitle || body}</div>` : `<div class="overlay"><h2>${escapeHtml(heading)}</h2>${subtitle || body}</div>`;
+      content = slide.image?.src ? `<img class="full-image" src="${escapeAttr(pathToFileURL(resolveInputPath(cwd, slide.image.src)).href)}" alt="${escapeAttr(slide.image.alt ?? "")}"><div class="full-image-scrim"></div><div class="overlay"><h2>${escapeHtml(heading)}</h2>${subtitle || body}</div>` : `<div class="overlay"><h2>${escapeHtml(heading)}</h2>${subtitle || body}</div>`;
       break;
     case "quote":
-      content = `<p class="quote">${escapeHtml(slide.quote ?? heading)}</p>${slide.attribution ? `<p class="attribution">${escapeHtml(slide.attribution)}</p>` : ""}`;
+      content = `<div class="quote-mark">"</div><p class="quote">${escapeHtml(slide.quote ?? heading)}</p>${slide.attribution ? `<p class="attribution">${escapeHtml(slide.attribution)}</p>` : ""}`;
       break;
     case "metric-grid":
       content = `<h2>${escapeHtml(heading)}</h2><div class="metrics">${(slide.metrics ?? []).map((metric) => `<div class="panel"><p class="metric-value">${escapeHtml(metric.value)}</p><p class="metric-label">${escapeHtml(metric.label)}</p>${metric.detail ? `<p class="metric-detail">${escapeHtml(metric.detail)}</p>` : ""}</div>`).join("")}</div>`;
@@ -1351,6 +1375,18 @@ function resolveInputPath(cwd: string, value: string): string {
 
 function readImageDimensions(filePath: string): { width: number; height: number } | null {
   const buffer = fs.readFileSync(filePath);
+  const extension = path.extname(filePath).toLowerCase();
+  if (extension === ".svg") {
+    const source = buffer.toString("utf8", 0, Math.min(buffer.length, 4096));
+    const width = source.match(/\bwidth=["']?([0-9.]+)/i)?.[1];
+    const height = source.match(/\bheight=["']?([0-9.]+)/i)?.[1];
+    const viewBox = source.match(/\bviewBox=["']\s*[-0-9.]+\s+[-0-9.]+\s+([0-9.]+)\s+([0-9.]+)\s*["']/i);
+    const parsedWidth = Number(width ?? viewBox?.[1]);
+    const parsedHeight = Number(height ?? viewBox?.[2]);
+    if (Number.isFinite(parsedWidth) && Number.isFinite(parsedHeight) && parsedWidth > 0 && parsedHeight > 0) {
+      return { width: parsedWidth, height: parsedHeight };
+    }
+  }
   if (buffer.length >= 24 && buffer.toString("ascii", 1, 4) === "PNG") {
     return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
   }

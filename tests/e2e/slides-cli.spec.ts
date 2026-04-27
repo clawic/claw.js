@@ -31,6 +31,31 @@ function parseJson<T>(stdout: string): T {
   return JSON.parse(stdout) as T;
 }
 
+function writeSyntheticSlideImage(targetPath: string) {
+  fs.writeFileSync(targetPath, `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs>
+    <linearGradient id="sky" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#10243f"/>
+      <stop offset="0.48" stop-color="#2577a6"/>
+      <stop offset="1" stop-color="#f3b36a"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.82"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.18"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#sky)"/>
+  <circle cx="1230" cy="210" r="130" fill="#ffd27c" opacity="0.88"/>
+  <path d="M0 745 C270 620 430 665 650 575 C880 480 1095 570 1600 430 L1600 1000 L0 1000 Z" fill="#0e3a4b" opacity="0.88"/>
+  <path d="M120 820 C390 700 620 720 900 610 C1110 528 1300 548 1600 490 L1600 1000 L120 1000 Z" fill="#071a26" opacity="0.72"/>
+  <g transform="translate(300 180)">
+    <rect x="0" y="0" width="300" height="520" rx="24" fill="url(#glass)" opacity="0.72"/>
+    <rect x="360" y="120" width="230" height="400" rx="24" fill="url(#glass)" opacity="0.52"/>
+    <rect x="650" y="42" width="340" height="478" rx="24" fill="url(#glass)" opacity="0.62"/>
+  </g>
+</svg>`, "utf8");
+}
+
 test("slides cli creates, validates, renders, shares, and downloads a deck without real services", async ({ page }) => {
   test.setTimeout(120_000);
 
@@ -127,6 +152,78 @@ test("slides cli creates, validates, renders, shares, and downloads a deck witho
   await expect(page.locator("text=Core workflows").first()).toBeVisible();
   await expect(page.locator("text=Create, validate, render and share").first()).toBeVisible();
   await saveArtifactScreenshot(page, "slides-cli-rendered-html.png");
+});
+
+test("slides image layouts render polished visual slides", async ({ page }) => {
+  test.setTimeout(120_000);
+
+  const rootDir = process.cwd();
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-slides-images-"));
+  const workspaceDir = path.join(tempRoot, "workspace");
+  fs.mkdirSync(workspaceDir, { recursive: true });
+  const imagePath = path.join(workspaceDir, "launch-visual.svg");
+  writeSyntheticSlideImage(imagePath);
+
+  const created = parseJson<{ deck: { id: string } }>((await runCli(rootDir, [
+    "slides", "create", "Launch Visual System",
+    "--theme", "product",
+    "--workspace", workspaceDir,
+    "--json",
+  ])).stdout);
+
+  await runCli(rootDir, [
+    "slides", "add", created.deck.id,
+    "--workspace", workspaceDir,
+    "--layout", "image-left",
+    "--heading", "Customer context",
+    "--subtitle", "A visual first slide with enough hierarchy to read quickly.",
+    "--image", imagePath,
+    "--bullet", "Show the environment before explaining the workflow",
+    "--bullet", "Keep supporting copy short and spatially balanced",
+    "--json",
+  ]);
+  await runCli(rootDir, [
+    "slides", "add", created.deck.id,
+    "--workspace", workspaceDir,
+    "--layout", "image-right",
+    "--heading", "Product narrative",
+    "--body", "Text and imagery should feel intentionally paired, with the image carrying half of the slide instead of behaving like a small decoration.",
+    "--image", imagePath,
+    "--json",
+  ]);
+  await runCli(rootDir, [
+    "slides", "add", created.deck.id,
+    "--workspace", workspaceDir,
+    "--layout", "full-bleed-image",
+    "--heading", "Launch momentum",
+    "--subtitle", "One strong image, one clear message and safe contrast.",
+    "--image", imagePath,
+    "--json",
+  ]);
+
+  const rendered = parseJson<{ validation: { ok: boolean }; rendered: Array<{ format: string; path: string; sizeBytes: number }> }>((await runCli(rootDir, [
+    "slides", "render", created.deck.id,
+    "--workspace", workspaceDir,
+    "--format", "pdf,html,png",
+    "--json",
+  ])).stdout);
+  expect(rendered.validation.ok).toBeTruthy();
+  const html = rendered.rendered.find((entry) => entry.format === "html");
+  const png = rendered.rendered.find((entry) => entry.format === "png");
+  const pdf = rendered.rendered.find((entry) => entry.format === "pdf");
+  expect(html).toBeTruthy();
+  expect(png?.sizeBytes).toBeGreaterThan(3000);
+  expect(pdf?.sizeBytes).toBeGreaterThan(3000);
+
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(`file://${html!.path}`);
+  await expect(page.locator(".layout-image-left img").first()).toBeVisible();
+  await expect(page.locator(".layout-image-right img").first()).toBeVisible();
+  await expect(page.locator(".layout-full-bleed-image img").first()).toBeVisible();
+  const renderedImages = await page.locator("img").evaluateAll((images) => images.every((image) => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0));
+  expect(renderedImages).toBeTruthy();
+  await page.locator(".layout-full-bleed-image").scrollIntoViewIfNeeded();
+  await saveArtifactScreenshot(page, "slides-cli-image-layouts-html.png");
 });
 
 test("slides validation blocks overflow by default and force preserves the report", async () => {
