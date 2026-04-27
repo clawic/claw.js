@@ -641,6 +641,24 @@ Existing upload, generation, voice note, and channel-send commands feed this
 index automatically. Use `media` commands to recover, filter, download, and
 share previously handled assets without changing the send workflow.
 
+## Slides
+
+```bash
+claw slides themes
+claw slides layouts
+claw slides create "Q2 Product Update" --theme studio
+claw slides add q2-product-update --layout title --heading "Q2 Product Update" --subtitle "Momentum and next priorities"
+claw slides add q2-product-update --layout title-bullets --heading "What changed" --bullet "Activation moved to guided setup" --bullet "PDF is the default share artifact"
+claw slides validate q2-product-update --json
+claw slides render q2-product-update --format pdf,pptx,html,png --json
+claw slides share q2-product-update --format pdf
+```
+
+`slides` stores a manifest in the selected workspace and treats HTML as
+the canonical visual renderer. `render` validates the deck first, exports
+PDF, PPTX, HTML, and PNG previews, registers the outputs in the media
+index, and blocks red validation issues unless `--force` is set.
+
 ## Inference and TTS
 
 ```bash

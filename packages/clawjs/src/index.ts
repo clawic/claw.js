@@ -42,6 +42,7 @@ import {
   scaffoldProject,
   type SupportedPackageManager,
 } from "./scaffold.ts";
+import { runSlidesCli } from "./slides.ts";
 
 export interface CliContext {
   stdout: NodeJS.WritableStream;
@@ -60,6 +61,7 @@ export const DEFAULT_CLI_BIN = "claw";
 type CliMediaShare = { id: string; url: string };
 type CliMediaClaw = ClawInstance & {
   media: {
+    register(input: { name?: string; mimeType?: string; kind?: MediaKind; filePath?: string; sourceText?: string; origin?: MediaOrigin; direction?: MediaDirection; agentId?: string; workspaceId?: string; projectId?: string; metadata?: Record<string, unknown> }): { mediaId: string; kind: string; name: string };
     list(input?: MediaListInput): Array<{ mediaId: string; kind: string; name: string }>;
     search(input: MediaListInput & { query: string }): Array<{ mediaId: string; kind: string; name: string }>;
     get(mediaId: string): { name: string } | null;
@@ -234,6 +236,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} sessions create|list|search|read|stream|generate-title`,
     `  ${binName} documents list|read|search|upload|register|download`,
     `  ${binName} media list|search|read|download|share create|revoke|list`,
+    `  ${binName} slides create|add|validate|render|share|themes|layouts`,
     `  ${binName} inference generate-text`,
     `  ${binName} tts synthesize|config|set-config|providers|catalog`,
     `  ${binName} stt transcribe|config|set-config|providers`,
@@ -1201,6 +1204,13 @@ function inferMimeTypeFromPath(filePath: string): string {
       return "text/csv";
     case ".pdf":
       return "application/pdf";
+    case ".html":
+    case ".htm":
+      return "text/html";
+    case ".png":
+      return "image/png";
+    case ".pptx":
+      return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
     case ".docx":
       return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
     default:
@@ -3443,6 +3453,50 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const runtimeAdapterId = resolveRuntimeAdapterId(flags);
   const runtimeAdapter = getRuntimeAdapter(runtimeAdapterId);
   const mediaGroup = group === "image" || group === "audio" || group === "video" ? group : null;
+
+  if (group === "slides") {
+    try {
+      return await runSlidesCli({
+        argv,
+        positionals,
+        flags,
+        workspaceRoot,
+        agentId,
+        wantsJson,
+        context: {
+          stdout: context.stdout,
+          stderr: context.stderr,
+          cwd: context.cwd,
+          binName,
+        },
+        registerOutput: async (input) => {
+          const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId) as CliMediaClaw;
+          const media = claw.media.register({
+            name: input.name,
+            mimeType: input.mimeType,
+            kind: input.kind,
+            filePath: input.filePath,
+            origin: "generated",
+            direction: "outbound",
+            workspaceId,
+            agentId,
+            sourceText: input.sourceText,
+            metadata: { feature: "slides" },
+          });
+          return { mediaId: media.mediaId };
+        },
+        createMediaShare: async (input) => {
+          const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId) as CliMediaClaw;
+          return await claw.media.share.create(input);
+        },
+      });
+    } catch (error) {
+      const handled = cliErrorFromUnknown(error);
+      if (wantsJson) writeCliError(context.stdout, handled);
+      else context.stderr.write(`${handled.message}\n`);
+      return handled.exitCode;
+    }
+  }
 
   if (group === "plan") {
     const state = readAgentPlanState(workspaceRoot);
