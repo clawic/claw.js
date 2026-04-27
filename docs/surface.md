@@ -257,6 +257,7 @@ The docs check script validates that every current export from
     DEFAULT_RUNTIME_FILE_DESCRIPTORS
     DEFAULT_SECRETS_VAULT_APP_PATH
     DEFAULT_SESSION_TITLE
+    DEFAULT_USER_ID
     DefaultModelRef
     DeliveryState
     demoAdapter
@@ -1114,7 +1115,49 @@ The docs check script validates that every current export from
     UploadDocumentInput
     UpsertChannelListenerInput
     UpsertSubscriptionInput
+    USER_MANAGED_BLOCK_ID
+    USER_STATE_FILE
+    USER_TARGET_FILE
+    UserAddRecordInput
+    UserAssignment
+    userAssignmentSchema
+    UserCompileOptions
+    UserCompileResult
+    UserCustomFact
+    userCustomFactSchema
+    UserFacetKey
+    userFacetKeySchema
+    UserFact
+    userFactMetadataSchema
+    UserFactMetadata
+    userFactSchema
+    UserFactSensitivity
+    userFactSensitivitySchema
+    UserFactStatus
+    userFactStatusSchema
+    UserFactValue
+    userFactValueSchema
+    UserFactVisibility
+    userFactVisibilitySchema
+    UserInitInput
     UserNotificationPreferences
+    UserProposal
+    UserProposalInput
+    userProposalSchema
+    UserRecord
+    userRecordSchema
+    UserRecordType
+    userRecordTypeSchema
+    UserSetInput
+    UserSpec
+    userSpecSchema
+    UserState
+    userStateSchema
+    UserStore
+    UserStoreOptions
+    UserValidationIssue
+    UserValidationResult
+    createUserStore
     validateSettingsUpdate
     validateWorkspace
     VoiceNoteListInput

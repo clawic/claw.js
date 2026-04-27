@@ -1,6 +1,6 @@
 ---
 title: Time Service
-description: Standalone calendar and scheduler control plane for events, routines, reminders, deadlines, and follow-ups.
+description: Standalone temporal control plane for calendar events, routines, reminders, deadlines, and watches.
 ---
 
 # Time Service
@@ -11,7 +11,7 @@ source of truth for time-aware work:
 - calendar events
 - routines and cron-style automations
 - reminders and deadlines
-- conditional follow-ups such as "24h if no reply"
+- conditional watches such as "24h if no reply"
 
 The service exposes:
 
@@ -25,14 +25,13 @@ The service exposes:
 Use the standalone service through the main CLI:
 
 ```bash
-claw time list --time-url http://127.0.0.1:4730
-claw time pause item_123 --time-url http://127.0.0.1:4730
-claw time resume item_123 --time-url http://127.0.0.1:4730
-claw time run item_123 --time-url http://127.0.0.1:4730
-claw time executions --item-id item_123 --time-url http://127.0.0.1:4730
-claw time calendar --time-url http://127.0.0.1:4730
-claw time timeline --time-url http://127.0.0.1:4730
-claw schedule every "3h" "check deployment health" --time-url http://127.0.0.1:4730
+claw calendar at "monday 9am" "review PRs" --time-url http://127.0.0.1:4730
+claw calendar list --time-url http://127.0.0.1:4730
+claw routines every "3h" "check deployment health" --time-url http://127.0.0.1:4730
+claw routines run item_123 --time-url http://127.0.0.1:4730
+claw routines history item_123 --time-url http://127.0.0.1:4730
+claw reminders after "30m" "check build" --time-url http://127.0.0.1:4730
+claw watch thread:thread-42 --if-no reply --after 24h --then remind "ping owner" --time-url http://127.0.0.1:4730
 ```
 
 ## SDK
@@ -53,23 +52,28 @@ const claw = await createClaw({
   },
 });
 
-await claw.time.create({
-  kind: "follow_up",
-  title: "Follow up on thread",
-  natural: {
-    command: "after",
-    expression: "24h if no reply",
-    anchorType: "thread",
-    anchorId: "thread-42",
-  },
+await claw.calendar.at({
+  title: "Review PRs",
+  expression: "monday 9am",
 });
 
-await claw.time.pause("item_123");
-await claw.time.resume("item_123");
-const run = await claw.time.runNow("item_123");
-const executions = await claw.time.listExecutions("item_123");
-const calendar = await claw.time.calendarView();
-const timeline = await claw.time.timelineView();
+await claw.routines.every({
+  title: "Check deployment health",
+  expression: "3h",
+});
+
+await claw.watch.create({
+  target: "thread:thread-42",
+  ifNo: "reply",
+  after: "24h",
+  then: { kind: "remind", title: "Ping owner" },
+});
+
+await claw.routines.disable("item_123");
+await claw.routines.enable("item_123");
+const run = await claw.routines.run("item_123");
+const executions = await claw.routines.history("item_123");
+const calendar = await claw.calendar.view();
 ```
 
 ## Data Model
@@ -88,11 +92,11 @@ service can normalize natural input and recurring schedules correctly.
 
 ## Execution Views
 
-- `pause` and `resume` change whether the scheduler should evaluate the
+- `disable` and `enable` change whether the scheduler should evaluate the
   item.
-- `run` / `runNow()` executes an item immediately and records a
+- `run` executes an item immediately and records a
   `TemporalExecution`.
-- `executions` lists historical runs, optionally scoped to one item.
+- `history` lists historical runs, optionally scoped to one item.
 - `calendar` returns date-bounded entries suitable for calendar UIs.
 - `timeline` returns chronological temporal items for activity and
   planning views.

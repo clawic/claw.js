@@ -167,6 +167,7 @@ claw capacity create "Reviewer capacity" --agent-id reviewer --max-wip 2 --curre
 
 claw reminders list --before 2026-03-28T00:00:00Z
 claw reminders create "Follow up" --trigger-at 2026-03-27T09:00:00Z --anchor-type task --anchor-id task-123
+claw reminders after "30m" "check build"
 
 claw deadlines list --after 2026-03-27T00:00:00Z
 claw deadlines create "Launch date" --due-at 2026-03-30T18:00:00Z --anchor-type project --anchor-id project-123
@@ -183,8 +184,11 @@ claw inbox draft --channel email --content "Thanks"
 claw inbox archive --id thread-123
 claw inbox process thread-123 --task-title "Reply" --note-title "Summary"
 
-claw events list
-claw events create --title "Release sync" --starts-at 2026-03-27T09:00:00Z
+claw calendar list
+claw calendar at "monday 9am" "review PRs"
+claw calendar create "Release sync" --starts-at 2026-03-27T09:00:00Z
+claw routines every "3h" "check deployment health"
+claw watch thread:thread-42 --if-no reply --after 24h --then remind "ping owner"
 
 claw my-work --json
 claw team-work --json
@@ -205,7 +209,7 @@ For overlapping CRUD verbs, `claw tasks ...`, `claw notes ...`,
 `claw cycles ...`, `claw sprints ...`, `claw epics ...`,
 `claw initiatives ...`, `claw custom-fields ...`,
 `claw field-values ...`, `claw templates ...`, `claw reminders ...`,
-`claw deadlines ...`, and `claw events ...`
+and `claw deadlines ...`
 follow the same local-first behavior and record normalization as
 `claw db <collection> ...`. `workspace-search query` also accepts
 `--strategy auto|keyword|semantic|hybrid`,
@@ -221,21 +225,24 @@ timestamps.
 screens: project groups, task bars, milestone markers, deadline markers,
 cycle bands, dependency readiness, and the current "now" recommendation.
 
-## Time Commands
+## Temporal Commands
 
 ```bash
-claw time list --time-url http://127.0.0.1:4730
-claw time create event "Release sync" --starts-at 2026-03-27T09:00:00Z --time-url http://127.0.0.1:4730
-claw time executions --time-url http://127.0.0.1:4730
-claw time calendar --time-url http://127.0.0.1:4730
+claw calendar list --time-url http://127.0.0.1:4730
+claw calendar at "monday 9am" "review PRs" --time-url http://127.0.0.1:4730
+claw calendar create "Release sync" --starts-at 2026-03-27T09:00:00Z --time-url http://127.0.0.1:4730
 
-claw schedule at "monday 9am" "review PRs" --time-url http://127.0.0.1:4730
-claw schedule every "3h" "check deployment health" --time-url http://127.0.0.1:4730
-claw schedule after "24h if no reply" "follow up" --anchor-type thread --anchor-id thread-42 --time-url http://127.0.0.1:4730
+claw routines list --time-url http://127.0.0.1:4730
+claw routines every "3h" "check deployment health" --time-url http://127.0.0.1:4730
+claw routines run item_123 --time-url http://127.0.0.1:4730
+claw routines history item_123 --time-url http://127.0.0.1:4730
+
+claw reminders after "30m" "check build" --time-url http://127.0.0.1:4730
+claw watch thread:thread-42 --if-no reply --after 24h --then remind "ping owner" --time-url http://127.0.0.1:4730
 ```
 
-By default, `claw time ...`, `claw schedule ...`, `claw reminders ...`,
-`claw deadlines ...`, and `claw events ...` use the embedded local
+By default, `claw calendar ...`, `claw routines ...`, `claw reminders ...`,
+`claw deadlines ...`, and `claw watch ...` use the embedded local
 temporal engine. Use `--time-url` or `CLAWJS_TIME_URL` only when you
 want to point the CLI at the standalone `time/` service instead.
 `--time-token` or `CLAWJS_TIME_TOKEN` adds optional bearer auth when
@@ -474,28 +481,9 @@ claw providers auth-state
 supports `--dry-run` and prints the adapter-specific command that would
 be executed.
 
-## Scheduler, Memory, Skills, and Channels
+## Memory, Skills, and Channels
 
 ```bash
-claw scheduler list
-claw scheduler run --id morning-sync
-claw scheduler enable --id morning-sync
-claw scheduler disable --id morning-sync
-
-claw time list
-claw time get item_123
-claw time create routine "Review PRs" --cron "0 */3 * * *"
-claw time pause item_123
-claw time resume item_123
-claw time run item_123
-claw time executions --item-id item_123
-claw time calendar
-claw time timeline
-
-claw schedule at "monday 9am" "review PRs"
-claw schedule every "3h" "check deployment health"
-claw schedule after "24h if no reply" "follow up"
-
 claw memory capabilities --json
 claw memory status --json
 claw memory save "User prefers concise answers" --title "Response style" --tags preference
@@ -720,7 +708,6 @@ Some public SDK surfaces do not have first-class CLI commands yet:
 - `claw.runtime.plugins`
 - `claw.slack`
 - `claw.whatsapp`
-- `claw.watch`
 
 Use the Node API for those flows today.
 

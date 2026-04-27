@@ -73,14 +73,14 @@ Docs: [docs/database.md](docs/database.md)
 
 ## Time
 
-The repository also includes `time/`, a standalone temporal control plane for calendar events, routines, reminders, deadlines, and conditional follow-ups.
+The repository also includes `time/`, a standalone temporal control plane for calendar events, routines, reminders, deadlines, and conditional watches.
 
 Time v1 adds:
 
 - one canonical temporal model for `event`, `routine`, `reminder`, `deadline`, and `follow_up`
 - one-off, cron, RRULE, and relative scheduling semantics with timezone-aware normalization
 - execution history plus projection records for workspace, relay, runtime scheduler, notify, and calendar sync targets
-- a dedicated operator UI plus `claw time ...` and `claw schedule ...` bridges
+- a dedicated operator UI plus `claw calendar ...`, `claw routines ...`, and `claw watch ...` bridges
 
 Docs: [docs/time.md](docs/time.md)
 
@@ -320,7 +320,7 @@ the Relay API:
 | List skills | `await claw.skills.list()` | `claw skills list` | `GET WS/skills/list` |
 | Search skills | `await claw.skills.search({ query: "calendar" })` | `claw skills search --query "calendar"` | `GET WS/skills/search?q=calendar` |
 | List tasks | `await workspace.tasks.list()` | `claw tasks list` | `GET WS/tasks` |
-| List temporal items | `await claw.time.list()` | `claw time list` | `GET WS/time` |
+| List calendar events | `await claw.calendar.list()` | `claw calendar list` | `GET WS/time` |
 | Generate or register an image | `await claw.image.create(...)` / `await claw.image.import(...)` | `claw image create --prompt "..."` / `claw image import --file ...` | `POST WS/images` |
 | Recover sent media | `claw.media.search({ query: "invoice" })` | `claw media search --query invoice` | `-` |
 | Create and render a slide deck | `-` | `claw slides create`, `claw slides render --format pdf,pptx,html,png` | `-` |

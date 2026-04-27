@@ -91,7 +91,9 @@ const same = await createClaw({
 | `claw.whatsapp` | connection lifecycle, status, send, disconnect |
 | `claw.inference` | `generateText` |
 | `claw.secrets` | `list`, `describe`, `types`, `capabilities`, `actions`, `brokerHttp`, `runAction`, `leases`, `doctorKeychain`, `ensureHttpReference`, `ensureTelegramBotReference` |
-| `claw.time` | temporal item CRUD, pause/resume/run, execution history, calendar/timeline views, and anchor signals |
+| `claw.calendar` | calendar event CRUD, natural `at(...)`, and calendar views |
+| `claw.routines` | routine CRUD, natural `every(...)`, `enable`, `disable`, `run`, and `history` |
+| `claw.time` | legacy-compatible temporal item CRUD, pause/resume/run, execution history, calendar/timeline views, and anchor signals |
 | `claw.iot` | inventory, state, actions, scenes, automations, approvals, and raw connector invocations |
 | `claw.content` | brands, destinations, campaigns, entries, variants, approvals, calendar, publish plans/runs, app read models, and scoped tokens |
 | `claw.notify` | notification send/cancel, receipts, feed sync, read/ack flows, push tokens, glances, and subscriptions |
@@ -100,7 +102,7 @@ const same = await createClaw({
 | `claw.storage` | local-first buckets/keys, raw object read/write/list/delete, scoped tokens, and read-only revocable shares |
 | `claw.data` | `document`, `collection`, `asset`, `rootDir` |
 | `claw.orchestration` | `snapshot` |
-| `claw.watch` | `file`, `transcript`, `runtimeStatus`, `providerStatus`, `events`, `eventsIterator` |
+| `claw.watch` | conditional follow-up CRUD plus `file`, `transcript`, `runtimeStatus`, `providerStatus`, `events`, `eventsIterator` |
 
 `claw.storage` is a local-first object layer for agent outputs and
 handoffs. Raw writes are internal by default; images, generations, documents,
@@ -186,7 +188,7 @@ intent/observed stores currently persisted in the workspace.
 
 Configure the standalone temporal service through `CreateClawOptions.time`
 when you want one source of truth for calendar events, routines,
-reminders, deadlines, and conditional follow-ups:
+reminders, deadlines, and conditional watches:
 
 ```ts
 const claw = await createClaw({
@@ -202,23 +204,31 @@ const claw = await createClaw({
   },
 });
 
-await claw.time.create({
-  kind: "routine",
+await claw.routines.every({
   title: "Review pull requests",
-  natural: {
-    command: "every",
-    expression: "3h",
-    timezone: "Europe/Madrid",
-  },
+  expression: "3h",
+  timezone: "Europe/Madrid",
 });
 
-const calendar = await claw.time.calendarView();
-const executions = await claw.time.listExecutions();
+await claw.calendar.at({
+  title: "Release sync",
+  expression: "monday 9am",
+});
+
+await claw.watch.create({
+  target: "thread:thread-42",
+  ifNo: "reply",
+  after: "24h",
+  then: { kind: "remind", title: "Ping owner" },
+});
+
+const calendar = await claw.calendar.view();
+const executions = await claw.routines.history();
 ```
 
-Use `claw.time` when the schedule itself is the product object. The
-workspace `events` surface remains available as a compatibility view and
-projects into the temporal system when the time service is configured.
+Use `claw.calendar`, `claw.routines`, `claw.reminders`, and `claw.watch`
+for public integrations. The lower-level `claw.time` namespace remains
+available for compatibility.
 
 ## Content
 

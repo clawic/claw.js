@@ -1522,6 +1522,7 @@ export interface WorkspaceClawInstance extends Omit<ClawInstance, "workspace" | 
     get: (id: string) => Promise<ReminderRecord | null>;
     create: (input: CreateReminderInput) => Promise<ReminderRecord>;
     update: (id: string, input: UpdateReminderInput) => Promise<ReminderRecord>;
+    after: ClawInstance["reminders"]["after"];
     pause: (id: string) => Promise<ReminderRecord>;
     resume: (id: string) => Promise<ReminderRecord>;
     archive: (id: string) => Promise<ReminderRecord>;
@@ -6368,6 +6369,7 @@ async function createWorkspaceExtension(
       appendAudit("reminders.updated", "reminders", { reminderId: id });
       return reminder;
     },
+    after: async (input) => claw.reminders.after(input),
     pause: async (id) => remindersApi.update(id, { status: "paused" }),
     resume: async (id) => remindersApi.update(id, { status: "active" }),
     archive: async (id) => remindersApi.update(id, { archivedAt: nowIso() }),

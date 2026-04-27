@@ -4954,7 +4954,7 @@ test("runCli browser commands target relay browser routes", async () => {
   }
 });
 
-test("runCli supports time commands and schedule sugar", async () => {
+test("runCli supports temporal domain commands and hidden legacy aliases", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-time-"));
   const built = buildTimeApp({
     config: {
@@ -4970,9 +4970,9 @@ test("runCli supports time commands and schedule sugar", async () => {
   const timeUrl = address.replace(/\/$/, "");
 
   try {
-    const scheduleStdout = captureStream();
-    const scheduleExitCode = await runCli([
-      "schedule",
+    const calendarStdout = captureStream();
+    const calendarExitCode = await runCli([
+      "calendar",
       "at",
       "monday 9am",
       "review PRs",
@@ -4980,17 +4980,49 @@ test("runCli supports time commands and schedule sugar", async () => {
       "--workspace", tmpDir,
       "--json",
     ], {
-      stdout: scheduleStdout.stream,
+      stdout: calendarStdout.stream,
       stderr: captureStream().stream,
       cwd: process.cwd(),
     });
 
-    assert.equal(scheduleExitCode, CLI_EXIT_OK);
-    assert.match(scheduleStdout.getOutput(), /"kind": "event"/);
+    assert.equal(calendarExitCode, CLI_EXIT_OK);
+    const calendarCreated = JSON.parse(calendarStdout.getOutput()) as { item: { id: string; kind: string; title: string } };
+    assert.equal(calendarCreated.item.kind, "event");
+
+    const calendarListStdout = captureStream();
+    const calendarListExitCode = await runCli([
+      "calendar",
+      "list",
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+    ], {
+      stdout: calendarListStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(calendarListExitCode, CLI_EXIT_OK);
+    assert.match(calendarListStdout.getOutput().split("\n")[0] ?? "", /id\s+status\s+next\s+title/);
+    assert.match(calendarListStdout.getOutput(), /review PRs/);
+
+    const calendarGetStdout = captureStream();
+    const calendarGetExitCode = await runCli([
+      "calendar",
+      "get",
+      calendarCreated.item.id,
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+      "--json",
+    ], {
+      stdout: calendarGetStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(calendarGetExitCode, CLI_EXIT_OK);
+    assert.match(calendarGetStdout.getOutput(), /review PRs/);
 
     const everyStdout = captureStream();
     const everyExitCode = await runCli([
-      "schedule",
+      "routines",
       "every",
       "3h",
       "check deployment health",
@@ -5003,27 +5035,79 @@ test("runCli supports time commands and schedule sugar", async () => {
       cwd: process.cwd(),
     });
     assert.equal(everyExitCode, CLI_EXIT_OK);
-    assert.match(everyStdout.getOutput(), /"kind": "routine"/);
+    const routineCreated = JSON.parse(everyStdout.getOutput()) as { item: { id: string; kind: string } };
+    assert.equal(routineCreated.item.kind, "routine");
 
-    const afterStdout = captureStream();
-    const afterExitCode = await runCli([
-      "schedule",
-      "after",
-      "24h",
-      "if no reply nudge owner",
+    const runStdout = captureStream();
+    const runExitCode = await runCli([
+      "routines",
+      "run",
+      routineCreated.item.id,
       "--time-url", timeUrl,
       "--workspace", tmpDir,
-      "--anchor-type", "thread",
-      "--anchor-id", "thread-1",
-      "--anchor-at", "2026-04-09T08:00:00.000Z",
       "--json",
     ], {
-      stdout: afterStdout.stream,
+      stdout: runStdout.stream,
       stderr: captureStream().stream,
       cwd: process.cwd(),
     });
-    assert.equal(afterExitCode, CLI_EXIT_OK);
-    assert.match(afterStdout.getOutput(), /"kind": "follow_up"/);
+    assert.equal(runExitCode, CLI_EXIT_OK);
+    assert.match(runStdout.getOutput(), /"status": "succeeded"/);
+
+    const historyStdout = captureStream();
+    const historyExitCode = await runCli([
+      "routines",
+      "history",
+      routineCreated.item.id,
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+    ], {
+      stdout: historyStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(historyExitCode, CLI_EXIT_OK);
+    assert.match(historyStdout.getOutput().split("\n")[0] ?? "", /id\s+status\s+next\s+title/);
+    assert.match(historyStdout.getOutput(), /routine executed via workflow/);
+
+    const reminderStdout = captureStream();
+    const reminderExitCode = await runCli([
+      "reminders",
+      "after",
+      "30m",
+      "check build",
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+      "--json",
+    ], {
+      stdout: reminderStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(reminderExitCode, CLI_EXIT_OK);
+    assert.match(reminderStdout.getOutput(), /"kind": "reminder"/);
+
+    const watchStdout = captureStream();
+    const watchExitCode = await runCli([
+      "watch",
+      "thread:thread-1",
+      "--if-no", "reply",
+      "--after",
+      "24h",
+      "--then", "remind",
+      "nudge owner",
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+      "--anchor-at", "2026-04-09T08:00:00.000Z",
+      "--json",
+    ], {
+      stdout: watchStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(watchExitCode, CLI_EXIT_OK);
+    assert.match(watchStdout.getOutput(), /"kind": "follow_up"/);
+    assert.match(watchStdout.getOutput(), /"anchorType": "thread"/);
 
     const listStdout = captureStream();
     const listExitCode = await runCli([
@@ -5039,6 +5123,23 @@ test("runCli supports time commands and schedule sugar", async () => {
     });
     assert.equal(listExitCode, CLI_EXIT_OK);
     assert.match(listStdout.getOutput(), /review PRs/);
+
+    const legacyScheduleStdout = captureStream();
+    const legacyScheduleExitCode = await runCli([
+      "schedule",
+      "every",
+      "3h",
+      "legacy deployment check",
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+      "--json",
+    ], {
+      stdout: legacyScheduleStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(legacyScheduleExitCode, CLI_EXIT_OK);
+    assert.match(legacyScheduleStdout.getOutput(), /"kind": "routine"/);
   } finally {
     await built.app.close();
   }

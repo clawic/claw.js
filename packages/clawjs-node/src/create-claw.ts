@@ -492,6 +492,70 @@ export interface CreateClawOptions {
   };
 }
 
+type TemporalListFilters = {
+  status?: TemporalItem["status"];
+  workspaceId?: string;
+  projectId?: string;
+  agentId?: string;
+  ownerId?: string;
+  sourceProvider?: string;
+};
+
+type TemporalTarget = {
+  anchorType?: NonNullable<TemporalItem["anchorType"]>;
+  anchorId?: string;
+  anchorAt?: string;
+};
+
+type TemporalWatchInput = TemporalTarget & {
+  target: string;
+  after: string;
+  ifNo?: "reply";
+  title?: string;
+  then?: string | { kind: "remind"; title: string };
+  timezone?: string;
+  description?: string;
+  workspaceId?: string;
+  projectId?: string;
+  agentId?: string;
+};
+
+type TemporalReminderAfterInput = TemporalTarget & {
+  after: string;
+  title: string;
+  timezone?: string;
+  description?: string;
+  workspaceId?: string;
+  projectId?: string;
+  agentId?: string;
+};
+
+type TemporalNaturalCreateInput = Omit<CreateTemporalItemInput, "kind" | "natural"> & {
+  expression: string;
+  timezone?: string;
+};
+
+function parseTemporalTarget(target: string): Required<Pick<TemporalTarget, "anchorType" | "anchorId">> {
+  const separatorIndex = target.indexOf(":");
+  const rawType = separatorIndex === -1 ? "standalone" : target.slice(0, separatorIndex);
+  const anchorId = separatorIndex === -1 ? target : target.slice(separatorIndex + 1);
+  const allowed = new Set(["thread", "task", "project", "goal", "event", "execution", "standalone"]);
+  if (!allowed.has(rawType) || !anchorId.trim()) {
+    throw new Error(`Invalid watch target "${target}". Use values like thread:123 or task:123.`);
+  }
+  return {
+    anchorType: rawType as NonNullable<TemporalItem["anchorType"]>,
+    anchorId: anchorId.trim(),
+  };
+}
+
+function resolveTemporalWatchTitle(input: TemporalWatchInput): string {
+  if (input.title?.trim()) return input.title.trim();
+  if (typeof input.then === "string" && input.then.trim()) return input.then.trim();
+  if (typeof input.then === "object" && input.then.kind === "remind" && input.then.title.trim()) return input.then.title.trim();
+  return `Watch ${input.target}`;
+}
+
 export interface ClawInstance {
   runtime: {
     context: () => OpenClawRuntimeContext | null;
@@ -1088,6 +1152,32 @@ export interface ClawInstance {
     timelineView: (input?: { start?: string; end?: string }) => Promise<{ items: TemporalItem[] }>;
     signalAnchor: (input: { anchorId: string; signal: "reply_received" | "task_completed" | "event_started" | "execution_succeeded" }) => Promise<{ items: TemporalItem[] }>;
   };
+  calendar: {
+    configured: boolean;
+    list: (filters?: TemporalListFilters) => Promise<{ items: TemporalItem[] }>;
+    get: (id: string) => Promise<{ item: TemporalItem }>;
+    create: (input: Omit<CreateTemporalItemInput, "kind">) => Promise<{ item: TemporalItem }>;
+    update: (id: string, input: UpdateTemporalItemInput) => Promise<{ item: TemporalItem }>;
+    delete: (id: string) => Promise<{ ok: boolean }>;
+    at: (input: TemporalNaturalCreateInput) => Promise<{ item: TemporalItem }>;
+    view: (input?: { start?: string; end?: string }) => Promise<{ items: TemporalItem[]; entries: Array<Record<string, unknown>> }>;
+  };
+  routines: {
+    configured: boolean;
+    list: (filters?: TemporalListFilters) => Promise<{ items: TemporalItem[] }>;
+    get: (id: string) => Promise<{ item: TemporalItem }>;
+    create: (input: Omit<CreateTemporalItemInput, "kind">) => Promise<{ item: TemporalItem }>;
+    update: (id: string, input: UpdateTemporalItemInput) => Promise<{ item: TemporalItem }>;
+    delete: (id: string) => Promise<{ ok: boolean }>;
+    every: (input: TemporalNaturalCreateInput) => Promise<{ item: TemporalItem }>;
+    enable: (id: string) => Promise<{ item: TemporalItem }>;
+    disable: (id: string) => Promise<{ item: TemporalItem }>;
+    run: (id: string) => Promise<{ item: TemporalItem; execution: TemporalExecution }>;
+    history: (itemId?: string) => Promise<{ executions: TemporalExecution[] }>;
+  };
+  reminders: {
+    after: (input: TemporalReminderAfterInput) => Promise<{ item: TemporalItem }>;
+  };
   content: {
     configured: boolean;
     brands: {
@@ -1351,6 +1441,13 @@ export interface ClawInstance {
     snapshot: () => Promise<ReturnType<typeof buildOrchestrationSnapshot>>;
   };
   watch: {
+    configured: boolean;
+    list: (filters?: TemporalListFilters) => Promise<{ items: TemporalItem[] }>;
+    get: (id: string) => Promise<{ item: TemporalItem }>;
+    create: (input: TemporalWatchInput) => Promise<{ item: TemporalItem }>;
+    enable: (id: string) => Promise<{ item: TemporalItem }>;
+    disable: (id: string) => Promise<{ item: TemporalItem }>;
+    delete: (id: string) => Promise<{ ok: boolean }>;
     file: (
       fileName: string,
       callback: Parameters<typeof watchWorkspaceFile>[2],
@@ -4339,6 +4436,107 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     return [...(input.contextBlocks ?? []), compiled.block];
   }
 
+  const temporalDefaults = () => ({
+    workspaceId: options.workspace.workspaceId,
+    agentId: logicalAgentId,
+  });
+
+  const calendarFacade: ClawInstance["calendar"] = {
+    configured: Boolean(timeClient),
+    list: async (filters = {}) => requireTimeClient().list({ ...filters, kind: "event" }),
+    get: async (id) => requireTimeClient().get(id),
+    create: async (input) => requireTimeClient().create({
+      ...temporalDefaults(),
+      ...input,
+      kind: "event",
+    }),
+    update: async (id, input) => requireTimeClient().update(id, input),
+    delete: async (id) => requireTimeClient().delete(id),
+    at: async (input) => requireTimeClient().create({
+      ...temporalDefaults(),
+      ...input,
+      kind: "event",
+      natural: {
+        command: "at",
+        expression: input.expression,
+        timezone: input.timezone,
+      },
+    }),
+    view: async (input) => requireTimeClient().calendarView(input),
+  };
+
+  const routinesFacade: ClawInstance["routines"] = {
+    configured: Boolean(timeClient),
+    list: async (filters = {}) => requireTimeClient().list({ ...filters, kind: "routine" }),
+    get: async (id) => requireTimeClient().get(id),
+    create: async (input) => requireTimeClient().create({
+      ...temporalDefaults(),
+      ...input,
+      kind: "routine",
+    }),
+    update: async (id, input) => requireTimeClient().update(id, input),
+    delete: async (id) => requireTimeClient().delete(id),
+    every: async (input) => requireTimeClient().create({
+      ...temporalDefaults(),
+      ...input,
+      kind: "routine",
+      natural: {
+        command: "every",
+        expression: input.expression,
+        timezone: input.timezone,
+      },
+    }),
+    enable: async (id) => requireTimeClient().resume(id),
+    disable: async (id) => requireTimeClient().pause(id),
+    run: async (id) => requireTimeClient().runNow(id),
+    history: async (itemId) => requireTimeClient().listExecutions(itemId),
+  };
+
+  const temporalRemindersFacade: ClawInstance["reminders"] = {
+    after: async (input) => requireTimeClient().create({
+      ...temporalDefaults(),
+      ...input,
+      kind: "reminder",
+      natural: {
+        command: "after",
+        expression: input.after,
+        timezone: input.timezone,
+        anchorType: input.anchorType ?? "standalone",
+        anchorId: input.anchorId ?? "standalone",
+        anchorAt: input.anchorAt ?? new Date().toISOString(),
+      },
+    }),
+  };
+
+  const watchFacade: Pick<ClawInstance["watch"], "configured" | "list" | "get" | "create" | "enable" | "disable" | "delete"> = {
+    configured: Boolean(timeClient),
+    list: async (filters = {}) => requireTimeClient().list({ ...filters, kind: "follow_up" }),
+    get: async (id) => requireTimeClient().get(id),
+    create: async (input) => {
+      if (input.ifNo && input.ifNo !== "reply") {
+        throw new Error(`Unsupported watch condition "if no ${input.ifNo}". Only "reply" is supported today.`);
+      }
+      const target = parseTemporalTarget(input.target);
+      return requireTimeClient().create({
+        ...temporalDefaults(),
+        ...input,
+        kind: "follow_up",
+        title: resolveTemporalWatchTitle(input),
+        natural: {
+          command: "after",
+          expression: input.ifNo === "reply" ? `${input.after} if no reply` : input.after,
+          timezone: input.timezone,
+          anchorType: input.anchorType ?? target.anchorType,
+          anchorId: input.anchorId ?? target.anchorId,
+          anchorAt: input.anchorAt ?? new Date().toISOString(),
+        },
+      });
+    },
+    enable: async (id) => requireTimeClient().resume(id),
+    disable: async (id) => requireTimeClient().pause(id),
+    delete: async (id) => requireTimeClient().delete(id),
+  };
+
   return {
     runtime: {
       context: () => runtimeContext,
@@ -5920,6 +6118,9 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       timelineView: async (input) => requireTimeClient().timelineView(input),
       signalAnchor: async (input) => requireTimeClient().signalAnchor(input),
     },
+    calendar: calendarFacade,
+    routines: routinesFacade,
+    reminders: temporalRemindersFacade,
     content: {
       configured: Boolean(contentClient),
       brands: {
@@ -6404,6 +6605,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       },
     },
     watch: {
+      ...watchFacade,
       file: (fileName, callback, watchOptions) => watchWorkspaceFile(workspaceDir, fileName, callback, watchOptions),
       transcript: (sessionId, callback, watchOptions) => watchSessionTranscript(workspaceDir, sessionId, callback, watchOptions),
       runtimeStatus: (callback, watchOptions) => watchRuntimeStatus(

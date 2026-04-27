@@ -1046,21 +1046,52 @@ test("createClaw exposes the time namespace when configured", async () => {
     });
 
     assert.equal(claw.time.configured, true);
-    const created = await claw.time.create({
-      kind: "routine",
+    assert.equal(claw.calendar.configured, true);
+    assert.equal(claw.routines.configured, true);
+    assert.equal(claw.watch.configured, true);
+
+    const routine = await claw.routines.every({
       title: "Review pull requests",
       workspaceId: "workspace-time-sdk",
       agentId: "agent-time-sdk",
-      natural: {
-        command: "every",
-        expression: "3h",
-        timezone: "Europe/Madrid",
-      },
+      expression: "3h",
+      timezone: "Europe/Madrid",
     });
-    assert.equal(created.item.kind, "routine");
+    assert.equal(routine.item.kind, "routine");
+
+    const event = await claw.calendar.at({
+      title: "Release sync",
+      workspaceId: "workspace-time-sdk",
+      agentId: "agent-time-sdk",
+      expression: "monday 9am",
+      timezone: "Europe/Madrid",
+    });
+    assert.equal(event.item.kind, "event");
+
+    const reminder = await claw.reminders.after({
+      title: "Check build",
+      workspaceId: "workspace-time-sdk",
+      agentId: "agent-time-sdk",
+      after: "30m",
+      timezone: "Europe/Madrid",
+    });
+    assert.equal(reminder.item.kind, "reminder");
+
+    const watch = await claw.watch.create({
+      target: "thread:thread-1",
+      workspaceId: "workspace-time-sdk",
+      agentId: "agent-time-sdk",
+      ifNo: "reply",
+      after: "24h",
+      then: { kind: "remind", title: "Nudge owner" },
+      timezone: "Europe/Madrid",
+    });
+    assert.equal(watch.item.kind, "follow_up");
+    assert.equal(watch.item.anchorType, "thread");
 
     const listed = await claw.time.list({ workspaceId: "workspace-time-sdk" });
-    assert.equal(listed.items.some((item) => item.id === created.item.id), true);
+    assert.equal(listed.items.some((item) => item.id === routine.item.id), true);
+    assert.equal((await claw.routines.list({ workspaceId: "workspace-time-sdk" })).items.some((item) => item.id === routine.item.id), true);
   } finally {
     await built.app.close();
   }
