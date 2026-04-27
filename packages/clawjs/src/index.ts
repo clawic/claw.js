@@ -27,7 +27,7 @@ import type { ClawInstance, ImageOperation, ImageProvenance, ImageType, Telegram
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
 import { semanticPlanSchema } from "@clawjs/core";
-import type { MediaDirection, MediaKind, MediaListInput, MediaOrigin, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserFactValue, UserRecordType } from "@clawjs/core";
+import type { LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserFactValue, UserRecordType } from "@clawjs/core";
 import { runEmbeddedDatabaseCli } from "./database-advanced.ts";
 import { runMagicDbCli } from "./database-magic.ts";
 import { runMemoryCli } from "./memory-local.ts";
@@ -230,6 +230,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} reminders after`,
     `  ${binName} watch list|get|enable|disable|delete`,
     `  ${binName} memory save|list|get|update|delete|search|context|status|capabilities`,
+    `  ${binName} learning capture|add|list|show|evidence add|promote|archive`,
     `  ${binName} rules status|list|get|propose|approve|archive|scopes|compile`,
     `  ${binName} areas|tasks|goals|projects|milestones|activity ...`,
     `  ${binName} blockers|artifacts|decisions|work-sessions ...`,
@@ -3825,6 +3826,150 @@ async function archiveOrRemoveProductivityRecord(
   }
   const record = await api.archive(id);
   return { ok: true, deleted: false, archived: true, record };
+}
+
+const LEARNING_TARGETS = new Set(["user", "agent", "project", "workflow", "runtime", "ui"]);
+const LEARNING_KINDS = new Set(["preference", "observation", "correction", "workflow", "failure"]);
+const LEARNING_STATUSES = new Set(["active", "archived", "promoted"]);
+const LEARNING_SENTIMENTS = new Set(["positive", "negative", "neutral"]);
+const LEARNING_PROMOTION_TARGETS = new Set(["rule", "user", "soul", "skill", "memory"]);
+
+function requireOneOf<T extends string>(value: string | undefined, values: Set<string>, label: string): T {
+  if (!value || !values.has(value)) {
+    throw new CliHandledError("usage_error", `${label} must be one of: ${[...values].join(", ")}`, CLI_EXIT_USAGE);
+  }
+  return value as T;
+}
+
+async function runLearningCli(input: {
+  argv: string[];
+  positionals: string[];
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+  workspaceRoot: string;
+  appId: string;
+  workspaceId: string;
+  agentId: string;
+  runtimeAdapterId: RuntimeAdapterId;
+}): Promise<number> {
+  const { argv, positionals, flags, context, wantsJson, binName, workspaceRoot, appId, workspaceId, agentId, runtimeAdapterId } = input;
+  const [, command, subcommand] = positionals;
+  const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+
+  try {
+    if (command === "capture") {
+      const sessionId = flags.session || flags["session-id"] || subcommand;
+      if (!sessionId) {
+        context.stderr.write(`Usage: ${binName} learning capture --session <session-id> [--json]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const result = claw.learning.capture({ sessionId });
+      if (wantsJson) writeJson(context.stdout, result);
+      else context.stdout.write(result.ignored ? `ignored ${sessionId}: ${result.reason ?? "no learning"}\n` : `${result.learnings.map((learning) => `${learning.id} ${learning.claim}`).join("\n")}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "add") {
+      const claim = flags.claim || joinedPositionals(positionals, 2);
+      const evidenceSessionId = flags["evidence-session"] || flags.session || flags["session-id"];
+      if (!claim || !evidenceSessionId) {
+        context.stderr.write(`Usage: ${binName} learning add --claim TEXT --target user|agent|project|workflow|runtime|ui --kind preference|observation|correction|workflow|failure --evidence-session ID\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const learning = claw.learning.add({
+        claim,
+        target: requireOneOf<LearningTarget>(flags.target, LEARNING_TARGETS, "target"),
+        kind: requireOneOf<LearningKind>(flags.kind, LEARNING_KINDS, "kind"),
+        evidenceSessionId,
+        sentiment: flags.sentiment ? requireOneOf<LearningEvidenceSentiment>(flags.sentiment, LEARNING_SENTIMENTS, "sentiment") : undefined,
+        note: flags.note,
+        quote: flags.quote,
+      });
+      if (wantsJson) writeJson(context.stdout, learning);
+      else context.stdout.write(`${learning.id}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "list") {
+      const learnings = claw.learning.list({
+        ...(flags.target ? { target: requireOneOf<LearningTarget>(flags.target, LEARNING_TARGETS, "target") } : {}),
+        ...(flags.kind ? { kind: requireOneOf<LearningKind>(flags.kind, LEARNING_KINDS, "kind") } : {}),
+        ...(flags.status ? { status: requireOneOf<LearningStatus>(flags.status, LEARNING_STATUSES, "status") } : {}),
+      });
+      if (wantsJson) writeJson(context.stdout, { learnings });
+      else context.stdout.write(`${learnings.map((learning) => `${learning.status} ${learning.confidence.toFixed(2)} ${learning.id} ${learning.claim}`).join("\n")}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "show" || command === "inspect") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write(`Usage: ${binName} learning show <learning-id> [--json]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const learning = claw.learning.show(id);
+      if (!learning) throw new CliHandledError("not_found", `Learning not found: ${id}`, CLI_EXIT_FAILURE);
+      if (wantsJson) writeJson(context.stdout, learning);
+      else context.stdout.write(`${learning.status} ${learning.confidence.toFixed(2)} ${learning.id}\n${learning.claim}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "evidence" && subcommand === "add") {
+      const id = positionals[3] || flags.id || flags.learning;
+      const sessionId = flags.session || flags["session-id"];
+      const note = flags.note;
+      if (!id || !sessionId || !note) {
+        context.stderr.write(`Usage: ${binName} learning evidence add <learning-id> --session ID --sentiment positive|negative|neutral --note TEXT\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const learning = claw.learning.addEvidence(id, {
+        sessionId,
+        sentiment: requireOneOf<LearningEvidenceSentiment>(flags.sentiment, LEARNING_SENTIMENTS, "sentiment"),
+        note,
+        quote: flags.quote,
+      });
+      if (wantsJson) writeJson(context.stdout, learning);
+      else context.stdout.write(`${learning.id} confidence=${learning.confidence.toFixed(2)} evidence=${learning.evidence.length}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "promote") {
+      const id = subcommand || flags.id || flags.learning;
+      const to = requireOneOf<LearningPromotionTarget>(flags.to, LEARNING_PROMOTION_TARGETS, "to");
+      if (!id) {
+        context.stderr.write(`Usage: ${binName} learning promote <learning-id> --to rule|user|soul|skill|memory --dry-run|--apply\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const apply = readBooleanFlag(argv, flags, "apply", false);
+      const dryRun = readBooleanFlag(argv, flags, "dry-run", !apply);
+      const result = claw.learning.promote(id, { to, dryRun, apply });
+      if (wantsJson) writeJson(context.stdout, result);
+      else context.stdout.write(`${result.applied ? "applied" : "dry-run"} ${to} ${id}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "archive") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write(`Usage: ${binName} learning archive <learning-id> [--reason TEXT]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const learning = claw.learning.archive(id, flags.reason);
+      if (wantsJson) writeJson(context.stdout, learning);
+      else context.stdout.write(`archived ${learning.id}\n`);
+      return CLI_EXIT_OK;
+    }
+  } catch (error) {
+    const handled = cliErrorFromUnknown(error);
+    if (wantsJson) writeCliError(context.stdout, handled);
+    else context.stderr.write(`${handled.message}\n`);
+    return handled.exitCode;
+  }
+
+  context.stderr.write(`Usage: ${binName} learning capture|add|list|show|evidence add|promote|archive\n`);
+  return CLI_EXIT_USAGE;
 }
 
 function resolveCliPackageVersion(): string | null {
@@ -9050,6 +9195,22 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     if (wantsJson) writeJson(context.stdout, result);
     else context.stdout.write(`reindexed=${result.reindexed} embeddings=${result.embeddings}\n`);
     return CLI_EXIT_OK;
+  }
+
+  if (group === "learning") {
+    return await runLearningCli({
+      argv,
+      positionals,
+      flags,
+      context,
+      wantsJson,
+      binName,
+      workspaceRoot,
+      appId,
+      workspaceId,
+      agentId,
+      runtimeAdapterId,
+    });
   }
 
   if (group === "soul") {

@@ -77,6 +77,12 @@ import type {
   LibraryAssignment,
   LibraryResolveResult,
   LibrarySyncResult,
+  LearningAddInput,
+  LearningEvidenceInput,
+  LearningListInput,
+  LearningPromotionResult,
+  LearningPromotionTarget,
+  LearningRecord,
   MediaGalleryShare,
   MediaKind,
   MediaListInput,
@@ -169,6 +175,7 @@ import { watchProviderStatus, watchRuntimeStatus, type PollWatchOptions } from "
 import { SessionStore } from "./sessions/store.ts";
 import { createSoulStore } from "./soul/store.ts";
 import { createUserStore } from "./user/store.ts";
+import { createLearningStore } from "./learning/store.ts";
 import { ChannelRunStore } from "./channel-runs/index.ts";
 import type { ChannelRunOptions, ChannelRunTarget, ChannelRunMessage } from "./channel-runs/index.ts";
 import { streamRuntimeSession, streamRuntimeSessionEvents, type SessionStreamEvent } from "./sessions/stream.ts";
@@ -895,6 +902,15 @@ export interface ClawInstance {
     list: () => Promise<MemoryDescriptor[]>;
     search: (query: string) => Promise<MemoryDescriptor[]>;
   };
+  learning: {
+    capture: (input: { sessionId: string }) => ReturnType<ReturnType<typeof createLearningStore>["captureSession"]>;
+    add: (input: LearningAddInput) => LearningRecord;
+    list: (input?: LearningListInput) => LearningRecord[];
+    show: (id: string) => LearningRecord | null;
+    addEvidence: (id: string, input: LearningEvidenceInput) => LearningRecord;
+    promote: (id: string, input: { to: LearningPromotionTarget; dryRun?: boolean; apply?: boolean }) => LearningPromotionResult;
+    archive: (id: string, reason?: string) => LearningRecord;
+  };
   rules: {
     status: () => ReturnType<ReturnType<typeof createLocalRulesStore>["status"]>;
     list: (options?: { status?: RuleRecord["status"]; scopeId?: string }) => RuleRecord[];
@@ -1510,6 +1526,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   const logicalAgentId = options.workspace.logicalAgentId ?? options.workspace.agentId;
   const runtimeAgentId = options.workspace.runtimeAgentId ?? logicalAgentId;
   const sessionStore = new SessionStore(workspaceDir, { filesystem });
+  const learningStore = createLearningStore({ workspaceDir, filesystem });
   const channelRunStore = new ChannelRunStore(workspaceDir, sessionStore, { filesystem });
   const dataStore = createWorkspaceDataStore(workspaceDir, filesystem);
   const storageStore = createLocalStorageStore({
@@ -5458,6 +5475,121 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         const memory = await adapter.searchMemory(query, processHost, resolvedRuntimeOptions);
         persistMemoryState(memory);
         return memory;
+      },
+    },
+    learning: {
+      capture: (input) => {
+        const session = sessionStore.getSession(input.sessionId);
+        const result = learningStore.captureSession(session);
+        appendAuditEvent("learning.captured", "memory", {
+          sessionId: input.sessionId,
+          count: result.learnings.length,
+          ignored: result.ignored,
+        });
+        eventBus.emit("learning.captured", {
+          sessionId: input.sessionId,
+          count: result.learnings.length,
+          ignored: result.ignored,
+        });
+        return result;
+      },
+      add: (input) => {
+        const learning = learningStore.add(input);
+        appendAuditEvent("learning.added", "memory", {
+          learningId: learning.id,
+          target: learning.target,
+          kind: learning.kind,
+        });
+        eventBus.emit("learning.added", {
+          learningId: learning.id,
+          target: learning.target,
+          kind: learning.kind,
+        });
+        return learning;
+      },
+      list: (input = {}) => learningStore.list(input),
+      show: (id) => learningStore.get(id),
+      addEvidence: (id, input) => {
+        const learning = learningStore.addEvidence(id, input);
+        appendAuditEvent("learning.evidence_added", "memory", {
+          learningId: learning.id,
+          evidenceCount: learning.evidence.length,
+          confidence: learning.confidence,
+        });
+        eventBus.emit("learning.evidence_added", {
+          learningId: learning.id,
+          evidenceCount: learning.evidence.length,
+          confidence: learning.confidence,
+        });
+        return learning;
+      },
+      promote: (id, input) => {
+        const preview = learningStore.previewPromotion(id, input.to);
+        const shouldApply = input.apply === true;
+        if (!shouldApply || input.dryRun === true) {
+          return { ...preview, applied: false };
+        }
+        if (!preview.writable) {
+          throw new Error(`Learning promotion to ${input.to} is dry-run only.`);
+        }
+        let result: Record<string, unknown>;
+        if (input.to === "rule") {
+          if (!rulesStore.readState().scopes.some((scope) => scope.id === "clawjs")) {
+            rulesStore.upsertScope({ id: "clawjs", kind: "user", name: "global", aliases: ["ClawJS", "claw", "clawjs", "default"] });
+          }
+          result = rulesStore.propose(preview.payload as unknown as Parameters<typeof rulesStore.propose>[0]) as unknown as Record<string, unknown>;
+        } else if (input.to === "user") {
+          result = userStore.propose(preview.payload as Parameters<typeof userStore.propose>[0]) as unknown as Record<string, unknown>;
+        } else if (input.to === "skill") {
+          const payload = preview.payload as unknown as Parameters<typeof libraryStore.create>[0];
+          const existing = payload.id ? libraryStore.get(String(payload.id)) : null;
+          result = existing
+            ? libraryStore.update(existing.id, payload as Parameters<typeof libraryStore.update>[1]) as unknown as Record<string, unknown>
+            : libraryStore.create(payload) as unknown as Record<string, unknown>;
+        } else if (input.to === "memory") {
+          const payload = preview.payload as Record<string, unknown>;
+          const collection = dataStore.collection<Record<string, unknown>>("memory");
+          const timestamp = new Date().toISOString();
+          const record = {
+            ...payload,
+            id: String(payload.id ?? `learning-${id}`),
+            source: "learning",
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          };
+          collection.put(record.id as string, record);
+          result = record;
+        } else {
+          throw new Error(`Learning promotion to ${input.to} is dry-run only.`);
+        }
+        learningStore.recordPromotion(id, {
+          target: input.to,
+          dryRun: false,
+          applied: true,
+          payload: preview.payload,
+          result,
+        });
+        appendAuditEvent("learning.promoted", "memory", {
+          learningId: id,
+          target: input.to,
+        });
+        eventBus.emit("learning.promoted", {
+          learningId: id,
+          target: input.to,
+        });
+        return { ...preview, applied: true, result };
+      },
+      archive: (id, reason) => {
+        const learning = learningStore.archive(id, reason);
+        appendAuditEvent("learning.archived", "memory", {
+          learningId: learning.id,
+          reason,
+        });
+        eventBus.emit("learning.archived", {
+          learningId: learning.id,
+          reason,
+        });
+        return learning;
       },
     },
     rules: {

@@ -32,6 +32,7 @@ export * from "./generations/index.ts";
 export * from "./images/index.ts";
 export * from "./inference/index.ts";
 export * from "./intents/store.ts";
+export * from "./learning/store.ts";
 export * from "./library/store.ts";
 export * from "./orchestration.ts";
 export * from "./observed/store.ts";

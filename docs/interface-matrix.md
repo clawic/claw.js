@@ -148,6 +148,7 @@ The Relay also exposes equivalent project-scoped routes under:
 | Scheduler run / enable / disable | `claw.scheduler.run()`, `enable()`, `disable()` | `claw scheduler run`, `enable`, `disable` | `-` |
 | Memory list | `claw.memory.list()` | `claw memory list` | `-` |
 | Memory search | `claw.memory.search()` | `claw memory search` | `-` |
+| Learning capture / list / promote | `claw.learning.*` | `claw learning capture|add|list|show|evidence add|promote|archive` | `-` |
 | Skills list | `claw.skills.list()` | `claw skills list` | `GET WS/skills/list` |
 | Skills sync | `claw.skills.sync()` | `claw skills sync` | `-` |
 | Skills sources | `claw.skills.sources()` | `claw skills sources` | `GET WS/skills/sources` |

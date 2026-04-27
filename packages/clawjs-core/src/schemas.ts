@@ -327,6 +327,54 @@ export const rulesStateSchema = z.object({
   updatedAt: z.string().min(1),
 });
 
+export const learningTargetSchema = z.enum(["user", "agent", "project", "workflow", "runtime", "ui"]);
+export const learningKindSchema = z.enum(["preference", "observation", "correction", "workflow", "failure"]);
+export const learningStatusSchema = z.enum(["active", "archived", "promoted"]);
+export const learningEvidenceSentimentSchema = z.enum(["positive", "negative", "neutral"]);
+export const learningPromotionTargetSchema = z.enum(["rule", "user", "soul", "skill", "memory"]);
+
+export const learningEvidenceSchema = z.object({
+  id: z.string().min(1),
+  sessionId: z.string().min(1),
+  sentiment: learningEvidenceSentimentSchema,
+  note: z.string().min(1),
+  quote: z.string().min(1).optional(),
+  createdAt: z.string().min(1),
+});
+
+export const learningPromotionSchema = z.object({
+  target: learningPromotionTargetSchema,
+  dryRun: z.boolean(),
+  applied: z.boolean(),
+  payload: z.record(z.unknown()),
+  result: z.record(z.unknown()).optional(),
+  createdAt: z.string().min(1),
+});
+
+export const learningRecordSchema = z.object({
+  id: z.string().min(1),
+  claim: z.string().min(1),
+  target: learningTargetSchema,
+  kind: learningKindSchema,
+  status: learningStatusSchema,
+  confidence: z.number().min(0).max(1),
+  evidence: z.array(learningEvidenceSchema),
+  promotions: z.array(learningPromotionSchema).default([]),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+  archivedAt: z.string().min(1).optional(),
+  archiveReason: z.string().min(1).optional(),
+  promotedAt: z.string().min(1).optional(),
+  promotedTo: learningPromotionTargetSchema.optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+export const learningStateSchema = z.object({
+  schemaVersion: z.literal(1),
+  learnings: z.array(learningRecordSchema),
+  updatedAt: z.string().min(1),
+});
+
 export const soulSliderValueSchema = z.enum(["very_low", "low", "medium", "high", "very_high"]);
 export const soulModuleModeSchema = z.enum(["disabled", "normal", "strong"]);
 const soulModuleBaseSchema = z.object({
@@ -1749,6 +1797,7 @@ export const temporalScheduleSchema = z.object({
   startsAt: z.string().min(1).optional(),
   cron: z.string().min(1).optional(),
   rrule: z.string().min(1).optional(),
+  staggerMs: z.number().int().nonnegative().optional(),
   relative: z.object({
     anchorType: z.enum(["thread", "task", "project", "goal", "event", "execution", "standalone"]),
     anchorId: z.string().min(1),
@@ -1783,6 +1832,84 @@ export const temporalExecutionSchema = z.object({
   error: z.string().optional(),
 });
 
+export const temporalHeartbeatUsageSchema = z.object({
+  inputTokens: z.number().int().nonnegative().optional(),
+  outputTokens: z.number().int().nonnegative().optional(),
+  totalTokens: z.number().int().nonnegative().optional(),
+});
+
+export const temporalHeartbeatAgentResultSchema = z.object({
+  status: z.enum(["done", "continue", "disable", "error", "noop"]),
+  summary: z.string().optional(),
+  error: z.string().optional(),
+  usage: temporalHeartbeatUsageSchema.optional(),
+});
+
+export const temporalRunLogEntrySchema = z.object({
+  id: z.string().min(1),
+  itemId: z.string().min(1),
+  status: z.enum(["succeeded", "failed", "cancelled", "noop"]),
+  scheduledFor: z.string().min(1),
+  startedAt: z.string().min(1),
+  completedAt: z.string().min(1),
+  durationMs: z.number().int().nonnegative(),
+  triggeredBy: z.enum(["scheduler", "manual", "system"]),
+  summary: z.string().optional(),
+  error: z.string().optional(),
+  agentResult: temporalHeartbeatAgentResultSchema.optional(),
+  usage: temporalHeartbeatUsageSchema.optional(),
+});
+
+export const temporalHeartbeatPolicySchema = z.object({
+  when: z.array(z.string().min(1)),
+  stopWhen: z.array(z.string().min(1)).optional(),
+  context: z.literal("diff"),
+  limit: z.number().int().positive(),
+  target: z.enum(["main", "isolated"]).optional(),
+  deliver: z.union([
+    z.boolean(),
+    z.object({
+      target: z.string().min(1).optional(),
+      mode: z.enum(["summary", "none"]).optional(),
+    }),
+  ]).optional(),
+  activeHours: z.object({
+    start: z.string().min(1),
+    end: z.string().min(1),
+    timezone: z.string().min(1).optional(),
+  }).optional(),
+  cooldownMs: z.number().int().nonnegative().optional(),
+  maxWakesPerWindow: z.object({
+    count: z.number().int().positive(),
+    windowMs: z.number().int().positive(),
+  }).optional(),
+  staggerMs: z.number().int().nonnegative().optional(),
+  prompt: z.string().optional(),
+  gate: z.object({
+    path: z.string().min(1).optional(),
+    policy: z.record(z.unknown()).optional(),
+  }).optional(),
+  allowedCustomChecks: z.array(z.string().min(1)).optional(),
+  state: z.object({
+    lastEvaluatedAt: z.string().min(1).optional(),
+    lastWakeAt: z.string().min(1).optional(),
+    lastSkipAt: z.string().min(1).optional(),
+    skipCount: z.number().int().nonnegative(),
+    lastSkipReason: z.string().optional(),
+    lastNoopAt: z.string().min(1).optional(),
+    lastCompletedAt: z.string().min(1).optional(),
+    lastMatches: z.array(z.object({
+      source: z.string().min(1),
+      id: z.string().min(1),
+      title: z.string().optional(),
+      updatedAt: z.string().optional(),
+      payload: z.record(z.unknown()).optional(),
+    })).optional(),
+    lastResult: temporalHeartbeatAgentResultSchema.extend({ at: z.string().min(1) }).optional(),
+    wakeTimestamps: z.array(z.string().min(1)).optional(),
+  }).optional(),
+});
+
 export const temporalNaturalInputSchema = z.object({
   command: z.enum(["at", "every", "after"]),
   expression: z.string().min(1),
@@ -1807,6 +1934,16 @@ export const temporalItemSchema = z.object({
   participants: z.array(temporalParticipantSchema),
   actions: z.array(temporalActionSchema),
   projections: z.array(temporalProjectionSchema),
+  heartbeat: temporalHeartbeatPolicySchema.optional(),
+  runtime: z.object({
+    runningExecutionId: z.string().min(1).optional(),
+    runningAt: z.string().min(1).optional(),
+    consecutiveErrors: z.number().int().nonnegative().optional(),
+    lastErrorAt: z.string().min(1).optional(),
+    lastError: z.string().optional(),
+    nextRetryAt: z.string().min(1).optional(),
+    lastDurationMs: z.number().int().nonnegative().optional(),
+  }).optional(),
   ownerId: z.string().min(1).optional(),
   workspaceId: z.string().min(1).optional(),
   projectId: z.string().min(1).optional(),

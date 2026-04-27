@@ -1327,6 +1327,7 @@ export interface TemporalSchedule {
   startsAt?: string;
   cron?: string;
   rrule?: string;
+  staggerMs?: number;
   relative?: {
     anchorType: "thread" | "task" | "project" | "goal" | "event" | "execution" | "standalone";
     anchorId: string;
@@ -1361,6 +1362,25 @@ export interface TemporalExecution {
   error?: string;
 }
 
+export interface TemporalRunLogEntry {
+  id: string;
+  itemId: string;
+  status: "succeeded" | "failed" | "cancelled" | "noop";
+  scheduledFor: string;
+  startedAt: string;
+  completedAt: string;
+  durationMs: number;
+  triggeredBy: "scheduler" | "manual" | "system";
+  summary?: string;
+  error?: string;
+  agentResult?: TemporalHeartbeatAgentResult;
+  usage?: {
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+  };
+}
+
 export interface TemporalHeartbeatMatch {
   source: string;
   id: string;
@@ -1370,9 +1390,10 @@ export interface TemporalHeartbeatMatch {
 }
 
 export interface TemporalHeartbeatAgentResult {
-  status: "done" | "continue" | "disable" | "error";
+  status: "done" | "continue" | "disable" | "error" | "noop";
   summary?: string;
   error?: string;
+  usage?: TemporalRunLogEntry["usage"];
 }
 
 export interface TemporalHeartbeatState {
@@ -1381,9 +1402,11 @@ export interface TemporalHeartbeatState {
   lastSkipAt?: string;
   skipCount: number;
   lastSkipReason?: string;
+  lastNoopAt?: string;
   lastCompletedAt?: string;
   lastMatches?: TemporalHeartbeatMatch[];
   lastResult?: TemporalHeartbeatAgentResult & { at: string };
+  wakeTimestamps?: string[];
 }
 
 export interface TemporalHeartbeatPolicy {
@@ -1391,6 +1414,19 @@ export interface TemporalHeartbeatPolicy {
   stopWhen?: string[];
   context: "diff";
   limit: number;
+  target?: "main" | "isolated";
+  deliver?: boolean | { target?: string; mode?: "summary" | "none" };
+  activeHours?: {
+    start: string;
+    end: string;
+    timezone?: string;
+  };
+  cooldownMs?: number;
+  maxWakesPerWindow?: {
+    count: number;
+    windowMs: number;
+  };
+  staggerMs?: number;
   prompt?: string;
   gate?: {
     path?: string;
@@ -1398,6 +1434,16 @@ export interface TemporalHeartbeatPolicy {
   };
   allowedCustomChecks?: string[];
   state?: TemporalHeartbeatState;
+}
+
+export interface TemporalRuntimeState {
+  runningExecutionId?: string;
+  runningAt?: string;
+  consecutiveErrors?: number;
+  lastErrorAt?: string;
+  lastError?: string;
+  nextRetryAt?: string;
+  lastDurationMs?: number;
 }
 
 export interface TemporalNaturalInput {
@@ -1425,6 +1471,7 @@ export interface TemporalItem {
   actions: TemporalAction[];
   projections: TemporalProjection[];
   heartbeat?: TemporalHeartbeatPolicy;
+  runtime?: TemporalRuntimeState;
   ownerId?: string;
   workspaceId?: string;
   projectId?: string;
@@ -2018,6 +2065,91 @@ export interface RulesCompileResult {
   overridden: Array<RulesCompileMatch & { overriddenBy: string }>;
   omitted: Array<{ rule: RuleRecord; reason: string }>;
   warnings: string[];
+}
+
+export type LearningTarget = "user" | "agent" | "project" | "workflow" | "runtime" | "ui";
+export type LearningKind = "preference" | "observation" | "correction" | "workflow" | "failure";
+export type LearningStatus = "active" | "archived" | "promoted";
+export type LearningEvidenceSentiment = "positive" | "negative" | "neutral";
+export type LearningPromotionTarget = "rule" | "user" | "soul" | "skill" | "memory";
+
+export interface LearningEvidence {
+  id: string;
+  sessionId: string;
+  sentiment: LearningEvidenceSentiment;
+  note: string;
+  quote?: string;
+  createdAt: string;
+}
+
+export interface LearningPromotion {
+  target: LearningPromotionTarget;
+  dryRun: boolean;
+  applied: boolean;
+  payload: Record<string, unknown>;
+  result?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface LearningRecord {
+  id: string;
+  claim: string;
+  target: LearningTarget;
+  kind: LearningKind;
+  status: LearningStatus;
+  confidence: number;
+  evidence: LearningEvidence[];
+  promotions: LearningPromotion[];
+  createdAt: string;
+  updatedAt: string;
+  archivedAt?: string;
+  archiveReason?: string;
+  promotedAt?: string;
+  promotedTo?: LearningPromotionTarget;
+  metadata?: Record<string, unknown>;
+}
+
+export interface LearningState {
+  schemaVersion: 1;
+  learnings: LearningRecord[];
+  updatedAt: string;
+}
+
+export interface LearningAddInput {
+  claim: string;
+  target: LearningTarget;
+  kind: LearningKind;
+  evidenceSessionId: string;
+  sentiment?: LearningEvidenceSentiment;
+  note?: string;
+  quote?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface LearningEvidenceInput {
+  sessionId: string;
+  sentiment: LearningEvidenceSentiment;
+  note: string;
+  quote?: string;
+}
+
+export interface LearningListInput {
+  target?: LearningTarget;
+  kind?: LearningKind;
+  status?: LearningStatus;
+}
+
+export interface LearningPromotionPreview {
+  learning: LearningRecord;
+  target: LearningPromotionTarget;
+  payload: Record<string, unknown>;
+  writable: boolean;
+  warnings: string[];
+}
+
+export interface LearningPromotionResult extends LearningPromotionPreview {
+  applied: boolean;
+  result?: Record<string, unknown>;
 }
 
 export type SoulModuleKey =
