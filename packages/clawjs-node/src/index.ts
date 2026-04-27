@@ -34,6 +34,7 @@ export * from "./inference/index.ts";
 export * from "./intents/store.ts";
 export * from "./judgment/store.ts";
 export * from "./learning/store.ts";
+export * from "./outcomes/store.ts";
 export * from "./library/store.ts";
 export * from "./orchestration.ts";
 export * from "./observed/store.ts";

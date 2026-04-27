@@ -2154,6 +2154,85 @@ export interface LearningPromotionResult extends LearningPromotionPreview {
   result?: Record<string, unknown>;
 }
 
+export type OutcomeResult = "worked" | "failed" | "mixed";
+export type OutcomeStatus = "active" | "archived";
+
+export interface OutcomeLinks {
+  judgments: string[];
+  sessions: string[];
+  learnings: string[];
+  tasks: string[];
+  artifacts: string[];
+}
+
+export interface OutcomeRecord {
+  id: string;
+  subject: string;
+  result: OutcomeResult;
+  score: number;
+  note: string;
+  status: OutcomeStatus;
+  links: OutcomeLinks;
+  expectedConfidence?: number;
+  confidenceGap?: number;
+  agentId?: string;
+  workspaceId?: string;
+  createdAt: string;
+  updatedAt: string;
+  archivedAt?: string;
+  archiveReason?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface OutcomeState {
+  schemaVersion: 1;
+  outcomes: OutcomeRecord[];
+  updatedAt: string;
+}
+
+export interface OutcomeAddInput {
+  subject: string;
+  result: OutcomeResult;
+  score: number;
+  note: string;
+  judgment?: string;
+  session?: string;
+  learning?: string;
+  task?: string;
+  artifact?: string;
+  agentId?: string;
+  workspaceId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface OutcomeCaptureInput {
+  sessionId: string;
+  agentId?: string;
+  workspaceId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface OutcomeCaptureResult {
+  sessionId: string;
+  outcomes: OutcomeRecord[];
+  ignored: boolean;
+  reason?: string;
+}
+
+export interface OutcomeListInput {
+  result?: OutcomeResult;
+  status?: OutcomeStatus;
+  judgment?: string;
+}
+
+export interface OutcomeLinkInput {
+  judgment?: string;
+  session?: string;
+  learning?: string;
+  task?: string;
+  artifact?: string;
+}
+
 export type JudgmentStatus = "prepared" | "decided" | "superseded" | "archived";
 export type JudgmentRecommendation = "act" | "ask_user" | "delegate" | "block";
 export type JudgmentImpact = "low" | "medium" | "high" | "critical";

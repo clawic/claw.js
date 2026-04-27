@@ -27,7 +27,7 @@ import type { ClawInstance, ImageOperation, ImageProvenance, ImageType, Telegram
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
 import { semanticPlanSchema } from "@clawjs/core";
-import type { JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserEntityType, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
+import type { JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserEntityType, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
 import { runEmbeddedDatabaseCli } from "./database-advanced.ts";
 import { runMagicDbCli } from "./database-magic.ts";
 import { runMemoryCli } from "./memory-local.ts";
@@ -230,6 +230,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} reminders after`,
     `  ${binName} watch list|get|enable|disable|delete`,
     `  ${binName} memory save|list|get|update|delete|search|context|status|capabilities`,
+    `  ${binName} outcomes add|capture|list|show|link|archive`,
     `  ${binName} judgment prepare|record|list|show|link|archive`,
     `  ${binName} learning capture|add|list|show|evidence add|promote|archive`,
     `  ${binName} rules status|list|get|propose|approve|archive|scopes|compile`,
@@ -3953,12 +3954,133 @@ const LEARNING_SENTIMENTS = new Set(["positive", "negative", "neutral"]);
 const LEARNING_PROMOTION_TARGETS = new Set(["rule", "user", "soul", "skill", "memory"]);
 const JUDGMENT_STATUSES = new Set(["prepared", "decided", "superseded", "archived"]);
 const JUDGMENT_IMPACTS = new Set(["low", "medium", "high", "critical"]);
+const OUTCOME_RESULTS = new Set(["worked", "failed", "mixed"]);
+const OUTCOME_STATUSES = new Set(["active", "archived"]);
 
 function requireOneOf<T extends string>(value: string | undefined, values: Set<string>, label: string): T {
   if (!value || !values.has(value)) {
     throw new CliHandledError("usage_error", `${label} must be one of: ${[...values].join(", ")}`, CLI_EXIT_USAGE);
   }
   return value as T;
+}
+
+async function runOutcomesCli(input: {
+  argv: string[];
+  positionals: string[];
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+  workspaceRoot: string;
+  appId: string;
+  workspaceId: string;
+  agentId: string;
+  runtimeAdapterId: RuntimeAdapterId;
+}): Promise<number> {
+  const { argv, positionals, flags, context, wantsJson, binName, workspaceRoot, appId, workspaceId, agentId, runtimeAdapterId } = input;
+  const [, command, subcommand] = positionals;
+  const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+
+  try {
+    if (command === "add") {
+      const subject = flags.subject || flags.title || joinedPositionals(positionals, 2);
+      const result = requireOneOf<OutcomeResult>(flags.result, OUTCOME_RESULTS, "result");
+      const note = flags.note || flags.reason;
+      const score = flags.score !== undefined ? Number(flags.score) : Number.NaN;
+      if (!subject || !note || !Number.isFinite(score)) {
+        context.stderr.write(`Usage: ${binName} outcomes add --subject TEXT --result worked|failed|mixed --score 0.82 --note TEXT\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const outcome = claw.outcomes.add({
+        subject,
+        result,
+        score,
+        note,
+        judgment: flags.judgment || flags["judgment-id"],
+        session: flags.session || flags["session-id"],
+        learning: flags.learning || flags["learning-id"],
+        task: flags.task || flags["task-id"],
+        artifact: flags.artifact || flags["artifact-id"],
+      });
+      if (wantsJson) writeJson(context.stdout, outcome);
+      else context.stdout.write(`${outcome.id} ${outcome.result} score=${outcome.score.toFixed(2)} gap=${outcome.confidenceGap?.toFixed(2) ?? "n/a"}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "capture") {
+      const sessionId = flags.session || flags["session-id"] || subcommand;
+      if (!sessionId) {
+        context.stderr.write(`Usage: ${binName} outcomes capture --session <session-id> [--json]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const result = claw.outcomes.capture({ sessionId });
+      if (wantsJson) writeJson(context.stdout, result);
+      else context.stdout.write(result.ignored ? `ignored ${sessionId}: ${result.reason ?? "no outcome"}\n` : `${result.outcomes.map((outcome) => `${outcome.id} ${outcome.result} ${outcome.subject}`).join("\n")}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "list") {
+      const outcomes = claw.outcomes.list({
+        ...(flags.result ? { result: requireOneOf<OutcomeResult>(flags.result, OUTCOME_RESULTS, "result") } : {}),
+        ...(flags.status ? { status: requireOneOf<OutcomeStatus>(flags.status, OUTCOME_STATUSES, "status") } : {}),
+        ...(flags.judgment ? { judgment: flags.judgment } : {}),
+      });
+      if (wantsJson) writeJson(context.stdout, { outcomes });
+      else context.stdout.write(`${outcomes.map((outcome) => `${outcome.status} ${outcome.result} ${outcome.score.toFixed(2)} ${outcome.id} ${outcome.subject}`).join("\n")}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "show" || command === "inspect") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write(`Usage: ${binName} outcomes show <outcome-id> [--json]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const outcome = claw.outcomes.show(id);
+      if (!outcome) throw new CliHandledError("not_found", `Outcome not found: ${id}`, CLI_EXIT_FAILURE);
+      if (wantsJson) writeJson(context.stdout, outcome);
+      else context.stdout.write(`${outcome.status} ${outcome.result} ${outcome.id}\n${outcome.subject}\nscore=${outcome.score.toFixed(2)} expected=${outcome.expectedConfidence?.toFixed(2) ?? "n/a"} gap=${outcome.confidenceGap?.toFixed(2) ?? "n/a"}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "link") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write(`Usage: ${binName} outcomes link <outcome-id> --judgment ID|--learning ID|--session ID|--task ID|--artifact ID\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const outcome = claw.outcomes.link(id, {
+        judgment: flags.judgment || flags["judgment-id"],
+        session: flags.session || flags["session-id"],
+        learning: flags.learning || flags["learning-id"],
+        task: flags.task || flags["task-id"],
+        artifact: flags.artifact || flags["artifact-id"],
+      });
+      if (wantsJson) writeJson(context.stdout, outcome);
+      else context.stdout.write(`${outcome.id}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "archive") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write(`Usage: ${binName} outcomes archive <outcome-id> [--reason TEXT]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const outcome = claw.outcomes.archive(id, flags.reason);
+      if (wantsJson) writeJson(context.stdout, outcome);
+      else context.stdout.write(`archived ${outcome.id}\n`);
+      return CLI_EXIT_OK;
+    }
+  } catch (error) {
+    const handled = cliErrorFromUnknown(error);
+    if (wantsJson) writeCliError(context.stdout, handled);
+    else context.stderr.write(`${handled.message}\n`);
+    return handled.exitCode;
+  }
+
+  context.stderr.write(`Usage: ${binName} outcomes add|capture|list|show|link|archive\n`);
+  return CLI_EXIT_USAGE;
 }
 
 async function runJudgmentCli(input: {
@@ -9477,6 +9599,22 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     if (wantsJson) writeJson(context.stdout, result);
     else context.stdout.write(`reindexed=${result.reindexed} embeddings=${result.embeddings}\n`);
     return CLI_EXIT_OK;
+  }
+
+  if (group === "outcomes") {
+    return await runOutcomesCli({
+      argv,
+      positionals,
+      flags,
+      context,
+      wantsJson,
+      binName,
+      workspaceRoot,
+      appId,
+      workspaceId,
+      agentId,
+      runtimeAdapterId,
+    });
   }
 
   if (group === "judgment") {

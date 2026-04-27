@@ -89,6 +89,11 @@ import type {
   LearningPromotionResult,
   LearningPromotionTarget,
   LearningRecord,
+  OutcomeAddInput,
+  OutcomeCaptureResult,
+  OutcomeLinkInput,
+  OutcomeListInput,
+  OutcomeRecord,
   MediaGalleryShare,
   MediaKind,
   MediaListInput,
@@ -188,6 +193,7 @@ import { createSoulStore } from "./soul/store.ts";
 import { createUserStore } from "./user/store.ts";
 import { createJudgmentStore } from "./judgment/store.ts";
 import { createLearningStore } from "./learning/store.ts";
+import { createOutcomeStore } from "./outcomes/store.ts";
 import { ChannelRunStore } from "./channel-runs/index.ts";
 import type { ChannelRunOptions, ChannelRunTarget, ChannelRunMessage } from "./channel-runs/index.ts";
 import { streamRuntimeSession, streamRuntimeSessionEvents, type SessionStreamEvent } from "./sessions/stream.ts";
@@ -933,6 +939,14 @@ export interface ClawInstance {
     promote: (id: string, input: { to: LearningPromotionTarget; dryRun?: boolean; apply?: boolean }) => LearningPromotionResult;
     archive: (id: string, reason?: string) => LearningRecord;
   };
+  outcomes: {
+    add: (input: OutcomeAddInput) => OutcomeRecord;
+    capture: (input: { sessionId: string }) => OutcomeCaptureResult;
+    list: (input?: OutcomeListInput) => OutcomeRecord[];
+    show: (id: string) => OutcomeRecord | null;
+    link: (id: string, input: OutcomeLinkInput) => OutcomeRecord;
+    archive: (id: string, reason?: string) => OutcomeRecord;
+  };
   judgment: {
     prepare: (input: { question: string; domain: string; impact?: JudgmentImpact; options?: string[]; sessionId?: string; metadata?: Record<string, unknown> }) => JudgmentRecord;
     record: (id: string, input: JudgmentRecordInput) => JudgmentRecord;
@@ -1559,6 +1573,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   const sessionStore = new SessionStore(workspaceDir, { filesystem });
   const judgmentStore = createJudgmentStore({ workspaceDir, filesystem });
   const learningStore = createLearningStore({ workspaceDir, filesystem });
+  const outcomeStore = createOutcomeStore({ workspaceDir, filesystem });
   const channelRunStore = new ChannelRunStore(workspaceDir, sessionStore, { filesystem });
   const dataStore = createWorkspaceDataStore(workspaceDir, filesystem);
   const storageStore = createLocalStorageStore({
@@ -5517,6 +5532,74 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         const memory = await adapter.searchMemory(query, processHost, resolvedRuntimeOptions);
         persistMemoryState(memory);
         return memory;
+      },
+    },
+    outcomes: {
+      add: (input) => {
+        const outcome = outcomeStore.add({
+          ...input,
+          agentId: input.agentId ?? logicalAgentId,
+          workspaceId: input.workspaceId ?? options.workspace.workspaceId,
+        }, {
+          judgment: input.judgment ? judgmentStore.get(input.judgment) : null,
+        });
+        appendAuditEvent("outcome.added", "outcome", {
+          outcomeId: outcome.id,
+          result: outcome.result,
+          score: outcome.score,
+          judgmentId: input.judgment,
+        });
+        eventBus.emit("outcome.added", {
+          outcomeId: outcome.id,
+          result: outcome.result,
+          score: outcome.score,
+          judgmentId: input.judgment,
+        });
+        return outcome;
+      },
+      capture: (input) => {
+        const session = sessionStore.getSession(input.sessionId);
+        const result = outcomeStore.captureSession(session, {
+          agentId: logicalAgentId,
+          workspaceId: options.workspace.workspaceId,
+        });
+        appendAuditEvent("outcome.captured", "outcome", {
+          sessionId: input.sessionId,
+          count: result.outcomes.length,
+          ignored: result.ignored,
+        });
+        eventBus.emit("outcome.captured", {
+          sessionId: input.sessionId,
+          count: result.outcomes.length,
+          ignored: result.ignored,
+        });
+        return result;
+      },
+      list: (input = {}) => outcomeStore.list(input),
+      show: (id) => outcomeStore.get(id),
+      link: (id, input) => {
+        const outcome = outcomeStore.link(id, input, {
+          judgment: input.judgment ? judgmentStore.get(input.judgment) : null,
+        });
+        appendAuditEvent("outcome.linked", "outcome", {
+          outcomeId: outcome.id,
+        });
+        eventBus.emit("outcome.linked", {
+          outcomeId: outcome.id,
+        });
+        return outcome;
+      },
+      archive: (id, reason) => {
+        const outcome = outcomeStore.archive(id, reason);
+        appendAuditEvent("outcome.archived", "outcome", {
+          outcomeId: outcome.id,
+          reason,
+        });
+        eventBus.emit("outcome.archived", {
+          outcomeId: outcome.id,
+          reason,
+        });
+        return outcome;
       },
     },
     judgment: {

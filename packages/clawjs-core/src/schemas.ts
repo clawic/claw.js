@@ -375,6 +375,42 @@ export const learningStateSchema = z.object({
   updatedAt: z.string().min(1),
 });
 
+export const outcomeResultSchema = z.enum(["worked", "failed", "mixed"]);
+export const outcomeStatusSchema = z.enum(["active", "archived"]);
+
+export const outcomeLinksSchema = z.object({
+  judgments: z.array(z.string().min(1)).default([]),
+  sessions: z.array(z.string().min(1)).default([]),
+  learnings: z.array(z.string().min(1)).default([]),
+  tasks: z.array(z.string().min(1)).default([]),
+  artifacts: z.array(z.string().min(1)).default([]),
+});
+
+export const outcomeRecordSchema = z.object({
+  id: z.string().min(1),
+  subject: z.string().min(1),
+  result: outcomeResultSchema,
+  score: z.number().min(0).max(1),
+  note: z.string().min(1),
+  status: outcomeStatusSchema,
+  links: outcomeLinksSchema,
+  expectedConfidence: z.number().min(0).max(1).optional(),
+  confidenceGap: z.number().min(-1).max(1).optional(),
+  agentId: z.string().min(1).optional(),
+  workspaceId: z.string().min(1).optional(),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+  archivedAt: z.string().min(1).optional(),
+  archiveReason: z.string().min(1).optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+export const outcomeStateSchema = z.object({
+  schemaVersion: z.literal(1),
+  outcomes: z.array(outcomeRecordSchema),
+  updatedAt: z.string().min(1),
+});
+
 export const judgmentStatusSchema = z.enum(["prepared", "decided", "superseded", "archived"]);
 export const judgmentRecommendationSchema = z.enum(["act", "ask_user", "delegate", "block"]);
 export const judgmentImpactSchema = z.enum(["low", "medium", "high", "critical"]);
