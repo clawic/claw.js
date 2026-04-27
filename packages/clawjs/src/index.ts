@@ -27,7 +27,7 @@ import type { ClawInstance, ImageOperation, ImageProvenance, ImageType, Telegram
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
 import { semanticPlanSchema } from "@clawjs/core";
-import type { JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserEntityType, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
+import type { ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserEntityType, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
 import { runEmbeddedDatabaseCli } from "./database-advanced.ts";
 import { runMagicDbCli } from "./database-magic.ts";
 import { runMemoryCli } from "./memory-local.ts";
@@ -230,6 +230,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} reminders after`,
     `  ${binName} watch list|get|enable|disable|delete`,
     `  ${binName} memory save|list|get|update|delete|search|context|status|capabilities`,
+    `  ${binName} context prepare|list|show|archive`,
     `  ${binName} outcomes add|capture|list|show|link|archive`,
     `  ${binName} judgment prepare|record|list|show|link|archive`,
     `  ${binName} learning capture|add|list|show|evidence add|promote|archive`,
@@ -3952,6 +3953,8 @@ const LEARNING_KINDS = new Set(["preference", "observation", "correction", "work
 const LEARNING_STATUSES = new Set(["active", "archived", "promoted"]);
 const LEARNING_SENTIMENTS = new Set(["positive", "negative", "neutral"]);
 const LEARNING_PROMOTION_TARGETS = new Set(["rule", "user", "soul", "skill", "memory"]);
+const CONTEXT_PURPOSES = new Set(["judgment", "prompt", "task", "session", "manual"]);
+const CONTEXT_STATUSES = new Set(["active", "archived"]);
 const JUDGMENT_STATUSES = new Set(["prepared", "decided", "superseded", "archived"]);
 const JUDGMENT_IMPACTS = new Set(["low", "medium", "high", "critical"]);
 const OUTCOME_RESULTS = new Set(["worked", "failed", "mixed"]);
@@ -4080,6 +4083,88 @@ async function runOutcomesCli(input: {
   }
 
   context.stderr.write(`Usage: ${binName} outcomes add|capture|list|show|link|archive\n`);
+  return CLI_EXIT_USAGE;
+}
+
+async function runContextCli(input: {
+  argv: string[];
+  positionals: string[];
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+  workspaceRoot: string;
+  appId: string;
+  workspaceId: string;
+  agentId: string;
+  runtimeAdapterId: RuntimeAdapterId;
+}): Promise<number> {
+  const { argv, positionals, flags, context, wantsJson, binName, workspaceRoot, appId, workspaceId, agentId, runtimeAdapterId } = input;
+  const [, command, subcommand] = positionals;
+  const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+
+  try {
+    if (command === "prepare") {
+      const query = flags.query || flags.prompt || joinedPositionals(positionals, 2);
+      if (!query) {
+        context.stderr.write(`Usage: ${binName} context prepare --query TEXT [--purpose judgment|prompt|task|session|manual]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const pack = claw.context.prepare({
+        query,
+        purpose: flags.purpose ? requireOneOf<ContextPackPurpose>(flags.purpose, CONTEXT_PURPOSES, "purpose") : undefined,
+        domain: flags.domain,
+        sessionId: flags.session || flags["session-id"],
+        ...(flags["max-items"] ? { maxItems: Number(flags["max-items"]) } : {}),
+        ...(flags["max-chars"] ? { maxChars: Number(flags["max-chars"]) } : {}),
+      });
+      if (wantsJson) writeJson(context.stdout, pack);
+      else context.stdout.write(`${pack.id} ${pack.purpose} items=${pack.items.length} chars=${pack.budget.charCount}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "list") {
+      const packs = claw.context.list({
+        ...(flags.purpose ? { purpose: requireOneOf<ContextPackPurpose>(flags.purpose, CONTEXT_PURPOSES, "purpose") } : {}),
+        ...(flags.status ? { status: requireOneOf<ContextPackStatus>(flags.status, CONTEXT_STATUSES, "status") } : {}),
+      });
+      if (wantsJson) writeJson(context.stdout, { contexts: packs });
+      else context.stdout.write(`${packs.map((pack) => `${pack.status} ${pack.purpose} ${pack.id} items=${pack.items.length} ${pack.query}`).join("\n")}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "show" || command === "inspect") {
+      const id = subcommand || flags.id || flags.context;
+      if (!id) {
+        context.stderr.write(`Usage: ${binName} context show <context-id> [--json]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const pack = claw.context.show(id);
+      if (!pack) throw new CliHandledError("not_found", `Context pack not found: ${id}`, CLI_EXIT_FAILURE);
+      if (wantsJson) writeJson(context.stdout, pack);
+      else context.stdout.write(`${pack.status} ${pack.purpose} ${pack.id}\n${pack.summary}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "archive") {
+      const id = subcommand || flags.id || flags.context;
+      if (!id) {
+        context.stderr.write(`Usage: ${binName} context archive <context-id> [--reason TEXT]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const pack = claw.context.archive(id, flags.reason);
+      if (wantsJson) writeJson(context.stdout, pack);
+      else context.stdout.write(`archived ${pack.id}\n`);
+      return CLI_EXIT_OK;
+    }
+  } catch (error) {
+    const handled = cliErrorFromUnknown(error);
+    if (wantsJson) writeCliError(context.stdout, handled);
+    else context.stderr.write(`${handled.message}\n`);
+    return handled.exitCode;
+  }
+
+  context.stderr.write(`Usage: ${binName} context prepare|list|show|archive\n`);
   return CLI_EXIT_USAGE;
 }
 
@@ -9603,6 +9688,22 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "outcomes") {
     return await runOutcomesCli({
+      argv,
+      positionals,
+      flags,
+      context,
+      wantsJson,
+      binName,
+      workspaceRoot,
+      appId,
+      workspaceId,
+      agentId,
+      runtimeAdapterId,
+    });
+  }
+
+  if (group === "context") {
+    return await runContextCli({
       argv,
       positionals,
       flags,

@@ -315,6 +315,7 @@ export class JudgmentStore {
       ...(recommendedOption ? { recommendedOption } : {}),
       confidence,
       rationale,
+      ...(input.contextPackId ? { contextPackId: input.contextPackId } : {}),
       context: refs,
       optionScores,
       ...(input.agentId ? { agentId: input.agentId } : {}),

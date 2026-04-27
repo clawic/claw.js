@@ -1175,7 +1175,7 @@ export interface WorkspaceConversationInput extends BaseWorkspaceConversationInp
   workspaceContext?: "off" | "auto" | WorkspaceConversationContextOption;
 }
 
-export interface WorkspaceClawInstance extends Omit<ClawInstance, "workspace" | "sessions"> {
+export interface WorkspaceClawInstance extends Omit<ClawInstance, "workspace" | "sessions" | "context"> {
   workspace: ClawInstance["workspace"] & {
     tools: {
       describe: () => WorkspaceToolDescriptor[];
@@ -1595,7 +1595,7 @@ export interface WorkspaceClawInstance extends Omit<ClawInstance, "workspace" | 
   search: {
     query: (input: WorkspaceSearchQuery) => Promise<WorkspaceSearchResult[]>;
   };
-  context: {
+  context: ClawInstance["context"] & {
     build: (input?: WorkspaceContextRequest) => Promise<WorkspaceContextBundle>;
     tools: () => WorkspaceToolDescriptor[];
   };
@@ -8129,7 +8129,7 @@ async function createWorkspaceExtension(
     return output;
   }
 
-  const contextApi: WorkspaceClawInstance["context"] = {
+  const contextApi: Pick<WorkspaceClawInstance["context"], "build" | "tools"> = {
     build: async (input = {}) => buildContext(input),
     tools: () => [...TOOL_DESCRIPTORS],
   };
@@ -8298,7 +8298,10 @@ async function createWorkspaceExtension(
     search: {
       query: async (input) => searchWorkspace(input),
     },
-    context: contextApi,
+    context: {
+      ...claw.context,
+      ...contextApi,
+    },
     ui: uiApi,
     workspaceIndex: {
       rebuild: async () => rebuildIndexes(),

@@ -411,6 +411,57 @@ export const outcomeStateSchema = z.object({
   updatedAt: z.string().min(1),
 });
 
+export const contextPackStatusSchema = z.enum(["active", "archived"]);
+export const contextPackPurposeSchema = z.enum(["judgment", "prompt", "task", "session", "manual"]);
+export const contextPackSourceSchema = z.enum(["rule", "learning", "user", "soul", "session", "memory"]);
+export const contextPackSensitivitySchema = z.enum(["public", "personal", "sensitive", "internal"]);
+
+export const contextPackItemSchema = z.object({
+  id: z.string().min(1),
+  source: contextPackSourceSchema,
+  sourceId: z.string().min(1),
+  title: z.string().min(1),
+  snippet: z.string().min(1),
+  reason: z.string().min(1),
+  score: z.number().min(0).max(1),
+  confidence: z.number().min(0).max(1),
+  sensitivity: contextPackSensitivitySchema,
+  metadata: z.record(z.unknown()).optional(),
+});
+
+export const contextPackBudgetSchema = z.object({
+  maxItems: z.number().int().positive(),
+  maxChars: z.number().int().positive(),
+  itemCount: z.number().int().min(0),
+  charCount: z.number().int().min(0),
+});
+
+export const contextPackRecordSchema = z.object({
+  id: z.string().min(1),
+  status: contextPackStatusSchema,
+  purpose: contextPackPurposeSchema,
+  query: z.string().min(1),
+  domain: z.string().min(1).optional(),
+  sessionId: z.string().min(1).optional(),
+  summary: z.string().min(1),
+  items: z.array(contextPackItemSchema),
+  sourceCounts: z.record(contextPackSourceSchema, z.number().int().min(0)),
+  budget: contextPackBudgetSchema,
+  agentId: z.string().min(1).optional(),
+  workspaceId: z.string().min(1).optional(),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+  archivedAt: z.string().min(1).optional(),
+  archiveReason: z.string().min(1).optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+export const contextPackStateSchema = z.object({
+  schemaVersion: z.literal(1),
+  packs: z.array(contextPackRecordSchema),
+  updatedAt: z.string().min(1),
+});
+
 export const judgmentStatusSchema = z.enum(["prepared", "decided", "superseded", "archived"]);
 export const judgmentRecommendationSchema = z.enum(["act", "ask_user", "delegate", "block"]);
 export const judgmentImpactSchema = z.enum(["low", "medium", "high", "critical"]);
@@ -446,6 +497,7 @@ export const judgmentRecordSchema = z.object({
   confidence: z.number().min(0).max(1),
   rationale: z.string().min(1),
   outcome: z.string().min(1).optional(),
+  contextPackId: z.string().min(1).optional(),
   context: judgmentContextRefsSchema,
   optionScores: z.array(judgmentOptionScoreSchema),
   agentId: z.string().min(1).optional(),

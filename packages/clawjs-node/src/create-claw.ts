@@ -78,6 +78,9 @@ import type {
   LibraryAssignment,
   LibraryResolveResult,
   LibrarySyncResult,
+  ContextPackListInput,
+  ContextPackPrepareInput,
+  ContextPackRecord,
   JudgmentImpact,
   JudgmentLinkInput,
   JudgmentListInput,
@@ -191,6 +194,7 @@ import { watchProviderStatus, watchRuntimeStatus, type PollWatchOptions } from "
 import { SessionStore } from "./sessions/store.ts";
 import { createSoulStore } from "./soul/store.ts";
 import { createUserStore } from "./user/store.ts";
+import { createContextStore } from "./context/store.ts";
 import { createJudgmentStore } from "./judgment/store.ts";
 import { createLearningStore } from "./learning/store.ts";
 import { createOutcomeStore } from "./outcomes/store.ts";
@@ -947,6 +951,12 @@ export interface ClawInstance {
     link: (id: string, input: OutcomeLinkInput) => OutcomeRecord;
     archive: (id: string, reason?: string) => OutcomeRecord;
   };
+  context: {
+    prepare: (input: ContextPackPrepareInput) => ContextPackRecord;
+    list: (input?: ContextPackListInput) => ContextPackRecord[];
+    show: (id: string) => ContextPackRecord | null;
+    archive: (id: string, reason?: string) => ContextPackRecord;
+  };
   judgment: {
     prepare: (input: { question: string; domain: string; impact?: JudgmentImpact; options?: string[]; sessionId?: string; metadata?: Record<string, unknown> }) => JudgmentRecord;
     record: (id: string, input: JudgmentRecordInput) => JudgmentRecord;
@@ -1571,6 +1581,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   const logicalAgentId = options.workspace.logicalAgentId ?? options.workspace.agentId;
   const runtimeAgentId = options.workspace.runtimeAgentId ?? logicalAgentId;
   const sessionStore = new SessionStore(workspaceDir, { filesystem });
+  const contextStore = createContextStore({ workspaceDir, filesystem });
   const judgmentStore = createJudgmentStore({ workspaceDir, filesystem });
   const learningStore = createLearningStore({ workspaceDir, filesystem });
   const outcomeStore = createOutcomeStore({ workspaceDir, filesystem });
@@ -4607,6 +4618,39 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     delete: async (id) => requireTimeClient().delete(id),
   };
 
+  function prepareContextPack(input: ContextPackPrepareInput): ContextPackRecord {
+    const rules = rulesStore.compile({
+      prompt: input.query,
+      domain: input.domain,
+      agent: logicalAgentId,
+    });
+    const session = input.sessionId ? sessionStore.getSession(input.sessionId) : null;
+    const pack = contextStore.prepare({
+      ...input,
+      agentId: input.agentId ?? logicalAgentId,
+      workspaceId: input.workspaceId ?? options.workspace.workspaceId,
+    }, {
+      rules: rules.included,
+      learnings: learningStore.list({ status: "active" }),
+      user: userStore.resolve({ agentId: logicalAgentId }),
+      soul: soulStore.resolve({ agentId: logicalAgentId }),
+      session,
+    });
+    appendAuditEvent("context.prepared", "context", {
+      contextPackId: pack.id,
+      purpose: pack.purpose,
+      domain: pack.domain,
+      itemCount: pack.items.length,
+    });
+    eventBus.emit("context.prepared", {
+      contextPackId: pack.id,
+      purpose: pack.purpose,
+      domain: pack.domain,
+      itemCount: pack.items.length,
+    });
+    return pack;
+  }
+
   return {
     runtime: {
       context: () => runtimeContext,
@@ -5602,8 +5646,31 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         return outcome;
       },
     },
+    context: {
+      prepare: (input) => prepareContextPack(input),
+      list: (input = {}) => contextStore.list(input),
+      show: (id) => contextStore.get(id),
+      archive: (id, reason) => {
+        const pack = contextStore.archive(id, reason);
+        appendAuditEvent("context.archived", "context", {
+          contextPackId: pack.id,
+          reason,
+        });
+        eventBus.emit("context.archived", {
+          contextPackId: pack.id,
+          reason,
+        });
+        return pack;
+      },
+    },
     judgment: {
       prepare: (input) => {
+        const contextPack = prepareContextPack({
+          query: input.question,
+          purpose: "judgment",
+          domain: input.domain,
+          sessionId: input.sessionId,
+        });
         const rules = rulesStore.compile({
           prompt: input.question,
           domain: input.domain,
@@ -5613,6 +5680,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         const session = input.sessionId ? sessionStore.getSession(input.sessionId) : null;
         const judgment = judgmentStore.prepare({
           ...input,
+          contextPackId: contextPack.id,
           agentId: logicalAgentId,
           workspaceId: options.workspace.workspaceId,
         }, {

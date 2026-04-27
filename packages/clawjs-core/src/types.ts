@@ -2233,6 +2233,74 @@ export interface OutcomeLinkInput {
   artifact?: string;
 }
 
+export type ContextPackStatus = "active" | "archived";
+export type ContextPackPurpose = "judgment" | "prompt" | "task" | "session" | "manual";
+export type ContextPackSource = "rule" | "learning" | "user" | "soul" | "session" | "memory";
+export type ContextPackSensitivity = "public" | "personal" | "sensitive" | "internal";
+
+export interface ContextPackItem {
+  id: string;
+  source: ContextPackSource;
+  sourceId: string;
+  title: string;
+  snippet: string;
+  reason: string;
+  score: number;
+  confidence: number;
+  sensitivity: ContextPackSensitivity;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ContextPackBudget {
+  maxItems: number;
+  maxChars: number;
+  itemCount: number;
+  charCount: number;
+}
+
+export interface ContextPackRecord {
+  id: string;
+  status: ContextPackStatus;
+  purpose: ContextPackPurpose;
+  query: string;
+  domain?: string;
+  sessionId?: string;
+  summary: string;
+  items: ContextPackItem[];
+  sourceCounts: Partial<Record<ContextPackSource, number>>;
+  budget: ContextPackBudget;
+  agentId?: string;
+  workspaceId?: string;
+  createdAt: string;
+  updatedAt: string;
+  archivedAt?: string;
+  archiveReason?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ContextPackState {
+  schemaVersion: 1;
+  packs: ContextPackRecord[];
+  updatedAt: string;
+}
+
+export interface ContextPackPrepareInput {
+  query: string;
+  purpose?: ContextPackPurpose;
+  domain?: string;
+  sessionId?: string;
+  maxItems?: number;
+  maxChars?: number;
+  agentId?: string;
+  workspaceId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ContextPackListInput {
+  purpose?: ContextPackPurpose;
+  status?: ContextPackStatus;
+}
+
 export type JudgmentStatus = "prepared" | "decided" | "superseded" | "archived";
 export type JudgmentRecommendation = "act" | "ask_user" | "delegate" | "block";
 export type JudgmentImpact = "low" | "medium" | "high" | "critical";
@@ -2268,6 +2336,7 @@ export interface JudgmentRecord {
   confidence: number;
   rationale: string;
   outcome?: string;
+  contextPackId?: string;
   context: JudgmentContextRefs;
   optionScores: JudgmentOptionScore[];
   agentId?: string;
@@ -2292,6 +2361,7 @@ export interface JudgmentPrepareInput {
   impact?: JudgmentImpact;
   options?: string[];
   sessionId?: string;
+  contextPackId?: string;
   agentId?: string;
   workspaceId?: string;
   metadata?: Record<string, unknown>;
