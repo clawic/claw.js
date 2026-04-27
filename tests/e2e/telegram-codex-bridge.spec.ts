@@ -442,6 +442,45 @@ test("telegram codex bridge injects default and assigned skill capsules in order
   expect(sameAIndex).toBeGreaterThan(sameBIndex);
 });
 
+test("telegram codex bridge translates .claw aliases into tokenized mobile links", async () => {
+  const rootDir = process.cwd();
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-telegram-domains-"));
+  const workspacePath = path.join(tempRoot, "workspace");
+  const runtimeWorkspace = path.join(tempRoot, "runtime-workspace");
+  const codexHome = path.join(tempRoot, "codex-home");
+  const statePath = path.join(tempRoot, "bridge-state.json");
+  fs.mkdirSync(workspacePath, { recursive: true });
+  fs.mkdirSync(runtimeWorkspace, { recursive: true });
+  fs.mkdirSync(codexHome, { recursive: true });
+  writeFakeCodexBinary(tempRoot);
+
+  const env = { CLAWJS_DOMAIN_SHARE_URL: "https://example.local/claw-share" };
+  const alias = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "501", chatType: "private", senderId: "501", text: "memory.claw" }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+    env,
+  });
+  const aliasText = sendActions(alias.actions)[0]?.text ?? "";
+  expect(aliasText).toContain("memory.claw: https://example.local/claw-share?");
+  expect(aliasText).toContain("claw_share_token=");
+  expect(aliasText).toContain("claw_surface=memory");
+
+  const open = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "501", chatType: "private", senderId: "501", text: "open memory", messageId: 502 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+    env,
+  });
+  const openText = sendActions(open.actions)[0]?.text ?? "";
+  expect(openText).toContain("memory.claw: https://example.local/claw-share?");
+  expect(openText).not.toContain("localhost");
+});
+
 async function runProcessor(rootDir: string, input: {
   event: unknown;
   statePath: string;
@@ -452,6 +491,7 @@ async function runProcessor(rootDir: string, input: {
   replyPolicy?: string;
   botUsername?: string;
   systemPrompt?: string;
+  env?: NodeJS.ProcessEnv;
 }) {
   const args = [
     path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs"),
@@ -481,6 +521,7 @@ async function runProcessor(rootDir: string, input: {
     cwd: rootDir,
     env: {
       ...process.env,
+      ...(input.env ?? {}),
       PATH: `${path.join(path.dirname(input.codexHome), "bin")}${path.delimiter}${process.env.PATH ?? ""}`,
       CI: "1",
     },

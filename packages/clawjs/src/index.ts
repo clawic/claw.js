@@ -243,6 +243,8 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} user init|set|add|propose|verify|list|get|inspect|validate|preview|compile|assign`,
     `  ${binName} channels list|status|telegram|assign|unassign|assignments|processors|listen|targets|messages|permissions|commands`,
     `  ${binName} channels telegram setup|codex setup|codex status`,
+    `  ${binName} open <surface> [--no-browser] [--host HOST] [--port PORT]`,
+    `  ${binName} domains install|status|uninstall|serve`,
     `  ${binName} preview share --url http://127.0.0.1:PORT [--mode lan|tailscale|cloudflare]`,
     `  ${binName} browser status|ensure|share --relay-url URL --access-token TOKEN --tenant-id ID --agent-id ID --workspace-id ID`,
     `  ${binName} telegram connect|status|webhook set|clear|polling start|stop|commands set|get|chats list|inspect|send`,
@@ -298,6 +300,7 @@ interface OpenSurfaceState {
   host: string;
   port: number;
   url: string;
+  targetUrl?: string;
   workspace: string;
   startedAt: string;
 }
@@ -329,6 +332,300 @@ const OPEN_SURFACE_BY_NAME = new Map<string, OpenSurface>(
     ...(surface.aliases ?? []).map((alias) => [alias, surface] as const),
   ]),
 );
+
+const CLAW_DOMAINS_BEGIN = "# BEGIN CLAWJS DOMAINS";
+const CLAW_DOMAINS_END = "# END CLAWJS DOMAINS";
+const CLAW_DOMAINS_LABEL = "com.clawjs.domains";
+
+interface ClawDomainsStatus {
+  installed: boolean;
+  hostsConfigured: boolean;
+  proxyConfigured: boolean;
+  proxyReachable: boolean;
+  hosts: string[];
+  hostsFile: string;
+  plistFile: string;
+  proxyUrl: string;
+}
+
+function allOpenSurfaceHostnames(): string[] {
+  return Array.from(new Set(OPEN_SURFACES.flatMap((surface) => [
+    `${surface.id}.claw`,
+    ...(surface.aliases ?? []).map((alias) => `${alias}.claw`),
+  ]))).sort();
+}
+
+function surfacePrimaryClawUrl(surface: OpenSurface): string {
+  return `http://${surface.id}.claw`;
+}
+
+function parseClawHostSurface(hostHeader: string | undefined): OpenSurface | null {
+  const host = (hostHeader ?? "").split(":")[0]?.trim().toLowerCase();
+  if (!host?.endsWith(".claw")) return null;
+  return resolveOpenSurface(host.slice(0, -".claw".length));
+}
+
+function isClawDomainConfigured(flags: Record<string, string>): boolean {
+  if (process.env.CLAWJS_DOMAINS_ACTIVE === "1") return true;
+  if (process.env.CLAWJS_DOMAINS_ACTIVE === "0") return false;
+  const hostsFile = flags["domains-hosts-file"] || flags["hosts-file"] || "/etc/hosts";
+  try {
+    const content = fs.readFileSync(hostsFile, "utf8");
+    return content.includes(CLAW_DOMAINS_BEGIN) && content.includes(CLAW_DOMAINS_END);
+  } catch {
+    return false;
+  }
+}
+
+function domainHostsBlock(): string {
+  return [
+    CLAW_DOMAINS_BEGIN,
+    `127.0.0.1 ${allOpenSurfaceHostnames().join(" ")}`,
+    CLAW_DOMAINS_END,
+  ].join("\n");
+}
+
+function replaceDomainHostsBlock(current: string, nextBlock: string | null): string {
+  const pattern = new RegExp(`${CLAW_DOMAINS_BEGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[\\s\\S]*?${CLAW_DOMAINS_END.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\n?`, "m");
+  const without = current.replace(pattern, "").replace(/\n{3,}/g, "\n\n").trimEnd();
+  if (!nextBlock) return without ? `${without}\n` : "";
+  return `${without ? `${without}\n\n` : ""}${nextBlock}\n`;
+}
+
+function xmlEscape(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function domainsPlistPath(flags: Record<string, string>): string {
+  return flags["plist-file"] || `/Library/LaunchDaemons/${CLAW_DOMAINS_LABEL}.plist`;
+}
+
+function domainsHostsFile(flags: Record<string, string>): string {
+  return flags["hosts-file"] || "/etc/hosts";
+}
+
+function buildDomainsPlist(flags: Record<string, string>): string {
+  const args = [
+    process.execPath,
+    currentCliEntryPath(),
+    "domains",
+    "serve",
+    "--host",
+    flags.host || "127.0.0.1",
+    "--port",
+    flags.port || "80",
+  ];
+  return [
+    `<?xml version="1.0" encoding="UTF-8"?>`,
+    `<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">`,
+    `<plist version="1.0">`,
+    `<dict>`,
+    `  <key>Label</key>`,
+    `  <string>${CLAW_DOMAINS_LABEL}</string>`,
+    `  <key>ProgramArguments</key>`,
+    `  <array>`,
+    ...args.map((arg) => `    <string>${xmlEscape(arg)}</string>`),
+    `  </array>`,
+    `  <key>WorkingDirectory</key>`,
+    `  <string>${xmlEscape(repoRootFromCliPackage())}</string>`,
+    `  <key>RunAtLoad</key>`,
+    `  <true/>`,
+    `  <key>KeepAlive</key>`,
+    `  <true/>`,
+    `  <key>StandardOutPath</key>`,
+    `  <string>/tmp/clawjs-domains.out.log</string>`,
+    `  <key>StandardErrorPath</key>`,
+    `  <string>/tmp/clawjs-domains.err.log</string>`,
+    `</dict>`,
+    `</plist>`,
+    "",
+  ].join("\n");
+}
+
+function domainsInstallPlan(flags: Record<string, string>) {
+  const hostsFile = domainsHostsFile(flags);
+  const plistFile = domainsPlistPath(flags);
+  return {
+    hostsFile,
+    plistFile,
+    hosts: allOpenSurfaceHostnames(),
+    proxyUrl: `http://${flags.host || "127.0.0.1"}:${flags.port || "80"}`,
+    serviceLabel: CLAW_DOMAINS_LABEL,
+  };
+}
+
+function sudoScript(script: string): void {
+  const result = spawnSync("sudo", ["sh", "-c", script], { stdio: "inherit" });
+  if (result.status !== 0) {
+    throw new CliHandledError("domains_install_failed", "Failed to update local .claw domain configuration.");
+  }
+}
+
+async function readDomainsStatus(flags: Record<string, string>): Promise<ClawDomainsStatus> {
+  const plan = domainsInstallPlan(flags);
+  let hostsConfigured = false;
+  try {
+    const content = fs.readFileSync(plan.hostsFile, "utf8");
+    hostsConfigured = content.includes(CLAW_DOMAINS_BEGIN) && content.includes(CLAW_DOMAINS_END);
+  } catch {
+    hostsConfigured = false;
+  }
+  const proxyConfigured = fs.existsSync(plan.plistFile);
+  const proxyReachable = await portIsOpen(flags.host || "127.0.0.1", Number(flags.port || "80"));
+  return {
+    installed: hostsConfigured && proxyConfigured,
+    hostsConfigured,
+    proxyConfigured,
+    proxyReachable,
+    hosts: plan.hosts,
+    hostsFile: plan.hostsFile,
+    plistFile: plan.plistFile,
+    proxyUrl: plan.proxyUrl,
+  };
+}
+
+function parseSurfacePortOverrides(value: string | undefined): Record<string, number> {
+  const ports: Record<string, number> = {};
+  for (const entry of parseCsvFlag(value)) {
+    const [name, rawPort] = entry.split("=");
+    const surface = resolveOpenSurface(name);
+    const port = Number(rawPort);
+    if (!surface || !Number.isInteger(port) || port <= 0 || port > 65_535) {
+      throw new CliHandledError("usage_error", `Invalid --surface-port entry "${entry}". Use surface=port.`, CLI_EXIT_USAGE);
+    }
+    ports[surface.id] = port;
+  }
+  return ports;
+}
+
+function surfaceTargetPort(surface: OpenSurface, flags: Record<string, string>): number {
+  return parseSurfacePortOverrides(flags["surface-port"])[surface.id] ?? surface.port;
+}
+
+async function proxyHttpResponse(input: {
+  request: http.IncomingMessage;
+  response: http.ServerResponse;
+  targetUrl: URL;
+}): Promise<void> {
+  const incomingUrl = new URL(input.request.url || "/", "http://127.0.0.1");
+  const target = new URL(input.targetUrl.toString());
+  target.pathname = incomingUrl.pathname;
+  target.search = incomingUrl.search;
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(input.request.headers)) {
+    if (key.toLowerCase() === "host" || value === undefined) continue;
+    if (Array.isArray(value)) {
+      for (const entry of value) headers.append(key, entry);
+    } else {
+      headers.set(key, value);
+    }
+  }
+  const body = input.request.method === "GET" || input.request.method === "HEAD"
+    ? undefined
+    : input.request as unknown as BodyInit;
+  try {
+    const upstream = await fetch(target, {
+      method: input.request.method,
+      headers,
+      body,
+      redirect: "manual",
+      duplex: body ? "half" : undefined,
+    } as RequestInit & { duplex?: "half" });
+    input.response.statusCode = upstream.status;
+    upstream.headers.forEach((value, key) => {
+      if (key.toLowerCase() !== "content-encoding") input.response.setHeader(key, value);
+    });
+    if (!upstream.body) {
+      input.response.end();
+      return;
+    }
+    const reader = upstream.body.getReader();
+    while (true) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      input.response.write(Buffer.from(chunk.value));
+    }
+    input.response.end();
+  } catch (error) {
+    input.response.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
+    input.response.end(error instanceof Error ? error.message : "Domain proxy failed.");
+  }
+}
+
+function domainIndexHtml(): string {
+  const links = OPEN_SURFACES.map((surface) => `<a class="surface" href="${surfacePrimaryClawUrl(surface)}"><span>${surface.label}</span><code>${surface.id}.claw</code></a>`).join("");
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claw domains</title>
+  <style>
+    :root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 0; min-height: 100vh; background: #f7f8fb; color: #16181d; }
+    main { max-width: 960px; margin: 0 auto; padding: 48px 24px; }
+    h1 { margin: 0 0 8px; font-size: 32px; letter-spacing: 0; }
+    p { margin: 0 0 28px; color: #5f6573; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+    .surface { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border: 1px solid #dde1e8; border-radius: 8px; background: #fff; color: inherit; text-decoration: none; }
+    .surface:hover { border-color: #9aa4b5; }
+    .surface span { font-weight: 650; }
+    code { color: #315b9f; font-size: 13px; overflow-wrap: anywhere; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #111318; color: #f2f4f8; }
+      p { color: #a6adbb; }
+      .surface { background: #191c23; border-color: #303642; }
+      .surface:hover { border-color: #687386; }
+      code { color: #8bb6ff; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Claw domains</h1>
+    <p>Local dashboards available on this machine.</p>
+    <section class="grid">${links}</section>
+  </main>
+</body>
+</html>`;
+}
+
+async function ensureDomainSurfaceRunning(surface: OpenSurface, flags: Record<string, string>, workspace: string): Promise<URL> {
+  const port = surfaceTargetPort(surface, flags);
+  const targetUrl = new URL(`http://127.0.0.1:${port}`);
+  if (await probeHttpServer(targetUrl)) return targetUrl;
+  if (flags["no-auto-start"] !== undefined || flags["auto-start"] === "false") return targetUrl;
+  const result = spawnSync(process.execPath, [
+    currentCliEntryPath(),
+    "open",
+    surface.id,
+    "--host",
+    "127.0.0.1",
+    "--port",
+    String(port),
+    "--workspace",
+    workspace,
+    "--domains-hosts-file",
+    path.join(os.tmpdir(), "clawjs-domains-disabled-hosts"),
+    "--no-browser",
+    "--json",
+  ], {
+    cwd: repoRootFromCliPackage(),
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      CLAWJS_DOMAINS_ACTIVE: "0",
+    },
+  });
+  if (result.status !== 0) {
+    throw new CliHandledError("domain_surface_start_failed", result.stdout || result.stderr || `Failed to start ${surface.id}.`);
+  }
+  return targetUrl;
+}
 
 function writeJson(stream: NodeJS.WritableStream, payload: unknown): void {
   stream.write(`${JSON.stringify(redactSecrets(payload), null, 2)}\n`);
@@ -403,6 +700,26 @@ function parseCsvFlag(value: string | undefined): string[] {
     .split(",")
     .map((entry) => entry.trim())
     .filter(Boolean);
+}
+
+function collectFlagValues(argv: string[], name: string): string[] {
+  const values: string[] = [];
+  const prefix = `--${name}=`;
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index];
+    if (token === `--${name}`) {
+      const next = argv[index + 1];
+      if (next && !next.startsWith("--")) {
+        values.push(...parseCsvFlag(next));
+        index += 1;
+      }
+      continue;
+    }
+    if (token?.startsWith(prefix)) {
+      values.push(...parseCsvFlag(token.slice(prefix.length)));
+    }
+  }
+  return values;
 }
 
 function parseRuleReferences(value: string | undefined): Array<{ kind: string; ref: string; label?: string }> {
@@ -523,10 +840,11 @@ function buildOpenUsage(binName: string): string {
   ].join("\n");
 }
 
-function openSurfaceRows(): Array<Record<string, string>> {
+function openSurfaceRows(flags: Record<string, string> = {}): Array<Record<string, string>> {
+  const useClawDomains = isClawDomainConfigured(flags);
   return OPEN_SURFACES.map((surface) => ({
     surface: surface.id,
-    url: `http://127.0.0.1:${surface.port}`,
+    url: useClawDomains ? surfacePrimaryClawUrl(surface) : `http://127.0.0.1:${surface.port}`,
     aliases: (surface.aliases ?? []).join(","),
   }));
 }
@@ -689,9 +1007,9 @@ async function runOpenCli(input: {
   const surfaceName = input.positionals[1];
   if (!surfaceName || surfaceName === "list") {
     if (input.wantsJson) {
-      writeJson(input.context.stdout, { dashboards: openSurfaceRows() });
+      writeJson(input.context.stdout, { dashboards: openSurfaceRows(input.flags) });
     } else {
-      input.context.stdout.write(`${formatCliTable(openSurfaceRows())}\n`);
+      input.context.stdout.write(`${formatCliTable(openSurfaceRows(input.flags))}\n`);
     }
     return CLI_EXIT_OK;
   }
@@ -712,14 +1030,17 @@ async function runOpenCli(input: {
   }
 
   const workspace = path.resolve(input.context.cwd, input.flags.workspace ?? ".");
-  const url = `http://${host}:${port}`;
+  const directUrl = `http://${host}:${port}`;
+  const useClawDomain = isClawDomainConfigured(input.flags) && host === "127.0.0.1" && port === surface.port;
+  const url = useClawDomain ? surfacePrimaryClawUrl(surface) : directUrl;
   const statePath = openStatePath(surface.id, host, port);
   const state = readOpenState(statePath);
   if (state && state.surface === surface.id && state.host === host && state.port === port && processIsAlive(state.pid)) {
-    if (await waitForUrl(state.url, 1_000)) {
-      if (!input.argv.includes("--no-browser") && !readBooleanFlag(input.argv, input.flags, "no-browser", false)) openBrowser(state.url);
-      if (input.wantsJson) writeJson(input.context.stdout, { ok: true, reused: true, surface: surface.id, url: state.url, pid: state.pid });
-      else input.context.stdout.write(`${state.url}\n`);
+    if (await waitForUrl(state.targetUrl || state.url, 1_000)) {
+      const outputUrl = useClawDomain ? surfacePrimaryClawUrl(surface) : state.url;
+      if (!input.argv.includes("--no-browser") && !readBooleanFlag(input.argv, input.flags, "no-browser", false)) openBrowser(outputUrl);
+      if (input.wantsJson) writeJson(input.context.stdout, { ok: true, reused: true, surface: surface.id, url: outputUrl, pid: state.pid });
+      else input.context.stdout.write(`${outputUrl}\n`);
       return CLI_EXIT_OK;
     }
   }
@@ -728,7 +1049,7 @@ async function runOpenCli(input: {
   }
 
   if (await portIsOpen(host, port)) {
-    throw new CliHandledError("port_in_use", `${url} is already in use. Use --port to choose another port.`);
+    throw new CliHandledError("port_in_use", `${directUrl} is already in use. Use --port to choose another port.`);
   }
 
   ensureSurfaceBuild(surface);
@@ -751,14 +1072,15 @@ async function runOpenCli(input: {
     host,
     port,
     url,
+    targetUrl: directUrl,
     workspace,
     startedAt: new Date().toISOString(),
   };
   writeOpenState(statePath, nextState);
 
-  const ready = await waitForUrl(url);
+  const ready = await waitForUrl(directUrl);
   if (!ready) {
-    throw new CliHandledError("dashboard_start_timeout", `${surface.id} dashboard did not become ready at ${url}.`);
+    throw new CliHandledError("dashboard_start_timeout", `${surface.id} dashboard did not become ready at ${directUrl}.`);
   }
 
   const browserUrl = surface.id === "storage" && fs.existsSync(path.join(openStateDir(), `storage-token-${host}-${port}.txt`))
@@ -846,6 +1168,129 @@ async function runOpenServerCommand(input: { positionals: string[]; flags: Recor
   }
 
   throw new CliHandledError("invalid_dashboard_server", `${surface.id} is not an internal open server.`);
+}
+
+async function runDomainsCli(input: {
+  argv: string[];
+  positionals: string[];
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+}): Promise<number> {
+  const command = input.positionals[1] || "status";
+  const dryRun = input.argv.includes("--dry-run");
+  if (command === "status") {
+    const status = await readDomainsStatus(input.flags);
+    if (input.wantsJson) writeJson(input.context.stdout, status);
+    else input.context.stdout.write(`installed=${status.installed} proxy=${status.proxyReachable ? "running" : "stopped"}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (command === "install") {
+    const plan = domainsInstallPlan(input.flags);
+    const plist = buildDomainsPlist(input.flags);
+    if (dryRun) {
+      if (input.wantsJson) writeJson(input.context.stdout, { ok: true, dryRun: true, action: "install", ...plan, hostsBlock: domainHostsBlock(), plist });
+      else input.context.stdout.write(`install ${plan.hosts.length} hosts and ${plan.serviceLabel}\n`);
+      return CLI_EXIT_OK;
+    }
+    const currentHosts = fs.existsSync(plan.hostsFile) ? fs.readFileSync(plan.hostsFile, "utf8") : "";
+    const nextHosts = replaceDomainHostsBlock(currentHosts, domainHostsBlock());
+    if (input.flags["hosts-file"] || input.flags["plist-file"]) {
+      fs.mkdirSync(path.dirname(plan.hostsFile), { recursive: true });
+      fs.writeFileSync(plan.hostsFile, nextHosts);
+      fs.mkdirSync(path.dirname(plan.plistFile), { recursive: true });
+      fs.writeFileSync(plan.plistFile, plist);
+    } else {
+      const tempHosts = path.join(os.tmpdir(), `clawjs-domains-hosts-${process.pid}`);
+      const tempPlist = path.join(os.tmpdir(), `clawjs-domains-${process.pid}.plist`);
+      fs.writeFileSync(tempHosts, nextHosts);
+      fs.writeFileSync(tempPlist, plist);
+      sudoScript([
+        `cp ${shellQuote(tempHosts)} ${shellQuote(plan.hostsFile)}`,
+        `cp ${shellQuote(tempPlist)} ${shellQuote(plan.plistFile)}`,
+        `chown root:wheel ${shellQuote(plan.plistFile)}`,
+        `chmod 644 ${shellQuote(plan.plistFile)}`,
+        `launchctl bootout system/${CLAW_DOMAINS_LABEL} >/dev/null 2>&1 || true`,
+        `launchctl bootstrap system ${shellQuote(plan.plistFile)}`,
+        `launchctl enable system/${CLAW_DOMAINS_LABEL}`,
+        `launchctl kickstart -k system/${CLAW_DOMAINS_LABEL}`,
+      ].join(" && "));
+      fs.rmSync(tempHosts, { force: true });
+      fs.rmSync(tempPlist, { force: true });
+    }
+    if (input.wantsJson) writeJson(input.context.stdout, { ok: true, action: "install", ...plan });
+    else input.context.stdout.write("installed\n");
+    return CLI_EXIT_OK;
+  }
+
+  if (command === "uninstall") {
+    const plan = domainsInstallPlan(input.flags);
+    if (dryRun) {
+      if (input.wantsJson) writeJson(input.context.stdout, { ok: true, dryRun: true, action: "uninstall", ...plan });
+      else input.context.stdout.write(`uninstall ${plan.serviceLabel}\n`);
+      return CLI_EXIT_OK;
+    }
+    const currentHosts = fs.existsSync(plan.hostsFile) ? fs.readFileSync(plan.hostsFile, "utf8") : "";
+    const nextHosts = replaceDomainHostsBlock(currentHosts, null);
+    if (input.flags["hosts-file"] || input.flags["plist-file"]) {
+      fs.mkdirSync(path.dirname(plan.hostsFile), { recursive: true });
+      fs.writeFileSync(plan.hostsFile, nextHosts);
+      fs.rmSync(plan.plistFile, { force: true });
+    } else {
+      const tempHosts = path.join(os.tmpdir(), `clawjs-domains-hosts-${process.pid}`);
+      fs.writeFileSync(tempHosts, nextHosts);
+      sudoScript([
+        `launchctl bootout system/${CLAW_DOMAINS_LABEL} >/dev/null 2>&1 || true`,
+        `cp ${shellQuote(tempHosts)} ${shellQuote(plan.hostsFile)}`,
+        `rm -f ${shellQuote(plan.plistFile)}`,
+      ].join(" && "));
+      fs.rmSync(tempHosts, { force: true });
+    }
+    if (input.wantsJson) writeJson(input.context.stdout, { ok: true, action: "uninstall", ...plan });
+    else input.context.stdout.write("uninstalled\n");
+    return CLI_EXIT_OK;
+  }
+
+  if (command === "serve") {
+    const host = input.flags.host || "127.0.0.1";
+    const port = Number(input.flags.port || "80");
+    if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
+      throw new CliHandledError("invalid_port", `Invalid port: ${input.flags.port}`, CLI_EXIT_USAGE);
+    }
+    const workspace = path.resolve(input.context.cwd, input.flags.workspace ?? ".");
+    const server = http.createServer((request, response) => {
+      void (async () => {
+        const surface = parseClawHostSurface(request.headers.host);
+        if (!surface) {
+          response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+          response.end(domainIndexHtml());
+          return;
+        }
+        const targetUrl = await ensureDomainSurfaceRunning(surface, input.flags, workspace);
+        await proxyHttpResponse({ request, response, targetUrl });
+      })().catch((error) => {
+        response.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
+        response.end(error instanceof Error ? error.message : "Domain proxy failed.");
+      });
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(port, host, () => resolve());
+    });
+    if (input.wantsJson) writeJsonLine(input.context.stdout, { ok: true, url: `http://${host}:${port}`, hosts: allOpenSurfaceHostnames() });
+    else input.context.stdout.write(`http://${host}:${port}\n`);
+    await new Promise<void>((resolve) => {
+      const shutdown = () => server.close(() => resolve());
+      process.once("SIGINT", shutdown);
+      process.once("SIGTERM", shutdown);
+    });
+    return CLI_EXIT_OK;
+  }
+
+  input.context.stderr.write(`Usage: ${input.binName} domains install|status|uninstall|serve\n`);
+  return CLI_EXIT_USAGE;
 }
 
 function parseFlags(argv: string[]): Record<string, string> {
@@ -1090,6 +1535,37 @@ function parseSimpleDurationMs(value: string | undefined): number | null {
   if (unit === "m") return amount * 60 * 1000;
   if (unit === "h") return amount * 60 * 60 * 1000;
   return amount * 24 * 60 * 60 * 1000;
+}
+
+function parseHeartbeatGate(pathValue: string | undefined): NonNullable<TemporalItem["heartbeat"]>["gate"] | undefined {
+  if (!pathValue) return undefined;
+  const gatePath = path.resolve(pathValue);
+  const policy = JSON.parse(fs.readFileSync(gatePath, "utf8")) as Record<string, unknown>;
+  return { path: gatePath, policy };
+}
+
+function buildRoutineHeartbeat(argv: string[], flags: Record<string, string>): Partial<NonNullable<TemporalItem["heartbeat"]>> | undefined {
+  const when = collectFlagValues(argv, "when");
+  const stopWhen = collectFlagValues(argv, "stop-when");
+  const allowedCustomChecks = collectFlagValues(argv, "allow-custom-check");
+  const gate = parseHeartbeatGate(flags.gate);
+  if (when.length === 0 && stopWhen.length === 0 && !gate && !flags.prompt) return undefined;
+  const missingCustomChecks = [...when, ...stopWhen]
+    .filter((condition) => condition.startsWith("custom:"))
+    .map((condition) => condition.slice("custom:".length).trim())
+    .filter((id) => id && !allowedCustomChecks.includes(id));
+  if (missingCustomChecks.length > 0) {
+    throw new CliHandledError("usage_error", `Custom heartbeat checks require --allow-custom-check: ${[...new Set(missingCustomChecks)].join(", ")}`, CLI_EXIT_USAGE);
+  }
+  return {
+    when,
+    ...(stopWhen.length > 0 ? { stopWhen } : {}),
+    context: "diff",
+    limit: flags.limit ? Number(flags.limit) : 20,
+    ...(flags.prompt ? { prompt: flags.prompt } : {}),
+    ...(gate ? { gate } : {}),
+    ...(allowedCustomChecks.length > 0 ? { allowedCustomChecks } : {}),
+  };
 }
 
 function channelListenerId(provider: string, accountId?: string): string {
@@ -1909,6 +2385,18 @@ const TELEGRAM_CODEX_BOT_COMMANDS = [
   { command: "summary", description: "Show active summary" },
   { command: "debug", description: "Show debug status" },
 ];
+const TELEGRAM_TOPIC_ICON_PRESETS = {
+  general: { emoji: "💬", customEmojiId: "5417915203100613993" },
+  work: { emoji: "💼", customEmojiId: "5348227245599105972" },
+  code: { emoji: "💻", customEmojiId: "5350554349074391003" },
+  research: { emoji: "🔎", customEmojiId: "5309965701241379366" },
+  notes: { emoji: "📝", customEmojiId: "5373251851074415873" },
+  brainstorm: { emoji: "💡", customEmojiId: "5312536423851630001" },
+  done: { emoji: "✅", customEmojiId: "5237699328843200968" },
+  agent: { emoji: "🤖", customEmojiId: "5309832892262654231" },
+  thinking: { emoji: "🧠", customEmojiId: "5237889595894414384" },
+} as const;
+type TelegramTopicIconPreset = keyof typeof TELEGRAM_TOPIC_ICON_PRESETS;
 
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`;
@@ -1948,6 +2436,8 @@ function buildTelegramCodexProcessorCommand(input: {
   if (input.flags["library-dir"]) args.push("--library-dir", input.flags["library-dir"]);
   if (input.flags["bot-username"]) args.push("--bot-username", input.flags["bot-username"]);
   if (input.flags["system-prompt"]) args.push("--system-prompt", input.flags["system-prompt"]);
+  if (input.flags["domain-share-url"]) args.push("--domain-share-url", input.flags["domain-share-url"]);
+  if (input.flags["domain-share-ttl"]) args.push("--domain-share-ttl", input.flags["domain-share-ttl"]);
   if (input.flags.transport) args.push("--transport", input.flags.transport);
   if (input.flags.model) args.push("--model", input.flags.model);
   if (input.flags["gateway-retries"]) args.push("--gateway-retries", input.flags["gateway-retries"]);
@@ -2138,6 +2628,38 @@ function stripTelegramCodexCommand(text: string, botUsername?: string): string {
     next = next.replace(new RegExp(`@${botUsername.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "ig"), "").trim();
   }
   return next || text.trim();
+}
+
+function resolveTelegramClawDomainRequest(text: string): OpenSurface | null {
+  const trimmed = text.trim();
+  const openMatch = trimmed.match(/^open\s+([a-z0-9._-]+)(?:\s+dashboard)?$/i);
+  if (openMatch) return resolveOpenSurface(openMatch[1]);
+  const bareMatch = trimmed.match(/^([a-z0-9._-]+)\.claw$/i);
+  if (bareMatch) return resolveOpenSurface(bareMatch[1]);
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    if (!url.hostname.endsWith(".claw")) return null;
+    return resolveOpenSurface(url.hostname.slice(0, -".claw".length));
+  } catch {
+    return null;
+  }
+}
+
+function buildTelegramClawDomainReply(surface: OpenSurface, flags: Record<string, string>): string {
+  const baseUrl = flags["domain-share-url"] || process.env.CLAWJS_DOMAIN_SHARE_URL || process.env.CLAWJS_TELEGRAM_DOMAIN_SHARE_URL;
+  const alias = `${surface.id}.claw`;
+  if (!baseUrl?.trim()) {
+    return `${alias} is local to the ClawJS Mac. Configure a relay/share URL to send a reachable mobile link.`;
+  }
+  const ttlMs = resolvePreviewShareTtlMs({ ttl: flags["domain-share-ttl"] || "30m" });
+  const expiresAt = new Date(Date.now() + ttlMs).toISOString();
+  const share = new URL(baseUrl);
+  share.searchParams.set("claw_surface", surface.id);
+  share.searchParams.set("claw_target", `http://127.0.0.1:${surface.port}`);
+  share.searchParams.set("claw_share_token", randomBytes(18).toString("base64url"));
+  share.searchParams.set("expires", expiresAt);
+  return `${alias}: ${share.toString()}`;
 }
 
 function telegramCodexResetPrompt(command: "new" | "reset"): string {
@@ -2331,6 +2853,39 @@ async function runTelegramCodexProcessor(input: {
   }
 
   if (changed) writeTelegramCodexBridgeState(statePath, state);
+
+  const requestedClawSurface = resolveTelegramClawDomainRequest(rawText);
+  if (requestedClawSurface) {
+    const text = buildTelegramClawDomainReply(requestedClawSurface, input.flags);
+    writeJson(input.context.stdout, {
+      actions: [
+        {
+          type: "grant_permission",
+          targetId,
+          agentId: input.agentId,
+          permissions: ["write"],
+          priority: 100,
+          metadata: {
+            source: "telegram-codex-bridge",
+            ownerUserId: state.ownerUserId,
+          },
+        },
+        {
+          type: "send_message",
+          targetId,
+          text,
+          ...(threadId ? { threadId } : {}),
+          agentId: input.agentId,
+          metadata: {
+            source: "telegram-claw-domain",
+            surface: requestedClawSurface.id,
+            ownerUserId: state.ownerUserId,
+          },
+        },
+      ],
+    });
+    return CLI_EXIT_OK;
+  }
 
   const targetLabel = threadId ? `${targetId} topic ${threadId}` : targetId;
   const claw = await createCliClaw(input.runtimeAdapterId, input.flags, input.workspaceRoot, input.appId, input.workspaceId, input.agentId, input.argv) as TelegramCodexClaw;
@@ -2603,11 +3158,22 @@ async function runTelegramCodexProcessor(input: {
         : stripTelegramCodexCommand(rawText, botUsername);
   const persistUserMessage = !(rotatesSession && sessionCommand && !sessionCommand.rest) && command !== "continue";
   if (!persistUserMessage && rotatesSession && sessionCommand) {
-    const resetText = sessionCommand.command === "reset"
+    const result = await claw.inference.generateText({
+      systemPrompt,
+      contextBlocks: [
+        { title: "Telegram", content: `provider=${provider}\naccount=${accountId}\ntarget=${targetLabel}\nsender=${event.message?.senderLabel ?? senderId}` },
+      ],
+      ruleHints: telegramRuleHints,
+      messages: [{ role: "user", content: telegramCodexResetPrompt(sessionCommand.command === "reset" ? "reset" : "new") }],
+      transport: (input.flags.transport as "auto" | "gateway" | "cli" | undefined) ?? "auto",
+      ...(input.flags.model ? { model: input.flags.model } : {}),
+      ...(input.flags["gateway-retries"] ? { gatewayRetries: Number(input.flags["gateway-retries"]) } : { gatewayRetries: 1 }),
+    });
+    const resetText = result.text || (sessionCommand.command === "reset"
       ? "Session reset. What do you want to do next?"
-      : "New session is ready. What do you want to do next?";
+      : "New session is ready. What do you want to do next?");
     appendAssistantTurn(resetText, { command: sessionCommand.command, sessionReset: true });
-    replies.push({ text: resetText });
+    replies.push({ text: resetText, ...(result.transport ? { transport: result.transport } : {}), fallback: result.fallback });
   } else if (persistUserMessage) {
     const processed = await processPrompt(formatTelegramCodexPrompt(event, promptText), {
       ...(providerMessageId ? { providerMessageId } : {}),
@@ -3777,6 +4343,10 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "open") {
     return await runOpenCli({ argv, positionals, flags, context, wantsJson, binName });
+  }
+
+  if (group === "domains") {
+    return await runDomainsCli({ argv, positionals, flags, context, wantsJson, binName });
   }
 
   if (group === "database" && wantsHelp) {
@@ -5204,11 +5774,13 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       if (parseSimpleDurationMs(expression) === null) {
         throw new CliHandledError("invalid_duration", `Unsupported duration "${expression}". Use simple durations like 30m, 24h, or 2d.`, CLI_EXIT_USAGE);
       }
+      const heartbeat = buildRoutineHeartbeat(argv, flags);
       const payload = await claw.routines.every({
         title,
         expression,
         description: flags.description,
         timezone: flags.timezone,
+        ...(heartbeat ? { heartbeat } : {}),
         workspaceId,
         ...(flags["project-id"] ? { projectId: flags["project-id"] } : {}),
         ...(flags["agent-id"] ? { agentId: flags["agent-id"] } : {}),
