@@ -59,6 +59,7 @@ import type {
   NotificationReceiptPolicy,
   TemporalExecution,
   TemporalItem,
+  TemporalRunLogEntry,
   HomeDescriptor,
   AreaDescriptor,
   ThingDescriptor,
@@ -1168,6 +1169,7 @@ export interface ClawInstance {
     resume: (id: string) => Promise<{ item: TemporalItem }>;
     runNow: (id: string) => Promise<{ item: TemporalItem; execution: TemporalExecution }>;
     listExecutions: (itemId?: string) => Promise<{ executions: TemporalExecution[] }>;
+    listRunLog: (itemId?: string, limit?: number) => Promise<{ entries: TemporalRunLogEntry[] }>;
     calendarView: (input?: { start?: string; end?: string }) => Promise<{ items: TemporalItem[]; entries: Array<Record<string, unknown>> }>;
     timelineView: (input?: { start?: string; end?: string }) => Promise<{ items: TemporalItem[] }>;
     signalAnchor: (input: { anchorId: string; signal: "reply_received" | "task_completed" | "event_started" | "execution_succeeded" }) => Promise<{ items: TemporalItem[] }>;
@@ -6252,6 +6254,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       resume: async (id) => requireTimeClient().resume(id),
       runNow: async (id) => requireTimeClient().runNow(id),
       listExecutions: async (itemId) => requireTimeClient().listExecutions(itemId),
+      listRunLog: async (itemId, limit) => requireTimeClient().listRunLog(itemId, limit),
       calendarView: async (input) => requireTimeClient().calendarView(input),
       timelineView: async (input) => requireTimeClient().timelineView(input),
       signalAnchor: async (input) => requireTimeClient().signalAnchor(input),

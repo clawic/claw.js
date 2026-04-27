@@ -72,6 +72,8 @@ test("runCreateClawAgent scaffolds an agent repository without installing depend
 
   const heartbeat = fs.readFileSync(path.join(appDir, "HEARTBEAT.md"), "utf8");
   assert.match(heartbeat, /heartbeat/i);
+  assert.match(heartbeat, /Hermes maintenance recipes/);
+  assert.match(heartbeat, /custom:hermes\.reflections:new/);
 
   const skillsReadme = fs.readFileSync(path.join(appDir, "skills", "README.md"), "utf8");
   assert.match(skillsReadme, /skills/i);

@@ -16,6 +16,9 @@ import {
 
 export interface BuildTimeAppOptions {
   config?: Partial<TimeServiceConfig>;
+  maxCatchUpPerCycle?: number;
+  missedJobStaggerMs?: number;
+  runLogLimit?: number;
   heartbeatChecks?: Record<string, TemporalHeartbeatCheckProvider>;
   heartbeatAgent?: TemporalHeartbeatAgentRunner;
 }
@@ -39,6 +42,9 @@ export function buildTimeApp(options: BuildTimeAppOptions = {}) {
     dbPath: config.dbPath,
     defaultTimeZone: config.defaultTimeZone,
     schedulerIntervalMs: config.schedulerIntervalMs,
+    maxCatchUpPerCycle: options.maxCatchUpPerCycle,
+    missedJobStaggerMs: options.missedJobStaggerMs,
+    runLogLimit: options.runLogLimit,
     notifyBaseUrl: config.notifyBaseUrl,
     notifySourceToken: config.notifySourceToken,
     heartbeatChecks: options.heartbeatChecks,
@@ -150,6 +156,12 @@ export function buildTimeApp(options: BuildTimeAppOptions = {}) {
   app.get("/v1/executions", async (request) => {
     const query = request.query as Record<string, string | undefined>;
     return await engine.listExecutions(query.itemId);
+  });
+
+  app.get("/v1/run-log", async (request) => {
+    const query = request.query as Record<string, string | undefined>;
+    const limit = query.limit ? Number(query.limit) : undefined;
+    return await engine.listRunLog(query.itemId, limit);
   });
 
   app.get("/v1/views/calendar", async (request) => engine.calendarView(request.query as { start?: string; end?: string }));

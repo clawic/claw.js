@@ -1743,14 +1743,44 @@ function pickCoreTitle(collectionName: string, payload: Record<string, unknown>,
 }
 
 function parseSimpleDurationMs(value: string | undefined): number | null {
-  const match = value?.trim().match(/^(\d+)(m|h|d)$/);
+  const match = value?.trim().match(/^(\d+)(ms|s|m|h|d)$/);
   if (!match) return null;
   const amount = Number(match[1]);
   if (!Number.isSafeInteger(amount) || amount <= 0) return null;
   const unit = match[2];
+  if (unit === "ms") return amount;
+  if (unit === "s") return amount * 1000;
   if (unit === "m") return amount * 60 * 1000;
   if (unit === "h") return amount * 60 * 60 * 1000;
   return amount * 24 * 60 * 60 * 1000;
+}
+
+function parseRoutineStaggerMs(flags: Record<string, string>, argv: string[]): number | undefined {
+  const hasExact = argv.includes("--exact");
+  const raw = flags.stagger;
+  if (hasExact && raw) {
+    throw new CliHandledError("usage_error", "Choose --stagger or --exact, not both.", CLI_EXIT_USAGE);
+  }
+  if (hasExact) return 0;
+  if (!raw) return undefined;
+  const parsed = parseSimpleDurationMs(raw);
+  if (parsed === null) {
+    throw new CliHandledError("invalid_duration", `Unsupported stagger "${raw}". Use durations like 30s, 5m, or 1h.`, CLI_EXIT_USAGE);
+  }
+  return parsed;
+}
+
+function parseActiveHours(raw: string | undefined, timezone: string | undefined): NonNullable<NonNullable<TemporalItem["heartbeat"]>["activeHours"]> | undefined {
+  if (!raw) return undefined;
+  const match = raw.trim().match(/^(\d{2}:\d{2})-(\d{2}:\d{2})$/);
+  if (!match) {
+    throw new CliHandledError("usage_error", 'Invalid --active-hours. Use "09:00-18:00".', CLI_EXIT_USAGE);
+  }
+  return {
+    start: match[1]!,
+    end: match[2]!,
+    timezone: timezone || "UTC",
+  };
 }
 
 function parseHeartbeatGate(pathValue: string | undefined): NonNullable<TemporalItem["heartbeat"]>["gate"] | undefined {
@@ -1765,7 +1795,28 @@ function buildRoutineHeartbeat(argv: string[], flags: Record<string, string>): P
   const stopWhen = collectFlagValues(argv, "stop-when");
   const allowedCustomChecks = collectFlagValues(argv, "allow-custom-check");
   const gate = parseHeartbeatGate(flags.gate);
-  if (when.length === 0 && stopWhen.length === 0 && !gate && !flags.prompt) return undefined;
+  const cooldownMs = flags.cooldown ? parseSimpleDurationMs(flags.cooldown) : undefined;
+  if (flags.cooldown && cooldownMs === null) {
+    throw new CliHandledError("invalid_duration", `Unsupported cooldown "${flags.cooldown}". Use durations like 30s, 5m, or 1h.`, CLI_EXIT_USAGE);
+  }
+  const maxWakes = flags["max-wakes"] ? Number(flags["max-wakes"]) : undefined;
+  const maxWakesWindowMs = flags["max-wakes-window"] ? parseSimpleDurationMs(flags["max-wakes-window"]) : undefined;
+  if (flags["max-wakes"] && (!Number.isSafeInteger(maxWakes) || Number(maxWakes) <= 0)) {
+    throw new CliHandledError("usage_error", "--max-wakes must be a positive integer.", CLI_EXIT_USAGE);
+  }
+  if (flags["max-wakes-window"] && maxWakesWindowMs === null) {
+    throw new CliHandledError("invalid_duration", `Unsupported max wake window "${flags["max-wakes-window"]}".`, CLI_EXIT_USAGE);
+  }
+  if ((maxWakes && !maxWakesWindowMs) || (!maxWakes && maxWakesWindowMs)) {
+    throw new CliHandledError("usage_error", "Use --max-wakes and --max-wakes-window together.", CLI_EXIT_USAGE);
+  }
+  const activeHours = parseActiveHours(flags["active-hours"], flags["active-timezone"]);
+  const target = flags.target as "main" | "isolated" | undefined;
+  if (target && target !== "main" && target !== "isolated") {
+    throw new CliHandledError("usage_error", "--target must be main or isolated.", CLI_EXIT_USAGE);
+  }
+  const deliver = flags.deliver ? { target: flags.deliver, mode: "summary" as const } : undefined;
+  if (when.length === 0 && stopWhen.length === 0 && !gate && !flags.prompt && !activeHours && cooldownMs === undefined && !maxWakes && !target && !deliver) return undefined;
   const missingCustomChecks = [...when, ...stopWhen]
     .filter((condition) => condition.startsWith("custom:"))
     .map((condition) => condition.slice("custom:".length).trim())
@@ -1778,6 +1829,11 @@ function buildRoutineHeartbeat(argv: string[], flags: Record<string, string>): P
     ...(stopWhen.length > 0 ? { stopWhen } : {}),
     context: "diff",
     limit: flags.limit ? Number(flags.limit) : 20,
+    ...(target ? { target } : {}),
+    ...(deliver ? { deliver } : {}),
+    ...(activeHours ? { activeHours } : {}),
+    ...(cooldownMs !== undefined && cooldownMs !== null ? { cooldownMs } : {}),
+    ...(maxWakes && maxWakesWindowMs ? { maxWakesPerWindow: { count: maxWakes, windowMs: maxWakesWindowMs } } : {}),
     ...(flags.prompt ? { prompt: flags.prompt } : {}),
     ...(gate ? { gate } : {}),
     ...(allowedCustomChecks.length > 0 ? { allowedCustomChecks } : {}),
@@ -6556,15 +6612,17 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         return CLI_EXIT_USAGE;
       }
       if (parseSimpleDurationMs(expression) === null) {
-        throw new CliHandledError("invalid_duration", `Unsupported duration "${expression}". Use simple durations like 30m, 24h, or 2d.`, CLI_EXIT_USAGE);
+        throw new CliHandledError("invalid_duration", `Unsupported duration "${expression}". Use simple durations like 30s, 30m, 24h, or 2d.`, CLI_EXIT_USAGE);
       }
+      const staggerMs = parseRoutineStaggerMs(flags, argv);
       const heartbeat = buildRoutineHeartbeat(argv, flags);
       const payload = await claw.routines.every({
         title,
         expression,
         description: flags.description,
         timezone: flags.timezone,
-        ...(heartbeat ? { heartbeat } : {}),
+        ...(staggerMs !== undefined ? { schedule: { staggerMs } } : {}),
+        ...(heartbeat ? { heartbeat: { ...heartbeat, ...(staggerMs !== undefined ? { staggerMs } : {}) } } : {}),
         workspaceId,
         ...(flags["project-id"] ? { projectId: flags["project-id"] } : {}),
         ...(flags["agent-id"] ? { agentId: flags["agent-id"] } : {}),
@@ -6579,6 +6637,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         context.stderr.write("Usage: claw routines create <title> --cron EXPR|--rrule RRULE\n");
         return CLI_EXIT_USAGE;
       }
+      const staggerMs = parseRoutineStaggerMs(flags, argv);
       const payload = await claw.routines.create({
         title,
         description: flags.description,
@@ -6591,6 +6650,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
           timezone: flags.timezone || "UTC",
           ...(flags.cron ? { cron: flags.cron } : {}),
           ...(flags.rrule ? { rrule: flags.rrule } : {}),
+          ...(staggerMs !== undefined ? { staggerMs } : {}),
         },
       });
       if (wantsJson) writeJson(context.stdout, payload);

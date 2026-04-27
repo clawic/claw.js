@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { Cron } from "croner";
 
 import type {
   TemporalAction,
@@ -166,10 +167,12 @@ function parseClock(text: string): { hour: number; minute: number } | null {
 }
 
 export function parseDurationMs(text: string): number | null {
-  const match = text.trim().toLowerCase().match(/^(\d+)\s*([mhd])$/);
+  const match = text.trim().toLowerCase().match(/^(\d+)\s*(ms|s|m|h|d)$/);
   if (!match) return null;
   const value = Number(match[1]);
   const unit = match[2];
+  if (unit === "ms") return value;
+  if (unit === "s") return value * 1000;
   if (unit === "m") return value * 60_000;
   if (unit === "h") return value * 3_600_000;
   return value * 86_400_000;
@@ -181,14 +184,21 @@ function parseEveryExpression(expression: string): string {
   if (!duration) {
     throw new Error(`Unsupported repeating schedule: ${expression}`);
   }
+  if (duration < 60_000) {
+    const seconds = Math.max(1, Math.round(duration / 1000));
+    return seconds === 1 ? "* * * * * *" : `*/${seconds} * * * * *`;
+  }
   const minutes = Math.round(duration / 60_000);
+  if (minutes < 60 && 60 % minutes === 0) {
+    return minutes === 1 ? "* * * * *" : `*/${minutes} * * * *`;
+  }
   if (minutes % 60 === 0) {
     const hours = minutes / 60;
     if (24 % hours === 0) {
       return hours === 1 ? "0 * * * *" : `0 */${hours} * * *`;
     }
   }
-  return `*/${minutes} * * * *`;
+  throw new Error(`Unsupported repeating schedule: ${expression}`);
 }
 
 function parseAtExpression(expression: string, timeZone: string, now = new Date()): string {
@@ -381,6 +391,12 @@ function normalizeHeartbeat(input?: Partial<TemporalHeartbeatPolicy>, current?: 
   const gateLimit = Number((gatePolicy as { limit?: unknown }).limit);
   const inputLimit = Number(input.limit);
   const prompt = input.prompt ?? (gatePolicy as { prompt?: string }).prompt;
+  const cooldownMs = Number(input.cooldownMs ?? (gatePolicy as { cooldownMs?: unknown }).cooldownMs);
+  const maxWakesPolicy = input.maxWakesPerWindow ?? (gatePolicy as { maxWakesPerWindow?: TemporalHeartbeatPolicy["maxWakesPerWindow"] }).maxWakesPerWindow;
+  const target = input.target ?? (gatePolicy as { target?: TemporalHeartbeatPolicy["target"] }).target;
+  const deliver = input.deliver ?? (gatePolicy as { deliver?: TemporalHeartbeatPolicy["deliver"] }).deliver;
+  const activeHours = input.activeHours ?? (gatePolicy as { activeHours?: TemporalHeartbeatPolicy["activeHours"] }).activeHours;
+  const staggerMs = Number(input.staggerMs ?? (gatePolicy as { staggerMs?: unknown }).staggerMs);
   return {
     when,
     ...(stopWhen.length > 0 ? { stopWhen } : {}),
@@ -390,6 +406,17 @@ function normalizeHeartbeat(input?: Partial<TemporalHeartbeatPolicy>, current?: 
       : Number.isFinite(gateLimit) && gateLimit > 0
         ? Math.floor(gateLimit)
         : 20,
+    ...(target === "main" || target === "isolated" ? { target } : {}),
+    ...(deliver !== undefined ? { deliver } : {}),
+    ...(activeHours ? { activeHours } : {}),
+    ...(Number.isFinite(cooldownMs) && cooldownMs >= 0 ? { cooldownMs: Math.floor(cooldownMs) } : {}),
+    ...(maxWakesPolicy && Number.isFinite(maxWakesPolicy.count) && Number.isFinite(maxWakesPolicy.windowMs) ? {
+      maxWakesPerWindow: {
+        count: Math.max(1, Math.floor(maxWakesPolicy.count)),
+        windowMs: Math.max(1, Math.floor(maxWakesPolicy.windowMs)),
+      },
+    } : {}),
+    ...(Number.isFinite(staggerMs) && staggerMs >= 0 ? { staggerMs: Math.floor(staggerMs) } : {}),
     ...(prompt ? { prompt } : {}),
     ...(input.gate ? { gate: input.gate } : {}),
     ...(allowedCustomChecks.length > 0 ? { allowedCustomChecks } : {}),
@@ -409,7 +436,11 @@ function normalizeSchedule(
 ): TemporalSchedule {
   const timeZone = input.timezone ?? input.schedule?.timezone ?? current?.timezone ?? defaultTimeZone;
   if (input.natural) {
-    return buildScheduleFromNatural(input.natural, timeZone);
+    const naturalSchedule = buildScheduleFromNatural(input.natural, timeZone);
+    return {
+      ...naturalSchedule,
+      staggerMs: input.schedule?.staggerMs ?? current?.schedule.staggerMs,
+    };
   }
   const mode = input.schedule?.mode ?? current?.schedule.mode ?? (kind === "routine" ? "cron" : "one_off");
   if (mode === "relative") {
@@ -429,23 +460,10 @@ function normalizeSchedule(
     startsAt: input.schedule?.startsAt ?? input.startsAt ?? current?.schedule.startsAt ?? current?.startsAt,
     cron: input.schedule?.cron ?? current?.schedule.cron,
     rrule: input.schedule?.rrule ?? current?.schedule.rrule,
+    staggerMs: input.schedule?.staggerMs ?? current?.schedule.staggerMs,
     overrides: input.schedule?.overrides ?? current?.schedule.overrides ?? [],
     cancelledOccurrences: input.schedule?.cancelledOccurrences ?? current?.schedule.cancelledOccurrences ?? [],
   };
-}
-
-function cronFieldMatches(field: string, value: number): boolean {
-  if (field === "*") return true;
-  if (field.includes(",")) return field.split(",").some((entry) => cronFieldMatches(entry, value));
-  if (field.includes("-")) {
-    const [start, end] = field.split("-").map(Number);
-    return value >= start && value <= end;
-  }
-  if (field.startsWith("*/")) {
-    const step = Number(field.slice(2));
-    return value % step === 0;
-  }
-  return Number(field) === value;
 }
 
 export function computeNextRunAt(item: Pick<TemporalItem, "kind" | "startsAt" | "dueAt" | "schedule" | "status">, from = new Date()): string | undefined {
@@ -459,18 +477,15 @@ export function computeNextRunAt(item: Pick<TemporalItem, "kind" | "startsAt" | 
     return new Date(new Date(schedule.relative.anchorAt).getTime() + schedule.relative.offsetMs).toISOString();
   }
   if (schedule.mode === "cron" && schedule.cron) {
-    const parts = schedule.cron.trim().split(/\s+/);
-    if (parts.length !== 5) return undefined;
-    const [minuteField, hourField, _domField, _monthField, weekdayField] = parts;
-    let candidate = new Date(from.getTime() + 60_000);
-    for (let index = 0; index < 20_000; index += 1) {
-      const zoned = getZonedParts(candidate, schedule.timezone);
-      const weekday = weekdayFromParts(zoned);
-      if (cronFieldMatches(minuteField, zoned.minute) && cronFieldMatches(hourField, zoned.hour) && cronFieldMatches(weekdayField, weekday)) {
-        candidate.setSeconds(0, 0);
-        return candidate.toISOString();
-      }
-      candidate = new Date(candidate.getTime() + 60_000);
+    try {
+      const cron = new Cron(schedule.cron, { timezone: schedule.timezone, catch: false });
+      const next = cron.nextRun(from);
+      if (!next) return undefined;
+      const nextMs = next.getTime() + (schedule.staggerMs ?? 0);
+      if (!Number.isFinite(nextMs) || nextMs <= from.getTime()) return undefined;
+      return new Date(nextMs).toISOString();
+    } catch {
+      return undefined;
     }
     return undefined;
   }
@@ -578,6 +593,7 @@ export function applyTemporalItemUpdate(
     actions: input.actions ? normalizeActions(current.kind, input.actions) : current.actions,
     projections: input.projections ? normalizeProjections(current.kind, current.id, input.projections) : current.projections,
     ...(heartbeat ? { heartbeat } : {}),
+    runtime: input.status === "active" && current.status !== "active" ? undefined : current.runtime,
     ownerId: input.ownerId ?? current.ownerId,
     workspaceId: input.workspaceId ?? current.workspaceId,
     projectId: input.projectId ?? current.projectId,

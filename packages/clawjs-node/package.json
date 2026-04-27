@@ -40,7 +40,8 @@
   },
   "dependencies": {
     "@clawjs/core": "0.1.2",
-    "better-sqlite3": "^11.10.0"
+    "better-sqlite3": "^11.10.0",
+    "croner": "^9.1.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12"

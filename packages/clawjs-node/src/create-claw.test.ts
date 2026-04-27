@@ -1062,10 +1062,15 @@ test("createClaw exposes the time namespace when configured", async () => {
         limit: 20,
         prompt: "Work on ready tasks",
         stopWhen: ["workspace.tasks:none"],
+        target: "main",
+        cooldownMs: 30_000,
+        maxWakesPerWindow: { count: 2, windowMs: 300_000 },
       },
     });
     assert.equal(routine.item.kind, "routine");
     assert.deepEqual(routine.item.heartbeat?.when, ["workspace.tasks:new"]);
+    assert.equal(routine.item.heartbeat?.target, "main");
+    assert.equal(routine.item.heartbeat?.cooldownMs, 30_000);
 
     const event = await claw.calendar.at({
       title: "Release sync",

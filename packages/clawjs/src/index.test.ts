@@ -5149,7 +5149,7 @@ test("runCli supports heartbeat routines with deterministic gates", async () => 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-heartbeat-"));
   let taskMatches: Array<{ source: string; id: string; title: string; updatedAt: string }> = [];
   let customMatches: Array<{ source: string; id: string; title: string; updatedAt: string }> = [];
-  const agentCalls: Array<{ prompt: string; matches: unknown[] }> = [];
+  const agentCalls: Array<{ prompt: string; matches: unknown[]; target: string; deliver?: unknown }> = [];
   const built = buildTimeApp({
     config: {
       host: "127.0.0.1",
@@ -5164,7 +5164,7 @@ test("runCli supports heartbeat routines with deterministic gates", async () => 
       "custom:ready-check": async () => customMatches,
     },
     heartbeatAgent: async (input) => {
-      agentCalls.push({ prompt: input.prompt, matches: input.matches });
+      agentCalls.push({ prompt: input.prompt, matches: input.matches, target: input.target, deliver: input.deliver });
       return { status: "done", summary: `processed ${input.matches.length}` };
     },
   });
@@ -5216,6 +5216,38 @@ test("runCli supports heartbeat routines with deterministic gates", async () => 
     assert.equal(skipExitCode, CLI_EXIT_OK);
     const skipRoutine = JSON.parse(skipStdout.getOutput()) as { item: { id: string; heartbeat?: { when: string[] } } };
     assert.deepEqual(skipRoutine.item.heartbeat?.when, ["workspace.tasks:new"]);
+
+    const policyStdout = captureStream();
+    const policyExitCode = await runCli([
+      "routines",
+      "every",
+      "5m",
+      "budgeted heartbeat",
+      "--when", "workspace.tasks:new",
+      "--target", "main",
+      "--cooldown", "30s",
+      "--max-wakes", "1",
+      "--max-wakes-window", "5m",
+      "--active-hours", "00:00-24:00",
+      "--active-timezone", "UTC",
+      "--stagger", "30s",
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+      "--json",
+    ], {
+      stdout: policyStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(policyExitCode, CLI_EXIT_OK);
+    const policyRoutine = JSON.parse(policyStdout.getOutput()) as { item: { schedule?: { staggerMs?: number }; heartbeat?: { target?: string; cooldownMs?: number; maxWakesPerWindow?: { count?: number; windowMs?: number }; activeHours?: { timezone?: string }; staggerMs?: number } } };
+    assert.equal(policyRoutine.item.schedule?.staggerMs, 30_000);
+    assert.equal(policyRoutine.item.heartbeat?.target, "main");
+    assert.equal(policyRoutine.item.heartbeat?.cooldownMs, 30_000);
+    assert.equal(policyRoutine.item.heartbeat?.maxWakesPerWindow?.count, 1);
+    assert.equal(policyRoutine.item.heartbeat?.maxWakesPerWindow?.windowMs, 300_000);
+    assert.equal(policyRoutine.item.heartbeat?.activeHours?.timezone, "UTC");
+
     forceDue(skipRoutine.item.id);
     assert.deepEqual(await built.engine.runSchedulerCycle(), []);
     assert.equal(agentCalls.length, 0);
@@ -5244,6 +5276,7 @@ test("runCli supports heartbeat routines with deterministic gates", async () => 
     assert.equal(wakeExecutions.length, 1);
     assert.equal(agentCalls.length, 1);
     assert.equal(agentCalls[0]?.prompt, "Work on ready tasks");
+    assert.equal(agentCalls[0]?.target, "isolated");
 
     const historyStdout = captureStream();
     const historyExitCode = await runCli([

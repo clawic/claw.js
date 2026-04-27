@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import Database from "better-sqlite3";
-import type { TemporalExecution, TemporalItem, TemporalProjection } from "@clawjs/core";
+import type { TemporalExecution, TemporalItem, TemporalProjection, TemporalRunLogEntry } from "@clawjs/core";
 
 export class TimeServiceStore {
   readonly sqlite: Database.Database;
@@ -57,6 +57,21 @@ export class TimeServiceStore {
       );
       CREATE UNIQUE INDEX IF NOT EXISTS temporal_executions_item_schedule
         ON temporal_executions(item_id, scheduled_for);
+      CREATE TABLE IF NOT EXISTS temporal_run_log (
+        id TEXT PRIMARY KEY,
+        item_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        scheduled_for TEXT NOT NULL,
+        started_at TEXT NOT NULL,
+        completed_at TEXT NOT NULL,
+        duration_ms INTEGER NOT NULL,
+        triggered_by TEXT NOT NULL,
+        summary TEXT,
+        error TEXT,
+        payload TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS temporal_run_log_item_idx
+        ON temporal_run_log(item_id, completed_at DESC);
       CREATE TABLE IF NOT EXISTS temporal_projections (
         id TEXT PRIMARY KEY,
         item_id TEXT NOT NULL,
@@ -268,6 +283,91 @@ export class TimeServiceStore {
       ? this.sqlite.prepare("SELECT * FROM temporal_executions WHERE item_id = ? ORDER BY scheduled_for DESC").all(itemId)
       : this.sqlite.prepare("SELECT * FROM temporal_executions ORDER BY scheduled_for DESC").all();
     return (rows as Array<Record<string, unknown>>).map((row) => this.hydrateExecution(row));
+  }
+
+  failStaleRunningExecutions(nowIso = new Date().toISOString()): TemporalExecution[] {
+    const running = this.listExecutions().filter((execution) => execution.status === "running");
+    for (const execution of running) {
+      this.putExecution({
+        ...execution,
+        status: "failed",
+        completedAt: nowIso,
+        error: "Recovered stale running execution on scheduler startup.",
+      });
+    }
+    for (const item of this.listItems()) {
+      if (item.runtime?.runningAt || item.runtime?.runningExecutionId) {
+        this.putItem({
+          ...item,
+          runtime: {
+            ...(item.runtime ?? {}),
+            runningAt: undefined,
+            runningExecutionId: undefined,
+          },
+        });
+      }
+    }
+    return running;
+  }
+
+  deleteExecution(id: string): boolean {
+    const result = this.sqlite.prepare("DELETE FROM temporal_executions WHERE id = ?").run(id);
+    return result.changes > 0;
+  }
+
+  appendRunLog(entry: TemporalRunLogEntry, options: { keep?: number } = {}): TemporalRunLogEntry {
+    this.sqlite.prepare(`
+      INSERT INTO temporal_run_log (
+        id, item_id, status, scheduled_for, started_at, completed_at, duration_ms,
+        triggered_by, summary, error, payload
+      ) VALUES (
+        @id, @item_id, @status, @scheduled_for, @started_at, @completed_at, @duration_ms,
+        @triggered_by, @summary, @error, @payload
+      )
+      ON CONFLICT(id) DO UPDATE SET
+        status = excluded.status,
+        completed_at = excluded.completed_at,
+        duration_ms = excluded.duration_ms,
+        summary = excluded.summary,
+        error = excluded.error,
+        payload = excluded.payload
+    `).run({
+      id: entry.id,
+      item_id: entry.itemId,
+      status: entry.status,
+      scheduled_for: entry.scheduledFor,
+      started_at: entry.startedAt,
+      completed_at: entry.completedAt,
+      duration_ms: entry.durationMs,
+      triggered_by: entry.triggeredBy,
+      summary: entry.summary ?? null,
+      error: entry.error ?? null,
+      payload: JSON.stringify(entry),
+    });
+    this.pruneRunLog(entry.itemId, options.keep ?? 500);
+    return entry;
+  }
+
+  listRunLog(itemId?: string, limit = 100): TemporalRunLogEntry[] {
+    const safeLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
+    const rows = itemId
+      ? this.sqlite.prepare("SELECT payload FROM temporal_run_log WHERE item_id = ? ORDER BY completed_at DESC LIMIT ?").all(itemId, safeLimit)
+      : this.sqlite.prepare("SELECT payload FROM temporal_run_log ORDER BY completed_at DESC LIMIT ?").all(safeLimit);
+    return (rows as Array<Record<string, unknown>>).map((row) => JSON.parse(String(row.payload)) as TemporalRunLogEntry);
+  }
+
+  private pruneRunLog(itemId: string, keep: number): void {
+    const safeKeep = Math.max(1, Math.min(5000, Math.floor(keep)));
+    this.sqlite.prepare(`
+      DELETE FROM temporal_run_log
+      WHERE item_id = ?
+        AND id NOT IN (
+          SELECT id FROM temporal_run_log
+          WHERE item_id = ?
+          ORDER BY completed_at DESC
+          LIMIT ?
+        )
+    `).run(itemId, itemId, safeKeep);
   }
 
   private hydrateExecution(row: Record<string, unknown>): TemporalExecution {

@@ -6,6 +6,7 @@ import type {
   TemporalNaturalInput,
   TemporalParticipant,
   TemporalProjection,
+  TemporalRunLogEntry,
 } from "@clawjs/core";
 
 import { EmbeddedTimeEngine, type EmbeddedTimeEngineOptions } from "./embedded.ts";
@@ -25,6 +26,7 @@ export interface TimeServiceLike {
   resume: TimeClient["resume"];
   runNow: TimeClient["runNow"];
   listExecutions: TimeClient["listExecutions"];
+  listRunLog: TimeClient["listRunLog"];
   calendarView: TimeClient["calendarView"];
   timelineView: TimeClient["timelineView"];
   signalAnchor: TimeClient["signalAnchor"];
@@ -149,6 +151,10 @@ export class TimeClient {
 
   async listExecutions(itemId?: string) {
     return await this.request<{ executions: TemporalExecution[] }>(appendQuery("/v1/executions", { itemId }));
+  }
+
+  async listRunLog(itemId?: string, limit?: number) {
+    return await this.request<{ entries: TemporalRunLogEntry[] }>(appendQuery("/v1/run-log", { itemId, limit }));
   }
 
   async calendarView(input?: { start?: string; end?: string }) {
