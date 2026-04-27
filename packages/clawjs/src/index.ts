@@ -2212,9 +2212,10 @@ function splitTelegramMessage(text: string, maxLength = 3900): string[] {
 }
 
 const TELEGRAM_CODEX_ATTACHMENT_INSTRUCTIONS = [
-  "Telegram delivery supports photos, videos, audio, animations, and documents when you have a Telegram file_id or an HTTPS URL.",
+  "Telegram delivery supports photos, videos, audio, animations, and documents when you have a Telegram file_id, an HTTPS URL, or a local file path generated in the active workspace.",
   "If the user asks you to send a photo or file, do not say this session cannot send attachments just because the reply is mediated through Telegram.",
-  "To attach media, include a final fenced block named clawjs-telegram-actions containing JSON: {\"actions\":[{\"type\":\"send_message\",\"mediaType\":\"photo|video|document|audio|animation\",\"media\":\"file_id_or_https_url\",\"text\":\"optional caption\"}]}.",
+  "If the user asks for a presentation or slides, prefer the local `claw slides` CLI: create a deck, add slides with layouts, validate it, render PDF/PPTX/HTML/PNG, and attach the rendered PDF path as a document.",
+  "To attach media, include a final fenced block named clawjs-telegram-actions containing JSON: {\"actions\":[{\"type\":\"send_message\",\"mediaType\":\"photo|video|document|audio|animation\",\"media\":\"file_id_https_url_or_local_path\",\"text\":\"optional caption\"}]}.",
 ].join(" ");
 
 type TelegramCodexMediaAction = {
