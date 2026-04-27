@@ -2410,15 +2410,28 @@ test("createClaw can stream and persist an assistant reply through gateway confi
 
   const originalFetch = globalThis.fetch;
   const encoder = new TextEncoder();
-  globalThis.fetch = (async () => new Response(new ReadableStream({
+  let gatewayBody = "";
+  globalThis.fetch = (async (_url, init) => {
+    gatewayBody = typeof init?.body === "string" ? init.body : "";
+    return new Response(new ReadableStream({
     start(controller) {
       controller.enqueue(encoder.encode('event: response.output_text.delta\ndata: {"delta":"hello"}\n\n'));
       controller.enqueue(encoder.encode('event: response.output_text.delta\ndata: {"delta":" world"}\n\n'));
       controller.close();
     },
-  }), { status: 200 })) as typeof fetch;
+  }), { status: 200 });
+  }) as typeof fetch;
 
   try {
+    claw.rules.upsertScope({ id: "global", kind: "user", name: "global" });
+    claw.rules.propose({
+      id: "reply-style",
+      title: "Reply style",
+      kind: "directive",
+      status: "active",
+      scopeId: "global",
+      content: "Keep streamed replies direct.",
+    });
     const session = claw.sessions.createSession("Hello");
     claw.sessions.appendMessage(session.sessionId, {
       role: "user",
@@ -2440,6 +2453,8 @@ test("createClaw can stream and persist an assistant reply through gateway confi
       claw.sessions.getSession(session.sessionId)?.messages.at(-1)?.content,
       "hello world",
     );
+    assert.match(gatewayBody, /Applicable Rules/);
+    assert.match(gatewayBody, /Keep streamed replies direct/);
   } finally {
     globalThis.fetch = originalFetch;
   }
