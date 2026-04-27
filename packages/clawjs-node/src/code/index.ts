@@ -15,6 +15,8 @@ export type CodeReviewDecision = "approved" | "rejected";
 export type CodeHostProvider = "github" | "gitlab";
 export type CodeProjectStatus = "active" | "missing" | "uninitialized";
 export type CodeAgentStatus = "idle" | "working" | "blocked" | "reviewing" | "offline";
+export type CodeGateStatus = "passed" | "failed";
+export type CodePolicyMode = "strict";
 
 export interface CodeRepositoryRecord {
   id: string;
@@ -111,6 +113,56 @@ export interface CodeHostSyncRecord {
   updatedAt: string;
 }
 
+export interface CodeIntegrationPolicy {
+  schemaVersion: 1;
+  mode: CodePolicyMode;
+  merge: {
+    requireFreshBase: boolean;
+    requireCleanSimulation: boolean;
+  };
+  checks: {
+    requireAtLeastOnePassed: boolean;
+    requiredNames: string[];
+  };
+  evidence: {
+    minimumByKind: Record<CodeChangeKind, number>;
+    highRiskMinimum: number;
+  };
+  risk: {
+    largeDiffThreshold: number;
+    criticalPaths: string[];
+    requireHumanReviewForHighRisk: boolean;
+  };
+  host: {
+    requireSynced: boolean;
+  };
+}
+
+export interface CodePolicyRecord {
+  path: string;
+  policy: CodeIntegrationPolicy;
+  updatedAt: string;
+}
+
+export interface CodeDiffSummary {
+  filesChanged: number;
+  additions: number;
+  deletions: number;
+  deletedFiles: string[];
+  changedFiles: string[];
+}
+
+export interface CodeGateRunRecord {
+  id: string;
+  intentId: string;
+  status: CodeGateStatus;
+  effectiveRisk: CodeRisk;
+  reasons: string[];
+  diffSummary: CodeDiffSummary;
+  policy: CodeIntegrationPolicy;
+  createdAt: string;
+}
+
 export interface CodeIntentDetail {
   intent: CodeIntentRecord;
   reservations: CodeReservationRecord[];
@@ -119,6 +171,8 @@ export interface CodeIntentDetail {
   reviews: CodeReviewRecord[];
   queue: CodeQueueRecord | null;
   hostSyncs: CodeHostSyncRecord[];
+  gateRuns: CodeGateRunRecord[];
+  latestGate: CodeGateRunRecord | null;
 }
 
 export interface CreateCodeLedgerOptions {
@@ -222,12 +276,14 @@ export interface CodeGlobalIntentRecord extends CodeIntentRecord {
   projectId: string;
   projectName: string;
   projectRootDir: string;
+  latestGate: CodeGateRunRecord | null;
 }
 
 export interface CodeGlobalQueueRecord extends CodeQueueRecord {
   projectId: string;
   projectName: string;
   intent: CodeIntentRecord | null;
+  latestGate: CodeGateRunRecord | null;
 }
 
 export interface CodeGlobalReservationRecord extends CodeReservationRecord {
@@ -369,6 +425,24 @@ interface SqliteHostSyncRow {
   updated_at: string;
 }
 
+interface SqliteCodePolicyRow {
+  id: string;
+  path: string;
+  policy_json: string;
+  updated_at: string;
+}
+
+interface SqliteGateRunRow {
+  id: string;
+  intent_id: string;
+  status: CodeGateStatus;
+  effective_risk: CodeRisk;
+  reasons_json: string;
+  diff_summary_json: string;
+  policy_json: string;
+  created_at: string;
+}
+
 interface SqliteCodeProjectRow {
   id: string;
   name: string;
@@ -397,6 +471,47 @@ interface SqliteCodeAgentRow {
 const CHANGE_KINDS = new Set<CodeChangeKind>(["fix", "feat", "refactor", "docs", "test", "chore"]);
 const RISKS = new Set<CodeRisk>(["low", "medium", "high"]);
 const AGENT_STATUSES = new Set<CodeAgentStatus>(["idle", "working", "blocked", "reviewing", "offline"]);
+const DEFAULT_CODE_POLICY_FILE = "claw.code.json";
+const DEFAULT_CODE_POLICY: CodeIntegrationPolicy = {
+  schemaVersion: 1,
+  mode: "strict",
+  merge: {
+    requireFreshBase: true,
+    requireCleanSimulation: true,
+  },
+  checks: {
+    requireAtLeastOnePassed: true,
+    requiredNames: ["e2e"],
+  },
+  evidence: {
+    minimumByKind: {
+      fix: 1,
+      feat: 1,
+      refactor: 1,
+      docs: 0,
+      test: 1,
+      chore: 0,
+    },
+    highRiskMinimum: 2,
+  },
+  risk: {
+    largeDiffThreshold: 500,
+    criticalPaths: [
+      ".github/",
+      ".env",
+      "package.json",
+      "package-lock.json",
+      "pnpm-lock.yaml",
+      "yarn.lock",
+      "security/",
+      "secrets/",
+    ],
+    requireHumanReviewForHighRisk: true,
+  },
+  host: {
+    requireSynced: false,
+  },
+};
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -458,6 +573,10 @@ function resolveRepoRoot(options: CreateCodeLedgerOptions): string {
 
 function resolveDatabasePath(repoRoot: string): string {
   return path.join(repoRoot, ".clawjs", "code", "code.sqlite");
+}
+
+function resolvePolicyPath(repoRoot: string): string {
+  return path.join(repoRoot, DEFAULT_CODE_POLICY_FILE);
 }
 
 function resolveGlobalRootDir(rootDir?: string): string {
@@ -530,6 +649,99 @@ function safeJsonParse(value: string): Record<string, unknown> {
   }
 }
 
+function safeJsonArray(value: string): unknown[] {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function readJsonObjectFile(filePath: string): Record<string, unknown> {
+  const parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as unknown;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error(`Invalid JSON object in ${filePath}`);
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function normalizeStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? [...new Set(value.filter((entry): entry is string => typeof entry === "string").map((entry) => entry.trim()).filter(Boolean))]
+    : [];
+}
+
+function normalizeMinimumByKind(value: unknown): Record<CodeChangeKind, number> {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  return {
+    fix: Math.max(0, Number(source.fix ?? DEFAULT_CODE_POLICY.evidence.minimumByKind.fix) || 0),
+    feat: Math.max(0, Number(source.feat ?? DEFAULT_CODE_POLICY.evidence.minimumByKind.feat) || 0),
+    refactor: Math.max(0, Number(source.refactor ?? DEFAULT_CODE_POLICY.evidence.minimumByKind.refactor) || 0),
+    docs: Math.max(0, Number(source.docs ?? DEFAULT_CODE_POLICY.evidence.minimumByKind.docs) || 0),
+    test: Math.max(0, Number(source.test ?? DEFAULT_CODE_POLICY.evidence.minimumByKind.test) || 0),
+    chore: Math.max(0, Number(source.chore ?? DEFAULT_CODE_POLICY.evidence.minimumByKind.chore) || 0),
+  };
+}
+
+function normalizePolicy(raw: unknown): CodeIntegrationPolicy {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("Code policy must be an object");
+  const input = raw as Record<string, unknown>;
+  const merge = input.merge && typeof input.merge === "object" && !Array.isArray(input.merge) ? input.merge as Record<string, unknown> : {};
+  const checks = input.checks && typeof input.checks === "object" && !Array.isArray(input.checks) ? input.checks as Record<string, unknown> : {};
+  const evidence = input.evidence && typeof input.evidence === "object" && !Array.isArray(input.evidence) ? input.evidence as Record<string, unknown> : {};
+  const risk = input.risk && typeof input.risk === "object" && !Array.isArray(input.risk) ? input.risk as Record<string, unknown> : {};
+  const host = input.host && typeof input.host === "object" && !Array.isArray(input.host) ? input.host as Record<string, unknown> : {};
+  const policy: CodeIntegrationPolicy = {
+    schemaVersion: 1,
+    mode: "strict",
+    merge: {
+      requireFreshBase: typeof merge.requireFreshBase === "boolean" ? merge.requireFreshBase : DEFAULT_CODE_POLICY.merge.requireFreshBase,
+      requireCleanSimulation: typeof merge.requireCleanSimulation === "boolean" ? merge.requireCleanSimulation : DEFAULT_CODE_POLICY.merge.requireCleanSimulation,
+    },
+    checks: {
+      requireAtLeastOnePassed: typeof checks.requireAtLeastOnePassed === "boolean" ? checks.requireAtLeastOnePassed : DEFAULT_CODE_POLICY.checks.requireAtLeastOnePassed,
+      requiredNames: normalizeStringArray(checks.requiredNames).length > 0 ? normalizeStringArray(checks.requiredNames) : DEFAULT_CODE_POLICY.checks.requiredNames,
+    },
+    evidence: {
+      minimumByKind: normalizeMinimumByKind(evidence.minimumByKind),
+      highRiskMinimum: Math.max(0, Number(evidence.highRiskMinimum ?? DEFAULT_CODE_POLICY.evidence.highRiskMinimum) || 0),
+    },
+    risk: {
+      largeDiffThreshold: Math.max(1, Number(risk.largeDiffThreshold ?? DEFAULT_CODE_POLICY.risk.largeDiffThreshold) || DEFAULT_CODE_POLICY.risk.largeDiffThreshold),
+      criticalPaths: normalizeStringArray(risk.criticalPaths).length > 0 ? normalizeStringArray(risk.criticalPaths) : DEFAULT_CODE_POLICY.risk.criticalPaths,
+      requireHumanReviewForHighRisk: typeof risk.requireHumanReviewForHighRisk === "boolean" ? risk.requireHumanReviewForHighRisk : DEFAULT_CODE_POLICY.risk.requireHumanReviewForHighRisk,
+    },
+    host: {
+      requireSynced: typeof host.requireSynced === "boolean" ? host.requireSynced : DEFAULT_CODE_POLICY.host.requireSynced,
+    },
+  };
+  return policy;
+}
+
+function riskRank(risk: CodeRisk): number {
+  return risk === "high" ? 2 : risk === "medium" ? 1 : 0;
+}
+
+function riskFromRank(rank: number): CodeRisk {
+  return rank >= 2 ? "high" : rank === 1 ? "medium" : "low";
+}
+
+function isHumanReviewer(review: CodeReviewRecord, intent: CodeIntentRecord): boolean {
+  const reviewer = review.reviewer.trim().toLowerCase();
+  if (!reviewer || reviewer === intent.agentId.trim().toLowerCase()) return false;
+  if (reviewer === "operator") return false;
+  return !reviewer.startsWith("agent");
+}
+
+function pathMatchesPolicy(filePath: string, policyPath: string): boolean {
+  const file = filePath.replace(/^\.\/+/, "").replace(/\\/g, "/");
+  const pattern = policyPath.replace(/^\.\/+/, "").replace(/\\/g, "/");
+  if (!pattern) return false;
+  if (pattern.endsWith("/")) return file.startsWith(pattern);
+  return file === pattern || file.startsWith(`${pattern}/`) || file.includes(`/${pattern}/`) || file.includes(`/${pattern}`);
+}
+
 function mapEvidence(row: SqliteEvidenceRow): CodeEvidenceRecord {
   return {
     id: row.id,
@@ -588,6 +800,25 @@ function mapHostSync(row: SqliteHostSyncRow): CodeHostSyncRecord {
     payload: safeJsonParse(row.payload_json),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+function mapGateRun(row: SqliteGateRunRow): CodeGateRunRecord {
+  return {
+    id: row.id,
+    intentId: row.intent_id,
+    status: row.status,
+    effectiveRisk: row.effective_risk,
+    reasons: safeJsonArray(row.reasons_json).filter((entry): entry is string => typeof entry === "string"),
+    diffSummary: {
+      filesChanged: Number((safeJsonParse(row.diff_summary_json).filesChanged)) || 0,
+      additions: Number((safeJsonParse(row.diff_summary_json).additions)) || 0,
+      deletions: Number((safeJsonParse(row.diff_summary_json).deletions)) || 0,
+      deletedFiles: normalizeStringArray(safeJsonParse(row.diff_summary_json).deletedFiles),
+      changedFiles: normalizeStringArray(safeJsonParse(row.diff_summary_json).changedFiles),
+    },
+    policy: normalizePolicy(safeJsonParse(row.policy_json)),
+    createdAt: row.created_at,
   };
 }
 
@@ -785,11 +1016,29 @@ export class CodeLedger {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS code_policies (
+        id TEXT PRIMARY KEY,
+        path TEXT NOT NULL,
+        policy_json TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS code_gate_runs (
+        id TEXT PRIMARY KEY,
+        intent_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        effective_risk TEXT NOT NULL,
+        reasons_json TEXT NOT NULL,
+        diff_summary_json TEXT NOT NULL,
+        policy_json TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS code_gate_runs_intent_idx ON code_gate_runs(intent_id, created_at DESC);
     `);
   }
 
   init(): CodeRepositoryRecord {
     this.ensureLocalGitExcludes();
+    this.ensurePolicy();
     const createdAt = nowIso();
     const originUrl = runGit(this.repoRoot, ["config", "--get", "remote.origin.url"], { allowFailure: true }) || null;
     const defaultBranch = runGit(this.repoRoot, ["branch", "--show-current"], { allowFailure: true }) || "main";
@@ -843,17 +1092,36 @@ export class CodeLedger {
       reviews: this.listReviews(intent.id),
       queue: this.getQueue(intent.id),
       hostSyncs: this.listHostSyncs(intent.id),
+      gateRuns: this.listGateRuns(intent.id),
+      latestGate: this.latestGate(intent.id),
     };
   }
 
-  status(): { repository: CodeRepositoryRecord; intents: CodeIntentRecord[]; blocked: CodeIntentRecord[]; queued: CodeQueueRecord[] } {
+  status(): { repository: CodeRepositoryRecord; intents: CodeIntentRecord[]; blocked: CodeIntentRecord[]; queued: CodeQueueRecord[]; gates: Record<string, CodeGateRunRecord | null> } {
     const repository = this.repository();
+    const intents = this.listIntents();
     return {
       repository,
-      intents: this.listIntents(),
+      intents,
       blocked: this.listIntents({ status: "blocked" }),
       queued: (this.db.prepare("SELECT * FROM code_queue WHERE status = 'queued' ORDER BY created_at ASC").all() as SqliteQueueRow[]).map(mapQueue),
+      gates: Object.fromEntries(intents.map((intent) => [intent.id, this.latestGate(intent.id)])),
     };
+  }
+
+  policy(): CodePolicyRecord {
+    return this.readPolicy();
+  }
+
+  validatePolicy(): CodePolicyRecord {
+    return this.readPolicy();
+  }
+
+  setPolicy(input: CodeIntegrationPolicy | Record<string, unknown>): CodePolicyRecord {
+    const policy = normalizePolicy(input);
+    const policyPath = resolvePolicyPath(this.repoRoot);
+    fs.writeFileSync(policyPath, `${JSON.stringify(policy, null, 2)}\n`);
+    return this.cachePolicy(policy, policyPath);
   }
 
   start(input: CodeStartInput): CodeIntentDetail {
@@ -1003,6 +1271,81 @@ export class CodeLedger {
     });
   }
 
+  gate(intentId: string): CodeGateRunRecord {
+    const intent = this.requireIntent(intentId);
+    const policy = this.readPolicy().policy;
+    const checks = this.listChecks(intent.id);
+    const evidence = this.listEvidence(intent.id);
+    const reviews = this.listReviews(intent.id);
+    const hostSyncs = this.listHostSyncs(intent.id);
+    const diffSummary = this.diffSummary(intent);
+    const reasons: string[] = [];
+    let effectiveRisk = riskRank(intent.risk);
+
+    if (!intent.commitSha) reasons.push("Integration requires a committed intent");
+
+    const currentBaseSha = runGit(this.repoRoot, ["rev-parse", intent.baseBranch], { allowFailure: true });
+    if (policy.merge.requireFreshBase && currentBaseSha && currentBaseSha !== intent.baseSha) {
+      reasons.push(`Base branch is stale: ${intent.baseBranch}`);
+      effectiveRisk = Math.max(effectiveRisk, 1);
+    }
+    if (policy.merge.requireCleanSimulation && intent.commitSha && !this.mergeSimulationPasses(intent)) {
+      reasons.push("Merge simulation failed");
+      effectiveRisk = Math.max(effectiveRisk, 2);
+    }
+
+    const latestByName = new Map<string, CodeCheckRecord>();
+    for (const check of checks) latestByName.set(check.name, check);
+    const latestChecks = [...latestByName.values()];
+    if (policy.checks.requireAtLeastOnePassed && !latestChecks.some((check) => check.status === "passed")) {
+      reasons.push("Integration requires at least one passed check");
+    }
+    for (const name of policy.checks.requiredNames) {
+      const check = latestByName.get(name);
+      if (!check) reasons.push(`Missing required check: ${name}`);
+      else if (check.status !== "passed") reasons.push(`Integration blocked by failed checks: ${name}`);
+    }
+    const failedChecks = checks.filter((check) => check.status === "failed");
+    if (failedChecks.length > 0) effectiveRisk = Math.max(effectiveRisk, 1);
+
+    const criticalPaths = diffSummary.changedFiles.filter((file) => policy.risk.criticalPaths.some((critical) => pathMatchesPolicy(file, critical)));
+    if (criticalPaths.length > 0) effectiveRisk = Math.max(effectiveRisk, 2);
+    if (diffSummary.additions + diffSummary.deletions >= policy.risk.largeDiffThreshold) effectiveRisk = Math.max(effectiveRisk, 2);
+    if (diffSummary.deletedFiles.length > 0) effectiveRisk = Math.max(effectiveRisk, 1);
+    if (hostSyncs.some((sync) => sync.status === "failed")) effectiveRisk = Math.max(effectiveRisk, 1);
+
+    const effectiveRiskValue = riskFromRank(effectiveRisk);
+    const minimumEvidence = Math.max(
+      policy.evidence.minimumByKind[intent.kind] ?? 0,
+      effectiveRiskValue === "high" ? policy.evidence.highRiskMinimum : 0,
+    );
+    if (evidence.length < minimumEvidence) reasons.push(`Integration requires at least ${minimumEvidence} evidence item(s)`);
+
+    const latestFailureAt = failedChecks.reduce<string | null>((latest, check) => latest && latest > check.createdAt ? latest : check.createdAt, null);
+    const latestReview = reviews[reviews.length - 1];
+    if (!latestReview || latestReview.decision !== "approved") {
+      reasons.push("Integration requires an approved review");
+    } else if (latestFailureAt && latestReview.createdAt <= latestFailureAt) {
+      reasons.push("Integration requires a review after the latest failed check");
+    }
+    if (policy.risk.requireHumanReviewForHighRisk && effectiveRiskValue === "high" && !reviews.some((review) => review.decision === "approved" && isHumanReviewer(review, intent))) {
+      reasons.push("High risk integration requires human review");
+    }
+
+    if (policy.host.requireSynced && !hostSyncs.some((sync) => sync.status === "synced")) {
+      reasons.push("Integration requires host sync");
+    }
+
+    return this.insertGateRun({
+      intentId: intent.id,
+      status: reasons.length === 0 ? "passed" : "failed",
+      effectiveRisk: effectiveRiskValue,
+      reasons,
+      diffSummary,
+      policy,
+    });
+  }
+
   review(input: CodeReviewInput): CodeReviewRecord {
     const intent = this.requireIntent(input.intentId);
     const reviewer = input.reviewer.trim();
@@ -1050,7 +1393,7 @@ export class CodeLedger {
 
   queue(intentId: string): CodeQueueRecord {
     const intent = this.requireIntent(intentId);
-    this.assertIntegrationReady(intent);
+    this.assertGatePassed(intent);
     const timestamp = nowIso();
     const existing = this.getQueue(intent.id);
     if (existing) {
@@ -1068,7 +1411,7 @@ export class CodeLedger {
   integrate(intentId: string): CodeIntegrateResult {
     const intent = this.requireIntent(intentId);
     const queue = this.getQueue(intent.id) ?? this.queue(intent.id);
-    this.assertIntegrationReady(intent);
+    this.assertGatePassed(intent);
     this.assertRepoClean();
     const timestamp = nowIso();
     try {
@@ -1168,6 +1511,97 @@ export class CodeLedger {
     return (this.db.prepare("SELECT * FROM code_host_syncs WHERE intent_id = ? ORDER BY created_at ASC").all(intentId) as SqliteHostSyncRow[]).map(mapHostSync);
   }
 
+  private listGateRuns(intentId: string): CodeGateRunRecord[] {
+    return (this.db.prepare("SELECT * FROM code_gate_runs WHERE intent_id = ? ORDER BY created_at ASC").all(intentId) as SqliteGateRunRow[]).map(mapGateRun);
+  }
+
+  private latestGate(intentId: string): CodeGateRunRecord | null {
+    const row = this.db.prepare("SELECT * FROM code_gate_runs WHERE intent_id = ? ORDER BY created_at DESC LIMIT 1").get(intentId) as SqliteGateRunRow | undefined;
+    return row ? mapGateRun(row) : null;
+  }
+
+  private ensurePolicy(): CodePolicyRecord {
+    const policyPath = resolvePolicyPath(this.repoRoot);
+    if (!fs.existsSync(policyPath)) {
+      fs.writeFileSync(policyPath, `${JSON.stringify(DEFAULT_CODE_POLICY, null, 2)}\n`);
+    }
+    return this.readPolicy();
+  }
+
+  private readPolicy(): CodePolicyRecord {
+    const policyPath = resolvePolicyPath(this.repoRoot);
+    const policy = fs.existsSync(policyPath) ? normalizePolicy(readJsonObjectFile(policyPath)) : DEFAULT_CODE_POLICY;
+    return this.cachePolicy(policy, policyPath);
+  }
+
+  private cachePolicy(policy: CodeIntegrationPolicy, policyPath: string): CodePolicyRecord {
+    const timestamp = nowIso();
+    this.db.prepare(`
+      INSERT INTO code_policies (id, path, policy_json, updated_at)
+      VALUES ('default', ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        path = excluded.path,
+        policy_json = excluded.policy_json,
+        updated_at = excluded.updated_at
+    `).run(policyPath, JSON.stringify(policy), timestamp);
+    const row = this.db.prepare("SELECT * FROM code_policies WHERE id = 'default'").get() as SqliteCodePolicyRow;
+    return { path: row.path, policy: normalizePolicy(safeJsonParse(row.policy_json)), updatedAt: row.updated_at };
+  }
+
+  private diffSummary(intent: CodeIntentRecord): CodeDiffSummary {
+    if (!intent.commitSha) return { filesChanged: 0, additions: 0, deletions: 0, deletedFiles: [], changedFiles: [] };
+    const numstat = runGit(this.repoRoot, ["diff", "--numstat", `${intent.baseSha}..${intent.commitSha}`], { allowFailure: true });
+    const nameStatus = runGit(this.repoRoot, ["diff", "--name-status", `${intent.baseSha}..${intent.commitSha}`], { allowFailure: true });
+    let additions = 0;
+    let deletions = 0;
+    const changedFiles = new Set<string>();
+    for (const line of numstat.split(/\r?\n/).filter(Boolean)) {
+      const [added, deleted, file] = line.split(/\t/);
+      additions += Number(added) || 0;
+      deletions += Number(deleted) || 0;
+      if (file) changedFiles.add(file);
+    }
+    const deletedFiles: string[] = [];
+    for (const line of nameStatus.split(/\r?\n/).filter(Boolean)) {
+      const [status, file] = line.split(/\t/);
+      if (file) changedFiles.add(file);
+      if (status === "D" && file) deletedFiles.push(file);
+    }
+    return {
+      filesChanged: changedFiles.size,
+      additions,
+      deletions,
+      deletedFiles,
+      changedFiles: [...changedFiles].sort((left, right) => left.localeCompare(right)),
+    };
+  }
+
+  private mergeSimulationPasses(intent: CodeIntentRecord): boolean {
+    const head = intent.commitSha ?? intent.branch;
+    const result = spawnSync("git", ["merge-tree", "--write-tree", intent.baseBranch, head], { cwd: this.repoRoot, encoding: "utf8" });
+    if (result.status === 0) return true;
+    const fallback = spawnSync("git", ["merge-tree", intent.baseSha, intent.baseBranch, head], { cwd: this.repoRoot, encoding: "utf8" });
+    const output = `${fallback.stdout ?? ""}${fallback.stderr ?? ""}`;
+    return fallback.status === 0 && !output.includes("<<<<<<<") && !output.includes("changed in both");
+  }
+
+  private insertGateRun(input: {
+    intentId: string;
+    status: CodeGateStatus;
+    effectiveRisk: CodeRisk;
+    reasons: string[];
+    diffSummary: CodeDiffSummary;
+    policy: CodeIntegrationPolicy;
+  }): CodeGateRunRecord {
+    const id = codeId("gate");
+    const timestamp = nowIso();
+    this.db.prepare(`
+      INSERT INTO code_gate_runs (id, intent_id, status, effective_risk, reasons_json, diff_summary_json, policy_json, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, input.intentId, input.status, input.effectiveRisk, JSON.stringify(input.reasons), JSON.stringify(input.diffSummary), JSON.stringify(input.policy), timestamp);
+    return this.latestGate(input.intentId)!;
+  }
+
   private assertNoReservationConflict(repoId: string, intentId: string, requested: Array<{ kind: "scope" | "path"; value: string }>): void {
     const active = (this.db.prepare(`
       SELECT * FROM code_reservations
@@ -1195,21 +1629,14 @@ export class CodeLedger {
 
   private assertRepoClean(): void {
     const porcelain = runGit(this.repoRoot, ["status", "--porcelain"]);
-    if (porcelain) throw new Error("Repository root has uncommitted changes; integration requires a clean root worktree");
+    const dirty = porcelain.split(/\r?\n/).filter((line) => line.trim() && line.trim() !== `?? ${DEFAULT_CODE_POLICY_FILE}`);
+    if (dirty.length > 0) throw new Error("Repository root has uncommitted changes; integration requires a clean root worktree");
   }
 
-  private assertIntegrationReady(intent: CodeIntentRecord): void {
-    if (!intent.commitSha) throw new Error("Integration requires a committed intent");
-    const checks = this.listChecks(intent.id);
-    if (checks.length === 0) throw new Error("Integration requires at least one recorded check");
-    const latestByName = new Map<string, CodeCheckRecord>();
-    for (const check of checks) latestByName.set(check.name, check);
-    const failed = [...latestByName.values()].filter((check) => check.status !== "passed");
-    if (failed.length > 0) throw new Error(`Integration blocked by failed checks: ${failed.map((check) => check.name).join(", ")}`);
-    const reviews = this.listReviews(intent.id);
-    const latestReview = reviews[reviews.length - 1];
-    if (!latestReview || latestReview.decision !== "approved") {
-      throw new Error("Integration requires an approved review");
+  private assertGatePassed(intent: CodeIntentRecord): void {
+    const gate = this.gate(intent.id);
+    if (gate.status !== "passed") {
+      throw new Error(gate.reasons.join("; ") || "Integration gate failed");
     }
   }
 
@@ -1440,11 +1867,13 @@ export class CodeGlobalIndex {
       const ledger = createCodeLedger({ repoDir: project.rootDir });
       for (const intent of ledger.listIntents({ ...(options.status ? { status: options.status } : {}) })) {
         if (options.agentId && intent.agentId !== options.agentId) continue;
+        const detail = ledger.showIntent(intent.id);
         intents.push({
           ...intent,
           projectId: project.id,
           projectName: project.name,
           projectRootDir: project.rootDir,
+          latestGate: detail.latestGate,
         });
       }
     }
@@ -1487,6 +1916,7 @@ export class CodeGlobalIndex {
         projectId: project.id,
         projectName: project.name,
         intent: status.intents.find((intent) => intent.id === entry.intentId) ?? null,
+        latestGate: status.gates[entry.intentId] ?? null,
       })));
     }
     return queue.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
@@ -1502,6 +1932,30 @@ export class CodeGlobalIndex {
     const result = this.projectLedger(projectId).integrate(intentId);
     this.syncProject(projectId);
     return result;
+  }
+
+  policy(projectId: string): CodePolicyRecord {
+    return this.projectLedger(projectId).policy();
+  }
+
+  validatePolicy(projectId: string): CodePolicyRecord {
+    return this.projectLedger(projectId).validatePolicy();
+  }
+
+  setPolicy(projectId: string, input: CodeIntegrationPolicy | Record<string, unknown>): CodePolicyRecord {
+    const policy = this.projectLedger(projectId).setPolicy(input);
+    this.syncProject(projectId);
+    return policy;
+  }
+
+  gate(projectId: string, intentId: string): CodeGateRunRecord {
+    const gate = this.projectLedger(projectId).gate(intentId);
+    this.syncProject(projectId);
+    return gate;
+  }
+
+  listGateRuns(projectId: string, intentId: string): CodeGateRunRecord[] {
+    return this.projectLedger(projectId).showIntent(intentId).gateRuns;
   }
 
   addEvidence(projectId: string, input: CodeEvidenceInput): CodeEvidenceRecord {
@@ -1723,6 +2177,26 @@ export async function startCodeServer(index: CodeGlobalIndex, options: CodeServe
         }
         if (request.method === "GET" && url.pathname === "/v1/reservations") {
           sendCodeJson(response, 200, { reservations: index.listReservations(url.searchParams.get("projectId") || undefined) });
+          return;
+        }
+        if (request.method === "GET" && url.pathname === "/v1/policy") {
+          sendCodeJson(response, 200, { policy: index.policy(url.searchParams.get("projectId") || "") });
+          return;
+        }
+        if (request.method === "PUT" && url.pathname === "/v1/policy") {
+          const body = await parseRequestJson(request);
+          const projectId = stringInput(body, "projectId") || "";
+          const policyInput = body.policy && typeof body.policy === "object" && !Array.isArray(body.policy) ? body.policy as Record<string, unknown> : body;
+          sendCodeJson(response, 200, { policy: index.setPolicy(projectId, policyInput) });
+          return;
+        }
+        if (request.method === "POST" && url.pathname === "/v1/gate") {
+          const body = await parseRequestJson(request);
+          sendCodeJson(response, 200, { gate: index.gate(stringInput(body, "projectId") || "", stringInput(body, "intentId") || "") });
+          return;
+        }
+        if (request.method === "GET" && url.pathname === "/v1/gates") {
+          sendCodeJson(response, 200, { gates: index.listGateRuns(url.searchParams.get("projectId") || "", url.searchParams.get("intentId") || "") });
           return;
         }
         if (request.method === "GET" && url.pathname === "/v1/queue") {

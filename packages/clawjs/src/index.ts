@@ -244,7 +244,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} skills list|inspect|sync|sources|search|install`,
     `  ${binName} library list|inspect|create|update|remove|import-skill|assign|unassign|resolve|sync`,
     `  ${binName} plan create|list|show|run|approve|reject|review|policy`,
-    `  ${binName} code init|projects|agents|start|status|list|show|reserve|evidence|check|commit|review|queue|integrate|sync|serve`,
+    `  ${binName} code init|projects|agents|policy|start|status|list|show|reserve|evidence|check|commit|review|gate|queue|integrate|sync|serve`,
     `  ${binName} soul init|validate|preview|compile|assign|inspect`,
     `  ${binName} user init|set|add|propose|verify|list|get|inspect|validate|preview|compile|assign`,
     `  ${binName} channels list|status|telegram|assign|unassign|assignments|processors|listen|targets|messages|permissions|commands`,
@@ -5007,6 +5007,34 @@ async function runCodeCli(input: {
       return CLI_EXIT_OK;
     }
 
+    if (command === "policy" && (subcommand === "show" || subcommand === undefined)) {
+      const policy = input.flags.project ? globalIndex.policy(input.flags.project) : localLedger().policy();
+      if (input.wantsJson) writeJson(input.context.stdout, { policy });
+      else input.context.stdout.write(`${policy.path}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "policy" && subcommand === "validate") {
+      const policy = input.flags.project ? globalIndex.validatePolicy(input.flags.project) : localLedger().validatePolicy();
+      if (input.wantsJson) writeJson(input.context.stdout, { ok: true, policy });
+      else input.context.stdout.write("ok\n");
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "policy" && subcommand === "set") {
+      const raw = input.flags["from-file"]
+        ? readJsonFile<Record<string, unknown>>(path.resolve(input.context.cwd, input.flags["from-file"]), "--from-file")
+        : parseJsonFlag<Record<string, unknown>>(input.flags["policy-json"] ?? input.flags.json, "--json");
+      if (!raw) {
+        input.context.stderr.write(`Usage: ${input.binName} code policy set [--project ID] --json TEXT\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const policy = input.flags.project ? globalIndex.setPolicy(input.flags.project, raw) : localLedger().setPolicy(raw);
+      if (input.wantsJson) writeJson(input.context.stdout, { policy });
+      else input.context.stdout.write(`${policy.path}\n`);
+      return CLI_EXIT_OK;
+    }
+
     if (command === "status") {
       if (wantsAll) {
         const status = globalIndex.status();
@@ -5195,6 +5223,15 @@ async function runCodeCli(input: {
       return CLI_EXIT_OK;
     }
 
+    if (command === "gate") {
+      const gate = input.flags.project
+        ? globalIndex.gate(input.flags.project, resolveCodeIntentId(input.positionals, input.flags))
+        : localLedger().gate(resolveCodeIntentId(input.positionals, input.flags));
+      if (input.wantsJson) writeJson(input.context.stdout, { gate });
+      else input.context.stdout.write(`${gate.status}${gate.reasons.length > 0 ? ` ${gate.reasons.join("; ")}` : ""}\n`);
+      return gate.status === "passed" ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
+    }
+
     if (command === "queue") {
       if (wantsAll) {
         const queue = globalIndex.listQueue(input.flags.project);
@@ -5238,7 +5275,7 @@ async function runCodeCli(input: {
       return sync.status === "failed" ? CLI_EXIT_FAILURE : CLI_EXIT_OK;
     }
 
-    input.context.stderr.write(`Usage: ${input.binName} code init|projects|agents|start|status|list|show|reserve|evidence add|check run|check record|commit|review approve|review reject|queue|integrate|sync github|serve\n`);
+    input.context.stderr.write(`Usage: ${input.binName} code init|projects|agents|policy|start|status|list|show|reserve|evidence add|check run|check record|commit|review approve|review reject|gate|queue|integrate|sync github|serve\n`);
     return CLI_EXIT_USAGE;
   } catch (error) {
     const handled = cliErrorFromUnknown(error);

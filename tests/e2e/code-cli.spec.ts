@@ -97,6 +97,9 @@ test("code cli runs an isolated intent through evidence, checks, review, commit,
 
   const init = parseJson<{ repository: { id: string } }>((await run(rootDir, repoDir, ["code", "init", "--json"])).stdout);
   expect(init.repository.id).toBeTruthy();
+  const policy = parseJson<{ policy: { policy: { mode: string; checks: { requiredNames: string[] } } } }>((await run(rootDir, repoDir, ["code", "policy", "show", "--json"])).stdout);
+  expect(policy.policy.policy.mode).toBe("strict");
+  expect(policy.policy.policy.checks.requiredNames).toContain("e2e");
 
   const started = parseJson<{ intent: { id: string; worktreePath: string; branch: string } }>((await run(rootDir, repoDir, [
     "code", "start",
@@ -153,6 +156,9 @@ test("code cli runs an isolated intent through evidence, checks, review, commit,
     "--reviewer", "human-owner",
     "--json",
   ]);
+  const gate = parseJson<{ gate: { status: string; effectiveRisk: string } }>((await run(rootDir, repoDir, ["code", "gate", "--intent", started.intent.id, "--json"])).stdout);
+  expect(gate.gate.status).toBe("passed");
+  expect(gate.gate.effectiveRisk).toBe("medium");
   await run(rootDir, repoDir, ["code", "queue", "--intent", started.intent.id, "--json"]);
   const integrated = parseJson<{ integrationSha: string; intent: { status: string } }>((await run(rootDir, repoDir, [
     "code", "integrate",
@@ -206,6 +212,13 @@ test("code cli refuses integration while the latest required check is failed", a
   ])).stdout);
   fs.mkdirSync(path.join(started.intent.worktreePath, "test"), { recursive: true });
   fs.writeFileSync(path.join(started.intent.worktreePath, "test", "checkout.test.ts"), "export const covered = true;\n");
+  await run(rootDir, repoDir, [
+    "code", "evidence", "add",
+    "--intent", started.intent.id,
+    "--label", "checkout e2e evidence",
+    "--path", "test/checkout.test.ts",
+    "--json",
+  ]);
 
   await run(rootDir, repoDir, [
     "code", "check", "record",
@@ -234,6 +247,75 @@ test("code cli refuses integration while the latest required check is failed", a
   ]);
   const queued = parseJson<{ queue: { status: string } }>((await run(rootDir, repoDir, ["code", "queue", "--intent", started.intent.id, "--json"])).stdout);
   expect(queued.queue.status).toBe("queued");
+});
+
+test("code integration gate blocks stale base and merge conflicts before queueing", async () => {
+  const rootDir = process.cwd();
+  const repoDir = await createRepo();
+
+  const started = parseJson<{ intent: { id: string; worktreePath: string } }>((await run(rootDir, repoDir, [
+    "code", "start",
+    "--kind", "fix",
+    "--scope", "readme",
+    "--title", "update readme",
+    "--path", "README.md",
+    "--json",
+  ])).stdout);
+  fs.writeFileSync(path.join(started.intent.worktreePath, "README.md"), "agent change\n");
+  await run(rootDir, repoDir, ["code", "evidence", "add", "--intent", started.intent.id, "--label", "readme evidence", "--path", "README.md", "--json"]);
+  await run(rootDir, repoDir, ["code", "check", "record", "--intent", started.intent.id, "--name", "e2e", "--status", "passed", "--json"]);
+  await run(rootDir, repoDir, ["code", "commit", "--intent", started.intent.id, "--json"]);
+  await run(rootDir, repoDir, ["code", "review", "approve", "--intent", started.intent.id, "--reviewer", "human-owner", "--json"]);
+
+  fs.writeFileSync(path.join(repoDir, "README.md"), "base change\n");
+  await git(repoDir, ["add", "README.md"]);
+  await git(repoDir, ["-c", "user.name=Test", "-c", "user.email=test@example.local", "commit", "-m", "docs(readme): update base"]);
+
+  const blocked = await run(rootDir, repoDir, ["code", "gate", "--intent", started.intent.id, "--json"], { reject: false });
+  expect(blocked.stdout).toContain("Base branch is stale");
+  expect(blocked.stdout).toContain("Merge simulation failed");
+  const queued = await run(rootDir, repoDir, ["code", "queue", "--intent", started.intent.id, "--json"], { reject: false });
+  expect(queued.stdout).toContain("Base branch is stale");
+});
+
+test("code integration gate enforces evidence and high-risk human review", async () => {
+  const rootDir = process.cwd();
+  const repoDir = await createRepo();
+  const policy = parseJson<{ policy: { policy: Record<string, unknown> } }>((await run(rootDir, repoDir, ["code", "policy", "show", "--json"])).stdout).policy.policy;
+  const nextPolicy = {
+    ...policy,
+    risk: {
+      ...(policy.risk as Record<string, unknown>),
+      criticalPaths: ["src/critical/"],
+    },
+  };
+  await run(rootDir, repoDir, ["code", "policy", "set", "--policy-json", JSON.stringify(nextPolicy), "--json"]);
+
+  const started = parseJson<{ intent: { id: string; worktreePath: string } }>((await run(rootDir, repoDir, [
+    "code", "start",
+    "--kind", "feat",
+    "--scope", "payments",
+    "--title", "add critical payment hook",
+    "--path", "src/critical/payments.ts",
+    "--agent-id", "agent-risk",
+    "--json",
+  ])).stdout);
+  fs.mkdirSync(path.join(started.intent.worktreePath, "src", "critical"), { recursive: true });
+  fs.writeFileSync(path.join(started.intent.worktreePath, "src", "critical", "payments.ts"), "export const criticalPayment = true;\n");
+  await run(rootDir, repoDir, ["code", "check", "record", "--intent", started.intent.id, "--name", "e2e", "--status", "passed", "--json"]);
+  await run(rootDir, repoDir, ["code", "commit", "--intent", started.intent.id, "--json"]);
+  await run(rootDir, repoDir, ["code", "review", "approve", "--intent", started.intent.id, "--reviewer", "agent-risk", "--json"]);
+
+  const missingEvidence = await run(rootDir, repoDir, ["code", "gate", "--intent", started.intent.id, "--json"], { reject: false });
+  expect(missingEvidence.stdout).toContain("Integration requires at least 2 evidence item");
+  expect(missingEvidence.stdout).toContain("High risk integration requires human review");
+
+  await run(rootDir, repoDir, ["code", "evidence", "add", "--intent", started.intent.id, "--label", "risk test", "--path", "src/critical/payments.ts", "--json"]);
+  await run(rootDir, repoDir, ["code", "evidence", "add", "--intent", started.intent.id, "--label", "risk screenshot", "--url", "https://example.local/evidence", "--json"]);
+  await run(rootDir, repoDir, ["code", "review", "approve", "--intent", started.intent.id, "--reviewer", "human-owner", "--json"]);
+  const passed = parseJson<{ gate: { status: string; effectiveRisk: string } }>((await run(rootDir, repoDir, ["code", "gate", "--intent", started.intent.id, "--json"])).stdout);
+  expect(passed.gate.status).toBe("passed");
+  expect(passed.gate.effectiveRisk).toBe("high");
 });
 
 test("code cli coordinates projects, agents, global queue, and project-scoped integration", async () => {
@@ -360,8 +442,31 @@ test("code local HTTP API exposes projects, agents, intents, and queue for futur
       }),
     });
     expect(intentResponse.ok).toBeTruthy();
-    const created = await intentResponse.json() as { intent: { id: string } };
+    const created = await intentResponse.json() as { intent: { id: string; worktreePath: string } };
     expect(created.intent.id).toContain("intent_");
+
+    const policy = await (await fetch(`${server.url}/v1/policy?projectId=app`)).json() as { policy: { policy: Record<string, unknown> } };
+    const policyResponse = await fetch(`${server.url}/v1/policy`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ projectId: "app", policy: policy.policy.policy }),
+    });
+    expect(policyResponse.ok).toBeTruthy();
+
+    fs.writeFileSync(path.join(created.intent.worktreePath, "README.md"), "api docs update\n");
+    await run(rootDir, tempRoot, ["code", "check", "record", "--project", "app", "--intent", created.intent.id, "--name", "e2e", "--status", "passed", "--json"], { env });
+    await run(rootDir, tempRoot, ["code", "commit", "--project", "app", "--intent", created.intent.id, "--json"], { env });
+    await run(rootDir, tempRoot, ["code", "review", "approve", "--project", "app", "--intent", created.intent.id, "--reviewer", "human-owner", "--json"], { env });
+    const gateResponse = await fetch(`${server.url}/v1/gate`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ projectId: "app", intentId: created.intent.id }),
+    });
+    expect(gateResponse.ok).toBeTruthy();
+    const gate = await gateResponse.json() as { gate: { status: string } };
+    expect(gate.gate.status).toBe("passed");
+    const gates = await (await fetch(`${server.url}/v1/gates?projectId=app&intentId=${created.intent.id}`)).json() as { gates: unknown[] };
+    expect(gates.gates.length).toBeGreaterThan(0);
 
     const agents = await (await fetch(`${server.url}/v1/agents`)).json() as { agents: Array<{ id: string; projectId: string }> };
     expect(agents.agents).toContainEqual(expect.objectContaining({ id: "api-agent", projectId: "app" }));
