@@ -2737,6 +2737,42 @@ process.stdin.on("end", () => {
   });
 });
 
+test("runCli handles Telegram /new session reset without model latency", () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-telegram-new-"));
+  const payload = JSON.stringify({
+    provider: "telegram",
+    accountId: "support",
+    targetId: "1001",
+    message: {
+      targetId: "1001",
+      senderId: "test-user",
+      text: "/new",
+      raw: { message: { chat: { type: "private" } } },
+    },
+  });
+  const script = [
+    "import { runCli } from './packages/clawjs/src/index.ts';",
+    "const code = await runCli([",
+    "'channels','codex-processor','run','--runtime','demo','--workspace',process.env.CLAWJS_TEST_WORKSPACE,",
+    "'--bridge-state',process.env.CLAWJS_TEST_WORKSPACE + '/.clawjs/telegram-codex-bridge.json','--reply-policy','all','--json'",
+    "], { stdout: process.stdout, stderr: process.stderr, cwd: process.cwd() });",
+    "process.exit(code);",
+  ].join(" ");
+  const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
+    cwd: process.cwd(),
+    input: payload,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      CLAWJS_TEST_WORKSPACE: workspaceRoot,
+    },
+  });
+
+  assert.equal(result.status, CLI_EXIT_OK, result.stderr);
+  const output = JSON.parse(result.stdout) as { actions: Array<{ type: string; text?: string }> };
+  assert.equal(output.actions.some((action) => action.type === "send_message" && action.text === "New session is ready. What do you want to do next?"), true);
+});
+
 test("runCli can discover workspaces under an explicit root", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-discover-"));
   const workspaceA = path.join(tempRoot, "apps", "a");

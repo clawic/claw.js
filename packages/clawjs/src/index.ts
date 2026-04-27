@@ -2030,25 +2030,11 @@ async function runTelegramCodexProcessor(input: {
         : stripTelegramCodexCommand(rawText, botUsername);
   const persistUserMessage = !(rotatesSession && sessionCommand && !sessionCommand.rest) && command !== "continue";
   if (!persistUserMessage && rotatesSession && sessionCommand) {
-    const runId = `telegram-codex-${hashStableId([run.runKey, userMessageId, Date.now()].join(":"))}`;
-    claw.channelRuns.processChannelRun({ runKey: run.runKey, sessionId, phase: "start", runId });
-    const result = await claw.inference.generateText({
-      systemPrompt,
-      contextBlocks: [
-        { title: "Telegram", content: `provider=${provider}\naccount=${accountId}\ntarget=${targetLabel}\nsender=${event.message?.senderLabel ?? senderId}` },
-      ],
-      ruleHints: telegramRuleHints,
-      messages: [{ role: "user", content: formatTelegramCodexPrompt(event, promptText) }],
-      transport: (input.flags.transport as "auto" | "gateway" | "cli" | undefined) ?? "auto",
-      ...(input.flags.model ? { model: input.flags.model } : {}),
-      ...(input.flags["gateway-retries"] ? { gatewayRetries: Number(input.flags["gateway-retries"]) } : { gatewayRetries: 1 }),
-    });
-    const afterRun = claw.channelRuns.getChannelRunStatus(run.runKey);
-    if (!(afterRun?.stopRequestedRunId === runId || afterRun?.status === "stopping") && result.text) {
-      appendAssistantTurn(result.text, { ...(result.transport ? { transport: result.transport } : {}), fallback: result.fallback });
-      replies.push({ text: result.text, ...(result.transport ? { transport: result.transport } : {}), fallback: result.fallback });
-    }
-    claw.channelRuns.processChannelRun({ runKey: run.runKey, sessionId, phase: "succeed", runId });
+    const resetText = sessionCommand.command === "reset"
+      ? "Session reset. What do you want to do next?"
+      : "New session is ready. What do you want to do next?";
+    appendAssistantTurn(resetText, { command: sessionCommand.command, sessionReset: true });
+    replies.push({ text: resetText });
   } else if (persistUserMessage) {
     const processed = await processPrompt(formatTelegramCodexPrompt(event, promptText), {
       ...(providerMessageId ? { providerMessageId } : {}),
