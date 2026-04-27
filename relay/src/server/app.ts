@@ -3490,7 +3490,10 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
   // the API still comes up cleanly. A clear 404 is returned for non-API
   // routes in that case.
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const publicDir = path.resolve(__dirname, "../../ui/dist");
+  const publicDir = [
+    path.resolve(__dirname, "../ui/dist"),
+    path.resolve(__dirname, "../../ui/dist"),
+  ].find((candidate) => existsSync(path.join(candidate, "index.html"))) ?? path.resolve(__dirname, "../ui/dist");
   const brandRoot = resolveBrandRoot();
   const hasStaticBuild = existsSync(path.join(publicDir, "index.html"));
 
