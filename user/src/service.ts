@@ -70,6 +70,14 @@ const TABLE_SPECS: Record<string, Array<{
       writableFields: [],
       deletable: true,
     },
+    {
+      table: "devices",
+      primaryKey: "rowid",
+      identityFields: ["user_id"],
+      labelField: "label",
+      writableFields: ["label", "platform"],
+      deletable: true,
+    },
   ],
   "execution-plane": [
     {
@@ -85,6 +93,18 @@ const TABLE_SPECS: Record<string, Array<{
       primaryKey: "rowid",
       identityFields: ["user_id"],
       writableFields: ["scopes_json", "role"],
+    },
+    {
+      table: "asset_revisions",
+      primaryKey: "id",
+      identityFields: ["created_by"],
+      writableFields: [],
+    },
+    {
+      table: "runs",
+      primaryKey: "id",
+      identityFields: ["worker_id"],
+      writableFields: ["status"],
     },
   ],
   notify: [
@@ -493,22 +513,86 @@ export class UserService {
     return { ok: true };
   }
 
-  buildGraph(): GraphData {
+  buildGraph(userId?: string): GraphData {
+    if (!userId) {
+      return { nodes: [], edges: [] };
+    }
+    const bundle = this.getUserBundle(userId);
     const nodes: GraphData["nodes"] = [];
     const edges: GraphData["edges"] = [];
-    const users = this.listUsers();
-    for (const user of users) {
-      nodes.push({ id: `user:${user.id}`, label: user.label, kind: "user" });
+    const seen = new Set<string>();
+    const addNode = (node: GraphData["nodes"][number]) => {
+      if (seen.has(node.id)) return;
+      seen.add(node.id);
+      nodes.push(node);
+    };
+    const userNodeId = `user:${bundle.identity.id}`;
+    addNode({ id: userNodeId, label: bundle.identity.label, kind: "user" });
+
+    const sourceIds = new Set(bundle.rows.map((r) => r.source));
+    const tableKeys = new Set<string>();
+
+    for (const sid of sourceIds) {
+      const sourceNodeId = `source:${sid}`;
+      addNode({ id: sourceNodeId, label: this.sourceLabel(sid), kind: "source", sourceId: sid });
+      edges.push({ source: userNodeId, target: sourceNodeId, relation: "in" });
     }
-    for (const source of this.sources) {
-      nodes.push({ id: `source:${source.id}`, label: source.label, kind: "source", sourceId: source.id });
-    }
-    for (const user of users) {
-      for (const sourceId of user.sources) {
-        edges.push({ source: `user:${user.id}`, target: `source:${sourceId}`, relation: "in" });
+
+    for (const row of bundle.rows) {
+      const sourceNodeId = `source:${row.source}`;
+      const tableNodeId = `table:${row.source}/${row.table}`;
+      if (!tableKeys.has(tableNodeId)) {
+        addNode({ id: tableNodeId, label: row.table, kind: "table", sourceId: row.source, tableId: row.table });
+        edges.push({ source: sourceNodeId, target: tableNodeId, relation: "has_table" });
+        tableKeys.add(tableNodeId);
+      }
+      const rowNodeId = `row:${row.source}/${row.table}/${row.primaryKey}`;
+      addNode({ id: rowNodeId, label: this.rowLabel(row), kind: "row", sourceId: row.source, tableId: row.table });
+      edges.push({ source: tableNodeId, target: rowNodeId, relation: "row" });
+
+      for (const link of this.extractRowLinks(row)) {
+        addNode({ id: link.id, label: link.label, kind: "row" });
+        edges.push({ source: rowNodeId, target: link.id, relation: link.relation });
       }
     }
+
     return { nodes, edges };
+  }
+
+  private sourceLabel(sourceId: string): string {
+    const source = this.sources.find((s) => s.id === sourceId);
+    return source?.label ?? sourceId;
+  }
+
+  private rowLabel(row: UserRowRef): string {
+    const r = row.row as Record<string, unknown>;
+    const candidates = ["title", "label", "display_name", "name", "email", "device_name", "id"];
+    for (const key of candidates) {
+      if (typeof r[key] === "string" && (r[key] as string).length > 0) return String(r[key]);
+    }
+    return `${row.table} #${row.primaryKey}`;
+  }
+
+  private extractRowLinks(row: UserRowRef): Array<{ id: string; label: string; relation: string }> {
+    const out: Array<{ id: string; label: string; relation: string }> = [];
+    const r = row.row as Record<string, unknown>;
+    const linkable: Array<{ field: string; relation: string; prefix: string }> = [
+      { field: "tenant_id", relation: "in_tenant", prefix: "tenant" },
+      { field: "agent_id", relation: "via_agent", prefix: "agent" },
+      { field: "workspace_id", relation: "in_workspace", prefix: "workspace" },
+      { field: "project_id", relation: "in_project", prefix: "project" },
+      { field: "repository_id", relation: "in_repo", prefix: "repository" },
+      { field: "asset_id", relation: "of_asset", prefix: "asset" },
+      { field: "brand_id", relation: "of_brand", prefix: "brand" },
+      { field: "device_id", relation: "on_device", prefix: "device" },
+    ];
+    for (const link of linkable) {
+      const value = r[link.field];
+      if (typeof value === "string" && value.length > 0) {
+        out.push({ id: `${link.prefix}:${value}`, label: value, relation: link.relation });
+      }
+    }
+    return out;
   }
 
   // ---- memory helpers ----

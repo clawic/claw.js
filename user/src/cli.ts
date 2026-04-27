@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { startServer } from "./server";
 import { UserService } from "./service";
+import { seedUser } from "./seed";
 
 function parseFlags(argv: string[]): Record<string, string> {
   const flags: Record<string, string> = {};
@@ -50,6 +51,7 @@ function printHelp(): void {
       "  user sources [--workspace DIR]",
       "  user list [--workspace DIR]",
       "  user show <id> [--workspace DIR]",
+      "  user seed [--id ID] [--workspace DIR]",
       "",
     ].join("\n") + "\n"
   );
@@ -112,6 +114,11 @@ try {
     const service = new UserService(workspaceFromFlags(flags));
     process.stdout.write(JSON.stringify(service.getUserBundle(id), null, 2) + "\n");
     service.close();
+  } else if (command === "seed") {
+    const workspace = workspaceFromFlags(flags);
+    const id = flags.id || args[1] || "test-user-001";
+    const reports = seedUser(workspace, id);
+    process.stdout.write(JSON.stringify({ workspace, userId: id, reports }, null, 2) + "\n");
   } else {
     process.stderr.write(`Unknown command: ${command}\n`);
     printHelp();

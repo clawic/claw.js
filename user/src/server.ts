@@ -2,6 +2,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { UserService } from "./service";
+import { seedUser } from "./seed";
 
 function sendJson(res: http.ServerResponse, data: unknown, status = 200): void {
   res.writeHead(status, {
@@ -71,7 +72,8 @@ export function startServer(service: UserService, host: string, port: number): h
       }
 
       if (method === "GET" && pathname === "/api/graph") {
-        sendJson(res, service.buildGraph());
+        const userId = url.searchParams.get("userId") ?? undefined;
+        sendJson(res, service.buildGraph(userId || undefined));
         return;
       }
 
@@ -113,6 +115,15 @@ export function startServer(service: UserService, host: string, port: number): h
           body: typeof body.body === "string" ? body.body : undefined,
         });
         sendJson(res, result);
+        return;
+      }
+
+      if (method === "POST" && pathname === "/api/seed") {
+        const body = await readJsonBody(req);
+        const userId = String(body.userId ?? body.id ?? "test-user-001");
+        const reports = seedUser(service.workspace, userId);
+        service.refreshDiscovery();
+        sendJson(res, { ok: true, userId, reports });
         return;
       }
 
