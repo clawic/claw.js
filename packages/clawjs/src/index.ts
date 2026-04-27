@@ -336,6 +336,8 @@ const OPEN_SURFACE_BY_NAME = new Map<string, OpenSurface>(
 const CLAW_DOMAINS_BEGIN = "# BEGIN CLAWJS DOMAINS";
 const CLAW_DOMAINS_END = "# END CLAWJS DOMAINS";
 const CLAW_DOMAINS_LABEL = "com.clawjs.domains";
+const CLAW_DOMAINS_INDEX_HOST = "dashboard.claw";
+const CLAW_DOMAINS_SERVICE_DIR = "/Library/Application Support/ClawJS/domains";
 
 interface ClawDomainsStatus {
   installed: boolean;
@@ -349,10 +351,13 @@ interface ClawDomainsStatus {
 }
 
 function allOpenSurfaceHostnames(): string[] {
-  return Array.from(new Set(OPEN_SURFACES.flatMap((surface) => [
+  return Array.from(new Set([
+    CLAW_DOMAINS_INDEX_HOST,
+    ...OPEN_SURFACES.flatMap((surface) => [
     `${surface.id}.claw`,
     ...(surface.aliases ?? []).map((alias) => `${alias}.claw`),
-  ]))).sort();
+    ]),
+  ])).sort();
 }
 
 function surfacePrimaryClawUrl(surface: OpenSurface): string {
@@ -408,16 +413,24 @@ function domainsHostsFile(flags: Record<string, string>): string {
   return flags["hosts-file"] || "/etc/hosts";
 }
 
+function domainsServiceDir(flags: Record<string, string>): string {
+  return flags["service-dir"] || CLAW_DOMAINS_SERVICE_DIR;
+}
+
+function domainsProxyScriptPath(flags: Record<string, string>): string {
+  return path.join(domainsServiceDir(flags), "proxy.mjs");
+}
+
+function domainsProxyConfigPath(flags: Record<string, string>): string {
+  return path.join(domainsServiceDir(flags), "config.json");
+}
+
 function buildDomainsPlist(flags: Record<string, string>): string {
   const args = [
     process.execPath,
-    currentCliEntryPath(),
-    "domains",
-    "serve",
-    "--host",
-    flags.host || "127.0.0.1",
-    "--port",
-    flags.port || "80",
+    domainsProxyScriptPath(flags),
+    "--config",
+    domainsProxyConfigPath(flags),
   ];
   return [
     `<?xml version="1.0" encoding="UTF-8"?>`,
@@ -431,7 +444,7 @@ function buildDomainsPlist(flags: Record<string, string>): string {
     ...args.map((arg) => `    <string>${xmlEscape(arg)}</string>`),
     `  </array>`,
     `  <key>WorkingDirectory</key>`,
-    `  <string>${xmlEscape(repoRootFromCliPackage())}</string>`,
+    `  <string>${xmlEscape(domainsServiceDir(flags))}</string>`,
     `  <key>RunAtLoad</key>`,
     `  <true/>`,
     `  <key>KeepAlive</key>`,
@@ -458,6 +471,156 @@ function domainsInstallPlan(flags: Record<string, string>) {
   };
 }
 
+function buildDomainsServiceConfig(flags: Record<string, string>, cwd: string): string {
+  const user = os.userInfo();
+  return `${JSON.stringify({
+    host: flags.host || "127.0.0.1",
+    port: Number(flags.port || "80"),
+    workspace: path.resolve(cwd, flags.workspace ?? "."),
+    repoRoot: repoRootFromCliPackage(),
+    cliEntryPath: currentCliEntryPath(),
+    nodePath: process.execPath,
+    username: user.username,
+    uid: typeof process.getuid === "function" ? process.getuid() : user.uid,
+    homeDir: user.homedir,
+    surfacePorts: parseSurfacePortOverrides(flags["surface-port"]),
+    surfaces: OPEN_SURFACES.map((surface) => ({
+      id: surface.id,
+      label: surface.label,
+      port: surface.port,
+      aliases: surface.aliases ?? [],
+    })),
+  }, null, 2)}\n`;
+}
+
+function buildDomainsProxyScript(): string {
+  return `import http from "node:http";
+import net from "node:net";
+import fs from "node:fs";
+import { spawnSync } from "node:child_process";
+
+const configPath = process.argv[process.argv.indexOf("--config") + 1];
+if (!configPath) throw new Error("Missing --config");
+const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+const surfaces = config.surfaces;
+const byName = new Map();
+for (const surface of surfaces) {
+  byName.set(surface.id, surface);
+  for (const alias of surface.aliases || []) byName.set(alias, surface);
+}
+
+function surfacePort(surface) {
+  return config.surfacePorts?.[surface.id] || surface.port;
+}
+
+function parseSurface(hostHeader) {
+  const host = String(hostHeader || "").split(":")[0].trim().toLowerCase();
+  if (!host.endsWith(".claw")) return null;
+  return byName.get(host.slice(0, -".claw".length)) || null;
+}
+
+function indexHtml() {
+  const links = surfaces.map((surface) => '<a class="surface" href="http://' + surface.id + '.claw"><span>' + surface.label + '</span><code>' + surface.id + '.claw</code></a>').join("");
+  return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Claw domains</title><style>:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{margin:0;min-height:100vh;background:#f7f8fb;color:#16181d}main{max-width:960px;margin:0 auto;padding:48px 24px}h1{margin:0 0 8px;font-size:32px;letter-spacing:0}p{margin:0 0 28px;color:#5f6573}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.surface{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border:1px solid #dde1e8;border-radius:8px;background:#fff;color:inherit;text-decoration:none}.surface:hover{border-color:#9aa4b5}.surface span{font-weight:650}code{color:#315b9f;font-size:13px;overflow-wrap:anywhere}@media (prefers-color-scheme:dark){body{background:#111318;color:#f2f4f8}p{color:#a6adbb}.surface{background:#191c23;border-color:#303642}.surface:hover{border-color:#687386}code{color:#8bb6ff}}</style></head><body><main><h1>Claw domains</h1><p>Local dashboards available on this machine.</p><section class="grid">' + links + '</section></main></body></html>';
+}
+
+async function probe(url) {
+  try {
+    const response = await fetch(url, { method: "GET" });
+    return response.status < 500;
+  } catch {
+    return false;
+  }
+}
+
+async function ensureSurface(surface) {
+  const target = "http://127.0.0.1:" + surfacePort(surface);
+  if (await probe(target)) return target;
+  const openArgs = [
+    config.cliEntryPath,
+    "open",
+    surface.id,
+    "--host",
+    "127.0.0.1",
+    "--port",
+    String(surfacePort(surface)),
+    "--workspace",
+    config.workspace,
+    "--domains-hosts-file",
+    "/tmp/clawjs-domains-disabled-hosts",
+    "--no-browser",
+    "--json",
+  ];
+  const envArgs = [
+    "HOME=" + config.homeDir,
+    "USER=" + config.username,
+    "LOGNAME=" + config.username,
+    "PATH=/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+    "CLAWJS_DOMAINS_ACTIVE=0",
+  ];
+  const command = process.platform === "darwin"
+    ? ["/bin/launchctl", ["asuser", String(config.uid), "/usr/bin/sudo", "-u", config.username, "/usr/bin/env", ...envArgs, config.nodePath, ...openArgs]]
+    : [config.nodePath, openArgs];
+  const result = spawnSync(command[0], command[1], { cwd: "/", encoding: "utf8" });
+  if (result.status !== 0) throw new Error(result.stdout || result.stderr || "Failed to start " + surface.id);
+  return target;
+}
+
+async function proxy(request, response, targetBase) {
+  const incoming = new URL(request.url || "/", "http://127.0.0.1");
+  const target = new URL(targetBase);
+  target.pathname = incoming.pathname;
+  target.search = incoming.search;
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(request.headers)) {
+    if (key.toLowerCase() === "host" || value === undefined) continue;
+    if (Array.isArray(value)) for (const item of value) headers.append(key, item);
+    else headers.set(key, value);
+  }
+  const body = request.method === "GET" || request.method === "HEAD" ? undefined : request;
+  const upstream = await fetch(target, {
+    method: request.method,
+    headers,
+    body,
+    redirect: "manual",
+    duplex: body ? "half" : undefined,
+  });
+  response.statusCode = upstream.status;
+  upstream.headers.forEach((value, key) => {
+    if (key.toLowerCase() !== "content-encoding") response.setHeader(key, value);
+  });
+  if (!upstream.body) {
+    response.end();
+    return;
+  }
+  const reader = upstream.body.getReader();
+  while (true) {
+    const chunk = await reader.read();
+    if (chunk.done) break;
+    response.write(Buffer.from(chunk.value));
+  }
+  response.end();
+}
+
+const server = http.createServer((request, response) => {
+  void (async () => {
+    const surface = parseSurface(request.headers.host);
+    if (!surface) {
+      response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      response.end(indexHtml());
+      return;
+    }
+    await proxy(request, response, await ensureSurface(surface));
+  })().catch((error) => {
+    response.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
+    response.end(error instanceof Error ? error.message : "Domain proxy failed.");
+  });
+});
+
+server.listen(config.port, config.host);
+`;
+}
+
 function sudoScript(script: string): void {
   const result = spawnSync("sudo", [
     ...(process.stdin.isTTY ? [] : ["-n"]),
@@ -467,6 +630,30 @@ function sudoScript(script: string): void {
   ], { stdio: "inherit" });
   if (result.status !== 0) {
     throw new CliHandledError("domains_install_failed", "Failed to update local .claw domain configuration.");
+  }
+}
+
+function appleScriptQuote(value: string): string {
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"")}"`;
+}
+
+function runPrivilegedScript(script: string, flags: Record<string, string>): void {
+  if (process.platform !== "darwin" || flags.auth === "sudo" || flags["no-gui"]) {
+    sudoScript(script);
+    return;
+  }
+  const helperPath = path.join(os.tmpdir(), `clawjs-domains-privileged-${process.pid}.sh`);
+  fs.writeFileSync(helperPath, `#!/bin/sh\nset -eu\n${script}\n`, { mode: 0o700 });
+  const result = spawnSync("osascript", [
+    "-e",
+    `do shell script ${appleScriptQuote(`/bin/sh ${shellQuote(helperPath)}`)} with administrator privileges`,
+  ], {
+    encoding: "utf8",
+  });
+  fs.rmSync(helperPath, { force: true });
+  if (result.status !== 0) {
+    const message = (result.stderr || result.stdout || "").trim();
+    throw new CliHandledError("domains_install_failed", message || "Failed to update local .claw domain configuration.");
   }
 }
 
@@ -1195,8 +1382,10 @@ async function runDomainsCli(input: {
   if (command === "install") {
     const plan = domainsInstallPlan(input.flags);
     const plist = buildDomainsPlist(input.flags);
+    const serviceConfig = buildDomainsServiceConfig(input.flags, input.context.cwd);
+    const proxyScript = buildDomainsProxyScript();
     if (dryRun) {
-      if (input.wantsJson) writeJson(input.context.stdout, { ok: true, dryRun: true, action: "install", ...plan, hostsBlock: domainHostsBlock(), plist });
+      if (input.wantsJson) writeJson(input.context.stdout, { ok: true, dryRun: true, action: "install", ...plan, hostsBlock: domainHostsBlock(), plist, serviceConfig });
       else input.context.stdout.write(`install ${plan.hosts.length} hosts and ${plan.serviceLabel}\n`);
       return CLI_EXIT_OK;
     }
@@ -1207,13 +1396,26 @@ async function runDomainsCli(input: {
       fs.writeFileSync(plan.hostsFile, nextHosts);
       fs.mkdirSync(path.dirname(plan.plistFile), { recursive: true });
       fs.writeFileSync(plan.plistFile, plist);
+      fs.mkdirSync(domainsServiceDir(input.flags), { recursive: true });
+      fs.writeFileSync(domainsProxyScriptPath(input.flags), proxyScript);
+      fs.writeFileSync(domainsProxyConfigPath(input.flags), serviceConfig);
     } else {
       const tempHosts = path.join(os.tmpdir(), `clawjs-domains-hosts-${process.pid}`);
       const tempPlist = path.join(os.tmpdir(), `clawjs-domains-${process.pid}.plist`);
+      const tempProxy = path.join(os.tmpdir(), `clawjs-domains-proxy-${process.pid}.mjs`);
+      const tempConfig = path.join(os.tmpdir(), `clawjs-domains-config-${process.pid}.json`);
       fs.writeFileSync(tempHosts, nextHosts);
       fs.writeFileSync(tempPlist, plist);
-      sudoScript([
+      fs.writeFileSync(tempProxy, proxyScript);
+      fs.writeFileSync(tempConfig, serviceConfig);
+      runPrivilegedScript([
         `cp ${shellQuote(tempHosts)} ${shellQuote(plan.hostsFile)}`,
+        `mkdir -p ${shellQuote(domainsServiceDir(input.flags))}`,
+        `cp ${shellQuote(tempProxy)} ${shellQuote(domainsProxyScriptPath(input.flags))}`,
+        `cp ${shellQuote(tempConfig)} ${shellQuote(domainsProxyConfigPath(input.flags))}`,
+        `chown -R root:wheel ${shellQuote(domainsServiceDir(input.flags))}`,
+        `chmod 755 ${shellQuote(domainsServiceDir(input.flags))}`,
+        `chmod 644 ${shellQuote(domainsProxyScriptPath(input.flags))} ${shellQuote(domainsProxyConfigPath(input.flags))}`,
         `cp ${shellQuote(tempPlist)} ${shellQuote(plan.plistFile)}`,
         `chown root:wheel ${shellQuote(plan.plistFile)}`,
         `chmod 644 ${shellQuote(plan.plistFile)}`,
@@ -1221,9 +1423,11 @@ async function runDomainsCli(input: {
         `launchctl bootstrap system ${shellQuote(plan.plistFile)}`,
         `launchctl enable system/${CLAW_DOMAINS_LABEL}`,
         `launchctl kickstart -k system/${CLAW_DOMAINS_LABEL}`,
-      ].join(" && "));
+      ].join("\n"), input.flags);
       fs.rmSync(tempHosts, { force: true });
       fs.rmSync(tempPlist, { force: true });
+      fs.rmSync(tempProxy, { force: true });
+      fs.rmSync(tempConfig, { force: true });
     }
     if (input.wantsJson) writeJson(input.context.stdout, { ok: true, action: "install", ...plan });
     else input.context.stdout.write("installed\n");
@@ -1243,14 +1447,16 @@ async function runDomainsCli(input: {
       fs.mkdirSync(path.dirname(plan.hostsFile), { recursive: true });
       fs.writeFileSync(plan.hostsFile, nextHosts);
       fs.rmSync(plan.plistFile, { force: true });
+      fs.rmSync(domainsServiceDir(input.flags), { force: true, recursive: true });
     } else {
       const tempHosts = path.join(os.tmpdir(), `clawjs-domains-hosts-${process.pid}`);
       fs.writeFileSync(tempHosts, nextHosts);
-      sudoScript([
+      runPrivilegedScript([
         `launchctl bootout system/${CLAW_DOMAINS_LABEL} >/dev/null 2>&1 || true`,
         `cp ${shellQuote(tempHosts)} ${shellQuote(plan.hostsFile)}`,
         `rm -f ${shellQuote(plan.plistFile)}`,
-      ].join(" && "));
+        `rm -rf ${shellQuote(domainsServiceDir(input.flags))}`,
+      ].join("\n"), input.flags);
       fs.rmSync(tempHosts, { force: true });
     }
     if (input.wantsJson) writeJson(input.context.stdout, { ok: true, action: "uninstall", ...plan });

@@ -172,6 +172,7 @@ test("domains cli supports dry-run lifecycle and open prefers .claw when configu
     "--json",
   ])).stdout) as { installed: boolean; hosts: string[] };
   expect(status.installed).toBe(false);
+  expect(status.hosts).toContain("dashboard.claw");
   expect(status.hosts).toContain("memory.claw");
 
   const install = JSON.parse((await runCli(rootDir, [
@@ -180,9 +181,12 @@ test("domains cli supports dry-run lifecycle and open prefers .claw when configu
     "--hosts-file", hostsFile,
     "--plist-file", plistFile,
     "--json",
-  ])).stdout) as { dryRun: boolean; hostsBlock: string };
+  ])).stdout) as { dryRun: boolean; hostsBlock: string; plist: string };
   expect(install.dryRun).toBe(true);
+  expect(install.hostsBlock).toContain("dashboard.claw");
   expect(install.hostsBlock).toContain("storage.claw");
+  expect(install.plist).toContain("/Library/Application Support/ClawJS/domains/proxy.mjs");
+  expect(install.plist).not.toContain(rootDir);
   expect(fs.readFileSync(hostsFile, "utf8")).not.toContain("storage.claw");
 
   fs.writeFileSync(hostsFile, `${install.hostsBlock}\n`);
@@ -247,6 +251,11 @@ test("domains proxy routes .claw hosts, indexes unknown hosts, and auto-starts a
     const unknown = await httpGet(proxyPort, "missing.claw");
     expect(unknown.status).toBe(200);
     expect(unknown.body).toContain("memory.claw");
+
+    const dashboard = await httpGet(proxyPort, "dashboard.claw");
+    expect(dashboard.status).toBe(200);
+    expect(dashboard.body).toContain("Claw domains");
+    expect(dashboard.body).toContain("storage.claw");
 
     const memory = await httpGet(proxyPort, "memory.claw");
     expect(memory.status).toBe(200);
