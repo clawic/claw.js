@@ -142,7 +142,7 @@ const SLIDE_H = 720;
 const PPTX_W = 12192000;
 const PPTX_H = 6858000;
 
-const THEME_STYLES: Record<SlideTheme, {
+type SlideThemeStyle = {
   bg: string;
   fg: string;
   muted: string;
@@ -151,7 +151,9 @@ const THEME_STYLES: Record<SlideTheme, {
   panel: string;
   font: string;
   mono: string;
-}> = {
+};
+
+const THEME_STYLES: Record<SlideTheme, SlideThemeStyle> = {
   editorial: { bg: "#f5f0e8", fg: "#151719", muted: "#6d655d", accent: "#b9412f", accent2: "#244f7a", panel: "#fffaf2", font: "Georgia, 'Times New Roman', serif", mono: "'SFMono-Regular', Consolas, monospace" },
   studio: { bg: "#f8f7f3", fg: "#1d2328", muted: "#65717b", accent: "#0f8b8d", accent2: "#f25f5c", panel: "#ffffff", font: "Inter, Arial, sans-serif", mono: "'SFMono-Regular', Consolas, monospace" },
   midnight: { bg: "#09111f", fg: "#f6f8fb", muted: "#a9b7c8", accent: "#57c7ff", accent2: "#a78bfa", panel: "#111f33", font: "Inter, Arial, sans-serif", mono: "'SFMono-Regular', Consolas, monospace" },
@@ -515,9 +517,14 @@ async function renderDeck(
     outputs.push(outputRecord("pptx", pptxPath));
   }
   if (options.formats.includes("pdf") || options.formats.includes("png")) {
-    const playwright = await import("playwright");
-    const browser = await playwright.chromium.launch({ headless: true });
+    let browser: Awaited<ReturnType<(typeof import("playwright"))["chromium"]["launch"]>> | null = null;
     try {
+      const playwright = await import("playwright");
+      browser = await playwright.chromium.launch({
+        headless: true,
+        chromiumSandbox: false,
+        args: ["--no-sandbox", "--disable-dev-shm-usage"],
+      });
       const page = await browser.newPage({ viewport: { width: SLIDE_W, height: SLIDE_H }, deviceScaleFactor: 1 });
       await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "networkidle" });
       if (options.formats.includes("pdf")) {
@@ -541,8 +548,14 @@ async function renderDeck(
         }
         outputs.push(outputRecord("png", pngDir));
       }
+    } catch (error) {
+      if (!options.formats.includes("pdf") || outputs.some((output) => output.format === "pdf")) throw error;
+      const pdfPath = path.join(options.outputDir, `${deck.id}-${timestamp}.pdf`);
+      fs.writeFileSync(pdfPath, buildFallbackPdf(deck));
+      outputs.push(outputRecord("pdf", pdfPath, { renderer: "node-fallback" }));
+      if (options.formats.includes("png")) throw error;
     } finally {
-      await browser.close();
+      await browser?.close();
     }
   }
   return outputs;
@@ -693,6 +706,121 @@ function buildPptx(deck: SlideDeckManifest): Buffer {
     ...deck.slides.map((_slide, index) => ({ name: `ppt/slides/_rels/slide${index + 1}.xml.rels`, data: slideRelsXml() })),
   ];
   return zipStore(entries.map((entry) => ({ name: entry.name, data: Buffer.from(entry.data, "utf8") })));
+}
+
+function buildFallbackPdf(deck: SlideDeckManifest): Buffer {
+  const theme = THEME_STYLES[deck.theme] ?? THEME_STYLES.editorial;
+  const objects: string[] = [];
+  const pageIds = deck.slides.map((_slide, index) => 4 + index * 2);
+  const contentIds = deck.slides.map((_slide, index) => 5 + index * 2);
+  objects[0] = "<< /Type /Catalog /Pages 2 0 R >>";
+  objects[1] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${deck.slides.length} >>`;
+  objects[2] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
+  deck.slides.forEach((slide, index) => {
+    const content = fallbackPdfPageContent(slide, index, deck, theme);
+    objects[pageIds[index] - 1] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${SLIDE_W} ${SLIDE_H}] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentIds[index]} 0 R >>`;
+    objects[contentIds[index] - 1] = `<< /Length ${Buffer.byteLength(content, "utf8")} >>\nstream\n${content}\nendstream`;
+  });
+  return writePdf(objects);
+}
+
+function fallbackPdfPageContent(slide: SlideManifestSlide, index: number, deck: SlideDeckManifest, theme: SlideThemeStyle): string {
+  const bg = pdfRgb(theme.bg);
+  const fg = pdfRgb(theme.fg);
+  const muted = pdfRgb(theme.muted);
+  const accent = pdfRgb(theme.accent);
+  const lines: string[] = [`q ${bg} rg 0 0 ${SLIDE_W} ${SLIDE_H} re f Q`];
+  let y = 455;
+  const heading = slide.heading ?? slide.title ?? deck.title;
+  lines.push(...pdfTextLines(heading, 64, y, 38, fg, 29));
+  y -= 72;
+  if (slide.subtitle) {
+    lines.push(...pdfTextLines(slide.subtitle, 66, y, 19, muted, 58));
+    y -= 46;
+  }
+  const body = fallbackSlideBody(slide);
+  for (const entry of body) {
+    const prefix = entry.kind === "bullet" ? "- " : "";
+    const color = entry.kind === "metric" ? accent : fg;
+    const size = entry.kind === "metric" ? 25 : 18;
+    lines.push(...pdfTextLines(`${prefix}${entry.text}`, 82, y, size, color, entry.kind === "metric" ? 24 : 70));
+    y -= entry.kind === "metric" ? 46 : 32;
+    if (y < 84) break;
+  }
+  lines.push(...pdfTextLines(slide.layout, 64, 28, 10, muted, 40));
+  lines.push(...pdfTextLines(String(index + 1), SLIDE_W - 92, 28, 10, muted, 8));
+  return lines.join("\n");
+}
+
+function fallbackSlideBody(slide: SlideManifestSlide): Array<{ kind: "text" | "bullet" | "metric"; text: string }> {
+  const entries: Array<{ kind: "text" | "bullet" | "metric"; text: string }> = [];
+  if (slide.body) entries.push({ kind: "text", text: slide.body });
+  if (slide.left) entries.push({ kind: "text", text: slide.left });
+  if (slide.right) entries.push({ kind: "text", text: slide.right });
+  if (slide.quote) entries.push({ kind: "text", text: slide.quote });
+  for (const bullet of slide.bullets ?? []) entries.push({ kind: "bullet", text: bullet });
+  for (const step of slide.steps ?? []) entries.push({ kind: "bullet", text: step });
+  for (const metric of slide.metrics ?? []) entries.push({ kind: "metric", text: `${metric.label}: ${metric.value}${metric.detail ? ` - ${metric.detail}` : ""}` });
+  for (const row of slide.rows ?? []) entries.push({ kind: "text", text: row.join(" | ") });
+  if (slide.image?.caption) entries.push({ kind: "text", text: slide.image.caption });
+  return entries;
+}
+
+function pdfTextLines(text: string, x: number, y: number, size: number, color: string, width: number): string[] {
+  return wrapPdfText(text, width).map((line, index) => `BT /F1 ${size} Tf ${color} rg ${x} ${y - index * Math.ceil(size * 1.32)} Td (${escapePdfText(line)}) Tj ET`);
+}
+
+function wrapPdfText(text: string, width: number): string[] {
+  const words = text.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > width && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = next;
+    }
+  }
+  if (current) lines.push(current);
+  return lines.slice(0, 8);
+}
+
+function pdfRgb(hex: string): string {
+  const normalized = hex.replace("#", "");
+  const r = Number.parseInt(normalized.slice(0, 2), 16) / 255;
+  const g = Number.parseInt(normalized.slice(2, 4), 16) / 255;
+  const b = Number.parseInt(normalized.slice(4, 6), 16) / 255;
+  return `${r.toFixed(3)} ${g.toFixed(3)} ${b.toFixed(3)}`;
+}
+
+function escapePdfText(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/[^\x20-\x7e]/g, "");
+}
+
+function writePdf(objects: string[]): Buffer {
+  const chunks: string[] = ["%PDF-1.4\n"];
+  const offsets: number[] = [0];
+  let offset = Buffer.byteLength(chunks[0], "utf8");
+  objects.forEach((object, index) => {
+    offsets[index + 1] = offset;
+    const chunk = `${index + 1} 0 obj\n${object}\nendobj\n`;
+    chunks.push(chunk);
+    offset += Buffer.byteLength(chunk, "utf8");
+  });
+  const xrefOffset = offset;
+  const xref = [
+    `xref\n0 ${objects.length + 1}`,
+    "0000000000 65535 f ",
+    ...offsets.slice(1).map((entry) => `${String(entry).padStart(10, "0")} 00000 n `),
+    `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>`,
+    "startxref",
+    String(xrefOffset),
+    "%%EOF",
+  ].join("\n");
+  chunks.push(xref);
+  return Buffer.from(chunks.join(""), "utf8");
 }
 
 function pptxSlideXml(slide: SlideManifestSlide, index: number, deck: SlideDeckManifest): string {
