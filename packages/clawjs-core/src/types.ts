@@ -69,6 +69,7 @@ export type FileMutationMode =
 
 export type KnownRuntimeAdapterId =
   | "demo"
+  | "claw"
   | "openclaw"
   | "codex"
   | "zeroclaw"
@@ -1678,6 +1679,7 @@ export interface ProviderAuthSummary {
   hasEnvKey: boolean;
   authType: "oauth" | "token" | "api_key" | "env" | null;
   maskedCredential?: string | null;
+  source?: "vault" | "env" | "missing" | "disabled" | "runtime" | "config" | "store";
 }
 
 export interface AuthProfileSummary {
@@ -1751,7 +1753,7 @@ export interface AuthState {
 export interface SessionTransport {
   kind: "cli" | "gateway" | "hybrid";
   streaming: boolean;
-  gatewayKind?: "openai-chat-completions" | "openai-responses" | "openclaw-gateway" | "codex-app-server" | "sse" | "ws";
+  gatewayKind?: "openai-chat-completions" | "openai-responses" | "openclaw-gateway" | "codex-app-server" | "claw-runtime" | "sse" | "ws";
   primaryTransport?: "cli" | "gateway";
   fallbackTransport?: "cli" | "gateway" | "none";
   sessionPersistence?: "ephemeral" | "workspace" | "runtime" | "agent";
@@ -3350,6 +3352,19 @@ export interface StreamChunk {
   messageId?: string;
   delta: string;
   done: boolean;
+  reasoningDelta?: string;
+  toolCalls?: Array<{
+    id?: string;
+    index?: number;
+    type?: string;
+    name?: string;
+    arguments?: string;
+  }>;
+  usage?: {
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+  };
 }
 
 export interface ProgressEvent {

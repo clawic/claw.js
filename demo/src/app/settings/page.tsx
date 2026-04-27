@@ -1856,6 +1856,7 @@ function SettingsContent() {
                 const adapterKey = adapter.id as keyof typeof adapterMessages;
                 const meta = (adapterMessages[adapterKey] ?? { name: adapter.runtimeName, hint: "" }) as { name: string; hint: string };
                 const isOpenClaw = adapter.id === "openclaw";
+                const isClaw = adapter.id === "claw";
                 const isCodex = adapter.id === "codex";
                 const isInstalled = isOpenClaw ? !!oc?.cliAvailable : adapter.cliAvailable;
                 const isSelected = activeAdapterId === adapter.id;
@@ -1927,6 +1928,8 @@ function SettingsContent() {
                         }`}>
                           {isOpenClaw
                             ? <svg width="17" height="17" viewBox="0 0 120 120" fill="currentColor"><path d="M60 10C30 10 15 35 15 55C15 75 30 95 45 100L45 110L55 110L55 100C55 100 60 102 65 100L65 110L75 110L75 100C90 95 105 75 105 55C105 35 90 10 60 10Z"/><path d="M20 45C5 40 0 50 5 60C10 70 20 65 25 55C28 48 25 45 20 45Z"/><path d="M100 45C115 40 120 50 115 60C110 70 100 65 95 55C92 48 95 45 100 45Z"/><path d="M45 15Q35 5 30 8" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/><path d="M75 15Q85 5 90 8" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/><circle cx="45" cy="35" r="6" fill="currentColor" opacity="0.3"/><circle cx="75" cy="35" r="6" fill="currentColor" opacity="0.3"/></svg>
+                            : isClaw
+                              ? <Swords className="w-[17px] h-[17px]" strokeWidth={2} />
                             : isCodex
                               ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 8a4 4 0 0 1 8 0v8a4 4 0 0 1-8 0z"/><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4 12h4"/><path d="M16 12h4"/></svg>
                             : <img src={`/runtimes/${adapter.id}.png`} alt={meta.name} width={17} height={17} className="rounded-sm grayscale" />

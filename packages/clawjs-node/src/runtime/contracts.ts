@@ -112,6 +112,14 @@ export interface RuntimeAdapterOptions {
   binaryPath?: string;
   agentId?: string;
   agentDir?: string;
+  provider?: string;
+  model?: string;
+  wire?: "chat_completions" | "responses";
+  baseUrl?: string;
+  secretRef?: string;
+  envKey?: string;
+  headers?: Record<string, string>;
+  permissionMode?: "read-only" | "workspace-write" | "danger-full-access";
   homeDir?: string;
   configPath?: string;
   workspacePath?: string;
@@ -194,7 +202,7 @@ export interface SessionCliInvocation {
 }
 
 export interface SessionGatewayDescriptor {
-  kind: "openai-chat-completions" | "openai-responses" | "openclaw-gateway" | "codex-app-server";
+  kind: "openai-chat-completions" | "openai-responses" | "openclaw-gateway" | "codex-app-server" | "claw-runtime";
   url: string;
   token?: string;
   port?: number;
@@ -205,6 +213,12 @@ export interface SessionGatewayDescriptor {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
   model?: string;
+  provider?: string;
+  wire?: "chat_completions" | "responses";
+  headers?: Record<string, string>;
+  secretRef?: string;
+  envKey?: string;
+  permissionMode?: "read-only" | "workspace-write" | "danger-full-access";
 }
 
 export interface RuntimeSessionAdapter {

@@ -12,6 +12,7 @@ import {
 } from "./prompt.ts";
 import { DEFAULT_SESSION_TITLE, suggestSessionTitle } from "./transcript.ts";
 import { buildOpenClawCommand } from "../runtime/openclaw-command.ts";
+import { streamClawRuntimeGatewayChunks } from "../runtime/claw-runtime.ts";
 
 export interface StreamSessionInput {
   sessionId: string;
@@ -695,6 +696,9 @@ async function* streamGatewayChunks(
   switch (gatewayConfig.kind) {
     case "codex-app-server":
       yield* streamCodexAppServerChunks(input, gatewayConfig);
+      return;
+    case "claw-runtime":
+      yield* streamClawRuntimeGatewayChunks(input, fetchImpl, gatewayConfig, dependencies);
       return;
     case "openai-chat-completions":
       yield* streamChatCompletionsChunks(input, fetchImpl, gatewayConfig);
