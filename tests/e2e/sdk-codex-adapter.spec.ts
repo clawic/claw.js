@@ -138,6 +138,7 @@ process.stdout.write(JSON.stringify({
   expect(payload.execText).toBe("exec fallback reply");
   expect(payload.commands.some((command) => command.args[0] === "app-server")).toBeTruthy();
   expect(payload.commands.some((command) => command.args[0] === "exec")).toBeTruthy();
+  expect(payload.commands.some((command) => command.args.includes("--sandbox") && command.args.includes("workspace-write"))).toBeTruthy();
 
   await resetDemoState(request, "seeded");
   await page.goto("/settings?tab=openclaw");

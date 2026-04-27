@@ -523,7 +523,7 @@ export const codexAdapter: RuntimeAdapter = {
       "--json",
       "--skip-git-repo-check",
       "--sandbox",
-      "read-only",
+      "workspace-write",
       ...(options.workspacePath ? ["--cd", options.workspacePath] : []),
     ], options);
     const defaultModel = readCodexDefaultModel(options) ?? "gpt-5.4";
