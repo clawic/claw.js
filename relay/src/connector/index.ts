@@ -1,4 +1,6 @@
 import { setTimeout as delay } from "node:timers/promises";
+import fs from "node:fs";
+import path from "node:path";
 
 import WebSocket from "ws";
 
@@ -29,6 +31,9 @@ function parseArgs(argv: string[]): RelayConnectorOptions {
     ?? process.env.RELAY_RUNTIME_BINARY_PATH
     ?? process.env.CLAWJS_CODEX_PATH
     ?? process.env.CLAWJS_OPENCLAW_PATH;
+  const credentialPath = values.get("credential-path")
+    ?? process.env.RELAY_CONNECTOR_CREDENTIAL_PATH
+    ?? path.join(workspaceRoot, ".relay", "connector-credential.json");
 
   return {
     relayUrl,
@@ -38,7 +43,40 @@ function parseArgs(argv: string[]): RelayConnectorOptions {
     workspaceRoot,
     runtimeAdapter,
     runtimeBinaryPath,
+    credentialPath,
   };
+}
+
+function readStoredCredential(options: RelayConnectorOptions): EnrollmentResult | null {
+  if (!options.credentialPath) return null;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(options.credentialPath, "utf8")) as Partial<EnrollmentResult>;
+    if (
+      typeof parsed.connectorToken === "string"
+      && typeof parsed.tenantId === "string"
+      && typeof parsed.connectorId === "string"
+      && typeof parsed.agentId === "string"
+    ) {
+      return {
+        connectorToken: parsed.connectorToken,
+        tenantId: parsed.tenantId,
+        connectorId: parsed.connectorId,
+        agentId: parsed.agentId,
+      };
+    }
+  } catch {}
+  return null;
+}
+
+function writeStoredCredential(options: RelayConnectorOptions, credential: EnrollmentResult): void {
+  if (!options.credentialPath) return;
+  fs.mkdirSync(path.dirname(options.credentialPath), { recursive: true });
+  fs.writeFileSync(options.credentialPath, `${JSON.stringify({
+    tenantId: credential.tenantId,
+    connectorId: credential.connectorId,
+    agentId: credential.agentId,
+    connectorToken: credential.connectorToken,
+  }, null, 2)}\n`, { mode: 0o600 });
 }
 
 async function enroll(options: RelayConnectorOptions): Promise<EnrollmentResult> {
@@ -105,15 +143,23 @@ async function pollDevicePairing(options: RelayConnectorOptions, deviceCode: str
 }
 
 async function bootstrapConnector(options: RelayConnectorOptions): Promise<EnrollmentResult> {
+  const stored = readStoredCredential(options);
+  if (stored) {
+    return stored;
+  }
   if (options.enrollmentToken) {
-    return await enroll(options);
+    const credential = await enroll(options);
+    writeStoredCredential(options, credential);
+    return credential;
   }
   const pairing = await startDevicePairing(options);
   console.error(`[relay-connector] approve connector ${options.connectorId}`);
   console.error(`[relay-connector] user code: ${pairing.userCode}`);
   console.error(`[relay-connector] verification uri: ${pairing.verificationUriComplete}`);
   console.error(`[relay-connector] qr payload: ${pairing.qrPayload}`);
-  return await pollDevicePairing(options, pairing.deviceCode, pairing.intervalSec || 5);
+  const credential = await pollDevicePairing(options, pairing.deviceCode, pairing.intervalSec || 5);
+  writeStoredCredential(options, credential);
+  return credential;
 }
 
 function toWebSocketUrl(relayUrl: string): string {

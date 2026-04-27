@@ -574,6 +574,9 @@ Connector flags or env vars:
 | `--runtime-adapter` | `RELAY_RUNTIME_ADAPTER` | `openclaw` |
 | `--runtime-binary-path` | `RELAY_RUNTIME_BINARY_PATH` | auto-detected |
 | `--codex-path` | `CLAWJS_CODEX_PATH` | auto-detected |
+| `--credential-path` | `RELAY_CONNECTOR_CREDENTIAL_PATH` | `<workspace-root>/.relay/connector-credential.json` |
+
+The connector stores the approved connector credential at `--credential-path` with file mode `0600`, so a launchd/system service can reconnect after restart without reusing one-time enrollment tokens or repeating device pairing.
 
 When the runtime adapter is `openclaw`, the connector also passes through these optional host-local paths:
 

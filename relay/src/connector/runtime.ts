@@ -18,6 +18,7 @@ export interface RelayConnectorOptions {
   workspaceRoot: string;
   runtimeAdapter: string;
   runtimeBinaryPath?: string;
+  credentialPath?: string;
 }
 
 export interface RelayConnectorRuntimeSummary {
