@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import fs from "node:fs";
+import path from "node:path";
 import { startServer } from "./server";
 import { UserService } from "./service";
 
@@ -54,11 +56,17 @@ function printHelp(): void {
 }
 
 function workspaceFromFlags(flags: Record<string, string>): string {
-  return (
-    flags.workspace ||
-    process.env.CLAWJS_OPEN_WORKSPACE ||
-    process.cwd()
-  );
+  if (flags.workspace) return path.resolve(flags.workspace);
+  if (process.env.CLAWJS_OPEN_WORKSPACE) return process.env.CLAWJS_OPEN_WORKSPACE;
+  const markers = [".memory", ".clawjs", "relay.sqlite", "AGENTS.md", ".data"];
+  let dir = process.cwd();
+  for (let i = 0; i < 6; i += 1) {
+    if (markers.some((m) => fs.existsSync(path.join(dir, m)))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return process.cwd();
 }
 
 const argv = process.argv.slice(2);
