@@ -1050,7 +1050,6 @@ The docs check script validates that every current export from
     TelegramForumReadiness
     TelegramForumTopic
     TelegramForumTopicIconSticker
-    TelegramForumTopicInput
     TelegramInviteLinkOptions
     TelegramMemberSummary
     telegramMemberSummarySchema
