@@ -27,7 +27,7 @@ import type { ClawInstance, ImageOperation, ImageProvenance, ImageType, Telegram
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
 import { semanticPlanSchema } from "@clawjs/core";
-import type { LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserEntityType, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
+import type { JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserEntityType, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
 import { runEmbeddedDatabaseCli } from "./database-advanced.ts";
 import { runMagicDbCli } from "./database-magic.ts";
 import { runMemoryCli } from "./memory-local.ts";
@@ -230,6 +230,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} reminders after`,
     `  ${binName} watch list|get|enable|disable|delete`,
     `  ${binName} memory save|list|get|update|delete|search|context|status|capabilities`,
+    `  ${binName} judgment prepare|record|list|show|link|archive`,
     `  ${binName} learning capture|add|list|show|evidence add|promote|archive`,
     `  ${binName} rules status|list|get|propose|approve|archive|scopes|compile`,
     `  ${binName} areas|tasks|goals|projects|milestones|activity ...`,
@@ -3892,12 +3893,135 @@ const LEARNING_KINDS = new Set(["preference", "observation", "correction", "work
 const LEARNING_STATUSES = new Set(["active", "archived", "promoted"]);
 const LEARNING_SENTIMENTS = new Set(["positive", "negative", "neutral"]);
 const LEARNING_PROMOTION_TARGETS = new Set(["rule", "user", "soul", "skill", "memory"]);
+const JUDGMENT_STATUSES = new Set(["prepared", "decided", "superseded", "archived"]);
+const JUDGMENT_IMPACTS = new Set(["low", "medium", "high", "critical"]);
 
 function requireOneOf<T extends string>(value: string | undefined, values: Set<string>, label: string): T {
   if (!value || !values.has(value)) {
     throw new CliHandledError("usage_error", `${label} must be one of: ${[...values].join(", ")}`, CLI_EXIT_USAGE);
   }
   return value as T;
+}
+
+async function runJudgmentCli(input: {
+  argv: string[];
+  positionals: string[];
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+  workspaceRoot: string;
+  appId: string;
+  workspaceId: string;
+  agentId: string;
+  runtimeAdapterId: RuntimeAdapterId;
+}): Promise<number> {
+  const { argv, positionals, flags, context, wantsJson, binName, workspaceRoot, appId, workspaceId, agentId, runtimeAdapterId } = input;
+  const [, command, subcommand] = positionals;
+  const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+
+  try {
+    if (command === "prepare") {
+      const question = flags.question || flags.prompt || joinedPositionals(positionals, 2);
+      const domain = flags.domain;
+      if (!question || !domain) {
+        context.stderr.write(`Usage: ${binName} judgment prepare --question TEXT --domain DOMAIN [--impact low|medium|high|critical] [--option VALUE ...]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const judgment = claw.judgment.prepare({
+        question,
+        domain,
+        impact: flags.impact ? requireOneOf<JudgmentImpact>(flags.impact, JUDGMENT_IMPACTS, "impact") : undefined,
+        options: collectFlagValues(argv, "option"),
+        sessionId: flags.session || flags["session-id"],
+      });
+      if (wantsJson) writeJson(context.stdout, judgment);
+      else context.stdout.write(`${judgment.id} ${judgment.recommendation} ${judgment.recommendedOption ?? ""} confidence=${judgment.confidence.toFixed(2)}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "record") {
+      const id = subcommand || flags.id;
+      const chosen = flags.chosen || flags.option;
+      const rationale = flags.rationale || flags.reason;
+      if (!id || !chosen || !rationale) {
+        context.stderr.write(`Usage: ${binName} judgment record <judgment-id> --chosen VALUE --rationale TEXT [--confidence 0.8]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const judgment = claw.judgment.record(id, {
+        chosen,
+        rationale,
+        ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
+        outcome: flags.outcome,
+      });
+      if (wantsJson) writeJson(context.stdout, judgment);
+      else context.stdout.write(`${judgment.id} ${judgment.status} ${judgment.chosenOption ?? ""}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "list") {
+      const judgments = claw.judgment.list({
+        ...(flags.status ? { status: requireOneOf<JudgmentStatus>(flags.status, JUDGMENT_STATUSES, "status") } : {}),
+        ...(flags.domain ? { domain: flags.domain } : {}),
+      });
+      if (wantsJson) writeJson(context.stdout, { judgments });
+      else context.stdout.write(`${judgments.map((judgment) => `${judgment.status} ${judgment.confidence.toFixed(2)} ${judgment.id} ${judgment.question}`).join("\n")}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "show" || command === "inspect") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write(`Usage: ${binName} judgment show <judgment-id> [--json]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const judgment = claw.judgment.show(id);
+      if (!judgment) throw new CliHandledError("not_found", `Judgment not found: ${id}`, CLI_EXIT_FAILURE);
+      if (wantsJson) writeJson(context.stdout, judgment);
+      else context.stdout.write(`${judgment.status} ${judgment.recommendation} ${judgment.id}\n${judgment.question}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "link") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write(`Usage: ${binName} judgment link <judgment-id> --learning ID|--rule ID|--session ID|--decision ID\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const judgment = claw.judgment.link(id, {
+        learning: flags.learning,
+        rule: flags.rule,
+        session: flags.session || flags["session-id"],
+        decision: flags.decision || flags["decision-id"],
+        artifact: flags.artifact || flags["artifact-id"],
+        plan: flags.plan || flags["plan-id"],
+        task: flags.task || flags["task-id"],
+      });
+      if (wantsJson) writeJson(context.stdout, judgment);
+      else context.stdout.write(`${judgment.id}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "archive") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write(`Usage: ${binName} judgment archive <judgment-id> [--reason TEXT]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const judgment = claw.judgment.archive(id, flags.reason);
+      if (wantsJson) writeJson(context.stdout, judgment);
+      else context.stdout.write(`archived ${judgment.id}\n`);
+      return CLI_EXIT_OK;
+    }
+  } catch (error) {
+    const handled = cliErrorFromUnknown(error);
+    if (wantsJson) writeCliError(context.stdout, handled);
+    else context.stderr.write(`${handled.message}\n`);
+    return handled.exitCode;
+  }
+
+  context.stderr.write(`Usage: ${binName} judgment prepare|record|list|show|link|archive\n`);
+  return CLI_EXIT_USAGE;
 }
 
 async function runLearningCli(input: {
@@ -9258,6 +9382,22 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     if (wantsJson) writeJson(context.stdout, result);
     else context.stdout.write(`reindexed=${result.reindexed} embeddings=${result.embeddings}\n`);
     return CLI_EXIT_OK;
+  }
+
+  if (group === "judgment") {
+    return await runJudgmentCli({
+      argv,
+      positionals,
+      flags,
+      context,
+      wantsJson,
+      binName,
+      workspaceRoot,
+      appId,
+      workspaceId,
+      agentId,
+      runtimeAdapterId,
+    });
   }
 
   if (group === "learning") {

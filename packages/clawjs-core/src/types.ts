@@ -2152,6 +2152,92 @@ export interface LearningPromotionResult extends LearningPromotionPreview {
   result?: Record<string, unknown>;
 }
 
+export type JudgmentStatus = "prepared" | "decided" | "superseded" | "archived";
+export type JudgmentRecommendation = "act" | "ask_user" | "delegate" | "block";
+export type JudgmentImpact = "low" | "medium" | "high" | "critical";
+
+export interface JudgmentContextRefs {
+  rules: string[];
+  learnings: string[];
+  user: string[];
+  soul: string[];
+  sessions: string[];
+  decisions: string[];
+  artifacts: string[];
+  plans: string[];
+  tasks: string[];
+}
+
+export interface JudgmentOptionScore {
+  option: string;
+  score: number;
+  evidence: string[];
+}
+
+export interface JudgmentRecord {
+  id: string;
+  question: string;
+  domain: string;
+  impact: JudgmentImpact;
+  status: JudgmentStatus;
+  options: string[];
+  recommendation: JudgmentRecommendation;
+  recommendedOption?: string;
+  chosenOption?: string;
+  confidence: number;
+  rationale: string;
+  outcome?: string;
+  context: JudgmentContextRefs;
+  optionScores: JudgmentOptionScore[];
+  agentId?: string;
+  workspaceId?: string;
+  createdAt: string;
+  updatedAt: string;
+  decidedAt?: string;
+  archivedAt?: string;
+  archiveReason?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface JudgmentState {
+  schemaVersion: 1;
+  judgments: JudgmentRecord[];
+  updatedAt: string;
+}
+
+export interface JudgmentPrepareInput {
+  question: string;
+  domain: string;
+  impact?: JudgmentImpact;
+  options?: string[];
+  sessionId?: string;
+  agentId?: string;
+  workspaceId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface JudgmentRecordInput {
+  chosen: string;
+  rationale: string;
+  confidence?: number;
+  outcome?: string;
+}
+
+export interface JudgmentListInput {
+  status?: JudgmentStatus;
+  domain?: string;
+}
+
+export interface JudgmentLinkInput {
+  learning?: string;
+  rule?: string;
+  session?: string;
+  decision?: string;
+  artifact?: string;
+  plan?: string;
+  task?: string;
+}
+
 export type SoulModuleKey =
   | "identity"
   | "mission"

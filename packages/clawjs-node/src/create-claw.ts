@@ -78,6 +78,11 @@ import type {
   LibraryAssignment,
   LibraryResolveResult,
   LibrarySyncResult,
+  JudgmentImpact,
+  JudgmentLinkInput,
+  JudgmentListInput,
+  JudgmentRecord,
+  JudgmentRecordInput,
   LearningAddInput,
   LearningEvidenceInput,
   LearningListInput,
@@ -181,6 +186,7 @@ import { watchProviderStatus, watchRuntimeStatus, type PollWatchOptions } from "
 import { SessionStore } from "./sessions/store.ts";
 import { createSoulStore } from "./soul/store.ts";
 import { createUserStore } from "./user/store.ts";
+import { createJudgmentStore } from "./judgment/store.ts";
 import { createLearningStore } from "./learning/store.ts";
 import { ChannelRunStore } from "./channel-runs/index.ts";
 import type { ChannelRunOptions, ChannelRunTarget, ChannelRunMessage } from "./channel-runs/index.ts";
@@ -927,6 +933,14 @@ export interface ClawInstance {
     promote: (id: string, input: { to: LearningPromotionTarget; dryRun?: boolean; apply?: boolean }) => LearningPromotionResult;
     archive: (id: string, reason?: string) => LearningRecord;
   };
+  judgment: {
+    prepare: (input: { question: string; domain: string; impact?: JudgmentImpact; options?: string[]; sessionId?: string; metadata?: Record<string, unknown> }) => JudgmentRecord;
+    record: (id: string, input: JudgmentRecordInput) => JudgmentRecord;
+    list: (input?: JudgmentListInput) => JudgmentRecord[];
+    show: (id: string) => JudgmentRecord | null;
+    link: (id: string, input: JudgmentLinkInput) => JudgmentRecord;
+    archive: (id: string, reason?: string) => JudgmentRecord;
+  };
   rules: {
     status: () => ReturnType<ReturnType<typeof createLocalRulesStore>["status"]>;
     list: (options?: { status?: RuleRecord["status"]; scopeId?: string }) => RuleRecord[];
@@ -1543,6 +1557,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   const logicalAgentId = options.workspace.logicalAgentId ?? options.workspace.agentId;
   const runtimeAgentId = options.workspace.runtimeAgentId ?? logicalAgentId;
   const sessionStore = new SessionStore(workspaceDir, { filesystem });
+  const judgmentStore = createJudgmentStore({ workspaceDir, filesystem });
   const learningStore = createLearningStore({ workspaceDir, filesystem });
   const channelRunStore = new ChannelRunStore(workspaceDir, sessionStore, { filesystem });
   const dataStore = createWorkspaceDataStore(workspaceDir, filesystem);
@@ -5502,6 +5517,79 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         const memory = await adapter.searchMemory(query, processHost, resolvedRuntimeOptions);
         persistMemoryState(memory);
         return memory;
+      },
+    },
+    judgment: {
+      prepare: (input) => {
+        const rules = rulesStore.compile({
+          prompt: input.question,
+          domain: input.domain,
+          agent: logicalAgentId,
+        });
+        const activeLearnings = learningStore.list({ status: "active" });
+        const session = input.sessionId ? sessionStore.getSession(input.sessionId) : null;
+        const judgment = judgmentStore.prepare({
+          ...input,
+          agentId: logicalAgentId,
+          workspaceId: options.workspace.workspaceId,
+        }, {
+          rules: rules.included,
+          learnings: activeLearnings,
+          user: userStore.resolve({ agentId: logicalAgentId }),
+          soul: soulStore.resolve({ agentId: logicalAgentId }),
+          session,
+        });
+        appendAuditEvent("judgment.prepared", "judgment", {
+          judgmentId: judgment.id,
+          recommendation: judgment.recommendation,
+          confidence: judgment.confidence,
+          domain: judgment.domain,
+        });
+        eventBus.emit("judgment.prepared", {
+          judgmentId: judgment.id,
+          recommendation: judgment.recommendation,
+          confidence: judgment.confidence,
+          domain: judgment.domain,
+        });
+        return judgment;
+      },
+      record: (id, input) => {
+        const judgment = judgmentStore.record(id, input);
+        appendAuditEvent("judgment.decided", "judgment", {
+          judgmentId: judgment.id,
+          chosenOption: judgment.chosenOption,
+          confidence: judgment.confidence,
+        });
+        eventBus.emit("judgment.decided", {
+          judgmentId: judgment.id,
+          chosenOption: judgment.chosenOption,
+          confidence: judgment.confidence,
+        });
+        return judgment;
+      },
+      list: (input = {}) => judgmentStore.list(input),
+      show: (id) => judgmentStore.get(id),
+      link: (id, input) => {
+        const judgment = judgmentStore.link(id, input);
+        appendAuditEvent("judgment.linked", "judgment", {
+          judgmentId: judgment.id,
+        });
+        eventBus.emit("judgment.linked", {
+          judgmentId: judgment.id,
+        });
+        return judgment;
+      },
+      archive: (id, reason) => {
+        const judgment = judgmentStore.archive(id, reason);
+        appendAuditEvent("judgment.archived", "judgment", {
+          judgmentId: judgment.id,
+          reason,
+        });
+        eventBus.emit("judgment.archived", {
+          judgmentId: judgment.id,
+          reason,
+        });
+        return judgment;
       },
     },
     learning: {

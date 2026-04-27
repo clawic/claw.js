@@ -375,6 +375,59 @@ export const learningStateSchema = z.object({
   updatedAt: z.string().min(1),
 });
 
+export const judgmentStatusSchema = z.enum(["prepared", "decided", "superseded", "archived"]);
+export const judgmentRecommendationSchema = z.enum(["act", "ask_user", "delegate", "block"]);
+export const judgmentImpactSchema = z.enum(["low", "medium", "high", "critical"]);
+
+export const judgmentContextRefsSchema = z.object({
+  rules: z.array(z.string().min(1)).default([]),
+  learnings: z.array(z.string().min(1)).default([]),
+  user: z.array(z.string().min(1)).default([]),
+  soul: z.array(z.string().min(1)).default([]),
+  sessions: z.array(z.string().min(1)).default([]),
+  decisions: z.array(z.string().min(1)).default([]),
+  artifacts: z.array(z.string().min(1)).default([]),
+  plans: z.array(z.string().min(1)).default([]),
+  tasks: z.array(z.string().min(1)).default([]),
+});
+
+export const judgmentOptionScoreSchema = z.object({
+  option: z.string().min(1),
+  score: z.number().min(0).max(1),
+  evidence: z.array(z.string().min(1)).default([]),
+});
+
+export const judgmentRecordSchema = z.object({
+  id: z.string().min(1),
+  question: z.string().min(1),
+  domain: z.string().min(1),
+  impact: judgmentImpactSchema,
+  status: judgmentStatusSchema,
+  options: z.array(z.string().min(1)),
+  recommendation: judgmentRecommendationSchema,
+  recommendedOption: z.string().min(1).optional(),
+  chosenOption: z.string().min(1).optional(),
+  confidence: z.number().min(0).max(1),
+  rationale: z.string().min(1),
+  outcome: z.string().min(1).optional(),
+  context: judgmentContextRefsSchema,
+  optionScores: z.array(judgmentOptionScoreSchema),
+  agentId: z.string().min(1).optional(),
+  workspaceId: z.string().min(1).optional(),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+  decidedAt: z.string().min(1).optional(),
+  archivedAt: z.string().min(1).optional(),
+  archiveReason: z.string().min(1).optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+export const judgmentStateSchema = z.object({
+  schemaVersion: z.literal(1),
+  judgments: z.array(judgmentRecordSchema),
+  updatedAt: z.string().min(1),
+});
+
 export const soulSliderValueSchema = z.enum(["very_low", "low", "medium", "high", "very_high"]);
 export const soulModuleModeSchema = z.enum(["disabled", "normal", "strong"]);
 const soulModuleBaseSchema = z.object({
