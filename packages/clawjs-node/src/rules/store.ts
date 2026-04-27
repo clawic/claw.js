@@ -15,6 +15,7 @@ import {
 } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
+import { BUILTIN_CLAWJS_RULE_SCOPES, BUILTIN_CLAWJS_RULES, isBuiltinClawJSRule } from "./builtin.ts";
 
 export const RULES_STATE_FILE = "rules.json";
 
@@ -135,6 +136,14 @@ function renderPrompt(matches: RulesCompileMatch[]): string {
   ].join("\n");
 }
 
+function mergeById<T extends { id: string }>(builtins: T[], locals: T[]): T[] {
+  const localIds = new Set(locals.map((entry) => entry.id));
+  return [
+    ...builtins.filter((entry) => !localIds.has(entry.id)),
+    ...locals,
+  ];
+}
+
 export class LocalRulesStore {
   readonly rootDir: string;
   private readonly filesystem: NodeFileSystemHost;
@@ -163,6 +172,16 @@ export class LocalRulesStore {
     };
   }
 
+  readEffectiveState(): RulesState {
+    const local = this.readState();
+    return {
+      schemaVersion: 1,
+      scopes: mergeById(BUILTIN_CLAWJS_RULE_SCOPES, local.scopes),
+      rules: mergeById(BUILTIN_CLAWJS_RULES, local.rules),
+      updatedAt: local.updatedAt,
+    };
+  }
+
   writeState(state: RulesState): RulesState {
     const next: RulesState = {
       schemaVersion: 1,
@@ -178,7 +197,10 @@ export class LocalRulesStore {
   }
 
   status() {
-    const state = this.readState();
+    const local = this.readState();
+    const state = this.readEffectiveState();
+    const builtinRules = state.rules.filter(isBuiltinClawJSRule);
+    const localRules = local.rules;
     return {
       rootDir: this.rootDir,
       scopes: state.scopes.length,
@@ -186,23 +208,25 @@ export class LocalRulesStore {
       pending: state.rules.filter((rule) => rule.status === "pending").length,
       active: state.rules.filter((rule) => rule.status === "active").length,
       archived: state.rules.filter((rule) => rule.status === "archived").length,
+      builtin: builtinRules.length,
+      local: localRules.length,
       updatedAt: state.updatedAt,
     };
   }
 
   list(options: { status?: RuleRecord["status"]; scopeId?: string } = {}): RuleRecord[] {
-    return this.readState().rules
+    return this.readEffectiveState().rules
       .filter((rule) => !options.status || rule.status === options.status)
       .filter((rule) => !options.scopeId || rule.scopeId === options.scopeId);
   }
 
   scopes(): RuleScope[] {
-    return this.readState().scopes;
+    return this.readEffectiveState().scopes;
   }
 
   get(id: string): RuleRecord | null {
     const ruleId = normalizeRuleId(id);
-    return this.readState().rules.find((rule) => rule.id === ruleId) ?? null;
+    return this.readEffectiveState().rules.find((rule) => rule.id === ruleId) ?? null;
   }
 
   upsertScope(input: RuleScopeInput): RuleScope {
@@ -275,7 +299,7 @@ export class LocalRulesStore {
   }
 
   compile(input: RulesCompileInput): RulesCompileResult {
-    const state = this.readState();
+    const state = this.readEffectiveState();
     const prompt = normalizeText(input.prompt);
     const scopesById = new Map(state.scopes.map((scope) => [scope.id, scope]));
     const omitted: RulesCompileResult["omitted"] = [];
@@ -322,6 +346,7 @@ export class LocalRulesStore {
       const sorted = [...entries].sort((left, right) =>
         right.specificity - left.specificity
         || left.rule.priority - right.rule.priority
+        || Number(isBuiltinClawJSRule(left.rule)) - Number(isBuiltinClawJSRule(right.rule))
         || left.rule.updatedAt.localeCompare(right.rule.updatedAt)
         || left.rule.id.localeCompare(right.rule.id));
       const winner = sorted[0]!;

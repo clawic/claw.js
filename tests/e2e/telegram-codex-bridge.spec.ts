@@ -427,6 +427,9 @@ test("telegram codex bridge injects default and assigned skill capsules in order
   expect(sendActions(result.actions)[0]).toMatchObject({ type: "send_message", targetId: "501", text: "codex reply" });
 
   const payloadText = fs.readFileSync(path.join(tempRoot, "codex-payloads.jsonl"), "utf8");
+  expect(payloadText).toContain("Applicable Rules");
+  expect(payloadText).toContain("ClawJS operating layer");
+  expect(payloadText).toContain("Telegram Codex bridge");
   const defaultIndex = payloadText.indexOf("Use ClawJS as the operating layer");
   const jsonIndex = payloadText.indexOf("JSON capsule wins over frontmatter.");
   const frontmatterIndex = payloadText.indexOf("Frontmatter capsule should lose.");

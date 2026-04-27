@@ -1,4 +1,4 @@
-import type { Message, PromptContextBlock } from "@clawjs/core";
+import type { Message, PromptContextBlock, RulesCompileInput } from "@clawjs/core";
 
 import {
   streamRuntimeSessionEvents,
@@ -12,6 +12,7 @@ export interface GenerateTextInput {
   agentId?: string;
   systemPrompt?: string;
   contextBlocks?: PromptContextBlock[];
+  ruleHints?: Omit<RulesCompileInput, "prompt">;
   messages: Array<Pick<Message, "role" | "content" | "attachments" | "documents" | "contextChips" | "metadata">>;
   transport?: "auto" | "gateway" | "cli";
   model?: string;

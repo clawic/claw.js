@@ -20,7 +20,7 @@ import type { ClawInstance, ImageOperation, ImageProvenance, ImageType, Telegram
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
 import { semanticPlanSchema } from "@clawjs/core";
-import type { MediaDirection, MediaKind, MediaListInput, MediaOrigin, RuntimeAdapterId, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem } from "@clawjs/core";
+import type { MediaDirection, MediaKind, MediaListInput, MediaOrigin, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem } from "@clawjs/core";
 import { runEmbeddedDatabaseCli } from "./database-advanced.ts";
 import { runMagicDbCli } from "./database-magic.ts";
 import { runMemoryCli } from "./memory-local.ts";
@@ -299,6 +299,24 @@ function parseContextBlock(value?: string): { title: string; content: string }[]
     title: trimmed.slice(0, separatorIndex).trim() || "Context",
     content: trimmed.slice(separatorIndex + 2).trim(),
   }];
+}
+
+function parseRuleHints(flags: Record<string, string>): Omit<RulesCompileInput, "prompt"> | undefined {
+  const hints: Omit<RulesCompileInput, "prompt"> = {
+    ...(flags.user ? { user: flags.user } : {}),
+    ...(flags.organization || flags.org ? { organization: flags.organization || flags.org } : {}),
+    ...(flags.brand ? { brand: flags.brand } : {}),
+    ...(flags.client ? { client: flags.client } : {}),
+    ...(flags.project ? { project: flags.project } : {}),
+    ...(flags.domain ? { domain: flags.domain } : {}),
+    ...(flags.service ? { service: flags.service } : {}),
+    ...(flags["task-type"] || flags.task ? { taskType: flags["task-type"] || flags.task } : {}),
+    ...(flags["output-format"] || flags.output ? { outputFormat: flags["output-format"] || flags.output } : {}),
+    ...(flags.agent ? { agent: flags.agent } : {}),
+    ...(flags.channel ? { channel: flags.channel } : {}),
+    ...(flags["rules-limit"] ? { limit: Number(flags["rules-limit"]) } : {}),
+  };
+  return Object.keys(hints).length > 0 ? hints : undefined;
 }
 
 function parseJsonFlag<TValue>(value: string | undefined, label: string): TValue | undefined {
@@ -1758,6 +1776,13 @@ async function runTelegramCodexProcessor(input: {
     appendPromptSection(baseSystemPrompt, skillCapsules.prompt),
     TELEGRAM_CODEX_ATTACHMENT_INSTRUCTIONS,
   );
+  const telegramRuleHints = {
+    channel: provider,
+    service: "telegram",
+    domain: "channels",
+    agent: input.agentId,
+    limit: 20,
+  };
   const sessionCommand = parseTelegramCodexSessionCommand(rawText);
   const runOptions = {
     coalescingWindowMs: input.flags["coalescing-window-ms"] ? Number(input.flags["coalescing-window-ms"]) : undefined,
@@ -1967,6 +1992,7 @@ async function runTelegramCodexProcessor(input: {
         contextBlocks: [
           { title: "Telegram", content: `provider=${provider}\naccount=${accountId}\ntarget=${targetLabel}\nsender=${event.message?.senderLabel ?? senderId}` },
         ],
+        ruleHints: telegramRuleHints,
         messages,
         transport: (input.flags.transport as "auto" | "gateway" | "cli" | undefined) ?? "auto",
         ...(input.flags.model ? { model: input.flags.model } : {}),
@@ -2011,6 +2037,7 @@ async function runTelegramCodexProcessor(input: {
       contextBlocks: [
         { title: "Telegram", content: `provider=${provider}\naccount=${accountId}\ntarget=${targetLabel}\nsender=${event.message?.senderLabel ?? senderId}` },
       ],
+      ruleHints: telegramRuleHints,
       messages: [{ role: "user", content: formatTelegramCodexPrompt(event, promptText) }],
       transport: (input.flags.transport as "auto" | "gateway" | "cli" | undefined) ?? "auto",
       ...(input.flags.model ? { model: input.flags.model } : {}),
@@ -8732,6 +8759,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       sessionId,
       systemPrompt: flags["system-prompt"],
       contextBlocks: parseContextBlock(flags.context),
+      ruleHints: parseRuleHints(flags),
       transport,
       ...(flags["chunk-size"] ? { chunkSize: Number(flags["chunk-size"]) } : {}),
       ...(flags["gateway-retries"] ? { gatewayRetries: Number(flags["gateway-retries"]) } : {}),
@@ -9051,6 +9079,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       sessionId: flags["session-id"],
       systemPrompt: flags["system-prompt"],
       contextBlocks: parseContextBlock(flags.context),
+      ruleHints: parseRuleHints(flags),
       transport: (flags.transport as "auto" | "gateway" | "cli" | undefined) ?? "auto",
       ...(flags.model ? { model: flags.model } : {}),
       ...(flags["chunk-size"] ? { chunkSize: Number(flags["chunk-size"]) } : {}),

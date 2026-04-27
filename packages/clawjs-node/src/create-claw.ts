@@ -1225,6 +1225,7 @@ export interface ClawInstance {
       sessionId: string;
       systemPrompt?: string;
       contextBlocks?: PromptContextBlock[];
+      ruleHints?: Omit<RulesCompileInput, "prompt">;
       transport?: "auto" | "gateway" | "cli";
       chunkSize?: number;
       gatewayRetries?: number;
@@ -1234,6 +1235,7 @@ export interface ClawInstance {
       sessionId: string;
       systemPrompt?: string;
       contextBlocks?: PromptContextBlock[];
+      ruleHints?: Omit<RulesCompileInput, "prompt">;
       transport?: "auto" | "gateway" | "cli";
       chunkSize?: number;
       gatewayRetries?: number;
@@ -4292,14 +4294,16 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   function mergeRulesContextBlocks(input: {
     sessionMessages: Array<{ role: string; content: string }>;
     contextBlocks?: PromptContextBlock[];
+    ruleHints?: Omit<RulesCompileInput, "prompt">;
   }): PromptContextBlock[] | undefined {
     const userPrompt = [...input.sessionMessages]
       .reverse()
       .find((message) => message.role === "user")?.content ?? "";
     const compiled = rulesStore.compile({
+      ...(input.ruleHints ?? {}),
       prompt: userPrompt,
-      agent: logicalAgentId,
-      limit: 20,
+      agent: input.ruleHints?.agent ?? logicalAgentId,
+      limit: input.ruleHints?.limit ?? 20,
     });
     if (!compiled.block) return input.contextBlocks;
     return [...(input.contextBlocks ?? []), compiled.block];
@@ -5763,6 +5767,11 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           return generateRuntimeText({
             ...input,
             agentId: input.agentId ?? runtimeAgentId,
+            contextBlocks: mergeRulesContextBlocks({
+              sessionMessages: input.messages,
+              contextBlocks: input.contextBlocks,
+              ruleHints: input.ruleHints,
+            }),
           }, {
             fetchImpl: input.transport === "cli" ? undefined : globalThis.fetch,
             runner: input.transport === "gateway" ? undefined : processHost,
@@ -5782,6 +5791,11 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           ...input,
           agentId: input.agentId ?? runtimeAgentId,
           messages: session?.messages ?? input.messages,
+          contextBlocks: mergeRulesContextBlocks({
+            sessionMessages: session?.messages ?? input.messages,
+            contextBlocks: input.contextBlocks,
+            ruleHints: input.ruleHints,
+          }),
         }, {
           fetchImpl: input.transport === "cli" ? undefined : globalThis.fetch,
           runner: input.transport === "gateway" ? undefined : processHost,
@@ -6103,7 +6117,11 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           sessionId: input.sessionId,
           agentId: runtimeAgentId,
           systemPrompt: input.systemPrompt,
-          contextBlocks: mergeRulesContextBlocks({ sessionMessages: session.messages, contextBlocks: input.contextBlocks }),
+          contextBlocks: mergeRulesContextBlocks({
+            sessionMessages: session.messages,
+            contextBlocks: input.contextBlocks,
+            ruleHints: input.ruleHints,
+          }),
           messages: session.messages,
           transport: input.transport,
           chunkSize: input.chunkSize,
@@ -6169,7 +6187,11 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           sessionId: input.sessionId,
           agentId: runtimeAgentId,
           systemPrompt: input.systemPrompt,
-          contextBlocks: mergeRulesContextBlocks({ sessionMessages: session.messages, contextBlocks: input.contextBlocks }),
+          contextBlocks: mergeRulesContextBlocks({
+            sessionMessages: session.messages,
+            contextBlocks: input.contextBlocks,
+            ruleHints: input.ruleHints,
+          }),
           messages: session.messages,
           transport: input.transport,
           chunkSize: input.chunkSize,
