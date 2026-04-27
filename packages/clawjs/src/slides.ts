@@ -485,6 +485,7 @@ function validateImage(issues: SlideValidationIssue[], slide: SlideManifestSlide
     }
     return;
   }
+  if (isExternalImageSrc(slide.image.src)) return;
   const imagePath = resolveInputPath(cwd, slide.image.src);
   if (!fs.existsSync(imagePath)) {
     issues.push(issue(slide, index, "image", "red", `Image does not exist: ${slide.image.src}`));
@@ -655,7 +656,7 @@ function renderSlideHtml(slide: SlideManifestSlide, index: number, theme: typeof
   const subtitle = slide.subtitle ? `<p class="subtitle">${escapeHtml(slide.subtitle)}</p>` : "";
   const body = slide.body ? `<p class="body">${escapeHtml(slide.body)}</p>` : "";
   const bullets = renderBullets(slide.bullets);
-  const image = slide.image?.src ? `<img class="image" src="${escapeAttr(pathToFileURL(resolveInputPath(cwd, slide.image.src)).href)}" alt="${escapeAttr(slide.image.alt ?? "")}">` : `<div class="panel body">Image placeholder</div>`;
+  const image = slide.image?.src ? `<img class="image" src="${escapeAttr(imageSrcForHtml(cwd, slide.image.src))}" alt="${escapeAttr(slide.image.alt ?? "")}">` : `<div class="panel body">Image placeholder</div>`;
   const caption = slide.image?.caption ? `<p class="attribution">${escapeHtml(slide.image.caption)}</p>` : "";
   let content = "";
   switch (slide.layout) {
@@ -678,7 +679,7 @@ function renderSlideHtml(slide: SlideManifestSlide, index: number, theme: typeof
       content = `<div class="grid2"><div class="image-copy"><h2>${escapeHtml(heading)}</h2>${subtitle}${body}${bullets}${caption}</div>${image}</div>`;
       break;
     case "full-bleed-image":
-      content = slide.image?.src ? `<img class="full-image" src="${escapeAttr(pathToFileURL(resolveInputPath(cwd, slide.image.src)).href)}" alt="${escapeAttr(slide.image.alt ?? "")}"><div class="full-image-scrim"></div><div class="overlay"><h2>${escapeHtml(heading)}</h2>${subtitle || body}</div>` : `<div class="overlay"><h2>${escapeHtml(heading)}</h2>${subtitle || body}</div>`;
+      content = slide.image?.src ? `<img class="full-image" src="${escapeAttr(imageSrcForHtml(cwd, slide.image.src))}" alt="${escapeAttr(slide.image.alt ?? "")}"><div class="full-image-scrim"></div><div class="overlay"><h2>${escapeHtml(heading)}</h2>${subtitle || body}</div>` : `<div class="overlay"><h2>${escapeHtml(heading)}</h2>${subtitle || body}</div>`;
       break;
     case "quote":
       content = `<div class="quote-mark">"</div><p class="quote">${escapeHtml(slide.quote ?? heading)}</p>${slide.attribution ? `<p class="attribution">${escapeHtml(slide.attribution)}</p>` : ""}`;
@@ -1422,6 +1423,14 @@ function formatValidationReport(report: SlideValidationReport): string {
 function resolveInputPath(cwd: string, value: string): string {
   if (value.startsWith("file://")) return new URL(value).pathname;
   return path.isAbsolute(value) ? value : path.resolve(cwd, value);
+}
+
+function isExternalImageSrc(value: string): boolean {
+  return /^(https?:|data:)/i.test(value.trim());
+}
+
+function imageSrcForHtml(cwd: string, value: string): string {
+  return isExternalImageSrc(value) ? value : pathToFileURL(resolveInputPath(cwd, value)).href;
 }
 
 function readImageDimensions(filePath: string): { width: number; height: number } | null {

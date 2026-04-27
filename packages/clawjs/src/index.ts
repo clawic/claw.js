@@ -2682,6 +2682,58 @@ function currentCliEntryPath(): string {
   return fs.existsSync(packagedBin) ? packagedBin : entry;
 }
 
+function maybeRerenderSlidesPdfMedia(media: unknown): string | null {
+  if (typeof media !== "string" || !media.endsWith(".pdf") || /^(https?:|file:)/i.test(media)) return null;
+  const marker = `${path.sep}.clawjs${path.sep}slides${path.sep}outputs${path.sep}`;
+  const markerIndex = media.indexOf(marker);
+  if (markerIndex < 0) return null;
+  const workspaceRoot = media.slice(0, markerIndex);
+  const [deckId] = media.slice(markerIndex + marker.length).split(path.sep);
+  if (!workspaceRoot || !deckId) return null;
+  const manifestPath = path.join(workspaceRoot, ".clawjs", "slides", "decks", `${deckId}.json`);
+  if (!fs.existsSync(manifestPath)) return null;
+  let deck: { slides?: Array<{ image?: { src?: string } }>; outputs?: Array<Record<string, unknown>> };
+  try {
+    deck = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as typeof deck;
+  } catch {
+    return null;
+  }
+  if (!deck.slides?.some((slide) => slide.image?.src)) return null;
+  const currentOutput = deck.outputs?.find((output) => output.path === media);
+  const usedFallback = typeof currentOutput?.metadata === "object"
+    && currentOutput.metadata !== null
+    && (currentOutput.metadata as { renderer?: unknown }).renderer === "node-fallback";
+  if (!usedFallback) return null;
+
+  const result = spawnSync(process.execPath, [
+    currentCliEntryPath(),
+    "slides",
+    "render",
+    manifestPath,
+    "--workspace",
+    workspaceRoot,
+    "--format",
+    "pdf",
+    "--json",
+  ], {
+    cwd: workspaceRoot,
+    encoding: "utf8",
+    maxBuffer: 20 * 1024 * 1024,
+    env: {
+      ...process.env,
+      CLAWJS_SLIDES_DISABLE_BROWSER: "0",
+    },
+  });
+  if (result.status !== 0 || !result.stdout.trim()) return null;
+  try {
+    const payload = JSON.parse(result.stdout) as { rendered?: Array<{ format?: string; path?: string; metadata?: { renderer?: string } }> };
+    const rendered = payload.rendered?.find((output) => output.format === "pdf" && output.path && output.metadata?.renderer !== "node-fallback");
+    return rendered?.path && fs.existsSync(rendered.path) ? rendered.path : null;
+  } catch {
+    return null;
+  }
+}
+
 function buildTelegramCodexProcessorCommand(input: {
   workspaceRoot: string;
   runtimeAdapterId: RuntimeAdapterId;
@@ -3483,19 +3535,24 @@ async function runTelegramCodexProcessor(input: {
     for (const text of splitTelegramMessage(parsedReply.text)) {
       actions.push(sendTextAction(text, { transport: reply.transport, fallback: reply.fallback }));
     }
-    mediaActions.push(...parsedReply.mediaActions.map((action) => ({
-      ...action,
-      targetId: action.targetId ?? targetId,
-      ...(action.threadId !== undefined ? { threadId: action.threadId } : threadId ? { threadId } : {}),
-      agentId: input.agentId,
-      metadata: {
-        ...(action.metadata ?? {}),
-        sessionId,
-        transport: reply.transport,
-        fallback: reply.fallback,
-        ownerUserId: state.ownerUserId,
-      },
-    })));
+    mediaActions.push(...parsedReply.mediaActions.map((action) => {
+      const repairedMedia = maybeRerenderSlidesPdfMedia(action.media);
+      return {
+        ...action,
+        ...(repairedMedia ? { media: repairedMedia } : {}),
+        targetId: action.targetId ?? targetId,
+        ...(action.threadId !== undefined ? { threadId: action.threadId } : threadId ? { threadId } : {}),
+        agentId: input.agentId,
+        metadata: {
+          ...(action.metadata ?? {}),
+          ...(repairedMedia ? { slidesMediaRerendered: true, originalMedia: action.media } : {}),
+          sessionId,
+          transport: reply.transport,
+          fallback: reply.fallback,
+          ownerUserId: state.ownerUserId,
+        },
+      };
+    }));
   }
   if (actions.length > 0 || mediaActions.length > 0) {
     actions.unshift({

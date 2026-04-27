@@ -69,6 +69,17 @@ function appendChannelMessages(workspacePath: string, messages: Array<{
   }, null, 2)}\n`);
 }
 
+function writeSyntheticBridgeSlideImage(targetPath: string) {
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+  fs.writeFileSync(targetPath, `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#09315a"/><stop offset="1" stop-color="#19b7a4"/></linearGradient></defs>
+  <rect width="1200" height="800" fill="url(#g)"/>
+  <circle cx="880" cy="220" r="150" fill="#f7c85f" opacity=".9"/>
+  <rect x="160" y="180" width="420" height="440" rx="36" fill="#fff" opacity=".78"/>
+  <rect x="640" y="330" width="330" height="230" rx="28" fill="#07111f" opacity=".66"/>
+</svg>`, "utf8");
+}
+
 async function startHermeticVault(prefix = "clawjs-telegram-vault") {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), `${prefix}-`));
   const { app } = buildVaultApp({
@@ -170,6 +181,7 @@ if (args[0] === "app-server") {
     if (message.method === "turn/start") {
       const payload = JSON.stringify(message.params || {});
       fs.appendFileSync(${JSON.stringify(payloadPath)}, payload + "\\n");
+      const slidesFallbackMedia = payload.match(/slides fallback media ([^\\s"]+\\.pdf)/)?.[1];
       const text = payload.includes("Repeat the prior summary") && payload.includes("Prior summary about product planning")
         ? "context preserved"
         : payload.includes("Messages received while the agent was already working")
@@ -180,6 +192,8 @@ if (args[0] === "app-server") {
         ? "context missing"
         : payload.includes("send a product photo")
         ? ${JSON.stringify("Here is the photo.\n\n```clawjs-telegram-actions\n{\"actions\":[{\"type\":\"send_message\",\"mediaType\":\"photo\",\"media\":\"https://example.local/product.png\",\"text\":\"Product preview\"}]}\n```")}
+        : slidesFallbackMedia
+        ? ${JSON.stringify("PDF adjunto.\n\n```clawjs-telegram-actions\n")} + JSON.stringify({ actions: [{ type: "send_message", mediaType: "document", media: slidesFallbackMedia, text: "Deck PDF" }] }) + ${JSON.stringify("\n```")}
         : payload.includes("follow up")
         ? "follow up reply"
         : payload.includes("Voice note transcript:")
@@ -440,6 +454,61 @@ test("telegram codex bridge injects default and assigned skill capsules in order
   expect(frontmatterIndex).toBe(-1);
   expect(sameBIndex).toBeGreaterThan(jsonIndex);
   expect(sameAIndex).toBeGreaterThan(sameBIndex);
+});
+
+test("telegram codex bridge rerenders fallback slide PDFs before attaching", async () => {
+  test.setTimeout(120_000);
+
+  const rootDir = process.cwd();
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-telegram-slides-rerender-"));
+  const workspacePath = path.join(tempRoot, "workspace");
+  const runtimeWorkspace = path.join(tempRoot, "runtime-workspace");
+  const codexHome = path.join(tempRoot, "codex-home");
+  const statePath = path.join(tempRoot, "state", "bridge.json");
+  fs.mkdirSync(workspacePath, { recursive: true });
+  fs.mkdirSync(runtimeWorkspace, { recursive: true });
+  fs.mkdirSync(codexHome, { recursive: true });
+  writeFakeCodexBinary(tempRoot);
+  const imagePath = path.join(runtimeWorkspace, "assets", "visual.svg");
+  writeSyntheticBridgeSlideImage(imagePath);
+
+  const created = await runClawJson(rootDir, ["slides", "create", "Visual Deck", "--theme", "product"], {
+    workspacePath: runtimeWorkspace,
+    runtimeWorkspace,
+    codexHome,
+  }) as { deck: { id: string } };
+  await runClawJson(rootDir, [
+    "slides", "add", created.deck.id,
+    "--layout", "image-left",
+    "--heading", "Image slide",
+    "--body", "This deck should be rerendered outside the Codex sandbox before Telegram receives it.",
+    "--image", imagePath,
+  ], { workspacePath: runtimeWorkspace, runtimeWorkspace, codexHome });
+  const fallbackRender = await runClawJson(rootDir, [
+    "slides", "render", created.deck.id,
+    "--format", "pdf",
+  ], {
+    workspacePath: runtimeWorkspace,
+    runtimeWorkspace,
+    codexHome,
+    env: { CLAWJS_SLIDES_DISABLE_BROWSER: "1" },
+  }) as { rendered: Array<{ format: string; path: string; metadata?: { renderer?: string }; sizeBytes: number }> };
+  const fallbackPdf = fallbackRender.rendered.find((entry) => entry.format === "pdf");
+  expect(fallbackPdf?.metadata?.renderer).toBe("node-fallback");
+
+  const result = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "501", chatType: "private", senderId: "501", text: `slides fallback media ${fallbackPdf!.path}`, messageId: 9901 }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+  });
+  const attached = sendActions(result.actions).find((action) => action.mediaType === "document");
+  expect(attached?.media).toBeTruthy();
+  expect(attached!.media).not.toBe(fallbackPdf!.path);
+  expect(fs.existsSync(attached!.media!)).toBeTruthy();
+  expect(fs.statSync(attached!.media!).size).toBeGreaterThan(fallbackPdf!.sizeBytes);
+  expect(attached?.metadata?.slidesMediaRerendered).toBeTruthy();
 });
 
 test("telegram codex bridge translates .claw aliases into tokenized mobile links", async () => {

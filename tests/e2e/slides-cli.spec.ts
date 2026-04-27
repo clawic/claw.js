@@ -226,6 +226,47 @@ test("slides image layouts render polished visual slides", async ({ page }) => {
   await saveArtifactScreenshot(page, "slides-cli-image-layouts-html.png");
 });
 
+test("slides image layouts accept URL image sources", async ({ page }) => {
+  test.setTimeout(120_000);
+
+  const rootDir = process.cwd();
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-slides-url-images-"));
+  const workspaceDir = path.join(tempRoot, "workspace");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"><rect width="1200" height="800" fill="#10243f"/><circle cx="860" cy="230" r="150" fill="#f3b36a"/><rect x="160" y="180" width="420" height="440" rx="36" fill="#fff" opacity=".82"/></svg>`;
+  const imageUrl = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+
+  const created = parseJson<{ deck: { id: string } }>((await runCli(rootDir, [
+    "slides", "create", "URL Image Deck",
+    "--theme", "product",
+    "--workspace", workspaceDir,
+    "--json",
+  ])).stdout);
+  await runCli(rootDir, [
+    "slides", "add", created.deck.id,
+    "--workspace", workspaceDir,
+    "--layout", "image-left",
+    "--heading", "Remote-ready visuals",
+    "--body", "Image sources can be URLs, so agents can use hosted assets without copying them first.",
+    "--image", imageUrl,
+    "--json",
+  ]);
+  const rendered = parseJson<{ validation: { ok: boolean }; rendered: Array<{ format: string; path: string; sizeBytes: number }> }>((await runCli(rootDir, [
+    "slides", "render", created.deck.id,
+    "--workspace", workspaceDir,
+    "--format", "html,png",
+    "--json",
+  ])).stdout);
+  expect(rendered.validation.ok).toBeTruthy();
+  const html = rendered.rendered.find((entry) => entry.format === "html");
+  const png = rendered.rendered.find((entry) => entry.format === "png");
+  expect(html).toBeTruthy();
+  expect(png?.sizeBytes).toBeGreaterThan(3000);
+
+  await page.goto(`file://${html!.path}`);
+  const loaded = await page.locator(".layout-image-left img").evaluate((image) => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0);
+  expect(loaded).toBeTruthy();
+});
+
 test("slides validation blocks overflow by default and force preserves the report", async () => {
   test.setTimeout(120_000);
 
