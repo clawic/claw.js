@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User</title>
+<link rel="icon" href="data:,">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+:root, [data-theme="dark"] {
+  --bg: #111116;
+  --surface: #1a1a22;
+  --surface2: #22222d;
+  --border: #2a2a38;
+  --text: #e8e8f0;
+  --text2: #8888a0;
+  --text3: #4a4a60;
+  --accent: #6366f1;
+  --accent2: #a78bfa;
+  --teal: #2dd4bf;
+  --amber: #fbbf24;
+  --rose: #fb7185;
+  --radius: 16px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+[data-theme="light"] {
+  --bg: #f8f8fb;
+  --surface: #ffffff;
+  --surface2: #f0f0f5;
+  --border: #e2e2ec;
+  --text: #1a1a22;
+  --text2: #5a5a70;
+  --text3: #a0a0b0;
+  --accent: #4f46e5;
+  --accent2: #8b5cf6;
+  --teal: #0d9488;
+  --amber: #d97706;
+  --rose: #e11d48;
+  --shadow: 0 8px 32px rgba(0,0,0,0.08);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  font-family: 'Space Grotesk', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+}
+
+#app { position: relative; height: 100vh; }
+
+/* graph canvas */
+#graph-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+#graph-canvas svg { width: 100%; height: 100%; display: block; }
+
+/* command bar */
+.command-bar {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 6px 8px;
+  box-shadow: var(--shadow);
+}
+.command-bar input {
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  width: 240px;
+}
+.tab-btn {
+  background: transparent;
+  border: 0;
+  color: var(--text2);
+  padding: 6px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all .15s ease;
+}
+.tab-btn:hover { color: var(--text); background: var(--surface2); }
+.tab-btn.active {
+  color: white;
+  background: var(--accent);
+}
+
+/* left panel: list */
+.list-panel {
+  position: absolute;
+  top: 80px;
+  left: 20px;
+  bottom: 20px;
+  width: 320px;
+  z-index: 10;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.list-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.list-header h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+.list-header .count {
+  font-size: 11px;
+  color: var(--text3);
+}
+.list-body { flex: 1; overflow-y: auto; padding: 6px; }
+.list-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background .12s ease;
+}
+.list-item:hover { background: var(--surface2); }
+.list-item.active { background: var(--surface2); border: 1px solid var(--border); }
+.list-item .li-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.list-item .li-sub {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.list-item .li-tags {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.tag {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(99,102,241,0.12);
+  color: var(--accent2);
+  border: 1px solid rgba(99,102,241,0.2);
+}
+.tag.muted { background: var(--surface2); color: var(--text3); border-color: var(--border); }
+.tag.warn { background: rgba(251,113,133,0.12); color: var(--rose); border-color: rgba(251,113,133,0.25); }
+.tag.ok { background: rgba(45,212,191,0.12); color: var(--teal); border-color: rgba(45,212,191,0.25); }
+
+/* right panel: detail */
+.detail-panel {
+  position: absolute;
+  top: 80px;
+  right: 20px;
+  bottom: 20px;
+  width: 460px;
+  z-index: 10;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.detail-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.detail-header .title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.detail-header .sub {
+  font-size: 12px;
+  color: var(--text3);
+  margin-top: 4px;
+}
+.detail-body { flex: 1; overflow-y: auto; padding: 10px 14px 16px; }
+.detail-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text3);
+  font-size: 13px;
+}
+
+.row-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin: 10px 0;
+  overflow: hidden;
+}
+.row-card .rc-head {
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.row-card .rc-head .rc-source {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent2);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.row-card .rc-head .rc-table {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+.row-card .rc-body { padding: 10px 12px; }
+.kv {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 4px 12px;
+  font-size: 12px;
+}
+.kv .k {
+  color: var(--text3);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kv .v {
+  color: var(--text);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  word-break: break-word;
+}
+.kv .v input, .kv .v textarea {
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-family: inherit;
+  font-size: 12px;
+}
+.kv .v textarea { min-height: 60px; resize: vertical; }
+.actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.btn {
+  background: var(--accent);
+  color: white;
+  border: 0;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn.secondary { background: var(--surface); color: var(--text2); border: 1px solid var(--border); }
+.btn.danger { background: var(--rose); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:hover:not(:disabled) { filter: brightness(1.1); }
+
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin: 14px 4px 6px;
+}
+
+/* toast */
+#toast {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 12px;
+  box-shadow: var(--shadow);
+  z-index: 50;
+  opacity: 0;
+  transition: opacity .2s ease;
+  pointer-events: none;
+}
+#toast.show { opacity: 1; }
+#toast.error { border-color: var(--rose); color: var(--rose); }
+
+/* graph node styles */
+.node-circle { cursor: pointer; }
+.node-label {
+  font-size: 11px;
+  pointer-events: none;
+  fill: var(--text);
+}
+
+/* search */
+.command-bar .icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text3);
+  margin-left: 4px;
+}
+</style>
+</head>
+<body data-theme="dark">
+<div id="app">
+  <div id="graph-canvas"></div>
+
+  <div class="command-bar">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+    <input id="search" placeholder="Search users…" />
+    <button class="tab-btn active" data-tab="users">Users</button>
+    <button class="tab-btn" data-tab="sources">Sources</button>
+  </div>
+
+  <div class="list-panel">
+    <div class="list-header">
+      <h3 id="list-title">Users</h3>
+      <div class="count" id="list-count">—</div>
+    </div>
+    <div class="list-body" id="list-body"></div>
+  </div>
+
+  <div class="detail-panel">
+    <div class="detail-header">
+      <div class="title" id="detail-title">Nothing selected</div>
+      <div class="sub" id="detail-sub">Select a user or a source to inspect.</div>
+    </div>
+    <div class="detail-body" id="detail-body">
+      <div class="detail-empty">Select something on the left.</div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script>
+const state = {
+  tab: "users",
+  users: [],
+  sources: [],
+  graph: null,
+  selectedUser: null,
+  selectedSource: null,
+  search: "",
+};
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    ...opts,
+    headers: { "Content-Type": "application/json", ...(opts.headers || {}) },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+function toast(msg, isError = false) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.toggle("error", Boolean(isError));
+  el.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove("show"), 2500);
+}
+
+async function loadUsers() {
+  const data = await api("/api/users");
+  state.users = data.users;
+  renderList();
+}
+
+async function loadSources() {
+  const data = await api("/api/sources");
+  state.sources = data.sources;
+  renderList();
+}
+
+async function loadGraph() {
+  state.graph = await api("/api/graph");
+  renderGraph();
+}
+
+function renderList() {
+  const body = document.getElementById("list-body");
+  const title = document.getElementById("list-title");
+  const count = document.getElementById("list-count");
+  body.innerHTML = "";
+  if (state.tab === "users") {
+    title.textContent = "Users";
+    const filtered = state.users.filter((u) =>
+      !state.search || (u.label + " " + u.id + " " + (u.email || "")).toLowerCase().includes(state.search)
+    );
+    count.textContent = filtered.length;
+    for (const user of filtered) {
+      const item = document.createElement("div");
+      item.className = "list-item" + (state.selectedUser?.id === user.id ? " active" : "");
+      const tags = user.sources.map((s) => `<span class="tag">${s}</span>`).join("");
+      item.innerHTML = `
+        <div class="li-title">${escapeHtml(user.label)}</div>
+        <div class="li-sub">${escapeHtml(user.email || user.id)}</div>
+        <div class="li-tags">${tags}</div>
+      `;
+      item.onclick = () => selectUser(user);
+      body.appendChild(item);
+    }
+  } else {
+    title.textContent = "Sources";
+    count.textContent = state.sources.length;
+    for (const source of state.sources) {
+      const item = document.createElement("div");
+      item.className = "list-item" + (state.selectedSource?.id === source.id ? " active" : "");
+      const statusTag = source.available
+        ? `<span class="tag ok">${source.rowCount} rows</span>`
+        : `<span class="tag warn">missing</span>`;
+      const tablesTag = source.tables.length > 0
+        ? source.tables.map((t) => `<span class="tag muted">${t}</span>`).join("")
+        : "";
+      item.innerHTML = `
+        <div class="li-title">${escapeHtml(source.label)}</div>
+        <div class="li-sub">${escapeHtml(source.path || "(not present)")}</div>
+        <div class="li-tags">${statusTag}${tablesTag}</div>
+      `;
+      item.onclick = () => selectSource(source);
+      body.appendChild(item);
+    }
+  }
+}
+
+async function selectUser(user) {
+  state.selectedUser = user;
+  state.selectedSource = null;
+  renderList();
+  document.getElementById("detail-title").textContent = user.label;
+  document.getElementById("detail-sub").textContent = user.email ? `${user.email} · ${user.id}` : user.id;
+  document.getElementById("detail-body").innerHTML = `<div class="detail-empty">Loading…</div>`;
+  try {
+    const bundle = await api(`/api/users/${encodeURIComponent(user.id)}`);
+    renderUserDetail(bundle);
+  } catch (err) {
+    toast(err.message, true);
+    document.getElementById("detail-body").innerHTML = `<div class="detail-empty">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function selectSource(source) {
+  state.selectedSource = source;
+  state.selectedUser = null;
+  renderList();
+  document.getElementById("detail-title").textContent = source.label;
+  document.getElementById("detail-sub").textContent = source.path || "(not present in this workspace)";
+  const body = document.getElementById("detail-body");
+  if (!source.available) {
+    body.innerHTML = `<div class="detail-empty">Source not present in this workspace.</div>`;
+    return;
+  }
+  body.innerHTML = `
+    <div class="section-title">Tables</div>
+    ${source.tables.map((t) => `
+      <div class="row-card">
+        <div class="rc-head">
+          <span class="rc-source">${escapeHtml(source.id)}</span>
+          <span class="rc-table">${escapeHtml(t)}</span>
+        </div>
+      </div>
+    `).join("") || `<div class="detail-empty">No user-related tables found.</div>`}
+    <div class="section-title">Stats</div>
+    <div class="kv">
+      <div class="k">kind</div><div class="v">${source.kind}</div>
+      <div class="k">rows</div><div class="v">${source.rowCount}</div>
+      <div class="k">path</div><div class="v">${escapeHtml(source.path)}</div>
+    </div>
+  `;
+}
+
+function renderUserDetail(bundle) {
+  const body = document.getElementById("detail-body");
+  if (!bundle.rows || bundle.rows.length === 0) {
+    body.innerHTML = `<div class="detail-empty">No associated data found for this user.</div>`;
+    return;
+  }
+  body.innerHTML = bundle.rows.map((r, idx) => renderRowCard(r, idx)).join("");
+  attachRowHandlers(bundle);
+}
+
+function renderRowCard(row, idx) {
+  const writable = isWritable(row);
+  const deletable = isDeletable(row);
+  const fields = Object.entries(row.row)
+    .filter(([k]) => k !== "__pk")
+    .map(([k, v]) => {
+      const editable = writable.includes(k);
+      const display = v === null || v === undefined ? "" : (typeof v === "object" ? JSON.stringify(v) : String(v));
+      const safe = escapeHtml(display);
+      const input = editable
+        ? `<input data-row-idx="${idx}" data-field="${k}" value="${safe.replace(/"/g, '&quot;')}" />`
+        : `<span>${safe}</span>`;
+      return `<div class="k">${escapeHtml(k)}</div><div class="v">${input}</div>`;
+    }).join("");
+  const actions = (writable.length > 0 || deletable)
+    ? `<div class="actions">
+         ${writable.length > 0 ? `<button class="btn" data-action="save" data-row-idx="${idx}">Save</button>` : ""}
+         ${deletable ? `<button class="btn danger" data-action="delete" data-row-idx="${idx}">Delete</button>` : ""}
+       </div>`
+    : "";
+  return `
+    <div class="row-card" data-row-idx="${idx}">
+      <div class="rc-head">
+        <span class="rc-source">${escapeHtml(row.source)}</span>
+        <span class="rc-table">${escapeHtml(row.table)} · pk=${escapeHtml(row.primaryKey)}</span>
+      </div>
+      <div class="rc-body">
+        <div class="kv">${fields}</div>
+        ${actions}
+      </div>
+    </div>
+  `;
+}
+
+function attachRowHandlers(bundle) {
+  for (const btn of document.querySelectorAll("[data-action]")) {
+    btn.onclick = async () => {
+      const idx = Number(btn.getAttribute("data-row-idx"));
+      const row = bundle.rows[idx];
+      const action = btn.getAttribute("data-action");
+      try {
+        if (action === "save") {
+          const writable = isWritable(row);
+          const updates = {};
+          for (const input of document.querySelectorAll(`input[data-row-idx="${idx}"]`)) {
+            const field = input.getAttribute("data-field");
+            if (writable.includes(field)) updates[field] = input.value;
+          }
+          if (row.source === "memory" && row.table === "entities/person") {
+            await api("/api/memory/person", { method: "PATCH", body: { id: row.primaryKey, frontmatter: updates } });
+          } else if (row.source === "telegram") {
+            await api("/api/telegram/account", { method: "PATCH", body: { accountId: row.primaryKey, updates } });
+          } else {
+            await api("/api/row", {
+              method: "PATCH",
+              body: { source: row.source, table: row.table, primaryKey: row.primaryKey, updates },
+            });
+          }
+          toast("Saved");
+          await loadUsers();
+          if (state.selectedUser) await selectUser(state.selectedUser);
+        } else if (action === "delete") {
+          if (!confirm(`Delete from ${row.source}/${row.table}?`)) return;
+          await api("/api/row", {
+            method: "DELETE",
+            body: { source: row.source, table: row.table, primaryKey: row.primaryKey },
+          });
+          toast("Deleted");
+          if (state.selectedUser) await selectUser(state.selectedUser);
+        }
+      } catch (err) {
+        toast(err.message, true);
+      }
+    };
+  }
+}
+
+const WRITABLE = {
+  "relay/users": ["email", "role"],
+  "relay/memberships": ["scopes_json"],
+  "execution-plane/users": ["email"],
+  "execution-plane/memberships": ["scopes_json", "role"],
+  "notify/device_installations": ["device_name", "platform"],
+  "notify/user_preferences": ["critical_only", "quiet_hours_json"],
+  "erp/employees": ["display_name", "employee_number"],
+};
+const DELETABLE = new Set([
+  "relay/refresh_tokens",
+  "notify/device_installations",
+  "notify/subscriptions",
+]);
+function isWritable(row) {
+  if (row.source === "memory" && row.table === "entities/person") {
+    return ["title", "role", "timezone"];
+  }
+  if (row.source === "telegram") {
+    return ["label"];
+  }
+  return WRITABLE[`${row.source}/${row.table}`] || [];
+}
+function isDeletable(row) {
+  return DELETABLE.has(`${row.source}/${row.table}`);
+}
+
+function escapeHtml(value) {
+  if (value === null || value === undefined) return "";
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// ----- D3 graph -----
+function renderGraph() {
+  const container = document.getElementById("graph-canvas");
+  container.innerHTML = "";
+  if (!state.graph || state.graph.nodes.length === 0) return;
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+
+  const nodes = state.graph.nodes.map((n) => ({ ...n }));
+  const links = state.graph.edges.map((e) => ({ source: e.source, target: e.target, relation: e.relation }));
+
+  const svg = d3.select(container)
+    .append("svg")
+    .attr("viewBox", [0, 0, width, height]);
+
+  const g = svg.append("g");
+
+  svg.call(d3.zoom().scaleExtent([0.2, 3]).on("zoom", (event) => {
+    g.attr("transform", event.transform);
+  }));
+
+  const colorFor = (kind) => kind === "user" ? "var(--accent)" : kind === "source" ? "var(--teal)" : kind === "table" ? "var(--amber)" : "var(--rose)";
+  const radiusFor = (kind) => kind === "user" ? 14 : kind === "source" ? 18 : 8;
+
+  const simulation = d3.forceSimulation(nodes)
+    .force("link", d3.forceLink(links).id((d) => d.id).distance(90).strength(0.4))
+    .force("charge", d3.forceManyBody().strength(-180))
+    .force("center", d3.forceCenter(width / 2, height / 2))
+    .force("collide", d3.forceCollide().radius((d) => radiusFor(d.kind) + 6));
+
+  const link = g.append("g")
+    .attr("stroke", "var(--border)")
+    .attr("stroke-opacity", 0.5)
+    .selectAll("line")
+    .data(links)
+    .join("line")
+    .attr("stroke-width", 1);
+
+  const node = g.append("g")
+    .selectAll("g")
+    .data(nodes)
+    .join("g")
+    .attr("class", "node-circle")
+    .call(drag(simulation))
+    .on("click", (_event, d) => {
+      if (d.kind === "user") {
+        const userId = d.id.replace(/^user:/, "");
+        const user = state.users.find((u) => u.id === userId);
+        if (user) {
+          state.tab = "users";
+          updateTabs();
+          selectUser(user);
+        }
+      } else if (d.kind === "source") {
+        const sourceId = d.id.replace(/^source:/, "");
+        const source = state.sources.find((s) => s.id === sourceId);
+        if (source) {
+          state.tab = "sources";
+          updateTabs();
+          selectSource(source);
+        }
+      }
+    });
+
+  node.append("circle")
+    .attr("r", (d) => radiusFor(d.kind))
+    .attr("fill", (d) => colorFor(d.kind))
+    .attr("fill-opacity", 0.9)
+    .attr("stroke", "var(--bg)")
+    .attr("stroke-width", 2);
+
+  node.append("text")
+    .attr("class", "node-label")
+    .attr("dy", (d) => radiusFor(d.kind) + 14)
+    .attr("text-anchor", "middle")
+    .text((d) => d.label.length > 20 ? d.label.slice(0, 18) + "…" : d.label);
+
+  simulation.on("tick", () => {
+    link
+      .attr("x1", (d) => d.source.x)
+      .attr("y1", (d) => d.source.y)
+      .attr("x2", (d) => d.target.x)
+      .attr("y2", (d) => d.target.y);
+    node.attr("transform", (d) => `translate(${d.x},${d.y})`);
+  });
+}
+
+function drag(simulation) {
+  return d3.drag()
+    .on("start", (event, d) => {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      d.fx = d.x; d.fy = d.y;
+    })
+    .on("drag", (event, d) => { d.fx = event.x; d.fy = event.y; })
+    .on("end", (event, d) => {
+      if (!event.active) simulation.alphaTarget(0);
+      d.fx = null; d.fy = null;
+    });
+}
+
+// ----- tabs / search -----
+function updateTabs() {
+  for (const btn of document.querySelectorAll(".tab-btn")) {
+    btn.classList.toggle("active", btn.getAttribute("data-tab") === state.tab);
+  }
+  renderList();
+}
+
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.onclick = () => {
+    state.tab = btn.getAttribute("data-tab");
+    updateTabs();
+  };
+});
+
+document.getElementById("search").addEventListener("input", (event) => {
+  state.search = event.target.value.trim().toLowerCase();
+  renderList();
+});
+
+(async () => {
+  try {
+    await loadSources();
+    await loadUsers();
+    await loadGraph();
+  } catch (err) {
+    toast(err.message, true);
+  }
+})();
+</script>
+</body>
+</html>

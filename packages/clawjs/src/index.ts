@@ -330,6 +330,7 @@ const OPEN_SURFACES: OpenSurface[] = [
   { id: "day", label: "Day", port: 21377, kind: "day", dir: "apps/day", buildCheck: "dist/serve-dashboard.js" },
   { id: "company", label: "Company", port: 21587, kind: "next", dir: "apps/company", buildCheck: ".next" },
   { id: "notify", label: "Notify", port: 21767, aliases: ["hub"], kind: "next", dir: "apps/hub", buildCheck: ".next" },
+  { id: "user", label: "User", port: 21979, kind: "cli-serve", dir: "user", buildCheck: "dist/cli.js" },
 ];
 
 const OPEN_SURFACE_BY_NAME = new Map<string, OpenSurface>(
