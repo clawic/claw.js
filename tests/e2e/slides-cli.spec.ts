@@ -354,6 +354,16 @@ test("slides fallback PDF keeps image layouts presentable and normalizes escaped
     "--image", imagePath,
     "--json",
   ]);
+  await runCli(rootDir, [
+    "slides", "add", created.deck.id,
+    "--workspace", workspaceDir,
+    "--layout", "metric-grid",
+    "--heading", "Wrapped metrics",
+    "--metric", "2.5M impresiones|Awareness",
+    "--metric", "18% registro a primer uso|Activacion",
+    "--metric", "-22% vs benchmark|CAC",
+    "--json",
+  ]);
 
   const rendered = parseJson<{ rendered: Array<{ format: string; path: string; metadata?: Record<string, unknown> }> }>((await runCli(rootDir, [
     "slides", "render", created.deck.id,
@@ -368,5 +378,7 @@ test("slides fallback PDF keeps image layouts presentable and normalizes escaped
   expect(pdfText).toContain("Manual checks");
   expect(pdfText).toContain("Validation first");
   expect(pdfText).toContain("Image-led story");
+  expect(pdfText).toContain("2.5M impresiones");
+  expect(pdfText).toContain("Awareness");
   expect(pdfText).not.toContain("\\\\n");
 });

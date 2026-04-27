@@ -826,8 +826,9 @@ function fallbackPdfPageContent(slide: SlideManifestSlide, index: number, deck: 
       const position = positions[metricIndex];
       lines.push(pdfRect(position.x, position.y, 338, 142, panel));
       lines.push(pdfRect(position.x, position.y + 136, 338, 6, metricIndex % 2 === 0 ? accent : accent2));
-      lines.push(...pdfTextLines(metric.value, position.x + 28, position.y + 82, 31, accent, 14, 36));
-      lines.push(...pdfTextLines(metric.label, position.x + 28, position.y + 42, 13, muted, 28, 17));
+      lines.push(...pdfTextLines(metric.value, position.x + 28, position.y + 90, 25, accent, 18, 30));
+      lines.push(...pdfTextLines(metric.label, position.x + 28, position.y + 30, 13, muted, 28, 17));
+      if (metric.detail) lines.push(...pdfTextLines(metric.detail, position.x + 28, position.y + 12, 10, muted, 34, 14));
     });
   } else {
     lines.push(...pdfTextLines(heading, 84, 578, 40, fg, 34, 48));
