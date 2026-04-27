@@ -252,6 +252,7 @@ async function runClawJson(rootDir: string, args: string[], input: {
   workspacePath: string;
   codexHome: string;
   runtimeWorkspace: string;
+  libraryDir?: string;
   env?: NodeJS.ProcessEnv;
 }) {
   const child = spawn(process.execPath, [
@@ -265,6 +266,7 @@ async function runClawJson(rootDir: string, args: string[], input: {
     input.runtimeWorkspace,
     "--home-dir",
     input.codexHome,
+    ...(input.libraryDir ? ["--library-dir", input.libraryDir] : []),
     "--json",
   ], {
     cwd: rootDir,
@@ -349,12 +351,101 @@ process.stdout.write(JSON.stringify({ ok: true, result }));
   return { proxyPath, statePath };
 }
 
+test("telegram codex bridge injects default and assigned skill capsules in order", async () => {
+  test.setTimeout(120_000);
+
+  const rootDir = process.cwd();
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-telegram-capsules-"));
+  const workspacePath = path.join(tempRoot, "workspace");
+  const runtimeWorkspace = path.join(tempRoot, "runtime-workspace");
+  const codexHome = path.join(tempRoot, "codex-home");
+  const libraryDir = path.join(tempRoot, "library");
+  const statePath = path.join(tempRoot, "state", "bridge.json");
+  const jsonSkillDir = path.join(tempRoot, "json-skill");
+  fs.mkdirSync(workspacePath, { recursive: true });
+  fs.mkdirSync(runtimeWorkspace, { recursive: true });
+  fs.mkdirSync(codexHome, { recursive: true });
+  fs.mkdirSync(jsonSkillDir, { recursive: true });
+  writeFakeCodexBinary(tempRoot);
+
+  fs.writeFileSync(path.join(jsonSkillDir, "skill.json"), JSON.stringify({
+    id: "json-skill",
+    name: "JSON Skill",
+    version: "0.1.0",
+    context: {
+      priority: 5,
+      capsule: "JSON capsule wins over frontmatter.",
+      readWhen: ["json metadata"],
+    },
+  }, null, 2));
+  fs.writeFileSync(path.join(jsonSkillDir, "SKILL.md"), [
+    "---",
+    "name: json-skill",
+    "description: frontmatter fallback",
+    "clawjs-context:",
+    "  priority: 1",
+    "  capsule: Frontmatter capsule should lose.",
+    "---",
+    "",
+    "# JSON Skill",
+  ].join("\n"));
+
+  await runClawJson(rootDir, [
+    "library", "import-skill", "json-skill",
+    "--id", "json-skill",
+    "--path", jsonSkillDir,
+  ], { workspacePath, runtimeWorkspace, codexHome, libraryDir });
+  await runClawJson(rootDir, [
+    "library", "create", "same-b",
+    "--kind", "skill",
+    "--title", "Same B",
+    "--context-capsule", "Same priority B comes first by assignment.",
+    "--context-priority", "20",
+  ], { workspacePath, runtimeWorkspace, codexHome, libraryDir });
+  await runClawJson(rootDir, [
+    "library", "create", "same-a",
+    "--kind", "skill",
+    "--title", "Same A",
+    "--context-capsule", "Same priority A comes second by assignment.",
+    "--context-priority", "20",
+  ], { workspacePath, runtimeWorkspace, codexHome, libraryDir });
+  for (const asset of ["same-b", "json-skill", "same-a"]) {
+    await runClawJson(rootDir, [
+      "library", "assign", asset,
+      "--agent", "telegram-codex",
+    ], { workspacePath, runtimeWorkspace, codexHome, libraryDir });
+  }
+
+  const result = await runProcessor(rootDir, {
+    event: telegramEvent({ chatId: "501", chatType: "private", senderId: "501", text: "hello capsules" }),
+    statePath,
+    workspacePath,
+    runtimeWorkspace,
+    codexHome,
+    libraryDir,
+  });
+  expect(sendActions(result.actions)[0]).toMatchObject({ type: "send_message", targetId: "501", text: "codex reply" });
+
+  const payloadText = fs.readFileSync(path.join(tempRoot, "codex-payloads.jsonl"), "utf8");
+  const defaultIndex = payloadText.indexOf("Use ClawJS as the operating layer");
+  const jsonIndex = payloadText.indexOf("JSON capsule wins over frontmatter.");
+  const frontmatterIndex = payloadText.indexOf("Frontmatter capsule should lose.");
+  const sameBIndex = payloadText.indexOf("Same priority B comes first by assignment.");
+  const sameAIndex = payloadText.indexOf("Same priority A comes second by assignment.");
+  expect(defaultIndex).toBeGreaterThanOrEqual(0);
+  expect(jsonIndex).toBeGreaterThan(defaultIndex);
+  expect(frontmatterIndex).toBe(-1);
+  expect(sameBIndex).toBeGreaterThan(jsonIndex);
+  expect(sameAIndex).toBeGreaterThan(sameBIndex);
+});
+
 async function runProcessor(rootDir: string, input: {
   event: unknown;
   statePath: string;
   workspacePath: string;
   codexHome: string;
   runtimeWorkspace: string;
+  libraryDir?: string;
   replyPolicy?: string;
   botUsername?: string;
   systemPrompt?: string;
@@ -372,6 +463,7 @@ async function runProcessor(rootDir: string, input: {
     input.runtimeWorkspace,
     "--home-dir",
     input.codexHome,
+    ...(input.libraryDir ? ["--library-dir", input.libraryDir] : []),
     "--bridge-state",
     input.statePath,
     "--reply-policy",

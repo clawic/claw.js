@@ -469,12 +469,15 @@ claw.library.createInstruction({
 });
 claw.library.assign({ assetId: "namecheap", scope: "agent", targetId: "ada" });
 const resolved = claw.library.resolve({ agentId: "ada", tags: ["domains"] });
+const capsules = claw.library.resolveSkillCapsules({ agentId: "ada" });
 await claw.library.sync({ agentId: "ada", availableSecrets: ["namecheap_api_token"] });
 ```
 
 The library is local-personal by default and can be isolated with
 `library.rootDir`. It stores secret references and required metadata, not
-secret values.
+secret values. Skill assets can include `context.capsule`, `context.priority`,
+and `context.readWhen`; capsules are limited to 300 characters and resolve in
+priority then assignment order.
 
 ## Generations And Typed Media Facades
 
@@ -525,6 +528,29 @@ workspaces can browse generated, edited, and imported assets later with
 records with parent/source ids; imported Codex or ChatGPT images can carry
 the same prompt, provider, tag, type, and provenance metadata as native
 generations.
+
+## Persistent Media Index
+
+Documents, generated assets, imported images, voice notes, and channel media
+are also written into the canonical media index. The index is for retrieval
+and sharing; agents should keep using the normal send/upload/generation APIs.
+
+```ts
+const recent = claw.media.list({ agentId: "support-agent", kind: "document" });
+const hits = claw.media.search({ query: "requirements", provider: "telegram" });
+const file = claw.media.download(hits[0].mediaId);
+
+const share = await claw.media.share.create({
+  label: "Requirements PDFs",
+  filters: { kind: "document", query: "requirements" },
+});
+
+await claw.media.share.revoke(share.id);
+```
+
+Media records include agent, session, channel, direction, storage/external
+reference, and searchable text when it is available from document indexing or
+voice transcription.
 
 ## Telegram and Secrets
 

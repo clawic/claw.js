@@ -322,6 +322,7 @@ the Relay API:
 | List tasks | `await workspace.tasks.list()` | `claw tasks list` | `GET WS/tasks` |
 | List temporal items | `await claw.time.list()` | `claw time list` | `GET WS/time` |
 | Generate or register an image | `await claw.image.create(...)` / `await claw.image.import(...)` | `claw image create --prompt "..."` / `claw image import --file ...` | `POST WS/images` |
+| Recover sent media | `claw.media.search({ query: "invoice" })` | `claw media search --query invoice` | `-` |
 
 In the rows that use `workspace.*`, that surface comes from
 `@clawjs/workspace` on top of the base SDK.

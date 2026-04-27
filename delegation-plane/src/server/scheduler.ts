@@ -5,6 +5,7 @@ import type {
   DependencyKind,
   RunLog,
 } from "../shared/types.ts";
+import type { SemanticPlan } from "../../../packages/clawjs-core/src/semantic.ts";
 import { DelegationPlaneDatabase } from "./db.ts";
 
 function now(): number {
@@ -88,6 +89,7 @@ export class DelegationScheduler {
     optional?: boolean;
     priority?: number;
     payload?: Record<string, unknown>;
+    semanticPlan?: SemanticPlan | null;
   }): DelegationNode {
     const run = this.requireRun(input.runId);
     const parent = this.requireNode(run.nodeId);
@@ -101,6 +103,7 @@ export class DelegationScheduler {
       agentType: input.agentType ?? parent.agentType,
       adapter: input.adapter ?? parent.adapter,
       input: input.payload ?? {},
+      semanticPlan: input.semanticPlan ?? null,
       priority: input.priority ?? parent.priority,
       depth: parent.depth + 1,
       maxAttempts: graph.policy.maxAttempts,

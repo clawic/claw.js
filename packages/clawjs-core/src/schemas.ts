@@ -195,6 +195,12 @@ export const libraryRequiredSecretSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const skillContextCapsuleSchema = z.object({
+  capsule: z.string().min(1).max(300),
+  priority: z.number().int().default(100),
+  readWhen: z.array(z.string().min(1)).optional(),
+});
+
 export const libraryAssetSchema = z.object({
   id: z.string().min(1),
   kind: z.enum(["skill", "instruction", "bundle"]),
@@ -207,6 +213,7 @@ export const libraryAssetSchema = z.object({
     installRef: z.string().min(1).optional(),
     path: z.string().min(1).optional(),
   }).optional(),
+  context: skillContextCapsuleSchema.optional(),
   projection: z.object({
     target: z.enum(["soul", "identity", "agents", "tools", "heartbeat", "user"]),
     blockId: z.string().min(1).optional(),
@@ -224,6 +231,7 @@ export const libraryAssignmentSchema = z.object({
   scope: z.enum(["agent", "workspace"]),
   targetId: z.string().min(1),
   mode: z.enum(["include", "exclude"]),
+  order: z.number().int().nonnegative().optional(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
 });
@@ -248,6 +256,232 @@ export const libraryResolveResultSchema = z.object({
     label: z.string().min(1).optional(),
   })),
 });
+
+export const ruleScopeKindSchema = z.enum([
+  "user",
+  "organization",
+  "brand",
+  "client",
+  "project",
+  "domain",
+  "service",
+  "task",
+  "output",
+]);
+
+export const ruleKindSchema = z.enum(["directive", "default", "resource"]);
+export const ruleStatusSchema = z.enum(["pending", "active", "archived"]);
+
+export const ruleScopeSchema = z.object({
+  id: z.string().min(1),
+  kind: z.string().min(1),
+  name: z.string().min(1),
+  parentId: z.string().min(1).optional(),
+  aliases: z.array(z.string().min(1)).default([]),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+});
+
+export const ruleReferenceSchema = z.object({
+  kind: z.string().min(1),
+  ref: z.string().min(1),
+  label: z.string().min(1).optional(),
+});
+
+export const ruleApplyWhenSchema = z.object({
+  keywords: z.array(z.string().min(1)).optional(),
+  taskTypes: z.array(z.string().min(1)).optional(),
+  outputFormats: z.array(z.string().min(1)).optional(),
+  domains: z.array(z.string().min(1)).optional(),
+  services: z.array(z.string().min(1)).optional(),
+  projects: z.array(z.string().min(1)).optional(),
+  agents: z.array(z.string().min(1)).optional(),
+  channels: z.array(z.string().min(1)).optional(),
+}).strict();
+
+export const ruleRecordSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  kind: ruleKindSchema,
+  status: ruleStatusSchema,
+  scopeId: z.string().min(1),
+  content: z.string().min(1),
+  applyWhen: ruleApplyWhenSchema.optional(),
+  aliases: z.array(z.string().min(1)).default([]),
+  priority: z.number().int().default(100),
+  key: z.string().min(1).optional(),
+  references: z.array(ruleReferenceSchema).default([]),
+  agentIds: z.array(z.string().min(1)).optional(),
+  channelIds: z.array(z.string().min(1)).optional(),
+  source: z.string().min(1).optional(),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+  approvedAt: z.string().min(1).optional(),
+  archivedAt: z.string().min(1).optional(),
+});
+
+export const rulesStateSchema = z.object({
+  schemaVersion: z.literal(1),
+  scopes: z.array(ruleScopeSchema),
+  rules: z.array(ruleRecordSchema),
+  updatedAt: z.string().min(1),
+});
+
+export const soulSliderValueSchema = z.enum(["very_low", "low", "medium", "high", "very_high"]);
+export const soulModuleModeSchema = z.enum(["disabled", "normal", "strong"]);
+const soulModuleBaseSchema = z.object({
+  mode: soulModuleModeSchema.optional(),
+  principles: z.array(z.string().min(1)).optional(),
+}).strict();
+
+export const soulModulesSchema = z.object({
+  identity: soulModuleBaseSchema.extend({
+    name: z.string().min(1).optional(),
+    role: z.string().min(1).optional(),
+    archetype: z.string().min(1).optional(),
+    selfConcept: z.string().min(1).optional(),
+    relationshipToUser: z.string().min(1).optional(),
+    continuityStyle: z.enum(["session_only", "workspace_memory", "long_running_identity"]).optional(),
+    signatureBehaviors: z.array(z.string().min(1)).optional(),
+  }).strict(),
+  mission: soulModuleBaseSchema.extend({
+    primaryPurpose: z.string().min(1).optional(),
+    successCriteria: z.array(z.string().min(1)).optional(),
+    priorities: z.array(z.string().min(1)).optional(),
+    antiGoals: z.array(z.string().min(1)).optional(),
+    defaultPosture: z.enum(["assist", "lead", "coach", "execute", "analyze"]).optional(),
+    timeHorizon: z.enum(["immediate", "daily", "strategic"]).optional(),
+  }).strict(),
+  values: soulModuleBaseSchema.extend({
+    honesty: soulSliderValueSchema.optional(),
+    privacy: soulSliderValueSchema.optional(),
+    usefulness: soulSliderValueSchema.optional(),
+    independence: soulSliderValueSchema.optional(),
+    rigor: soulSliderValueSchema.optional(),
+    care: soulSliderValueSchema.optional(),
+    values: z.array(z.string().min(1)).optional(),
+    hardLines: z.array(z.string().min(1)).optional(),
+  }).strict(),
+  temperament: soulModuleBaseSchema.extend({
+    warmth: soulSliderValueSchema.optional(),
+    energy: soulSliderValueSchema.optional(),
+    patience: soulSliderValueSchema.optional(),
+    humor: soulSliderValueSchema.optional(),
+    confidence: soulSliderValueSchema.optional(),
+    intensity: soulSliderValueSchema.optional(),
+    emotionalRange: z.enum(["reserved", "natural", "expressive"]).optional(),
+  }).strict(),
+  communication: soulModuleBaseSchema.extend({
+    directness: soulSliderValueSchema.optional(),
+    detail: soulSliderValueSchema.optional(),
+    formality: z.enum(["casual", "neutral", "formal"]).optional(),
+    verbosity: z.enum(["minimal", "concise", "balanced", "thorough"]).optional(),
+    disagreementStyle: z.enum(["direct", "diplomatic", "socratic"]).optional(),
+    questionFrequency: soulSliderValueSchema.optional(),
+    structurePreference: z.enum(["prose", "bullets", "mixed"]).optional(),
+    languagePolicy: z.enum(["mirror_user", "workspace_default", "english", "spanish"]).optional(),
+    forbiddenPhrases: z.array(z.string().min(1)).optional(),
+  }).strict(),
+  cognition: soulModuleBaseSchema.extend({
+    rigor: soulSliderValueSchema.optional(),
+    creativity: soulSliderValueSchema.optional(),
+    skepticism: soulSliderValueSchema.optional(),
+    speedVsAccuracy: z.enum(["speed", "balanced", "accuracy"]).optional(),
+    uncertaintyPolicy: z.enum(["state_confidence", "ask_clarifying", "research_first", "make_reasonable_assumption"]).optional(),
+    planningStyle: z.enum(["act_first", "plan_first", "ask_first"]).optional(),
+    researchDepth: soulSliderValueSchema.optional(),
+    abstractionLevel: z.enum(["concrete", "balanced", "abstract"]).optional(),
+  }).strict(),
+  autonomy: soulModuleBaseSchema.extend({
+    askPolicy: z.enum(["act", "ask_when_uncertain", "ask_before_external", "ask_first"]).optional(),
+    riskTolerance: z.enum(["low", "medium", "high"]).optional(),
+    initiative: soulSliderValueSchema.optional(),
+    externalActionPolicy: z.enum(["never", "ask_first", "allowed_when_authorized"]).optional(),
+    spendingPolicy: z.enum(["never", "ask_first"]).optional(),
+    publicVoicePolicy: z.enum(["never_impersonate", "draft_only", "allowed_when_authorized"]).optional(),
+    reversibleChanges: z.enum(["act", "ask_when_uncertain", "ask_first"]).optional(),
+  }).strict(),
+  memory: soulModuleBaseSchema.extend({
+    persistence: z.enum(["none", "workspace_files", "structured_memory"]).optional(),
+    updatePolicy: z.enum(["never", "ask_first", "stable_facts", "proactive"]).optional(),
+    rememberPreferences: z.boolean().optional(),
+    rememberPeople: z.boolean().optional(),
+    rememberProjects: z.boolean().optional(),
+    forgetPolicy: z.enum(["on_request", "expiry", "manual_review"]).optional(),
+    sensitiveDataPolicy: z.enum(["avoid", "minimize", "allowed_if_needed"]).optional(),
+  }).strict(),
+  boundaries: soulModuleBaseSchema.extend({
+    privacyBoundary: soulSliderValueSchema.optional(),
+    medicalLegalFinancialBoundary: z.enum(["disclaim", "refer_out", "general_info_only"]).optional(),
+    manipulationBoundary: z.enum(["refuse", "redirect", "ask_intent"]).optional(),
+    secretsPolicy: z.enum(["never_reveal", "reference_only"]).optional(),
+    minorsPolicy: z.enum(["extra_care", "standard"]).optional(),
+    prohibitedActions: z.array(z.string().min(1)).optional(),
+  }).strict(),
+  tools: soulModuleBaseSchema.extend({
+    toolEagerness: soulSliderValueSchema.optional(),
+    inspectBeforeAsking: z.boolean().optional(),
+    shellPolicy: z.enum(["avoid", "allowed", "preferred_for_local_truth"]).optional(),
+    browserPolicy: z.enum(["when_current_needed", "avoid", "always_verify"]).optional(),
+    fileEditPolicy: z.enum(["minimal", "normal", "proactive"]).optional(),
+    validationPolicy: z.enum(["none", "targeted", "e2e_required"]).optional(),
+    preferredTools: z.array(z.string().min(1)).optional(),
+  }).strict(),
+  social: soulModuleBaseSchema.extend({
+    userAddressStyle: z.enum(["mirror", "name", "informal", "formal"]).optional(),
+    groupChatPosture: z.enum(["quiet", "helpful", "active"]).optional(),
+    thirdPartyTone: z.enum(["neutral", "warm", "professional"]).optional(),
+    conflictStyle: z.enum(["deescalate", "direct", "mediate"]).optional(),
+    boundariesWithUser: z.enum(["service", "collaborator", "companion"]).optional(),
+  }).strict(),
+  domain: soulModuleBaseSchema.extend({
+    primaryDomains: z.array(z.string().min(1)).optional(),
+    secondaryDomains: z.array(z.string().min(1)).optional(),
+    weakDomains: z.array(z.string().min(1)).optional(),
+    learningPolicy: z.enum(["admit_limits", "research", "ask_expert"]).optional(),
+    expertiseVoice: z.enum(["humble", "confident", "expert"]).optional(),
+  }).strict(),
+  operations: soulModuleBaseSchema.extend({
+    executionStyle: z.enum(["minimal_change", "balanced", "comprehensive"]).optional(),
+    debuggingStyle: z.enum(["diagnose_first", "fast_iteration", "hypothesis_driven"]).optional(),
+    reportingStyle: z.enum(["brief", "structured", "detailed"]).optional(),
+    qualityGate: z.enum(["none", "tests", "e2e"]).optional(),
+    commitStyle: z.enum(["none", "conventional", "project_policy"]).optional(),
+    rollbackPolicy: z.enum(["never_without_permission", "allowed_for_own_changes"]).optional(),
+  }).strict(),
+  vibe: soulModuleBaseSchema.extend({
+    descriptors: z.array(z.string().min(1)).optional(),
+    avoidDescriptors: z.array(z.string().min(1)).optional(),
+    aesthetic: z.enum(["plain", "warm", "sharp", "playful", "calm"]).optional(),
+    humanity: soulSliderValueSchema.optional(),
+    edge: soulSliderValueSchema.optional(),
+  }).strict(),
+}).strict();
+
+export const soulSpecSchema = z.object({
+  schemaVersion: z.literal(1),
+  id: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().optional(),
+  presetId: z.string().min(1).optional(),
+  modules: soulModulesSchema,
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+}).strict();
+
+export const soulAssignmentSchema = z.object({
+  agentId: z.string().min(1),
+  soulId: z.string().min(1),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+}).strict();
+
+export const soulStateSchema = z.object({
+  schemaVersion: z.literal(1),
+  specs: z.array(soulSpecSchema),
+  assignments: z.array(soulAssignmentSchema),
+  updatedAt: z.string().min(1),
+}).strict();
 
 export const channelsStateSnapshotSchema = z.object({
   schemaVersion: z.number().int().positive(),

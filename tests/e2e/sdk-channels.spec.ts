@@ -32,6 +32,30 @@ function createFakeTelegramProxy(rootDir: string): { proxyPath: string; statePat
           username: "alice",
         },
       },
+    }, {
+      update_id: 32,
+      message: {
+        message_id: 42,
+        message_thread_id: 77,
+        caption: "inbound requirements pdf",
+        document: {
+          file_id: "telegram-file-reqs",
+          file_unique_id: "telegram-unique-reqs",
+          file_name: "requirements.pdf",
+          mime_type: "application/pdf",
+        },
+        chat: {
+          id: -1001,
+          type: "supergroup",
+          title: "Launch Group",
+          is_forum: true,
+        },
+        from: {
+          id: 502,
+          first_name: "Bob",
+          username: "bob",
+        },
+      },
     }],
     lastSend: null,
   }, null, 2));
@@ -192,6 +216,8 @@ const sentMedia = await claw.channels.messages.send({
   threadId: 77,
   agentId: "support-agent",
 });
+const mediaHits = claw.media.search({ query: "requirements", provider: "telegram", targetId: "-1001" });
+const outboundMediaHits = claw.media.search({ query: "Spec sheet", provider: "telegram", direction: "outbound" });
 await claw.channels.commands.set("telegram", [{ command: "start", description: "Start" }], { accountId: "support" });
 
 const accounts = claw.channels.accounts.list("telegram");
@@ -222,6 +248,8 @@ process.stdout.write(JSON.stringify({
   syncedSender: synced[0]?.senderLabel,
   sentThreadId: sent.threadId,
   sentMediaThreadId: sentMedia.threadId,
+  inboundMedia: mediaHits[0],
+  outboundMedia: outboundMediaHits[0],
   allowedCount: allowedMessages.length,
   deniedCount: deniedMessages.length,
   commands,
@@ -253,6 +281,8 @@ process.stdout.write(JSON.stringify({
       syncedSender?: string;
       sentThreadId: string;
       sentMediaThreadId: string;
+      inboundMedia?: { name: string; kind: string; direction: string; channel?: { provider?: string; targetId?: string; threadId?: string } };
+      outboundMedia?: { name: string; kind: string; direction: string; external?: { value?: string } };
       allowedCount: number;
       deniedCount: number;
       commands: Array<{ command: string; description: string }>;
@@ -273,6 +303,15 @@ process.stdout.write(JSON.stringify({
     expect(payload.syncedSender).toBe("alice");
     expect(payload.sentThreadId).toBe("77");
     expect(payload.sentMediaThreadId).toBe("77");
+    expect(payload.inboundMedia?.name).toBe("requirements.pdf");
+    expect(payload.inboundMedia?.kind).toBe("document");
+    expect(payload.inboundMedia?.direction).toBe("inbound");
+    expect(payload.inboundMedia?.channel?.provider).toBe("telegram");
+    expect(payload.inboundMedia?.channel?.targetId).toBe("-1001");
+    expect(payload.inboundMedia?.channel?.threadId).toBe("77");
+    expect(payload.outboundMedia?.kind).toBe("document");
+    expect(payload.outboundMedia?.direction).toBe("outbound");
+    expect(payload.outboundMedia?.external?.value).toBe("https://example.local/spec.pdf");
     expect(payload.allowedCount).toBeGreaterThanOrEqual(2);
     expect(payload.deniedCount).toBe(0);
     expect(payload.commands[0]?.command).toBe("start");

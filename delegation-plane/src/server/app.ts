@@ -7,6 +7,7 @@ import { DelegationPlaneDatabase } from "./db.ts";
 import { loadDelegationPlaneConfig, type DelegationPlaneConfig } from "./config.ts";
 import { DelegationScheduler } from "./scheduler.ts";
 import type { DelegationPolicy, DependencyKind, RunLog } from "../shared/types.ts";
+import { semanticPlanSchema } from "../../../packages/clawjs-core/src/semantic.ts";
 
 export interface BuildDelegationPlaneAppOptions {
   config?: Partial<DelegationPlaneConfig>;
@@ -14,6 +15,10 @@ export interface BuildDelegationPlaneAppOptions {
 
 function bodyRecord(body: unknown): Record<string, unknown> {
   return (body ?? {}) as Record<string, unknown>;
+}
+
+function parseSemanticPlan(value: unknown) {
+  return value === undefined ? null : semanticPlanSchema.parse(value);
 }
 
 async function sendError(reply: FastifyReply, error: unknown, status = 400) {
@@ -45,15 +50,23 @@ export async function buildDelegationPlaneApp(options: BuildDelegationPlaneAppOp
 
   app.post("/v1/graphs", async (request, reply) => {
     const body = bodyRecord(request.body);
-    const objective = String(body.objective ?? "").trim();
-    if (!objective) return await reply.code(400).send({ error: "objective is required" });
-    const graph = db.createGraph({
-      objective,
-      creator: String(body.creator ?? "operator"),
-      policy: body.policy as Partial<DelegationPolicy> | undefined,
-      root: body.root && typeof body.root === "object" ? body.root as Record<string, unknown> : undefined,
-    });
-    return await reply.code(201).send({ graph, root: graph.rootNodeId ? db.getNode(graph.rootNodeId) : null });
+    try {
+      const objective = String(body.objective ?? "").trim();
+      if (!objective) return await reply.code(400).send({ error: "objective is required" });
+      const graph = db.createGraph({
+        objective,
+        creator: String(body.creator ?? "operator"),
+        policy: body.policy as Partial<DelegationPolicy> | undefined,
+        root: body.root && typeof body.root === "object" ? {
+          ...(body.root as Record<string, unknown>),
+          semanticPlan: parseSemanticPlan((body.root as Record<string, unknown>).semanticPlan),
+        } : undefined,
+        semanticPlan: parseSemanticPlan(body.semanticPlan),
+      });
+      return await reply.code(201).send({ graph, root: graph.rootNodeId ? db.getNode(graph.rootNodeId) : null });
+    } catch (error) {
+      return await sendError(reply, error);
+    }
   });
 
   app.get("/v1/graphs", async () => ({ graphs: db.listGraphs() }));
@@ -191,6 +204,7 @@ export async function buildDelegationPlaneApp(options: BuildDelegationPlaneAppOp
           optional: body.optional === true,
           priority: typeof body.priority === "number" ? body.priority : undefined,
           payload: body.payload && typeof body.payload === "object" ? body.payload as Record<string, unknown> : {},
+          semanticPlan: parseSemanticPlan(body.semanticPlan),
         }),
       };
     } catch (error) {

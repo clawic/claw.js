@@ -1,7 +1,9 @@
 import fs from "fs";
+import http from "http";
+import os from "os";
 import path from "path";
-import { spawn } from "child_process";
-import { createHash } from "crypto";
+import { spawn, spawnSync } from "child_process";
+import { createHash, randomBytes } from "crypto";
 import { fileURLToPath } from "url";
 
 import {
@@ -17,7 +19,8 @@ import {
 import type { ClawInstance, ImageOperation, ImageProvenance, ImageType, TelegramSendMediaInput, TelegramSendMessageInput, VoiceNoteStatus } from "@clawjs/claw";
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
-import type { RuntimeAdapterId, TemporalItem } from "@clawjs/core";
+import { semanticPlanSchema } from "@clawjs/core";
+import type { MediaDirection, MediaKind, MediaListInput, MediaOrigin, RuntimeAdapterId, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem } from "@clawjs/core";
 import { runEmbeddedDatabaseCli } from "./database-advanced.ts";
 import { runMagicDbCli } from "./database-magic.ts";
 import { runMemoryCli } from "./memory-local.ts";
@@ -53,6 +56,22 @@ export const CLI_EXIT_FAILURE = 1;
 export const CLI_EXIT_DEGRADED = 2;
 export const CLI_EXIT_USAGE = 64;
 export const DEFAULT_CLI_BIN = "claw";
+
+type CliMediaShare = { id: string; url: string };
+type CliMediaClaw = ClawInstance & {
+  media: {
+    list(input?: MediaListInput): Array<{ mediaId: string; kind: string; name: string }>;
+    search(input: MediaListInput & { query: string }): Array<{ mediaId: string; kind: string; name: string }>;
+    get(mediaId: string): { name: string } | null;
+    download(mediaId: string): { media: { name: string }; buffer: Buffer } | null;
+    share: {
+      create(input: { mediaId?: string; label?: string; filters?: MediaListInput; expiresAt?: string | null; ttlMs?: number }): Promise<CliMediaShare>;
+      list(): CliMediaShare[];
+      revoke(id: string): Promise<boolean>;
+      resolveGallery(id: string): { items: Array<{ mediaId: string; name: string }> } | null;
+    };
+  };
+};
 
 class CliHandledError extends Error {
   readonly code: string;
@@ -194,6 +213,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} time list|get|create|update|delete|pause|resume|run|executions|calendar|timeline`,
     `  ${binName} schedule at|every|after ...`,
     `  ${binName} memory save|list|get|update|delete|search|context|status|capabilities`,
+    `  ${binName} rules status|list|get|propose|approve|archive|scopes|compile`,
     `  ${binName} areas|tasks|goals|projects|milestones|activity ...`,
     `  ${binName} blockers|artifacts|decisions|work-sessions ...`,
     `  ${binName} assignments|handoffs|approvals|capacity ...`,
@@ -204,12 +224,16 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} workspace-search query | workspace-index rebuild`,
     `  ${binName} skills list|inspect|sync|sources|search|install`,
     `  ${binName} library list|inspect|create|update|remove|import-skill|assign|unassign|resolve|sync`,
+    `  ${binName} plan create|list|show|run|approve|reject|review|policy`,
+    `  ${binName} soul init|validate|preview|compile|assign|inspect`,
     `  ${binName} channels list|status|telegram|assign|unassign|assignments|processors|listen|targets|messages|permissions|commands`,
     `  ${binName} channels telegram setup|codex setup|codex status`,
+    `  ${binName} preview share --url http://127.0.0.1:PORT [--mode lan|tailscale|cloudflare]`,
     `  ${binName} browser status|ensure|share --relay-url URL --access-token TOKEN --tenant-id ID --agent-id ID --workspace-id ID`,
     `  ${binName} telegram connect|status|webhook set|clear|polling start|stop|commands set|get|chats list|inspect|send`,
     `  ${binName} sessions create|list|search|read|stream|generate-title`,
     `  ${binName} documents list|read|search|upload|register|download`,
+    `  ${binName} media list|search|read|download|share create|revoke|list`,
     `  ${binName} inference generate-text`,
     `  ${binName} tts synthesize|config|set-config|providers|catalog`,
     `  ${binName} stt transcribe|config|set-config|providers`,
@@ -292,6 +316,44 @@ function parseCsvFlag(value: string | undefined): string[] {
     .split(",")
     .map((entry) => entry.trim())
     .filter(Boolean);
+}
+
+function parseRuleReferences(value: string | undefined): Array<{ kind: string; ref: string; label?: string }> {
+  return parseCsvFlag(value).map((entry) => {
+    const [kind, ref, label] = entry.split(":");
+    if (!kind || !ref) {
+      throw new CliHandledError("usage_error", `Invalid rule reference "${entry}". Use kind:ref[:label].`, CLI_EXIT_USAGE);
+    }
+    return {
+      kind,
+      ref,
+      ...(label ? { label } : {}),
+    };
+  });
+}
+
+function buildMediaListInput(flags: Record<string, string>): MediaListInput {
+  return {
+    ...(flags.query ? { query: flags.query } : {}),
+    ...(flags.kind ? { kind: flags.kind as MediaKind } : {}),
+    ...(flags.type ? { kind: flags.type as MediaKind } : {}),
+    ...(flags.direction ? { direction: flags.direction as MediaDirection } : {}),
+    ...(flags.origin ? { origin: flags.origin as MediaOrigin } : {}),
+    ...(flags.agent ? { agentId: flags.agent } : {}),
+    ...(flags["agent-id"] ? { agentId: flags["agent-id"] } : {}),
+    ...(flags["workspace-id"] ? { workspaceId: flags["workspace-id"] } : {}),
+    ...(flags["project-id"] ? { projectId: flags["project-id"] } : {}),
+    ...(flags["session-id"] ? { sessionId: flags["session-id"] } : {}),
+    ...(flags.provider ? { provider: flags.provider } : {}),
+    ...(flags.channel ? { provider: flags.channel } : {}),
+    ...(flags.account ? { accountId: flags.account } : {}),
+    ...(flags["target-id"] ? { targetId: flags["target-id"] } : {}),
+    ...(flags["chat-id"] ? { targetId: flags["chat-id"] } : {}),
+    ...(flags["thread-id"] ? { threadId: flags["thread-id"] } : {}),
+    ...(flags.from ? { from: flags.from } : {}),
+    ...(flags.to ? { to: flags.to } : {}),
+    ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+  };
 }
 
 function writeProgress(stream: NodeJS.WritableStream, event: { phase: string; status: string; percent?: number; message?: string }): void {
@@ -378,6 +440,40 @@ function parseSetFlags(argv: string[]): Record<string, unknown> {
     index += 1;
   }
   return values;
+}
+
+const SOUL_CLI_MODULES = new Set<SoulModuleKey>([
+  "identity",
+  "mission",
+  "values",
+  "temperament",
+  "communication",
+  "cognition",
+  "autonomy",
+  "memory",
+  "boundaries",
+  "tools",
+  "social",
+  "domain",
+  "operations",
+  "vibe",
+]);
+
+function parseSoulModulesFromSetFlags(argv: string[]): Partial<Record<SoulModuleKey, SoulModule>> {
+  const values = parseSetFlags(argv);
+  const modules: Partial<Record<SoulModuleKey, SoulModule>> = {};
+  for (const [pathKey, value] of Object.entries(values)) {
+    const [moduleKey, settingKey] = pathKey.split(".", 2);
+    if (!moduleKey || !settingKey || !SOUL_CLI_MODULES.has(moduleKey as SoulModuleKey)) {
+      throw new CliHandledError("usage_error", `Soul --set keys must use module.setting, received ${pathKey}`, CLI_EXIT_USAGE);
+    }
+    const key = moduleKey as SoulModuleKey;
+    modules[key] = {
+      ...(modules[key] ?? {}),
+      [settingKey]: value,
+    } as SoulModule;
+  }
+  return modules;
 }
 
 function parseObjectFlag(value: string | undefined, label: string): Record<string, unknown> {
@@ -770,6 +866,289 @@ function pathSafeBasename(value: string): string {
   return parts[parts.length - 1] || "clawjs-workspace";
 }
 
+type AgentPlanStatus = "draft" | "pending" | "approved" | "rejected" | "blocked" | "running" | "succeeded" | "failed" | "cancelled";
+type AgentPlanDecision = "auto_run" | "require_approval" | "assign_reviewer" | "block" | "pending";
+
+interface AgentPlanPolicyRule {
+  id: string;
+  when: Record<string, unknown>;
+  then: {
+    decision: AgentPlanDecision;
+    approver?: "human_owner" | string;
+    reviewerAgentId?: string;
+    reason?: string;
+  };
+}
+
+interface AgentPlanRecord {
+  schemaVersion: 1;
+  id: string;
+  objective: string;
+  status: AgentPlanStatus;
+  creatorAgentId: string;
+  executorAgentId?: string;
+  approverAgentId?: string;
+  reviewerAgentId?: string;
+  tags: string[];
+  semanticPlan: SemanticPlan;
+  policyDecision: AgentPlanDecision;
+  policyRuleId?: string;
+  policyReason: string;
+  delegationGraphId?: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+  decisionReason?: string;
+  reviewReason?: string;
+  lastRunError?: string;
+}
+
+interface AgentPlanState {
+  schemaVersion: 1;
+  plans: AgentPlanRecord[];
+  policies: AgentPlanPolicyRule[];
+}
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function planStatePath(workspaceRoot: string): string {
+  return path.join(workspaceRoot, ".clawjs", "data", "agent-plans.json");
+}
+
+function readAgentPlanState(workspaceRoot: string): AgentPlanState {
+  const filePath = planStatePath(workspaceRoot);
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as Partial<AgentPlanState>;
+    return {
+      schemaVersion: 1,
+      plans: Array.isArray(parsed.plans) ? parsed.plans as AgentPlanRecord[] : [],
+      policies: Array.isArray(parsed.policies) ? parsed.policies as AgentPlanPolicyRule[] : [],
+    };
+  } catch {
+    return { schemaVersion: 1, plans: [], policies: [] };
+  }
+}
+
+function writeAgentPlanState(workspaceRoot: string, state: AgentPlanState): void {
+  const filePath = planStatePath(workspaceRoot);
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${JSON.stringify(state, null, 2)}\n`);
+}
+
+function planId(): string {
+  return `plan_${randomBytes(8).toString("hex")}`;
+}
+
+function riskRank(risk: string | undefined): number {
+  if (risk === "high") return 3;
+  if (risk === "medium") return 2;
+  if (risk === "low") return 1;
+  return 0;
+}
+
+function maxSemanticPlanRisk(plan: SemanticPlan): "low" | "medium" | "high" {
+  const risks = [
+    ...plan.actions.map((action) => action.risk),
+    ...plan.effects.map((effect) => effect.risk),
+    ...plan.permissions.map((permission) => permission.risk),
+  ];
+  if (risks.some((risk) => risk === "high")) return "high";
+  if (risks.some((risk) => risk === "medium")) return "medium";
+  return "low";
+}
+
+function planRequiresHumanApproval(plan: SemanticPlan): boolean {
+  return plan.actions.some((action) => action.requiresHumanApproval)
+    || plan.permissions.some((permission) => permission.requiresHumanApproval);
+}
+
+function conditionValues(plan: SemanticPlan, key: string, record: Pick<AgentPlanRecord, "creatorAgentId" | "tags">): string[] {
+  if (key === "actions.type") return plan.actions.map((action) => action.type);
+  if (key === "effects.kind") return plan.effects.map((effect) => effect.kind);
+  if (key === "permissions.capability") return plan.permissions.map((permission) => permission.capability);
+  if (key === "objects.kind") return plan.objects.map((object) => object.kind);
+  if (key === "agent") return [record.creatorAgentId];
+  if (key === "tags") return record.tags;
+  return [];
+}
+
+function planMatchesPolicy(rule: AgentPlanPolicyRule, plan: SemanticPlan, record: Pick<AgentPlanRecord, "creatorAgentId" | "tags">): boolean {
+  for (const [key, rawExpected] of Object.entries(rule.when)) {
+    if (key === "maxRisk") {
+      if (riskRank(maxSemanticPlanRisk(plan)) > riskRank(String(rawExpected))) return false;
+      continue;
+    }
+    if (key === "requiresHumanApproval") {
+      if (planRequiresHumanApproval(plan) !== Boolean(rawExpected)) return false;
+      continue;
+    }
+    const expected = Array.isArray(rawExpected) ? rawExpected.map(String) : [String(rawExpected)];
+    const values = conditionValues(plan, key, record);
+    if (!expected.some((value) => values.includes(value))) return false;
+  }
+  return true;
+}
+
+function defaultPlanDecision(plan: SemanticPlan): { decision: AgentPlanDecision; reason: string; approver?: string } {
+  const maxRisk = maxSemanticPlanRisk(plan);
+  if (maxRisk === "high" || planRequiresHumanApproval(plan)) {
+    return { decision: "require_approval", approver: "human_owner", reason: "High risk or explicit approval requirement." };
+  }
+  if (maxRisk === "medium") {
+    return { decision: "pending", reason: "Medium risk plans require review by default." };
+  }
+  return { decision: "auto_run", reason: "Low risk plan with no explicit approval requirement." };
+}
+
+function evaluatePlanPolicy(
+  policies: AgentPlanPolicyRule[],
+  plan: SemanticPlan,
+  record: Pick<AgentPlanRecord, "creatorAgentId" | "tags">,
+): { decision: AgentPlanDecision; reason: string; ruleId?: string; approverAgentId?: string; reviewerAgentId?: string } {
+  const matched = policies.find((rule) => planMatchesPolicy(rule, plan, record));
+  if (matched) {
+    const approver = matched.then.approver === "human_owner" ? undefined : matched.then.approver;
+    return {
+      decision: matched.then.decision,
+      reason: matched.then.reason ?? `Matched policy ${matched.id}.`,
+      ruleId: matched.id,
+      approverAgentId: matched.then.decision === "require_approval" ? approver : undefined,
+      reviewerAgentId: matched.then.reviewerAgentId ?? (matched.then.decision === "assign_reviewer" ? approver : undefined),
+    };
+  }
+  const fallback = defaultPlanDecision(plan);
+  return { decision: fallback.decision, reason: fallback.reason, approverAgentId: fallback.approver === "human_owner" ? undefined : fallback.approver };
+}
+
+function statusFromDecision(decision: AgentPlanDecision): AgentPlanStatus {
+  if (decision === "auto_run") return "approved";
+  if (decision === "block") return "blocked";
+  return "pending";
+}
+
+function buildFallbackSemanticPlan(objective: string, creatorAgentId: string, tags: string[]): SemanticPlan {
+  const publishLike = /\b(deploy|publish|push|release|ship)\b/i.test(objective);
+  const designLike = tags.includes("design") || tags.includes("web") || /\b(ui|design|frontend|home|page|screen)\b/i.test(objective);
+  const risk = publishLike ? "high" : designLike ? "medium" : "low";
+  return semanticPlanSchema.parse({
+    schemaVersion: 1,
+    intent: {
+      id: "intent-main",
+      summary: objective,
+      requestedBy: creatorAgentId,
+      constraints: publishLike ? ["publishing requires approval"] : [],
+    },
+    objects: [
+      { id: "workspace", kind: "repository", label: "Current workspace" },
+      { id: "work", kind: "task", label: objective },
+    ],
+    actions: [
+      {
+        id: "inspect",
+        type: "inspect",
+        label: "Inspect relevant context",
+        objectIds: ["workspace"],
+        effectIds: ["read-workspace"],
+        permissionIds: ["workspace-read"],
+        risk: "low",
+      },
+      {
+        id: "propose",
+        type: "propose",
+        label: "Prepare proposed work",
+        objectIds: ["work"],
+        effectIds: ["prepare-work"],
+        permissionIds: ["workspace-write"],
+        risk,
+        requiresHumanApproval: publishLike,
+      },
+    ],
+    effects: [
+      {
+        id: "read-workspace",
+        kind: "read",
+        description: "Read local workspace context",
+        objectIds: ["workspace"],
+        reversible: true,
+        risk: "low",
+      },
+      {
+        id: "prepare-work",
+        kind: publishLike ? "publication" : "write",
+        description: publishLike ? "May publish or deploy externally" : "May prepare local changes",
+        objectIds: ["work"],
+        reversible: !publishLike,
+        risk,
+      },
+    ],
+    permissions: [
+      {
+        id: "workspace-read",
+        capability: "workspace.read",
+        scope: "current workspace",
+        risk: "low",
+      },
+      {
+        id: "workspace-write",
+        capability: publishLike ? "workspace.publish" : "workspace.write",
+        scope: "current workspace",
+        risk,
+        requiresHumanApproval: publishLike,
+      },
+    ],
+    receipts: [],
+    provenance: ["claw plan create"],
+  });
+}
+
+function readJsonFile<TValue>(filePath: string, label: string): TValue {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8")) as TValue;
+  } catch (error) {
+    throw new CliHandledError("invalid_json", `Invalid ${label}: ${error instanceof Error ? error.message : "parse error"}`, CLI_EXIT_USAGE);
+  }
+}
+
+function formatPlan(plan: AgentPlanRecord): string {
+  return [
+    `${plan.id} ${plan.status}`,
+    `objective: ${plan.objective}`,
+    `agent: ${plan.creatorAgentId}`,
+    `decision: ${plan.policyDecision} (${plan.policyReason})`,
+    `risk: ${maxSemanticPlanRisk(plan.semanticPlan)}`,
+    "actions:",
+    ...plan.semanticPlan.actions.map((action) => `- ${action.type}: ${action.label} [${action.risk}${action.requiresHumanApproval ? ", approval" : ""}]`),
+    "effects:",
+    ...plan.semanticPlan.effects.map((effect) => `- ${effect.kind}: ${effect.description} [${effect.risk}]`),
+    "permissions:",
+    ...plan.semanticPlan.permissions.map((permission) => `- ${permission.capability} (${permission.scope}) [${permission.risk}${permission.requiresHumanApproval ? ", approval" : ""}]`),
+    ...(plan.delegationGraphId ? [`delegation: ${plan.delegationGraphId}`] : []),
+  ].join("\n");
+}
+
+async function createDelegationGraphForPlan(plan: AgentPlanRecord, flags: Record<string, string>): Promise<string> {
+  const url = (flags["delegation-url"] ?? process.env.DELEGATION_PLANE_URL ?? "http://127.0.0.1:4520").replace(/\/$/, "");
+  const response = await fetch(`${url}/v1/graphs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      objective: plan.objective,
+      creator: plan.creatorAgentId,
+      semanticPlan: plan.semanticPlan,
+      root: {
+        agentType: plan.executorAgentId ?? plan.creatorAgentId,
+        adapter: flags.adapter ?? "deterministic",
+      },
+    }),
+  });
+  const text = await response.text();
+  const parsed = text ? JSON.parse(text) as { graph?: { id?: string }; error?: string } : {};
+  if (!response.ok || !parsed.graph?.id) throw new Error(parsed.error ?? text ?? `HTTP ${response.status}`);
+  return parsed.graph.id;
+}
+
 function timelineRange(mode: "day" | "week", startValue?: string): { start: string; end: string } {
   const start = startValue ? new Date(startValue) : new Date();
   if (!Number.isFinite(start.getTime())) {
@@ -790,7 +1169,7 @@ function resolveRuntimeAdapterId(flags: Record<string, string>): RuntimeAdapterI
   return runtime as RuntimeAdapterId;
 }
 
-type MediaKind = "image" | "audio" | "video";
+type GenerationCliMediaKind = "image" | "audio" | "video";
 
 function inferMimeTypeFromPath(filePath: string): string {
   switch (path.extname(filePath).toLowerCase()) {
@@ -977,6 +1356,7 @@ function buildTelegramCodexProcessorCommand(input: {
     input.agentId || CODEX_AGENT_ID,
   ];
   if (input.flags["home-dir"]) args.push("--home-dir", input.flags["home-dir"]);
+  if (input.flags["library-dir"]) args.push("--library-dir", input.flags["library-dir"]);
   if (input.flags["bot-username"]) args.push("--bot-username", input.flags["bot-username"]);
   if (input.flags["system-prompt"]) args.push("--system-prompt", input.flags["system-prompt"]);
   if (input.flags.transport) args.push("--transport", input.flags.transport);
@@ -1017,6 +1397,12 @@ function registerCodexAgentProcessor(input: {
       runtimeAdapter: input.runtimeAdapterId,
     },
   });
+}
+
+function appendPromptSection(base: string, section: string): string {
+  const trimmedSection = section.trim();
+  if (!trimmedSection) return base;
+  return `${base.trim()}\n\n${trimmedSection}`;
 }
 
 function normalizeTelegramCodexAccount(flags: Record<string, string>): string | undefined {
@@ -1356,13 +1742,22 @@ async function runTelegramCodexProcessor(input: {
   if (changed) writeTelegramCodexBridgeState(statePath, state);
 
   const targetLabel = threadId ? `${targetId} topic ${threadId}` : targetId;
+  const claw = await createCliClaw(input.runtimeAdapterId, input.flags, input.workspaceRoot, input.appId, input.workspaceId, input.agentId, input.argv) as TelegramCodexClaw;
   const baseSystemPrompt = input.flags["system-prompt"] || [
     "You are Codex responding through a Telegram bot.",
     "Be concise, useful, and clear.",
     "You are running in the configured ClawJS runtime environment.",
   ].join(" ");
-  const systemPrompt = `${baseSystemPrompt}\n\n${TELEGRAM_CODEX_ATTACHMENT_INSTRUCTIONS}`;
-  const claw = await createCliClaw(input.runtimeAdapterId, input.flags, input.workspaceRoot, input.appId, input.workspaceId, input.agentId, input.argv) as TelegramCodexClaw;
+  const skillCapsules = (claw.library as typeof claw.library & {
+    resolveSkillCapsules: (input?: { agentId?: string; workspaceId?: string }) => { prompt: string };
+  }).resolveSkillCapsules({
+    agentId: input.agentId,
+    workspaceId: input.workspaceId,
+  });
+  const systemPrompt = appendPromptSection(
+    appendPromptSection(baseSystemPrompt, skillCapsules.prompt),
+    TELEGRAM_CODEX_ATTACHMENT_INSTRUCTIONS,
+  );
   const sessionCommand = parseTelegramCodexSessionCommand(rawText);
   const runOptions = {
     coalescingWindowMs: input.flags["coalescing-window-ms"] ? Number(input.flags["coalescing-window-ms"]) : undefined,
@@ -1697,7 +2092,7 @@ async function runTelegramCodexProcessor(input: {
 }
 
 function buildMediaMetadata(
-  kind: MediaKind,
+  kind: GenerationCliMediaKind,
   flags: Record<string, string>,
   metadata: Record<string, unknown> | undefined,
 ): Record<string, unknown> | undefined {
@@ -1834,6 +2229,9 @@ async function createCliClaw(
     },
     library: {
       rootDir: flags["library-dir"],
+    },
+    rules: {
+      rootDir: flags["rules-dir"],
     },
     images: {
       rootDir: flags["image-library"],
@@ -2298,6 +2696,375 @@ async function relayBrowserRequest<T>(
   return (text ? JSON.parse(text) : null) as T;
 }
 
+type PreviewShareMode = "lan" | "tailscale" | "cloudflare" | "relay";
+
+interface PreviewSharePayload {
+  ok: true;
+  mode: PreviewShareMode;
+  targetUrl: string;
+  shareUrl: string;
+  token: string;
+  tokenParam: string;
+  expiresAt: string;
+  qrPayload: string;
+  provider?: {
+    available: boolean;
+    command?: string[];
+    message?: string;
+  };
+}
+
+function parsePreviewShareMode(value: string | undefined): PreviewShareMode {
+  if (!value || value === "lan") return "lan";
+  if (value === "tailscale" || value === "cloudflare" || value === "relay") return value;
+  throw new CliHandledError("invalid_enum", `Invalid preview share mode "${value}". Allowed values: lan, tailscale, cloudflare, relay.`, CLI_EXIT_USAGE);
+}
+
+function resolvePreviewTargetUrl(flags: Record<string, string>): URL {
+  const raw = flags.url?.trim() || (flags.port?.trim() ? `http://127.0.0.1:${flags.port.trim()}` : "");
+  if (!raw) {
+    throw new CliHandledError("usage_error", "--url or --port is required", CLI_EXIT_USAGE);
+  }
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new CliHandledError("usage_error", `Invalid preview URL: ${raw}`, CLI_EXIT_USAGE);
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new CliHandledError("usage_error", "Preview URL must use http or https.", CLI_EXIT_USAGE);
+  }
+  return url;
+}
+
+function resolvePreviewShareTtlMs(flags: Record<string, string>): number {
+  const parsed = parseSimpleDurationMs(flags.ttl || flags["expires-in"] || "30m");
+  if (!parsed) {
+    throw new CliHandledError("usage_error", "--ttl must use a duration like 15m, 1h, or 1d", CLI_EXIT_USAGE);
+  }
+  return parsed;
+}
+
+function resolveLanAdvertiseHost(flags: Record<string, string>): string {
+  if (flags["advertise-host"]?.trim()) return flags["advertise-host"].trim();
+  if (flags.host?.trim() && flags.host.trim() !== "0.0.0.0") return flags.host.trim();
+  const interfaces = os.networkInterfaces();
+  for (const entries of Object.values(interfaces)) {
+    for (const entry of entries ?? []) {
+      if (entry.family === "IPv4" && !entry.internal) return entry.address;
+    }
+  }
+  return "127.0.0.1";
+}
+
+function appendQueryParam(url: string, key: string, value: string): string {
+  const parsed = new URL(url);
+  parsed.searchParams.set(key, value);
+  return parsed.toString();
+}
+
+function findExecutable(name: string, env = process.env): string | null {
+  const pathValue = env.PATH ?? "";
+  const extensions = process.platform === "win32" ? ["", ".exe", ".cmd", ".bat"] : [""];
+  for (const dir of pathValue.split(path.delimiter).filter(Boolean)) {
+    for (const extension of extensions) {
+      const candidate = path.join(dir, `${name}${extension}`);
+      try {
+        fs.accessSync(candidate, fs.constants.X_OK);
+        return candidate;
+      } catch {
+        // Try the next PATH entry.
+      }
+    }
+  }
+  return null;
+}
+
+async function probeHttpServer(url: URL): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2_000);
+  try {
+    const response = await fetch(url, { method: "GET", signal: controller.signal });
+    return response.status < 500;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function buildLanPreviewSharePayload(input: {
+  targetUrl: URL;
+  flags: Record<string, string>;
+  token: string;
+  expiresAt: Date;
+  actualPort: number;
+}): PreviewSharePayload {
+  const tokenParam = input.flags["token-param"] || "claw_share_token";
+  const host = resolveLanAdvertiseHost(input.flags);
+  const shareUrl = appendQueryParam(`http://${host}:${input.actualPort}/`, tokenParam, input.token);
+  return {
+    ok: true,
+    mode: "lan",
+    targetUrl: input.targetUrl.toString(),
+    shareUrl,
+    token: input.token,
+    tokenParam,
+    expiresAt: input.expiresAt.toISOString(),
+    qrPayload: shareUrl,
+  };
+}
+
+async function pipePreviewProxyResponse(input: {
+  targetUrl: URL;
+  request: http.IncomingMessage;
+  response: http.ServerResponse;
+  token: string;
+  tokenParam: string;
+  expiresAtMs: number;
+}): Promise<void> {
+  const incomingUrl = new URL(input.request.url || "/", "http://127.0.0.1");
+  if (incomingUrl.searchParams.get(input.tokenParam) !== input.token) {
+    input.response.writeHead(401, { "content-type": "text/plain; charset=utf-8" });
+    input.response.end("Invalid or missing share token.");
+    return;
+  }
+  if (Date.now() > input.expiresAtMs) {
+    input.response.writeHead(410, { "content-type": "text/plain; charset=utf-8" });
+    input.response.end("Share token expired.");
+    return;
+  }
+
+  incomingUrl.searchParams.delete(input.tokenParam);
+  const target = new URL(input.targetUrl.toString());
+  target.pathname = incomingUrl.pathname;
+  target.search = incomingUrl.search;
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(input.request.headers)) {
+    if (key.toLowerCase() === "host" || value === undefined) continue;
+    if (Array.isArray(value)) {
+      for (const entry of value) headers.append(key, entry);
+    } else {
+      headers.set(key, value);
+    }
+  }
+  const body = input.request.method === "GET" || input.request.method === "HEAD"
+    ? undefined
+    : input.request as unknown as BodyInit;
+  try {
+    const upstream = await fetch(target, {
+      method: input.request.method,
+      headers,
+      body,
+      redirect: "manual",
+      duplex: body ? "half" : undefined,
+    } as RequestInit & { duplex?: "half" });
+    input.response.statusCode = upstream.status;
+    upstream.headers.forEach((value, key) => {
+      if (key.toLowerCase() !== "content-encoding") input.response.setHeader(key, value);
+    });
+    if (!upstream.body) {
+      input.response.end();
+      return;
+    }
+    const reader = upstream.body.getReader();
+    while (true) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      input.response.write(Buffer.from(chunk.value));
+    }
+    input.response.end();
+  } catch (error) {
+    input.response.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
+    input.response.end(error instanceof Error ? error.message : "Preview proxy failed.");
+  }
+}
+
+async function runLanPreviewShare(input: {
+  targetUrl: URL;
+  flags: Record<string, string>;
+  stdout: NodeJS.WritableStream;
+  wantsJson: boolean;
+  dryRun: boolean;
+}): Promise<number> {
+  const serverReachable = await probeHttpServer(input.targetUrl);
+  if (!serverReachable) {
+    throw new CliHandledError("target_unreachable", `No local preview responded at ${input.targetUrl.toString()}`);
+  }
+  const ttlMs = resolvePreviewShareTtlMs(input.flags);
+  const expiresAt = new Date(Date.now() + ttlMs);
+  const token = input.flags.token || randomBytes(18).toString("base64url");
+  const listenHost = input.flags.host || "0.0.0.0";
+  const listenPort = Number(input.flags["share-port"] || input.flags["listen-port"] || "0");
+  if (!Number.isInteger(listenPort) || listenPort < 0 || listenPort > 65535) {
+    throw new CliHandledError("usage_error", "--share-port must be a valid TCP port.", CLI_EXIT_USAGE);
+  }
+  if (input.dryRun) {
+    const payload = buildLanPreviewSharePayload({ targetUrl: input.targetUrl, flags: input.flags, token, expiresAt, actualPort: listenPort || Number(input.targetUrl.port || "80") });
+    if (input.wantsJson) writeJson(input.stdout, payload);
+    else input.stdout.write(`${payload.shareUrl}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  const tokenParam = input.flags["token-param"] || "claw_share_token";
+  const expiresAtMs = expiresAt.getTime();
+  const server = http.createServer((request, response) => {
+    void pipePreviewProxyResponse({
+      targetUrl: input.targetUrl,
+      request,
+      response,
+      token,
+      tokenParam,
+      expiresAtMs,
+    });
+  });
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(listenPort, listenHost, () => resolve());
+  });
+  const address = server.address();
+  const actualPort = typeof address === "object" && address ? address.port : listenPort;
+  const payload = buildLanPreviewSharePayload({ targetUrl: input.targetUrl, flags: input.flags, token, expiresAt, actualPort });
+  if (input.wantsJson) writeJsonLine(input.stdout, payload);
+  else input.stdout.write(`${payload.shareUrl}\n`);
+
+  await new Promise<void>((resolve) => {
+    const shutdown = () => {
+      server.close(() => resolve());
+    };
+    process.once("SIGINT", shutdown);
+    process.once("SIGTERM", shutdown);
+    setTimeout(shutdown, ttlMs).unref();
+  });
+  return CLI_EXIT_OK;
+}
+
+function runTailscalePreviewShare(input: {
+  targetUrl: URL;
+  flags: Record<string, string>;
+  stdout: NodeJS.WritableStream;
+  wantsJson: boolean;
+  dryRun: boolean;
+}): number {
+  const token = input.flags.token || randomBytes(18).toString("base64url");
+  const tokenParam = input.flags["token-param"] || "claw_share_token";
+  const expiresAt = new Date(Date.now() + resolvePreviewShareTtlMs(input.flags));
+  const tailscaleBin = input.flags["tailscale-bin"] || findExecutable("tailscale");
+  const port = input.targetUrl.port || (input.targetUrl.protocol === "https:" ? "443" : "80");
+  const command = [tailscaleBin || "tailscale", "serve", "--bg", port];
+  const baseShareUrl = input.flags["share-url"] || `https://<tailnet-device>/${input.targetUrl.pathname.replace(/^\//, "")}`;
+  const payload: PreviewSharePayload = {
+    ok: true,
+    mode: "tailscale",
+    targetUrl: input.targetUrl.toString(),
+    shareUrl: appendQueryParam(baseShareUrl, tokenParam, token),
+    token,
+    tokenParam,
+    expiresAt: expiresAt.toISOString(),
+    qrPayload: appendQueryParam(baseShareUrl, tokenParam, token),
+    provider: {
+      available: Boolean(tailscaleBin),
+      command,
+      ...(!tailscaleBin ? { message: "tailscale is not installed or not on PATH." } : {}),
+    },
+  };
+  if (!input.dryRun && tailscaleBin) {
+    const result = spawnSync(tailscaleBin, ["serve", "--bg", port], { encoding: "utf8" });
+    if (result.status !== 0) {
+      throw new CliHandledError("provider_failed", result.stderr.trim() || "tailscale serve failed.");
+    }
+  }
+  if (input.wantsJson) writeJson(input.stdout, payload);
+  else input.stdout.write(`${payload.shareUrl}\n`);
+  return CLI_EXIT_OK;
+}
+
+async function runCloudflarePreviewShare(input: {
+  targetUrl: URL;
+  flags: Record<string, string>;
+  stdout: NodeJS.WritableStream;
+  wantsJson: boolean;
+  dryRun: boolean;
+}): Promise<number> {
+  const token = input.flags.token || randomBytes(18).toString("base64url");
+  const tokenParam = input.flags["token-param"] || "claw_share_token";
+  const expiresAt = new Date(Date.now() + resolvePreviewShareTtlMs(input.flags));
+  const mockUrl = process.env.CLAWJS_PREVIEW_CLOUDFLARE_URL || input.flags["share-url"];
+  const cloudflaredBin = input.flags["cloudflared-bin"] || findExecutable("cloudflared");
+  const providerCommand = [cloudflaredBin || "cloudflared", "tunnel", "--url", input.targetUrl.toString()];
+  if (input.dryRun || mockUrl) {
+    const shareUrl = appendQueryParam(mockUrl || "https://<trycloudflare-preview>/", tokenParam, token);
+    const payload: PreviewSharePayload = {
+      ok: true,
+      mode: "cloudflare",
+      targetUrl: input.targetUrl.toString(),
+      shareUrl,
+      token,
+      tokenParam,
+      expiresAt: expiresAt.toISOString(),
+      qrPayload: shareUrl,
+      provider: {
+        available: Boolean(cloudflaredBin || mockUrl),
+        command: providerCommand,
+        ...(!cloudflaredBin && !mockUrl ? { message: "cloudflared is not installed or not on PATH." } : {}),
+      },
+    };
+    if (input.wantsJson) writeJson(input.stdout, payload);
+    else input.stdout.write(`${payload.shareUrl}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (!cloudflaredBin) {
+    throw new CliHandledError("provider_unavailable", "cloudflared is not installed or not on PATH.");
+  }
+  const child = spawn(cloudflaredBin, ["tunnel", "--url", input.targetUrl.toString()], {
+    stdio: ["ignore", "pipe", "pipe"],
+    env: process.env,
+  });
+  let announced = false;
+  const announce = (chunk: Buffer) => {
+    const text = chunk.toString("utf8");
+    const match = text.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/i);
+    if (!match || announced) return;
+    announced = true;
+    const shareUrl = appendQueryParam(match[0], tokenParam, token);
+    const payload: PreviewSharePayload = {
+      ok: true,
+      mode: "cloudflare",
+      targetUrl: input.targetUrl.toString(),
+      shareUrl,
+      token,
+      tokenParam,
+      expiresAt: expiresAt.toISOString(),
+      qrPayload: shareUrl,
+      provider: { available: true, command: providerCommand },
+    };
+    if (input.wantsJson) writeJsonLine(input.stdout, payload);
+    else input.stdout.write(`${payload.shareUrl}\n`);
+  };
+  child.stdout?.on("data", announce);
+  child.stderr?.on("data", announce);
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      if (!announced) {
+        child.kill("SIGTERM");
+        reject(new CliHandledError("provider_failed", "cloudflared did not announce a public URL."));
+      }
+    }, 15_000);
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    child.on("exit", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+    setTimeout(() => {
+      child.kill("SIGTERM");
+    }, resolvePreviewShareTtlMs(input.flags)).unref();
+  });
+  return announced ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
+}
+
 function parsePackageManager(value: string | undefined): SupportedPackageManager {
   if (!value || value === "npm") return "npm";
   if (value === "pnpm") return "pnpm";
@@ -2664,7 +3431,191 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const runtimeAdapter = getRuntimeAdapter(runtimeAdapterId);
   const mediaGroup = group === "image" || group === "audio" || group === "video" ? group : null;
 
-  async function getTypedGenerationFacade(kind: MediaKind) {
+  if (group === "plan") {
+    const state = readAgentPlanState(workspaceRoot);
+    const save = () => writeAgentPlanState(workspaceRoot, state);
+    const findPlan = (id: string | undefined): AgentPlanRecord => {
+      const plan = state.plans.find((candidate) => candidate.id === id);
+      if (!plan) throw new CliHandledError("not_found", `Plan not found: ${id ?? ""}`, CLI_EXIT_FAILURE);
+      return plan;
+    };
+
+    if (command === "create") {
+      const objective = joinedPositionals(positionals, 2) ?? flags.objective ?? flags.title;
+      if (!objective) {
+        context.stderr.write(`Usage: ${binName} plan create "Objective" [--agent ID] [--tags a,b] [--from-file plan.json]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const creatorAgentId = flags.agent ?? flags["agent-id"] ?? agentId;
+      const tags = parseCsvFlag(flags.tags);
+      const fromFile = flags["from-file"];
+      const parsedFile = fromFile ? readJsonFile<unknown>(path.resolve(context.cwd, fromFile), "--from-file") : null;
+      const semanticPlan = semanticPlanSchema.parse(
+        parsedFile && typeof parsedFile === "object" && !Array.isArray(parsedFile) && "semanticPlan" in parsedFile
+          ? (parsedFile as { semanticPlan: unknown }).semanticPlan
+          : parsedFile ?? buildFallbackSemanticPlan(objective, creatorAgentId, tags),
+      );
+      const timestamp = nowIso();
+      const policy = evaluatePlanPolicy(state.policies, semanticPlan, { creatorAgentId, tags });
+      const plan: AgentPlanRecord = {
+        schemaVersion: 1,
+        id: flags.id ?? planId(),
+        objective,
+        status: statusFromDecision(policy.decision),
+        creatorAgentId,
+        ...(flags.executor ? { executorAgentId: flags.executor } : {}),
+        ...(policy.approverAgentId ? { approverAgentId: policy.approverAgentId } : {}),
+        ...(policy.reviewerAgentId ? { reviewerAgentId: policy.reviewerAgentId } : {}),
+        tags,
+        semanticPlan,
+        policyDecision: policy.decision,
+        ...(policy.ruleId ? { policyRuleId: policy.ruleId } : {}),
+        policyReason: policy.reason,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+      state.plans.unshift(plan);
+      save();
+      if (policy.decision === "auto_run" && !readBooleanFlag(argv, flags, "no-auto-run", false)) {
+        try {
+          plan.delegationGraphId = await createDelegationGraphForPlan(plan, flags);
+          plan.status = "running";
+          plan.updatedAt = nowIso();
+          save();
+        } catch (error) {
+          plan.lastRunError = error instanceof Error ? error.message : String(error);
+          plan.updatedAt = nowIso();
+          save();
+        }
+      }
+      if (wantsJson) writeJson(context.stdout, { plan });
+      else context.stdout.write(`${plan.id} ${plan.status}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "list") {
+      const filtered = state.plans
+        .filter((plan) => !flags.status || plan.status === flags.status)
+        .filter((plan) => !flags.agent || plan.creatorAgentId === flags.agent || plan.executorAgentId === flags.agent || plan.reviewerAgentId === flags.agent)
+        .filter((plan) => !flags.tags || parseCsvFlag(flags.tags).every((tag) => plan.tags.includes(tag)));
+      if (wantsJson) writeJson(context.stdout, { plans: filtered });
+      else context.stdout.write(`${filtered.map((plan) => `${plan.id}\t${plan.status}\t${plan.objective}`).join("\n")}${filtered.length ? "\n" : ""}`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "show") {
+      const plan = findPlan(subcommand ?? flags.id);
+      if (wantsJson) writeJson(context.stdout, { plan });
+      else context.stdout.write(`${formatPlan(plan)}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "approve" || command === "reject") {
+      const plan = findPlan(subcommand ?? flags.id);
+      plan.status = command === "approve" ? "approved" : "rejected";
+      plan.policyDecision = command === "approve" ? "auto_run" : "block";
+      plan.decisionReason = flags.reason ?? (command === "approve" ? "Approved manually." : "Rejected manually.");
+      plan.updatedAt = nowIso();
+      save();
+      if (wantsJson) writeJson(context.stdout, { plan });
+      else context.stdout.write(`${plan.id} ${plan.status}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "review") {
+      const plan = findPlan(subcommand ?? flags.id);
+      const reviewerAgentId = flags.agent ?? plan.reviewerAgentId;
+      if (!reviewerAgentId) {
+        context.stderr.write(`Usage: ${binName} plan review <planId> --agent AGENT [--decision approve|reject]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const decision = flags.decision === "reject" ? "reject" : "approve";
+      plan.reviewerAgentId = reviewerAgentId;
+      plan.reviewReason = flags.reason ?? `${reviewerAgentId} ${decision}d this plan.`;
+      plan.status = decision === "approve" ? "approved" : "rejected";
+      plan.policyDecision = decision === "approve" ? "auto_run" : "block";
+      plan.updatedAt = nowIso();
+      save();
+      if (wantsJson) writeJson(context.stdout, { plan, review: { decision, reason: plan.reviewReason } });
+      else context.stdout.write(`${plan.id} ${plan.status}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "run") {
+      const plan = findPlan(subcommand ?? flags.id);
+      if (plan.status !== "approved" && plan.status !== "running") {
+        throw new CliHandledError("plan_not_authorized", `Plan ${plan.id} is ${plan.status}; approve or review it before running.`, CLI_EXIT_FAILURE);
+      }
+      if (!plan.delegationGraphId) {
+        plan.delegationGraphId = await createDelegationGraphForPlan(plan, flags);
+      }
+      plan.status = "running";
+      plan.updatedAt = nowIso();
+      save();
+      if (wantsJson) writeJson(context.stdout, { plan });
+      else context.stdout.write(`${plan.id} running ${plan.delegationGraphId}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "complete" || command === "fail" || command === "cancel") {
+      const plan = findPlan(subcommand ?? flags.id);
+      plan.status = command === "complete" ? "succeeded" : command === "fail" ? "failed" : "cancelled";
+      plan.completedAt = nowIso();
+      plan.updatedAt = plan.completedAt;
+      plan.decisionReason = flags.reason ?? plan.decisionReason;
+      save();
+      if (wantsJson) writeJson(context.stdout, { plan });
+      else context.stdout.write(`${plan.id} ${plan.status}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "policy" && subcommand === "list") {
+      if (wantsJson) writeJson(context.stdout, { policies: state.policies });
+      else context.stdout.write(`${state.policies.map((policy) => `${policy.id}\t${policy.then.decision}`).join("\n")}${state.policies.length ? "\n" : ""}`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "policy" && subcommand === "add") {
+      const raw = flags["from-file"]
+        ? readJsonFile<unknown>(path.resolve(context.cwd, flags["from-file"]), "--from-file")
+        : {
+            id: flags.id,
+            when: parseJsonFlag<Record<string, unknown>>(flags["when-json"], "--when-json"),
+            then: parseJsonFlag<AgentPlanPolicyRule["then"]>(flags["then-json"], "--then-json"),
+          };
+      const rule = raw as AgentPlanPolicyRule;
+      if (!rule.id || !rule.when || !rule.then?.decision) {
+        throw new CliHandledError("usage_error", "Policy requires id, when, and then.decision.", CLI_EXIT_USAGE);
+      }
+      state.policies = [rule, ...state.policies.filter((policy) => policy.id !== rule.id)];
+      save();
+      if (wantsJson) writeJson(context.stdout, { policy: rule });
+      else context.stdout.write(`${rule.id}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "policy" && subcommand === "remove") {
+      const id = positionals[3] ?? flags.id;
+      state.policies = state.policies.filter((policy) => policy.id !== id);
+      save();
+      if (wantsJson) writeJson(context.stdout, { ok: true, id });
+      else context.stdout.write(`${id}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "policy" && subcommand === "test") {
+      const plan = findPlan(positionals[3] ?? flags.id);
+      const decision = evaluatePlanPolicy(state.policies, plan.semanticPlan, { creatorAgentId: plan.creatorAgentId, tags: plan.tags });
+      if (wantsJson) writeJson(context.stdout, decision);
+      else context.stdout.write(`${decision.decision}: ${decision.reason}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    context.stderr.write(`Usage: ${binName} plan create|list|show|run|approve|reject|review|complete|fail|cancel|policy\n`);
+    return CLI_EXIT_USAGE;
+  }
+
+  async function getTypedGenerationFacade(kind: GenerationCliMediaKind) {
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
     switch (kind) {
       case "image":
@@ -3005,6 +3956,30 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       }
     }
     return compat.degraded ? CLI_EXIT_DEGRADED : CLI_EXIT_OK;
+  }
+
+  if (group === "preview" && command === "share") {
+    try {
+      const targetUrl = resolvePreviewTargetUrl(flags);
+      const mode = parsePreviewShareMode(flags.mode);
+      const dryRun = argv.includes("--dry-run");
+      if (mode === "lan") {
+        return await runLanPreviewShare({ targetUrl, flags, stdout: context.stdout, wantsJson, dryRun });
+      }
+      if (mode === "tailscale") {
+        return runTailscalePreviewShare({ targetUrl, flags, stdout: context.stdout, wantsJson, dryRun });
+      }
+      if (mode === "cloudflare") {
+        return await runCloudflarePreviewShare({ targetUrl, flags, stdout: context.stdout, wantsJson, dryRun });
+      }
+      context.stderr.write(`Use ${binName} browser share for Relay-backed remote browser sessions.\n`);
+      return CLI_EXIT_USAGE;
+    } catch (error) {
+      const handled = cliErrorFromUnknown(error);
+      if (wantsJson) writeCliError(context.stdout, handled);
+      else context.stderr.write(`${handled.message}\n`);
+      return handled.exitCode;
+    }
   }
 
   if (group === "browser" && (command === "status" || command === "ensure" || command === "share")) {
@@ -5895,6 +6870,224 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return CLI_EXIT_OK;
   }
 
+  if (group === "soul") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+    const targetSoulId = subcommand || flags.id;
+    const targetAgentId = flags.agent || flags["agent-id"] || agentId;
+
+    try {
+      if (command === "init") {
+        const modules = parseSoulModulesFromSetFlags(argv);
+        const spec = claw.soul.init({
+          id: targetSoulId || "default",
+          title: flags.title,
+          description: flags.description,
+          presetId: flags.preset || flags["preset-id"],
+          ...(Object.keys(modules).length ? { modules } : {}),
+        });
+        if (wantsJson) writeJson(context.stdout, spec);
+        else context.stdout.write(`initialized soul ${spec.id}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "inspect") {
+        const result = claw.soul.inspect(targetSoulId, flags.agent ? targetAgentId : undefined);
+        if (wantsJson) writeJson(context.stdout, result);
+        else context.stdout.write(`${targetSoulId ? result.resolved?.title ?? "not found" : `${result.state.specs.length} souls`}\n`);
+        return targetSoulId && !result.resolved ? CLI_EXIT_FAILURE : CLI_EXIT_OK;
+      }
+
+      if (command === "validate") {
+        const spec = targetSoulId ? claw.soul.resolve({ soulId: targetSoulId }) : claw.soul.resolve({ agentId: targetAgentId });
+        const result = claw.soul.validate(spec);
+        if (wantsJson) writeJson(context.stdout, result);
+        else context.stdout.write(result.ok ? "valid\n" : `${result.issues.map((issue) => `${issue.path}: ${issue.message}`).join("\n")}\n`);
+        return result.ok ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
+      }
+
+      if (command === "preview") {
+        const result = claw.soul.preview({
+          ...(targetSoulId ? { soulId: targetSoulId } : {}),
+          agentId: targetAgentId,
+        });
+        if (wantsJson) writeJson(context.stdout, result);
+        else context.stdout.write(result.markdown);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "compile") {
+        const result = claw.soul.compile({
+          ...(targetSoulId ? { soulId: targetSoulId } : {}),
+          agentId: targetAgentId,
+        });
+        if (wantsJson) writeJson(context.stdout, result);
+        else context.stdout.write(`compiled ${result.soulId} to ${result.targetFile}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "assign") {
+        const soulId = targetSoulId || flags["soul-id"];
+        if (!soulId || !targetAgentId) {
+          context.stderr.write("Usage: claw soul assign <soul-id> --agent ID [--compile]\n");
+          return CLI_EXIT_USAGE;
+        }
+        const assignment = claw.soul.assign({
+          soulId,
+          agentId: targetAgentId,
+        });
+        const compiled = readBooleanFlag(argv, flags, "compile", false)
+          ? claw.soul.compile({ agentId: targetAgentId })
+          : null;
+        if (wantsJson) writeJson(context.stdout, { assignment, compiled });
+        else context.stdout.write(`assigned ${assignment.soulId} to ${assignment.agentId}\n`);
+        return CLI_EXIT_OK;
+      }
+    } catch (error) {
+      context.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+      return CLI_EXIT_FAILURE;
+    }
+
+    context.stderr.write("Usage: claw soul init|validate|preview|compile|assign|inspect ...\n");
+    return CLI_EXIT_USAGE;
+  }
+
+  if (group === "rules") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+    const scopeId = flags.scope || flags["scope-id"];
+
+    try {
+      if (command === "status") {
+        const status = claw.rules.status();
+        if (wantsJson) writeJson(context.stdout, status);
+        else context.stdout.write(`rules ${status.rules} active ${status.active} pending ${status.pending}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "list") {
+        const rules = claw.rules.list({
+          ...(flags.status ? { status: flags.status as "pending" | "active" | "archived" } : {}),
+          ...(scopeId ? { scopeId } : {}),
+        });
+        if (wantsJson) writeJson(context.stdout, { rules });
+        else context.stdout.write(`${rules.map((rule) => `${rule.status} ${rule.kind} ${rule.id} ${rule.title}`).join("\n")}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "get" || command === "inspect") {
+        const id = subcommand || flags.id;
+        const rule = id ? claw.rules.get(id) : null;
+        if (!rule) throw new CliHandledError("not_found", `Rule not found: ${id ?? ""}`, CLI_EXIT_FAILURE);
+        if (wantsJson) writeJson(context.stdout, rule);
+        else context.stdout.write(`${rule.status} ${rule.kind} ${rule.id}\n${rule.content}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "scopes") {
+        if (flags.name || flags.kind || flags.id) {
+          if (!flags.name || !flags.kind) {
+            context.stderr.write("Usage: claw rules scopes --id ID --kind KIND --name TEXT [--parent ID] [--aliases a,b]\n");
+            return CLI_EXIT_USAGE;
+          }
+          const scope = claw.rules.upsertScope({
+            id: flags.id,
+            kind: flags.kind,
+            name: flags.name,
+            parentId: flags.parent,
+            aliases: parseCsvFlag(flags.aliases),
+          });
+          if (wantsJson) writeJson(context.stdout, scope);
+          else context.stdout.write(`scope ${scope.id}\n`);
+          return CLI_EXIT_OK;
+        }
+        const scopes = claw.rules.scopes();
+        if (wantsJson) writeJson(context.stdout, { scopes });
+        else context.stdout.write(`${scopes.map((scope) => `${scope.kind} ${scope.id} ${scope.name}`).join("\n")}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "propose") {
+        if (!scopeId || !flags.title || !flags.content) {
+          context.stderr.write("Usage: claw rules propose --scope ID --title TEXT --content TEXT [--kind directive|default|resource]\n");
+          return CLI_EXIT_USAGE;
+        }
+        const rule = claw.rules.propose({
+          id: flags.id,
+          title: flags.title,
+          kind: (flags.kind as "directive" | "default" | "resource" | undefined) ?? "directive",
+          status: (flags.status as "pending" | "active" | "archived" | undefined) ?? "pending",
+          scopeId,
+          content: flags.content,
+          aliases: parseCsvFlag(flags.aliases),
+          priority: flags.priority ? Number(flags.priority) : undefined,
+          key: flags.key,
+          references: parseRuleReferences(flags.reference || flags.references),
+          agentIds: parseCsvFlag(flags.agent || flags.agents),
+          channelIds: parseCsvFlag(flags.channel || flags.channels),
+          applyWhen: {
+            keywords: parseCsvFlag(flags.keywords),
+            taskTypes: parseCsvFlag(flags["task-types"] || flags.task),
+            outputFormats: parseCsvFlag(flags["output-formats"] || flags.output),
+            domains: parseCsvFlag(flags.domains || flags.domain),
+            services: parseCsvFlag(flags.services || flags.service),
+            projects: parseCsvFlag(flags.projects || flags.project),
+            agents: parseCsvFlag(flags.agents),
+            channels: parseCsvFlag(flags.channels),
+          },
+          source: flags.source,
+        });
+        if (wantsJson) writeJson(context.stdout, rule);
+        else context.stdout.write(`proposed ${rule.id}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "approve" || command === "archive") {
+        const id = subcommand || flags.id;
+        if (!id) {
+          context.stderr.write(`Usage: claw rules ${command} <id>\n`);
+          return CLI_EXIT_USAGE;
+        }
+        const rule = command === "approve" ? claw.rules.approve(id) : claw.rules.archive(id);
+        if (wantsJson) writeJson(context.stdout, rule);
+        else context.stdout.write(`${rule.status} ${rule.id}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "compile") {
+        const prompt = subcommand || flags.prompt || flags.text || "";
+        if (!prompt.trim()) {
+          context.stderr.write("Usage: claw rules compile <prompt> [--brand BRAND] [--output-format website] [--json]\n");
+          return CLI_EXIT_USAGE;
+        }
+        const result = claw.rules.compile({
+          prompt,
+          user: flags.user,
+          organization: flags.organization || flags.org,
+          brand: flags.brand,
+          client: flags.client,
+          project: flags.project,
+          domain: flags.domain,
+          service: flags.service,
+          taskType: flags["task-type"] || flags.task,
+          outputFormat: flags["output-format"] || flags.output,
+          agent: flags.agent,
+          channel: flags.channel,
+          ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+        });
+        if (wantsJson) writeJson(context.stdout, result);
+        else context.stdout.write(result.prompt ? `${result.prompt}\n` : "No applicable rules.\n");
+        return CLI_EXIT_OK;
+      }
+    } catch (error) {
+      const handled = cliErrorFromUnknown(error);
+      if (wantsJson) writeCliError(context.stdout, handled);
+      else context.stderr.write(`${handled.message}\n`);
+      return handled.exitCode;
+    }
+
+    context.stderr.write("Usage: claw rules status|list|get|propose|approve|archive|scopes|compile\n");
+    return CLI_EXIT_USAGE;
+  }
+
   if (group === "library") {
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const targetAgentId = flags.agent || agentId;
@@ -5935,6 +7128,13 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
           version: flags.version,
           requiredSecrets,
           autoApplyTags: parseCsvFlag(flags["auto-apply-tags"]),
+          ...(flags["context-capsule"] ? {
+            context: {
+              capsule: flags["context-capsule"],
+              priority: flags["context-priority"] ? Number(flags["context-priority"]) : 100,
+              ...(flags["context-read-when"] ? { readWhen: parseCsvFlag(flags["context-read-when"]) } : {}),
+            },
+          } : {}),
           ...(kind === "skill" ? { source: { source: flags.source, installRef: flags.ref, path: flags.path } } : {}),
           ...(kind === "instruction" ? {
             content: flags.content ?? "",
@@ -5961,6 +7161,13 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
           ...(flags.description !== undefined ? { description: flags.description } : {}),
           ...(flags.tags !== undefined ? { tags } : {}),
           ...(flags.version !== undefined ? { version: flags.version } : {}),
+          ...(flags["context-capsule"] !== undefined ? {
+            context: {
+              capsule: flags["context-capsule"],
+              priority: flags["context-priority"] ? Number(flags["context-priority"]) : 100,
+              ...(flags["context-read-when"] ? { readWhen: parseCsvFlag(flags["context-read-when"]) } : {}),
+            },
+          } : {}),
           ...(flags.content !== undefined ? { content: flags.content } : {}),
           ...(flags["required-secret"] !== undefined || flags["required-secrets"] !== undefined ? { requiredSecrets } : {}),
           ...(flags["auto-apply-tags"] !== undefined ? { autoApplyTags: parseCsvFlag(flags["auto-apply-tags"]) } : {}),
@@ -5991,6 +7198,13 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
           source: flags.source,
           path: flags.path,
           tags,
+          ...(flags["context-capsule"] ? {
+            context: {
+              capsule: flags["context-capsule"],
+              priority: flags["context-priority"] ? Number(flags["context-priority"]) : 100,
+              ...(flags["context-read-when"] ? { readWhen: parseCsvFlag(flags["context-read-when"]) } : {}),
+            },
+          } : {}),
         });
         if (wantsJson) writeJson(context.stdout, asset);
         else context.stdout.write(`imported skill ${asset.id}\n`);
@@ -7061,6 +8275,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       targetId,
       text: flags.text,
       media: flags.media,
+      mediaType: flags["media-type"] as "photo" | "video" | "document" | "audio" | "animation" | undefined,
       threadId: flags["thread-id"] || flags["message-thread-id"],
       parseMode: flags["parse-mode"] as "HTML" | "Markdown" | "MarkdownV2" | undefined,
       agentId: flags.agent,
@@ -7688,6 +8903,140 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       context.stdout.write(`${outputPath}\n`);
     }
     return CLI_EXIT_OK;
+  }
+
+  if (group === "media" && command === "list") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId) as CliMediaClaw;
+    const media = claw.media.list(buildMediaListInput(flags));
+    if (wantsJson) {
+      writeJson(context.stdout, media);
+    } else {
+      context.stdout.write(`${media.map((entry) => `${entry.mediaId} ${entry.kind} ${entry.name}`).join("\n")}\n`);
+    }
+    return media.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "media" && command === "search") {
+    const query = flags.query || subcommand;
+    if (!query?.trim()) {
+      context.stderr.write("--query is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId) as CliMediaClaw;
+    const results = claw.media.search({
+      ...buildMediaListInput(flags),
+      query: query.trim(),
+    });
+    if (wantsJson) {
+      writeJson(context.stdout, results);
+    } else {
+      context.stdout.write(`${results.map((entry) => `${entry.mediaId} ${entry.kind} ${entry.name}`).join("\n")}\n`);
+    }
+    return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "media" && command === "read") {
+    const mediaId = flags["media-id"] ?? flags.id;
+    if (!mediaId) {
+      context.stderr.write("--media-id is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId) as CliMediaClaw;
+    const media = claw.media.get(mediaId);
+    if (wantsJson) {
+      writeJson(context.stdout, media);
+    } else {
+      context.stdout.write(`${media?.name ?? "missing"}\n`);
+    }
+    return media ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
+  }
+
+  if (group === "media" && command === "download") {
+    const mediaId = flags["media-id"] ?? flags.id;
+    if (!mediaId) {
+      context.stderr.write("--media-id is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId) as CliMediaClaw;
+    const download = claw.media.download(mediaId);
+    if (!download) {
+      if (wantsJson) writeJson(context.stdout, null);
+      else context.stdout.write("missing\n");
+      return CLI_EXIT_FAILURE;
+    }
+    const outputPath = path.resolve(context.cwd, flags.out || flags.output || download.media.name);
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, download.buffer);
+    if (wantsJson) {
+      writeJson(context.stdout, {
+        media: download.media,
+        outputPath,
+        sizeBytes: download.buffer.length,
+      });
+    } else {
+      context.stdout.write(`${outputPath}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "media" && command === "share" && subcommand === "create") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId) as CliMediaClaw;
+    const share = await claw.media.share.create({
+      mediaId: flags["media-id"] ?? flags.id,
+      label: flags.label,
+      filters: flags["media-id"] || flags.id ? undefined : buildMediaListInput(flags),
+      expiresAt: flags["expires-at"],
+      ...(flags["ttl-ms"] ? { ttlMs: Number(flags["ttl-ms"]) } : {}),
+    });
+    if (wantsJson) {
+      writeJson(context.stdout, share);
+    } else {
+      context.stdout.write(`${share.url}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "media" && command === "share" && subcommand === "list") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId) as CliMediaClaw;
+    const shares = claw.media.share.list();
+    if (wantsJson) {
+      writeJson(context.stdout, shares);
+    } else {
+      context.stdout.write(`${shares.map((share) => `${share.id} ${share.url}`).join("\n")}\n`);
+    }
+    return shares.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "media" && command === "share" && subcommand === "revoke") {
+    const id = flags["share-id"] ?? flags.id;
+    if (!id) {
+      context.stderr.write("--share-id is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId) as CliMediaClaw;
+    const revoked = await claw.media.share.revoke(id);
+    if (wantsJson) {
+      writeJson(context.stdout, { revoked, id });
+    } else {
+      context.stdout.write(`${revoked}\n`);
+    }
+    return revoked ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "media" && command === "share" && subcommand === "resolve") {
+    const id = flags["share-id"] ?? flags.id;
+    if (!id) {
+      context.stderr.write("--share-id is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId) as CliMediaClaw;
+    const resolved = claw.media.share.resolveGallery(id);
+    if (wantsJson) {
+      writeJson(context.stdout, resolved);
+    } else {
+      context.stdout.write(`${resolved?.items.map((entry) => `${entry.mediaId} ${entry.name}`).join("\n") ?? "missing"}\n`);
+    }
+    return resolved ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
   }
 
   if (group === "inference" && command === "generate-text") {

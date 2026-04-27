@@ -1,3 +1,5 @@
+import type { SemanticPlan } from "../../../packages/clawjs-core/src/semantic.ts";
+
 export type GraphStatus = "active" | "succeeded" | "failed" | "cancelled";
 export type NodeStatus = "ready" | "claimed" | "running" | "waiting" | "blocked" | "succeeded" | "failed" | "cancelled";
 export type DependencyKind = "blocks_parent" | "informational" | "fan_in";
@@ -34,6 +36,7 @@ export interface DelegationGraph {
   status: GraphStatus;
   rootNodeId: string | null;
   policy: DelegationPolicy;
+  semanticPlan: SemanticPlan | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -51,6 +54,7 @@ export interface DelegationNode {
   priority: number;
   depth: number;
   input: Record<string, unknown>;
+  semanticPlan: SemanticPlan | null;
   result: Record<string, unknown> | null;
   errorMessage: string | null;
   maxAttempts: number;

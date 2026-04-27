@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "fs";
 import http from "http";
 import type { AddressInfo } from "net";
@@ -64,6 +64,49 @@ function runInstalledClawProcess(binPath: string, cwd: string, args: string[]): 
     stdout: result.stdout,
     stderr: result.stderr,
   };
+}
+
+async function startDelegationPlaneTestServer(workspaceRoot: string): Promise<{ url: string; stop: () => Promise<void> }> {
+  const port = 18_000 + Math.floor(Math.random() * 1_000);
+  const url = `http://127.0.0.1:${port}`;
+  const delegationTsxBin = path.join(process.cwd(), "delegation-plane", "node_modules", ".bin", "tsx");
+  const rootTsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
+  const homeTsxBin = path.join(os.homedir(), "node_modules", ".bin", "tsx");
+  const tsxBin = fs.existsSync(delegationTsxBin) ? delegationTsxBin : fs.existsSync(rootTsxBin) ? rootTsxBin : homeTsxBin;
+  const child = spawn(tsxBin, [path.join(process.cwd(), "delegation-plane", "src", "bin", "server.ts")], {
+    cwd: process.cwd(),
+    stdio: "ignore",
+    env: {
+      ...process.env,
+      DELEGATION_PLANE_HOST: "127.0.0.1",
+      DELEGATION_PLANE_PORT: String(port),
+      DELEGATION_PLANE_DATA_DIR: path.join(workspaceRoot, "delegation-data"),
+      DELEGATION_PLANE_DATABASE_FILE: path.join(workspaceRoot, "delegation-data", "delegation.sqlite"),
+      DELEGATION_PLANE_SCHEDULER: "0",
+    },
+  });
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < 8_000) {
+    try {
+      const response = await fetch(`${url}/v1/health`);
+      if (response.ok) {
+        return {
+          url,
+          stop: async () => {
+            child.kill("SIGTERM");
+            await Promise.race([
+              once(child, "exit"),
+              new Promise((resolve) => setTimeout(resolve, 1_000)),
+            ]);
+          },
+        };
+      }
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+  child.kill("SIGTERM");
+  throw new Error("Delegation Plane test server did not start.");
 }
 
 async function createFakeVaultCliServer() {
@@ -2678,7 +2721,17 @@ process.stdin.on("end", () => {
     assert.equal(grantExitCode, CLI_EXIT_OK);
     assert.equal(listenExitCode, CLI_EXIT_OK);
     assert.match(listenStdout.getOutput(), /"status": "stopped"/);
-    assert.deepEqual(proxyState.commands?.map((entry) => entry.command), ["new", "reset", "codex"]);
+    assert.deepEqual(proxyState.commands?.map((entry) => entry.command), [
+      "new",
+      "reset",
+      "status",
+      "queue",
+      "stop",
+      "continue",
+      "compact",
+      "summary",
+      "debug",
+    ]);
     assert.equal(proxyState.lastSend?.text, "cli reply: hello telegram");
     assert.equal(proxyState.lastSendToken, "{{telegram_support_bot_token}}");
   });
@@ -2710,6 +2763,208 @@ test("runCli can discover workspaces under an explicit root", async () => {
   assert.equal(exitCode, CLI_EXIT_OK);
   assert.match(stdout.getOutput(), /"workspaceId": "a"/);
   assert.match(stdout.getOutput(), /"workspaceId": "b"/);
+});
+
+test("runCli manages agent-native plans, policies, reviews, and delegation runs", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-plans-"));
+  const planPath = path.join(workspaceRoot, "low-risk-plan.json");
+  const publishPlanPath = path.join(workspaceRoot, "publish-plan.json");
+  const policyPath = path.join(workspaceRoot, "policy.json");
+  fs.mkdirSync(workspaceRoot, { recursive: true });
+  const lowRiskSemanticPlan = {
+    schemaVersion: 1,
+    intent: { id: "intent-low-risk", summary: "Inspect local docs", requestedBy: "frontend", constraints: [] },
+    objects: [{ id: "workspace", kind: "repository", label: "Workspace", metadata: {} }],
+    actions: [{
+      id: "inspect",
+      type: "inspect",
+      label: "Inspect docs",
+      objectIds: ["workspace"],
+      effectIds: ["read"],
+      permissionIds: ["read"],
+      risk: "low",
+      requiresHumanApproval: false,
+    }],
+    effects: [{
+      id: "read",
+      kind: "read",
+      description: "Read local docs",
+      objectIds: ["workspace"],
+      reversible: true,
+      risk: "low",
+    }],
+    permissions: [{
+      id: "read",
+      capability: "workspace.read",
+      scope: "workspace",
+      risk: "low",
+      requiresHumanApproval: false,
+    }],
+    receipts: [],
+    provenance: ["test fixture"],
+  };
+  const publishSemanticPlan = {
+    ...lowRiskSemanticPlan,
+    intent: { id: "intent-publish", summary: "Deploy the site", requestedBy: "frontend", constraints: ["owner approval required"] },
+    actions: [{
+      id: "publish",
+      type: "publish",
+      label: "Publish site",
+      objectIds: ["workspace"],
+      effectIds: ["publish"],
+      permissionIds: ["publish"],
+      risk: "high",
+      requiresHumanApproval: true,
+    }],
+    effects: [{
+      id: "publish",
+      kind: "publication",
+      description: "Publish to remote",
+      objectIds: ["workspace"],
+      reversible: false,
+      risk: "high",
+    }],
+    permissions: [{
+      id: "publish",
+      capability: "workspace.publish",
+      scope: "remote",
+      risk: "high",
+      requiresHumanApproval: true,
+    }],
+  };
+  fs.writeFileSync(planPath, JSON.stringify(lowRiskSemanticPlan));
+  fs.writeFileSync(publishPlanPath, JSON.stringify(publishSemanticPlan));
+  fs.writeFileSync(policyPath, JSON.stringify({
+    id: "publish-needs-owner",
+    when: { "actions.type": ["publish"], "effects.kind": ["publication"] },
+    then: { decision: "require_approval", approver: "human_owner", reason: "Publishing requires owner approval" },
+  }));
+
+  const delegation = await startDelegationPlaneTestServer(workspaceRoot);
+  const delegationUrl = delegation.url;
+  try {
+    const createStdout = captureStream();
+    const createExit = await runCli([
+      "plan",
+      "create",
+      "Inspect local docs",
+      "--workspace",
+      workspaceRoot,
+      "--agent",
+      "frontend",
+      "--tags",
+      "web",
+      "--from-file",
+      planPath,
+      "--delegation-url",
+      delegationUrl,
+      "--json",
+    ], {
+      stdout: createStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    const created = JSON.parse(createStdout.getOutput()) as { plan: { id: string; status: string; delegationGraphId?: string } };
+    assert.equal(createExit, CLI_EXIT_OK);
+    assert.equal(created.plan.status, "running");
+    assert.ok(created.plan.delegationGraphId);
+
+    const policyExit = await runCli([
+      "plan",
+      "policy",
+      "add",
+      "--workspace",
+      workspaceRoot,
+      "--from-file",
+      policyPath,
+      "--json",
+    ], {
+      stdout: captureStream().stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(policyExit, CLI_EXIT_OK);
+
+    const publishStdout = captureStream();
+    const publishExit = await runCli([
+      "plan",
+      "create",
+      "Deploy the site",
+      "--workspace",
+      workspaceRoot,
+      "--agent",
+      "frontend",
+      "--from-file",
+      publishPlanPath,
+      "--json",
+    ], {
+      stdout: publishStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    const publishCreated = JSON.parse(publishStdout.getOutput()) as { plan: { id: string; status: string; policyDecision: string } };
+    assert.equal(publishExit, CLI_EXIT_OK);
+    assert.equal(publishCreated.plan.status, "pending");
+    assert.equal(publishCreated.plan.policyDecision, "require_approval");
+
+    const reviewStdout = captureStream();
+    const reviewExit = await runCli([
+      "plan",
+      "review",
+      publishCreated.plan.id,
+      "--workspace",
+      workspaceRoot,
+      "--agent",
+      "design-reviewer",
+      "--decision",
+      "approve",
+      "--json",
+    ], {
+      stdout: reviewStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(reviewExit, CLI_EXIT_OK);
+    assert.match(reviewStdout.getOutput(), /"status": "approved"/);
+
+    const runStdout = captureStream();
+    const runExit = await runCli([
+      "plan",
+      "run",
+      publishCreated.plan.id,
+      "--workspace",
+      workspaceRoot,
+      "--delegation-url",
+      delegationUrl,
+      "--json",
+    ], {
+      stdout: runStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(runExit, CLI_EXIT_OK);
+    assert.match(runStdout.getOutput(), /"status": "running"/);
+
+    const listStdout = captureStream();
+    const listExit = await runCli(["plan", "list", "--workspace", workspaceRoot, "--json"], {
+      stdout: listStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(listExit, CLI_EXIT_OK);
+    assert.match(listStdout.getOutput(), /Deploy the site/);
+
+    const showStdout = captureStream();
+    const showExit = await runCli(["plan", "show", publishCreated.plan.id, "--workspace", workspaceRoot], {
+      stdout: showStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(showExit, CLI_EXIT_OK);
+    assert.match(showStdout.getOutput(), /Publishing requires owner approval/);
+  } finally {
+    await delegation.stop();
+  }
 });
 
 test("runCli doctor reports workspace diagnostics", async () => {
@@ -3498,6 +3753,46 @@ test("runCli memory lifecycle is local-first and agent-friendly", async () => {
     cwd: process.cwd(),
   }), CLI_EXIT_OK);
   assert.equal((JSON.parse(deleteStdout.getOutput()) as { data: { deleted: boolean } }).data.deleted, true);
+});
+
+test("runCli rules compiles scoped active rules and ignores pending rules", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-rules-workspace-"));
+  const rulesDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-rules-"));
+  const base = ["--workspace", workspaceRoot, "--rules-dir", rulesDir, "--json"];
+
+  for (const args of [
+    ["rules", "scopes", "--id", "northstar", "--kind", "brand", "--name", "Northstar Studio", "--aliases", "NS,North Star", ...base],
+    ["rules", "scopes", "--id", "northstar-website", "--kind", "output", "--name", "Website", "--parent", "northstar", "--aliases", "website,site", ...base],
+    ["rules", "propose", "--id", "northstar-tone", "--scope", "northstar", "--title", "Northstar tone", "--content", "Use the Northstar tone.", "--status", "active", "--key", "tone", ...base],
+    ["rules", "propose", "--id", "northstar-type-default", "--scope", "northstar", "--title", "Typography", "--content", "Use Source Sans generally.", "--status", "active", "--kind", "default", "--key", "typography", ...base],
+    ["rules", "propose", "--id", "northstar-type-website", "--scope", "northstar-website", "--title", "Website typography", "--content", "Use Inter on websites.", "--status", "active", "--kind", "default", "--key", "typography", "--output", "website", ...base],
+    ["rules", "propose", "--id", "northstar-slides", "--scope", "northstar", "--title", "Slides", "--content", "Use Keynote for slides.", "--status", "active", "--output", "slides,pdf", ...base],
+    ["rules", "propose", "--id", "northstar-pending", "--scope", "northstar-website", "--title", "Pending", "--content", "Do not include pending rules.", "--output", "website", ...base],
+  ]) {
+    assert.equal(await runCli(args, {
+      stdout: captureStream().stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    }), CLI_EXIT_OK);
+  }
+
+  const stdout = captureStream();
+  assert.equal(await runCli(["rules", "compile", "Create a site for NS", "--brand", "North Star", "--output-format", "website", ...base], {
+    stdout: stdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+  const result = JSON.parse(stdout.getOutput()) as {
+    prompt: string;
+    overridden: Array<{ rule: { id: string } }>;
+    omitted: Array<{ rule: { id: string }; reason: string }>;
+  };
+  assert.match(result.prompt, /Northstar tone/);
+  assert.match(result.prompt, /Website typography/);
+  assert.doesNotMatch(result.prompt, /Keynote/);
+  assert.doesNotMatch(result.prompt, /Source Sans/);
+  assert.equal(result.overridden.some((entry) => entry.rule.id === "northstar-type-default"), true);
+  assert.equal(result.omitted.some((entry) => entry.rule.id === "northstar-pending" && entry.reason === "status:pending"), true);
 });
 
 test("runCli memory search keeps workspaces and runtime source separate", async () => {

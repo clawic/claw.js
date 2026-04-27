@@ -36,10 +36,36 @@ Common fields:
 - `requiredSecrets`
 - `autoApplyTags`
 
+Skill assets can also declare a prompt capsule: a short instruction injected before a full skill is read.
+
+```json
+{
+  "context": {
+    "priority": 10,
+    "capsule": "Track work in ClawJS tasks. Create/update tasks for actionable work; use notes for durable findings; search workspace before asking for known context.",
+    "readWhen": ["planning work", "creating tasks", "saving learnings"]
+  }
+}
+```
+
+Capsules are limited to 300 characters. ClawJS sorts them by `priority`, then assignment order. Metadata stored on the library asset wins over skill metadata. Imported `skill.json` metadata wins over compatible `SKILL.md` frontmatter:
+
+```yaml
+---
+clawjs-context:
+  priority: 10
+  capsule: Track actionable work in ClawJS tasks; use notes for durable findings.
+  read-when: planning work, creating tasks
+---
+```
+
+Telegram/Codex receives the resolved capsule block automatically and includes the default `clawjs-operator` capsule.
+
 ## CLI
 
 ```bash
 claw library import-skill namecheap --id namecheap --path /path/to/namecheap-skill
+claw library import-skill ops --path /path/to/ops --context-capsule "Track actionable work in ClawJS tasks." --context-priority 10
 claw library create ceo-soul --kind instruction --projection agents --content "Operate like a pragmatic CEO."
 claw library create developer-kit --kind bundle --assets namecheap,ceo-soul
 

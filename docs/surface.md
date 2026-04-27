@@ -39,6 +39,8 @@ The docs check script validates that every current export from
 
 ## @clawjs/claw Exports
 
+    ActionReceipt
+    actionReceiptSchema
     ActivityEntryRecord
     activityEntryRecordSchema
     AgentRecord
@@ -219,6 +221,8 @@ The docs check script validates that every current export from
     CreateImageLibraryStoreOptions
     createLocalLibraryStore
     createLocalStorageStore
+    createLocalRulesStore
+    createMediaStore
     createManifest
     createSlackService
     CreateSlackServiceOptions
@@ -246,6 +250,8 @@ The docs check script validates that every current export from
     deadlineRecordSchema
     DecisionRecord
     decisionRecordSchema
+    DEFAULT_CLAWJS_OPERATOR_CAPSULE
+    DEFAULT_CLAWJS_OPERATOR_SKILL_ID
     DEFAULT_DEMO_SCENARIO_ID
     DEFAULT_OPENAI_MODEL
     DEFAULT_RUNTIME_FILE_DESCRIPTORS
@@ -288,6 +294,8 @@ The docs check script validates that every current export from
     DocumentStorageDescriptor
     DocumentStore
     downloadTelegramFile
+    EffectPreview
+    effectPreviewSchema
     EffectiveAccessPolicy
     EmbeddedTimeEngine
     EmbeddedTimeEngineOptions
@@ -390,7 +398,9 @@ The docs check script validates that every current export from
     inspectWorkspaceFile
     installOpenClawRuntime
     INTENT_DOMAINS
+    Intent
     IntentDomain
+    intentSchema
     intentDomainSchema
     IntentStateByDomain
     invokeChannelProcessor
@@ -476,6 +486,17 @@ The docs check script validates that every current export from
     MemoryStateSnapshot
     memoryStateSnapshotSchema
     MemoryStructuredLogSink
+    MediaChannelContext
+    MediaDirection
+    MediaExternalRef
+    MediaGalleryShare
+    MediaKind
+    MediaListInput
+    MediaOrigin
+    MediaRecord
+    MediaSearchResult
+    MediaStore
+    MediaStorageRef
     mergeManagedBlocks
     MergeManagedBlocksOptions
     mergeRuntimeCapabilityMaps
@@ -498,6 +519,7 @@ The docs check script validates that every current export from
     normalizeCompatSnapshot
     normalizeContextChip
     normalizeDocumentRef
+    normalizeRuleId
     normalizeInstallRef
     normalizeLibraryId
     normalizeProviderAuth
@@ -575,6 +597,8 @@ The docs check script validates that every current export from
     parseOpenClawVersion
     parseTranscriptLine
     patchIntentDomain
+    PermissionRequirement
+    permissionRequirementSchema
     persistProviderApiKey
     PersistProviderApiKeyOptions
     PersistProviderApiKeyResult
@@ -670,6 +694,7 @@ The docs check script validates that every current export from
     RegisterChannelTargetInput
     RegisterCommandGenerationBackendInput
     RegisterDocumentPathInput
+    RegisterMediaInput
     RegisterTelegramBotAccountInput
     RegisterVoiceNotePathInput
     ReleaseRecord
@@ -726,8 +751,34 @@ The docs check script validates that every current export from
     resolveWorkspaceLockPath
     resolveWorkspaceStatePath
     restartOpenClawGateway
+    resolveRulesRoot
     runOpenClawMemorySearch
     runSecretAction
+    RuleApplyWhen
+    ruleApplyWhenSchema
+    RuleInput
+    RuleKind
+    ruleKindSchema
+    LocalRulesStore
+    RULES_STATE_FILE
+    RuleRecord
+    ruleRecordSchema
+    RuleReference
+    RuleReferenceKind
+    ruleReferenceSchema
+    RuleScope
+    RuleScopeInput
+    RuleScopeKind
+    ruleScopeKindSchema
+    ruleScopeSchema
+    RuleStatus
+    ruleStatusSchema
+    RulesCompileInput
+    RulesCompileMatch
+    RulesCompileResult
+    RulesState
+    rulesStateSchema
+    RulesStoreOptions
     RuntimeAdapter
     RuntimeAdapterId
     RuntimeAdapterOptions
@@ -793,6 +844,20 @@ The docs check script validates that every current export from
     SectionRecord
     sectionRecordSchema
     segmentTextForTts
+    SemanticAction
+    semanticActionSchema
+    SemanticActionKind
+    semanticActionKindSchema
+    SemanticEffectKind
+    semanticEffectKindSchema
+    SemanticObject
+    semanticObjectSchema
+    SemanticObjectKind
+    semanticObjectKindSchema
+    SemanticPlan
+    semanticPlanSchema
+    SemanticRiskLevel
+    semanticRiskLevelSchema
     SendChannelMessageInput
     SendNotificationInput
     SESSION_FILE_EXTENSION
@@ -830,6 +895,10 @@ The docs check script validates that every current export from
     SkillCatalog
     SkillCatalogEntry
     skillCatalogEntrySchema
+    SkillContextCapsule
+    skillContextCapsuleSchema
+    SkillContextCapsuleEntry
+    SkillContextResolveResult
     SkillDescriptor
     SkillInstallResult
     skillInstallResultSchema
@@ -848,6 +917,7 @@ The docs check script validates that every current export from
     SkillSourceSearchOptions
     SkillSourceSearchResponse
     SkillSourceStatus
+    SKILL_CONTEXT_CAPSULE_MAX_CHARS
     SkillsStateSnapshot
     skillsStateSnapshotSchema
     SlackBotProfile
@@ -862,6 +932,55 @@ The docs check script validates that every current export from
     SlackStatusResult
     SlackTransportStatus
     slackTransportStatusSchema
+    BUILTIN_SOUL_PRESETS
+    createSoulStore
+    DEFAULT_SOUL_ID
+    SOUL_MANAGED_BLOCK_ID
+    SOUL_STATE_FILE
+    SOUL_TARGET_FILE
+    SoulAskPolicy
+    SoulAssignment
+    soulAssignmentSchema
+    SoulAutonomyModule
+    SoulBoundariesModule
+    SoulCognitionModule
+    SoulCommunicationModule
+    SoulCompileOptions
+    SoulCompileResult
+    SoulDomainModule
+    SoulFormality
+    SoulIdentityModule
+    SoulInitInput
+    SoulMemoryModule
+    SoulMissionModule
+    SoulModule
+    SoulModuleBase
+    SoulModuleKey
+    soulModuleModeSchema
+    SoulModuleMode
+    SoulModules
+    soulModulesSchema
+    SoulOperationsModule
+    SoulPlanningStyle
+    SoulRiskTolerance
+    SoulSocialModule
+    soulSliderValueSchema
+    SoulSliderValue
+    SoulSpec
+    soulSpecSchema
+    SoulState
+    soulStateSchema
+    SoulStore
+    SoulStoreOptions
+    SoulTemperamentModule
+    SoulToolsModule
+    SoulTruthStyle
+    SoulUncertaintyPolicy
+    SoulValuesModule
+    SoulValidationIssue
+    SoulValidationResult
+    SoulVerbosity
+    SoulVibeModule
     SpeechIntentState
     splitTextIntoChunks
     startOpenClawGateway

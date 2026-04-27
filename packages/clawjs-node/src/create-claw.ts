@@ -77,6 +77,23 @@ import type {
   LibraryAssignment,
   LibraryResolveResult,
   LibrarySyncResult,
+  MediaGalleryShare,
+  MediaKind,
+  MediaListInput,
+  MediaRecord,
+  MediaSearchResult,
+  SkillContextCapsule,
+  SkillContextResolveResult,
+  SoulAssignment,
+  SoulCompileResult,
+  SoulSpec,
+  SoulValidationResult,
+  RuleInput,
+  RuleRecord,
+  RuleScope,
+  RuleScopeInput,
+  RulesCompileInput,
+  RulesCompileResult,
 } from "@clawjs/core";
 import {
   createTtsPlaybackPlan,
@@ -141,12 +158,14 @@ import { watchSessionTranscript } from "./watch/transcript.ts";
 import { ClawEventBus, type ClawEvent, type EventListener } from "./watch/events.ts";
 import { watchProviderStatus, watchRuntimeStatus, type PollWatchOptions } from "./watch/status.ts";
 import { SessionStore } from "./sessions/store.ts";
+import { createSoulStore } from "./soul/store.ts";
 import { ChannelRunStore } from "./channel-runs/index.ts";
 import type { ChannelRunOptions, ChannelRunTarget, ChannelRunMessage } from "./channel-runs/index.ts";
 import { streamRuntimeSession, streamRuntimeSessionEvents, type SessionStreamEvent } from "./sessions/stream.ts";
 import { generateRuntimeSessionTitle } from "./sessions/title.ts";
 import { createWorkspaceDataStore, type WorkspaceDataStore } from "./data/store.ts";
 import { createDocumentStore, resolveLegacyDocumentRefs } from "./documents/store.ts";
+import { createMediaStore, type RegisterMediaInput } from "./media/store.ts";
 import {
   createDriveStorageShareAdapter,
   createLocalStorageStore,
@@ -303,6 +322,7 @@ import {
   type LibraryAssignInput,
   type LibraryResolveInput,
 } from "./library/store.ts";
+import { createLocalRulesStore } from "./rules/store.ts";
 import {
   synthesize,
   listTtsProviders,
@@ -408,6 +428,10 @@ export interface CreateClawOptions {
     pack?: string;
   };
   library?: {
+    rootDir?: string;
+    env?: NodeJS.ProcessEnv;
+  };
+  rules?: {
     rootDir?: string;
     env?: NodeJS.ProcessEnv;
   };
@@ -702,6 +726,18 @@ export interface ClawInstance {
     inspectManagedBlock: (relativePath: string, blockId: string) => ReturnType<typeof inspectManagedWorkspaceFile>;
     mergeManagedBlocks: (originalContent: string, editedContent: string, options?: MergeManagedBlocksOptions) => string;
   };
+  soul: {
+    list: () => SoulSpec[];
+    get: (id: string) => SoulSpec | null;
+    init: (input?: { id?: string; title?: string; description?: string; presetId?: string; extends?: string[]; modules?: Partial<SoulSpec["modules"]> }) => SoulSpec;
+    assign: (input: { soulId: string; agentId: string }) => SoulAssignment;
+    assignmentForAgent: (agentId: string) => SoulAssignment | null;
+    resolve: (input?: { soulId?: string; agentId?: string }) => SoulSpec;
+    validate: (input?: SoulSpec) => SoulValidationResult;
+    preview: (input?: { soulId?: string; agentId?: string }) => SoulCompileResult;
+    compile: (input?: { soulId?: string; agentId?: string; write?: boolean }) => SoulCompileResult;
+    inspect: (id?: string, agentId?: string) => ReturnType<ReturnType<typeof createSoulStore>["inspect"]>;
+  };
   compat: {
     refresh: () => Promise<ReturnType<typeof writeCompatSnapshot>>;
     read: () => ReturnType<typeof readCompatSnapshot>;
@@ -765,6 +801,17 @@ export interface ClawInstance {
     list: () => Promise<MemoryDescriptor[]>;
     search: (query: string) => Promise<MemoryDescriptor[]>;
   };
+  rules: {
+    status: () => ReturnType<ReturnType<typeof createLocalRulesStore>["status"]>;
+    list: (options?: { status?: RuleRecord["status"]; scopeId?: string }) => RuleRecord[];
+    get: (id: string) => RuleRecord | null;
+    scopes: () => RuleScope[];
+    upsertScope: (input: RuleScopeInput) => RuleScope;
+    propose: (input: RuleInput) => RuleRecord;
+    approve: (id: string) => RuleRecord;
+    archive: (id: string) => RuleRecord;
+    compile: (input: RulesCompileInput) => RulesCompileResult;
+  };
   skills: {
     list: () => Promise<SkillDescriptor[]>;
     sync: () => Promise<SkillDescriptor[]>;
@@ -778,12 +825,13 @@ export interface ClawInstance {
     create: (input: LibraryAssetInput) => LibraryAsset;
     update: (id: string, patch: LibraryAssetUpdate) => LibraryAsset;
     remove: (id: string) => boolean;
-    importSkill: (ref: string, options?: { id?: string; title?: string; source?: string; path?: string; tags?: string[] }) => LibraryAsset;
+    importSkill: (ref: string, options?: { id?: string; title?: string; source?: string; path?: string; tags?: string[]; context?: SkillContextCapsule }) => LibraryAsset;
     createInstruction: (input: Omit<LibraryAssetInput, "kind"> & { content: string; projection: NonNullable<LibraryAssetInput["projection"]> }) => LibraryAsset;
     createBundle: (input: Omit<LibraryAssetInput, "kind"> & { bundleAssetIds: string[] }) => LibraryAsset;
     assign: (input: LibraryAssignInput) => LibraryAssignment;
     unassign: (input: LibraryAssignInput) => boolean;
     resolve: (input?: LibraryResolveInput) => LibraryResolveResult;
+    resolveSkillCapsules: (input?: LibraryResolveInput & { includeDefault?: boolean }) => SkillContextResolveResult;
     sync: (input?: LibraryResolveInput & { allowMissingSecrets?: boolean }) => Promise<LibrarySyncResult>;
   };
   generations: {
@@ -1237,6 +1285,19 @@ export interface ClawInstance {
     download: (documentId: string) => Promise<{ document: DocumentRecord; filePath: string; buffer: Buffer } | null>;
     resolveRefs: (documentIds: string[]) => Promise<DocumentRef[]>;
   };
+  media: {
+    register: (input: RegisterMediaInput) => MediaRecord;
+    list: (input?: MediaListInput) => MediaRecord[];
+    search: (input: MediaListInput & { query: string }) => MediaSearchResult[];
+    get: (mediaId: string) => MediaRecord | null;
+    download: (mediaId: string) => { media: MediaRecord; filePath: string; buffer: Buffer } | null;
+    share: {
+      create: (input: { mediaId?: string; label?: string; filters?: MediaListInput; expiresAt?: string | null; ttlMs?: number }) => Promise<StorageShare | MediaGalleryShare>;
+      revoke: (id: string) => Promise<boolean>;
+      list: () => Array<StorageShare | MediaGalleryShare>;
+      resolveGallery: (id: string) => { share: MediaGalleryShare; items: MediaRecord[] } | null;
+    };
+  };
   storage: {
     put: (input: StoragePutInput) => StorageObject;
     get: (ref: Partial<StorageRef> & { key: string }) => StorageGetResult | null;
@@ -1336,6 +1397,13 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       : undefined,
   });
   const documentStore = createDocumentStore(workspaceDir, filesystem, { storage: storageStore });
+  const mediaStore = createMediaStore({
+    dataStore,
+    storage: storageStore,
+    workspaceId: options.workspace.workspaceId,
+    ...(options.workspace.projectId ? { projectId: options.workspace.projectId } : {}),
+    agentId: logicalAgentId,
+  });
   const voiceNoteStore = createVoiceNoteStore({
     dataStore,
     storage: storageStore,
@@ -1395,6 +1463,15 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   const libraryStore = createLocalLibraryStore({
     rootDir: options.library?.rootDir,
     env: options.library?.env ?? runtimeEnv,
+    filesystem,
+  });
+  const rulesStore = createLocalRulesStore({
+    rootDir: options.rules?.rootDir,
+    env: options.rules?.env ?? runtimeEnv,
+    filesystem,
+  });
+  const soulStore = createSoulStore({
+    workspaceDir,
     filesystem,
   });
   const eventBus = new ClawEventBus();
@@ -1528,6 +1605,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
 
   async function createGenerationRecord(input: CreateGenerationInput): Promise<GenerationRecord> {
     const record = await generationStore.create(input);
+    registerGeneratedMedia(record);
     appendAuditEvent("generations.created", "file_sync", {
       generationId: record.id,
       kind: record.kind,
@@ -1642,7 +1720,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     if (!record.output?.filePath || !record.output.exists) {
       return mapGenerationToImageRecord(record);
     }
-    return imageStore.importImage({
+    const image = imageStore.importImage({
       filePath: record.output.filePath,
       prompt: record.prompt,
       title: record.title,
@@ -1668,6 +1746,8 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         generationId: record.id,
       },
     });
+    registerImageMedia(image);
+    return image;
   }
 
   async function createImageRecord(input: Omit<ImageCreateInput, "workspaceId" | "agentId"> & {
@@ -1680,11 +1760,13 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     mimeType?: string;
   }): Promise<ImageRecord> {
     if (shouldUseNativeImageBackend(input)) {
-      return imageStore.create({
+      const image = await imageStore.create({
         ...input,
         workspaceId: options.workspace.workspaceId,
         agentId: logicalAgentId,
       });
+      registerImageMedia(image);
+      return image;
     }
     const record = await createGenerationRecord({
       kind: "image",
@@ -1713,11 +1795,13 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     mimeType?: string;
   }): Promise<ImageRecord> {
     if (shouldUseNativeImageBackend(input)) {
-      return imageStore.edit({
+      const image = await imageStore.edit({
         ...input,
         workspaceId: options.workspace.workspaceId,
         agentId: logicalAgentId,
       });
+      registerImageMedia(image);
+      return image;
     }
     const parent = imageStore.get(input.parentId);
     const inputImages = [parent?.output?.filePath, ...(input.sourceImageIds ?? []).map((id) => imageStore.get(id)?.output?.filePath)]
@@ -2183,6 +2267,282 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     });
   }
 
+  function mediaKindFromMime(mimeType: string): MediaKind {
+    const lower = mimeType.toLowerCase();
+    if (lower.startsWith("image/")) return "image";
+    if (lower.startsWith("audio/")) return "audio";
+    if (lower.startsWith("video/")) return "video";
+    if (
+      lower.startsWith("text/")
+      || lower === "application/pdf"
+      || lower.includes("document")
+      || lower.includes("spreadsheet")
+      || lower.includes("presentation")
+      || lower === "application/json"
+    ) return "document";
+    return "other";
+  }
+
+  function mediaKindFromTelegram(type: TelegramSendMediaInput["type"]): MediaKind {
+    if (type === "photo") return "image";
+    if (type === "audio") return "audio";
+    if (type === "video") return "video";
+    if (type === "animation") return "animation";
+    return "document";
+  }
+
+  function mediaKindFromChannel(type: SendChannelMessageInput["mediaType"]): MediaKind {
+    if (type === "photo") return "image";
+    if (type === "audio") return "audio";
+    if (type === "video") return "video";
+    if (type === "animation") return "animation";
+    return "document";
+  }
+
+  function parseMediaStorageUrl(value: string | undefined): { bucket: string; key: string; url: string } | undefined {
+    if (!value?.startsWith("storage://")) return undefined;
+    const rest = value.slice("storage://".length);
+    const slashIndex = rest.indexOf("/");
+    if (slashIndex <= 0) return undefined;
+    return {
+      bucket: rest.slice(0, slashIndex),
+      key: rest.slice(slashIndex + 1),
+      url: value,
+    };
+  }
+
+  function readDocumentIndexText(document: DocumentRecord): string | undefined {
+    if (!document.textPath) return undefined;
+    const indexPath = path.isAbsolute(document.textPath)
+      ? document.textPath
+      : path.resolve(workspaceDir, document.textPath);
+    try {
+      return fs.readFileSync(indexPath, "utf8");
+    } catch {
+      return undefined;
+    }
+  }
+
+  function registerDocumentMedia(document: DocumentRecord, direction: "inbound" | "outbound" | "internal" = "internal"): MediaRecord {
+    return mediaStore.register({
+      name: document.name,
+      mimeType: document.mimeType,
+      kind: mediaKindFromMime(document.mimeType),
+      workspaceId: document.workspaceId ?? options.workspace.workspaceId,
+      projectId: document.projectId ?? options.workspace.projectId,
+      agentId: document.agentId ?? logicalAgentId,
+      sessionId: document.sessionId,
+      messageId: document.createdByMessageId,
+      origin: document.origin === "assistant_generated" ? "assistant_generated" : document.origin,
+      direction,
+      storage: parseMediaStorageUrl(document.storage.path),
+      external: parseMediaStorageUrl(document.storage.path) ? undefined : { value: document.storage.path, kind: "opaque" },
+      sourceText: readDocumentIndexText(document),
+      sourceType: "document",
+      sourceId: document.documentId,
+      metadata: {
+        documentId: document.documentId,
+        indexStatus: document.indexStatus,
+      },
+    });
+  }
+
+  function registerGeneratedMedia(record: GenerationRecord): MediaRecord | null {
+    if (record.status !== "succeeded" || !record.output) return null;
+    return mediaStore.register({
+      name: path.basename(record.output.relativePath),
+      mimeType: record.output.mimeType ?? "application/octet-stream",
+      kind: record.kind === "document" ? "document" : record.kind,
+      filePath: record.output.filePath,
+      workspaceId: options.workspace.workspaceId,
+      projectId: options.workspace.projectId,
+      agentId: logicalAgentId,
+      origin: "generated",
+      direction: "internal",
+      sourceText: record.prompt,
+      sourceType: "generation",
+      sourceId: record.id,
+      metadata: {
+        generationId: record.id,
+        backendId: record.backendId,
+        title: record.title,
+      },
+    });
+  }
+
+  function registerImageMedia(record: ImageRecord): MediaRecord | null {
+    if (record.status !== "succeeded" || !record.output) return null;
+    return mediaStore.register({
+      name: path.basename(record.output.relativePath),
+      mimeType: record.output.mimeType ?? "image/*",
+      kind: "image",
+      filePath: record.output.filePath,
+      workspaceId: record.workspaceId ?? options.workspace.workspaceId,
+      projectId: options.workspace.projectId,
+      agentId: record.agentId ?? logicalAgentId,
+      origin: record.operation === "import" ? "imported" : "generated",
+      direction: "internal",
+      sourceText: [record.prompt, record.revisedPrompt, record.title, ...(record.tags ?? [])].filter(Boolean).join(" "),
+      sourceType: "image",
+      sourceId: record.id,
+      metadata: {
+        imageId: record.id,
+        operation: record.operation,
+        provider: record.provider,
+        model: record.model,
+      },
+    });
+  }
+
+  function registerVoiceNoteMedia(note: VoiceNoteRecord): MediaRecord {
+    return mediaStore.register({
+      name: note.audio.fileName ?? `${note.id}.ogg`,
+      mimeType: note.audio.mimeType,
+      kind: "audio",
+      storage: {
+        bucket: note.audio.bucket,
+        key: note.audio.key,
+        url: note.audio.storageUrl,
+      },
+      agentId: logicalAgentId,
+      origin: note.source.origin === "telegram" ? "channel_ingested" : "imported",
+      direction: "inbound",
+      channel: {
+        provider: note.source.provider,
+        accountId: note.source.accountId,
+        targetId: note.source.targetId,
+        ...(note.source.threadId !== undefined ? { threadId: String(note.source.threadId) } : {}),
+        providerMessageId: note.source.providerMessageId,
+      },
+      sourceText: note.transcript?.text,
+      sourceType: "voice-note",
+      sourceId: note.id,
+      metadata: {
+        voiceNoteId: note.id,
+        durationSeconds: note.audio.durationSeconds,
+        status: note.status,
+      },
+    });
+  }
+
+  function registerOutboundChannelMedia(input: {
+    provider: string;
+    accountId?: string;
+    targetId: string;
+    threadId?: string | number;
+    media: string;
+    mediaType?: TelegramSendMediaInput["type"] | SendChannelMessageInput["mediaType"];
+    text?: string;
+    agentId?: string;
+    response?: Record<string, unknown>;
+    command?: string;
+  }): MediaRecord {
+    const providerMessageId = typeof input.response?.message_id === "number" || typeof input.response?.message_id === "string"
+      ? String(input.response.message_id)
+      : undefined;
+    const mediaValue = input.media.trim();
+    const localPath = mediaValue && fs.existsSync(mediaValue) ? mediaValue : undefined;
+    const isUrl = /^https?:\/\//i.test(mediaValue);
+    const mediaType = input.mediaType ?? "document";
+    const kind = typeof mediaType === "string" && mediaType !== "document"
+      ? mediaKindFromChannel(mediaType as SendChannelMessageInput["mediaType"])
+      : "document";
+    return mediaStore.register({
+      name: localPath ? path.basename(localPath) : path.basename(new URL(isUrl ? mediaValue : "file:///media").pathname) || mediaValue,
+      mimeType: kind === "image" ? "image/*" : kind === "audio" ? "audio/*" : kind === "video" ? "video/*" : "application/octet-stream",
+      kind,
+      filePath: localPath,
+      external: localPath ? undefined : {
+        provider: input.provider,
+        value: mediaValue,
+        kind: isUrl ? "url" : "provider_file_id",
+      },
+      workspaceId: options.workspace.workspaceId,
+      projectId: options.workspace.projectId,
+      agentId: input.agentId ?? logicalAgentId,
+      command: input.command,
+      origin: "assistant_generated",
+      direction: "outbound",
+      channel: {
+        provider: input.provider,
+        accountId: input.accountId ?? "default",
+        targetId: input.targetId,
+        ...(input.threadId !== undefined ? { threadId: String(input.threadId) } : {}),
+        ...(providerMessageId ? { providerMessageId } : {}),
+      },
+      sourceText: input.text,
+      sourceType: "channel-message",
+      sourceId: [
+        input.provider,
+        input.accountId ?? "default",
+        input.targetId,
+        input.threadId,
+        providerMessageId,
+        mediaValue,
+      ].filter((part) => part !== undefined && part !== null && String(part).trim()).map(String).join(":"),
+      metadata: {
+        mediaType,
+      },
+    });
+  }
+
+  function registerInboundTelegramMedia(message: ChannelMessageRecord): void {
+    if (message.provider !== "telegram") return;
+    const rawMessage = (message.raw?.message ?? message.raw?.edited_message) as Record<string, unknown> | undefined;
+    if (!rawMessage) return;
+    const candidates: Array<{ key: string; kind: MediaKind; mimeType: string; value: unknown }> = [
+      { key: "photo", kind: "image", mimeType: "image/*", value: rawMessage.photo },
+      { key: "document", kind: "document", mimeType: "application/octet-stream", value: rawMessage.document },
+      { key: "audio", kind: "audio", mimeType: "audio/*", value: rawMessage.audio },
+      { key: "voice", kind: "audio", mimeType: "audio/ogg", value: rawMessage.voice },
+      { key: "video", kind: "video", mimeType: "video/*", value: rawMessage.video },
+      { key: "animation", kind: "animation", mimeType: "image/gif", value: rawMessage.animation },
+    ];
+    for (const candidate of candidates) {
+      const value = Array.isArray(candidate.value)
+        ? [...candidate.value].reverse().find((entry) => entry && typeof entry === "object") as Record<string, unknown> | undefined
+        : candidate.value as Record<string, unknown> | undefined;
+      if (!value || typeof value !== "object") continue;
+      const fileId = typeof value.file_id === "string" ? value.file_id : "";
+      if (!fileId) continue;
+      const fileName = typeof value.file_name === "string" ? value.file_name : `${candidate.key}-${fileId.slice(0, 12)}`;
+      mediaStore.register({
+        name: fileName,
+        mimeType: typeof value.mime_type === "string" ? value.mime_type : candidate.mimeType,
+        kind: candidate.kind,
+        external: {
+          provider: "telegram",
+          value: fileId,
+          kind: "provider_file_id",
+        },
+        agentId: logicalAgentId,
+        origin: "channel_ingested",
+        direction: "inbound",
+        channel: {
+          provider: "telegram",
+          accountId: message.accountId,
+          targetId: message.targetId,
+          threadId: message.threadId,
+          providerMessageId: message.providerMessageId,
+        },
+        sourceText: message.text,
+        sourceType: "channel-message",
+        sourceId: [
+          "telegram",
+          message.accountId,
+          message.targetId,
+          message.threadId,
+          message.providerMessageId,
+          fileId,
+        ].filter(Boolean).join(":"),
+        metadata: {
+          telegramMediaType: candidate.key,
+          fileUniqueId: typeof value.file_unique_id === "string" ? value.file_unique_id : undefined,
+        },
+      });
+    }
+  }
+
   function prepareMessageDocuments(
     sessionId: string,
     message: Parameters<SessionStore["appendMessage"]>[1],
@@ -2211,6 +2571,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           agentId: options.workspace.agentId,
           sessionId,
         });
+        registerDocumentMedia(document, message.role === "assistant" ? "outbound" : message.role === "user" ? "inbound" : "internal");
         uploadedDocuments.push({
           documentId: document.documentId,
           name: document.name,
@@ -3703,12 +4064,14 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         },
       },
     });
+    registerVoiceNoteMedia(note);
     const config = readSttConfig();
     const languageHint = config.language === "auto" || !config.language ? extractTelegramLanguageHint(message) : undefined;
     const transcriptionConfig = languageHint ? { ...config, language: languageHint } : config;
     const transcribed = config.enabled === false && !config.modelPath
       ? note
       : await voiceNoteStore.transcribe(note.id, transcriptionConfig);
+    registerVoiceNoteMedia(transcribed);
     const transcript = transcribed.transcript?.text?.trim();
     if (!transcript) return message;
     return {
@@ -3924,6 +4287,22 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     eventBus.emit("channel.listener.stopped", { provider, accountId, processorId: configuredProcessor?.id, pid: process.pid });
     appendChannelListenerLog(input.logPath, `listener stopped provider=${provider} account=${accountId}`);
     return listener;
+  }
+
+  function mergeRulesContextBlocks(input: {
+    sessionMessages: Array<{ role: string; content: string }>;
+    contextBlocks?: PromptContextBlock[];
+  }): PromptContextBlock[] | undefined {
+    const userPrompt = [...input.sessionMessages]
+      .reverse()
+      .find((message) => message.role === "user")?.content ?? "";
+    const compiled = rulesStore.compile({
+      prompt: userPrompt,
+      agent: logicalAgentId,
+      limit: 20,
+    });
+    if (!compiled.block) return input.contextBlocks;
+    return [...(input.contextBlocks ?? []), compiled.block];
   }
 
   return {
@@ -4400,6 +4779,31 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       inspectManagedBlock: (relativePath, blockId) => inspectManagedWorkspaceFile(workspaceDir, relativePath, blockId, filesystem),
       mergeManagedBlocks: (originalContent, editedContent, mergeOptions = {}) => mergeManagedBlocks(originalContent, editedContent, mergeOptions),
     },
+    soul: {
+      list: () => soulStore.list(),
+      get: (id) => soulStore.get(id),
+      init: (input = {}) => soulStore.init(input),
+      assign: (input) => soulStore.assign(input),
+      assignmentForAgent: (targetAgentId) => soulStore.assignmentForAgent(targetAgentId),
+      resolve: (input = {}) => soulStore.resolve(input),
+      validate: (input) => soulStore.validate(input),
+      preview: (input = {}) => soulStore.preview({ ...input, write: false }),
+      compile: (input = {}) => {
+        const result = soulStore.compile(input);
+        appendAuditEvent("soul.compiled", "file_sync", {
+          soulId: result.soulId,
+          agentId: result.agentId ?? logicalAgentId,
+          changed: result.changed,
+        });
+        eventBus.emit("soul.compiled", {
+          soulId: result.soulId,
+          agentId: result.agentId ?? logicalAgentId,
+          changed: result.changed,
+        });
+        return result;
+      },
+      inspect: (id, targetAgentId) => soulStore.inspect(id, targetAgentId),
+    },
     compat: {
       refresh: async () => {
         const status = await adapter.getStatus(processHost, resolvedRuntimeOptions);
@@ -4789,6 +5193,20 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         return memory;
       },
     },
+    rules: {
+      status: () => rulesStore.status(),
+      list: (input = {}) => rulesStore.list(input),
+      get: (id) => rulesStore.get(id),
+      scopes: () => rulesStore.scopes(),
+      upsertScope: (input) => rulesStore.upsertScope(input),
+      propose: (input) => rulesStore.propose(input),
+      approve: (id) => rulesStore.approve(id),
+      archive: (id) => rulesStore.archive(id),
+      compile: (input) => rulesStore.compile({
+        ...input,
+        agent: input.agent ?? logicalAgentId,
+      }),
+    },
     skills: {
       list: async () => {
         const skills = await readSkills();
@@ -4834,6 +5252,13 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         tags: input.tags,
         availableSecrets: input.availableSecrets,
       }),
+      resolveSkillCapsules: (input = {}) => libraryStore.resolveSkillCapsules({
+        agentId: input.agentId ?? logicalAgentId,
+        workspaceId: input.workspaceId ?? options.workspace.workspaceId,
+        tags: input.tags,
+        availableSecrets: input.availableSecrets,
+        includeDefault: input.includeDefault,
+      }),
       sync: (input = {}) => syncLibraryAssets(input),
     },
     generations: {
@@ -4850,11 +5275,15 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       create: (input) => createImageRecord(input),
       generate: (input) => createImageRecord(input),
       edit: (input) => editImageRecord(input),
-      import: (input) => imageStore.importImage({
-        ...input,
-        workspaceId: options.workspace.workspaceId,
-        agentId: logicalAgentId,
-      }),
+      import: (input) => {
+        const image = imageStore.importImage({
+          ...input,
+          workspaceId: options.workspace.workspaceId,
+          agentId: logicalAgentId,
+        });
+        registerImageMedia(image);
+        return image;
+      },
       list: (query) => listImageRecords(query),
       search: (query) => listImageRecords(query),
       get: (id) => getImageRecord(id),
@@ -4893,12 +5322,24 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       normalizeConfig: (input) => normalizeSttConfig(input),
     },
     voiceNotes: {
-      create: (input) => voiceNoteStore.create(input),
-      registerPath: (input) => voiceNoteStore.registerPath(input),
+      create: (input) => {
+        const note = voiceNoteStore.create(input);
+        registerVoiceNoteMedia(note);
+        return note;
+      },
+      registerPath: (input) => {
+        const note = voiceNoteStore.registerPath(input);
+        registerVoiceNoteMedia(note);
+        return note;
+      },
       list: (input) => voiceNoteStore.list(input),
       get: (id) => voiceNoteStore.get(id),
       download: (id) => voiceNoteStore.download(id),
-      transcribe: (id, input) => voiceNoteStore.transcribe(id, input),
+      transcribe: async (id, input) => {
+        const note = await voiceNoteStore.transcribe(id, input);
+        registerVoiceNoteMedia(note);
+        return note;
+      },
     },
     channels: {
       list: async () => {
@@ -5007,7 +5448,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           if (!channelsRegistry.bindings.can(input.agentId, "write", { provider, accountId, targetId: input.targetId })) {
             throw new Error(`agent ${input.agentId} does not have write permission for ${provider}:${input.targetId}`);
           }
-          return sendTelegramAccountMessage({
+          const message = await sendTelegramAccountMessage({
             registry: channelsRegistry,
             runner: processHost,
             env: secretsEnv,
@@ -5016,6 +5457,21 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
             provider,
             accountId,
           });
+          if (input.media) {
+            registerOutboundChannelMedia({
+              provider,
+              accountId,
+              targetId: input.targetId,
+              threadId: input.threadId,
+              media: input.media,
+              mediaType: input.mediaType,
+              text: input.text,
+              agentId: input.agentId,
+              response: message.raw as Record<string, unknown> | undefined,
+              command: "channels messages send",
+            });
+          }
+          return message;
         },
         read: (input) => channelsRegistry.messages.read(input),
         sync: async (input = {}) => {
@@ -5030,6 +5486,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           }, input);
           const processedRecords = [];
           for (const record of records) {
+            registerInboundTelegramMedia(record);
             processedRecords.push(await ingestTelegramVoiceNote(record));
           }
           await refreshChannelSnapshots();
@@ -5202,6 +5659,17 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           media: input.media,
           threadId: input.messageThreadId,
         }, response);
+        registerOutboundChannelMedia({
+          provider: "telegram",
+          accountId: "default",
+          targetId: String(input.chatId),
+          threadId: input.messageThreadId,
+          media: input.media,
+          mediaType: input.type,
+          text: input.caption,
+          response,
+          command: "telegram send",
+        });
         return response;
       },
       listChats: (query) => telegram.listChats(query),
@@ -5215,7 +5683,8 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       syncUpdates: async (input) => {
         const updates = await telegram.syncUpdates(input);
         for (const envelope of updates) {
-          channelsRegistry.messages.recordTelegramUpdate(envelope);
+          const record = channelsRegistry.messages.recordTelegramUpdate(envelope);
+          if (record) registerInboundTelegramMedia(record);
         }
         await refreshChannelSnapshots();
         if (updates.length > 0) {
@@ -5634,7 +6103,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           sessionId: input.sessionId,
           agentId: runtimeAgentId,
           systemPrompt: input.systemPrompt,
-          contextBlocks: input.contextBlocks,
+          contextBlocks: mergeRulesContextBlocks({ sessionMessages: session.messages, contextBlocks: input.contextBlocks }),
           messages: session.messages,
           transport: input.transport,
           chunkSize: input.chunkSize,
@@ -5700,7 +6169,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           sessionId: input.sessionId,
           agentId: runtimeAgentId,
           systemPrompt: input.systemPrompt,
-          contextBlocks: input.contextBlocks,
+          contextBlocks: mergeRulesContextBlocks({ sessionMessages: session.messages, contextBlocks: input.contextBlocks }),
           messages: session.messages,
           transport: input.transport,
           chunkSize: input.chunkSize,
@@ -5750,18 +6219,26 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       list: async (options) => documentStore.list(options),
       get: async (documentId) => documentStore.get(documentId),
       search: async (input) => searchDocuments(input),
-      upload: async (input) => documentStore.upload({
-        ...input,
-        workspaceId: options.workspace.workspaceId,
-        ...(options.workspace.projectId ? { projectId: options.workspace.projectId } : {}),
-        agentId: options.workspace.agentId,
-      }),
-      register: async (input) => documentStore.registerPath({
-        ...input,
-        workspaceId: options.workspace.workspaceId,
-        ...(options.workspace.projectId ? { projectId: options.workspace.projectId } : {}),
-        agentId: options.workspace.agentId,
-      }),
+      upload: async (input) => {
+        const document = documentStore.upload({
+          ...input,
+          workspaceId: options.workspace.workspaceId,
+          ...(options.workspace.projectId ? { projectId: options.workspace.projectId } : {}),
+          agentId: options.workspace.agentId,
+        });
+        registerDocumentMedia(document);
+        return document;
+      },
+      register: async (input) => {
+        const document = documentStore.registerPath({
+          ...input,
+          workspaceId: options.workspace.workspaceId,
+          ...(options.workspace.projectId ? { projectId: options.workspace.projectId } : {}),
+          agentId: options.workspace.agentId,
+        });
+        registerDocumentMedia(document);
+        return document;
+      },
       beginUpload: async (input) => documentStore.beginUpload({
         ...input,
         workspaceId: options.workspace.workspaceId,
@@ -5769,9 +6246,38 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         agentId: options.workspace.agentId,
       }),
       appendUploadChunk: async (uploadId, chunkBase64) => documentStore.appendUploadChunk(uploadId, chunkBase64),
-      commitUpload: async (uploadId) => documentStore.commitUpload(uploadId),
+      commitUpload: async (uploadId) => {
+        const document = documentStore.commitUpload(uploadId);
+        registerDocumentMedia(document);
+        return document;
+      },
       download: async (documentId) => documentStore.download(documentId),
       resolveRefs: async (documentIds) => documentStore.resolveRefs(documentIds),
+    },
+    media: {
+      register: (input) => mediaStore.register(input),
+      list: (input) => mediaStore.list(input),
+      search: (input) => mediaStore.search(input),
+      get: (mediaId) => mediaStore.get(mediaId),
+      download: (mediaId) => mediaStore.download(mediaId),
+      share: {
+        create: async (input) => input.mediaId
+          ? await mediaStore.createObjectShare({
+              mediaId: input.mediaId,
+              label: input.label,
+              expiresAt: input.expiresAt,
+              ttlMs: input.ttlMs,
+            })
+          : mediaStore.createGalleryShare({
+              label: input.label,
+              filters: input.filters,
+              expiresAt: input.expiresAt,
+              ttlMs: input.ttlMs,
+            }),
+        revoke: (id) => mediaStore.revokeShare(id),
+        list: () => mediaStore.listShares(),
+        resolveGallery: (id) => mediaStore.resolveGalleryShare(id),
+      },
     },
     storage: {
       put: (input) => storageStore.put(input),

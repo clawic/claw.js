@@ -12,6 +12,9 @@ import {
   type LibraryRequiredSecret,
   type LibraryResolveResult,
   type LibraryResolvedAsset,
+  type SkillContextCapsule,
+  type SkillContextCapsuleEntry,
+  type SkillContextResolveResult,
   type LibraryState,
 } from "@clawjs/core";
 
@@ -33,6 +36,7 @@ export interface LibraryAssetInput {
   tags?: string[];
   version?: string;
   source?: LibraryAsset["source"];
+  context?: LibraryAsset["context"];
   projection?: LibraryAsset["projection"];
   requiredSecrets?: LibraryRequiredSecret[];
   autoApplyTags?: string[];
@@ -46,6 +50,7 @@ export interface LibraryAssetUpdate {
   tags?: string[];
   version?: string;
   source?: LibraryAsset["source"] | null;
+  context?: LibraryAsset["context"] | null;
   projection?: LibraryAsset["projection"] | null;
   requiredSecrets?: LibraryRequiredSecret[];
   autoApplyTags?: string[] | null;
@@ -66,6 +71,18 @@ export interface LibraryResolveInput {
   tags?: string[];
   availableSecrets?: string[];
 }
+
+export const SKILL_CONTEXT_CAPSULE_MAX_CHARS = 300;
+export const DEFAULT_CLAWJS_OPERATOR_SKILL_ID = "clawjs-operator";
+export const DEFAULT_CLAWJS_OPERATOR_CAPSULE: SkillContextCapsuleEntry = {
+  assetId: DEFAULT_CLAWJS_OPERATOR_SKILL_ID,
+  title: "ClawJS Operator",
+  capsule: "Use ClawJS as the operating layer: create/update tasks for actionable work; save durable findings as notes; search workspace context before asking; use secrets by reference only.",
+  priority: 0,
+  readWhen: ["planning work", "saving learnings", "using workspace tools"],
+  assignmentOrder: -1,
+  includedBy: ["default"],
+};
 
 export function resolveLibraryRoot(options: LibraryStoreOptions = {}): string {
   const configured = options.rootDir?.trim()
@@ -98,6 +115,107 @@ function nowIso(): string {
 
 function uniqueStrings(values: string[] = []): string[] {
   return [...new Set(values.map((value) => value.trim()).filter(Boolean))].sort();
+}
+
+function cleanReadWhen(values: unknown): string[] | undefined {
+  const raw = Array.isArray(values)
+    ? values
+    : typeof values === "string"
+      ? values.split(",")
+      : [];
+  const cleaned = uniqueStrings(raw.map((value) => String(value)));
+  return cleaned.length > 0 ? cleaned : undefined;
+}
+
+function normalizeSkillContextCapsule(input: unknown): SkillContextCapsule | null {
+  if (!input || typeof input !== "object") return null;
+  const record = input as Record<string, unknown>;
+  const capsule = typeof record.capsule === "string" ? record.capsule.trim() : "";
+  if (!capsule || capsule.length > SKILL_CONTEXT_CAPSULE_MAX_CHARS) return null;
+  const rawPriority = record.priority;
+  const priority = typeof rawPriority === "number" && Number.isFinite(rawPriority)
+    ? Math.trunc(rawPriority)
+    : typeof rawPriority === "string" && rawPriority.trim() && Number.isFinite(Number(rawPriority))
+      ? Math.trunc(Number(rawPriority))
+      : 100;
+  const readWhen = cleanReadWhen(record.readWhen ?? record["read-when"]);
+  return {
+    capsule,
+    priority,
+    ...(readWhen ? { readWhen } : {}),
+  };
+}
+
+function assertSkillContextCapsule(input: SkillContextCapsule): SkillContextCapsule {
+  const normalized = normalizeSkillContextCapsule(input);
+  if (!normalized) {
+    throw new Error(`Skill context capsule must be 1-${SKILL_CONTEXT_CAPSULE_MAX_CHARS} characters.`);
+  }
+  return normalized;
+}
+
+function parseJsonFile(filePath: string, filesystem: NodeFileSystemHost): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(filesystem.readText(filePath)) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null;
+  } catch {
+    return null;
+  }
+}
+
+function readSkillJsonContext(skillDir: string, filesystem: NodeFileSystemHost): SkillContextCapsule | null {
+  const parsed = parseJsonFile(path.join(skillDir, "skill.json"), filesystem);
+  return normalizeSkillContextCapsule(parsed?.context);
+}
+
+function parseSkillFrontmatterContext(raw: string): SkillContextCapsule | null {
+  const match = raw.match(/^---\n([\s\S]*?)\n---/);
+  if (!match) return null;
+  const lines = match[1].split(/\r?\n/);
+  let inContext = false;
+  const context: Record<string, unknown> = {};
+  for (const line of lines) {
+    if (/^\s*clawjs-context\s*:\s*$/.test(line)) {
+      inContext = true;
+      continue;
+    }
+    if (inContext && /^\S/.test(line)) inContext = false;
+    if (!inContext) continue;
+    const entry = line.match(/^\s+([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
+    if (!entry) continue;
+    const key = entry[1] === "read-when" ? "readWhen" : entry[1];
+    const value = entry[2].trim().replace(/^["']|["']$/g, "");
+    context[key] = key === "priority" ? Number(value) : value;
+  }
+  return normalizeSkillContextCapsule(context);
+}
+
+function readSkillFrontmatterContext(skillDir: string, filesystem: NodeFileSystemHost): SkillContextCapsule | null {
+  try {
+    return parseSkillFrontmatterContext(filesystem.readText(path.join(skillDir, "SKILL.md")));
+  } catch {
+    return null;
+  }
+}
+
+function resolveSkillSourceDir(asset: LibraryAsset, libraryRoot: string): string | null {
+  const sourcePath = asset.source?.path?.trim();
+  if (!sourcePath) return null;
+  return path.isAbsolute(sourcePath) ? sourcePath : path.resolve(libraryRoot, sourcePath);
+}
+
+function renderSkillCapsules(capsules: SkillContextCapsuleEntry[]): string {
+  if (capsules.length === 0) return "";
+  const lines = [
+    "ClawJS skill capsules:",
+    "Use these compact rules automatically. Read the skill only when more detail is needed.",
+  ];
+  for (const entry of capsules) {
+    const readWhen = entry.readWhen?.length ? ` Read when: ${entry.readWhen.join(", ")}.` : "";
+    const location = entry.sourcePath ? ` Skill: ${entry.sourcePath}.` : "";
+    lines.push(`- ${entry.assetId}: ${entry.capsule}${readWhen}${location}`);
+  }
+  return lines.join("\n");
 }
 
 function titleFromId(id: string): string {
@@ -211,6 +329,7 @@ export class LocalLibraryStore {
       tags: uniqueStrings(input.tags),
       version: input.version?.trim() || "0.1.0",
       source: input.source,
+      context: input.context ? assertSkillContextCapsule(input.context) : undefined,
       projection: input.projection,
       requiredSecrets: input.requiredSecrets ?? [],
       autoApplyTags: input.autoApplyTags && input.autoApplyTags.length > 0 ? uniqueStrings(input.autoApplyTags) : undefined,
@@ -249,6 +368,7 @@ export class LocalLibraryStore {
       ...(patch.tags !== undefined ? { tags: uniqueStrings(patch.tags) } : {}),
       ...(patch.version !== undefined ? { version: patch.version } : {}),
       ...(patch.source !== undefined ? { source: patch.source ?? undefined } : {}),
+      ...(patch.context !== undefined ? { context: patch.context ? assertSkillContextCapsule(patch.context) : undefined } : {}),
       ...(patch.projection !== undefined ? { projection: patch.projection ?? undefined } : {}),
       ...(patch.requiredSecrets !== undefined ? { requiredSecrets: patch.requiredSecrets } : {}),
       ...(patch.autoApplyTags !== undefined ? { autoApplyTags: patch.autoApplyTags ? uniqueStrings(patch.autoApplyTags) : undefined } : {}),
@@ -283,7 +403,7 @@ export class LocalLibraryStore {
     return true;
   }
 
-  importSkill(ref: string, options: { id?: string; title?: string; source?: string; path?: string; tags?: string[] } = {}): LibraryAsset {
+  importSkill(ref: string, options: { id?: string; title?: string; source?: string; path?: string; tags?: string[]; context?: SkillContextCapsule } = {}): LibraryAsset {
     const trimmedRef = ref.trim();
     if (!trimmedRef && !options.path?.trim()) throw new Error("Skill ref or path is required.");
     const id = normalizeLibraryId(options.id ?? trimmedRef.split("/").pop() ?? options.path ?? "skill", "skill");
@@ -292,6 +412,7 @@ export class LocalLibraryStore {
       kind: "skill",
       title: options.title,
       tags: options.tags,
+      context: options.context,
       source: {
         ...(options.source ? { source: options.source } : {}),
         ...(trimmedRef ? { installRef: trimmedRef } : {}),
@@ -313,11 +434,13 @@ export class LocalLibraryStore {
     if (!this.get(assetId)) throw new Error(`Library asset not found: ${assetId}`);
     const state = this.readState();
     const now = nowIso();
+    const nextOrder = state.assignments.reduce((max, assignment) => Math.max(max, assignment.order ?? -1), -1) + 1;
     const next: LibraryAssignment = {
       assetId,
       scope: input.scope,
       targetId: input.targetId.trim(),
       mode: input.mode ?? "include",
+      order: nextOrder,
       createdAt: now,
       updatedAt: now,
     };
@@ -346,6 +469,7 @@ export class LocalLibraryStore {
     const state = this.readState();
     const targetTags = uniqueStrings(input.tags);
     const includedById = new Map<string, Set<LibraryResolvedAsset["includedBy"][number]>>();
+    const orderById = new Map<string, number>();
     const excluded = new Set<string>();
 
     for (const assignment of state.assignments) {
@@ -358,6 +482,7 @@ export class LocalLibraryStore {
       }
       if (!includedById.has(assignment.assetId)) includedById.set(assignment.assetId, new Set());
       includedById.get(assignment.assetId)!.add("explicit");
+      orderById.set(assignment.assetId, Math.min(orderById.get(assignment.assetId) ?? Number.MAX_SAFE_INTEGER, assignment.order ?? Number.MAX_SAFE_INTEGER));
     }
 
     for (const asset of state.assets) {
@@ -366,6 +491,7 @@ export class LocalLibraryStore {
       if (requiredTags.every((tag) => targetTags.includes(tag))) {
         if (!includedById.has(asset.id)) includedById.set(asset.id, new Set());
         includedById.get(asset.id)!.add("tag");
+        orderById.set(asset.id, Math.min(orderById.get(asset.id) ?? Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER));
       }
     }
 
@@ -374,10 +500,12 @@ export class LocalLibraryStore {
       if (stack.includes(assetId)) return;
       const asset = byId.get(assetId);
       if (!asset || asset.kind !== "bundle") return;
+      const parentOrder = orderById.get(assetId) ?? Number.MAX_SAFE_INTEGER;
       for (const childId of asset.bundleAssetIds ?? []) {
         const normalizedChild = normalizeLibraryId(childId);
         if (!includedById.has(normalizedChild)) includedById.set(normalizedChild, new Set());
         includedById.get(normalizedChild)!.add("bundle");
+        orderById.set(normalizedChild, Math.min(orderById.get(normalizedChild) ?? Number.MAX_SAFE_INTEGER, parentOrder));
         visitBundle(normalizedChild, [...stack, assetId]);
       }
     };
@@ -402,6 +530,7 @@ export class LocalLibraryStore {
       assets.push({
         ...asset,
         includedBy: [...includedBy].sort(),
+        assignmentOrder: orderById.get(asset.id) ?? Number.MAX_SAFE_INTEGER,
       });
     }
 
@@ -411,6 +540,50 @@ export class LocalLibraryStore {
       tags: targetTags,
       assets,
       missingSecrets,
+    };
+  }
+
+  resolveSkillCapsules(input: LibraryResolveInput & { includeDefault?: boolean } = {}): SkillContextResolveResult {
+    const resolved = this.resolve(input);
+    const capsules: SkillContextCapsuleEntry[] = [];
+    const warnings: string[] = [];
+
+    if (input.includeDefault !== false) {
+      capsules.push(DEFAULT_CLAWJS_OPERATOR_CAPSULE);
+    }
+
+    for (const asset of resolved.assets) {
+      if (asset.kind !== "skill") continue;
+      const sourceDir = resolveSkillSourceDir(asset, this.rootDir);
+      const skillJsonContext = sourceDir ? readSkillJsonContext(sourceDir, this.filesystem) : null;
+      const frontmatterContext = sourceDir ? readSkillFrontmatterContext(sourceDir, this.filesystem) : null;
+      const context = asset.context ?? skillJsonContext ?? frontmatterContext;
+      if (!context) continue;
+      if (context.capsule.length > SKILL_CONTEXT_CAPSULE_MAX_CHARS) {
+        warnings.push(`Skill capsule too long: ${asset.id}`);
+        continue;
+      }
+      capsules.push({
+        assetId: asset.id,
+        title: asset.title,
+        sourcePath: sourceDir ? path.join(sourceDir, "SKILL.md") : undefined,
+        capsule: context.capsule,
+        priority: context.priority,
+        ...(context.readWhen ? { readWhen: context.readWhen } : {}),
+        assignmentOrder: asset.assignmentOrder ?? Number.MAX_SAFE_INTEGER,
+        includedBy: asset.includedBy,
+      });
+    }
+
+    capsules.sort((left, right) =>
+      left.priority - right.priority
+      || left.assignmentOrder - right.assignmentOrder
+      || left.assetId.localeCompare(right.assetId));
+
+    return {
+      capsules,
+      prompt: renderSkillCapsules(capsules),
+      warnings,
     };
   }
 }

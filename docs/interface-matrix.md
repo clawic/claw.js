@@ -240,6 +240,9 @@ These methods come from the `@clawjs/workspace` extension, not from the base
 | Generic generation delete | `claw.generations.remove()` | `claw generations delete` | `-` |
 | Register command backend | `claw.generations.registerCommandBackend()` | `claw generations register-command` | `-` |
 | Remove generation backend | `claw.generations.removeBackend()` | `claw generations remove-backend` | `-` |
+| Persistent media list/search | `claw.media.list()` / `claw.media.search()` | `claw media list` / `claw media search` | `-` |
+| Persistent media read/download | `claw.media.get()` / `claw.media.download()` | `claw media read` / `claw media download` | `-` |
+| Persistent media shares | `claw.media.share.*` | `claw media share ...` | `-` |
 | Image create | `claw.image.create()` / `claw.image.generate()` | `claw image create` / `claw image generate` | `POST WS/images` |
 | Image edit | `claw.image.edit()` | `claw image edit` | `-` |
 | Image import | `claw.image.import()` | `claw image import` | `-` |

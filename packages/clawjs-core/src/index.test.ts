@@ -27,6 +27,7 @@ import {
   incidentRecordSchema,
   linkedEntityRefSchema,
   segmentTextForTts,
+  semanticPlanSchema,
   manifestSchema,
   milestoneRecordSchema,
   maskCredential,
@@ -102,6 +103,53 @@ test("ClawError preserves code and repair hint", () => {
 
   assert.equal(error.code, "runtime_not_found");
   assert.equal(error.repairHint, "Install the runtime first.");
+});
+
+test("semantic plan schema validates agent-native action previews", () => {
+  const plan = semanticPlanSchema.parse({
+    schemaVersion: 1,
+    intent: {
+      id: "intent-code-change",
+      summary: "Prepare a code change",
+      constraints: ["do not publish without approval"],
+    },
+    objects: [
+      { id: "repo", kind: "repository", label: "Example repo" },
+      { id: "change", kind: "task", label: "Proposed change" },
+    ],
+    actions: [
+      {
+        id: "inspect",
+        type: "inspect",
+        label: "Inspect repository",
+        objectIds: ["repo"],
+        effectIds: ["read-local"],
+        permissionIds: ["repo-read"],
+        risk: "low",
+      },
+    ],
+    effects: [
+      {
+        id: "read-local",
+        kind: "read",
+        description: "Read local repository files",
+        objectIds: ["repo"],
+        reversible: true,
+        risk: "low",
+      },
+    ],
+    permissions: [
+      {
+        id: "repo-read",
+        capability: "repository.read",
+        scope: "local workspace",
+        risk: "low",
+      },
+    ],
+  });
+
+  assert.equal(plan.intent.summary, "Prepare a code change");
+  assert.equal(plan.actions[0]?.requiresHumanApproval, false);
 });
 
 test("compat and template schemas validate normalized payloads", () => {

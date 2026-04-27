@@ -19,6 +19,7 @@ import {
   type RunLog,
   type RunStatus,
 } from "../shared/types.ts";
+import type { SemanticPlan } from "../../../packages/clawjs-core/src/semantic.ts";
 
 function now(): number {
   return Date.now();
@@ -49,6 +50,7 @@ function graphFromRow(row: Record<string, unknown>): DelegationGraph {
     status: row.status as GraphStatus,
     rootNodeId: row.root_node_id ? String(row.root_node_id) : null,
     policy: parseJson(String(row.policy_json), DEFAULT_POLICY),
+    semanticPlan: row.semantic_plan_json ? parseJson(String(row.semantic_plan_json), null as SemanticPlan | null) : null,
     createdAt: Number(row.created_at),
     updatedAt: Number(row.updated_at),
   };
@@ -68,6 +70,7 @@ function nodeFromRow(row: Record<string, unknown>): DelegationNode {
     priority: Number(row.priority),
     depth: Number(row.depth),
     input: parseJson(String(row.input_json), {}),
+    semanticPlan: row.semantic_plan_json ? parseJson(String(row.semantic_plan_json), null as SemanticPlan | null) : null,
     result: row.result_json ? parseJson(String(row.result_json), {}) : null,
     errorMessage: row.error_message ? String(row.error_message) : null,
     maxAttempts: Number(row.max_attempts),
@@ -172,6 +175,7 @@ export class DelegationPlaneDatabase {
         status TEXT NOT NULL,
         root_node_id TEXT,
         policy_json TEXT NOT NULL,
+        semantic_plan_json TEXT,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL
       );
@@ -188,6 +192,7 @@ export class DelegationPlaneDatabase {
         priority INTEGER NOT NULL,
         depth INTEGER NOT NULL,
         input_json TEXT NOT NULL,
+        semantic_plan_json TEXT,
         result_json TEXT,
         error_message TEXT,
         max_attempts INTEGER NOT NULL,
@@ -267,6 +272,14 @@ export class DelegationPlaneDatabase {
         created_at INTEGER NOT NULL
       );
     `);
+    this.ensureColumn("delegation_graphs", "semantic_plan_json", "TEXT");
+    this.ensureColumn("delegation_nodes", "semantic_plan_json", "TEXT");
+  }
+
+  private ensureColumn(table: string, column: string, definition: string): void {
+    const rows = this.sqlite.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+    if (rows.some((row) => row.name === column)) return;
+    this.sqlite.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
   }
 
   appendEvent(input: {
@@ -295,17 +308,18 @@ export class DelegationPlaneDatabase {
   createGraph(input: {
     objective: string;
     creator?: string;
-    root?: Partial<Pick<DelegationNode, "title" | "agentType" | "adapter" | "input" | "priority">>;
+    root?: Partial<Pick<DelegationNode, "title" | "agentType" | "adapter" | "input" | "priority" | "semanticPlan">>;
     policy?: Partial<DelegationPolicy>;
+    semanticPlan?: SemanticPlan | null;
   }): DelegationGraph {
     const timestamp = now();
     const graphId = id("graph");
     const policy = policyFrom(input.policy);
     const graph = this.sqlite.transaction(() => {
       this.sqlite.prepare(`
-        INSERT INTO delegation_graphs (id, objective, creator, status, root_node_id, policy_json, created_at, updated_at)
-        VALUES (?, ?, ?, 'active', NULL, ?, ?, ?)
-      `).run(graphId, input.objective, input.creator ?? "operator", JSON.stringify(policy), timestamp, timestamp);
+        INSERT INTO delegation_graphs (id, objective, creator, status, root_node_id, policy_json, semantic_plan_json, created_at, updated_at)
+        VALUES (?, ?, ?, 'active', NULL, ?, ?, ?, ?)
+      `).run(graphId, input.objective, input.creator ?? "operator", JSON.stringify(policy), input.semanticPlan ? JSON.stringify(input.semanticPlan) : null, timestamp, timestamp);
       const root = this.createNode({
         graphId,
         parentNodeId: null,
@@ -314,6 +328,7 @@ export class DelegationPlaneDatabase {
         agentType: input.root?.agentType ?? "general",
         adapter: input.root?.adapter ?? "deterministic",
         input: input.root?.input ?? {},
+        semanticPlan: input.root?.semanticPlan ?? input.semanticPlan ?? null,
         priority: input.root?.priority ?? 0,
         depth: 0,
         maxAttempts: policy.maxAttempts,
@@ -350,6 +365,7 @@ export class DelegationPlaneDatabase {
     agentType?: string;
     adapter?: string;
     input?: Record<string, unknown>;
+    semanticPlan?: SemanticPlan | null;
     priority?: number;
     depth?: number;
     maxAttempts?: number;
@@ -363,10 +379,10 @@ export class DelegationPlaneDatabase {
     this.sqlite.prepare(`
       INSERT INTO delegation_nodes (
         id, graph_id, parent_node_id, continuation_of_node_id, title, objective, agent_type, adapter, status,
-        priority, depth, input_json, result_json, error_message, max_attempts, attempt_count, timeout_ms,
+        priority, depth, input_json, semantic_plan_json, result_json, error_message, max_attempts, attempt_count, timeout_ms,
         lease_expires_at, leased_by_worker_id, next_run_at, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, 0, ?, NULL, NULL, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, 0, ?, NULL, NULL, ?, ?, ?)
     `).run(
       nodeId,
       input.graphId,
@@ -380,6 +396,7 @@ export class DelegationPlaneDatabase {
       input.priority ?? 0,
       input.depth ?? 0,
       JSON.stringify(input.input ?? {}),
+      input.semanticPlan ? JSON.stringify(input.semanticPlan) : null,
       input.maxAttempts ?? policy.maxAttempts,
       input.timeoutMs ?? policy.runTimeoutMs,
       timestamp,

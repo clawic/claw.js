@@ -6,6 +6,7 @@ import path from "node:path";
 
 import { buildDelegationPlaneApp } from "../../src/server/app.ts";
 import type { ClaimedRun, DelegationGraph, DelegationNode, DelegationTree } from "../../src/shared/types.ts";
+import type { SemanticPlan } from "../../../packages/clawjs-core/src/semantic.ts";
 
 const state: {
   tmpDir: string;
@@ -27,6 +28,145 @@ async function json<T>(url: string, method = "GET", body?: unknown): Promise<T> 
   assert.equal(response.ok, true, text);
   return parsed as T;
 }
+
+async function rawJson(url: string, method = "GET", body?: unknown): Promise<{ status: number; parsed: Record<string, unknown> }> {
+  const response = await fetch(url, {
+    method,
+    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const text = await response.text();
+  return { status: response.status, parsed: text ? JSON.parse(text) as Record<string, unknown> : {} };
+}
+
+const codeChangeSemanticPlan: SemanticPlan = {
+  schemaVersion: 1,
+  intent: {
+    id: "intent-code-change",
+    summary: "Prepare a code change",
+    requestedBy: "operator",
+    constraints: ["do not publish without human approval"],
+  },
+  objects: [
+    { id: "repo", kind: "repository", label: "Local repository", ref: "example.local/repo", metadata: {} },
+    { id: "task", kind: "task", label: "Implementation task", metadata: {} },
+    { id: "change", kind: "artifact", label: "Proposed code change", metadata: {} },
+    { id: "result", kind: "run", label: "Validation result", metadata: {} },
+  ],
+  actions: [
+    {
+      id: "inspect",
+      type: "inspect",
+      label: "Inspect repository",
+      objectIds: ["repo"],
+      effectIds: ["read-local-files"],
+      permissionIds: ["read-workspace"],
+      risk: "low",
+      requiresHumanApproval: false,
+    },
+    {
+      id: "modify",
+      type: "modify",
+      label: "Prepare local code change",
+      objectIds: ["change"],
+      effectIds: ["write-local-files"],
+      permissionIds: ["write-workspace"],
+      risk: "medium",
+      requiresHumanApproval: false,
+    },
+    {
+      id: "validate",
+      type: "validate",
+      label: "Run tests",
+      objectIds: ["result"],
+      effectIds: ["execute-tests"],
+      permissionIds: ["execute-local-command"],
+      risk: "medium",
+      requiresHumanApproval: false,
+    },
+    {
+      id: "publish",
+      type: "publish",
+      label: "Publish changes",
+      objectIds: ["repo"],
+      effectIds: ["push-remote"],
+      permissionIds: ["publish-approval"],
+      risk: "high",
+      requiresHumanApproval: true,
+    },
+  ],
+  effects: [
+    {
+      id: "read-local-files",
+      kind: "read",
+      description: "Read local repository files for context",
+      objectIds: ["repo"],
+      reversible: true,
+      risk: "low",
+    },
+    {
+      id: "write-local-files",
+      kind: "write",
+      description: "Modify local files in the workspace",
+      objectIds: ["change"],
+      reversible: true,
+      risk: "medium",
+    },
+    {
+      id: "execute-tests",
+      kind: "execute",
+      description: "Execute local validation commands",
+      objectIds: ["result"],
+      reversible: false,
+      risk: "medium",
+    },
+    {
+      id: "push-remote",
+      kind: "publication",
+      description: "Publish committed changes to a remote repository",
+      objectIds: ["repo"],
+      reversible: false,
+      risk: "high",
+    },
+  ],
+  permissions: [
+    {
+      id: "read-workspace",
+      capability: "workspace.read",
+      scope: "local repository",
+      duration: "single run",
+      risk: "low",
+      requiresHumanApproval: false,
+    },
+    {
+      id: "write-workspace",
+      capability: "workspace.write",
+      scope: "local repository",
+      duration: "single run",
+      risk: "medium",
+      requiresHumanApproval: false,
+    },
+    {
+      id: "execute-local-command",
+      capability: "command.execute",
+      scope: "local validation",
+      duration: "single run",
+      costLimit: "no paid services",
+      risk: "medium",
+      requiresHumanApproval: false,
+    },
+    {
+      id: "publish-approval",
+      capability: "repository.publish",
+      scope: "remote repository",
+      duration: "one approval",
+      risk: "high",
+      requiresHumanApproval: true,
+    },
+  ],
+  receipts: [],
+  provenance: ["operator request", "simulated plan"],
+};
 
 async function createGraph(policy: Record<string, unknown> = {}) {
   const response = await json<{ graph: DelegationGraph; root: DelegationNode }>(`${state.baseUrl}/v1/graphs`, "POST", {
@@ -135,6 +275,67 @@ describe("delegation-plane backend e2e", () => {
     await complete(continued.run.id, { final: true });
     snapshot = await tree(graph.id);
     assert.equal(snapshot.graph.status, "succeeded");
+  });
+
+  test("semantic plans persist on delegation graphs and root nodes", async () => {
+    const created = await json<{ graph: DelegationGraph; root: DelegationNode }>(`${state.baseUrl}/v1/graphs`, "POST", {
+      objective: "Prepare a code change",
+      creator: "e2e",
+      semanticPlan: codeChangeSemanticPlan,
+      policy: {
+        leaseTimeoutMs: 30,
+        runTimeoutMs: 200,
+      },
+    });
+
+    assert.equal(created.graph.semanticPlan?.intent.summary, "Prepare a code change");
+    assert.equal(created.root.semanticPlan?.actions.find((action) => action.id === "publish")?.requiresHumanApproval, true);
+
+    const snapshot = await tree(created.graph.id);
+    const root = snapshot.nodes.find((node) => node.id === snapshot.graph.rootNodeId);
+    assert.equal(snapshot.graph.semanticPlan?.effects.find((effect) => effect.id === "write-local-files")?.description, "Modify local files in the workspace");
+    assert.equal(root?.semanticPlan?.permissions.find((permission) => permission.id === "execute-local-command")?.risk, "medium");
+  });
+
+  test("legacy graphs without semantic plans remain claimable and completable", async () => {
+    const { graph, root } = await createGraph();
+    assert.equal(graph.semanticPlan, null);
+    assert.equal(root.semanticPlan, null);
+
+    await registerWorker("worker-a");
+    const claimed = await claim("worker-a");
+    assert.ok(claimed);
+    assert.equal(claimed.node.semanticPlan, null);
+    await complete(claimed.run.id, { ok: true });
+
+    const snapshot = await tree(graph.id);
+    assert.equal(snapshot.graph.status, "succeeded");
+  });
+
+  test("invalid semantic plans are rejected before persistence", async () => {
+    const missingActionType = structuredClone(codeChangeSemanticPlan) as Record<string, unknown>;
+    missingActionType.actions = [{ id: "bad-action", label: "Missing type", risk: "low" }];
+    const actionResponse = await rawJson(`${state.baseUrl}/v1/graphs`, "POST", {
+      objective: "Prepare a code change",
+      semanticPlan: missingActionType,
+    });
+    assert.equal(actionResponse.status, 400);
+
+    const missingEffectDescription = structuredClone(codeChangeSemanticPlan) as Record<string, unknown>;
+    missingEffectDescription.effects = [{ id: "bad-effect", kind: "read", risk: "low" }];
+    const effectResponse = await rawJson(`${state.baseUrl}/v1/graphs`, "POST", {
+      objective: "Prepare a code change",
+      semanticPlan: missingEffectDescription,
+    });
+    assert.equal(effectResponse.status, 400);
+
+    const malformedPermission = structuredClone(codeChangeSemanticPlan) as Record<string, unknown>;
+    malformedPermission.permissions = [{ id: "bad-permission", capability: "workspace.read", risk: "not-a-risk" }];
+    const permissionResponse = await rawJson(`${state.baseUrl}/v1/graphs`, "POST", {
+      objective: "Prepare a code change",
+      semanticPlan: malformedPermission,
+    });
+    assert.equal(permissionResponse.status, 400);
   });
 
   test("expired leases return work to the queue for another worker", async () => {

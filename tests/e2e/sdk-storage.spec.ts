@@ -76,6 +76,9 @@ test("sdk storage scopes agent objects, shares through Drive shape, and backs ge
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-storage-"));
   const workspaceDir = path.join(tempRoot, "workspace");
   const commandPath = path.join(tempRoot, "fake-generation.js");
+  const whisperPath = path.join(tempRoot, "fake-whisper.js");
+  const ffmpegPath = path.join(tempRoot, "fake-ffmpeg.js");
+  const modelPath = path.join(tempRoot, "fake-model.bin");
   const moduleUrl = pathToFileURL(path.join(rootDir, "packages", "clawjs-node", "dist", "index.js")).href;
   const fakeDrive = await startFakeDriveShareServer();
 
@@ -92,6 +95,20 @@ fs.writeFileSync(outputPath, Buffer.from([
   8, 2, 0, 0, 0,
 ]));
 `, { mode: 0o755 });
+  fs.writeFileSync(whisperPath, `#!/usr/bin/env node
+const fs = require("fs");
+const args = process.argv.slice(2);
+const outputBase = args[args.indexOf("-of") + 1];
+fs.writeFileSync(outputBase + ".txt", "voice transcript storage requirements");
+`, { mode: 0o755 });
+  fs.writeFileSync(ffmpegPath, `#!/usr/bin/env node
+const fs = require("fs");
+const args = process.argv.slice(2);
+const input = args[args.indexOf("-i") + 1];
+const output = args[args.length - 1];
+fs.copyFileSync(input, output);
+`, { mode: 0o755 });
+  fs.writeFileSync(modelPath, "fake model");
 
   const script = `
 const { Claw, createLocalStorageStore, startStorageHttpServer } = await import(${JSON.stringify(moduleUrl)});
@@ -210,6 +227,33 @@ const document = await agentA.documents.upload({
 });
 const hits = await agentA.documents.search({ query: "storage", sessionId: "session-1" });
 const downloaded = await agentA.documents.download(document.documentId);
+const documentMediaHits = agentA.media.search({ query: "alpha", sessionId: "session-1", kind: "document" });
+const voiceNote = agentA.voiceNotes.create({
+  data: Buffer.from("RIFF0000WAVEfmt "),
+  mimeType: "audio/wav",
+  fileName: "note.wav",
+  source: {
+    origin: "telegram",
+    provider: "telegram",
+    accountId: "support",
+    targetId: "test-chat-001",
+    threadId: "test-topic-001",
+    providerMessageId: "voice-message-001",
+  },
+});
+const transcribedVoice = await agentA.voiceNotes.transcribe(voiceNote.id, {
+  binaryPath: ${JSON.stringify(whisperPath)},
+  ffmpegPath: ${JSON.stringify(ffmpegPath)},
+  modelPath: ${JSON.stringify(modelPath)},
+});
+const voiceMediaHits = agentA.media.search({ query: "voice transcript", provider: "telegram", kind: "audio" });
+const galleryShare = await agentA.media.share.create({
+  label: "Storage documents",
+  filters: { kind: "document", query: "alpha" },
+});
+const resolvedGallery = agentA.media.share.resolveGallery(galleryShare.id);
+const revokedGallery = await agentA.media.share.revoke(galleryShare.id);
+const revokedResolvedGallery = agentA.media.share.resolveGallery(galleryShare.id);
 const driveVisible = agentA.storage.list({ prefix: "agents/agent-a/" }).filter((object) => object.visibility === "drive").map((object) => object.key);
 
 process.stdout.write(JSON.stringify({
@@ -234,6 +278,13 @@ process.stdout.write(JSON.stringify({
   documentStoragePath: document.storage.path,
   documentHit: hits[0]?.documentId === document.documentId,
   documentDownload: downloaded?.buffer.toString("utf8"),
+  documentMediaHit: documentMediaHits[0]?.metadata?.documentId === document.documentId,
+  voiceMediaHit: voiceMediaHits[0]?.metadata?.voiceNoteId === transcribedVoice.id,
+  voiceMediaText: voiceMediaHits[0]?.sourceText,
+  galleryShareUrl: galleryShare.url,
+  galleryShareCount: resolvedGallery?.items.length,
+  revokedGallery,
+  revokedGalleryMissing: revokedResolvedGallery === null,
 }, null, 2));
 await remote.close();
 httpStore.close();
@@ -271,6 +322,13 @@ httpStore.close();
       documentStoragePath: string;
       documentHit: boolean;
       documentDownload: string;
+      documentMediaHit: boolean;
+      voiceMediaHit: boolean;
+      voiceMediaText?: string;
+      galleryShareUrl: string;
+      galleryShareCount?: number;
+      revokedGallery: boolean;
+      revokedGalleryMissing: boolean;
     };
 
     expect(payload.stored.key).toBe("agents/agent-a/reports/launch.txt");
@@ -298,6 +356,13 @@ httpStore.close();
     expect(payload.documentStoragePath).toContain("storage://workspace/agents/agent-a/documents/blobs/");
     expect(payload.documentHit).toBeTruthy();
     expect(payload.documentDownload).toBe("alpha storage document");
+    expect(payload.documentMediaHit).toBeTruthy();
+    expect(payload.voiceMediaHit).toBeTruthy();
+    expect(payload.voiceMediaText).toContain("voice transcript storage requirements");
+    expect(payload.galleryShareUrl).toContain("clawjs://media-gallery/");
+    expect(payload.galleryShareCount).toBeGreaterThanOrEqual(1);
+    expect(payload.revokedGallery).toBeTruthy();
+    expect(payload.revokedGalleryMissing).toBeTruthy();
 
     await page.setViewportSize({ width: 1280, height: 840 });
     await page.setContent(`

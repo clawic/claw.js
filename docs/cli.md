@@ -29,6 +29,30 @@ claw info --json
 The official flow is now `claw new` for project creation,
 `claw generate` for internal resources, and `claw add` for integrations.
 
+## Agent Plans
+
+`claw plan ...` is the agent-native planning gate. Agents create a
+semantic plan before work starts, policies decide whether it can run
+automatically or needs approval, and authorized plans execute through
+Delegation Plane.
+
+```bash
+claw plan create "Polish the home page" --agent frontend --tags web,design
+claw plan list
+claw plan show plan_123
+claw plan approve plan_123 --reason "Approved for local changes"
+claw plan review plan_123 --agent design-reviewer --decision approve
+claw plan run plan_123 --delegation-url http://127.0.0.1:4520
+
+claw plan policy add --from-file policy.json
+claw plan policy list
+claw plan policy test plan_123
+```
+
+Policies are JSON rules over semantic-plan fields such as action type,
+effect kind, required permission, object kind, creator agent, tags,
+maximum risk, and explicit human-approval requirements.
+
 ## Global Flags
 
 | Flag | Description |
@@ -536,6 +560,7 @@ claw channels telegram codex commands sync --account support
 claw library list
 claw library inspect namecheap
 claw library import-skill namecheap --id namecheap --path /path/to/namecheap-skill
+claw library import-skill ops --path /path/to/ops --context-capsule "Track actionable work in ClawJS tasks." --context-priority 10
 claw library create ceo-soul --kind instruction --projection agents --content "Operate like a pragmatic CEO."
 claw library create developer-kit --kind bundle --assets namecheap,ceo-soul
 claw library assign developer-kit --agent ada
@@ -546,6 +571,10 @@ claw library sync --workspace /path/to/workspace --agent ada
 `new skill` and `generate skill` register local library assets by default.
 Pass `--no-library` to skip that registration. Assets can declare required
 secret names with `--required-secret`; the library stores references only.
+Skill assets can declare a 300-character prompt capsule with
+`--context-capsule`, `--context-priority`, and `--context-read-when`.
+Telegram/Codex injects resolved capsules in priority and assignment order,
+including the default `clawjs-operator` capsule.
 ## Telegram
 
 ```bash
@@ -597,6 +626,20 @@ claw documents download --document-id doc_123 --out ./brief.txt
 Use `upload` when the CLI should ingest file bytes into the workspace
 document store. Use `register` when the file already exists on disk and
 should be indexed in place.
+
+## Media Index
+
+```bash
+claw media list --agent support-agent --kind document
+claw media search --query "requirements pdf" --provider telegram
+claw media read --media-id media_123
+claw media download --media-id media_123 --out ./requirements.pdf
+claw media share create --kind document --query requirements
+claw media share revoke --share-id media-share-123
+```
+Existing upload, generation, voice note, and channel-send commands feed this
+index automatically. Use `media` commands to recover, filter, download, and
+share previously handled assets without changing the send workflow.
 
 ## Inference and TTS
 

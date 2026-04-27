@@ -1772,6 +1772,12 @@ export interface LibrarySkillSource {
   path?: string;
 }
 
+export interface SkillContextCapsule {
+  capsule: string;
+  priority: number;
+  readWhen?: string[];
+}
+
 export interface LibraryInstructionProjection {
   target: LibraryInstructionProjectionTarget;
   blockId?: string;
@@ -1785,6 +1791,7 @@ export interface LibraryAsset {
   tags: string[];
   version: string;
   source?: LibrarySkillSource;
+  context?: SkillContextCapsule;
   projection?: LibraryInstructionProjection;
   requiredSecrets: LibraryRequiredSecret[];
   autoApplyTags?: string[];
@@ -1799,6 +1806,7 @@ export interface LibraryAssignment {
   scope: "agent" | "workspace";
   targetId: string;
   mode: "include" | "exclude";
+  order?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -1812,6 +1820,7 @@ export interface LibraryState {
 
 export interface LibraryResolvedAsset extends LibraryAsset {
   includedBy: Array<"explicit" | "tag" | "bundle">;
+  assignmentOrder?: number;
 }
 
 export interface LibraryMissingSecret {
@@ -1826,6 +1835,378 @@ export interface LibraryResolveResult {
   tags: string[];
   assets: LibraryResolvedAsset[];
   missingSecrets: LibraryMissingSecret[];
+}
+
+export interface SkillContextCapsuleEntry extends SkillContextCapsule {
+  assetId: string;
+  title: string;
+  sourcePath?: string;
+  assignmentOrder: number;
+  includedBy: Array<"explicit" | "tag" | "bundle" | "default">;
+}
+
+export interface SkillContextResolveResult {
+  capsules: SkillContextCapsuleEntry[];
+  prompt: string;
+  warnings: string[];
+}
+
+export type RuleScopeKind =
+  | "user"
+  | "organization"
+  | "brand"
+  | "client"
+  | "project"
+  | "domain"
+  | "service"
+  | "task"
+  | "output";
+
+export type RuleKind = "directive" | "default" | "resource";
+export type RuleStatus = "pending" | "active" | "archived";
+export type RuleReferenceKind = "asset" | "secret" | "connection" | "url" | "file" | "note";
+
+export interface RuleScope {
+  id: string;
+  kind: RuleScopeKind | (string & {});
+  name: string;
+  parentId?: string;
+  aliases: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RuleReference {
+  kind: RuleReferenceKind | (string & {});
+  ref: string;
+  label?: string;
+}
+
+export interface RuleApplyWhen {
+  keywords?: string[];
+  taskTypes?: string[];
+  outputFormats?: string[];
+  domains?: string[];
+  services?: string[];
+  projects?: string[];
+  agents?: string[];
+  channels?: string[];
+}
+
+export interface RuleRecord {
+  id: string;
+  title: string;
+  kind: RuleKind;
+  status: RuleStatus;
+  scopeId: string;
+  content: string;
+  applyWhen?: RuleApplyWhen;
+  aliases: string[];
+  priority: number;
+  key?: string;
+  references: RuleReference[];
+  agentIds?: string[];
+  channelIds?: string[];
+  source?: string;
+  createdAt: string;
+  updatedAt: string;
+  approvedAt?: string;
+  archivedAt?: string;
+}
+
+export interface RulesState {
+  schemaVersion: 1;
+  scopes: RuleScope[];
+  rules: RuleRecord[];
+  updatedAt: string;
+}
+
+export interface RuleInput {
+  id?: string;
+  title: string;
+  kind?: RuleKind;
+  status?: RuleStatus;
+  scopeId: string;
+  content: string;
+  applyWhen?: RuleApplyWhen;
+  aliases?: string[];
+  priority?: number;
+  key?: string;
+  references?: RuleReference[];
+  agentIds?: string[];
+  channelIds?: string[];
+  source?: string;
+}
+
+export interface RuleScopeInput {
+  id?: string;
+  kind: RuleScope["kind"];
+  name: string;
+  parentId?: string;
+  aliases?: string[];
+}
+
+export interface RulesCompileInput {
+  prompt: string;
+  user?: string;
+  organization?: string;
+  brand?: string;
+  client?: string;
+  project?: string;
+  domain?: string;
+  service?: string;
+  taskType?: string;
+  outputFormat?: string;
+  agent?: string;
+  channel?: string;
+  limit?: number;
+}
+
+export interface RulesCompileMatch {
+  rule: RuleRecord;
+  scopePath: RuleScope[];
+  reasons: string[];
+  specificity: number;
+}
+
+export interface RulesCompileResult {
+  input: RulesCompileInput;
+  block: PromptContextBlock | null;
+  prompt: string;
+  matched: RulesCompileMatch[];
+  included: RulesCompileMatch[];
+  overridden: Array<RulesCompileMatch & { overriddenBy: string }>;
+  omitted: Array<{ rule: RuleRecord; reason: string }>;
+  warnings: string[];
+}
+
+export type SoulModuleKey =
+  | "identity"
+  | "mission"
+  | "values"
+  | "temperament"
+  | "communication"
+  | "cognition"
+  | "autonomy"
+  | "memory"
+  | "boundaries"
+  | "tools"
+  | "social"
+  | "domain"
+  | "operations"
+  | "vibe";
+
+export type SoulSliderValue = "very_low" | "low" | "medium" | "high" | "very_high";
+export type SoulAskPolicy = "act" | "ask_when_uncertain" | "ask_before_external" | "ask_first";
+export type SoulUncertaintyPolicy = "state_confidence" | "ask_clarifying" | "research_first" | "make_reasonable_assumption";
+export type SoulRiskTolerance = "low" | "medium" | "high";
+export type SoulFormality = "casual" | "neutral" | "formal";
+export type SoulVerbosity = "minimal" | "concise" | "balanced" | "thorough";
+export type SoulTruthStyle = "direct" | "diplomatic" | "socratic";
+export type SoulPlanningStyle = "act_first" | "plan_first" | "ask_first";
+export type SoulModuleMode = "disabled" | "normal" | "strong";
+
+export interface SoulModuleBase {
+  mode?: SoulModuleMode;
+  principles?: string[];
+}
+
+export interface SoulIdentityModule extends SoulModuleBase {
+  name?: string;
+  role?: string;
+  archetype?: string;
+  selfConcept?: string;
+  relationshipToUser?: string;
+  continuityStyle?: "session_only" | "workspace_memory" | "long_running_identity";
+  signatureBehaviors?: string[];
+}
+
+export interface SoulMissionModule extends SoulModuleBase {
+  primaryPurpose?: string;
+  successCriteria?: string[];
+  priorities?: string[];
+  antiGoals?: string[];
+  defaultPosture?: "assist" | "lead" | "coach" | "execute" | "analyze";
+  timeHorizon?: "immediate" | "daily" | "strategic";
+}
+
+export interface SoulValuesModule extends SoulModuleBase {
+  honesty?: SoulSliderValue;
+  privacy?: SoulSliderValue;
+  usefulness?: SoulSliderValue;
+  independence?: SoulSliderValue;
+  rigor?: SoulSliderValue;
+  care?: SoulSliderValue;
+  values?: string[];
+  hardLines?: string[];
+}
+
+export interface SoulTemperamentModule extends SoulModuleBase {
+  warmth?: SoulSliderValue;
+  energy?: SoulSliderValue;
+  patience?: SoulSliderValue;
+  humor?: SoulSliderValue;
+  confidence?: SoulSliderValue;
+  intensity?: SoulSliderValue;
+  emotionalRange?: "reserved" | "natural" | "expressive";
+}
+
+export interface SoulCommunicationModule extends SoulModuleBase {
+  directness?: SoulSliderValue;
+  detail?: SoulSliderValue;
+  formality?: SoulFormality;
+  verbosity?: SoulVerbosity;
+  disagreementStyle?: SoulTruthStyle;
+  questionFrequency?: SoulSliderValue;
+  structurePreference?: "prose" | "bullets" | "mixed";
+  languagePolicy?: "mirror_user" | "workspace_default" | "english" | "spanish";
+  forbiddenPhrases?: string[];
+}
+
+export interface SoulCognitionModule extends SoulModuleBase {
+  rigor?: SoulSliderValue;
+  creativity?: SoulSliderValue;
+  skepticism?: SoulSliderValue;
+  speedVsAccuracy?: "speed" | "balanced" | "accuracy";
+  uncertaintyPolicy?: SoulUncertaintyPolicy;
+  planningStyle?: SoulPlanningStyle;
+  researchDepth?: SoulSliderValue;
+  abstractionLevel?: "concrete" | "balanced" | "abstract";
+}
+
+export interface SoulAutonomyModule extends SoulModuleBase {
+  askPolicy?: SoulAskPolicy;
+  riskTolerance?: SoulRiskTolerance;
+  initiative?: SoulSliderValue;
+  externalActionPolicy?: "never" | "ask_first" | "allowed_when_authorized";
+  spendingPolicy?: "never" | "ask_first";
+  publicVoicePolicy?: "never_impersonate" | "draft_only" | "allowed_when_authorized";
+  reversibleChanges?: "act" | "ask_when_uncertain" | "ask_first";
+}
+
+export interface SoulMemoryModule extends SoulModuleBase {
+  persistence?: "none" | "workspace_files" | "structured_memory";
+  updatePolicy?: "never" | "ask_first" | "stable_facts" | "proactive";
+  rememberPreferences?: boolean;
+  rememberPeople?: boolean;
+  rememberProjects?: boolean;
+  forgetPolicy?: "on_request" | "expiry" | "manual_review";
+  sensitiveDataPolicy?: "avoid" | "minimize" | "allowed_if_needed";
+}
+
+export interface SoulBoundariesModule extends SoulModuleBase {
+  privacyBoundary?: SoulSliderValue;
+  medicalLegalFinancialBoundary?: "disclaim" | "refer_out" | "general_info_only";
+  manipulationBoundary?: "refuse" | "redirect" | "ask_intent";
+  secretsPolicy?: "never_reveal" | "reference_only";
+  minorsPolicy?: "extra_care" | "standard";
+  prohibitedActions?: string[];
+}
+
+export interface SoulToolsModule extends SoulModuleBase {
+  toolEagerness?: SoulSliderValue;
+  inspectBeforeAsking?: boolean;
+  shellPolicy?: "avoid" | "allowed" | "preferred_for_local_truth";
+  browserPolicy?: "when_current_needed" | "avoid" | "always_verify";
+  fileEditPolicy?: "minimal" | "normal" | "proactive";
+  validationPolicy?: "none" | "targeted" | "e2e_required";
+  preferredTools?: string[];
+}
+
+export interface SoulSocialModule extends SoulModuleBase {
+  userAddressStyle?: "mirror" | "name" | "informal" | "formal";
+  groupChatPosture?: "quiet" | "helpful" | "active";
+  thirdPartyTone?: "neutral" | "warm" | "professional";
+  conflictStyle?: "deescalate" | "direct" | "mediate";
+  boundariesWithUser?: "service" | "collaborator" | "companion";
+}
+
+export interface SoulDomainModule extends SoulModuleBase {
+  primaryDomains?: string[];
+  secondaryDomains?: string[];
+  weakDomains?: string[];
+  learningPolicy?: "admit_limits" | "research" | "ask_expert";
+  expertiseVoice?: "humble" | "confident" | "expert";
+}
+
+export interface SoulOperationsModule extends SoulModuleBase {
+  executionStyle?: "minimal_change" | "balanced" | "comprehensive";
+  debuggingStyle?: "diagnose_first" | "fast_iteration" | "hypothesis_driven";
+  reportingStyle?: "brief" | "structured" | "detailed";
+  qualityGate?: "none" | "tests" | "e2e";
+  commitStyle?: "none" | "conventional" | "project_policy";
+  rollbackPolicy?: "never_without_permission" | "allowed_for_own_changes";
+}
+
+export interface SoulVibeModule extends SoulModuleBase {
+  descriptors?: string[];
+  avoidDescriptors?: string[];
+  aesthetic?: "plain" | "warm" | "sharp" | "playful" | "calm";
+  humanity?: SoulSliderValue;
+  edge?: SoulSliderValue;
+}
+
+export interface SoulModules {
+  identity: SoulIdentityModule;
+  mission: SoulMissionModule;
+  values: SoulValuesModule;
+  temperament: SoulTemperamentModule;
+  communication: SoulCommunicationModule;
+  cognition: SoulCognitionModule;
+  autonomy: SoulAutonomyModule;
+  memory: SoulMemoryModule;
+  boundaries: SoulBoundariesModule;
+  tools: SoulToolsModule;
+  social: SoulSocialModule;
+  domain: SoulDomainModule;
+  operations: SoulOperationsModule;
+  vibe: SoulVibeModule;
+}
+
+export type SoulModule = SoulModules[SoulModuleKey];
+
+export interface SoulSpec {
+  schemaVersion: 1;
+  id: string;
+  title: string;
+  description?: string;
+  presetId?: string;
+  modules: SoulModules;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SoulAssignment {
+  agentId: string;
+  soulId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SoulState {
+  schemaVersion: 1;
+  specs: SoulSpec[];
+  assignments: SoulAssignment[];
+  updatedAt: string;
+}
+
+export interface SoulValidationIssue {
+  path: string;
+  message: string;
+}
+
+export interface SoulValidationResult {
+  ok: boolean;
+  issues: SoulValidationIssue[];
+}
+
+export interface SoulCompileResult {
+  soulId: string;
+  agentId?: string;
+  markdown: string;
+  targetFile: "SOUL.md";
+  blockId: string;
+  changed: boolean;
 }
 
 export interface LibrarySyncResult {
@@ -2356,6 +2737,90 @@ export interface DocumentSearchResult extends DocumentRecord {
   sourcePath?: string;
   startLine?: number;
   endLine?: number;
+}
+
+export type MediaKind = "image" | "document" | "audio" | "video" | "animation" | "other";
+export type MediaOrigin = "user_upload" | "assistant_generated" | "channel_ingested" | "imported" | "generated";
+export type MediaDirection = "inbound" | "outbound" | "internal";
+
+export interface MediaStorageRef {
+  bucket: string;
+  key: string;
+  url: string;
+}
+
+export interface MediaExternalRef {
+  provider?: string;
+  value: string;
+  kind: "url" | "provider_file_id" | "opaque";
+}
+
+export interface MediaChannelContext {
+  provider?: string;
+  accountId?: string;
+  targetId?: string;
+  threadId?: string;
+  providerMessageId?: string;
+}
+
+export interface MediaRecord {
+  mediaId: string;
+  name: string;
+  mimeType: string;
+  kind: MediaKind;
+  sizeBytes?: number;
+  sha256?: string;
+  workspaceId?: string;
+  projectId?: string;
+  agentId?: string;
+  sessionId?: string;
+  messageId?: string;
+  command?: string;
+  origin: MediaOrigin;
+  direction: MediaDirection;
+  channel?: MediaChannelContext;
+  storage?: MediaStorageRef;
+  external?: MediaExternalRef;
+  sourceText?: string;
+  sourceType?: string;
+  sourceId?: string;
+  shareIds: string[];
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface MediaListInput {
+  query?: string;
+  kind?: MediaKind;
+  direction?: MediaDirection;
+  origin?: MediaOrigin;
+  agentId?: string;
+  workspaceId?: string;
+  projectId?: string;
+  sessionId?: string;
+  provider?: string;
+  accountId?: string;
+  targetId?: string;
+  threadId?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+}
+
+export interface MediaSearchResult extends MediaRecord {
+  snippet: string;
+  score: number;
+}
+
+export interface MediaGalleryShare {
+  id: string;
+  label: string;
+  url: string;
+  filters: MediaListInput;
+  createdAt: string;
+  expiresAt?: string | null;
+  revokedAt?: string | null;
 }
 
 export interface ContextChip {
