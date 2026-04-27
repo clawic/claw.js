@@ -537,6 +537,7 @@ export const userFactVisibilitySchema = z.enum(["agent", "public", "private"]);
 
 export const userFactMetadataSchema = z.object({
   status: userFactStatusSchema.default("verified"),
+  schemaVersion: z.number().int().positive().default(1),
   source: z.string().min(1).optional(),
   verifiedAt: z.string().min(1).optional(),
   sensitivity: userFactSensitivitySchema.default("personal"),
@@ -558,6 +559,9 @@ export const userRecordTypeSchema = z.enum([
   "certification", "skill", "language", "affiliation", "descriptive_preference", "health_condition",
   "routine", "pet", "administrative_document",
 ]);
+
+export const userPackIdSchema = z.enum(["practical", "professional", "wellbeing"]);
+export const userEntityTypeSchema = z.enum(["person", "organization", "place", "asset", "pet", "document", "account"]);
 
 export const userFactValueSchema = z.union([
   z.string(),
@@ -596,6 +600,36 @@ export const userCustomFactSchema = z.object({
   updatedAt: z.string().min(1),
 }).strict();
 
+export const userPackStateSchema = z.object({
+  id: userPackIdSchema,
+  schemaVersion: z.number().int().positive().default(1),
+  enabled: z.boolean(),
+  enabledAt: z.string().min(1).optional(),
+  disabledAt: z.string().min(1).optional(),
+  sensitivity: userFactSensitivitySchema.default("personal"),
+  visibility: userFactVisibilitySchema.default("agent"),
+}).strict();
+
+export const userEntitySchema = z.object({
+  id: z.string().min(1),
+  type: userEntityTypeSchema,
+  title: z.string().min(1),
+  fields: z.record(userFactValueSchema).default({}),
+  metadata: userFactMetadataSchema,
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+}).strict();
+
+export const userLinkSchema = z.object({
+  id: z.string().min(1),
+  from: z.string().min(1),
+  relation: z.string().min(1),
+  to: z.string().min(1),
+  metadata: userFactMetadataSchema,
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+}).strict();
+
 export const userProposalSchema = z.object({
   id: z.string().min(1),
   kind: z.enum(["fact", "record", "custom_fact"]),
@@ -629,6 +663,9 @@ export const userSpecSchema = z.object({
   displayName: z.string().min(1),
   isDefault: z.boolean().default(false),
   facets: z.record(userFacetKeySchema, z.array(userFactSchema)).default({}),
+  packs: z.array(userPackStateSchema).default([]),
+  entities: z.array(userEntitySchema).default([]),
+  links: z.array(userLinkSchema).default([]),
   records: z.array(userRecordSchema).default([]),
   customFacts: z.array(userCustomFactSchema).default([]),
   proposals: z.array(userProposalSchema).default([]),

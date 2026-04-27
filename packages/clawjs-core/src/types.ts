@@ -2423,10 +2423,13 @@ export type UserRecordType =
   | "routine"
   | "pet"
   | "administrative_document";
+export type UserPackId = "practical" | "professional" | "wellbeing";
+export type UserEntityType = "person" | "organization" | "place" | "asset" | "pet" | "document" | "account";
 export type UserFactValue = string | number | boolean | null | Array<string | number | boolean | null> | Record<string, unknown>;
 
 export interface UserFactMetadata {
   status: UserFactStatus;
+  schemaVersion: number;
   source?: string;
   verifiedAt?: string;
   sensitivity: UserFactSensitivity;
@@ -2465,6 +2468,36 @@ export interface UserCustomFact {
   updatedAt: string;
 }
 
+export interface UserPackState {
+  id: UserPackId;
+  schemaVersion: number;
+  enabled: boolean;
+  enabledAt?: string;
+  disabledAt?: string;
+  sensitivity: UserFactSensitivity;
+  visibility: UserFactVisibility;
+}
+
+export interface UserEntity {
+  id: string;
+  type: UserEntityType;
+  title: string;
+  fields: Record<string, UserFactValue>;
+  metadata: UserFactMetadata;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserLink {
+  id: string;
+  from: string;
+  relation: string;
+  to: string;
+  metadata: UserFactMetadata;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface UserProposal {
   id: string;
   kind: "fact" | "record" | "custom_fact";
@@ -2498,6 +2531,9 @@ export interface UserSpec {
   displayName: string;
   isDefault: boolean;
   facets: Partial<Record<UserFacetKey, UserFact[]>>;
+  packs: UserPackState[];
+  entities: UserEntity[];
+  links: UserLink[];
   records: UserRecord[];
   customFacts: UserCustomFact[];
   proposals: UserProposal[];

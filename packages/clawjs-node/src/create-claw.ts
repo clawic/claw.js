@@ -97,8 +97,13 @@ import type {
   SoulValidationResult,
   UserAssignment,
   UserCompileResult,
+  UserEntity,
+  UserEntityType,
   UserFact,
   UserFactValue,
+  UserLink,
+  UserPackId,
+  UserPackState,
   UserProposal,
   UserRecord,
   UserRecordType,
@@ -828,8 +833,18 @@ export interface ClawInstance {
     list: () => UserSpec[];
     get: (id: string) => UserSpec | null;
     init: (input?: { id?: string; displayName?: string; isDefault?: boolean }) => UserSpec;
+    packs: (userId?: string) => Array<UserPackState & { availableFacets: string[]; availableRecords: string[]; availableEntities: string[] }>;
+    enablePack: (input: { userId?: string; id: UserPackId }) => UserPackState;
+    disablePack: (input: { userId?: string; id: UserPackId }) => UserPackState;
     set: (input: { userId?: string; path: string; value: UserFactValue; source?: string; sensitivity?: "public" | "personal" | "sensitive"; confidence?: number; validFrom?: string; validTo?: string; notes?: string; visibility?: "agent" | "public" | "private" }) => UserFact;
     add: (input: { userId?: string; type: UserRecordType; title: string; fields?: Record<string, UserFactValue>; source?: string; sensitivity?: "public" | "personal" | "sensitive"; confidence?: number; validFrom?: string; validTo?: string; notes?: string; visibility?: "agent" | "public" | "private" }) => UserRecord;
+    wizard: (input: { userId?: string; domain: UserPackId; title: string; fields?: Record<string, UserFactValue>; source?: string; sensitivity?: "public" | "personal" | "sensitive"; confidence?: number; validFrom?: string; validTo?: string; notes?: string; visibility?: "agent" | "public" | "private" }) => UserProposal;
+    addEntity: (input: { userId?: string; type: UserEntityType; title: string; fields?: Record<string, UserFactValue>; source?: string; sensitivity?: "public" | "personal" | "sensitive"; confidence?: number; validFrom?: string; validTo?: string; notes?: string; visibility?: "agent" | "public" | "private" }) => UserEntity;
+    getEntity: (id: string, userId?: string) => UserEntity | null;
+    listEntities: (input?: { userId?: string; type?: UserEntityType }) => UserEntity[];
+    link: (input: { userId?: string; from: string; relation: string; to: string; source?: string; sensitivity?: "public" | "personal" | "sensitive"; confidence?: number; validFrom?: string; validTo?: string; notes?: string; visibility?: "agent" | "public" | "private" }) => UserLink;
+    query: (input?: { userId?: string; domain?: UserPackId; type?: string; status?: string; sensitivity?: "public" | "personal" | "sensitive"; source?: string; date?: string; text?: string }) => ReturnType<ReturnType<typeof createUserStore>["query"]>;
+    delete: (id: string, userId?: string) => { id: string; deleted: boolean };
     propose: (input: { userId?: string; path?: string; value?: UserFactValue; recordType?: UserRecordType; title?: string; fields?: Record<string, UserFactValue>; source?: string; sensitivity?: "public" | "personal" | "sensitive"; confidence?: number; notes?: string; visibility?: "agent" | "public" | "private" }) => UserProposal;
     verify: (proposalId: string, userId?: string) => UserProposal;
     assign: (input: { userId: string; agentId: string }) => UserAssignment;
@@ -5065,8 +5080,18 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
       list: () => userStore.list(),
       get: (id) => userStore.get(id),
       init: (input = {}) => userStore.init(input),
+      packs: (targetUserId) => userStore.packs(targetUserId),
+      enablePack: (input) => userStore.enablePack(input.userId, input.id),
+      disablePack: (input) => userStore.disablePack(input.userId, input.id),
       set: (input) => userStore.set(input),
       add: (input) => userStore.addRecord(input),
+      wizard: (input) => userStore.wizard(input),
+      addEntity: (input) => userStore.addEntity(input),
+      getEntity: (id, targetUserId) => userStore.getEntity(id, targetUserId),
+      listEntities: (input = {}) => userStore.listEntities(input.userId, input.type),
+      link: (input) => userStore.link(input),
+      query: (input = {}) => userStore.query(input as Parameters<typeof userStore.query>[0]),
+      delete: (id, targetUserId) => userStore.delete(id, targetUserId),
       propose: (input) => userStore.propose(input),
       verify: (proposalId, targetUserId) => userStore.verify(proposalId, targetUserId),
       assign: (input) => userStore.assign(input),

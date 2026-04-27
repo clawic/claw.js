@@ -81,3 +81,103 @@ test("UserSpec CLI rejects behavior preferences that belong in rules", async () 
       stdout: expect.stringContaining("Behavior preferences belong in rules"),
     });
 });
+
+test("UserSpec CLI expands humans with packs, guided proposals, entities, links, query, and delete", async () => {
+  const rootDir = process.cwd();
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-user-expanded-"));
+  const workspaceDir = path.join(tempRoot, "workspace");
+  const baseArgs = ["--workspace", workspaceDir, "--json"];
+
+  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "init", "--name", "Expanded User", ...baseArgs], { cwd: rootDir });
+  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "pack", "enable", "professional", ...baseArgs], { cwd: rootDir });
+  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "pack", "enable", "practical", ...baseArgs], { cwd: rootDir });
+
+  const wizard = await execFileAsync(process.execPath, [
+    clawBin(rootDir), "user", "wizard", "professional", "--title", "Example Launch", "--set", "role=lead", ...baseArgs,
+  ], { cwd: rootDir });
+  const wizardPayload = JSON.parse(wizard.stdout) as { id: string; status: string; source: string };
+  expect(wizardPayload.status).toBe("pending");
+  expect(wizardPayload.source).toBe("wizard:professional");
+
+  const organization = await execFileAsync(process.execPath, [
+    clawBin(rootDir), "user", "entity", "add", "organization", "--title", "Example Org", "--set", "url=example.local", ...baseArgs,
+  ], { cwd: rootDir });
+  const person = await execFileAsync(process.execPath, [
+    clawBin(rootDir), "user", "entity", "add", "person", "--title", "Example Collaborator", ...baseArgs,
+  ], { cwd: rootDir });
+  const organizationPayload = JSON.parse(organization.stdout) as { id: string };
+  const personPayload = JSON.parse(person.stdout) as { id: string };
+
+  await execFileAsync(process.execPath, [
+    clawBin(rootDir), "user", "link", personPayload.id, "works_with", organizationPayload.id, ...baseArgs,
+  ], { cwd: rootDir });
+
+  const queryBeforeVerify = await execFileAsync(process.execPath, [
+    clawBin(rootDir), "user", "query", "--domain", "professional", "--status", "pending", ...baseArgs,
+  ], { cwd: rootDir });
+  const queryBeforeVerifyPayload = JSON.parse(queryBeforeVerify.stdout) as { proposals: Array<{ id: string }> };
+  expect(queryBeforeVerifyPayload.proposals.map((entry) => entry.id)).toContain(wizardPayload.id);
+
+  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "verify", wizardPayload.id, ...baseArgs], { cwd: rootDir });
+  const queryAfterVerify = await execFileAsync(process.execPath, [
+    clawBin(rootDir), "user", "query", "--domain", "professional", "--text", "Example Launch", ...baseArgs,
+  ], { cwd: rootDir });
+  const queryAfterVerifyPayload = JSON.parse(queryAfterVerify.stdout) as { records: Array<{ title: string }> };
+  expect(queryAfterVerifyPayload.records.map((entry) => entry.title)).toContain("Example Launch");
+
+  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "compile", ...baseArgs], { cwd: rootDir });
+  const compiled = fs.readFileSync(path.join(workspaceDir, "USER.md"), "utf8");
+  expect(compiled).toContain("Enabled User Packs");
+  expect(compiled).toContain("Example Launch");
+  expect(compiled).toContain("Linked Entities");
+
+  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "delete", organizationPayload.id, ...baseArgs], { cwd: rootDir });
+  const entityList = await execFileAsync(process.execPath, [clawBin(rootDir), "user", "entity", "list", ...baseArgs], { cwd: rootDir });
+  expect(entityList.stdout).not.toContain(organizationPayload.id);
+  const linkList = await execFileAsync(process.execPath, [clawBin(rootDir), "user", "query", "--type", "works_with", ...baseArgs], { cwd: rootDir });
+  const linkListPayload = JSON.parse(linkList.stdout) as { links: unknown[] };
+  expect(linkListPayload.links).toHaveLength(0);
+});
+
+test("UserSpec CLI keeps sensitive wellbeing data opt-in and out of compile unless explicitly public", async () => {
+  const rootDir = process.cwd();
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-user-sensitive-"));
+  const workspaceDir = path.join(tempRoot, "workspace");
+  const baseArgs = ["--workspace", workspaceDir, "--json"];
+
+  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "init", "--name", "Private User", ...baseArgs], { cwd: rootDir });
+  await expect(execFileAsync(process.execPath, [
+    clawBin(rootDir), "user", "set", "health.sleep", "light", ...baseArgs,
+  ], { cwd: rootDir })).rejects.toMatchObject({
+    stdout: expect.stringContaining("requires enabled user pack"),
+  });
+
+  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "pack", "enable", "wellbeing", ...baseArgs], { cwd: rootDir });
+  await execFileAsync(process.execPath, [
+    clawBin(rootDir), "user", "set", "health.sleep", "light", "--source", "manual", ...baseArgs,
+  ], { cwd: rootDir });
+  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "compile", ...baseArgs], { cwd: rootDir });
+  const privateCompiled = fs.readFileSync(path.join(workspaceDir, "USER.md"), "utf8");
+  expect(privateCompiled).not.toContain("Sleep: light");
+
+  await execFileAsync(process.execPath, [
+    clawBin(rootDir), "user", "set", "health.sleep", "light", "--source", "manual", "--visibility", "public", ...baseArgs,
+  ], { cwd: rootDir });
+  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "compile", ...baseArgs], { cwd: rootDir });
+  const publicCompiled = fs.readFileSync(path.join(workspaceDir, "USER.md"), "utf8");
+  expect(publicCompiled).toContain("Sleep: light");
+
+  const memoryProposal = await execFileAsync(process.execPath, [
+    clawBin(rootDir), "user", "propose", "health.energy", "low", "--source", "memory", "--visibility", "public", ...baseArgs,
+  ], { cwd: rootDir });
+  const memoryProposalPayload = JSON.parse(memoryProposal.stdout) as { id: string };
+  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "compile", ...baseArgs], { cwd: rootDir });
+  const proposedCompiled = fs.readFileSync(path.join(workspaceDir, "USER.md"), "utf8");
+  expect(proposedCompiled).not.toContain("Energy: low");
+  expect(proposedCompiled).toContain("Pending proposed facts are intentionally omitted");
+
+  await execFileAsync(process.execPath, [clawBin(rootDir), "user", "delete", memoryProposalPayload.id, ...baseArgs], { cwd: rootDir });
+  const pending = await execFileAsync(process.execPath, [clawBin(rootDir), "user", "query", "--status", "pending", ...baseArgs], { cwd: rootDir });
+  const pendingPayload = JSON.parse(pending.stdout) as { proposals: unknown[] };
+  expect(pendingPayload.proposals).toHaveLength(0);
+});

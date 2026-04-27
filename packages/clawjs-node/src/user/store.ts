@@ -7,12 +7,17 @@ import {
   type UserAssignment,
   type UserCompileResult,
   type UserCustomFact,
+  type UserEntity,
+  type UserEntityType,
   type UserFacetKey,
   type UserFact,
   type UserFactMetadata,
   type UserFactSensitivity,
   type UserFactValue,
   type UserFactVisibility,
+  type UserLink,
+  type UserPackId,
+  type UserPackState,
   type UserProposal,
   type UserRecord,
   type UserRecordType,
@@ -42,7 +47,37 @@ const RECORD_TYPES = new Set<UserRecordType>([
   "certification", "skill", "language", "affiliation", "descriptive_preference", "health_condition",
   "routine", "pet", "administrative_document",
 ]);
+const PACK_IDS = new Set<UserPackId>(["practical", "professional", "wellbeing"]);
+const ENTITY_TYPES = new Set<UserEntityType>(["person", "organization", "place", "asset", "pet", "document", "account"]);
 const BEHAVIOR_FACETS = new Set(["assistant", "behavior", "communication", "preference", "preferences", "rules", "style"]);
+const PACK_DEFINITIONS: Record<UserPackId, { sensitivity: UserFactSensitivity; facets: UserFacetKey[]; records: UserRecordType[]; entities: UserEntityType[] }> = {
+  practical: {
+    sensitivity: "personal",
+    facets: ["home", "family", "legal", "travel", "devices", "routines", "residence"],
+    records: ["administrative_document", "pet", "routine", "residence", "life_event"],
+    entities: ["person", "place", "asset", "pet", "document", "account"],
+  },
+  professional: {
+    sensitivity: "personal",
+    facets: ["work", "education", "projects", "skills", "publicContact"],
+    records: ["employment", "education", "project", "achievement", "certification", "skill", "affiliation"],
+    entities: ["person", "organization", "place", "document", "account"],
+  },
+  wellbeing: {
+    sensitivity: "sensitive",
+    facets: ["health", "routines"],
+    records: ["health_condition", "routine"],
+    entities: ["person", "document", "account"],
+  },
+};
+const FACET_PACKS = new Map<UserFacetKey, UserPackId[]>();
+const RECORD_PACKS = new Map<UserRecordType, UserPackId[]>();
+const ENTITY_PACKS = new Map<UserEntityType, UserPackId[]>();
+for (const [packId, definition] of Object.entries(PACK_DEFINITIONS) as Array<[UserPackId, typeof PACK_DEFINITIONS[UserPackId]]>) {
+  for (const facet of definition.facets) FACET_PACKS.set(facet, [...(FACET_PACKS.get(facet) ?? []), packId]);
+  for (const record of definition.records) RECORD_PACKS.set(record, [...(RECORD_PACKS.get(record) ?? []), packId]);
+  for (const entity of definition.entities) ENTITY_PACKS.set(entity, [...(ENTITY_PACKS.get(entity) ?? []), packId]);
+}
 const SECTION_LABELS: Record<UserFacetKey, string> = {
   identity: "Identity",
   biography: "Biography",
@@ -108,6 +143,37 @@ export interface UserProposalInput {
   visibility?: UserFactVisibility;
 }
 export interface UserCompileOptions { userId?: string; agentId?: string; write?: boolean; }
+export interface UserQueryInput {
+  userId?: string;
+  domain?: UserPackId;
+  type?: string;
+  status?: UserFactMetadata["status"] | UserProposal["status"];
+  sensitivity?: UserFactSensitivity;
+  source?: string;
+  date?: string;
+  text?: string;
+}
+export interface UserQueryResult {
+  facts: Array<UserFact & { facet: UserFacetKey }>;
+  records: UserRecord[];
+  customFacts: UserCustomFact[];
+  proposals: UserProposal[];
+  entities: UserEntity[];
+  links: UserLink[];
+}
+export interface UserWizardInput {
+  userId?: string;
+  domain: UserPackId;
+  title: string;
+  fields?: Record<string, UserFactValue>;
+  source?: string;
+  sensitivity?: UserFactSensitivity;
+  confidence?: number;
+  validFrom?: string;
+  validTo?: string;
+  notes?: string;
+  visibility?: UserFactVisibility;
+}
 
 function nowIso(): string { return new Date().toISOString(); }
 function titleFromId(id: string): string {
@@ -131,6 +197,7 @@ function metadata(input: {
   const timestamp = input.verifiedAt ?? (status === "verified" ? nowIso() : undefined);
   return {
     status,
+    schemaVersion: 1,
     ...(input.source ? { source: input.source } : {}),
     ...(timestamp ? { verifiedAt: timestamp } : {}),
     sensitivity: input.sensitivity ?? "personal",
@@ -149,6 +216,9 @@ function defaultSpec(id = DEFAULT_USER_ID, displayName = "User"): UserSpec {
     displayName,
     isDefault: id === DEFAULT_USER_ID,
     facets: {},
+    packs: [],
+    entities: [],
+    links: [],
     records: [],
     customFacts: [],
     proposals: [],
@@ -163,6 +233,9 @@ function normalizeState(raw: unknown): UserState {
     specs: (parsed.specs ?? []).map((spec) => userSpecSchema.parse({
       ...spec,
       facets: spec.facets ?? {},
+      packs: spec.packs ?? [],
+      entities: spec.entities ?? [],
+      links: spec.links ?? [],
       records: spec.records ?? [],
       customFacts: spec.customFacts ?? [],
       proposals: spec.proposals ?? [],
@@ -188,8 +261,33 @@ function assertRecordType(value: string): UserRecordType {
   if (!RECORD_TYPES.has(value as UserRecordType)) throw new Error(`Unknown UserSpec record type: ${value}`);
   return value as UserRecordType;
 }
-function isVisibleVerified(metadataValue: UserFactMetadata): boolean {
-  return metadataValue.status === "verified" && metadataValue.visibility !== "private";
+function assertPackId(value: string): UserPackId {
+  if (!PACK_IDS.has(value as UserPackId)) throw new Error(`Unknown UserSpec pack: ${value}`);
+  return value as UserPackId;
+}
+function assertEntityType(value: string): UserEntityType {
+  if (!ENTITY_TYPES.has(value as UserEntityType)) throw new Error(`Unknown UserSpec entity type: ${value}`);
+  return value as UserEntityType;
+}
+function hasEnabledPack(spec: UserSpec, packId: UserPackId): boolean {
+  return spec.packs.some((pack) => pack.id === packId && pack.enabled);
+}
+function enabledPackIds(spec: UserSpec): Set<UserPackId> {
+  return new Set(spec.packs.filter((pack) => pack.enabled).map((pack) => pack.id));
+}
+function requiredPacksForSensitivity(sensitivity: UserFactSensitivity): UserPackId[] {
+  return sensitivity === "sensitive" ? ["wellbeing"] : [];
+}
+function assertPacksEnabled(spec: UserSpec, packs: UserPackId[], context: string): void {
+  const missing = packs.filter((packId) => !hasEnabledPack(spec, packId));
+  if (missing.length) throw new Error(`${context} requires enabled user pack(s): ${missing.join(", ")}`);
+}
+function isVisibleVerified(spec: UserSpec, metadataValue: UserFactMetadata): boolean {
+  if (metadataValue.status !== "verified" || metadataValue.visibility === "private") return false;
+  if (metadataValue.sensitivity === "sensitive") {
+    return metadataValue.visibility === "public" && hasEnabledPack(spec, "wellbeing");
+  }
+  return true;
 }
 function formatKey(value: string): string {
   return value.replace(/([A-Z])/g, " $1").replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim().replace(/^./, (c) => c.toUpperCase());
@@ -230,6 +328,49 @@ export class UserStore {
   list(): UserSpec[] { return this.readState().specs; }
   get(id: string): UserSpec | null { return this.readState().specs.find((spec) => spec.id === id) ?? null; }
 
+  packs(userId?: string): Array<UserPackState & { availableFacets: UserFacetKey[]; availableRecords: UserRecordType[]; availableEntities: UserEntityType[] }> {
+    const user = this.resolve({ userId });
+    return (Object.keys(PACK_DEFINITIONS) as UserPackId[]).map((id) => {
+      const current = user.packs.find((pack) => pack.id === id);
+      const definition = PACK_DEFINITIONS[id];
+      return {
+        id,
+        schemaVersion: current?.schemaVersion ?? 1,
+        enabled: current?.enabled ?? false,
+        ...(current?.enabledAt ? { enabledAt: current.enabledAt } : {}),
+        ...(current?.disabledAt ? { disabledAt: current.disabledAt } : {}),
+        sensitivity: current?.sensitivity ?? definition.sensitivity,
+        visibility: current?.visibility ?? "agent",
+        availableFacets: definition.facets,
+        availableRecords: definition.records,
+        availableEntities: definition.entities,
+      };
+    });
+  }
+
+  setPack(input: { userId?: string; id: UserPackId; enabled: boolean }): UserPackState {
+    const state = this.readState();
+    const user = this.resolve({ userId: input.userId });
+    const id = assertPackId(input.id);
+    const timestamp = nowIso();
+    const current = user.packs.find((pack) => pack.id === id);
+    const pack: UserPackState = {
+      id,
+      schemaVersion: current?.schemaVersion ?? 1,
+      enabled: input.enabled,
+      ...(input.enabled ? { enabledAt: current?.enabledAt ?? timestamp } : {}),
+      ...(!input.enabled ? { disabledAt: timestamp } : {}),
+      sensitivity: current?.sensitivity ?? PACK_DEFINITIONS[id].sensitivity,
+      visibility: current?.visibility ?? "agent",
+    };
+    const nextUser = { ...user, packs: [...user.packs.filter((entry) => entry.id !== id), pack], updatedAt: timestamp };
+    this.writeState({ ...state, specs: state.specs.map((spec) => spec.id === user.id ? userSpecSchema.parse(nextUser) : spec) });
+    return pack;
+  }
+
+  enablePack(userId: string | undefined, id: UserPackId): UserPackState { return this.setPack({ userId, id, enabled: true }); }
+  disablePack(userId: string | undefined, id: UserPackId): UserPackState { return this.setPack({ userId, id, enabled: false }); }
+
   init(input: UserInitInput = {}): UserSpec {
     const state = this.readState();
     const id = input.id?.trim() || DEFAULT_USER_ID;
@@ -248,6 +389,8 @@ export class UserStore {
     const { facet, key } = parsePath(input.path);
     const state = this.readState();
     const user = this.resolve({ userId: input.userId });
+    const sensitivity = input.sensitivity ?? (facet === "health" ? "sensitive" : "personal");
+    assertPacksEnabled(user, requiredPacksForSensitivity(sensitivity), `User fact ${input.path}`);
     const timestamp = nowIso();
     const currentFacts = user.facets[facet] ?? [];
     const current = currentFacts.find((fact) => fact.key === key);
@@ -255,7 +398,7 @@ export class UserStore {
       id: current?.id ?? normalizeId(`${facet}-${key}`),
       key,
       value: input.value,
-      metadata: metadata(input),
+      metadata: metadata({ ...input, sensitivity }),
       createdAt: current?.createdAt ?? timestamp,
       updatedAt: timestamp,
     };
@@ -276,12 +419,14 @@ export class UserStore {
     const user = this.resolve({ userId: input.userId });
     const timestamp = nowIso();
     const type = assertRecordType(input.type);
+    const sensitivity = input.sensitivity ?? (type === "health_condition" ? "sensitive" : "personal");
+    assertPacksEnabled(user, requiredPacksForSensitivity(sensitivity), `User record ${type}`);
     const record: UserRecord = {
       id: normalizeId(`${type}-${input.title}-${randomUUID().slice(0, 8)}`),
       type,
       title: input.title.trim(),
       fields: input.fields ?? {},
-      metadata: metadata(input),
+      metadata: metadata({ ...input, sensitivity }),
       createdAt: timestamp,
       updatedAt: timestamp,
     };
@@ -293,12 +438,14 @@ export class UserStore {
   addCustomFact(input: { userId?: string; title: string; value: UserFactValue } & Partial<UserFactMetadata>): UserCustomFact {
     const state = this.readState();
     const user = this.resolve({ userId: input.userId });
+    const sensitivity = input.sensitivity ?? "personal";
+    assertPacksEnabled(user, requiredPacksForSensitivity(sensitivity), `User custom fact ${input.title}`);
     const timestamp = nowIso();
     const fact: UserCustomFact = {
       id: normalizeId(`custom-${input.title}-${randomUUID().slice(0, 8)}`),
       title: input.title.trim(),
       value: input.value,
-      metadata: metadata(input),
+      metadata: metadata({ ...input, sensitivity }),
       createdAt: timestamp,
       updatedAt: timestamp,
     };
@@ -313,6 +460,8 @@ export class UserStore {
     if (input.path) parsePath(input.path);
     if (input.recordType) assertRecordType(input.recordType);
     if (!input.path && !input.recordType && !input.title) throw new Error("User proposal requires --path, --record-type, or --title");
+    const sensitivity = input.sensitivity ?? (input.path?.startsWith("health.") || input.recordType === "health_condition" ? "sensitive" : "personal");
+    assertPacksEnabled(user, requiredPacksForSensitivity(sensitivity), "User proposal");
     const timestamp = nowIso();
     const proposal: UserProposal = {
       id: normalizeId(`proposal-${input.path ?? input.recordType ?? input.title ?? "fact"}-${randomUUID().slice(0, 8)}`),
@@ -324,7 +473,7 @@ export class UserStore {
       ...(input.value !== undefined ? { value: input.value } : {}),
       ...(input.fields ? { fields: input.fields } : {}),
       ...(input.source ? { source: input.source } : {}),
-      sensitivity: input.sensitivity ?? "personal",
+      sensitivity,
       ...(input.confidence !== undefined ? { confidence: input.confidence } : {}),
       ...(input.notes ? { notes: input.notes } : {}),
       visibility: input.visibility ?? "agent",
@@ -390,6 +539,144 @@ export class UserStore {
     return verified;
   }
 
+  wizard(input: UserWizardInput): UserProposal {
+    const domain = assertPackId(input.domain);
+    const user = this.resolve({ userId: input.userId });
+    assertPacksEnabled(user, [domain], `User wizard ${domain}`);
+    const recordType: UserRecordType = domain === "professional"
+      ? "project"
+      : domain === "wellbeing"
+        ? "routine"
+        : "administrative_document";
+    return this.propose({
+      userId: user.id,
+      recordType,
+      title: input.title,
+      fields: input.fields,
+      source: input.source ?? `wizard:${domain}`,
+      sensitivity: input.sensitivity ?? PACK_DEFINITIONS[domain].sensitivity,
+      confidence: input.confidence,
+      notes: input.notes,
+      visibility: input.visibility,
+    });
+  }
+
+  addEntity(input: { userId?: string; type: UserEntityType; title: string; fields?: Record<string, UserFactValue>; source?: string; sensitivity?: UserFactSensitivity; confidence?: number; validFrom?: string; validTo?: string; notes?: string; visibility?: UserFactVisibility }): UserEntity {
+    const state = this.readState();
+    const user = this.resolve({ userId: input.userId });
+    const type = assertEntityType(input.type);
+    const sensitivity = input.sensitivity ?? "personal";
+    assertPacksEnabled(user, requiredPacksForSensitivity(sensitivity), `User entity ${type}`);
+    const timestamp = nowIso();
+    const entity: UserEntity = {
+      id: normalizeId(`${type}-${input.title}-${randomUUID().slice(0, 8)}`),
+      type,
+      title: input.title.trim(),
+      fields: input.fields ?? {},
+      metadata: metadata({ ...input, sensitivity }),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    const nextUser = { ...user, entities: [...user.entities, entity], updatedAt: timestamp };
+    this.writeState({ ...state, specs: state.specs.map((spec) => spec.id === user.id ? userSpecSchema.parse(nextUser) : spec) });
+    return entity;
+  }
+
+  getEntity(id: string, userId?: string): UserEntity | null {
+    return this.resolve({ userId }).entities.find((entity) => entity.id === id) ?? null;
+  }
+
+  listEntities(userId?: string, type?: UserEntityType): UserEntity[] {
+    const entities = this.resolve({ userId }).entities;
+    return type ? entities.filter((entity) => entity.type === type) : entities;
+  }
+
+  link(input: { userId?: string; from: string; relation: string; to: string; source?: string; sensitivity?: UserFactSensitivity; confidence?: number; validFrom?: string; validTo?: string; notes?: string; visibility?: UserFactVisibility }): UserLink {
+    const state = this.readState();
+    const user = this.resolve({ userId: input.userId });
+    const entityIds = new Set(user.entities.map((entity) => entity.id));
+    if (!entityIds.has(input.from)) throw new Error(`User entity not found: ${input.from}`);
+    if (!entityIds.has(input.to)) throw new Error(`User entity not found: ${input.to}`);
+    const sensitivity = input.sensitivity ?? "personal";
+    assertPacksEnabled(user, requiredPacksForSensitivity(sensitivity), `User link ${input.relation}`);
+    const timestamp = nowIso();
+    const link: UserLink = {
+      id: normalizeId(`link-${input.from}-${input.relation}-${input.to}-${randomUUID().slice(0, 8)}`),
+      from: input.from,
+      relation: input.relation.trim(),
+      to: input.to,
+      metadata: metadata({ ...input, sensitivity }),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    const nextUser = { ...user, links: [...user.links, link], updatedAt: timestamp };
+    this.writeState({ ...state, specs: state.specs.map((spec) => spec.id === user.id ? userSpecSchema.parse(nextUser) : spec) });
+    return link;
+  }
+
+  query(input: UserQueryInput = {}): UserQueryResult {
+    const user = this.resolve({ userId: input.userId });
+    const text = input.text?.toLowerCase();
+    const matchesText = (value: unknown) => !text || JSON.stringify(value).toLowerCase().includes(text);
+    const matchesMeta = (meta: UserFactMetadata | UserProposal) => {
+      if (input.status && meta.status !== input.status) return false;
+      if (input.sensitivity && meta.sensitivity !== input.sensitivity) return false;
+      if (input.source && meta.source !== input.source) return false;
+      if (input.date) {
+        const values = [("createdAt" in meta ? meta.createdAt : undefined), ("updatedAt" in meta ? meta.updatedAt : undefined), ("validFrom" in meta ? meta.validFrom : undefined), ("validTo" in meta ? meta.validTo : undefined)].filter(Boolean);
+        if (!values.some((value) => String(value).startsWith(input.date!))) return false;
+      }
+      return true;
+    };
+    const domain = input.domain ? assertPackId(input.domain) : undefined;
+    const facts = Object.entries(user.facets).flatMap(([facet, entries]) => (entries ?? []).map((fact) => ({ ...fact, facet: facet as UserFacetKey })))
+      .filter((fact) => (!domain || FACET_PACKS.get(fact.facet)?.includes(domain)))
+      .filter((fact) => (!input.type || fact.facet === input.type || fact.key === input.type))
+      .filter((fact) => matchesMeta(fact.metadata) && matchesText(fact));
+    const records = user.records
+      .filter((record) => (!domain || RECORD_PACKS.get(record.type)?.includes(domain)))
+      .filter((record) => (!input.type || record.type === input.type))
+      .filter((record) => matchesMeta(record.metadata) && matchesText(record));
+    const customFacts = user.customFacts
+      .filter((fact) => !domain && (!input.type || fact.title === input.type))
+      .filter((fact) => matchesMeta(fact.metadata) && matchesText(fact));
+    const proposals = user.proposals
+      .filter((proposal) => !domain || (proposal.path ? FACET_PACKS.get(proposal.path.split(".", 1)[0] as UserFacetKey)?.includes(domain) : proposal.recordType ? RECORD_PACKS.get(proposal.recordType)?.includes(domain) : false))
+      .filter((proposal) => (!input.type || proposal.recordType === input.type || proposal.path?.startsWith(`${input.type}.`) || proposal.kind === input.type))
+      .filter((proposal) => matchesMeta(proposal) && matchesText(proposal));
+    const entities = user.entities
+      .filter((entity) => (!domain || ENTITY_PACKS.get(entity.type)?.includes(domain)))
+      .filter((entity) => (!input.type || entity.type === input.type))
+      .filter((entity) => matchesMeta(entity.metadata) && matchesText(entity));
+    const links = user.links
+      .filter((link) => !domain)
+      .filter((link) => (!input.type || link.relation === input.type))
+      .filter((link) => matchesMeta(link.metadata) && matchesText(link));
+    return { facts, records, customFacts, proposals, entities, links };
+  }
+
+  delete(id: string, userId?: string): { id: string; deleted: boolean } {
+    const state = this.readState();
+    const user = this.resolve({ userId });
+    const nextFacets = Object.fromEntries(Object.entries(user.facets).map(([facet, facts]) => [facet, (facts ?? []).filter((fact) => fact.id !== id)])) as UserSpec["facets"];
+    const nextRecords = user.records.filter((record) => record.id !== id);
+    const nextCustomFacts = user.customFacts.filter((fact) => fact.id !== id);
+    const nextProposals = user.proposals.filter((proposal) => proposal.id !== id);
+    const nextEntities = user.entities.filter((entity) => entity.id !== id);
+    const nextLinks = user.links.filter((link) => link.id !== id && link.from !== id && link.to !== id);
+    const deleted = JSON.stringify(user.facets) !== JSON.stringify(nextFacets)
+      || nextRecords.length !== user.records.length
+      || nextCustomFacts.length !== user.customFacts.length
+      || nextProposals.length !== user.proposals.length
+      || nextEntities.length !== user.entities.length
+      || nextLinks.length !== user.links.length;
+    if (deleted) {
+      const nextUser = { ...user, facets: nextFacets, records: nextRecords, customFacts: nextCustomFacts, proposals: nextProposals, entities: nextEntities, links: nextLinks, updatedAt: nowIso() };
+      this.writeState({ ...state, specs: state.specs.map((spec) => spec.id === user.id ? userSpecSchema.parse(nextUser) : spec) });
+    }
+    return { id, deleted };
+  }
+
   assign(input: { userId: string; agentId: string }): UserAssignment {
     if (!this.get(input.userId)) throw new Error(`User not found: ${input.userId}`);
     const state = this.readState();
@@ -420,17 +707,21 @@ export class UserStore {
 
   renderMarkdown(spec: UserSpec): string {
     const lines = [`# ${spec.displayName}`, "", "<!-- Generated from ClawJS UserSpec. Edit the structured user source, not this block. -->"];
-    const identityFacts = spec.facets.identity?.filter((fact) => isVisibleVerified(fact.metadata)) ?? [];
+    const identityFacts = spec.facets.identity?.filter((fact) => isVisibleVerified(spec, fact.metadata)) ?? [];
     if (identityFacts.length) {
       lines.push("", "## Identity", ...identityFacts.map((fact) => `- ${formatKey(fact.key)}: ${formatValue(fact.value)}`));
     }
+    const activePacks = this.packs(spec.id).filter((pack) => pack.enabled);
+    if (activePacks.length) {
+      lines.push("", "## Enabled User Packs", ...activePacks.map((pack) => `- ${formatKey(pack.id)} v${pack.schemaVersion}`));
+    }
     for (const facet of FACET_KEYS) {
       if (facet === "identity") continue;
-      const facts = (spec.facets[facet] ?? []).filter((fact) => isVisibleVerified(fact.metadata));
+      const facts = (spec.facets[facet] ?? []).filter((fact) => isVisibleVerified(spec, fact.metadata));
       if (!facts.length) continue;
       lines.push("", `## ${SECTION_LABELS[facet]}`, ...facts.map((fact) => `- ${formatKey(fact.key)}: ${formatValue(fact.value)}`));
     }
-    const records = spec.records.filter((record) => isVisibleVerified(record.metadata));
+    const records = spec.records.filter((record) => isVisibleVerified(spec, record.metadata));
     if (records.length) {
       lines.push("", "## Structured Records");
       for (const record of records) {
@@ -438,7 +729,20 @@ export class UserStore {
         lines.push(`- ${record.title} (${record.type.replace(/_/g, " ")})${fields ? `: ${fields}` : ""}`);
       }
     }
-    const customFacts = spec.customFacts.filter((fact) => isVisibleVerified(fact.metadata));
+    const entities = spec.entities.filter((entity) => isVisibleVerified(spec, entity.metadata));
+    if (entities.length) {
+      lines.push("", "## Linked Entities");
+      for (const entity of entities) {
+        const fields = Object.entries(entity.fields).map(([key, value]) => `${formatKey(key)}: ${formatValue(value)}`).join("; ");
+        lines.push(`- ${entity.title} (${entity.type})${fields ? `: ${fields}` : ""}`);
+      }
+    }
+    const visibleEntityIds = new Set(entities.map((entity) => entity.id));
+    const links = spec.links.filter((link) => isVisibleVerified(spec, link.metadata) && visibleEntityIds.has(link.from) && visibleEntityIds.has(link.to));
+    if (links.length) {
+      lines.push("", "## Entity Links", ...links.map((link) => `- ${link.from} ${link.relation} ${link.to}`));
+    }
+    const customFacts = spec.customFacts.filter((fact) => isVisibleVerified(spec, fact.metadata));
     if (customFacts.length) {
       lines.push("", "## Custom Facts", ...customFacts.map((fact) => `- ${fact.title}: ${formatValue(fact.value)}`));
     }
