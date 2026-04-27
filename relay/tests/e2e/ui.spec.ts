@@ -239,7 +239,7 @@ test("relay shared browser opens in an immersive standalone view", async ({ page
 
     await expect(page.getByTestId("immersive-browser-shell")).toBeVisible();
     await page.getByTestId("browser-start").click();
-    await expect(page.getByTestId("browser-status")).toContainText("Ready");
+    await expect(page.getByTestId("browser-status")).toContainText("Connected");
     await expect(page.getByTestId("browser-display-url")).toContainText("Local preview");
     await expect(page.getByTestId("browser-frame")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Agents" })).toHaveCount(0);
@@ -248,7 +248,7 @@ test("relay shared browser opens in an immersive standalone view", async ({ page
     await expect(page.locator("text=admin@relay.local")).toBeVisible();
 
     await page.getByTestId("browser-release-control").click();
-    await expect(page.locator("text=Read only")).toBeVisible();
+    await expect(page.locator("text=No controller")).toBeVisible();
 
     const outputDir = path.join(process.cwd(), "output", "playwright");
     fs.mkdirSync(outputDir, { recursive: true });
@@ -266,4 +266,56 @@ test("relay shared browser opens in an immersive standalone view", async ({ page
   } finally {
     socket.close();
   }
+});
+
+test("relay monitor renders a live session transcript", async ({ page }) => {
+  await page.route("**/v1/tenants/demo-tenant/monitor/stream**", async (route) => {
+    const now = Date.now();
+    await route.fulfill({
+      status: 200,
+      headers: {
+        "content-type": "text/event-stream; charset=utf-8",
+        "cache-control": "no-cache",
+      },
+      body: [
+        "event: monitor.snapshot",
+        `data: ${JSON.stringify({
+          tenantId: "demo-tenant",
+          clientId: "viewer-e2e",
+          openedSessionId: "mon-session",
+          agents: [{ agentId: "codex-monitor", displayName: "Codex Monitor", status: "online", version: "e2e", capabilities: ["sessions"] }],
+          activity: [{ tenantId: "demo-tenant", agentId: "codex-monitor", workspaceId: "main", capability: "sessions.stream", status: "success", detail: "stream started", createdAt: now }],
+          attachedClients: [{ clientId: "viewer-e2e", openedSessionId: "mon-session", attachedAt: now }],
+          ts: now,
+        })}`,
+        "",
+        "event: monitor.session.start",
+        `data: ${JSON.stringify({ tenantId: "demo-tenant", agentId: "codex-monitor", workspaceId: "main", sessionId: "mon-session", startedAt: now, snippet: "audit this flow" })}`,
+        "",
+        "event: monitor.session.delta",
+        `data: ${JSON.stringify({ tenantId: "demo-tenant", agentId: "codex-monitor", workspaceId: "main", sessionId: "mon-session", delta: "Live monitor transcript" })}`,
+        "",
+        "event: monitor.session.end",
+        `data: ${JSON.stringify({ tenantId: "demo-tenant", agentId: "codex-monitor", workspaceId: "main", sessionId: "mon-session", reason: "complete", durationMs: 42 })}`,
+        "",
+        "",
+      ].join("\n"),
+    });
+  });
+
+  await page.goto("/login");
+  await page.getByTestId("login-submit").click();
+  await page.waitForURL("**/agents");
+  await page.getByRole("link", { name: /Monitor/ }).click();
+  await expect(page.getByRole("heading", { name: "Monitor" })).toBeVisible();
+  await expect(page.getByText("codex-monitor", { exact: true })).toBeVisible();
+  await expect(page.getByText("Live monitor transcript", { exact: true })).toBeVisible();
+  await expect(page.getByText("stream started").first()).toBeVisible();
+
+  const outputDir = path.join(process.cwd(), "output", "playwright");
+  fs.mkdirSync(outputDir, { recursive: true });
+  await page.screenshot({
+    path: path.join(outputDir, "relay-monitor-e2e.png"),
+    fullPage: true,
+  });
 });

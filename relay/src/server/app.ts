@@ -20,6 +20,7 @@ import { loadRelayConfig, type RelayConfig } from "./config.ts";
 import { ConnectorRegistry, OfflineError } from "./connector-registry.ts";
 import { RelayDatabase } from "./db.ts";
 import { RelayLogger } from "./logger.ts";
+import { MonitorBus } from "./monitor-bus.ts";
 import { MemoryRateLimiter } from "./rate-limit.ts";
 
 interface RelayAppOptions {
@@ -583,6 +584,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
   const logger = options.logger ?? new RelayLogger();
   const db = new RelayDatabase(config.dbPath);
   const auth = new RelayAuthService(config, db);
+  const monitor = new MonitorBus();
   const registry = new ConnectorRegistry(db, logger, config.requestTimeoutMs);
   const rateLimiter = new MemoryRateLimiter();
   const app = Fastify({ logger: false });
@@ -1004,6 +1006,95 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
         estimatedCostLast24h: Math.round(estimatedCostLast24h * 100) / 100,
       },
     };
+  });
+
+  /* -------------------------------------------------------
+     Tenant-scoped monitor firehose. One SSE per browser tab.
+     Read-only: never invokes any agent operation.
+     ------------------------------------------------------- */
+  const buildMonitorSnapshot = (tenantId: string, clientId: string, openedSessionId?: string) => {
+    const agents = db.listAgents(tenantId).map((a) => ({
+      agentId: a.agentId,
+      displayName: a.displayName,
+      status: a.status,
+      version: a.version,
+      capabilities: a.capabilities,
+      lastSeenAt: a.lastSeenAt,
+    }));
+    const activity = db.listActivity(tenantId).slice(0, 30);
+    const attachedClients = monitor.listClients(tenantId);
+    return {
+      tenantId,
+      clientId,
+      agents,
+      activity,
+      attachedClients,
+      openedSessionId: openedSessionId ?? null,
+      ts: Date.now(),
+    };
+  };
+
+  app.get("/v1/tenants/:tenantId/monitor/stream", async (request, reply) => {
+    const claims = await requireClaims(request, reply, auth, "monitor:read");
+    if (!claims) return;
+    const params = request.params as { tenantId: string };
+    try {
+      authorizeTenant(claims, params.tenantId);
+    } catch (error) {
+      await reply.code(403).send({ error: "Forbidden", message: error instanceof Error ? error.message : String(error) });
+      return;
+    }
+    if (monitor.listenerCount(params.tenantId) >= 8) {
+      await reply.code(429).header("Retry-After", "30").send({ error: "too_many_monitors" });
+      return;
+    }
+    const query = request.query as { openedSessionId?: string; clientId?: string };
+    const clientId = typeof query.clientId === "string" && query.clientId
+      ? query.clientId
+      : randomUUID();
+    const openedSessionId = typeof query.openedSessionId === "string" && query.openedSessionId
+      ? query.openedSessionId
+      : undefined;
+
+    reply.hijack();
+    reply.raw.statusCode = 200;
+    reply.raw.setHeader("content-type", "text/event-stream; charset=utf-8");
+    reply.raw.setHeader("cache-control", "no-cache, no-transform");
+    reply.raw.setHeader("connection", "keep-alive");
+
+    const writeEvent = (event: string, payload: Record<string, unknown>) => {
+      if (reply.raw.destroyed) return;
+      reply.raw.write(`event: ${event}\n`);
+      reply.raw.write(`data: ${JSON.stringify(payload)}\n\n`);
+    };
+
+    writeEvent("monitor.snapshot", buildMonitorSnapshot(params.tenantId, clientId, openedSessionId));
+
+    const unsubscribe = monitor.subscribe(params.tenantId, (envelope) => {
+      writeEvent(envelope.event, { ...envelope.payload, ts: envelope.ts });
+    });
+
+    monitor.attachClient(params.tenantId, {
+      clientId,
+      attachedAt: Date.now(),
+      ...(openedSessionId ? { openedSessionId } : {}),
+    });
+
+    const refreshTimer = setInterval(() => {
+      writeEvent("monitor.snapshot", buildMonitorSnapshot(params.tenantId, clientId, openedSessionId));
+    }, 15_000);
+
+    let closed = false;
+    const cleanup = () => {
+      if (closed) return;
+      closed = true;
+      clearInterval(refreshTimer);
+      unsubscribe();
+      monitor.detachClient(params.tenantId, clientId);
+      if (!reply.raw.destroyed) reply.raw.end();
+    };
+    request.raw.on("close", cleanup);
+    request.raw.on("error", cleanup);
   });
 
   app.post("/v1/auth/login", async (request, reply) => {
@@ -2504,6 +2595,14 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       { sessionId: params.sessionId, ...body },
     );
     if (!result) return;
+    monitor.publish(params.tenantId, "monitor.session.touch", {
+      sessionId: params.sessionId,
+      tenantId: params.tenantId,
+      agentId: params.agentId,
+      workspaceId: params.workspaceId,
+      lastMessageAt: Date.now(),
+      ...(typeof body.message === "string" ? { snippet: body.message.slice(0, 200) } : {}),
+    });
     return result;
   });
 
@@ -2521,6 +2620,14 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       { sessionId: params.sessionId, ...body },
     );
     if (!result) return;
+    monitor.publish(params.tenantId, "monitor.session.touch", {
+      sessionId: params.sessionId,
+      tenantId: params.tenantId,
+      agentId: params.agentId,
+      projectId: params.projectId,
+      lastMessageAt: Date.now(),
+      ...(typeof body.message === "string" ? { snippet: body.message.slice(0, 200) } : {}),
+    });
     return result;
   });
 
@@ -2546,6 +2653,14 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       workspaceId: params.workspaceId,
       tokensIn: tokensFromText(inputMessage),
       tokensOut: tokensFromText(replyText),
+    });
+    monitor.publish(params.tenantId, "monitor.session.touch", {
+      sessionId: params.sessionId,
+      tenantId: params.tenantId,
+      agentId: params.agentId,
+      workspaceId: params.workspaceId,
+      lastMessageAt: Date.now(),
+      ...(replyText ? { snippet: replyText.slice(0, 200) } : inputMessage ? { snippet: inputMessage.slice(0, 200) } : {}),
     });
     return result;
   });
@@ -2577,6 +2692,15 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       tokensIn: tokensFromText(inputMessage),
       tokensOut: tokensFromText(replyText),
     });
+    monitor.publish(params.tenantId, "monitor.session.touch", {
+      sessionId: params.sessionId,
+      tenantId: params.tenantId,
+      agentId: params.agentId,
+      workspaceId: assignment.workspaceId,
+      projectId: params.projectId,
+      lastMessageAt: Date.now(),
+      ...(replyText ? { snippet: replyText.slice(0, 200) } : inputMessage ? { snippet: inputMessage.slice(0, 200) } : {}),
+    });
     return result;
   });
 
@@ -2607,6 +2731,21 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       reply.raw.write(`data: ${JSON.stringify(payload)}\n\n`);
     };
 
+    const monitorRequestId = randomUUID();
+    const monitorStartedAt = Date.now();
+    const monitorBase = {
+      sessionId: params.sessionId,
+      tenantId: params.tenantId,
+      agentId: params.agentId,
+      workspaceId: params.workspaceId,
+      requestId: monitorRequestId,
+    };
+    monitor.publish(params.tenantId, "monitor.session.start", {
+      ...monitorBase,
+      startedAt: monitorStartedAt,
+      ...(query.message ? { snippet: query.message.slice(0, 200) } : {}),
+    });
+
     try {
       const result = await registry.invoke({
         tenantId: params.tenantId,
@@ -2622,7 +2761,13 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
         },
         onStream: (stream) => {
           const payload = stream.payload;
-          if (typeof payload.delta === "string") streamedText += payload.delta;
+          if (typeof payload.delta === "string") {
+            streamedText += payload.delta;
+            monitor.publish(params.tenantId, "monitor.session.delta", {
+              ...monitorBase,
+              delta: payload.delta,
+            });
+          }
           writeEvent(stream.event, payload);
         },
         signal: abortController.signal,
@@ -2636,12 +2781,28 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       });
       if (result.cancelled) {
         writeEvent("cancelled", {});
+        monitor.publish(params.tenantId, "monitor.session.end", {
+          ...monitorBase,
+          reason: "cancelled",
+          durationMs: Date.now() - monitorStartedAt,
+        });
       } else {
         writeEvent("complete", { ok: true });
+        monitor.publish(params.tenantId, "monitor.session.end", {
+          ...monitorBase,
+          reason: "complete",
+          durationMs: Date.now() - monitorStartedAt,
+        });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       writeEvent("error", { error: message });
+      monitor.publish(params.tenantId, "monitor.session.end", {
+        ...monitorBase,
+        reason: "error",
+        error: message,
+        durationMs: Date.now() - monitorStartedAt,
+      });
     } finally {
       if (!reply.raw.destroyed) reply.raw.end();
     }
@@ -2678,6 +2839,22 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       reply.raw.write(`data: ${JSON.stringify(payload)}\n\n`);
     };
 
+    const monitorRequestId = randomUUID();
+    const monitorStartedAt = Date.now();
+    const monitorBase = {
+      sessionId: params.sessionId,
+      tenantId: params.tenantId,
+      agentId: params.agentId,
+      workspaceId: assignment.workspaceId,
+      projectId: params.projectId,
+      requestId: monitorRequestId,
+    };
+    monitor.publish(params.tenantId, "monitor.session.start", {
+      ...monitorBase,
+      startedAt: monitorStartedAt,
+      ...(query.message ? { snippet: query.message.slice(0, 200) } : {}),
+    });
+
     try {
       const result = await registry.invoke({
         tenantId: params.tenantId,
@@ -2693,7 +2870,13 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
         },
         onStream: (stream) => {
           const streamPayload = stream.payload;
-          if (typeof streamPayload.delta === "string") streamedText += streamPayload.delta;
+          if (typeof streamPayload.delta === "string") {
+            streamedText += streamPayload.delta;
+            monitor.publish(params.tenantId, "monitor.session.delta", {
+              ...monitorBase,
+              delta: streamPayload.delta,
+            });
+          }
           writeEvent(stream.event, streamPayload);
         },
         signal: abortController.signal,
@@ -2707,12 +2890,28 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       });
       if (result.cancelled) {
         writeEvent("cancelled", {});
+        monitor.publish(params.tenantId, "monitor.session.end", {
+          ...monitorBase,
+          reason: "cancelled",
+          durationMs: Date.now() - monitorStartedAt,
+        });
       } else {
         writeEvent("complete", { ok: true });
+        monitor.publish(params.tenantId, "monitor.session.end", {
+          ...monitorBase,
+          reason: "complete",
+          durationMs: Date.now() - monitorStartedAt,
+        });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       writeEvent("error", { error: message });
+      monitor.publish(params.tenantId, "monitor.session.end", {
+        ...monitorBase,
+        reason: "error",
+        error: message,
+        durationMs: Date.now() - monitorStartedAt,
+      });
     } finally {
       if (!reply.raw.destroyed) reply.raw.end();
     }
@@ -2745,6 +2944,22 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       reply.raw.write(`data: ${JSON.stringify(payload)}\n\n`);
     };
 
+    const monitorRequestId = randomUUID();
+    const monitorStartedAt = Date.now();
+    const monitorBase = {
+      sessionId: params.sessionId,
+      tenantId: params.tenantId,
+      agentId: params.agentId,
+      workspaceId: params.workspaceId,
+      requestId: monitorRequestId,
+    };
+    const initialMessage = typeof body.message === "string" ? body.message : "";
+    monitor.publish(params.tenantId, "monitor.session.start", {
+      ...monitorBase,
+      startedAt: monitorStartedAt,
+      ...(initialMessage ? { snippet: initialMessage.slice(0, 200) } : {}),
+    });
+
     try {
       const result = await registry.invoke({
         tenantId: params.tenantId,
@@ -2761,7 +2976,13 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
         },
         onStream: (stream) => {
           const payload = stream.payload;
-          if (typeof payload.delta === "string") streamedText += payload.delta;
+          if (typeof payload.delta === "string") {
+            streamedText += payload.delta;
+            monitor.publish(params.tenantId, "monitor.session.delta", {
+              ...monitorBase,
+              delta: payload.delta,
+            });
+          }
           writeEvent(stream.event, payload);
         },
         signal: abortController.signal,
@@ -2770,17 +2991,33 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
         tenantId: params.tenantId,
         agentId: params.agentId,
         workspaceId: params.workspaceId,
-        tokensIn: tokensFromText(typeof body.message === "string" ? body.message : ""),
+        tokensIn: tokensFromText(initialMessage),
         tokensOut: tokensFromText(streamedText),
       });
       if (result.cancelled) {
         writeEvent("cancelled", {});
+        monitor.publish(params.tenantId, "monitor.session.end", {
+          ...monitorBase,
+          reason: "cancelled",
+          durationMs: Date.now() - monitorStartedAt,
+        });
       } else {
         writeEvent("complete", { ok: true });
+        monitor.publish(params.tenantId, "monitor.session.end", {
+          ...monitorBase,
+          reason: "complete",
+          durationMs: Date.now() - monitorStartedAt,
+        });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       writeEvent("error", { error: message });
+      monitor.publish(params.tenantId, "monitor.session.end", {
+        ...monitorBase,
+        reason: "error",
+        error: message,
+        durationMs: Date.now() - monitorStartedAt,
+      });
     } finally {
       if (!reply.raw.destroyed) reply.raw.end();
     }
@@ -2817,6 +3054,23 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
       reply.raw.write(`data: ${JSON.stringify(payload)}\n\n`);
     };
 
+    const monitorRequestId = randomUUID();
+    const monitorStartedAt = Date.now();
+    const monitorBase = {
+      sessionId: params.sessionId,
+      tenantId: params.tenantId,
+      agentId: params.agentId,
+      workspaceId: assignment.workspaceId,
+      projectId: params.projectId,
+      requestId: monitorRequestId,
+    };
+    const initialMessage = typeof body.message === "string" ? body.message : "";
+    monitor.publish(params.tenantId, "monitor.session.start", {
+      ...monitorBase,
+      startedAt: monitorStartedAt,
+      ...(initialMessage ? { snippet: initialMessage.slice(0, 200) } : {}),
+    });
+
     try {
       const result = await registry.invoke({
         tenantId: params.tenantId,
@@ -2833,7 +3087,13 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
         },
         onStream: (stream) => {
           const payload = stream.payload;
-          if (typeof payload.delta === "string") streamedText += payload.delta;
+          if (typeof payload.delta === "string") {
+            streamedText += payload.delta;
+            monitor.publish(params.tenantId, "monitor.session.delta", {
+              ...monitorBase,
+              delta: payload.delta,
+            });
+          }
           writeEvent(stream.event, payload);
         },
         signal: abortController.signal,
@@ -2842,17 +3102,33 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
         tenantId: params.tenantId,
         agentId: params.agentId,
         workspaceId: assignment.workspaceId,
-        tokensIn: tokensFromText(typeof body.message === "string" ? body.message : ""),
+        tokensIn: tokensFromText(initialMessage),
         tokensOut: tokensFromText(streamedText),
       });
       if (result.cancelled) {
         writeEvent("cancelled", {});
+        monitor.publish(params.tenantId, "monitor.session.end", {
+          ...monitorBase,
+          reason: "cancelled",
+          durationMs: Date.now() - monitorStartedAt,
+        });
       } else {
         writeEvent("complete", { ok: true });
+        monitor.publish(params.tenantId, "monitor.session.end", {
+          ...monitorBase,
+          reason: "complete",
+          durationMs: Date.now() - monitorStartedAt,
+        });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       writeEvent("error", { error: message });
+      monitor.publish(params.tenantId, "monitor.session.end", {
+        ...monitorBase,
+        reason: "error",
+        error: message,
+        durationMs: Date.now() - monitorStartedAt,
+      });
     } finally {
       if (!reply.raw.destroyed) reply.raw.end();
     }

@@ -7,6 +7,7 @@ import { WorkspacesPage } from "./routes/Workspaces";
 import { ImmersiveBrowserPage } from "./routes/ImmersiveBrowser";
 import { WorkspacePage } from "./routes/Workspace";
 import { LogsPage } from "./routes/Logs";
+import { MonitorPage } from "./routes/Monitor";
 import { SettingsPage } from "./routes/Settings";
 
 export function App() {
@@ -39,6 +40,7 @@ export function App() {
           path="/workspace/:tenantId/:agentId/:workspaceId/:tab"
           element={<WorkspacePage />}
         />
+        <Route path="/monitor" element={<MonitorPage />} />
         <Route path="/logs" element={<LogsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>

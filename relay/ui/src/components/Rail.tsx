@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
+  Activity,
   Bot,
   FolderOpenDot,
   LogOut,
@@ -28,6 +29,7 @@ const ITEMS: Item[] = [
     // Highlight Workspaces when inside a specific workspace too.
     match: (p) => p.startsWith("/workspaces") || p.startsWith("/workspace/"),
   },
+  { to: "/monitor", label: "Monitor", icon: Activity },
   { to: "/logs", label: "Logs", icon: ScrollText },
   { to: "/settings", label: "Settings", icon: Settings, adminOnly: true },
 ];

@@ -77,6 +77,7 @@ test("judgment CLI prepares, records, links, lists, and archives decisions", asy
   expect(ruleJudgment.contextPackId).toMatch(/^context_/);
   expect(ruleJudgment.recommendation).toBe("act");
   expect(ruleJudgment.recommendedOption).toBe("Flutter");
+  expect(ruleJudgment.contextPackId).toMatch(/^context_/);
   expect(ruleJudgment.context.rules).toContain(rulePayload.id);
   expect(ruleJudgment.context.sessions).toContain("session-framework");
 
@@ -176,6 +177,7 @@ test("judgment CLI prepares, records, links, lists, and archives decisions", asy
   expect(shownPayload.id).toBe(ruleJudgment.id);
   expect(shownPayload.contextPackId).toBe(ruleJudgment.contextPackId);
   expect(shownPayload.rationale).toContain("Rule-backed");
+  expect(shownPayload.contextPackId).toBe(ruleJudgment.contextPackId);
 
   const archived = await execFileAsync(process.execPath, [
     bin, "judgment", "archive", learningJudgment.id,

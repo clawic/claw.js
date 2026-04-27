@@ -1288,6 +1288,77 @@ describe("relay e2e", () => {
     socket.close();
   });
 
+  test("monitor stream publishes agent snapshots and live session deltas", async () => {
+    const userTokens = await login("user@relay.local", "relay-user");
+    const adminTokens = await login("admin@relay.local", "relay-admin");
+
+    const enrollmentResponse = await fetch(`${baseUrl}/v1/admin/connectors/enrollments`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${adminTokens.accessToken}`,
+      },
+      body: JSON.stringify({ tenantId: "demo-tenant", agentId: "monitor-agent", description: "monitor connector" }),
+    });
+    assert.equal(enrollmentResponse.status, 200);
+    const enrollment = await enrollmentResponse.json() as { enrollmentToken: string };
+    const connectorEnroll = await fetch(`${baseUrl}/v1/connector/enroll`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enrollmentToken: enrollment.enrollmentToken }),
+    });
+    assert.equal(connectorEnroll.status, 200);
+    const { connectorToken } = await connectorEnroll.json() as { connectorToken: string };
+    const socket = startFakeConnector(baseUrl, connectorToken, "monitor-agent");
+    await new Promise((resolve) => socket.once("message", () => resolve(null)));
+
+    const monitorResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/monitor/stream?clientId=e2e-monitor`, {
+      headers: { authorization: `Bearer ${adminTokens.accessToken}` },
+    });
+    assert.equal(monitorResponse.status, 200);
+    const reader = monitorResponse.body?.getReader();
+    assert.ok(reader);
+    const decoder = new TextDecoder();
+    let monitorText = "";
+
+    try {
+      const firstChunk = await reader.read();
+      monitorText += firstChunk.value ? decoder.decode(firstChunk.value) : "";
+      assert.match(monitorText, /event: monitor\.snapshot/);
+      assert.match(monitorText, /monitor-agent/);
+
+      const createSession = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/monitor-agent/workspaces/main/sessions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          authorization: `Bearer ${userTokens.accessToken}`,
+        },
+        body: JSON.stringify({ title: "monitor stream" }),
+      });
+      assert.equal(createSession.status, 200);
+      const created = await createSession.json() as { session: { sessionId: string } };
+
+      const streamResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/monitor-agent/workspaces/main/sessions/${created.session.sessionId}/stream?message=hello`, {
+        headers: { authorization: `Bearer ${userTokens.accessToken}` },
+      });
+      assert.equal(streamResponse.status, 200);
+      await streamResponse.text();
+
+      for (let i = 0; i < 8 && !monitorText.includes("monitor.session.delta"); i += 1) {
+        const chunk = await reader.read();
+        monitorText += chunk.value ? decoder.decode(chunk.value) : "";
+      }
+      assert.match(monitorText, /event: monitor\.session\.start/);
+      assert.match(monitorText, /event: monitor\.session\.delta/);
+      assert.match(monitorText, /hello /);
+      assert.match(monitorText, /event: monitor\.session\.end/);
+    } finally {
+      await reader.cancel();
+      reader.releaseLock();
+      socket.close();
+    }
+  });
+
   test("login, refresh, logout, connector enrollment, routing, CRUD, SSE, offline and admin protection", async () => {
     const userTokens = await login("user@relay.local", "relay-user");
 

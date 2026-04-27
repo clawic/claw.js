@@ -19,6 +19,7 @@ import { mountDeck } from "./deck.js";
 import { mountSheet } from "./sheet.js";
 import { mountImages } from "./images.js";
 import { mountSoul } from "./soul.js";
+import { mountUser } from "./user.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const oc = document.getElementById("demo-openclaw");
@@ -63,4 +64,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (imgs) mountImages(imgs);
   const soul = document.getElementById("demo-soul");
   if (soul) mountSoul(soul);
+  const usr = document.getElementById("demo-user");
+  if (usr) mountUser(usr);
 });
