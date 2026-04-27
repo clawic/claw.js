@@ -5144,3 +5144,183 @@ test("runCli supports temporal domain commands and hidden legacy aliases", async
     await built.app.close();
   }
 });
+
+test("runCli supports heartbeat routines with deterministic gates", async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-heartbeat-"));
+  let taskMatches: Array<{ source: string; id: string; title: string; updatedAt: string }> = [];
+  let customMatches: Array<{ source: string; id: string; title: string; updatedAt: string }> = [];
+  const agentCalls: Array<{ prompt: string; matches: unknown[] }> = [];
+  const built = buildTimeApp({
+    config: {
+      host: "127.0.0.1",
+      port: 0,
+      dataDir: path.join(tmpDir, "time-data"),
+      dbPath: path.join(tmpDir, "time-data", "time.sqlite"),
+      defaultTimeZone: "UTC",
+      schedulerIntervalMs: 50,
+    },
+    heartbeatChecks: {
+      "workspace.tasks": async () => taskMatches,
+      "custom:ready-check": async () => customMatches,
+    },
+    heartbeatAgent: async (input) => {
+      agentCalls.push({ prompt: input.prompt, matches: input.matches });
+      return { status: "done", summary: `processed ${input.matches.length}` };
+    },
+  });
+  const address = await built.app.listen({ host: "127.0.0.1", port: 0 });
+  const timeUrl = address.replace(/\/$/, "");
+
+  const forceDue = (id: string) => {
+    const item = built.store.getItem(id);
+    assert.ok(item);
+    item.nextRunAt = "2026-04-09T08:00:00.000Z";
+    built.store.putItem(item);
+  };
+
+  try {
+    const missingOptInStdout = captureStream();
+    const missingOptInStderr = captureStream();
+    const missingOptInExitCode = await runCli([
+      "routines",
+      "every",
+      "5m",
+      "custom heartbeat",
+      "--when", "custom:ready-check",
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+    ], {
+      stdout: missingOptInStdout.stream,
+      stderr: missingOptInStderr.stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(missingOptInExitCode, CLI_EXIT_USAGE);
+    assert.match(missingOptInStderr.getOutput(), /allow-custom-check/);
+
+    const skipStdout = captureStream();
+    const skipExitCode = await runCli([
+      "routines",
+      "every",
+      "5m",
+      "triage ready work",
+      "--when", "workspace.tasks:new",
+      "--prompt", "Work on ready tasks",
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+      "--json",
+    ], {
+      stdout: skipStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(skipExitCode, CLI_EXIT_OK);
+    const skipRoutine = JSON.parse(skipStdout.getOutput()) as { item: { id: string; heartbeat?: { when: string[] } } };
+    assert.deepEqual(skipRoutine.item.heartbeat?.when, ["workspace.tasks:new"]);
+    forceDue(skipRoutine.item.id);
+    assert.deepEqual(await built.engine.runSchedulerCycle(), []);
+    assert.equal(agentCalls.length, 0);
+
+    const skipGetStdout = captureStream();
+    const skipGetExitCode = await runCli([
+      "routines",
+      "get",
+      skipRoutine.item.id,
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+      "--json",
+    ], {
+      stdout: skipGetStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(skipGetExitCode, CLI_EXIT_OK);
+    const skipped = JSON.parse(skipGetStdout.getOutput()) as { item: { heartbeat?: { state?: { skipCount?: number; lastSkipReason?: string } } } };
+    assert.equal(skipped.item.heartbeat?.state?.skipCount, 1);
+    assert.equal(skipped.item.heartbeat?.state?.lastSkipReason, "no heartbeat matches");
+
+    taskMatches = [{ source: "workspace.tasks", id: "task-1", title: "Fix release gate", updatedAt: "2026-04-09T08:01:00.000Z" }];
+    forceDue(skipRoutine.item.id);
+    const wakeExecutions = await built.engine.runSchedulerCycle();
+    assert.equal(wakeExecutions.length, 1);
+    assert.equal(agentCalls.length, 1);
+    assert.equal(agentCalls[0]?.prompt, "Work on ready tasks");
+
+    const historyStdout = captureStream();
+    const historyExitCode = await runCli([
+      "routines",
+      "history",
+      skipRoutine.item.id,
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+    ], {
+      stdout: historyStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(historyExitCode, CLI_EXIT_OK);
+    assert.match(historyStdout.getOutput().split("\n")[0] ?? "", /id\s+status\s+next\s+title/);
+    assert.match(historyStdout.getOutput(), /processed 1/);
+
+    taskMatches = [];
+    const stopStdout = captureStream();
+    const stopExitCode = await runCli([
+      "routines",
+      "every",
+      "5m",
+      "stop when empty",
+      "--when", "workspace.tasks:new",
+      "--stop-when", "workspace.tasks:none",
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+      "--json",
+    ], {
+      stdout: stopStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(stopExitCode, CLI_EXIT_OK);
+    const stopRoutine = JSON.parse(stopStdout.getOutput()) as { item: { id: string } };
+    forceDue(stopRoutine.item.id);
+    assert.deepEqual(await built.engine.runSchedulerCycle(), []);
+    const stopped = built.store.getItem(stopRoutine.item.id);
+    assert.equal(stopped?.status, "completed");
+    assert.equal(agentCalls.length, 1);
+
+    customMatches = [{ source: "custom", id: "ready-1", title: "Ready check", updatedAt: "2026-04-09T08:02:00.000Z" }];
+    const customStdout = captureStream();
+    const customExitCode = await runCli([
+      "routines",
+      "every",
+      "5m",
+      "custom heartbeat",
+      "--when", "custom:ready-check",
+      "--allow-custom-check", "ready-check",
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+      "--json",
+    ], {
+      stdout: customStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(customExitCode, CLI_EXIT_OK);
+    const customRoutine = JSON.parse(customStdout.getOutput()) as { item: { id: string; heartbeat?: { allowedCustomChecks?: string[] } } };
+    assert.deepEqual(customRoutine.item.heartbeat?.allowedCustomChecks, ["ready-check"]);
+
+    const listStdout = captureStream();
+    const listExitCode = await runCli([
+      "routines",
+      "list",
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+    ], {
+      stdout: listStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(listExitCode, CLI_EXIT_OK);
+    assert.match(listStdout.getOutput().split("\n")[0] ?? "", /id\s+status\s+next\s+title/);
+  } finally {
+    await built.app.close();
+  }
+});

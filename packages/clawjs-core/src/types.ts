@@ -1361,6 +1361,45 @@ export interface TemporalExecution {
   error?: string;
 }
 
+export interface TemporalHeartbeatMatch {
+  source: string;
+  id: string;
+  title?: string;
+  updatedAt?: string;
+  payload?: Record<string, unknown>;
+}
+
+export interface TemporalHeartbeatAgentResult {
+  status: "done" | "continue" | "disable" | "error";
+  summary?: string;
+  error?: string;
+}
+
+export interface TemporalHeartbeatState {
+  lastEvaluatedAt?: string;
+  lastWakeAt?: string;
+  lastSkipAt?: string;
+  skipCount: number;
+  lastSkipReason?: string;
+  lastCompletedAt?: string;
+  lastMatches?: TemporalHeartbeatMatch[];
+  lastResult?: TemporalHeartbeatAgentResult & { at: string };
+}
+
+export interface TemporalHeartbeatPolicy {
+  when: string[];
+  stopWhen?: string[];
+  context: "diff";
+  limit: number;
+  prompt?: string;
+  gate?: {
+    path?: string;
+    policy?: Record<string, unknown>;
+  };
+  allowedCustomChecks?: string[];
+  state?: TemporalHeartbeatState;
+}
+
 export interface TemporalNaturalInput {
   command: "at" | "every" | "after";
   expression: string;
@@ -1385,6 +1424,7 @@ export interface TemporalItem {
   participants: TemporalParticipant[];
   actions: TemporalAction[];
   projections: TemporalProjection[];
+  heartbeat?: TemporalHeartbeatPolicy;
   ownerId?: string;
   workspaceId?: string;
   projectId?: string;
@@ -2769,6 +2809,25 @@ export interface TelegramUpdateEnvelope {
 export interface TelegramCommand {
   command: string;
   description: string;
+}
+
+export interface TelegramForumTopicIconSticker {
+  customEmojiId: string;
+  emoji?: string;
+}
+
+export interface TelegramForumTopic {
+  messageThreadId: number;
+  name: string;
+  iconColor?: number;
+  iconCustomEmojiId?: string;
+}
+
+export interface TelegramForumReadiness {
+  ready: boolean;
+  chat: TelegramChatSummary;
+  bot: TelegramMemberSummary;
+  missing: string[];
 }
 
 // ── Slack types ──────────────────────────────────────────────────────

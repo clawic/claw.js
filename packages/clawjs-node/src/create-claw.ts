@@ -379,6 +379,8 @@ import {
   EmbeddedTimeEngine,
   TimeClient,
   type CreateTemporalItemInput,
+  type TemporalHeartbeatAgentRunner,
+  type TemporalHeartbeatCheckProvider,
   type TimeServiceLike,
   type UpdateTemporalItemInput,
 } from "./time/index.ts";
@@ -480,6 +482,8 @@ export interface CreateClawOptions {
     schedulerIntervalMs?: number;
     notifyBaseUrl?: string;
     notifySourceToken?: string;
+    heartbeatChecks?: Record<string, TemporalHeartbeatCheckProvider>;
+    heartbeatAgent?: TemporalHeartbeatAgentRunner;
   };
   content?: {
     baseUrl: string;
@@ -1689,6 +1693,8 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         schedulerIntervalMs: options.time?.schedulerIntervalMs,
         notifyBaseUrl: options.time?.notifyBaseUrl,
         notifySourceToken: options.time?.notifySourceToken,
+        heartbeatChecks: options.time?.heartbeatChecks,
+        heartbeatAgent: options.time?.heartbeatAgent,
       });
   embeddedTimeEngine?.startScheduler();
   const timeClient: TimeServiceLike | null = options.time?.baseUrl

@@ -1,6 +1,7 @@
 import type {
   TemporalAction,
   TemporalExecution,
+  TemporalHeartbeatPolicy,
   TemporalItem,
   TemporalNaturalInput,
   TemporalParticipant,
@@ -45,6 +46,7 @@ export interface CreateTemporalItemInput {
   participants?: Array<Partial<TemporalParticipant>>;
   actions?: Array<Partial<TemporalAction>>;
   projections?: Array<Partial<TemporalProjection>>;
+  heartbeat?: Partial<TemporalHeartbeatPolicy>;
   ownerId?: string;
   workspaceId?: string;
   projectId?: string;
@@ -174,4 +176,4 @@ export class TimeClient {
 }
 
 export { EmbeddedTimeEngine };
-export type { EmbeddedTimeEngineOptions };
+export type { EmbeddedTimeEngineOptions, TemporalHeartbeatAgentRunner, TemporalHeartbeatCheckProvider } from "./embedded.ts";

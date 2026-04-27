@@ -8,10 +8,16 @@ import fastifyStatic from "@fastify/static";
 
 import { loadTimeConfig, type TimeServiceConfig } from "./config.ts";
 import type { CreateTemporalItemInput, TemporalExecution, TemporalItem, UpdateTemporalItemInput } from "./logic.ts";
-import { EmbeddedTimeEngine } from "../../../packages/clawjs-node/src/time/embedded.ts";
+import {
+  EmbeddedTimeEngine,
+  type TemporalHeartbeatAgentRunner,
+  type TemporalHeartbeatCheckProvider,
+} from "../../../packages/clawjs-node/src/time/embedded.ts";
 
 export interface BuildTimeAppOptions {
   config?: Partial<TimeServiceConfig>;
+  heartbeatChecks?: Record<string, TemporalHeartbeatCheckProvider>;
+  heartbeatAgent?: TemporalHeartbeatAgentRunner;
 }
 
 function resolvePublicRoot(): string {
@@ -35,6 +41,8 @@ export function buildTimeApp(options: BuildTimeAppOptions = {}) {
     schedulerIntervalMs: config.schedulerIntervalMs,
     notifyBaseUrl: config.notifyBaseUrl,
     notifySourceToken: config.notifySourceToken,
+    heartbeatChecks: options.heartbeatChecks,
+    heartbeatAgent: options.heartbeatAgent,
   });
   const store = engine.store;
   const app = Fastify({ logger: false });

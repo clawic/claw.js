@@ -1069,6 +1069,12 @@ The docs check script validates that every current export from
     temporalActionSchema
     TemporalExecution
     temporalExecutionSchema
+    TemporalHeartbeatAgentResult
+    TemporalHeartbeatAgentRunner
+    TemporalHeartbeatCheckProvider
+    TemporalHeartbeatMatch
+    TemporalHeartbeatPolicy
+    TemporalHeartbeatState
     TemporalItem
     temporalItemSchema
     TemporalNaturalInput

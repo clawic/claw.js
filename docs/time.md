@@ -28,6 +28,7 @@ Use the standalone service through the main CLI:
 claw calendar at "monday 9am" "review PRs" --time-url http://127.0.0.1:4730
 claw calendar list --time-url http://127.0.0.1:4730
 claw routines every "3h" "check deployment health" --time-url http://127.0.0.1:4730
+claw routines every "5m" "triage ready work" --when workspace.tasks:new --prompt "Work on ready tasks" --time-url http://127.0.0.1:4730
 claw routines run item_123 --time-url http://127.0.0.1:4730
 claw routines history item_123 --time-url http://127.0.0.1:4730
 claw reminders after "30m" "check build" --time-url http://127.0.0.1:4730
@@ -62,6 +63,18 @@ await claw.routines.every({
   expression: "3h",
 });
 
+await claw.routines.every({
+  title: "Triage ready work",
+  expression: "5m",
+  heartbeat: {
+    when: ["workspace.tasks:new"],
+    context: "diff",
+    limit: 20,
+    prompt: "Work on ready tasks",
+    stopWhen: ["workspace.tasks:none"],
+  },
+});
+
 await claw.watch.create({
   target: "thread:thread-42",
   ifNo: "reply",
@@ -86,9 +99,16 @@ The canonical record is `TemporalItem` with:
 - `actions`
 - `projections`
 - `executions`
+- optional `heartbeat` policy for routines that should run a cheap gate
+  before waking an agent
 
 Store timestamps in UTC and keep an IANA timezone on the item so the
 service can normalize natural input and recurring schedules correctly.
+
+Heartbeat routines support `workspace.tasks:new`, `workspace.inbox:new`,
+`workspace.events:due`, `relay.messages:new`, and opt-in `custom:<id>`
+conditions. Skips are aggregated on the item state instead of creating a
+run for every empty poll.
 
 ## Execution Views
 

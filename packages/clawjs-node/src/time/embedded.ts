@@ -1,4 +1,10 @@
-import type { TemporalExecution, TemporalItem, TemporalProjection } from "@clawjs/core";
+import type {
+  TemporalExecution,
+  TemporalHeartbeatAgentResult,
+  TemporalHeartbeatMatch,
+  TemporalItem,
+  TemporalProjection,
+} from "@clawjs/core";
 
 import {
   applyTemporalItemUpdate,
@@ -17,6 +23,136 @@ export interface EmbeddedTimeEngineOptions {
   schedulerIntervalMs?: number;
   notifyBaseUrl?: string;
   notifySourceToken?: string;
+  heartbeatChecks?: Record<string, TemporalHeartbeatCheckProvider>;
+  heartbeatAgent?: TemporalHeartbeatAgentRunner;
+}
+
+export type TemporalHeartbeatCheckProvider = (input: {
+  condition: string;
+  item: TemporalItem;
+  now: Date;
+}) => Promise<TemporalHeartbeatMatch[]> | TemporalHeartbeatMatch[];
+
+export type TemporalHeartbeatAgentRunner = (input: {
+  item: TemporalItem;
+  execution: TemporalExecution;
+  prompt: string;
+  matches: TemporalHeartbeatMatch[];
+  context: {
+    mode: "diff";
+    matches: TemporalHeartbeatMatch[];
+  };
+}) => Promise<TemporalHeartbeatAgentResult> | TemporalHeartbeatAgentResult;
+
+type HeartbeatDecision =
+  | { action: "none" }
+  | { action: "skip"; item: TemporalItem }
+  | { action: "complete"; item: TemporalItem }
+  | { action: "wake"; item: TemporalItem; matches: TemporalHeartbeatMatch[] };
+
+function heartbeatProviderKey(condition: string): string {
+  if (condition.startsWith("custom:")) return condition;
+  return condition.split(":")[0] ?? condition;
+}
+
+function heartbeatState(item: TemporalItem) {
+  return {
+    skipCount: 0,
+    ...(item.heartbeat?.state ?? {}),
+  };
+}
+
+function rescheduleItem(item: TemporalItem, scheduledFor: string): TemporalItem {
+  const nextItem = { ...item };
+  if (nextItem.schedule.mode === "one_off" || nextItem.schedule.mode === "relative") {
+    nextItem.status = "completed";
+    nextItem.nextRunAt = undefined;
+  } else {
+    nextItem.nextRunAt = computeNextRunAt(nextItem, new Date(scheduledFor));
+  }
+  nextItem.updatedAt = new Date().toISOString();
+  return nextItem;
+}
+
+async function collectHeartbeatMatches(
+  options: EmbeddedTimeEngineOptions,
+  item: TemporalItem,
+  condition: string,
+  now: Date,
+): Promise<TemporalHeartbeatMatch[]> {
+  const provider = options.heartbeatChecks?.[condition] ?? options.heartbeatChecks?.[heartbeatProviderKey(condition)];
+  if (!provider) return [];
+  const matches = await provider({ condition, item, now });
+  return matches.slice(0, item.heartbeat?.limit ?? 20);
+}
+
+async function evaluateHeartbeat(
+  options: EmbeddedTimeEngineOptions,
+  item: TemporalItem,
+  scheduledFor: string,
+  now: Date,
+): Promise<HeartbeatDecision> {
+  if (item.kind !== "routine" || !item.heartbeat) return { action: "none" };
+  const evaluatedAt = now.toISOString();
+  for (const condition of item.heartbeat.stopWhen ?? []) {
+    if (condition === "agent:disable") continue;
+    const matches = await collectHeartbeatMatches(options, item, condition, now);
+    if (condition.endsWith(":none") ? matches.length === 0 : matches.length > 0) {
+      const completed: TemporalItem = {
+        ...item,
+        status: "completed",
+        nextRunAt: undefined,
+        heartbeat: {
+          ...item.heartbeat,
+          state: {
+            ...heartbeatState(item),
+            lastEvaluatedAt: evaluatedAt,
+            lastCompletedAt: evaluatedAt,
+            lastSkipReason: `stop condition matched: ${condition}`,
+          },
+        },
+        updatedAt: evaluatedAt,
+      };
+      return { action: "complete", item: completed };
+    }
+  }
+
+  const matches: TemporalHeartbeatMatch[] = [];
+  for (const condition of item.heartbeat.when) {
+    matches.push(...await collectHeartbeatMatches(options, item, condition, now));
+  }
+  if (matches.length === 0) {
+    const state = heartbeatState(item);
+    const skipped: TemporalItem = rescheduleItem({
+      ...item,
+      heartbeat: {
+        ...item.heartbeat,
+        state: {
+          ...state,
+          skipCount: state.skipCount + 1,
+          lastEvaluatedAt: evaluatedAt,
+          lastSkipAt: evaluatedAt,
+          lastSkipReason: "no heartbeat matches",
+          lastMatches: [],
+        },
+      },
+    }, scheduledFor);
+    return { action: "skip", item: skipped };
+  }
+
+  const awakened: TemporalItem = {
+    ...item,
+    heartbeat: {
+      ...item.heartbeat,
+      state: {
+        ...heartbeatState(item),
+        lastEvaluatedAt: evaluatedAt,
+        lastWakeAt: evaluatedAt,
+        lastMatches: matches.slice(0, item.heartbeat.limit),
+      },
+    },
+  };
+  return { action: "wake", item: awakened, matches: matches.slice(0, item.heartbeat.limit) };
 }
 
 async function dispatchActions(
@@ -24,11 +160,14 @@ async function dispatchActions(
   item: TemporalItem,
   execution: TemporalExecution,
   store: TimeServiceStore,
+  heartbeatMatches: TemporalHeartbeatMatch[] = [],
 ): Promise<{
   output: string;
   projections: TemporalProjection[];
+  agentResult?: TemporalHeartbeatAgentResult;
 }> {
   let output = `${item.kind} executed`;
+  let agentResult: TemporalHeartbeatAgentResult | undefined;
   const projections = item.projections.map((projection) => ({
     ...projection,
     status: "synced" as const,
@@ -40,7 +179,26 @@ async function dispatchActions(
     },
   }));
 
+  if (item.heartbeat) {
+    const prompt = item.heartbeat.prompt ?? item.description ?? item.title;
+    agentResult = await (options.heartbeatAgent?.({
+      item,
+      execution,
+      prompt,
+      matches: heartbeatMatches,
+      context: {
+        mode: "diff",
+        matches: heartbeatMatches.slice(0, item.heartbeat.limit),
+      },
+    }) ?? {
+      status: "done",
+      summary: `Heartbeat matched ${heartbeatMatches.length} item${heartbeatMatches.length === 1 ? "" : "s"}`,
+    });
+    output = JSON.stringify(agentResult);
+  }
+
   for (const action of item.actions) {
+    if (item.heartbeat) continue;
     if (action.kind === "notify" && options.notifyBaseUrl) {
       const headers: Record<string, string> = { "content-type": "application/json" };
       if (options.notifySourceToken) {
@@ -75,7 +233,7 @@ async function dispatchActions(
 
   const nextItem = { ...item, projections };
   store.putItem(nextItem);
-  return { output, projections };
+  return { output, projections, ...(agentResult ? { agentResult } : {}) };
 }
 
 function eventProjection(item: TemporalItem) {
@@ -149,21 +307,54 @@ export class EmbeddedTimeEngine {
       const scheduledFor = item.nextRunAt!;
       const existing = this.store.getExecutionForSchedule(item.id, scheduledFor);
       if (existing) continue;
+      const heartbeat = await evaluateHeartbeat(this.config, item, scheduledFor, now);
+      if (heartbeat.action === "skip" || heartbeat.action === "complete") {
+        this.store.putItem(heartbeat.item);
+        continue;
+      }
+      const runnableItem = heartbeat.action === "wake" ? heartbeat.item : item;
+      if (heartbeat.action === "wake") {
+        this.store.putItem(runnableItem);
+      }
       let execution = createExecution(item.id, scheduledFor, "scheduler");
       this.store.putExecution(execution);
       try {
-        const { output } = await dispatchActions(this.config, item, execution, this.store);
-        execution = completeExecution(execution, { status: "succeeded", output });
+        const { output, agentResult } = await dispatchActions(
+          this.config,
+          runnableItem,
+          execution,
+          this.store,
+          heartbeat.action === "wake" ? heartbeat.matches : [],
+        );
+        execution = completeExecution(execution, {
+          status: agentResult?.status === "error" ? "failed" : "succeeded",
+          output,
+          ...(agentResult?.error ? { error: agentResult.error } : {}),
+        });
         this.store.putExecution(execution);
-        const nextItem = this.store.getItem(item.id);
+        let nextItem = this.store.getItem(item.id);
         if (!nextItem) continue;
-        if (nextItem.schedule.mode === "one_off" || nextItem.schedule.mode === "relative") {
-          nextItem.status = "completed";
-          nextItem.nextRunAt = undefined;
-        } else {
-          nextItem.nextRunAt = computeNextRunAt(nextItem, new Date(scheduledFor));
+        if (nextItem.heartbeat && agentResult) {
+          nextItem.heartbeat = {
+            ...nextItem.heartbeat,
+            state: {
+              ...heartbeatState(nextItem),
+              lastResult: {
+                ...agentResult,
+                at: new Date().toISOString(),
+              },
+            },
+          };
+          if (agentResult.status === "disable" && nextItem.heartbeat.stopWhen?.includes("agent:disable")) {
+            nextItem.status = "completed";
+            nextItem.nextRunAt = undefined;
+            nextItem.updatedAt = new Date().toISOString();
+            this.store.putItem(nextItem);
+            completed.push(execution);
+            continue;
+          }
         }
-        nextItem.updatedAt = new Date().toISOString();
+        nextItem = rescheduleItem(nextItem, scheduledFor);
         this.store.putItem(nextItem);
         completed.push(execution);
       } catch (error) {
@@ -242,17 +433,34 @@ export class EmbeddedTimeEngine {
     if (!current) throw new Error(`time item not found: ${id}`);
     let execution = createExecution(current.id, new Date().toISOString(), "manual");
     this.store.putExecution(execution);
-    const { output } = await dispatchActions(this.config, current, execution, this.store);
-    execution = completeExecution(execution, { status: "succeeded", output });
+    const { output, agentResult } = await dispatchActions(this.config, current, execution, this.store);
+    execution = completeExecution(execution, {
+      status: agentResult?.status === "error" ? "failed" : "succeeded",
+      output,
+      ...(agentResult?.error ? { error: agentResult.error } : {}),
+    });
     this.store.putExecution(execution);
-    const refreshed = this.store.getItem(id)!;
-    if (refreshed.schedule.mode === "one_off" || refreshed.schedule.mode === "relative") {
-      refreshed.status = "completed";
-      refreshed.nextRunAt = undefined;
-    } else {
-      refreshed.nextRunAt = computeNextRunAt(refreshed, new Date(execution.scheduledFor));
+    let refreshed = this.store.getItem(id)!;
+    if (refreshed.heartbeat && agentResult) {
+      refreshed.heartbeat = {
+        ...refreshed.heartbeat,
+        state: {
+          ...heartbeatState(refreshed),
+          lastResult: {
+            ...agentResult,
+            at: new Date().toISOString(),
+          },
+        },
+      };
+      if (agentResult.status === "disable" && refreshed.heartbeat.stopWhen?.includes("agent:disable")) {
+        refreshed.status = "completed";
+        refreshed.nextRunAt = undefined;
+        refreshed.updatedAt = new Date().toISOString();
+        this.store.putItem(refreshed);
+        return { item: refreshed, execution };
+      }
     }
-    refreshed.updatedAt = new Date().toISOString();
+    refreshed = rescheduleItem(refreshed, execution.scheduledFor);
     this.store.putItem(refreshed);
     return { item: refreshed, execution };
   }

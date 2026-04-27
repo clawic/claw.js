@@ -79,6 +79,7 @@ Time v1 adds:
 
 - one canonical temporal model for `event`, `routine`, `reminder`, `deadline`, and `follow_up`
 - one-off, cron, RRULE, and relative scheduling semantics with timezone-aware normalization
+- heartbeat routines with deterministic gates before waking agents
 - execution history plus projection records for workspace, relay, runtime scheduler, notify, and calendar sync targets
 - a dedicated operator UI plus `claw calendar ...`, `claw routines ...`, and `claw watch ...` bridges
 

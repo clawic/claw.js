@@ -1056,8 +1056,16 @@ test("createClaw exposes the time namespace when configured", async () => {
       agentId: "agent-time-sdk",
       expression: "3h",
       timezone: "Europe/Madrid",
+      heartbeat: {
+        when: ["workspace.tasks:new"],
+        context: "diff",
+        limit: 20,
+        prompt: "Work on ready tasks",
+        stopWhen: ["workspace.tasks:none"],
+      },
     });
     assert.equal(routine.item.kind, "routine");
+    assert.deepEqual(routine.item.heartbeat?.when, ["workspace.tasks:new"]);
 
     const event = await claw.calendar.at({
       title: "Release sync",

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type {
   TemporalAction,
   TemporalExecution,
+  TemporalHeartbeatPolicy,
   TemporalItem,
   TemporalNaturalInput,
   TemporalParticipant,
@@ -36,6 +37,7 @@ export interface CreateTemporalItemInput {
   participants?: Array<Partial<TemporalParticipant>>;
   actions?: Array<Partial<TemporalAction>>;
   projections?: Array<Partial<TemporalProjection>>;
+  heartbeat?: Partial<TemporalHeartbeatPolicy>;
   ownerId?: string;
   workspaceId?: string;
   projectId?: string;
@@ -70,6 +72,21 @@ const RRULE_WEEKDAY_MAP: Record<string, number> = {
   FR: 5,
   SA: 6,
 };
+
+const HEARTBEAT_WHEN_CONDITIONS = new Set([
+  "workspace.tasks:new",
+  "workspace.inbox:new",
+  "workspace.events:due",
+  "relay.messages:new",
+]);
+
+const HEARTBEAT_STOP_CONDITIONS = new Set([
+  "workspace.tasks:none",
+  "workspace.inbox:none",
+  "workspace.events:none",
+  "relay.messages:none",
+  "agent:disable",
+]);
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -328,6 +345,62 @@ function normalizeProjections(kind: TemporalItemKind, itemId: string, input?: Ar
   }));
 }
 
+function normalizeStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry) => String(entry).trim()).filter(Boolean);
+}
+
+function heartbeatCustomId(condition: string): string | null {
+  return condition.startsWith("custom:") ? condition.slice("custom:".length).trim() || null : null;
+}
+
+function normalizeHeartbeat(input?: Partial<TemporalHeartbeatPolicy>, current?: TemporalItem): TemporalHeartbeatPolicy | undefined {
+  if (input === undefined) return current?.heartbeat;
+  const gatePolicy = input.gate?.policy ?? {};
+  const gateWhen = normalizeStringList((gatePolicy as { when?: unknown }).when);
+  const gateStopWhen = normalizeStringList((gatePolicy as { stopWhen?: unknown }).stopWhen);
+  const when = [...gateWhen, ...normalizeStringList(input.when)];
+  const stopWhen = [...gateStopWhen, ...normalizeStringList(input.stopWhen)];
+  const allowedCustomChecks = normalizeStringList(input.allowedCustomChecks);
+  const invalidWhen = when.filter((condition) => !HEARTBEAT_WHEN_CONDITIONS.has(condition) && !heartbeatCustomId(condition));
+  const invalidStopWhen = stopWhen.filter((condition) => !HEARTBEAT_STOP_CONDITIONS.has(condition) && !heartbeatCustomId(condition));
+  if (invalidWhen.length > 0) {
+    throw new Error(`Unsupported heartbeat condition: ${invalidWhen.join(", ")}`);
+  }
+  if (invalidStopWhen.length > 0) {
+    throw new Error(`Unsupported heartbeat stop condition: ${invalidStopWhen.join(", ")}`);
+  }
+  const unapprovedCustomChecks = [...when, ...stopWhen]
+    .map(heartbeatCustomId)
+    .filter((id): id is string => Boolean(id))
+    .filter((id) => !allowedCustomChecks.includes(id));
+  if (unapprovedCustomChecks.length > 0) {
+    throw new Error(`Custom heartbeat checks require opt-in: ${[...new Set(unapprovedCustomChecks)].join(", ")}`);
+  }
+  if (when.length === 0 && stopWhen.length === 0) return undefined;
+  const gateLimit = Number((gatePolicy as { limit?: unknown }).limit);
+  const inputLimit = Number(input.limit);
+  const prompt = input.prompt ?? (gatePolicy as { prompt?: string }).prompt;
+  return {
+    when,
+    ...(stopWhen.length > 0 ? { stopWhen } : {}),
+    context: "diff",
+    limit: Number.isFinite(inputLimit) && inputLimit > 0
+      ? Math.floor(inputLimit)
+      : Number.isFinite(gateLimit) && gateLimit > 0
+        ? Math.floor(gateLimit)
+        : 20,
+    ...(prompt ? { prompt } : {}),
+    ...(input.gate ? { gate: input.gate } : {}),
+    ...(allowedCustomChecks.length > 0 ? { allowedCustomChecks } : {}),
+    state: {
+      skipCount: input.state?.skipCount ?? current?.heartbeat?.state?.skipCount ?? 0,
+      ...(current?.heartbeat?.state ?? {}),
+      ...(input.state ?? {}),
+    },
+  };
+}
+
 function normalizeSchedule(
   input: CreateTemporalItemInput | UpdateTemporalItemInput,
   kind: TemporalItemKind,
@@ -449,6 +522,7 @@ export function normalizeTemporalItem(
   const startsAt = input.startsAt ?? schedule.startsAt;
   const anchorType = input.anchorType ?? schedule.relative?.anchorType;
   const anchorId = input.anchorId ?? schedule.relative?.anchorId;
+  const heartbeat = normalizeHeartbeat(input.heartbeat);
   const item: TemporalItem = {
     id,
     kind: input.kind,
@@ -464,6 +538,7 @@ export function normalizeTemporalItem(
     participants: normalizeParticipants(input.participants),
     actions: normalizeActions(input.kind, input.actions),
     projections: [],
+    ...(heartbeat ? { heartbeat } : {}),
     ...(input.ownerId ? { ownerId: input.ownerId } : {}),
     ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}),
     ...(input.projectId ? { projectId: input.projectId } : {}),
@@ -488,6 +563,7 @@ export function applyTemporalItemUpdate(
   const schedule = normalizeSchedule(input, current.kind, defaultTimeZone, current);
   const anchorType = input.anchorType ?? schedule.relative?.anchorType ?? current.anchorType;
   const anchorId = input.anchorId ?? schedule.relative?.anchorId ?? current.anchorId;
+  const heartbeat = normalizeHeartbeat(input.heartbeat, current);
   const updated: TemporalItem = {
     ...current,
     title: input.title?.trim() ?? current.title,
@@ -501,6 +577,7 @@ export function applyTemporalItemUpdate(
     participants: input.participants ? normalizeParticipants(input.participants) : current.participants,
     actions: input.actions ? normalizeActions(current.kind, input.actions) : current.actions,
     projections: input.projections ? normalizeProjections(current.kind, current.id, input.projections) : current.projections,
+    ...(heartbeat ? { heartbeat } : {}),
     ownerId: input.ownerId ?? current.ownerId,
     workspaceId: input.workspaceId ?? current.workspaceId,
     projectId: input.projectId ?? current.projectId,
