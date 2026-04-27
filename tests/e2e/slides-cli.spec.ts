@@ -65,6 +65,16 @@ test("slides cli creates, validates, renders, shares, and downloads a deck witho
     "--bullet", "Agents can self-correct slides before rendering",
     "--json",
   ]);
+  await runCli(rootDir, [
+    "slides", "add", created.deck.id,
+    "--workspace", workspaceDir,
+    "--layout", "metric-grid",
+    "--heading", "Launch coverage",
+    "--metric", "4|Core workflows|Create, validate, render and share",
+    "--metric", "10|Visual themes|Distinct deck aesthetics",
+    "--metric", "15|Slide layouts|Reusable presentation structures",
+    "--json",
+  ]);
 
   const rendered = parseJson<{
     validation: { ok: boolean };
@@ -114,6 +124,8 @@ test("slides cli creates, validates, renders, shares, and downloads a deck witho
   await page.goto(`file://${html.path}`);
   await expect(page.locator(".slide").first()).toBeVisible();
   await expect(page.locator("text=Q2 Product Update").first()).toBeVisible();
+  await expect(page.locator("text=Core workflows").first()).toBeVisible();
+  await expect(page.locator("text=Create, validate, render and share").first()).toBeVisible();
   await saveArtifactScreenshot(page, "slides-cli-rendered-html.png");
 });
 
