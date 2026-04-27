@@ -673,12 +673,44 @@ export const soulStateSchema = z.object({
 }).strict();
 
 export const userFactStatusSchema = z.enum(["pending", "verified", "archived"]);
-export const userFactSensitivitySchema = z.enum(["public", "personal", "sensitive"]);
+export const userFactSensitivitySchema = z.enum([
+  "public",
+  "personal",
+  "sensitive",
+  "medical",
+  "financial",
+  "legal",
+  "location",
+  "intimate",
+  "child",
+  "official_id",
+  "account",
+]);
 export const userFactVisibilitySchema = z.enum(["agent", "public", "private"]);
+export const userCompileProfileSchema = z.enum(["general", "work", "family", "travel", "wellbeing"]);
+export const userDomainIdSchema = z.enum([
+  "career.projects",
+  "career.employment",
+  "career.education",
+  "career.skills",
+  "family.household",
+  "family.relationships",
+  "travel.documents",
+  "travel.places",
+  "health.sleep",
+  "health.routines",
+  "health.conditions",
+  "legal.documents",
+  "finance.profile",
+  "location.places",
+  "accounts.public",
+]);
 
 export const userFactMetadataSchema = z.object({
   status: userFactStatusSchema.default("verified"),
   schemaVersion: z.number().int().positive().default(1),
+  domain: userDomainIdSchema.optional(),
+  supersedes: z.string().min(1).optional(),
   source: z.string().min(1).optional(),
   verifiedAt: z.string().min(1).optional(),
   sensitivity: userFactSensitivitySchema.default("personal"),
@@ -751,6 +783,16 @@ export const userPackStateSchema = z.object({
   visibility: userFactVisibilitySchema.default("agent"),
 }).strict();
 
+export const userDomainStateSchema = z.object({
+  id: userDomainIdSchema,
+  schemaVersion: z.number().int().positive().default(1),
+  enabled: z.boolean(),
+  enabledAt: z.string().min(1).optional(),
+  disabledAt: z.string().min(1).optional(),
+  sensitivity: userFactSensitivitySchema.default("personal"),
+  visibility: userFactVisibilitySchema.default("agent"),
+}).strict();
+
 export const userEntitySchema = z.object({
   id: z.string().min(1),
   type: userEntityTypeSchema,
@@ -771,6 +813,26 @@ export const userLinkSchema = z.object({
   updatedAt: z.string().min(1),
 }).strict();
 
+export const userTombstoneSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(["fact", "record", "custom_fact", "proposal", "entity", "link", "merge_proposal"]),
+  userId: z.string().min(1),
+  deletedAt: z.string().min(1),
+  reason: z.string().min(1).optional(),
+}).strict();
+
+export const userMergeProposalSchema = z.object({
+  id: z.string().min(1),
+  userId: z.string().min(1),
+  sourceId: z.string().min(1),
+  targetId: z.string().min(1),
+  reason: z.string().min(1),
+  status: z.enum(["pending", "approved", "rejected"]).default("pending"),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+  decidedAt: z.string().min(1).optional(),
+}).strict();
+
 export const userProposalSchema = z.object({
   id: z.string().min(1),
   kind: z.enum(["fact", "record", "custom_fact"]),
@@ -780,6 +842,7 @@ export const userProposalSchema = z.object({
   title: z.string().min(1).optional(),
   value: userFactValueSchema.optional(),
   fields: z.record(userFactValueSchema).optional(),
+  domain: userDomainIdSchema.optional(),
   source: z.string().min(1).optional(),
   sensitivity: userFactSensitivitySchema.default("personal"),
   confidence: z.number().min(0).max(1).optional(),
@@ -805,11 +868,14 @@ export const userSpecSchema = z.object({
   isDefault: z.boolean().default(false),
   facets: z.record(userFacetKeySchema, z.array(userFactSchema)).default({}),
   packs: z.array(userPackStateSchema).default([]),
+  domains: z.array(userDomainStateSchema).default([]),
   entities: z.array(userEntitySchema).default([]),
   links: z.array(userLinkSchema).default([]),
   records: z.array(userRecordSchema).default([]),
   customFacts: z.array(userCustomFactSchema).default([]),
   proposals: z.array(userProposalSchema).default([]),
+  tombstones: z.array(userTombstoneSchema).default([]),
+  mergeProposals: z.array(userMergeProposalSchema).default([]),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
 }).strict();

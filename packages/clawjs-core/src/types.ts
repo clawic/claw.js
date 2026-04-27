@@ -2619,8 +2619,20 @@ export interface SoulCompileResult {
 }
 
 export type UserFactStatus = "pending" | "verified" | "archived";
-export type UserFactSensitivity = "public" | "personal" | "sensitive";
+export type UserFactSensitivity =
+  | "public"
+  | "personal"
+  | "sensitive"
+  | "medical"
+  | "financial"
+  | "legal"
+  | "location"
+  | "intimate"
+  | "child"
+  | "official_id"
+  | "account";
 export type UserFactVisibility = "agent" | "public" | "private";
+export type UserCompileProfile = "general" | "work" | "family" | "travel" | "wellbeing";
 export type UserFacetKey =
   | "identity"
   | "biography"
@@ -2661,12 +2673,30 @@ export type UserRecordType =
   | "pet"
   | "administrative_document";
 export type UserPackId = "practical" | "professional" | "wellbeing";
+export type UserDomainId =
+  | "career.projects"
+  | "career.employment"
+  | "career.education"
+  | "career.skills"
+  | "family.household"
+  | "family.relationships"
+  | "travel.documents"
+  | "travel.places"
+  | "health.sleep"
+  | "health.routines"
+  | "health.conditions"
+  | "legal.documents"
+  | "finance.profile"
+  | "location.places"
+  | "accounts.public";
 export type UserEntityType = "person" | "organization" | "place" | "asset" | "pet" | "document" | "account";
 export type UserFactValue = string | number | boolean | null | Array<string | number | boolean | null> | Record<string, unknown>;
 
 export interface UserFactMetadata {
   status: UserFactStatus;
   schemaVersion: number;
+  domain?: UserDomainId;
+  supersedes?: string;
   source?: string;
   verifiedAt?: string;
   sensitivity: UserFactSensitivity;
@@ -2715,6 +2745,16 @@ export interface UserPackState {
   visibility: UserFactVisibility;
 }
 
+export interface UserDomainState {
+  id: UserDomainId;
+  schemaVersion: number;
+  enabled: boolean;
+  enabledAt?: string;
+  disabledAt?: string;
+  sensitivity: UserFactSensitivity;
+  visibility: UserFactVisibility;
+}
+
 export interface UserEntity {
   id: string;
   type: UserEntityType;
@@ -2735,6 +2775,26 @@ export interface UserLink {
   updatedAt: string;
 }
 
+export interface UserTombstone {
+  id: string;
+  kind: "fact" | "record" | "custom_fact" | "proposal" | "entity" | "link" | "merge_proposal";
+  userId: string;
+  deletedAt: string;
+  reason?: string;
+}
+
+export interface UserMergeProposal {
+  id: string;
+  userId: string;
+  sourceId: string;
+  targetId: string;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+  updatedAt: string;
+  decidedAt?: string;
+}
+
 export interface UserProposal {
   id: string;
   kind: "fact" | "record" | "custom_fact";
@@ -2744,6 +2804,7 @@ export interface UserProposal {
   title?: string;
   value?: UserFactValue;
   fields?: Record<string, UserFactValue>;
+  domain?: UserDomainId;
   source?: string;
   sensitivity: UserFactSensitivity;
   confidence?: number;
@@ -2769,11 +2830,14 @@ export interface UserSpec {
   isDefault: boolean;
   facets: Partial<Record<UserFacetKey, UserFact[]>>;
   packs: UserPackState[];
+  domains: UserDomainState[];
   entities: UserEntity[];
   links: UserLink[];
   records: UserRecord[];
   customFacts: UserCustomFact[];
   proposals: UserProposal[];
+  tombstones: UserTombstone[];
+  mergeProposals: UserMergeProposal[];
   createdAt: string;
   updatedAt: string;
 }

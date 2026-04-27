@@ -27,7 +27,7 @@ import type { ClawInstance, ImageOperation, ImageProvenance, ImageType, Telegram
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
 import { semanticPlanSchema } from "@clawjs/core";
-import type { ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserEntityType, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
+import type { ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
 import { runEmbeddedDatabaseCli } from "./database-advanced.ts";
 import { runMagicDbCli } from "./database-magic.ts";
 import { runMemoryCli } from "./memory-local.ts";
@@ -248,7 +248,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} plan create|list|show|run|approve|reject|review|policy`,
     `  ${binName} code init|projects|agents|policy|start|status|list|show|reserve|evidence|check|commit|review|gate|queue|integrate|sync|serve`,
     `  ${binName} soul init|validate|preview|compile|assign|inspect`,
-    `  ${binName} user init|set|add|propose|verify|list|get|inspect|validate|preview|compile|assign`,
+    `  ${binName} user init|set|add|propose|verify|review|domains|pack|wizard|entity|link|query|delete|list|get|inspect|validate|preview|compile|assign`,
     `  ${binName} channels list|status|telegram|assign|unassign|assignments|processors|listen|targets|messages|permissions|commands`,
     `  ${binName} channels telegram setup|codex setup|codex status`,
     `  ${binName} open <surface> [--no-browser] [--host HOST] [--port PORT]`,
@@ -1710,8 +1710,10 @@ function parseUserFieldsFromSetFlags(argv: string[]): Record<string, UserFactVal
 
 function parseUserMetadataFlags(flags: Record<string, string>) {
   return {
+    ...(flags.domain ? { domain: flags.domain as UserDomainId } : {}),
+    ...(flags.supersedes ? { supersedes: flags.supersedes } : {}),
     ...(flags.source ? { source: flags.source } : {}),
-    ...(flags.sensitivity ? { sensitivity: flags.sensitivity as "public" | "personal" | "sensitive" } : {}),
+    ...(flags.sensitivity ? { sensitivity: flags.sensitivity as UserFactSensitivity } : {}),
     ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
     ...(flags["valid-from"] ? { validFrom: flags["valid-from"] } : {}),
     ...(flags["valid-to"] ? { validTo: flags["valid-to"] } : {}),
@@ -9888,8 +9890,34 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         return CLI_EXIT_OK;
       }
 
+      if (command === "domains") {
+        const action = subcommand || "list";
+        const domainId = (positionals[3] || flags.id || flags.domain) as UserDomainId | undefined;
+        if (action === "list") {
+          const domains = claw.user.domains(targetUserId);
+          if (wantsJson) writeJson(context.stdout, { domains });
+          else context.stdout.write(`${domains.map((domain) => `${domain.enabled ? "*" : "-"} ${domain.id} ${domain.sensitivity}`).join("\n")}\n`);
+          return CLI_EXIT_OK;
+        }
+        if (action === "inspect") {
+          const domains = claw.user.domains(targetUserId);
+          const domain = domainId ? domains.find((entry) => entry.id === domainId) : domains;
+          if (wantsJson) writeJson(context.stdout, domain);
+          else context.stdout.write(`${Array.isArray(domain) ? domain.map((entry) => entry.id).join("\n") : domain ? `${domain.id} ${domain.pack}` : "not found"}\n`);
+          return domain ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
+        }
+        if (!domainId || (action !== "enable" && action !== "disable")) {
+          context.stderr.write("Usage: claw user domains list|enable|disable|inspect [domain-id] [--user ID]\n");
+          return CLI_EXIT_USAGE;
+        }
+        const domain = action === "enable" ? claw.user.enableDomain({ userId: targetUserId, id: domainId }) : claw.user.disableDomain({ userId: targetUserId, id: domainId });
+        if (wantsJson) writeJson(context.stdout, domain);
+        else context.stdout.write(`${domain.enabled ? "enabled" : "disabled"} ${domain.id}\n`);
+        return CLI_EXIT_OK;
+      }
+
       if (command === "wizard") {
-        const domain = (subcommand || flags.domain) as UserPackId | undefined;
+        const domain = (subcommand || flags.domain) as UserPackId | UserDomainId | undefined;
         const title = flags.title || joinedPositionals(positionals, 3);
         if (!domain || !title) {
           context.stderr.write("Usage: claw user wizard <domain> --title TEXT [--set key=value ...] [--user ID]\n");
@@ -9974,10 +10002,10 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       if (command === "query") {
         const result = claw.user.query({
           userId: targetUserId,
-          ...(flags.domain ? { domain: flags.domain as UserPackId } : {}),
+          ...(flags.domain ? { domain: flags.domain as UserPackId | UserDomainId } : {}),
           ...(flags.type ? { type: flags.type } : {}),
           ...(flags.status ? { status: flags.status } : {}),
-          ...(flags.sensitivity ? { sensitivity: flags.sensitivity as "public" | "personal" | "sensitive" } : {}),
+          ...(flags.sensitivity ? { sensitivity: flags.sensitivity as UserFactSensitivity } : {}),
           ...(flags.source ? { source: flags.source } : {}),
           ...(flags.date ? { date: flags.date } : {}),
           ...(flags.text ? { text: flags.text } : {}),
@@ -9994,6 +10022,115 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
           ];
           context.stdout.write(`${rows.join("\n")}\n`);
         }
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "review") {
+        const action = subcommand || "list";
+        const proposalId = positionals[3] || flags.id;
+        if (action === "list") {
+          const proposals = claw.user.review.list({ userId: targetUserId, ...(flags.status ? { status: flags.status as "pending" | "verified" | "rejected" } : {}) });
+          if (wantsJson) writeJson(context.stdout, { proposals });
+          else context.stdout.write(`${proposals.map((proposal) => `${proposal.status} ${proposal.id} ${proposal.title ?? proposal.path ?? proposal.recordType ?? proposal.kind}`).join("\n")}\n`);
+          return CLI_EXIT_OK;
+        }
+        if (!proposalId && action !== "approve-many") {
+          context.stderr.write("Usage: claw user review list|show|approve|reject|edit|approve-many [proposal-id]\n");
+          return CLI_EXIT_USAGE;
+        }
+        if (action === "show") {
+          const proposal = claw.user.review.show(proposalId, targetUserId);
+          if (wantsJson) writeJson(context.stdout, proposal);
+          else context.stdout.write(`${proposal.status} ${proposal.id}\n`);
+          return CLI_EXIT_OK;
+        }
+        if (action === "approve") {
+          const proposal = claw.user.review.approve(proposalId, targetUserId);
+          if (wantsJson) writeJson(context.stdout, proposal);
+          else context.stdout.write(`approved ${proposal.id}\n`);
+          return CLI_EXIT_OK;
+        }
+        if (action === "reject") {
+          const proposal = claw.user.review.reject(proposalId, targetUserId, flags.reason || flags.notes);
+          if (wantsJson) writeJson(context.stdout, proposal);
+          else context.stdout.write(`rejected ${proposal.id}\n`);
+          return CLI_EXIT_OK;
+        }
+        if (action === "edit") {
+          const patch = {
+            ...(flags.path ? { path: flags.path } : {}),
+            ...(flags.value !== undefined ? { value: parseUserFactValue(flags.value, "proposal value") } : {}),
+            ...(flags["record-type"] || flags.type ? { recordType: (flags["record-type"] || flags.type) as UserRecordType } : {}),
+            ...(flags.title ? { title: flags.title } : {}),
+            ...(flags.domain ? { domain: flags.domain as UserDomainId } : {}),
+            ...(flags.source ? { source: flags.source } : {}),
+            ...(flags.sensitivity ? { sensitivity: flags.sensitivity as UserFactSensitivity } : {}),
+            ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
+            ...(flags.notes ? { notes: flags.notes } : {}),
+            ...(flags.visibility ? { visibility: flags.visibility as "agent" | "public" | "private" } : {}),
+            ...(argv.includes("--set") ? { fields: parseUserFieldsFromSetFlags(argv) } : {}),
+          };
+          const proposal = claw.user.review.edit(proposalId, patch, targetUserId);
+          if (wantsJson) writeJson(context.stdout, proposal);
+          else context.stdout.write(`edited ${proposal.id}\n`);
+          return CLI_EXIT_OK;
+        }
+        if (action === "approve-many") {
+          const ids = parseCsvFlag(flags.ids || joinedPositionals(positionals, 3));
+          if (ids.length === 0) {
+            context.stderr.write("Usage: claw user review approve-many <id,id> [--user ID]\n");
+            return CLI_EXIT_USAGE;
+          }
+          const proposals = claw.user.review.approveMany(ids, targetUserId);
+          if (wantsJson) writeJson(context.stdout, { proposals });
+          else context.stdout.write(`${proposals.map((proposal) => `approved ${proposal.id}`).join("\n")}\n`);
+          return CLI_EXIT_OK;
+        }
+        context.stderr.write("Usage: claw user review list|show|approve|reject|edit|approve-many [proposal-id]\n");
+        return CLI_EXIT_USAGE;
+      }
+
+      if (command === "classify") {
+        const text = subcommand || flags.text || joinedPositionals(positionals, 2);
+        if (!text) {
+          context.stderr.write("Usage: claw user classify <text>\n");
+          return CLI_EXIT_USAGE;
+        }
+        const result = claw.user.classify(text);
+        if (wantsJson) writeJson(context.stdout, result);
+        else context.stdout.write(`${result.target} ${result.confidence} ${result.reason}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "extract") {
+        const action = subcommand;
+        const source = flags.source || flags.text || joinedPositionals(positionals, 3);
+        if (action !== "memory" || !source) {
+          context.stderr.write("Usage: claw user extract memory --source TEXT [--user ID]\n");
+          return CLI_EXIT_USAGE;
+        }
+        const proposals = claw.user.extractMemory({ userId: targetUserId, source });
+        if (wantsJson) writeJson(context.stdout, { proposals });
+        else context.stdout.write(`${proposals.map((proposal) => `proposed ${proposal.id}`).join("\n")}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "merge") {
+        const action = subcommand || "propose";
+        if (action === "propose") {
+          const proposals = claw.user.merge.propose({ userId: targetUserId, ...(flags.source || flags.from ? { sourceId: flags.source || flags.from } : {}), ...(flags.target || flags.to ? { targetId: flags.target || flags.to } : {}) });
+          if (wantsJson) writeJson(context.stdout, { proposals });
+          else context.stdout.write(`${proposals.map((proposal) => `merge ${proposal.id} ${proposal.sourceId} -> ${proposal.targetId}`).join("\n")}\n`);
+          return CLI_EXIT_OK;
+        }
+        const mergeId = positionals[3] || flags.id;
+        if (!mergeId || (action !== "approve" && action !== "reject")) {
+          context.stderr.write("Usage: claw user merge propose|approve|reject [merge-id]\n");
+          return CLI_EXIT_USAGE;
+        }
+        const proposal = action === "approve" ? claw.user.merge.approve(mergeId, targetUserId) : claw.user.merge.reject(mergeId, targetUserId);
+        if (wantsJson) writeJson(context.stdout, proposal);
+        else context.stdout.write(`${proposal.status} ${proposal.id}\n`);
         return CLI_EXIT_OK;
       }
 
@@ -10031,6 +10168,26 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         });
         if (wantsJson) writeJson(context.stdout, record);
         else context.stdout.write(`added ${record.type} ${record.id}\n`);
+        return CLI_EXIT_OK;
+      }
+
+      if (command === "supersede") {
+        const id = subcommand || flags.id;
+        if (!id) {
+          context.stderr.write("Usage: claw user supersede <id> [--value VALUE|--title TEXT --set key=value]\n");
+          return CLI_EXIT_USAGE;
+        }
+        const result = claw.user.supersede(id, {
+          userId: targetUserId,
+          ...(flags.value !== undefined ? { value: parseUserFactValue(flags.value, "replacement value") } : {}),
+          ...(flags.title ? { title: flags.title } : {}),
+          ...(argv.includes("--set") ? { fields: parseUserFieldsFromSetFlags(argv) } : {}),
+          ...(flags.notes ? { notes: flags.notes } : {}),
+          ...(flags["valid-from"] ? { validFrom: flags["valid-from"] } : {}),
+          ...(flags.visibility ? { visibility: flags.visibility as "agent" | "public" | "private" } : {}),
+        });
+        if (wantsJson) writeJson(context.stdout, result);
+        else context.stdout.write(`superseded ${id}\n`);
         return CLI_EXIT_OK;
       }
 
@@ -10088,6 +10245,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         const result = claw.user.preview({
           userId: subcommand || targetUserId,
           agentId: targetAgentId,
+          ...(flags.profile ? { profile: flags.profile as UserCompileProfile } : {}),
         });
         if (wantsJson) writeJson(context.stdout, result);
         else context.stdout.write(result.markdown);
@@ -10098,6 +10256,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         const result = claw.user.compile({
           userId: subcommand || targetUserId,
           agentId: targetAgentId,
+          ...(flags.profile ? { profile: flags.profile as UserCompileProfile } : {}),
         });
         if (wantsJson) writeJson(context.stdout, result);
         else context.stdout.write(`compiled ${result.userId} to ${result.targetFile}\n`);
@@ -10125,7 +10284,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       return handled.exitCode;
     }
 
-    context.stderr.write("Usage: claw user init|set|add|propose|verify|pack|wizard|entity|link|query|delete|list|get|inspect|validate|preview|compile|assign\n");
+    context.stderr.write("Usage: claw user init|set|add|propose|verify|review|domains|pack|wizard|entity|link|query|delete|list|get|inspect|validate|preview|compile|assign\n");
     return CLI_EXIT_USAGE;
   }
 
