@@ -224,6 +224,7 @@ The docs check script validates that every current export from
     createLocalRulesStore
     createMediaStore
     createManifest
+    createStorageHttpHandler
     createSlackService
     CreateSlackServiceOptions
     createTelegramService
@@ -295,6 +296,7 @@ The docs check script validates that every current export from
     DocumentStorageDescriptor
     DocumentStore
     downloadTelegramFile
+    ensureOwnerTokenFile
     EffectPreview
     effectPreviewSchema
     EffectiveAccessPolicy
@@ -990,11 +992,13 @@ The docs check script validates that every current export from
     StorageDriveIndexAdapter
     StorageGetResult
     StorageGrant
+    StorageHttpHandler
     StorageHttpServer
     StorageHttpServerOptions
     StorageListInput
     StorageObject
     StorageOperation
+    StorageOwnerTokenOptions
     StoragePutInput
     StorageRef
     StorageScopedToken
@@ -1043,6 +1047,10 @@ The docs check script validates that every current export from
     TelegramCommand
     telegramCommandSchema
     TelegramConnectBotInput
+    TelegramForumReadiness
+    TelegramForumTopic
+    TelegramForumTopicIconSticker
+    TelegramForumTopicInput
     TelegramInviteLinkOptions
     TelegramMemberSummary
     telegramMemberSummarySchema
