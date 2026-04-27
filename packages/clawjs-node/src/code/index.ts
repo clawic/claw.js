@@ -1,4 +1,5 @@
 import fs from "fs";
+import http from "http";
 import os from "os";
 import path from "path";
 import { randomBytes } from "crypto";
@@ -12,6 +13,8 @@ export type CodeIntentStatus = "open" | "blocked" | "queued" | "integrated" | "c
 export type CodeCheckStatus = "passed" | "failed";
 export type CodeReviewDecision = "approved" | "rejected";
 export type CodeHostProvider = "github" | "gitlab";
+export type CodeProjectStatus = "active" | "missing" | "uninitialized";
+export type CodeAgentStatus = "idle" | "working" | "blocked" | "reviewing" | "offline";
 
 export interface CodeRepositoryRecord {
   id: string;
@@ -190,6 +193,97 @@ export interface CodeSyncGithubInput {
   base?: string;
 }
 
+export interface CodeProjectRecord {
+  id: string;
+  name: string;
+  rootDir: string;
+  status: CodeProjectStatus;
+  originUrl: string | null;
+  defaultBranch: string | null;
+  currentHead: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lastSyncAt: string | null;
+}
+
+export interface CodeAgentRecord {
+  id: string;
+  label: string;
+  status: CodeAgentStatus;
+  projectId: string | null;
+  intentId: string | null;
+  worktreePath: string | null;
+  heartbeatAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CodeGlobalIntentRecord extends CodeIntentRecord {
+  projectId: string;
+  projectName: string;
+  projectRootDir: string;
+}
+
+export interface CodeGlobalQueueRecord extends CodeQueueRecord {
+  projectId: string;
+  projectName: string;
+  intent: CodeIntentRecord | null;
+}
+
+export interface CodeGlobalReservationRecord extends CodeReservationRecord {
+  projectId: string;
+  projectName: string;
+}
+
+export interface CodeGlobalStatus {
+  projects: CodeProjectRecord[];
+  agents: CodeAgentRecord[];
+  intents: CodeGlobalIntentRecord[];
+  queued: CodeGlobalQueueRecord[];
+}
+
+export interface CreateCodeGlobalIndexOptions {
+  rootDir?: string;
+}
+
+export interface AddCodeProjectInput {
+  rootDir: string;
+  id?: string;
+  name?: string;
+}
+
+export interface DiscoverCodeProjectsInput {
+  rootDir: string;
+  maxDepth?: number;
+}
+
+export interface RegisterCodeAgentInput {
+  id: string;
+  label?: string;
+  status?: CodeAgentStatus;
+  projectId?: string | null;
+  intentId?: string | null;
+  worktreePath?: string | null;
+}
+
+export interface HeartbeatCodeAgentInput {
+  id: string;
+  status?: CodeAgentStatus;
+  projectId?: string | null;
+  intentId?: string | null;
+  worktreePath?: string | null;
+}
+
+export interface CodeServeOptions {
+  host?: string;
+  port?: number;
+}
+
+export interface CodeServerHandle {
+  url: string;
+  close: () => Promise<void>;
+}
+
 interface SqliteCodeIntentRow {
   id: string;
   repo_id: string;
@@ -275,8 +369,34 @@ interface SqliteHostSyncRow {
   updated_at: string;
 }
 
+interface SqliteCodeProjectRow {
+  id: string;
+  name: string;
+  root_dir: string;
+  status: CodeProjectStatus;
+  origin_url: string | null;
+  default_branch: string | null;
+  current_head: string | null;
+  created_at: string;
+  updated_at: string;
+  last_sync_at: string | null;
+}
+
+interface SqliteCodeAgentRow {
+  id: string;
+  label: string;
+  status: CodeAgentStatus;
+  project_id: string | null;
+  intent_id: string | null;
+  worktree_path: string | null;
+  heartbeat_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
 const CHANGE_KINDS = new Set<CodeChangeKind>(["fix", "feat", "refactor", "docs", "test", "chore"]);
 const RISKS = new Set<CodeRisk>(["low", "medium", "high"]);
+const AGENT_STATUSES = new Set<CodeAgentStatus>(["idle", "working", "blocked", "reviewing", "offline"]);
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -338,6 +458,14 @@ function resolveRepoRoot(options: CreateCodeLedgerOptions): string {
 
 function resolveDatabasePath(repoRoot: string): string {
   return path.join(repoRoot, ".clawjs", "code", "code.sqlite");
+}
+
+function resolveGlobalRootDir(rootDir?: string): string {
+  return path.resolve(rootDir || process.env.CLAWJS_CODE_HOME || path.join(os.homedir(), ".clawjs", "code"));
+}
+
+function resolveGlobalDatabasePath(rootDir?: string): string {
+  return path.join(resolveGlobalRootDir(rootDir), "global.sqlite");
 }
 
 function normalizePathList(paths?: string[]): string[] {
@@ -461,6 +589,97 @@ function mapHostSync(row: SqliteHostSyncRow): CodeHostSyncRecord {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function mapProject(row: SqliteCodeProjectRow): CodeProjectRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    rootDir: row.root_dir,
+    status: row.status,
+    originUrl: row.origin_url,
+    defaultBranch: row.default_branch,
+    currentHead: row.current_head,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    lastSyncAt: row.last_sync_at,
+  };
+}
+
+function mapAgent(row: SqliteCodeAgentRow): CodeAgentRecord {
+  return {
+    id: row.id,
+    label: row.label,
+    status: row.status,
+    projectId: row.project_id,
+    intentId: row.intent_id,
+    worktreePath: row.worktree_path,
+    heartbeatAt: row.heartbeat_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function assertAgentStatus(status: string | undefined): CodeAgentStatus {
+  if (!status) return "idle";
+  if (AGENT_STATUSES.has(status as CodeAgentStatus)) return status as CodeAgentStatus;
+  throw new Error(`Invalid code agent status: ${status}`);
+}
+
+function parseRequestJson(request: http.IncomingMessage): Promise<Record<string, unknown>> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let total = 0;
+    request.on("data", (chunk: Buffer | string) => {
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      total += buffer.length;
+      if (total > 512 * 1024) {
+        reject(new Error("request body is too large"));
+        request.destroy();
+        return;
+      }
+      chunks.push(buffer);
+    });
+    request.on("end", () => {
+      const body = Buffer.concat(chunks).toString("utf8").trim();
+      if (!body) {
+        resolve({});
+        return;
+      }
+      try {
+        const parsed = JSON.parse(body) as unknown;
+        resolve(parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {});
+      } catch (error) {
+        reject(error);
+      }
+    });
+    request.on("error", reject);
+  });
+}
+
+function sendCodeJson(response: http.ServerResponse, status: number, payload: unknown): void {
+  response.writeHead(status, {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
+  });
+  response.end(`${JSON.stringify(payload)}\n`);
+}
+
+function stringInput(payload: Record<string, unknown>, key: string): string | undefined {
+  const value = payload[key];
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function boolInput(payload: Record<string, unknown>, key: string): boolean | undefined {
+  const value = payload[key];
+  return typeof value === "boolean" ? value : undefined;
+}
+
+function listInput(payload: Record<string, unknown>, key: string): string[] | undefined {
+  const value = payload[key];
+  if (Array.isArray(value)) return value.filter((entry): entry is string => typeof entry === "string");
+  if (typeof value === "string") return [value];
+  return undefined;
 }
 
 export class CodeLedger {
@@ -1044,6 +1263,539 @@ export class CodeLedger {
     `).run(id, intentId, provider, status, remoteUrl, JSON.stringify(payload), timestamp, timestamp);
     return this.listHostSyncs(intentId).find((sync) => sync.id === id)!;
   }
+}
+
+export class CodeGlobalIndex {
+  readonly rootDir: string;
+  readonly databasePath: string;
+  private readonly db: Database.Database;
+
+  constructor(options: CreateCodeGlobalIndexOptions = {}) {
+    this.rootDir = resolveGlobalRootDir(options.rootDir);
+    this.databasePath = resolveGlobalDatabasePath(options.rootDir);
+    fs.mkdirSync(path.dirname(this.databasePath), { recursive: true });
+    this.db = new Database(this.databasePath);
+    this.db.pragma("journal_mode = WAL");
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS code_projects (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        root_dir TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL,
+        origin_url TEXT,
+        default_branch TEXT,
+        current_head TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        last_sync_at TEXT
+      );
+      CREATE INDEX IF NOT EXISTS code_projects_status_idx ON code_projects(status, updated_at DESC);
+      CREATE TABLE IF NOT EXISTS code_agents (
+        id TEXT PRIMARY KEY,
+        label TEXT NOT NULL,
+        status TEXT NOT NULL,
+        project_id TEXT,
+        intent_id TEXT,
+        worktree_path TEXT,
+        heartbeat_at TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS code_agents_project_idx ON code_agents(project_id, status);
+    `);
+  }
+
+  addProject(input: AddCodeProjectInput): CodeProjectRecord {
+    const rootDir = discoverGitRoot(path.resolve(input.rootDir));
+    const timestamp = nowIso();
+    const existingByRoot = this.db.prepare("SELECT * FROM code_projects WHERE root_dir = ?").get(rootDir) as SqliteCodeProjectRow | undefined;
+    const id = input.id?.trim() || existingByRoot?.id || this.uniqueProjectId(slugify(input.name || path.basename(rootDir)));
+    const metadata = this.readProjectMetadata(rootDir);
+    const status = fs.existsSync(resolveDatabasePath(rootDir)) ? "active" : "uninitialized";
+    const record = {
+      id,
+      name: input.name?.trim() || existingByRoot?.name || path.basename(rootDir),
+      rootDir,
+      status,
+      originUrl: metadata.originUrl,
+      defaultBranch: metadata.defaultBranch,
+      currentHead: metadata.currentHead,
+      createdAt: existingByRoot?.created_at ?? timestamp,
+      updatedAt: timestamp,
+      lastSyncAt: timestamp,
+    };
+    this.db.prepare(`
+      INSERT INTO code_projects (id, name, root_dir, status, origin_url, default_branch, current_head, created_at, updated_at, last_sync_at)
+      VALUES (@id, @name, @rootDir, @status, @originUrl, @defaultBranch, @currentHead, @createdAt, @updatedAt, @lastSyncAt)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        root_dir = excluded.root_dir,
+        status = excluded.status,
+        origin_url = excluded.origin_url,
+        default_branch = excluded.default_branch,
+        current_head = excluded.current_head,
+        updated_at = excluded.updated_at,
+        last_sync_at = excluded.last_sync_at
+    `).run(record);
+    return this.requireProject(id);
+  }
+
+  discoverProjects(input: DiscoverCodeProjectsInput): CodeProjectRecord[] {
+    const rootDir = path.resolve(input.rootDir);
+    const maxDepth = Math.max(0, input.maxDepth ?? 3);
+    const roots: string[] = [];
+    const visit = (dir: string, depth: number) => {
+      if (depth > maxDepth) return;
+      if (fs.existsSync(path.join(dir, ".git"))) {
+        roots.push(dir);
+        return;
+      }
+      let entries: fs.Dirent[];
+      try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return;
+      }
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
+        visit(path.join(dir, entry.name), depth + 1);
+      }
+    };
+    visit(rootDir, 0);
+    return roots.sort((left, right) => left.localeCompare(right)).map((repoRoot) => this.addProject({ rootDir: repoRoot }));
+  }
+
+  listProjects(): CodeProjectRecord[] {
+    return (this.db.prepare("SELECT * FROM code_projects ORDER BY name ASC, id ASC").all() as SqliteCodeProjectRow[]).map(mapProject);
+  }
+
+  getProject(projectId: string): CodeProjectRecord | null {
+    const row = this.db.prepare("SELECT * FROM code_projects WHERE id = ?").get(projectId) as SqliteCodeProjectRow | undefined;
+    return row ? mapProject(row) : null;
+  }
+
+  requireProject(projectId: string): CodeProjectRecord {
+    const project = this.getProject(projectId);
+    if (!project) throw new Error(`Code project not found: ${projectId}`);
+    return project;
+  }
+
+  removeProject(projectId: string): boolean {
+    const result = this.db.prepare("DELETE FROM code_projects WHERE id = ?").run(projectId);
+    return result.changes > 0;
+  }
+
+  syncProject(projectId: string): CodeProjectRecord {
+    const project = this.requireProject(projectId);
+    const timestamp = nowIso();
+    if (!fs.existsSync(project.rootDir)) {
+      this.db.prepare("UPDATE code_projects SET status = 'missing', updated_at = ?, last_sync_at = ? WHERE id = ?").run(timestamp, timestamp, project.id);
+      return this.requireProject(project.id);
+    }
+    const metadata = this.readProjectMetadata(project.rootDir);
+    const status: CodeProjectStatus = fs.existsSync(resolveDatabasePath(project.rootDir)) ? "active" : "uninitialized";
+    if (status === "active") {
+      const ledger = createCodeLedger({ repoDir: project.rootDir });
+      ledger.status();
+    }
+    this.db.prepare(`
+      UPDATE code_projects
+      SET status = ?, origin_url = ?, default_branch = ?, current_head = ?, updated_at = ?, last_sync_at = ?
+      WHERE id = ?
+    `).run(status, metadata.originUrl, metadata.defaultBranch, metadata.currentHead, timestamp, timestamp, project.id);
+    return this.requireProject(project.id);
+  }
+
+  syncAllProjects(): CodeProjectRecord[] {
+    return this.listProjects().map((project) => this.syncProject(project.id));
+  }
+
+  projectLedger(projectId: string): CodeLedger {
+    const project = this.requireProject(projectId);
+    if (!fs.existsSync(project.rootDir)) throw new Error(`Code project is missing: ${projectId}`);
+    return createCodeLedger({ repoDir: project.rootDir });
+  }
+
+  startIntent(projectId: string, input: CodeStartInput): CodeIntentDetail {
+    const project = this.syncProject(projectId);
+    const ledger = this.projectLedger(project.id);
+    const detail = ledger.start(input);
+    this.registerAgent({
+      id: detail.intent.agentId,
+      status: "working",
+      projectId: project.id,
+      intentId: detail.intent.id,
+      worktreePath: detail.intent.worktreePath,
+    });
+    this.syncProject(project.id);
+    return detail;
+  }
+
+  listIntents(options: { projectId?: string; agentId?: string; status?: CodeIntentStatus } = {}): CodeGlobalIntentRecord[] {
+    const projects = options.projectId ? [this.syncProject(options.projectId)] : this.syncAllProjects();
+    const intents: CodeGlobalIntentRecord[] = [];
+    for (const project of projects) {
+      if (project.status !== "active") continue;
+      const ledger = createCodeLedger({ repoDir: project.rootDir });
+      for (const intent of ledger.listIntents({ ...(options.status ? { status: options.status } : {}) })) {
+        if (options.agentId && intent.agentId !== options.agentId) continue;
+        intents.push({
+          ...intent,
+          projectId: project.id,
+          projectName: project.name,
+          projectRootDir: project.rootDir,
+        });
+      }
+    }
+    return intents.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+  }
+
+  showIntent(projectId: string, intentId: string): CodeIntentDetail & { project: CodeProjectRecord } {
+    const project = this.syncProject(projectId);
+    const detail = this.projectLedger(project.id).showIntent(intentId);
+    return { ...detail, project };
+  }
+
+  listReservations(projectId?: string): CodeGlobalReservationRecord[] {
+    const projects = projectId ? [this.syncProject(projectId)] : this.syncAllProjects();
+    const reservations: CodeGlobalReservationRecord[] = [];
+    for (const project of projects) {
+      if (project.status !== "active") continue;
+      const ledger = createCodeLedger({ repoDir: project.rootDir });
+      for (const intent of ledger.listIntents()) {
+        const detail = ledger.showIntent(intent.id);
+        reservations.push(...detail.reservations.map((reservation) => ({
+          ...reservation,
+          projectId: project.id,
+          projectName: project.name,
+        })));
+      }
+    }
+    return reservations;
+  }
+
+  listQueue(projectId?: string): CodeGlobalQueueRecord[] {
+    const projects = projectId ? [this.syncProject(projectId)] : this.syncAllProjects();
+    const queue: CodeGlobalQueueRecord[] = [];
+    for (const project of projects) {
+      if (project.status !== "active") continue;
+      const ledger = createCodeLedger({ repoDir: project.rootDir });
+      const status = ledger.status();
+      queue.push(...status.queued.map((entry) => ({
+        ...entry,
+        projectId: project.id,
+        projectName: project.name,
+        intent: status.intents.find((intent) => intent.id === entry.intentId) ?? null,
+      })));
+    }
+    return queue.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+  }
+
+  queueIntent(projectId: string, intentId: string): CodeQueueRecord {
+    const queue = this.projectLedger(projectId).queue(intentId);
+    this.syncProject(projectId);
+    return queue;
+  }
+
+  integrateIntent(projectId: string, intentId: string): CodeIntegrateResult {
+    const result = this.projectLedger(projectId).integrate(intentId);
+    this.syncProject(projectId);
+    return result;
+  }
+
+  addEvidence(projectId: string, input: CodeEvidenceInput): CodeEvidenceRecord {
+    const evidence = this.projectLedger(projectId).addEvidence(input);
+    this.syncProject(projectId);
+    return evidence;
+  }
+
+  recordCheck(projectId: string, input: CodeCheckRecordInput): CodeCheckRecord {
+    const check = this.projectLedger(projectId).recordCheck(input);
+    this.syncProject(projectId);
+    return check;
+  }
+
+  runCheck(projectId: string, input: CodeCheckRunInput): CodeCheckRecord {
+    const check = this.projectLedger(projectId).runCheck(input);
+    this.syncProject(projectId);
+    return check;
+  }
+
+  review(projectId: string, input: CodeReviewInput): CodeReviewRecord {
+    const review = this.projectLedger(projectId).review(input);
+    this.syncProject(projectId);
+    return review;
+  }
+
+  commit(projectId: string, intentId: string): CodeCommitResult {
+    const result = this.projectLedger(projectId).commit(intentId);
+    this.syncProject(projectId);
+    return result;
+  }
+
+  syncGithub(projectId: string, input: CodeSyncGithubInput): CodeHostSyncRecord {
+    const sync = this.projectLedger(projectId).syncGithub(input);
+    this.syncProject(projectId);
+    return sync;
+  }
+
+  registerAgent(input: RegisterCodeAgentInput): CodeAgentRecord {
+    const id = input.id.trim();
+    if (!id) throw new Error("agent id is required");
+    const timestamp = nowIso();
+    const existing = this.db.prepare("SELECT * FROM code_agents WHERE id = ?").get(id) as SqliteCodeAgentRow | undefined;
+    const record = {
+      id,
+      label: input.label?.trim() || existing?.label || id,
+      status: assertAgentStatus(input.status),
+      projectId: input.projectId ?? existing?.project_id ?? null,
+      intentId: input.intentId ?? existing?.intent_id ?? null,
+      worktreePath: input.worktreePath ?? existing?.worktree_path ?? null,
+      heartbeatAt: timestamp,
+      createdAt: existing?.created_at ?? timestamp,
+      updatedAt: timestamp,
+    };
+    this.db.prepare(`
+      INSERT INTO code_agents (id, label, status, project_id, intent_id, worktree_path, heartbeat_at, created_at, updated_at)
+      VALUES (@id, @label, @status, @projectId, @intentId, @worktreePath, @heartbeatAt, @createdAt, @updatedAt)
+      ON CONFLICT(id) DO UPDATE SET
+        label = excluded.label,
+        status = excluded.status,
+        project_id = excluded.project_id,
+        intent_id = excluded.intent_id,
+        worktree_path = excluded.worktree_path,
+        heartbeat_at = excluded.heartbeat_at,
+        updated_at = excluded.updated_at
+    `).run(record);
+    return this.requireAgent(id);
+  }
+
+  heartbeatAgent(input: HeartbeatCodeAgentInput): CodeAgentRecord {
+    const existing = this.getAgent(input.id);
+    return this.registerAgent({
+      id: input.id,
+      label: existing?.label ?? input.id,
+      status: input.status ?? existing?.status ?? "idle",
+      projectId: input.projectId ?? existing?.projectId ?? null,
+      intentId: input.intentId ?? existing?.intentId ?? null,
+      worktreePath: input.worktreePath ?? existing?.worktreePath ?? null,
+    });
+  }
+
+  listAgents(options: { offlineAfterMs?: number } = {}): CodeAgentRecord[] {
+    const offlineAfterMs = options.offlineAfterMs ?? 60_000;
+    return (this.db.prepare("SELECT * FROM code_agents ORDER BY updated_at DESC, id ASC").all() as SqliteCodeAgentRow[])
+      .map(mapAgent)
+      .map((agent) => {
+        if (Date.now() - new Date(agent.heartbeatAt).getTime() > offlineAfterMs) {
+          return { ...agent, status: "offline" };
+        }
+        return agent;
+      });
+  }
+
+  getAgent(agentId: string): CodeAgentRecord | null {
+    const row = this.db.prepare("SELECT * FROM code_agents WHERE id = ?").get(agentId) as SqliteCodeAgentRow | undefined;
+    return row ? mapAgent(row) : null;
+  }
+
+  requireAgent(agentId: string): CodeAgentRecord {
+    const agent = this.getAgent(agentId);
+    if (!agent) throw new Error(`Code agent not found: ${agentId}`);
+    return agent;
+  }
+
+  status(): CodeGlobalStatus {
+    return {
+      projects: this.syncAllProjects(),
+      agents: this.listAgents(),
+      intents: this.listIntents(),
+      queued: this.listQueue(),
+    };
+  }
+
+  private readProjectMetadata(rootDir: string): Pick<CodeProjectRecord, "originUrl" | "defaultBranch" | "currentHead"> {
+    return {
+      originUrl: runGit(rootDir, ["config", "--get", "remote.origin.url"], { allowFailure: true }) || null,
+      defaultBranch: runGit(rootDir, ["branch", "--show-current"], { allowFailure: true }) || null,
+      currentHead: runGit(rootDir, ["rev-parse", "HEAD"], { allowFailure: true }) || null,
+    };
+  }
+
+  private uniqueProjectId(base: string): string {
+    let candidate = base || "project";
+    let index = 2;
+    while (this.getProject(candidate)) {
+      candidate = `${base}-${index}`;
+      index += 1;
+    }
+    return candidate;
+  }
+}
+
+export function createCodeGlobalIndex(options: CreateCodeGlobalIndexOptions = {}): CodeGlobalIndex {
+  return new CodeGlobalIndex(options);
+}
+
+export async function startCodeServer(index: CodeGlobalIndex, options: CodeServeOptions = {}): Promise<CodeServerHandle> {
+  const host = options.host || "127.0.0.1";
+  const port = options.port ?? 0;
+  const server = http.createServer((request, response) => {
+    void (async () => {
+      const url = new URL(request.url || "/", `http://${request.headers.host || `${host}:${port}`}`);
+      const parts = url.pathname.split("/").filter(Boolean);
+      try {
+        if (request.method === "GET" && url.pathname === "/v1/projects") {
+          sendCodeJson(response, 200, { projects: index.listProjects() });
+          return;
+        }
+        if (request.method === "POST" && url.pathname === "/v1/projects") {
+          const body = await parseRequestJson(request);
+          sendCodeJson(response, 200, { project: index.addProject({
+            rootDir: stringInput(body, "rootDir") || stringInput(body, "path") || "",
+            id: stringInput(body, "id"),
+            name: stringInput(body, "name"),
+          }) });
+          return;
+        }
+        if (request.method === "POST" && url.pathname === "/v1/projects/discover") {
+          const body = await parseRequestJson(request);
+          sendCodeJson(response, 200, { projects: index.discoverProjects({
+            rootDir: stringInput(body, "rootDir") || stringInput(body, "path") || "",
+            maxDepth: typeof body.maxDepth === "number" ? body.maxDepth : undefined,
+          }) });
+          return;
+        }
+        if (request.method === "GET" && parts[0] === "v1" && parts[1] === "projects" && parts[2]) {
+          sendCodeJson(response, 200, { project: index.requireProject(parts[2]) });
+          return;
+        }
+        if (request.method === "GET" && url.pathname === "/v1/agents") {
+          const offlineAfterMs = url.searchParams.get("offlineAfterMs");
+          sendCodeJson(response, 200, { agents: index.listAgents({ ...(offlineAfterMs ? { offlineAfterMs: Number(offlineAfterMs) } : {}) }) });
+          return;
+        }
+        if (request.method === "POST" && url.pathname === "/v1/agents/register") {
+          const body = await parseRequestJson(request);
+          sendCodeJson(response, 200, { agent: index.registerAgent({
+            id: stringInput(body, "id") || "",
+            label: stringInput(body, "label"),
+            status: stringInput(body, "status") as CodeAgentStatus | undefined,
+            projectId: stringInput(body, "projectId") ?? null,
+            intentId: stringInput(body, "intentId") ?? null,
+            worktreePath: stringInput(body, "worktreePath") ?? null,
+          }) });
+          return;
+        }
+        if (request.method === "POST" && url.pathname === "/v1/agents/heartbeat") {
+          const body = await parseRequestJson(request);
+          sendCodeJson(response, 200, { agent: index.heartbeatAgent({
+            id: stringInput(body, "id") || "",
+            status: stringInput(body, "status") as CodeAgentStatus | undefined,
+            projectId: stringInput(body, "projectId") ?? null,
+            intentId: stringInput(body, "intentId") ?? null,
+            worktreePath: stringInput(body, "worktreePath") ?? null,
+          }) });
+          return;
+        }
+        if (request.method === "GET" && url.pathname === "/v1/intents") {
+          sendCodeJson(response, 200, { intents: index.listIntents({
+            projectId: url.searchParams.get("projectId") || undefined,
+            agentId: url.searchParams.get("agentId") || undefined,
+            status: (url.searchParams.get("status") || undefined) as CodeIntentStatus | undefined,
+          }) });
+          return;
+        }
+        if (request.method === "POST" && url.pathname === "/v1/intents") {
+          const body = await parseRequestJson(request);
+          const detail = index.startIntent(stringInput(body, "projectId") || "", {
+            kind: stringInput(body, "kind") as CodeChangeKind,
+            scope: stringInput(body, "scope") || "",
+            title: stringInput(body, "title") || "",
+            summary: stringInput(body, "summary"),
+            risk: stringInput(body, "risk") as CodeRisk | undefined,
+            agentId: stringInput(body, "agentId"),
+            paths: listInput(body, "paths"),
+          });
+          sendCodeJson(response, 200, detail);
+          return;
+        }
+        if (request.method === "GET" && url.pathname === "/v1/reservations") {
+          sendCodeJson(response, 200, { reservations: index.listReservations(url.searchParams.get("projectId") || undefined) });
+          return;
+        }
+        if (request.method === "GET" && url.pathname === "/v1/queue") {
+          sendCodeJson(response, 200, { queue: index.listQueue(url.searchParams.get("projectId") || undefined) });
+          return;
+        }
+        if (request.method === "POST" && url.pathname === "/v1/evidence") {
+          const body = await parseRequestJson(request);
+          sendCodeJson(response, 200, { evidence: index.addEvidence(stringInput(body, "projectId") || "", {
+            intentId: stringInput(body, "intentId") || "",
+            kind: stringInput(body, "kind"),
+            label: stringInput(body, "label") || "",
+            path: stringInput(body, "path"),
+            url: stringInput(body, "url"),
+          }) });
+          return;
+        }
+        if (request.method === "POST" && url.pathname === "/v1/checks") {
+          const body = await parseRequestJson(request);
+          const projectId = stringInput(body, "projectId") || "";
+          const command = stringInput(body, "command");
+          const check = command
+            ? index.runCheck(projectId, { intentId: stringInput(body, "intentId") || "", name: stringInput(body, "name") || "check", command })
+            : index.recordCheck(projectId, {
+              intentId: stringInput(body, "intentId") || "",
+              name: stringInput(body, "name") || "check",
+              status: stringInput(body, "status") as CodeCheckStatus,
+            });
+          sendCodeJson(response, 200, { check });
+          return;
+        }
+        if (request.method === "POST" && url.pathname === "/v1/reviews") {
+          const body = await parseRequestJson(request);
+          sendCodeJson(response, 200, { review: index.review(stringInput(body, "projectId") || "", {
+            intentId: stringInput(body, "intentId") || "",
+            reviewer: stringInput(body, "reviewer") || "operator",
+            decision: stringInput(body, "decision") as CodeReviewDecision,
+            reason: stringInput(body, "reason"),
+          }) });
+          return;
+        }
+        if (request.method === "GET" && url.pathname === "/v1/status") {
+          sendCodeJson(response, 200, index.status());
+          return;
+        }
+        if (request.method === "POST" && url.pathname === "/v1/sync/github") {
+          const body = await parseRequestJson(request);
+          sendCodeJson(response, 200, { sync: index.syncGithub(stringInput(body, "projectId") || "", {
+            intentId: stringInput(body, "intentId") || "",
+            dryRun: boolInput(body, "dryRun") ?? true,
+            repo: stringInput(body, "repo"),
+            base: stringInput(body, "base"),
+          }) });
+          return;
+        }
+        sendCodeJson(response, 404, { error: "not_found" });
+      } catch (error) {
+        sendCodeJson(response, 400, { error: error instanceof Error ? error.message : String(error) });
+      }
+    })();
+  });
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(port, host, () => resolve());
+  });
+  const address = server.address();
+  const actualPort = typeof address === "object" && address ? address.port : port;
+  return {
+    url: `http://${host}:${actualPort}`,
+    close: () => new Promise<void>((resolve, reject) => {
+      server.close((error) => error ? reject(error) : resolve());
+    }),
+  };
 }
 
 export function createCodeLedger(options: CreateCodeLedgerOptions = {}): CodeLedger {
