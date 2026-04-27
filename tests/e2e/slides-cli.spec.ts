@@ -318,3 +318,55 @@ test("slides pdf fallback remains readable when browser rendering is unavailable
   expect(pdfText).toContain("Prioridades de lanzamiento");
   expect(pdfText).toContain("resultado \\372til");
 });
+
+test("slides fallback PDF keeps image layouts presentable and normalizes escaped newlines", async () => {
+  test.setTimeout(120_000);
+
+  const rootDir = process.cwd();
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-slides-fallback-visual-"));
+  const workspaceDir = path.join(tempRoot, "workspace");
+  fs.mkdirSync(workspaceDir, { recursive: true });
+  const imagePath = path.join(workspaceDir, "visual.svg");
+  writeSyntheticSlideImage(imagePath);
+
+  const created = parseJson<{ deck: { id: string } }>((await runCli(rootDir, [
+    "slides", "create", "Fallback Visual",
+    "--theme", "midnight",
+    "--workspace", workspaceDir,
+    "--json",
+  ])).stdout);
+
+  await runCli(rootDir, [
+    "slides", "add", created.deck.id,
+    "--workspace", workspaceDir,
+    "--layout", "comparison",
+    "--heading", "Before vs after",
+    "--left", "Old flow\\nManual checks\\nWeak exports",
+    "--right", "New flow\\nValidation first\\nPDF ready",
+    "--json",
+  ]);
+  await runCli(rootDir, [
+    "slides", "add", created.deck.id,
+    "--workspace", workspaceDir,
+    "--layout", "full-bleed-image",
+    "--heading", "Image-led story",
+    "--subtitle", "A visual slide should still look intentional when browser rendering falls back.",
+    "--image", imagePath,
+    "--json",
+  ]);
+
+  const rendered = parseJson<{ rendered: Array<{ format: string; path: string; metadata?: Record<string, unknown> }> }>((await runCli(rootDir, [
+    "slides", "render", created.deck.id,
+    "--workspace", workspaceDir,
+    "--format", "pdf",
+    "--json",
+  ], { env: { CLAWJS_SLIDES_DISABLE_BROWSER: "1" } })).stdout);
+  const pdf = rendered.rendered.find((entry) => entry.format === "pdf");
+  expect(pdf).toBeTruthy();
+  expect(pdf?.metadata?.renderer).toBe("node-fallback");
+  const pdfText = fs.readFileSync(pdf!.path, "latin1");
+  expect(pdfText).toContain("Manual checks");
+  expect(pdfText).toContain("Validation first");
+  expect(pdfText).toContain("Image-led story");
+  expect(pdfText).not.toContain("\\\\n");
+});

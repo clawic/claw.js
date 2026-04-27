@@ -585,10 +585,10 @@ body { font-family: ${theme.font}; color: ${theme.fg}; }
 h1, h2, h3, p { margin: 0; }
 h1 { font-size: 78px; line-height: .92; max-width: 980px; }
 h2 { font-size: 58px; line-height: .96; max-width: 1040px; }
-.subtitle { font-size: 32px; line-height: 1.18; color: ${theme.muted}; max-width: 880px; }
-.body { font-size: 32px; line-height: 1.2; color: ${theme.muted}; max-width: 920px; }
+.subtitle { font-size: 32px; line-height: 1.18; color: ${theme.muted}; max-width: 880px; white-space: pre-line; }
+.body { font-size: 32px; line-height: 1.2; color: ${theme.muted}; max-width: 920px; white-space: pre-line; }
 .bullets { counter-reset: bullet; display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; font-size: 27px; line-height: 1.14; }
-.bullets li { counter-increment: bullet; display: grid; grid-template-columns: 54px 1fr; gap: 18px; align-items: center; min-height: 74px; padding: 16px 22px 16px 16px; border-radius: 18px; background: ${hexAlpha(theme.panel, "dd")}; border: 1px solid ${hexAlpha(theme.accent, "24")}; box-shadow: 0 18px 45px ${hexAlpha("#000000", "08")}; }
+.bullets li { counter-increment: bullet; display: grid; grid-template-columns: 54px 1fr; gap: 18px; align-items: center; min-height: 74px; padding: 16px 22px 16px 16px; border-radius: 18px; background: ${hexAlpha(theme.panel, "dd")}; border: 1px solid ${hexAlpha(theme.accent, "24")}; box-shadow: 0 18px 45px ${hexAlpha("#000000", "08")}; white-space: pre-line; }
 .bullets li::before { content: counter(bullet); display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: ${theme.accent}; color: ${theme.bg}; font: 800 21px/1 ${theme.font}; }
 .panel { background: ${hexAlpha(theme.panel, "f2")}; border: 1px solid ${hexAlpha(theme.accent, "28")}; border-radius: 14px; padding: 34px; box-shadow: 0 20px 54px ${hexAlpha("#000000", "09")}; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 34px; align-items: stretch; height: 100%; }
@@ -603,9 +603,9 @@ h2 { font-size: 58px; line-height: .96; max-width: 1040px; }
 .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: stretch; align-self: center; }
 .metric-value { font-size: 60px; font-weight: 800; color: ${theme.accent}; line-height: .95; }
 .metric-label { font-size: 23px; color: ${theme.fg}; font-weight: 700; }
-.metric-detail { font-size: 19px; color: ${theme.muted}; line-height: 1.2; }
+.metric-detail { font-size: 19px; color: ${theme.muted}; line-height: 1.2; white-space: pre-line; }
 .steps { display: grid; gap: 18px; counter-reset: step; align-self: center; }
-.step { counter-increment: step; display: grid; gap: 22px; align-content: start; min-height: 184px; padding: 26px; border-radius: 14px; background: ${hexAlpha(theme.panel, "f0")}; border: 1px solid ${hexAlpha(theme.accent, "24")}; box-shadow: 0 18px 48px ${hexAlpha("#000000", "07")}; font-size: 27px; line-height: 1.14; color: ${theme.fg}; }
+.step { counter-increment: step; display: grid; gap: 22px; align-content: start; min-height: 184px; padding: 26px; border-radius: 14px; background: ${hexAlpha(theme.panel, "f0")}; border: 1px solid ${hexAlpha(theme.accent, "24")}; box-shadow: 0 18px 48px ${hexAlpha("#000000", "07")}; font-size: 27px; line-height: 1.14; color: ${theme.fg}; white-space: pre-line; }
 .step::before { content: counter(step); display: grid; place-items: center; width: 52px; height: 52px; border-radius: 15px; background: ${theme.accent}; color: ${theme.bg}; font-weight: 800; }
 table { width: 100%; border-collapse: collapse; font-size: 22px; overflow: hidden; border-radius: 18px; }
 td, th { padding: 15px 18px; border-bottom: 1px solid ${hexAlpha(theme.muted, "34")}; text-align: left; }
@@ -770,11 +770,41 @@ function fallbackPdfPageContent(slide: SlideManifestSlide, index: number, deck: 
   ];
   const heading = slide.heading ?? slide.title ?? deck.title;
   if (["title", "section", "statement", "closing"].includes(slide.layout)) {
-    lines.push(pdfRect(84, 454, 88, 4, accent2));
+    lines.push(pdfRect(84, 350, 88, 4, accent2));
     lines.push(...pdfTextLines(slide.layout === "closing" ? "CLOSE" : "PRESENTATION", 84, 492, 13, accent, 36, 18));
     lines.push(...pdfTextLines(heading, 84, 438, 50, fg, 27, 60));
     if (slide.subtitle) lines.push(...pdfTextLines(slide.subtitle, 84, 282, 23, muted, 64, 32));
     if (slide.body) lines.push(...pdfTextLines(slide.body, 84, 230, 19, fg, 76, 27));
+  } else if (["image-left", "image-right", "full-bleed-image"].includes(slide.layout)) {
+    const full = slide.layout === "full-bleed-image";
+    lines.push(pdfRect(0, 0, SLIDE_W, SLIDE_H, full ? pdfRgb("#07111f") : bg));
+    if (full) {
+      lines.push(pdfRect(0, 0, SLIDE_W, SLIDE_H, pdfRgb("#07111f")));
+      lines.push(pdfRect(690, 0, 590, SLIDE_H, accent));
+      lines.push(pdfRect(760, 88, 420, 520, accent2));
+      lines.push(pdfRect(812, 136, 316, 424, panel));
+      lines.push(...pdfTextLines(heading, 84, 442, 46, "1.000 1.000 1.000", 26, 56));
+      if (slide.subtitle) lines.push(...pdfTextLines(slide.subtitle, 84, 284, 22, "0.820 0.870 0.920", 58, 31));
+      if (slide.body) lines.push(...pdfTextLines(slide.body, 84, 238, 20, "0.820 0.870 0.920", 64, 29));
+    } else {
+      const imageOnLeft = slide.layout === "image-left";
+      const imageX = imageOnLeft ? 84 : 704;
+      const copyX = imageOnLeft ? 704 : 84;
+      lines.push(pdfRect(imageX, 98, 492, 524, panel));
+      lines.push(pdfRect(imageX + 24, 122, 444, 476, accent));
+      lines.push(pdfRect(imageX + 64, 166, 364, 388, accent2));
+      lines.push(pdfRect(imageX + 108, 218, 276, 286, bg));
+      lines.push(...pdfTextLines(slide.image?.caption ?? "Visual", imageX + 48, 148, 15, fg, 34, 20));
+      lines.push(...pdfTextLines(heading, copyX, 496, 39, fg, 25, 48));
+      if (slide.subtitle) lines.push(...pdfTextLines(slide.subtitle, copyX, 380, 21, muted, 40, 30));
+      if (slide.body) lines.push(...pdfTextLines(slide.body, copyX, 334, 20, fg, 42, 29));
+      let y = slide.body || slide.subtitle ? 244 : 344;
+      for (const [entryIndex, bullet] of (slide.bullets ?? []).slice(0, 3).entries()) {
+        lines.push(pdfRoundedMarker(copyX, y - 14, String(entryIndex + 1), entryIndex % 2 === 0 ? accent : accent2, bg));
+        lines.push(...pdfTextLines(bullet, copyX + 62, y, 18, fg, 38, 25));
+        y -= 68;
+      }
+    }
   } else if (slide.layout === "comparison") {
     lines.push(...pdfTextLines(heading, 84, 578, 39, fg, 34, 46));
     lines.push(pdfRect(84, 126, 520, 330, panel));
@@ -859,19 +889,26 @@ function pdfTextLines(text: string, x: number, y: number, size: number, color: s
 }
 
 function wrapPdfText(text: string, width: number): string[] {
-  const words = text.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
   const lines: string[] = [];
-  let current = "";
-  for (const word of words) {
-    const next = current ? `${current} ${word}` : word;
-    if (next.length > width && current) {
-      lines.push(current);
-      current = word;
-    } else {
-      current = next;
+  const paragraphs = normalizeSlideText(text).split(/\r?\n/);
+  for (const paragraph of paragraphs) {
+    const words = paragraph.replace(/[ \t]+/g, " ").trim().split(" ").filter(Boolean);
+    if (words.length === 0) {
+      if (lines.length) lines.push("");
+      continue;
     }
+    let current = "";
+    for (const word of words) {
+      const next = current ? `${current} ${word}` : word;
+      if (next.length > width && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = next;
+      }
+    }
+    if (current) lines.push(current);
   }
-  if (current) lines.push(current);
   return lines.slice(0, 8);
 }
 
@@ -1116,25 +1153,38 @@ function crc32(buffer: Buffer): number {
 }
 
 function buildSlideFromFlags(layout: SlideLayout, argv: string[], flags: Record<string, string>): SlideManifestSlide {
+  const bullets = readListFlag(argv, flags, "bullet", "bullets").map(normalizeSlideText);
+  const steps = readListFlag(argv, flags, "step", "steps").map(normalizeSlideText);
+  const metrics = parseMetricFlags(argv, flags).map((metric) => ({
+    label: normalizeSlideText(metric.label),
+    value: normalizeSlideText(metric.value),
+    ...(metric.detail ? { detail: normalizeSlideText(metric.detail) } : {}),
+  }));
+  const rows = parseRows(flags["rows-json"] || flags.rows).map((row) => row.map(normalizeSlideText));
+  const metadata = parseObjectFlag(flags["metadata-json"]);
   return {
     id: flags.id || `slide-${randomBytes(4).toString("hex")}`,
     layout,
-    ...(flags.title ? { title: flags.title } : {}),
-    ...(flags.heading ? { heading: flags.heading } : {}),
-    ...(flags.subtitle ? { subtitle: flags.subtitle } : {}),
-    ...(flags.body ? { body: flags.body } : {}),
-    ...(flags.left ? { left: flags.left } : {}),
-    ...(flags.right ? { right: flags.right } : {}),
-    ...(flags.quote ? { quote: flags.quote } : {}),
-    ...(flags.attribution ? { attribution: flags.attribution } : {}),
-    ...(readListFlag(argv, flags, "bullet", "bullets").length ? { bullets: readListFlag(argv, flags, "bullet", "bullets") } : {}),
-    ...(readListFlag(argv, flags, "step", "steps").length ? { steps: readListFlag(argv, flags, "step", "steps") } : {}),
-    ...(parseMetricFlags(argv, flags).length ? { metrics: parseMetricFlags(argv, flags) } : {}),
-    ...(parseRows(flags["rows-json"] || flags.rows).length ? { rows: parseRows(flags["rows-json"] || flags.rows) } : {}),
-    ...(flags.image || flags["image-src"] ? { image: { src: flags.image || flags["image-src"], ...(flags.alt ? { alt: flags.alt } : {}), ...(flags.caption ? { caption: flags.caption } : {}) } } : {}),
-    ...(flags.notes ? { notes: flags.notes } : {}),
-    ...(parseObjectFlag(flags["metadata-json"]) ? { metadata: parseObjectFlag(flags["metadata-json"]) } : {}),
+    ...(flags.title ? { title: normalizeSlideText(flags.title) } : {}),
+    ...(flags.heading ? { heading: normalizeSlideText(flags.heading) } : {}),
+    ...(flags.subtitle ? { subtitle: normalizeSlideText(flags.subtitle) } : {}),
+    ...(flags.body ? { body: normalizeSlideText(flags.body) } : {}),
+    ...(flags.left ? { left: normalizeSlideText(flags.left) } : {}),
+    ...(flags.right ? { right: normalizeSlideText(flags.right) } : {}),
+    ...(flags.quote ? { quote: normalizeSlideText(flags.quote) } : {}),
+    ...(flags.attribution ? { attribution: normalizeSlideText(flags.attribution) } : {}),
+    ...(bullets.length ? { bullets } : {}),
+    ...(steps.length ? { steps } : {}),
+    ...(metrics.length ? { metrics } : {}),
+    ...(rows.length ? { rows } : {}),
+    ...(flags.image || flags["image-src"] ? { image: { src: flags.image || flags["image-src"], ...(flags.alt ? { alt: normalizeSlideText(flags.alt) } : {}), ...(flags.caption ? { caption: normalizeSlideText(flags.caption) } : {}) } } : {}),
+    ...(flags.notes ? { notes: normalizeSlideText(flags.notes) } : {}),
+    ...(metadata ? { metadata } : {}),
   };
+}
+
+function normalizeSlideText(value: string): string {
+  return value.replace(/\\n/g, "\n").replace(/\\t/g, "\t").trim();
 }
 
 function writeOutput(options: SlidesCliOptions, payload: unknown, text: string): void {
