@@ -1126,6 +1126,22 @@ describe("relay e2e", () => {
     );
   });
 
+  test("tailscale private hosts are accepted without forwarded https", async () => {
+    const response = await fetch(`${baseUrl}/v1/auth/login`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        host: "100.64.0.42:5299",
+      },
+      body: JSON.stringify({
+        email: "user@relay.local",
+        password: "relay-user",
+        tenantId: "demo-tenant",
+      }),
+    });
+    assert.equal(response.status, 200);
+  });
+
   test("relay forwards home-scoped iot state, actions, approvals, and stream", async () => {
     const { accessToken } = await login("user@relay.local", "relay-user");
 

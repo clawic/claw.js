@@ -108,7 +108,10 @@ function requestKey(request: FastifyRequest): string {
 function isLoopbackHost(host: string): boolean {
   if (host.includes("localhost") || host.includes("127.0.0.1")) return true;
   const bare = host.replace(/:\d+$/, "");
-  return bare.startsWith("192.168.") || bare.startsWith("10.") || /^172\.(1[6-9]|2\d|3[01])\./.test(bare);
+  return bare.startsWith("192.168.")
+    || bare.startsWith("10.")
+    || /^172\.(1[6-9]|2\d|3[01])\./.test(bare)
+    || /^100\.(6[4-9]|[78]\d|9\d|1[01]\d|12[0-7])\./.test(bare);
 }
 
 function isSecureRequest(request: FastifyRequest): boolean {
