@@ -2301,6 +2301,122 @@ export interface ContextPackListInput {
   status?: ContextPackStatus;
 }
 
+export type CommitmentKind = "promise" | "follow_up" | "delivery";
+export type CommitmentStatus = "active" | "fulfilled" | "missed" | "cancelled";
+export type CommitmentSource = "manual" | "session_capture";
+export type CommitmentPartyKind = "agent" | "user";
+
+export interface CommitmentParty {
+  kind: CommitmentPartyKind;
+  id?: string;
+}
+
+export interface CommitmentEvidence {
+  id: string;
+  sessionId?: string;
+  note: string;
+  quote?: string;
+  artifactId?: string;
+  createdAt: string;
+}
+
+export interface CommitmentLinks {
+  sessions: string[];
+  judgments: string[];
+  decisions: string[];
+  learnings: string[];
+  tasks: string[];
+  reminders: string[];
+  deadlines: string[];
+  artifacts: string[];
+}
+
+export interface CommitmentRecord {
+  id: string;
+  claim: string;
+  kind: CommitmentKind;
+  status: CommitmentStatus;
+  source: CommitmentSource;
+  owner: CommitmentParty;
+  beneficiary: CommitmentParty;
+  evidence: CommitmentEvidence[];
+  links: CommitmentLinks;
+  remindAt?: string;
+  dueAt?: string;
+  outcome?: string;
+  missReason?: string;
+  cancelReason?: string;
+  agentId?: string;
+  workspaceId?: string;
+  createdAt: string;
+  updatedAt: string;
+  fulfilledAt?: string;
+  missedAt?: string;
+  cancelledAt?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CommitmentState {
+  schemaVersion: 1;
+  commitments: CommitmentRecord[];
+  updatedAt: string;
+}
+
+export interface CommitmentAddInput {
+  claim: string;
+  kind: CommitmentKind;
+  ownerAgentId?: string;
+  ownerUserId?: string;
+  beneficiaryUserId?: string;
+  beneficiaryAgentId?: string;
+  sessionId?: string;
+  remindAt?: string;
+  dueAt?: string;
+  taskId?: string;
+  agentId?: string;
+  workspaceId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CommitmentCaptureInput {
+  sessionId: string;
+  ownerAgentId?: string;
+  beneficiaryUserId?: string;
+  agentId?: string;
+  workspaceId?: string;
+}
+
+export interface CommitmentCaptureResult {
+  sessionId: string;
+  commitments: CommitmentRecord[];
+  ignored: boolean;
+  reason?: string;
+}
+
+export interface CommitmentListInput {
+  status?: CommitmentStatus;
+  kind?: CommitmentKind;
+  ownerAgentId?: string;
+}
+
+export interface CommitmentOutcomeInput {
+  outcome?: string;
+  reason?: string;
+  evidenceSessionId?: string;
+  artifactId?: string;
+}
+
+export interface CommitmentLinkInput {
+  session?: string;
+  judgment?: string;
+  decision?: string;
+  learning?: string;
+  task?: string;
+  reminder?: string;
+  deadline?: string;
+  artifact?: string;
+}
+
 export type JudgmentStatus = "prepared" | "decided" | "superseded" | "archived";
 export type JudgmentRecommendation = "act" | "ask_user" | "delegate" | "block";
 export type JudgmentImpact = "low" | "medium" | "high" | "critical";
@@ -2315,6 +2431,7 @@ export interface JudgmentContextRefs {
   artifacts: string[];
   plans: string[];
   tasks: string[];
+  commitments: string[];
 }
 
 export interface JudgmentOptionScore {

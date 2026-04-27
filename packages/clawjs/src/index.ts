@@ -27,7 +27,7 @@ import type { ClawInstance, ImageOperation, ImageProvenance, ImageType, Telegram
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
 import { semanticPlanSchema } from "@clawjs/core";
-import type { ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
+import type { CommitmentKind, CommitmentStatus, ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
 import { runEmbeddedDatabaseCli } from "./database-advanced.ts";
 import { runMagicDbCli } from "./database-magic.ts";
 import { runMemoryCli } from "./memory-local.ts";
@@ -237,6 +237,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} memory save|list|get|update|delete|search|context|status|capabilities`,
     `  ${binName} context prepare|list|show|archive`,
     `  ${binName} outcomes add|capture|list|show|link|archive`,
+    `  ${binName} commitments capture|add|list|show|fulfill|miss|cancel|link`,
     `  ${binName} judgment prepare|record|list|show|link|archive`,
     `  ${binName} learning capture|add|list|show|evidence add|promote|archive`,
     `  ${binName} rules status|list|get|propose|approve|archive|scopes|compile`,
@@ -3976,6 +3977,8 @@ const LEARNING_SENTIMENTS = new Set(["positive", "negative", "neutral"]);
 const LEARNING_PROMOTION_TARGETS = new Set(["rule", "user", "soul", "skill", "memory"]);
 const CONTEXT_PURPOSES = new Set(["judgment", "prompt", "task", "session", "manual"]);
 const CONTEXT_STATUSES = new Set(["active", "archived"]);
+const COMMITMENT_KINDS = new Set(["promise", "follow_up", "delivery"]);
+const COMMITMENT_STATUSES = new Set(["active", "fulfilled", "missed", "cancelled"]);
 const JUDGMENT_STATUSES = new Set(["prepared", "decided", "superseded", "archived"]);
 const JUDGMENT_IMPACTS = new Set(["low", "medium", "high", "critical"]);
 const OUTCOME_RESULTS = new Set(["worked", "failed", "mixed"]);
@@ -4186,6 +4189,150 @@ async function runContextCli(input: {
   }
 
   context.stderr.write(`Usage: ${binName} context prepare|list|show|archive\n`);
+  return CLI_EXIT_USAGE;
+}
+
+async function runCommitmentsCli(input: {
+  argv: string[];
+  positionals: string[];
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+  workspaceRoot: string;
+  appId: string;
+  workspaceId: string;
+  agentId: string;
+  runtimeAdapterId: RuntimeAdapterId;
+}): Promise<number> {
+  const { argv, positionals, flags, context, wantsJson, binName, workspaceRoot, appId, workspaceId, agentId, runtimeAdapterId } = input;
+  const [, command, subcommand] = positionals;
+  const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
+
+  try {
+    if (command === "capture") {
+      const sessionId = flags.session || flags["session-id"] || subcommand;
+      if (!sessionId) {
+        context.stderr.write(`Usage: ${binName} commitments capture --session SESSION_ID [--json]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const result = claw.commitments.capture({
+        sessionId,
+        ownerAgentId: flags["owner-agent"] || flags["owner-agent-id"],
+        beneficiaryUserId: flags["beneficiary-user"] || flags["beneficiary-user-id"],
+      });
+      if (wantsJson) writeJson(context.stdout, result);
+      else context.stdout.write(result.ignored ? `${result.reason ?? "No commitments captured."}\n` : `${result.commitments.map((commitment) => commitment.id).join("\n")}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "add") {
+      const claim = flags.claim || joinedPositionals(positionals, 2);
+      const kind = requireOneOf<CommitmentKind>(flags.kind, COMMITMENT_KINDS, "kind");
+      if (!claim) {
+        context.stderr.write(`Usage: ${binName} commitments add --claim TEXT --kind promise|follow_up|delivery [--remind-at ISO]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const commitment = await claw.commitments.add({
+        claim,
+        kind,
+        ownerAgentId: flags["owner-agent"] || flags["owner-agent-id"],
+        ownerUserId: flags["owner-user"] || flags["owner-user-id"],
+        beneficiaryUserId: flags["beneficiary-user"] || flags["beneficiary-user-id"],
+        beneficiaryAgentId: flags["beneficiary-agent"] || flags["beneficiary-agent-id"],
+        sessionId: flags.session || flags["session-id"],
+        remindAt: flags["remind-at"],
+        dueAt: flags["due-at"],
+        taskId: flags.task || flags["task-id"],
+      });
+      if (wantsJson) writeJson(context.stdout, commitment);
+      else context.stdout.write(`${commitment.id}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "list") {
+      const commitments = claw.commitments.list({
+        ...(flags.status ? { status: requireOneOf<CommitmentStatus>(flags.status, COMMITMENT_STATUSES, "status") } : {}),
+        ...(flags.kind ? { kind: requireOneOf<CommitmentKind>(flags.kind, COMMITMENT_KINDS, "kind") } : {}),
+        ...(flags["owner-agent"] || flags["owner-agent-id"] ? { ownerAgentId: flags["owner-agent"] || flags["owner-agent-id"] } : {}),
+      });
+      if (wantsJson) writeJson(context.stdout, { commitments });
+      else context.stdout.write(`${commitments.map((commitment) => `${commitment.status} ${commitment.kind} ${commitment.id} ${commitment.claim}`).join("\n")}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "show" || command === "inspect") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write(`Usage: ${binName} commitments show <commitment-id> [--json]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const commitment = claw.commitments.show(id);
+      if (!commitment) throw new CliHandledError("not_found", `Commitment not found: ${id}`, CLI_EXIT_FAILURE);
+      if (wantsJson) writeJson(context.stdout, commitment);
+      else context.stdout.write(`${commitment.status} ${commitment.kind} ${commitment.id}\n${commitment.claim}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "fulfill" || command === "miss") {
+      const id = subcommand || flags.id;
+      const text = command === "fulfill" ? flags.outcome : flags.reason;
+      if (!id || !text) {
+        context.stderr.write(`Usage: ${binName} commitments ${command} <commitment-id> --${command === "fulfill" ? "outcome" : "reason"} TEXT\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const payload = {
+        outcome: command === "fulfill" ? text : undefined,
+        reason: command === "miss" ? text : undefined,
+        evidenceSessionId: flags["evidence-session"] || flags.session || flags["session-id"],
+        artifactId: flags.artifact || flags["artifact-id"],
+      };
+      const commitment = command === "fulfill" ? claw.commitments.fulfill(id, payload) : claw.commitments.miss(id, payload);
+      if (wantsJson) writeJson(context.stdout, commitment);
+      else context.stdout.write(`${commitment.status} ${commitment.id}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "cancel") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write(`Usage: ${binName} commitments cancel <commitment-id> [--reason TEXT]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const commitment = claw.commitments.cancel(id, flags.reason);
+      if (wantsJson) writeJson(context.stdout, commitment);
+      else context.stdout.write(`${commitment.status} ${commitment.id}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "link") {
+      const id = subcommand || flags.id;
+      if (!id) {
+        context.stderr.write(`Usage: ${binName} commitments link <commitment-id> [--judgment ID] [--task ID]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const commitment = claw.commitments.link(id, {
+        session: flags.session || flags["session-id"],
+        judgment: flags.judgment || flags["judgment-id"],
+        decision: flags.decision || flags["decision-id"],
+        learning: flags.learning || flags["learning-id"],
+        task: flags.task || flags["task-id"],
+        reminder: flags.reminder || flags["reminder-id"],
+        deadline: flags.deadline || flags["deadline-id"],
+        artifact: flags.artifact || flags["artifact-id"],
+      });
+      if (wantsJson) writeJson(context.stdout, commitment);
+      else context.stdout.write(`${commitment.id}\n`);
+      return CLI_EXIT_OK;
+    }
+  } catch (error) {
+    const handled = cliErrorFromUnknown(error);
+    if (wantsJson) writeCliError(context.stdout, handled);
+    else context.stderr.write(`${handled.message}\n`);
+    return handled.exitCode;
+  }
+
+  context.stderr.write(`Usage: ${binName} commitments capture|add|list|show|fulfill|miss|cancel|link\n`);
   return CLI_EXIT_USAGE;
 }
 
@@ -9733,6 +9880,22 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "context") {
     return await runContextCli({
+      argv,
+      positionals,
+      flags,
+      context,
+      wantsJson,
+      binName,
+      workspaceRoot,
+      appId,
+      workspaceId,
+      agentId,
+      runtimeAdapterId,
+    });
+  }
+
+  if (group === "commitments") {
+    return await runCommitmentsCli({
       argv,
       positionals,
       flags,

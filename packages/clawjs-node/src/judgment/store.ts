@@ -4,6 +4,7 @@ import { createHash, randomUUID } from "crypto";
 import {
   judgmentRecordSchema,
   judgmentStateSchema,
+  type CommitmentRecord,
   type JudgmentContextRefs,
   type JudgmentImpact,
   type JudgmentLinkInput,
@@ -30,6 +31,7 @@ export const JUDGMENT_STATE_FILE = "judgment.json";
 export interface JudgmentPrepareContext {
   rules: RulesCompileMatch[];
   learnings: LearningRecord[];
+  commitments?: CommitmentRecord[];
   user?: UserSpec | null;
   soul?: SoulSpec | null;
   session?: SessionRecord | null;
@@ -75,6 +77,7 @@ function emptyContext(): JudgmentContextRefs {
     artifacts: [],
     plans: [],
     tasks: [],
+    commitments: [],
   };
 }
 
@@ -202,6 +205,7 @@ function buildRationale(input: {
     input.context.user.length ? "user" : "",
     input.context.soul.length ? "soul" : "",
     input.context.sessions.length ? "sessions" : "",
+    input.context.commitments.length ? "commitments" : "",
   ].filter(Boolean);
   if (input.recommendation === "act" && input.recommendedOption) {
     return `Evidence from ${sources.join(", ") || "available context"} supports ${input.recommendedOption} with confidence ${input.confidence.toFixed(2)}.`;
@@ -226,6 +230,7 @@ function contextRefs(
   refs.sessions = input.sessionId ? [input.sessionId] : [];
   refs.user = unique(optionScores.flatMap((score) => score.evidence.filter((entry) => entry.startsWith("user:"))));
   refs.soul = unique(optionScores.flatMap((score) => score.evidence.filter((entry) => entry.startsWith("soul:")).map((entry) => entry.slice("soul:".length))));
+  refs.commitments = unique(context.commitments?.map((commitment) => commitment.id) ?? []);
   return refs;
 }
 

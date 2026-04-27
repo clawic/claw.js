@@ -462,6 +462,67 @@ export const contextPackStateSchema = z.object({
   updatedAt: z.string().min(1),
 });
 
+export const commitmentKindSchema = z.enum(["promise", "follow_up", "delivery"]);
+export const commitmentStatusSchema = z.enum(["active", "fulfilled", "missed", "cancelled"]);
+export const commitmentSourceSchema = z.enum(["manual", "session_capture"]);
+export const commitmentPartyKindSchema = z.enum(["agent", "user"]);
+
+export const commitmentPartySchema = z.object({
+  kind: commitmentPartyKindSchema,
+  id: z.string().min(1).optional(),
+});
+
+export const commitmentEvidenceSchema = z.object({
+  id: z.string().min(1),
+  sessionId: z.string().min(1).optional(),
+  note: z.string().min(1),
+  quote: z.string().min(1).optional(),
+  artifactId: z.string().min(1).optional(),
+  createdAt: z.string().min(1),
+});
+
+export const commitmentLinksSchema = z.object({
+  sessions: z.array(z.string().min(1)).default([]),
+  judgments: z.array(z.string().min(1)).default([]),
+  decisions: z.array(z.string().min(1)).default([]),
+  learnings: z.array(z.string().min(1)).default([]),
+  tasks: z.array(z.string().min(1)).default([]),
+  reminders: z.array(z.string().min(1)).default([]),
+  deadlines: z.array(z.string().min(1)).default([]),
+  artifacts: z.array(z.string().min(1)).default([]),
+});
+
+export const commitmentRecordSchema = z.object({
+  id: z.string().min(1),
+  claim: z.string().min(1),
+  kind: commitmentKindSchema,
+  status: commitmentStatusSchema,
+  source: commitmentSourceSchema,
+  owner: commitmentPartySchema,
+  beneficiary: commitmentPartySchema,
+  evidence: z.array(commitmentEvidenceSchema),
+  links: commitmentLinksSchema,
+  remindAt: z.string().min(1).optional(),
+  dueAt: z.string().min(1).optional(),
+  outcome: z.string().min(1).optional(),
+  missReason: z.string().min(1).optional(),
+  cancelReason: z.string().min(1).optional(),
+  agentId: z.string().min(1).optional(),
+  workspaceId: z.string().min(1).optional(),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+  fulfilledAt: z.string().min(1).optional(),
+  missedAt: z.string().min(1).optional(),
+  cancelledAt: z.string().min(1).optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+export const commitmentStateSchema = z.object({
+  schemaVersion: z.literal(1),
+  commitments: z.array(commitmentRecordSchema),
+  updatedAt: z.string().min(1),
+});
+
 export const judgmentStatusSchema = z.enum(["prepared", "decided", "superseded", "archived"]);
 export const judgmentRecommendationSchema = z.enum(["act", "ask_user", "delegate", "block"]);
 export const judgmentImpactSchema = z.enum(["low", "medium", "high", "critical"]);
@@ -476,6 +537,7 @@ export const judgmentContextRefsSchema = z.object({
   artifacts: z.array(z.string().min(1)).default([]),
   plans: z.array(z.string().min(1)).default([]),
   tasks: z.array(z.string().min(1)).default([]),
+  commitments: z.array(z.string().min(1)).default([]),
 });
 
 export const judgmentOptionScoreSchema = z.object({

@@ -150,6 +150,7 @@ The Relay also exposes equivalent project-scoped routes under:
 | Memory search | `claw.memory.search()` | `claw memory search` | `-` |
 | Learning capture / list / promote | `claw.learning.*` | `claw learning capture|add|list|show|evidence add|promote|archive` | `-` |
 | Context prepare / inspect | `claw.context.*` | `claw context prepare|list|show|archive` | `-` |
+| Commitments capture / outcome / link | `claw.commitments.*` | `claw commitments capture|add|list|show|fulfill|miss|cancel|link` | `-` |
 | Judgment prepare / record / link | `claw.judgment.*` | `claw judgment prepare|record|list|show|link|archive` | `-` |
 | Outcomes add / capture / link | `claw.outcomes.*` | `claw outcomes add|capture|list|show|link|archive` | `-` |
 | Skills list | `claw.skills.list()` | `claw skills list` | `GET WS/skills/list` |

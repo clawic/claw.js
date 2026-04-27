@@ -81,6 +81,13 @@ import type {
   ContextPackListInput,
   ContextPackPrepareInput,
   ContextPackRecord,
+  CommitmentAddInput,
+  CommitmentCaptureInput,
+  CommitmentCaptureResult,
+  CommitmentLinkInput,
+  CommitmentListInput,
+  CommitmentOutcomeInput,
+  CommitmentRecord,
   JudgmentImpact,
   JudgmentLinkInput,
   JudgmentListInput,
@@ -201,6 +208,7 @@ import { SessionStore } from "./sessions/store.ts";
 import { createSoulStore } from "./soul/store.ts";
 import { createUserStore } from "./user/store.ts";
 import { createContextStore } from "./context/store.ts";
+import { createCommitmentStore } from "./commitments/store.ts";
 import { createJudgmentStore } from "./judgment/store.ts";
 import { createLearningStore } from "./learning/store.ts";
 import { createOutcomeStore } from "./outcomes/store.ts";
@@ -990,6 +998,16 @@ export interface ClawInstance {
     show: (id: string) => ContextPackRecord | null;
     archive: (id: string, reason?: string) => ContextPackRecord;
   };
+  commitments: {
+    capture: (input: CommitmentCaptureInput) => CommitmentCaptureResult;
+    add: (input: CommitmentAddInput) => Promise<CommitmentRecord>;
+    list: (input?: CommitmentListInput) => CommitmentRecord[];
+    show: (id: string) => CommitmentRecord | null;
+    fulfill: (id: string, input: CommitmentOutcomeInput) => CommitmentRecord;
+    miss: (id: string, input: CommitmentOutcomeInput) => CommitmentRecord;
+    cancel: (id: string, reason?: string) => CommitmentRecord;
+    link: (id: string, input: CommitmentLinkInput) => CommitmentRecord;
+  };
   judgment: {
     prepare: (input: { question: string; domain: string; impact?: JudgmentImpact; options?: string[]; sessionId?: string; metadata?: Record<string, unknown> }) => JudgmentRecord;
     record: (id: string, input: JudgmentRecordInput) => JudgmentRecord;
@@ -1615,6 +1633,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   const runtimeAgentId = options.workspace.runtimeAgentId ?? logicalAgentId;
   const sessionStore = new SessionStore(workspaceDir, { filesystem });
   const contextStore = createContextStore({ workspaceDir, filesystem });
+  const commitmentStore = createCommitmentStore({ workspaceDir, filesystem });
   const judgmentStore = createJudgmentStore({ workspaceDir, filesystem });
   const learningStore = createLearningStore({ workspaceDir, filesystem });
   const outcomeStore = createOutcomeStore({ workspaceDir, filesystem });
@@ -4692,6 +4711,20 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     return pack;
   }
 
+  async function projectCommitmentReminder(commitment: CommitmentRecord): Promise<CommitmentRecord> {
+    if (!commitment.remindAt || commitment.links.reminders.length > 0) return commitment;
+    const reminder = await requireTimeClient().create({
+      ...temporalDefaults(),
+      kind: "reminder",
+      title: commitment.claim,
+      startsAt: commitment.remindAt,
+      anchorType: "standalone",
+      anchorId: commitment.id,
+      sourceProvider: "commitments",
+    });
+    return commitmentStore.link(commitment.id, { reminder: reminder.item.id });
+  }
+
   return {
     runtime: {
       context: () => runtimeContext,
@@ -5723,6 +5756,58 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         return pack;
       },
     },
+    commitments: {
+      capture: (input) => {
+        const session = sessionStore.getSession(input.sessionId);
+        const result = commitmentStore.captureSession(session, {
+          ...input,
+          ownerAgentId: input.ownerAgentId ?? logicalAgentId,
+          agentId: input.agentId ?? logicalAgentId,
+          workspaceId: input.workspaceId ?? options.workspace.workspaceId,
+        });
+        appendAuditEvent("commitments.captured", "commitments", { sessionId: input.sessionId, count: result.commitments.length, ignored: result.ignored });
+        eventBus.emit("commitments.captured", { sessionId: input.sessionId, count: result.commitments.length, ignored: result.ignored });
+        return result;
+      },
+      add: async (input) => {
+        const commitment = commitmentStore.add({
+          ...input,
+          ownerAgentId: input.ownerAgentId ?? logicalAgentId,
+          agentId: input.agentId ?? logicalAgentId,
+          workspaceId: input.workspaceId ?? options.workspace.workspaceId,
+        });
+        const projected = await projectCommitmentReminder(commitment);
+        appendAuditEvent("commitments.added", "commitments", { commitmentId: projected.id, kind: projected.kind, reminderCount: projected.links.reminders.length });
+        eventBus.emit("commitments.added", { commitmentId: projected.id, kind: projected.kind, reminderCount: projected.links.reminders.length });
+        return projected;
+      },
+      list: (input = {}) => commitmentStore.list(input),
+      show: (id) => commitmentStore.get(id),
+      fulfill: (id, input) => {
+        const commitment = commitmentStore.fulfill(id, input);
+        appendAuditEvent("commitments.fulfilled", "commitments", { commitmentId: commitment.id });
+        eventBus.emit("commitments.fulfilled", { commitmentId: commitment.id });
+        return commitment;
+      },
+      miss: (id, input) => {
+        const commitment = commitmentStore.miss(id, input);
+        appendAuditEvent("commitments.missed", "commitments", { commitmentId: commitment.id });
+        eventBus.emit("commitments.missed", { commitmentId: commitment.id });
+        return commitment;
+      },
+      cancel: (id, reason) => {
+        const commitment = commitmentStore.cancel(id, reason);
+        appendAuditEvent("commitments.cancelled", "commitments", { commitmentId: commitment.id, reason });
+        eventBus.emit("commitments.cancelled", { commitmentId: commitment.id, reason });
+        return commitment;
+      },
+      link: (id, input) => {
+        const commitment = commitmentStore.link(id, input);
+        appendAuditEvent("commitments.linked", "commitments", { commitmentId: commitment.id });
+        eventBus.emit("commitments.linked", { commitmentId: commitment.id });
+        return commitment;
+      },
+    },
     judgment: {
       prepare: (input) => {
         const contextPack = prepareContextPack({
@@ -5746,6 +5831,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         }, {
           rules: rules.included,
           learnings: activeLearnings,
+          commitments: commitmentStore.relevantTo(input.question, input.options ?? []),
           user: userStore.resolve({ agentId: logicalAgentId }),
           soul: soulStore.resolve({ agentId: logicalAgentId }),
           session,
