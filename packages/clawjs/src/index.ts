@@ -14,6 +14,7 @@ import {
   createLocalStorageStore,
   createStorageHttpHandler,
   createLocalLibraryStore,
+  createCodeLedger,
   discoverWorkspaces,
   getRuntimeAdapter,
   normalizeLibraryId,
@@ -239,6 +240,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} skills list|inspect|sync|sources|search|install`,
     `  ${binName} library list|inspect|create|update|remove|import-skill|assign|unassign|resolve|sync`,
     `  ${binName} plan create|list|show|run|approve|reject|review|policy`,
+    `  ${binName} code init|start|status|list|show|reserve|evidence|check|commit|review|queue|integrate|sync`,
     `  ${binName} soul init|validate|preview|compile|assign|inspect`,
     `  ${binName} user init|set|add|propose|verify|list|get|inspect|validate|preview|compile|assign`,
     `  ${binName} channels list|status|telegram|assign|unassign|assignments|processors|listen|targets|messages|permissions|commands`,
@@ -4499,6 +4501,208 @@ function buildScaffoldCompletionNote(type: ClawProjectType): string {
   return "The generated project uses the demo adapter by default. Switch scripts and helpers to openclaw when you want a real runtime.";
 }
 
+function parseCodeListFlag(value: string | undefined): string[] {
+  return value
+    ? value.split(",").map((entry) => entry.trim()).filter(Boolean)
+    : [];
+}
+
+function resolveCodeIntentId(positionals: string[], flags: Record<string, string>, index = 2): string {
+  const id = flags.intent ?? flags["intent-id"] ?? flags.id ?? positionals[index];
+  if (!id) throw new CliHandledError("usage_error", "A code intent id is required.", CLI_EXIT_USAGE);
+  return id;
+}
+
+async function runCodeCli(input: {
+  positionals: string[];
+  flags: Record<string, string>;
+  argv: string[];
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+}): Promise<number> {
+  const [, command, subcommand] = input.positionals;
+  const ledger = createCodeLedger({ cwd: input.flags.repo || input.flags.workspace || input.context.cwd });
+  const dryRun = readBooleanFlag(input.argv, input.flags, "dry-run", false);
+
+  try {
+    if (command === "init") {
+      const repository = ledger.init();
+      if (input.wantsJson) writeJson(input.context.stdout, { repository, databasePath: ledger.databasePath });
+      else input.context.stdout.write(`${repository.id}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "status") {
+      const status = ledger.status();
+      if (input.wantsJson) writeJson(input.context.stdout, status);
+      else input.context.stdout.write(`${status.intents.length} intents, ${status.queued.length} queued\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "list") {
+      const intents = ledger.listIntents({ ...(input.flags.status ? { status: input.flags.status as never } : {}) });
+      if (input.wantsJson) writeJson(input.context.stdout, { intents });
+      else input.context.stdout.write(formatCliTable(intents.map((intent) => ({
+        id: intent.id,
+        status: intent.status,
+        kind: intent.kind,
+        scope: intent.scope,
+        title: intent.title,
+      }))) + "\n");
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "show") {
+      const detail = ledger.showIntent(resolveCodeIntentId(input.positionals, input.flags));
+      if (input.wantsJson) writeJson(input.context.stdout, detail);
+      else input.context.stdout.write(`${detail.intent.id} ${detail.intent.status} ${detail.intent.branch}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "start") {
+      const kind = input.flags.kind;
+      const scope = input.flags.scope;
+      const title = input.flags.title ?? joinedPositionals(input.positionals, 2);
+      if (!kind || !scope || !title) {
+        input.context.stderr.write(`Usage: ${input.binName} code start --kind fix|feat|refactor|docs|test|chore --scope SCOPE --title TEXT\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const detail = ledger.start({
+        kind: kind as never,
+        scope,
+        title,
+        ...(input.flags.summary ? { summary: input.flags.summary } : {}),
+        ...(input.flags.risk ? { risk: input.flags.risk as never } : {}),
+        ...(input.flags["agent-id"] ? { agentId: input.flags["agent-id"] } : {}),
+        ...(input.flags.base ? { baseBranch: input.flags.base } : {}),
+        paths: [...parseCodeListFlag(input.flags.path), ...parseCodeListFlag(input.flags.paths)],
+      });
+      if (input.wantsJson) writeJson(input.context.stdout, detail);
+      else input.context.stdout.write(`${detail.intent.id}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "reserve") {
+      const reservations = ledger.reserve({
+        intentId: resolveCodeIntentId(input.positionals, input.flags),
+        scopes: parseCodeListFlag(input.flags.scope ?? input.flags.scopes),
+        paths: [...parseCodeListFlag(input.flags.path), ...parseCodeListFlag(input.flags.paths)],
+      });
+      if (input.wantsJson) writeJson(input.context.stdout, { reservations });
+      else input.context.stdout.write(`${reservations.length}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "evidence" && subcommand === "add") {
+      const label = input.flags.label ?? input.flags.title ?? joinedPositionals(input.positionals, 3);
+      if (!label) {
+        input.context.stderr.write(`Usage: ${input.binName} code evidence add --intent ID --label TEXT [--path PATH|--url URL]\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const evidence = ledger.addEvidence({
+        intentId: resolveCodeIntentId(input.positionals, input.flags, 3),
+        label,
+        ...(input.flags.kind ? { kind: input.flags.kind } : {}),
+        ...(input.flags.path ? { path: input.flags.path } : {}),
+        ...(input.flags.url ? { url: input.flags.url } : {}),
+      });
+      if (input.wantsJson) writeJson(input.context.stdout, { evidence });
+      else input.context.stdout.write(`${evidence.id}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "check" && subcommand === "record") {
+      const name = input.flags.name ?? input.flags.check ?? "check";
+      const status = input.flags.status;
+      if (status !== "passed" && status !== "failed") {
+        input.context.stderr.write(`Usage: ${input.binName} code check record --intent ID --name NAME --status passed|failed\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const check = ledger.recordCheck({
+        intentId: resolveCodeIntentId(input.positionals, input.flags, 3),
+        name,
+        status,
+        ...(input.flags.command ? { command: input.flags.command } : {}),
+        ...(input.flags.output ? { output: input.flags.output } : {}),
+      });
+      if (input.wantsJson) writeJson(input.context.stdout, { check });
+      else input.context.stdout.write(`${check.id}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "check" && subcommand === "run") {
+      const name = input.flags.name ?? input.flags.check ?? "check";
+      const commandText = input.flags.command ?? joinedPositionals(input.positionals, 3);
+      if (!commandText) {
+        input.context.stderr.write(`Usage: ${input.binName} code check run --intent ID --name NAME --command COMMAND\n`);
+        return CLI_EXIT_USAGE;
+      }
+      const check = ledger.runCheck({
+        intentId: resolveCodeIntentId(input.positionals, input.flags, 3),
+        name,
+        command: commandText,
+      });
+      if (input.wantsJson) writeJson(input.context.stdout, { check });
+      else input.context.stdout.write(`${check.status}\n`);
+      return check.status === "passed" ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
+    }
+
+    if (command === "commit") {
+      const result = ledger.commit(resolveCodeIntentId(input.positionals, input.flags));
+      if (input.wantsJson) writeJson(input.context.stdout, result);
+      else input.context.stdout.write(`${result.commitSha}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "review" && (subcommand === "approve" || subcommand === "reject")) {
+      const review = ledger.review({
+        intentId: resolveCodeIntentId(input.positionals, input.flags, 3),
+        reviewer: input.flags.reviewer ?? input.flags["agent-id"] ?? "operator",
+        decision: subcommand === "approve" ? "approved" : "rejected",
+        ...(input.flags.reason ? { reason: input.flags.reason } : {}),
+      });
+      if (input.wantsJson) writeJson(input.context.stdout, { review });
+      else input.context.stdout.write(`${review.id}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "queue") {
+      const queue = ledger.queue(resolveCodeIntentId(input.positionals, input.flags));
+      if (input.wantsJson) writeJson(input.context.stdout, { queue });
+      else input.context.stdout.write(`${queue.status}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "integrate") {
+      const result = ledger.integrate(resolveCodeIntentId(input.positionals, input.flags));
+      if (input.wantsJson) writeJson(input.context.stdout, result);
+      else input.context.stdout.write(`${result.integrationSha}\n`);
+      return CLI_EXIT_OK;
+    }
+
+    if (command === "sync" && subcommand === "github") {
+      const sync = ledger.syncGithub({
+        intentId: resolveCodeIntentId(input.positionals, input.flags, 3),
+        dryRun,
+        ...(input.flags.repo ? { repo: input.flags.repo } : {}),
+        ...(input.flags.base ? { base: input.flags.base } : {}),
+      });
+      if (input.wantsJson) writeJson(input.context.stdout, { sync });
+      else input.context.stdout.write(`${sync.remoteUrl ?? sync.status}\n`);
+      return sync.status === "failed" ? CLI_EXIT_FAILURE : CLI_EXIT_OK;
+    }
+
+    input.context.stderr.write(`Usage: ${input.binName} code init|start|status|list|show|reserve|evidence add|check run|check record|commit|review approve|review reject|queue|integrate|sync github\n`);
+    return CLI_EXIT_USAGE;
+  } catch (error) {
+    const handled = cliErrorFromUnknown(error);
+    if (input.wantsJson) writeCliError(input.context.stdout, handled);
+    else input.context.stderr.write(`${handled.message}\n`);
+    return handled.exitCode;
+  }
+}
+
 function registerGeneratedSkillInLibrary(input: {
   id: string;
   title: string;
@@ -4611,6 +4815,10 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         },
       },
     });
+  }
+
+  if (group === "code") {
+    return await runCodeCli({ positionals, flags, argv, context, wantsJson, binName });
   }
 
   if (wantsHelp || group === "help") {
