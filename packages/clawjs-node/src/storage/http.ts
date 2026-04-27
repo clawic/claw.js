@@ -1,11 +1,19 @@
+import fs from "fs";
 import http, { type IncomingMessage, type ServerResponse } from "http";
+import path from "path";
 
 import type { LocalStorageStore, StorageShare } from "./store.ts";
+
+export interface StorageOwnerTokenOptions {
+  path: string;
+  label?: string;
+}
 
 export interface StorageHttpServerOptions {
   store: LocalStorageStore;
   host?: string;
   port?: number;
+  ownerToken?: StorageOwnerTokenOptions;
 }
 
 export interface StorageHttpServer {
@@ -13,6 +21,8 @@ export interface StorageHttpServer {
   url: string;
   close: () => Promise<void>;
 }
+
+export type StorageHttpHandler = (request: IncomingMessage, response: ServerResponse) => Promise<unknown>;
 
 function bearerToken(request: IncomingMessage): string | null {
   const header = request.headers.authorization;
@@ -55,12 +65,65 @@ function shareExpired(share: StorageShare): boolean {
   return Boolean(share.expiresAt && Date.parse(share.expiresAt) <= Date.now());
 }
 
-export async function startStorageHttpServer(options: StorageHttpServerOptions): Promise<StorageHttpServer> {
-  const host = options.host ?? "127.0.0.1";
-  const port = options.port ?? 0;
-  const server = http.createServer(async (request, response) => {
+function isLoopbackRequest(request: IncomingMessage): boolean {
+  const remote = request.socket.remoteAddress;
+  if (!remote) return false;
+  return remote === "127.0.0.1" || remote === "::1" || remote === "::ffff:127.0.0.1";
+}
+
+export function ensureOwnerTokenFile(
+  store: LocalStorageStore,
+  options: StorageOwnerTokenOptions,
+): string {
+  const tokenPath = options.path;
+  if (fs.existsSync(tokenPath)) {
+    const existing = fs.readFileSync(tokenPath, "utf8").trim();
+    if (existing && store.isOwnerToken(existing)) return existing;
+  }
+  const issued = store.issueOwnerToken({ label: options.label });
+  fs.mkdirSync(path.dirname(tokenPath), { recursive: true });
+  fs.writeFileSync(tokenPath, issued.token, { mode: 0o600 });
+  try {
+    fs.chmodSync(tokenPath, 0o600);
+  } catch {
+    // best effort on platforms without chmod
+  }
+  return issued.token;
+}
+
+export function createStorageHttpHandler(
+  options: Pick<StorageHttpServerOptions, "store" | "ownerToken">,
+): StorageHttpHandler {
+  return async (request, response) => {
     const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "127.0.0.1"}`);
     try {
+      if (request.method === "GET" && url.pathname === "/v1/storage/owner-token") {
+        if (!options.ownerToken) return sendError(response, 404, "owner_token_disabled");
+        if (!isLoopbackRequest(request)) return sendError(response, 403, "loopback_only");
+        let token: string;
+        try {
+          token = fs.readFileSync(options.ownerToken.path, "utf8").trim();
+        } catch {
+          return sendError(response, 404, "owner_token_missing");
+        }
+        if (!token || !options.store.isOwnerToken(token)) {
+          return sendError(response, 404, "owner_token_invalid");
+        }
+        return sendJson(response, 200, { token });
+      }
+
+      if (request.method === "GET" && url.pathname === "/v1/storage/buckets") {
+        const token = bearerToken(request);
+        if (!token) return sendError(response, 401, "missing_token");
+        const scoped = options.store.scopedTokenStore(token);
+        if (!scoped) return sendError(response, 401, "invalid_token");
+        try {
+          return sendJson(response, 200, { buckets: scoped.listBuckets() });
+        } finally {
+          scoped.close();
+        }
+      }
+
       if (request.method === "GET" && url.pathname === "/v1/storage/objects") {
         const token = bearerToken(request);
         if (!token) return sendError(response, 401, "missing_token");
@@ -172,8 +235,16 @@ export async function startStorageHttpServer(options: StorageHttpServerOptions):
     } catch (error) {
       return sendError(response, 400, error instanceof Error ? error.message : String(error));
     }
-  });
+  };
+}
 
+export async function startStorageHttpServer(options: StorageHttpServerOptions): Promise<StorageHttpServer> {
+  const host = options.host ?? "127.0.0.1";
+  const port = options.port ?? 0;
+  if (options.ownerToken) {
+    ensureOwnerTokenFile(options.store, options.ownerToken);
+  }
+  const server = http.createServer(createStorageHttpHandler(options));
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, host, () => {

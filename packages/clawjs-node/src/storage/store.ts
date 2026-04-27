@@ -50,6 +50,7 @@ export interface StorageScopedToken {
   createdAt: string;
   lastUsedAt?: string | null;
   revokedAt?: string | null;
+  isOwner?: boolean;
 }
 
 export interface StorageShare {
@@ -104,6 +105,7 @@ export interface StorageStoreOptions {
   driveIndexAdapter?: StorageDriveIndexAdapter;
   includeDefaultGrants?: boolean;
   rawKeys?: boolean;
+  ownerMode?: boolean;
 }
 
 interface ObjectRow {
@@ -128,6 +130,7 @@ interface TokenRow {
   created_at: string;
   last_used_at: string | null;
   revoked_at: string | null;
+  is_owner: number;
 }
 
 interface ShareRow {
@@ -277,6 +280,7 @@ function serializeToken(row: TokenRow): StorageScopedToken {
     createdAt: row.created_at,
     lastUsedAt: row.last_used_at,
     revokedAt: row.revoked_at,
+    isOwner: Boolean(row.is_owner),
   };
 }
 
@@ -388,7 +392,8 @@ export class LocalStorageStore {
         grants_json TEXT NOT NULL,
         created_at TEXT NOT NULL,
         last_used_at TEXT,
-        revoked_at TEXT
+        revoked_at TEXT,
+        is_owner INTEGER NOT NULL DEFAULT 0
       );
 
       CREATE TABLE IF NOT EXISTS storage_shares (
@@ -410,6 +415,7 @@ export class LocalStorageStore {
       );
     `);
     this.ensureColumn("storage_objects", "visibility", "TEXT NOT NULL DEFAULT 'internal'");
+    this.ensureColumn("storage_tokens", "is_owner", "INTEGER NOT NULL DEFAULT 0");
     this.ensureColumn("storage_shares", "snapshot_blob_path", "TEXT NOT NULL DEFAULT ''");
     this.ensureColumn("storage_shares", "snapshot_size_bytes", "INTEGER NOT NULL DEFAULT 0");
     this.ensureColumn("storage_shares", "snapshot_content_type", "TEXT NOT NULL DEFAULT 'application/octet-stream'");
@@ -439,10 +445,12 @@ export class LocalStorageStore {
 
   private resolvePrefix(prefix?: string): string {
     if (prefix?.trim()) return normalizePrefix(prefix);
+    if (this.options.ownerMode) return "";
     return `agents/${this.options.agentId}/`;
   }
 
   private assertAllowed(bucket: string, key: string, operation: StorageOperation): void {
+    if (this.options.ownerMode) return;
     const allowed = this.grants.some((grant) => (
       grant.bucket === bucket
       && grant.operations.includes(operation)
@@ -598,8 +606,8 @@ export class LocalStorageStore {
     const id = crypto.randomUUID();
     const now = nowIso();
     this.sqlite.prepare(`
-      INSERT INTO storage_tokens (id, label, token_hash, grants_json, created_at, last_used_at, revoked_at)
-      VALUES (?, ?, ?, ?, ?, NULL, NULL)
+      INSERT INTO storage_tokens (id, label, token_hash, grants_json, created_at, last_used_at, revoked_at, is_owner)
+      VALUES (?, ?, ?, ?, ?, NULL, NULL, 0)
     `).run(id, input.label?.trim() || "storage token", hashSecret(token), JSON.stringify(grants), now);
     return {
       record: this.getToken(id)!,
@@ -607,9 +615,50 @@ export class LocalStorageStore {
     };
   }
 
+  issueOwnerToken(input: { label?: string } = {}): { record: StorageScopedToken; token: string } {
+    const token = generateToken("stg_owner");
+    const id = crypto.randomUUID();
+    const now = nowIso();
+    this.sqlite.prepare(`
+      INSERT INTO storage_tokens (id, label, token_hash, grants_json, created_at, last_used_at, revoked_at, is_owner)
+      VALUES (?, ?, ?, ?, ?, NULL, NULL, 1)
+    `).run(id, input.label?.trim() || "owner", hashSecret(token), JSON.stringify([]), now);
+    return {
+      record: this.getToken(id)!,
+      token,
+    };
+  }
+
+  findActiveOwnerToken(): StorageScopedToken | null {
+    const row = this.sqlite.prepare(`
+      SELECT id, label, token_hash, grants_json, created_at, last_used_at, revoked_at, is_owner
+      FROM storage_tokens
+      WHERE is_owner = 1 AND revoked_at IS NULL
+      ORDER BY created_at DESC
+      LIMIT 1
+    `).get() as TokenRow | undefined;
+    return row ? serializeToken(row) : null;
+  }
+
+  isOwnerToken(token: string): boolean {
+    const row = this.sqlite.prepare(`
+      SELECT is_owner FROM storage_tokens
+      WHERE token_hash = ? AND revoked_at IS NULL
+      LIMIT 1
+    `).get(hashSecret(token)) as { is_owner: number } | undefined;
+    return Boolean(row?.is_owner);
+  }
+
+  listBuckets(): string[] {
+    const rows = this.sqlite.prepare(`
+      SELECT DISTINCT bucket FROM storage_objects ORDER BY bucket ASC
+    `).all() as Array<{ bucket: string }>;
+    return rows.map((row) => row.bucket);
+  }
+
   listTokens(): StorageScopedToken[] {
     return (this.sqlite.prepare(`
-      SELECT id, label, token_hash, grants_json, created_at, last_used_at, revoked_at
+      SELECT id, label, token_hash, grants_json, created_at, last_used_at, revoked_at, is_owner
       FROM storage_tokens
       ORDER BY created_at DESC
     `).all() as TokenRow[]).map(serializeToken);
@@ -617,7 +666,7 @@ export class LocalStorageStore {
 
   authenticateToken(token: string): StorageScopedToken | null {
     const row = this.sqlite.prepare(`
-      SELECT id, label, token_hash, grants_json, created_at, last_used_at, revoked_at
+      SELECT id, label, token_hash, grants_json, created_at, last_used_at, revoked_at, is_owner
       FROM storage_tokens
       WHERE token_hash = ? AND revoked_at IS NULL
       LIMIT 1
@@ -633,19 +682,20 @@ export class LocalStorageStore {
     if (!record) return null;
     return new LocalStorageStore({
       workspaceDir: this.options.workspaceDir,
-      agentId: `token-${record.id}`,
+      agentId: record.isOwner ? "owner" : `token-${record.id}`,
       grants: record.grants,
       filesystem: this.filesystem,
       shareAdapter: this.shareAdapter,
       driveIndexAdapter: this.driveIndexAdapter,
       includeDefaultGrants: false,
       rawKeys: true,
+      ownerMode: record.isOwner,
     });
   }
 
   getToken(id: string): StorageScopedToken | null {
     const row = this.sqlite.prepare(`
-      SELECT id, label, token_hash, grants_json, created_at, last_used_at, revoked_at
+      SELECT id, label, token_hash, grants_json, created_at, last_used_at, revoked_at, is_owner
       FROM storage_tokens
       WHERE id = ?
       LIMIT 1

@@ -1,5 +1,6 @@
 import fs from "fs";
 import http from "http";
+import net from "net";
 import os from "os";
 import path from "path";
 import { spawn, spawnSync } from "child_process";
@@ -10,12 +11,15 @@ import {
   buildCodexCommand,
   buildSetDefaultModelCommand,
   createClaw,
+  createLocalStorageStore,
+  createStorageHttpHandler,
   createLocalLibraryStore,
   discoverWorkspaces,
   getRuntimeAdapter,
   normalizeLibraryId,
   redactSecrets,
 } from "@clawjs/claw";
+import { buildDatabaseApp } from "@clawjs/database";
 import type { ClawInstance, ImageOperation, ImageProvenance, ImageType, TelegramSendMediaInput, TelegramSendMessageInput, VoiceNoteStatus } from "@clawjs/claw";
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
@@ -197,6 +201,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `Usage: ${binName} <command> [options]`,
     "",
     "Primary workflow:",
+    `  ${binName} open <memory|storage|database|vault|time|feed|drive|wiki|relay|monitor|execution|delegation|content|erp|iot|day|company|notify>`,
     `  ${binName} db <collection> <title>`,
     `  ${binName} db <collection> list|get|create|update|delete|schema`,
     `  ${binName} tasks|notes|people|projects|goals|reminders|deadlines ...`,
@@ -271,6 +276,59 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
 export const CLI_USAGE = buildCliUsage();
 
 const CLI_TEMPLATE_ROOT = fileURLToPath(new URL("../templates", import.meta.url));
+
+type OpenSurfaceKind = "internal-database" | "internal-storage" | "cli-serve" | "server-script" | "memory" | "day" | "next";
+
+interface OpenSurface {
+  id: string;
+  label: string;
+  port: number;
+  aliases?: string[];
+  kind: OpenSurfaceKind;
+  dir?: string;
+  script?: string;
+  envHost?: string;
+  envPort?: string;
+  buildCheck?: string;
+}
+
+interface OpenSurfaceState {
+  surface: string;
+  pid: number;
+  host: string;
+  port: number;
+  url: string;
+  workspace: string;
+  startedAt: string;
+}
+
+const OPEN_SURFACES: OpenSurface[] = [
+  { id: "memory", label: "Memory", port: 18273, kind: "memory", dir: "memory", buildCheck: "dist/cli.js" },
+  { id: "storage", label: "Storage", port: 18419, kind: "internal-storage", dir: "storage/ui", buildCheck: "dist/index.html" },
+  { id: "database", label: "Database", port: 18647, aliases: ["db"], kind: "internal-database" },
+  { id: "vault", label: "Vault", port: 18853, kind: "server-script", dir: "vault", script: "dist/server.js", envHost: "VAULT_HOST", envPort: "VAULT_PORT", buildCheck: "dist/server.js" },
+  { id: "time", label: "Time", port: 19121, kind: "server-script", dir: "time", script: "dist/server.js", envHost: "CLAWJS_TIME_HOST", envPort: "CLAWJS_TIME_PORT", buildCheck: "dist/server.js" },
+  { id: "feed", label: "Feed", port: 19337, kind: "cli-serve", dir: "feed", buildCheck: "dist/cli.js" },
+  { id: "relay", label: "Relay", port: 19543, kind: "server-script", dir: "relay", script: "dist/server.js", envHost: "HOST", envPort: "PORT", buildCheck: "dist/server.js" },
+  { id: "monitor", label: "Monitor", port: 19759, kind: "server-script", dir: "monitor", script: "dist/main.js", envHost: "MONITOR_HOST", envPort: "MONITOR_PORT", buildCheck: "dist/main.js" },
+  { id: "drive", label: "Drive", port: 19963, kind: "cli-serve", dir: "drive", buildCheck: "dist/cli.js" },
+  { id: "wiki", label: "Wiki", port: 20111, kind: "cli-serve", dir: "wiki", buildCheck: "dist/cli.js" },
+  { id: "execution", label: "Execution Plane", port: 20347, aliases: ["execution-plane"], kind: "server-script", dir: "execution-plane", script: "dist/server.js", envHost: "EXECUTION_PLANE_HOST", envPort: "EXECUTION_PLANE_PORT", buildCheck: "dist/server.js" },
+  { id: "delegation", label: "Delegation Plane", port: 20563, aliases: ["delegation-plane"], kind: "server-script", dir: "delegation-plane", script: "dist/server.js", envHost: "DELEGATION_PLANE_HOST", envPort: "DELEGATION_PLANE_PORT", buildCheck: "dist/server.js" },
+  { id: "content", label: "Content", port: 20789, kind: "cli-serve", dir: "content", buildCheck: "dist/cli.js" },
+  { id: "erp", label: "ERP", port: 20927, kind: "cli-serve", dir: "erp", buildCheck: "dist/cli.js" },
+  { id: "iot", label: "IoT", port: 21143, kind: "cli-serve", dir: "iot", buildCheck: "dist/cli.js" },
+  { id: "day", label: "Day", port: 21377, kind: "day", dir: "apps/day", buildCheck: "dist/serve-dashboard.js" },
+  { id: "company", label: "Company", port: 21587, kind: "next", dir: "apps/company", buildCheck: ".next" },
+  { id: "notify", label: "Notify", port: 21767, aliases: ["hub"], kind: "next", dir: "apps/hub", buildCheck: ".next" },
+];
+
+const OPEN_SURFACE_BY_NAME = new Map<string, OpenSurface>(
+  OPEN_SURFACES.flatMap((surface) => [
+    [surface.id, surface],
+    ...(surface.aliases ?? []).map((alias) => [alias, surface] as const),
+  ]),
+);
 
 function writeJson(stream: NodeJS.WritableStream, payload: unknown): void {
   stream.write(`${JSON.stringify(redactSecrets(payload), null, 2)}\n`);
@@ -389,6 +447,405 @@ function writeProgress(stream: NodeJS.WritableStream, event: { phase: string; st
   const suffix = typeof event.percent === "number" ? ` ${event.percent}%` : "";
   const message = event.message ? ` ${event.message}` : "";
   stream.write(`${event.phase} ${event.status}${suffix}${message}\n`);
+}
+
+function openStateDir(): string {
+  return path.join(os.tmpdir(), "clawjs-open");
+}
+
+function openStatePath(surface: string, host: string, port: number): string {
+  return path.join(openStateDir(), `${surface}-${host.replace(/[^a-z0-9.-]/gi, "_")}-${port}.json`);
+}
+
+function repoRootFromCliPackage(): string {
+  return path.resolve(fileURLToPath(new URL("../../..", import.meta.url)));
+}
+
+function readOpenState(filePath: string): OpenSurfaceState | null {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8")) as OpenSurfaceState;
+  } catch {
+    return null;
+  }
+}
+
+function writeOpenState(filePath: string, state: OpenSurfaceState): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${JSON.stringify(state, null, 2)}\n`);
+}
+
+function processIsAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function portIsOpen(host: string, port: number): Promise<boolean> {
+  return await new Promise<boolean>((resolve) => {
+    const socket = net.createConnection({ host, port });
+    socket.setTimeout(500);
+    socket.once("connect", () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once("timeout", () => {
+      socket.destroy();
+      resolve(false);
+    });
+    socket.once("error", () => resolve(false));
+  });
+}
+
+async function waitForUrl(url: string, timeoutMs = 15_000): Promise<boolean> {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    try {
+      const response = await fetch(url, { method: "GET" });
+      if (response.status < 500) return true;
+    } catch {
+      // Server is still starting.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+  return false;
+}
+
+function buildOpenUsage(binName: string): string {
+  const rows = OPEN_SURFACES.map((surface) => `  ${surface.id.padEnd(12)} http://127.0.0.1:${surface.port}`).join("\n");
+  return [
+    `Usage: ${binName} open <surface> [--no-browser] [--host HOST] [--port PORT]`,
+    "",
+    "Available dashboards:",
+    rows,
+  ].join("\n");
+}
+
+function openSurfaceRows(): Array<Record<string, string>> {
+  return OPEN_SURFACES.map((surface) => ({
+    surface: surface.id,
+    url: `http://127.0.0.1:${surface.port}`,
+    aliases: (surface.aliases ?? []).join(","),
+  }));
+}
+
+function resolveOpenSurface(raw: string | undefined): OpenSurface | null {
+  if (!raw) return null;
+  return OPEN_SURFACE_BY_NAME.get(raw.trim().toLowerCase()) ?? null;
+}
+
+function openBrowser(url: string): void {
+  if (process.env.CI || !url.trim()) return;
+  if (process.platform === "darwin") {
+    spawn("open", [url], { stdio: "ignore", detached: true }).unref();
+    return;
+  }
+  if (process.platform === "win32") {
+    spawn("cmd", ["/c", "start", "", url], { stdio: "ignore", detached: true }).unref();
+    return;
+  }
+  spawn("xdg-open", [url], { stdio: "ignore", detached: true }).unref();
+}
+
+function ensureSurfaceBuild(surface: OpenSurface): void {
+  if (!surface.dir || !surface.buildCheck) return;
+  const repoRoot = repoRootFromCliPackage();
+  const surfaceDir = path.join(repoRoot, surface.dir);
+  if (!fs.existsSync(surfaceDir)) {
+    throw new CliHandledError("dashboard_unavailable", `${surface.id} dashboard is not available in this installation.`);
+  }
+  if (fs.existsSync(path.join(surfaceDir, surface.buildCheck))) return;
+  if (fs.existsSync(path.join(surfaceDir, "package.json")) && !fs.existsSync(path.join(surfaceDir, "node_modules"))) {
+    const install = spawnSync("npm", ["--prefix", surfaceDir, "install"], {
+      cwd: repoRoot,
+      stdio: "ignore",
+      env: {
+        ...process.env,
+        npm_config_audit: "false",
+        npm_config_fund: "false",
+      },
+    });
+    if (install.status !== 0) {
+      throw new CliHandledError("dashboard_install_failed", `Failed to install ${surface.id} dashboard dependencies.`);
+    }
+  }
+  const result = spawnSync("npm", ["--prefix", surfaceDir, "run", "build"], {
+    cwd: repoRoot,
+    stdio: "ignore",
+    env: {
+      ...process.env,
+      npm_config_audit: "false",
+      npm_config_fund: "false",
+    },
+  });
+  if (result.status !== 0) {
+    throw new CliHandledError("dashboard_build_failed", `Failed to build ${surface.id} dashboard.`);
+  }
+}
+
+function prepareOpenSurface(surface: OpenSurface, workspace: string): void {
+  if (surface.kind !== "memory") return;
+  if (fs.existsSync(path.join(workspace, ".memory"))) return;
+  const repoRoot = repoRootFromCliPackage();
+  const memoryCli = path.join(repoRoot, "memory", "dist", "cli.js");
+  const result = spawnSync(process.execPath, [memoryCli, "init", "--dir", workspace], {
+    cwd: workspace,
+    stdio: "ignore",
+    env: process.env,
+  });
+  if (result.status !== 0) {
+    throw new CliHandledError("dashboard_prepare_failed", "Failed to initialize memory dashboard workspace.");
+  }
+}
+
+function cliBinPath(): string {
+  const currentArgv = process.argv[1];
+  if (currentArgv && fs.existsSync(currentArgv)) return currentArgv;
+  const packagedBin = fileURLToPath(new URL("../bin/clawjs.mjs", import.meta.url));
+  if (fs.existsSync(packagedBin)) return packagedBin;
+  return fileURLToPath(import.meta.url);
+}
+
+function buildSurfaceCommand(surface: OpenSurface, input: { host: string; port: number; workspace: string }): { command: string; args: string[]; cwd: string; env: NodeJS.ProcessEnv } {
+  const repoRoot = repoRootFromCliPackage();
+  const surfaceDir = surface.dir ? path.join(repoRoot, surface.dir) : repoRoot;
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  if (surface.envHost) env[surface.envHost] = input.host;
+  if (surface.envPort) env[surface.envPort] = String(input.port);
+
+  if (surface.kind === "internal-database" || surface.kind === "internal-storage") {
+    return {
+      command: process.execPath,
+      args: [
+        cliBinPath(),
+        "__open-server",
+        surface.id,
+        "--host",
+        input.host,
+        "--port",
+        String(input.port),
+        "--workspace",
+        input.workspace,
+      ],
+      cwd: repoRoot,
+      env,
+    };
+  }
+
+  if (surface.kind === "memory") {
+    return {
+      command: process.execPath,
+      args: [path.join(surfaceDir, "dist", "cli.js"), "serve", "--port", String(input.port)],
+      cwd: input.workspace,
+      env,
+    };
+  }
+
+  if (surface.kind === "cli-serve") {
+    return {
+      command: process.execPath,
+      args: [path.join(surfaceDir, "dist", "cli.js"), "serve", "--host", input.host, "--port", String(input.port)],
+      cwd: surfaceDir,
+      env,
+    };
+  }
+
+  if (surface.kind === "server-script") {
+    return {
+      command: process.execPath,
+      args: [path.join(surfaceDir, surface.script ?? "dist/server.js")],
+      cwd: surfaceDir,
+      env,
+    };
+  }
+
+  if (surface.kind === "day") {
+    return {
+      command: process.execPath,
+      args: [path.join(surfaceDir, "dist", "serve-dashboard.js"), "--port", String(input.port), "--root", input.workspace],
+      cwd: surfaceDir,
+      env,
+    };
+  }
+
+  return {
+    command: "npm",
+    args: ["--prefix", surfaceDir, "exec", "--", "next", "start", "--hostname", input.host, "--port", String(input.port)],
+    cwd: surfaceDir,
+    env,
+  };
+}
+
+async function runOpenCli(input: {
+  argv: string[];
+  positionals: string[];
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+}): Promise<number> {
+  const surfaceName = input.positionals[1];
+  if (!surfaceName || surfaceName === "list") {
+    if (input.wantsJson) {
+      writeJson(input.context.stdout, { dashboards: openSurfaceRows() });
+    } else {
+      input.context.stdout.write(`${formatCliTable(openSurfaceRows())}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
+  if (surfaceName === "help" || input.argv.includes("--help") || input.argv.includes("-h")) {
+    input.context.stdout.write(`${buildOpenUsage(input.binName)}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  const surface = resolveOpenSurface(surfaceName);
+  if (!surface) {
+    throw new CliHandledError("unknown_dashboard", `Unknown dashboard: ${surfaceName}`, CLI_EXIT_USAGE);
+  }
+
+  const host = input.flags.host ?? "127.0.0.1";
+  const port = input.flags.port ? Number(input.flags.port) : surface.port;
+  if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
+    throw new CliHandledError("invalid_port", `Invalid port: ${input.flags.port}`, CLI_EXIT_USAGE);
+  }
+
+  const workspace = path.resolve(input.context.cwd, input.flags.workspace ?? ".");
+  const url = `http://${host}:${port}`;
+  const statePath = openStatePath(surface.id, host, port);
+  const state = readOpenState(statePath);
+  if (state && state.surface === surface.id && state.host === host && state.port === port && processIsAlive(state.pid)) {
+    if (await waitForUrl(state.url, 1_000)) {
+      if (!input.argv.includes("--no-browser") && !readBooleanFlag(input.argv, input.flags, "no-browser", false)) openBrowser(state.url);
+      if (input.wantsJson) writeJson(input.context.stdout, { ok: true, reused: true, surface: surface.id, url: state.url, pid: state.pid });
+      else input.context.stdout.write(`${state.url}\n`);
+      return CLI_EXIT_OK;
+    }
+  }
+  if (state) {
+    fs.rmSync(statePath, { force: true });
+  }
+
+  if (await portIsOpen(host, port)) {
+    throw new CliHandledError("port_in_use", `${url} is already in use. Use --port to choose another port.`);
+  }
+
+  ensureSurfaceBuild(surface);
+  prepareOpenSurface(surface, workspace);
+  const command = buildSurfaceCommand(surface, { host, port, workspace });
+  const child = spawn(command.command, command.args, {
+    cwd: command.cwd,
+    env: command.env,
+    detached: true,
+    stdio: "ignore",
+  });
+  child.unref();
+  if (!child.pid) {
+    throw new CliHandledError("dashboard_start_failed", `Failed to start ${surface.id} dashboard.`);
+  }
+
+  const nextState: OpenSurfaceState = {
+    surface: surface.id,
+    pid: child.pid,
+    host,
+    port,
+    url,
+    workspace,
+    startedAt: new Date().toISOString(),
+  };
+  writeOpenState(statePath, nextState);
+
+  const ready = await waitForUrl(url);
+  if (!ready) {
+    throw new CliHandledError("dashboard_start_timeout", `${surface.id} dashboard did not become ready at ${url}.`);
+  }
+
+  const browserUrl = surface.id === "storage" && fs.existsSync(path.join(openStateDir(), `storage-token-${host}-${port}.txt`))
+    ? `${url}?token=${encodeURIComponent(fs.readFileSync(path.join(openStateDir(), `storage-token-${host}-${port}.txt`), "utf8").trim())}&bucket=workspace`
+    : url;
+  if (!input.argv.includes("--no-browser") && !readBooleanFlag(input.argv, input.flags, "no-browser", false)) openBrowser(browserUrl);
+  if (input.wantsJson) writeJson(input.context.stdout, { ok: true, reused: false, surface: surface.id, url, pid: child.pid });
+  else input.context.stdout.write(`${url}\n`);
+  return CLI_EXIT_OK;
+}
+
+function sendStaticFile(response: http.ServerResponse, filePath: string): void {
+  const ext = path.extname(filePath).toLowerCase();
+  const contentType = ext === ".html" ? "text/html; charset=utf-8"
+    : ext === ".js" ? "text/javascript; charset=utf-8"
+      : ext === ".css" ? "text/css; charset=utf-8"
+        : ext === ".svg" ? "image/svg+xml"
+          : "application/octet-stream";
+  response.writeHead(200, { "content-type": contentType });
+  response.end(fs.readFileSync(filePath));
+}
+
+async function runOpenServerCommand(input: { positionals: string[]; flags: Record<string, string>; context: CliContext }): Promise<number> {
+  const surface = resolveOpenSurface(input.positionals[1]);
+  if (!surface) throw new CliHandledError("unknown_dashboard", `Unknown dashboard: ${input.positionals[1]}`, CLI_EXIT_USAGE);
+  const host = input.flags.host ?? "127.0.0.1";
+  const port = input.flags.port ? Number(input.flags.port) : surface.port;
+  const workspace = path.resolve(input.context.cwd, input.flags.workspace ?? ".");
+
+  if (surface.kind === "internal-database") {
+    const { app } = buildDatabaseApp({
+      config: {
+        host,
+        port,
+        dataDir: path.join(workspace, ".clawjs", "dashboard-database"),
+      },
+    });
+    await app.listen({ host, port });
+    await new Promise(() => undefined);
+    return CLI_EXIT_OK;
+  }
+
+  if (surface.kind === "internal-storage") {
+    const store = createLocalStorageStore({
+      workspaceDir: workspace,
+      agentId: "dashboard-storage",
+      grants: [{
+        bucket: "workspace",
+        operations: ["objects:list", "objects:read", "objects:write", "objects:delete", "shares:create", "shares:revoke"],
+      }],
+    });
+    const issued = store.issueToken({
+      label: "storage dashboard",
+      grants: [{
+        bucket: "workspace",
+        operations: ["objects:list", "objects:read", "objects:write", "objects:delete", "shares:create", "shares:revoke"],
+      }],
+    });
+    fs.mkdirSync(openStateDir(), { recursive: true });
+    fs.writeFileSync(path.join(openStateDir(), `storage-token-${host}-${port}.txt`), `${issued.token}\n`);
+    const storageHandler = createStorageHttpHandler({ store });
+    const uiRoot = path.join(repoRootFromCliPackage(), "storage", "ui", "dist");
+    const server = http.createServer(async (request, response) => {
+      const requestUrl = new URL(request.url ?? "/", `http://${request.headers.host ?? host}`);
+      if (requestUrl.pathname.startsWith("/v1/storage/") || requestUrl.pathname.startsWith("/shared/storage/")) {
+        await storageHandler(request, response);
+        return;
+      }
+      const normalized = path.normalize(decodeURIComponent(requestUrl.pathname)).replace(/^(\.\.[/\\])+/, "");
+      const candidate = path.join(uiRoot, normalized === "/" ? "index.html" : normalized);
+      const filePath = candidate.startsWith(uiRoot) && fs.existsSync(candidate) && fs.statSync(candidate).isFile()
+        ? candidate
+        : path.join(uiRoot, "index.html");
+      sendStaticFile(response, filePath);
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(port, host, () => {
+        server.off("error", reject);
+        resolve();
+      });
+    });
+    await new Promise(() => undefined);
+    return CLI_EXIT_OK;
+  }
+
+  throw new CliHandledError("invalid_dashboard_server", `${surface.id} is not an internal open server.`);
 }
 
 function parseFlags(argv: string[]): Record<string, string> {
@@ -3311,6 +3768,14 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const binName = context.binName?.trim() || DEFAULT_CLI_BIN;
   const usage = buildCliUsage(binName);
   const wantsHelp = argv.includes("--help") || argv.includes("-h");
+
+  if (group === "__open-server") {
+    return await runOpenServerCommand({ positionals, flags, context });
+  }
+
+  if (group === "open") {
+    return await runOpenCli({ argv, positionals, flags, context, wantsJson, binName });
+  }
 
   if (group === "database" && wantsHelp) {
     try {
