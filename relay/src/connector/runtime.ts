@@ -5,6 +5,7 @@ import path from "node:path";
 import { applyTextMutation, createClaw } from "@clawjs/claw";
 import type { RuntimeAdapterId, RuntimeProbeStatus } from "@clawjs/claw";
 import { extendClawWithWorkspace } from "@clawjs/workspace";
+import WebSocket from "ws";
 
 import { BrowserSessionManager } from "../../../browser/host/session-manager.ts";
 import type { BrowserActor, BrowserInputCommand } from "../../../browser/shared/types.ts";
@@ -19,6 +20,13 @@ export interface RelayConnectorOptions {
   runtimeAdapter: string;
   runtimeBinaryPath?: string;
   credentialPath?: string;
+  services?: RelayConnectorServiceConfig[];
+}
+
+export interface RelayConnectorServiceConfig {
+  serviceId: string;
+  displayName?: string;
+  baseUrl: string;
 }
 
 export interface RelayConnectorRuntimeSummary {
@@ -244,6 +252,7 @@ function upsertManagedBlocks(filePath: string, title: string, blocks: Array<{ bl
 
 export class RelayConnectorRuntime {
   private readonly contexts = new Map<string, Promise<RuntimeContext>>();
+  private readonly serviceSockets = new Map<string, WebSocket>();
   private readonly browser: BrowserSessionManager;
   private readonly runtimeEnv: NodeJS.ProcessEnv;
   private readonly runtimeBinaryPath: string | undefined;
@@ -289,6 +298,160 @@ export class RelayConnectorRuntime {
     }
 
     return [...workspaces.values()].sort((left, right) => left.workspaceId.localeCompare(right.workspaceId));
+  }
+
+  listServices(): Array<{ serviceId: string; displayName?: string; status: "online" | "offline" | "degraded" }> {
+    return (this.options.services ?? []).map((service) => ({
+      serviceId: service.serviceId,
+      ...(service.displayName ? { displayName: service.displayName } : {}),
+      status: "online",
+    }));
+  }
+
+  private resolveService(serviceId: string): RelayConnectorServiceConfig {
+    const service = (this.options.services ?? []).find((entry) => entry.serviceId === serviceId);
+    if (!service) throw new Error(`Unknown relay service: ${serviceId}`);
+    return service;
+  }
+
+  private serviceUrl(serviceId: string, servicePath: string): URL {
+    const service = this.resolveService(serviceId);
+    const base = service.baseUrl.endsWith("/") ? service.baseUrl : `${service.baseUrl}/`;
+    const cleanPath = servicePath.startsWith("/") ? servicePath.slice(1) : servicePath;
+    return new URL(cleanPath, base);
+  }
+
+  private async executeServiceHttp(
+    payload: Record<string, unknown> | undefined,
+    emitStream: (event: string, payload: Record<string, unknown>) => void,
+    signal?: AbortSignal,
+  ): Promise<Record<string, unknown>> {
+    const serviceId = String(payload?.serviceId ?? "");
+    const method = String(payload?.method ?? "GET").toUpperCase();
+    const pathName = String(payload?.path ?? "/");
+    const headersInput = payload?.headers && typeof payload.headers === "object" && !Array.isArray(payload.headers)
+      ? payload.headers as Record<string, unknown>
+      : {};
+    const headers = new Headers();
+    for (const [key, value] of Object.entries(headersInput)) {
+      if (typeof value === "string") headers.set(key, value);
+      if (Array.isArray(value)) headers.set(key, value.map(String).join(", "));
+    }
+    const bodyBase64 = typeof payload?.bodyBase64 === "string" ? payload.bodyBase64 : "";
+    const body = bodyBase64 ? Buffer.from(bodyBase64, "base64") : undefined;
+    const response = await fetch(this.serviceUrl(serviceId, pathName), {
+      method,
+      headers,
+      ...(body && !["GET", "HEAD"].includes(method) ? { body } : {}),
+      signal,
+    });
+    const responseHeaders = Object.fromEntries(response.headers.entries());
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.includes("text/event-stream") && response.body) {
+      emitStream("service.response", {
+        status: response.status,
+        headers: responseHeaders,
+      });
+      const reader = response.body.getReader();
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (!value) continue;
+          emitStream("service.chunk", {
+            bodyBase64: Buffer.from(value).toString("base64"),
+          });
+        }
+      } finally {
+        await reader.cancel().catch(() => {});
+      }
+      return {
+        status: response.status,
+        headers: responseHeaders,
+        streamed: true,
+      };
+    }
+    const bodyBuffer = Buffer.from(await response.arrayBuffer());
+    return {
+      status: response.status,
+      headers: responseHeaders,
+      bodyBase64: bodyBuffer.toString("base64"),
+    };
+  }
+
+  private async executeServiceWebSocketOpen(
+    payload: Record<string, unknown> | undefined,
+    emitStream: (event: string, payload: Record<string, unknown>) => void,
+    signal?: AbortSignal,
+  ): Promise<Record<string, unknown>> {
+    const channelId = String(payload?.channelId ?? "");
+    const serviceId = String(payload?.serviceId ?? "");
+    const pathName = String(payload?.path ?? "/");
+    const headersInput = payload?.headers && typeof payload.headers === "object" && !Array.isArray(payload.headers)
+      ? payload.headers as Record<string, unknown>
+      : {};
+    const headers: Record<string, string> = {};
+    for (const [key, value] of Object.entries(headersInput)) {
+      if (typeof value === "string") headers[key] = value;
+    }
+    const url = this.serviceUrl(serviceId, pathName);
+    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    const socket = new WebSocket(url, { headers });
+    this.serviceSockets.set(channelId, socket);
+    const cleanup = () => {
+      this.serviceSockets.delete(channelId);
+      signal?.removeEventListener("abort", abort);
+    };
+    const abort = () => socket.close(1000, "relay_client_closed");
+    signal?.addEventListener("abort", abort, { once: true });
+    return await new Promise<Record<string, unknown>>((resolve, reject) => {
+      socket.once("open", () => {
+        emitStream("service.websocket.opened", { channelId });
+      });
+      socket.on("message", (data, isBinary) => {
+        const buffer = Buffer.isBuffer(data)
+          ? data
+          : Array.isArray(data)
+            ? Buffer.concat(data)
+            : Buffer.from(data);
+        emitStream("service.websocket.message", {
+          channelId,
+          isBinary,
+          bodyBase64: buffer.toString("base64"),
+        });
+      });
+      socket.once("close", (code, reason) => {
+        cleanup();
+        emitStream("service.websocket.closed", {
+          channelId,
+          code,
+          reason: reason.toString(),
+        });
+        resolve({ channelId, closed: true, code });
+      });
+      socket.once("error", (error) => {
+        cleanup();
+        reject(error);
+      });
+    });
+  }
+
+  private executeServiceWebSocketSend(payload: Record<string, unknown> | undefined): Record<string, unknown> {
+    const channelId = String(payload?.channelId ?? "");
+    const socket = this.serviceSockets.get(channelId);
+    if (!socket || socket.readyState !== WebSocket.OPEN) throw new Error(`Service websocket is not open: ${channelId}`);
+    const body = Buffer.from(String(payload?.bodyBase64 ?? ""), "base64");
+    const isBinary = payload?.isBinary === true;
+    socket.send(isBinary ? body : body.toString("utf8"));
+    return { channelId, sent: true };
+  }
+
+  private executeServiceWebSocketClose(payload: Record<string, unknown> | undefined): Record<string, unknown> {
+    const channelId = String(payload?.channelId ?? "");
+    const socket = this.serviceSockets.get(channelId);
+    if (!socket) return { channelId, closed: true };
+    socket.close(1000, "relay_client_closed");
+    return { channelId, closed: true };
   }
 
   async getContext(workspaceId: string): Promise<RuntimeContext> {
@@ -626,6 +789,19 @@ export class RelayConnectorRuntime {
         logicalAgentId: metadata.logicalAgentId,
         ...(metadata.projectId ? { projectId: metadata.projectId } : {}),
       };
+    }
+
+    if (operation === "service.http") {
+      return await this.executeServiceHttp(payload, emitStream, signal);
+    }
+    if (operation === "service.websocket.open") {
+      return await this.executeServiceWebSocketOpen(payload, emitStream, signal);
+    }
+    if (operation === "service.websocket.send") {
+      return this.executeServiceWebSocketSend(payload);
+    }
+    if (operation === "service.websocket.close") {
+      return this.executeServiceWebSocketClose(payload);
     }
 
     const { claw, workspaceClaw, compat } = await this.getContext(targetWorkspaceId);

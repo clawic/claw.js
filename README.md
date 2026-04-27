@@ -53,6 +53,7 @@ Relay v1 adds:
 - shared browser sessions per workspace with human takeover over the same persisted Chromium profile
 - explicit routing by `tenantId`, `connectorId`, `agentId`, and `workspaceId`
 - first-class `project + agent + assignment` routing on top of materialized workspaces
+- service gateway routing for local product UIs that need APIs running behind the connector
 - an admin-only surface for runtime setup, config, and connector enrollment
 
 Docs: [docs/relay.md](docs/relay.md)

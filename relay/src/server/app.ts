@@ -62,6 +62,18 @@ function parseBearerToken(request: FastifyRequest): string | null {
   return token;
 }
 
+function parseServiceRelayToken(request: FastifyRequest): string | null {
+  const relayHeader = request.headers["x-clawjs-relay-authorization"] ?? request.headers["x-relay-authorization"];
+  const header = Array.isArray(relayHeader) ? relayHeader[0] : relayHeader;
+  if (typeof header === "string" && header.trim()) {
+    const [scheme, token] = header.trim().split(" ");
+    if (scheme?.toLowerCase() === "bearer" && token) return token;
+  }
+  const queryToken = new URL(request.url, "http://relay.local").searchParams.get("relay_access_token");
+  if (queryToken?.trim()) return queryToken.trim();
+  return parseBearerToken(request);
+}
+
 function parseWebSocketAccessToken(request: FastifyRequest): string | null {
   const queryToken = new URL(request.url, "http://relay.local").searchParams.get("access_token");
   if (queryToken?.trim()) return queryToken.trim();
@@ -178,6 +190,31 @@ async function requireClaims(
   }
 }
 
+async function requireServiceClaims(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  auth: RelayAuthService,
+  scope: string,
+): Promise<AuthClaims | null> {
+  const token = parseServiceRelayToken(request);
+  if (!token) {
+    await reply.code(401).send({ error: "Unauthorized", message: "Missing relay bearer token." });
+    return null;
+  }
+
+  try {
+    const claims = await auth.verifyAccessToken(token);
+    if (!ensureScope(claims, scope)) {
+      await reply.code(403).send({ error: "Forbidden", message: `Scope ${scope} is required.` });
+      return null;
+    }
+    return claims;
+  } catch {
+    await reply.code(401).send({ error: "Unauthorized", message: "Invalid relay bearer token." });
+    return null;
+  }
+}
+
 function tokensFromText(text: string): number {
   return Math.max(1, Math.ceil(text.length / 4));
 }
@@ -195,6 +232,72 @@ function normalizeUploadData(value: unknown): string {
     return base64Data;
   }
   return trimmed;
+}
+
+function filteredServiceHeaders(request: FastifyRequest): Record<string, string> {
+  const excluded = new Set([
+    "host",
+    "connection",
+    "content-length",
+    "transfer-encoding",
+    "upgrade",
+    "sec-websocket-key",
+    "sec-websocket-version",
+    "sec-websocket-extensions",
+    "sec-websocket-protocol",
+    "x-clawjs-relay-authorization",
+    "x-relay-authorization",
+  ]);
+  const headers: Record<string, string> = {};
+  for (const [key, value] of Object.entries(request.headers)) {
+    const lower = key.toLowerCase();
+    if (excluded.has(lower)) continue;
+    if (typeof value === "string") headers[lower] = value;
+    else if (Array.isArray(value)) headers[lower] = value.join(", ");
+  }
+  return headers;
+}
+
+function filteredResponseHeaders(headers: Record<string, unknown>): Record<string, string> {
+  const excluded = new Set([
+    "connection",
+    "content-length",
+    "keep-alive",
+    "proxy-authenticate",
+    "proxy-authorization",
+    "te",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+  ]);
+  const result: Record<string, string> = {};
+  for (const [key, value] of Object.entries(headers)) {
+    const lower = key.toLowerCase();
+    if (excluded.has(lower)) continue;
+    if (typeof value === "string") result[lower] = value;
+  }
+  return result;
+}
+
+function servicePathFromRequest(request: FastifyRequest<{ Params: { serviceId: string; "*": string } }>): string {
+  const wildcard = request.params["*"] ?? "";
+  const pathName = wildcard ? `/${wildcard}` : "/";
+  const queryIndex = request.url.indexOf("?");
+  const query = queryIndex >= 0 ? request.url.slice(queryIndex) : "";
+  if (!query) return pathName;
+  const params = new URLSearchParams(query.slice(1));
+  params.delete("relay_access_token");
+  const nextQuery = params.toString();
+  return nextQuery ? `${pathName}?${nextQuery}` : pathName;
+}
+
+function serviceBodyBase64(request: FastifyRequest): string | undefined {
+  const body = request.body as unknown;
+  if (!body) return undefined;
+  if (Buffer.isBuffer(body)) return body.toString("base64");
+  if (typeof body === "string") return Buffer.from(body).toString("base64");
+  if (body instanceof Uint8Array) return Buffer.from(body).toString("base64");
+  return Buffer.from(JSON.stringify(body)).toString("base64");
 }
 
 function parseProjectResourceRefs(value: unknown): ProjectResourceRef[] {
@@ -484,6 +587,10 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
   const rateLimiter = new MemoryRateLimiter();
   const app = Fastify({ logger: false });
 
+  app.addContentTypeParser("*", { parseAs: "buffer" }, (_request, body, done) => {
+    done(null, body);
+  });
+
   const materializeProjectAssignment = async (input: {
     tenantId: string;
     projectId: string;
@@ -569,6 +676,219 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     service: "clawjs-relay",
     uptimeSeconds: Math.round(process.uptime()),
   }));
+
+  const serviceHttpHandler = async (
+    request: FastifyRequest<{ Params: { tenantId: string; serviceId: string; "*": string } }>,
+    reply: FastifyReply,
+  ) => {
+    const claims = await requireServiceClaims(request, reply, auth, "workspace:data");
+    if (!claims) return null;
+    try {
+      authorizeTenant(claims, request.params.tenantId);
+    } catch (error) {
+      await reply.code(403).send({ error: "Forbidden", message: error instanceof Error ? error.message : String(error) });
+      return null;
+    }
+    const service = registry.resolveService({
+      tenantId: request.params.tenantId,
+      serviceId: request.params.serviceId,
+    });
+    if (!service) {
+      await reply.code(503).send({ error: "service_unavailable", message: `Service ${request.params.serviceId} is not connected.` });
+      return null;
+    }
+
+    const abort = new AbortController();
+    const abortUpstream = () => abort.abort();
+    request.raw.once("close", abortUpstream);
+    let streamed = false;
+    try {
+      const result = await registry.invoke({
+        tenantId: request.params.tenantId,
+        connectorId: service.connectorId,
+        agentId: service.agentId,
+        operation: "service.http",
+        payload: {
+          serviceId: request.params.serviceId,
+          method: request.method,
+          path: servicePathFromRequest(request),
+          headers: filteredServiceHeaders(request),
+          bodyBase64: serviceBodyBase64(request),
+        },
+        signal: abort.signal,
+        timeoutMs: request.headers.accept?.includes("text/event-stream") ? 0 : undefined,
+        onStream: (event) => {
+          if (event.event === "service.response") {
+            streamed = true;
+            const headers = filteredResponseHeaders((event.payload.headers ?? {}) as Record<string, unknown>);
+            reply.raw.writeHead(Number(event.payload.status ?? 200), {
+              ...headers,
+              "cache-control": headers["cache-control"] ?? "no-cache, no-transform",
+            });
+            return;
+          }
+          if (event.event === "service.chunk" && typeof event.payload.bodyBase64 === "string") {
+            reply.raw.write(Buffer.from(event.payload.bodyBase64, "base64"));
+          }
+        },
+      });
+      if (streamed) {
+        if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.end();
+        return reply;
+      }
+      const status = Number(result.status ?? 200);
+      for (const [key, value] of Object.entries(filteredResponseHeaders((result.headers ?? {}) as Record<string, unknown>))) {
+        reply.header(key, value);
+      }
+      const body = typeof result.bodyBase64 === "string" ? Buffer.from(result.bodyBase64, "base64") : Buffer.alloc(0);
+      return await reply.code(status).send(body);
+    } catch (error) {
+      if (abort.signal.aborted) return null;
+      if (error instanceof OfflineError) {
+        await reply.code(503).send({ error: "offline", message: error.message });
+        return null;
+      }
+      await reply.code(502).send({ error: "service_gateway_error", message: error instanceof Error ? error.message : String(error) });
+      return null;
+    } finally {
+      request.raw.off("close", abortUpstream);
+    }
+  };
+
+  const serviceRouteMethods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"] as const;
+  for (const method of serviceRouteMethods) {
+    app.route({
+      method,
+      url: "/v1/tenants/:tenantId/services/:serviceId",
+      handler: serviceHttpHandler,
+    });
+    app.route({
+      method,
+      url: "/v1/tenants/:tenantId/services/:serviceId/*",
+      handler: serviceHttpHandler,
+    });
+  }
+
+  app.get("/v1/tenants/:tenantId/services/:serviceId/_ws/*", { websocket: true }, async (socket, request) => {
+    const typedRequest = request as FastifyRequest<{ Params: { tenantId: string; serviceId: string; "*": string } }>;
+    const token = parseServiceRelayToken(typedRequest);
+    if (!token) {
+      socket.close(1008, "missing_relay_token");
+      return;
+    }
+    let claims: AuthClaims;
+    try {
+      claims = await auth.verifyAccessToken(token);
+      if (!ensureScope(claims, "workspace:data")) throw new Error("missing scope");
+      authorizeTenant(claims, typedRequest.params.tenantId);
+    } catch {
+      socket.close(1008, "invalid_relay_token");
+      return;
+    }
+    const service = registry.resolveService({
+      tenantId: typedRequest.params.tenantId,
+      serviceId: typedRequest.params.serviceId,
+    });
+    if (!service) {
+      socket.close(1013, "service_unavailable");
+      return;
+    }
+
+    const channelId = randomUUID();
+    const abort = new AbortController();
+    let opened = false;
+    const queued: Array<{ data: Buffer; isBinary: boolean }> = [];
+    const flushQueue = async () => {
+      if (!opened) return;
+      while (queued.length > 0) {
+        const item = queued.shift()!;
+        await registry.invoke({
+          tenantId: typedRequest.params.tenantId,
+          connectorId: service.connectorId,
+          agentId: service.agentId,
+          operation: "service.websocket.send",
+          payload: {
+            channelId,
+            isBinary: item.isBinary,
+            bodyBase64: item.data.toString("base64"),
+          },
+        }).catch(() => {});
+      }
+    };
+
+    const openPromise = registry.invoke({
+      tenantId: typedRequest.params.tenantId,
+      connectorId: service.connectorId,
+      agentId: service.agentId,
+      operation: "service.websocket.open",
+      payload: {
+        channelId,
+        serviceId: typedRequest.params.serviceId,
+        path: (() => {
+          const parsed = new URL(typedRequest.url, "http://relay.local");
+          parsed.searchParams.delete("relay_access_token");
+          const query = parsed.searchParams.toString();
+          return `/${typedRequest.params["*"] ?? ""}${query ? `?${query}` : ""}`;
+        })(),
+        headers: filteredServiceHeaders(typedRequest),
+      },
+      signal: abort.signal,
+      timeoutMs: 0,
+      onStream: (event) => {
+        if (event.event === "service.websocket.opened") {
+          opened = true;
+          void flushQueue();
+          return;
+        }
+        if (event.event === "service.websocket.message" && typeof event.payload.bodyBase64 === "string") {
+          const data = Buffer.from(event.payload.bodyBase64, "base64");
+          socket.send(event.payload.isBinary === true ? data : data.toString("utf8"));
+          return;
+        }
+        if (event.event === "service.websocket.closed") {
+          socket.close(Number(event.payload.code ?? 1000), typeof event.payload.reason === "string" ? event.payload.reason : "service_closed");
+        }
+      },
+    }).catch(() => {
+      if (socket.readyState === 1) socket.close(1011, "service_gateway_error");
+    });
+
+    socket.on("message", (data, isBinary) => {
+      const buffer = Buffer.isBuffer(data)
+        ? data
+        : Array.isArray(data)
+          ? Buffer.concat(data)
+          : Buffer.from(data);
+      if (!opened) {
+        queued.push({ data: buffer, isBinary });
+        return;
+      }
+      void registry.invoke({
+        tenantId: typedRequest.params.tenantId,
+        connectorId: service.connectorId,
+        agentId: service.agentId,
+        operation: "service.websocket.send",
+        payload: {
+          channelId,
+          isBinary,
+          bodyBase64: buffer.toString("base64"),
+        },
+      }).catch(() => {});
+    });
+    socket.once("close", () => {
+      abort.abort();
+      if (opened) {
+        void registry.invoke({
+          tenantId: typedRequest.params.tenantId,
+          connectorId: service.connectorId,
+          agentId: service.agentId,
+          operation: "service.websocket.close",
+          payload: { channelId },
+        }).catch(() => {});
+      }
+    });
+    await openPromise;
+  });
 
   /* -------------------------------------------------------
      Monitor consolidated status endpoint.

@@ -12,6 +12,12 @@ export interface ConnectorWorkspaceDescriptor {
   displayName: string;
 }
 
+export interface ConnectorServiceDescriptor {
+  serviceId: string;
+  displayName?: string;
+  status?: "online" | "offline" | "degraded";
+}
+
 export interface ConnectorHelloPayload {
   tenantId: string;
   connectorId: string;
@@ -19,6 +25,7 @@ export interface ConnectorHelloPayload {
   version: string;
   capabilities: string[];
   workspaces: ConnectorWorkspaceDescriptor[];
+  services?: ConnectorServiceDescriptor[];
   runtime?: {
     adapter: string;
     runtimeName?: string;

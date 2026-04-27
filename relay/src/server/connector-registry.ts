@@ -8,6 +8,7 @@ import type {
   ConnectorAuthContext,
   ConnectorInboundEnvelope,
   ConnectorOutboundEnvelope,
+  ConnectorServiceDescriptor,
   ErrorEnvelope,
   HelloEnvelope,
   StreamEnvelope,
@@ -28,12 +29,13 @@ interface ActiveConnection {
   auth: ConnectorAuthContext;
   capabilities: string[];
   version: string;
+  services: ConnectorServiceDescriptor[];
 }
 
 interface PendingInvocation {
   resolve: (value: Record<string, unknown>) => void;
   reject: (reason?: unknown) => void;
-  timer: NodeJS.Timeout;
+  timer: NodeJS.Timeout | null;
   onStream?: (payload: StreamEnvelope) => void;
 }
 
@@ -97,7 +99,7 @@ export class ConnectorRegistry {
       case "result": {
         const pending = this.pending.get(message.requestId);
         if (!pending) return;
-        clearTimeout(pending.timer);
+        if (pending.timer) clearTimeout(pending.timer);
         this.pending.delete(message.requestId);
         pending.resolve(message.payload);
         return;
@@ -107,7 +109,7 @@ export class ConnectorRegistry {
         const text = `${message.code}: ${message.message}`;
         this.logger.error(`Connector error for ${auth.agentId}: ${text}`);
         if (!pending || !message.requestId) return;
-        clearTimeout(pending.timer);
+        if (pending.timer) clearTimeout(pending.timer);
         this.pending.delete(message.requestId);
         pending.reject(this.normalizeError(message));
         return;
@@ -199,7 +201,21 @@ export class ConnectorRegistry {
       auth,
       capabilities: message.payload.capabilities,
       version: message.payload.version,
+      services: message.payload.services ?? [],
     });
+    for (const service of message.payload.services ?? []) {
+      this.db.appendActivity({
+        tenantId: auth.tenantId,
+        agentId: auth.agentId,
+        capability: `service.${service.serviceId}`,
+        status: service.status === "offline" ? "error" : "info",
+        detail: JSON.stringify({
+          serviceId: service.serviceId,
+          displayName: service.displayName,
+          status: service.status ?? "online",
+        }),
+      });
+    }
     const ack: ConnectorOutboundEnvelope = { type: "ack", payload: { sessionId } };
     socket.send(JSON.stringify(ack));
   }
@@ -227,6 +243,7 @@ export class ConnectorRegistry {
     payload?: Record<string, unknown>;
     onStream?: (payload: StreamEnvelope) => void;
     signal?: AbortSignal;
+    timeoutMs?: number;
   }): Promise<Record<string, unknown>> {
     const connection = this.connections.get(this.key(input.tenantId, input.connectorId));
     if (!connection) {
@@ -245,10 +262,13 @@ export class ConnectorRegistry {
     };
 
     return await new Promise<Record<string, unknown>>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pending.delete(requestId);
-        reject(new Error(`Timed out waiting for connector response to ${input.operation}`));
-      }, this.requestTimeoutMs);
+      const timeoutMs = input.timeoutMs ?? this.requestTimeoutMs;
+      const timer = timeoutMs > 0
+        ? setTimeout(() => {
+            this.pending.delete(requestId);
+            reject(new Error(`Timed out waiting for connector response to ${input.operation}`));
+          }, timeoutMs)
+        : null;
 
       this.pending.set(requestId, {
         resolve,
@@ -260,7 +280,7 @@ export class ConnectorRegistry {
       const onAbort = () => {
         const pending = this.pending.get(requestId);
         if (!pending) return;
-        clearTimeout(pending.timer);
+        if (pending.timer) clearTimeout(pending.timer);
         this.pending.delete(requestId);
         const cancelEnvelope: CancelEnvelope = { type: "cancel", requestId };
         connection.socket.send(JSON.stringify(cancelEnvelope));
@@ -269,7 +289,7 @@ export class ConnectorRegistry {
 
       if (input.signal) {
         if (input.signal.aborted) {
-          clearTimeout(timer);
+          if (timer) clearTimeout(timer);
           this.pending.delete(requestId);
           resolve({ cancelled: true, requestId });
           return;
@@ -292,11 +312,28 @@ export class ConnectorRegistry {
       connection.socket.send(JSON.stringify(envelope), (error) => {
         if (!error) return;
         cleanup();
-        clearTimeout(timer);
+        if (timer) clearTimeout(timer);
         this.pending.delete(requestId);
         reject(error);
       });
     });
+  }
+
+  resolveService(input: {
+    tenantId: string;
+    serviceId: string;
+  }): { connectorId: string; agentId: string; service: ConnectorServiceDescriptor } | null {
+    for (const connection of this.connections.values()) {
+      if (connection.auth.tenantId !== input.tenantId) continue;
+      const service = connection.services.find((entry) => entry.serviceId === input.serviceId);
+      if (!service || service.status === "offline") continue;
+      return {
+        connectorId: connection.auth.connectorId,
+        agentId: connection.auth.agentId,
+        service,
+      };
+    }
+    return null;
   }
 
   revoke(tenantId: string, connectorId: string): void {

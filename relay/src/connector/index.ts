@@ -5,7 +5,74 @@ import path from "node:path";
 import WebSocket from "ws";
 
 import type { CancelEnvelope, ConnectorInboundEnvelope, ConnectorOutboundEnvelope, EnrollmentResult, InvokeEnvelope } from "../shared/protocol.ts";
-import { RelayConnectorRuntime, type RelayConnectorOptions } from "./runtime.ts";
+import { RelayConnectorRuntime, type RelayConnectorOptions, type RelayConnectorServiceConfig } from "./runtime.ts";
+
+function normalizeServiceId(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+function parseServiceEntry(entry: unknown): RelayConnectorServiceConfig | null {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+  const raw = entry as Record<string, unknown>;
+  const serviceId = normalizeServiceId(String(raw.serviceId ?? raw.id ?? ""));
+  const baseUrl = typeof raw.baseUrl === "string" ? raw.baseUrl.trim() : "";
+  if (!serviceId || !baseUrl) return null;
+  return {
+    serviceId,
+    baseUrl,
+    ...(typeof raw.displayName === "string" && raw.displayName.trim() ? { displayName: raw.displayName.trim() } : {}),
+  };
+}
+
+function readServicesConfig(values: Map<string, string>): RelayConnectorServiceConfig[] {
+  const services: RelayConnectorServiceConfig[] = [];
+  const push = (service: RelayConnectorServiceConfig | null) => {
+    if (!service) return;
+    const index = services.findIndex((entry) => entry.serviceId === service.serviceId);
+    if (index >= 0) services[index] = service;
+    else services.push(service);
+  };
+
+  const configPath = values.get("services-config")
+    ?? values.get("service-config")
+    ?? process.env.RELAY_SERVICES_CONFIG_PATH
+    ?? process.env.RELAY_SERVICE_CONFIG_PATH;
+  if (configPath) {
+    const parsed = JSON.parse(fs.readFileSync(configPath, "utf8")) as unknown;
+    if (Array.isArray(parsed)) parsed.forEach((entry) => push(parseServiceEntry(entry)));
+    else if (parsed && typeof parsed === "object") {
+      for (const [id, value] of Object.entries(parsed as Record<string, unknown>)) {
+        if (typeof value === "string") push(parseServiceEntry({ id, baseUrl: value }));
+        else if (value && typeof value === "object") push(parseServiceEntry({ id, ...(value as Record<string, unknown>) }));
+      }
+    }
+  }
+
+  const inline = values.get("services") ?? process.env.RELAY_SERVICES;
+  if (inline) {
+    for (const part of inline.split(",")) {
+      const trimmed = part.trim();
+      if (!trimmed) continue;
+      const splitAt = trimmed.indexOf("=");
+      if (splitAt === -1) continue;
+      push(parseServiceEntry({
+        id: trimmed.slice(0, splitAt),
+        baseUrl: trimmed.slice(splitAt + 1),
+      }));
+    }
+  }
+
+  for (const [key, value] of Object.entries(process.env)) {
+    const match = key.match(/^RELAY_SERVICE_([A-Z0-9_]+)_URL$/);
+    if (!match || !value?.trim()) continue;
+    push(parseServiceEntry({
+      id: match[1]?.toLowerCase().replaceAll("_", "-"),
+      baseUrl: value,
+    }));
+  }
+
+  return services.sort((left, right) => left.serviceId.localeCompare(right.serviceId));
+}
 
 function parseArgs(argv: string[]): RelayConnectorOptions {
   const values = new Map<string, string>();
@@ -44,6 +111,7 @@ function parseArgs(argv: string[]): RelayConnectorOptions {
     runtimeAdapter,
     runtimeBinaryPath,
     credentialPath,
+    services: readServicesConfig(values),
   };
 }
 
@@ -223,9 +291,11 @@ async function runOnce(options: RelayConnectorOptions): Promise<void> {
           "integrations",
           "admin",
           "browser",
+          "services",
           ...runtimeCapabilities,
         ],
         runtime: runtimeSummary,
+        services: runtime.listServices(),
         workspaces: runtime.listWorkspaces(),
       },
     }));

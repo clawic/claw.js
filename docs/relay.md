@@ -226,9 +226,50 @@ Then it:
 
 1. receives a connector credential
 2. opens `/v1/connector/connect`
-3. sends a `hello` frame with `connectorId`, `agentId`, capabilities, and workspaces
+3. sends a `hello` frame with `connectorId`, `agentId`, capabilities, workspaces, and optional services
 4. keeps the socket alive with heartbeats every 10 seconds
 5. reconnects in a loop after disconnection
+
+### Service gateway for local UIs
+
+The connector can also advertise local HTTP services running on the connector host. Relay exposes them through:
+
+```text
+/v1/tenants/:tenantId/services/:serviceId/*
+```
+
+Relay authenticates the tunnel with `X-ClawJS-Relay-Authorization: Bearer <relay-token>`. The service's own `Authorization` header is preserved and forwarded unchanged, so product UIs keep their native login flows.
+
+Example connector service config:
+
+```json
+{
+  "storage": "http://127.0.0.1:47632",
+  "database": "http://127.0.0.1:4510"
+}
+```
+
+Start the connector with:
+
+```bash
+npm --prefix relay run connector -- \
+  --relay-url http://127.0.0.1:4410 \
+  --agent-id example-agent \
+  --services-config ./relay-services.json
+```
+
+For local UI development, run the UI dev server on one port and put the local service proxy in front of it:
+
+```bash
+npm --prefix relay run service-proxy -- \
+  --relay-url http://127.0.0.1:4410 \
+  --tenant-id demo-tenant \
+  --service-id storage \
+  --ui-url http://127.0.0.1:5173 \
+  --port 5299
+```
+
+Open the proxy URL. Static UI requests go to the local UI dev server; `/v1`, `/api`, and WebSocket API calls go through Relay to the service on the connector host.
 
 ### 5. Call a workspace route
 
@@ -575,6 +616,8 @@ Connector flags or env vars:
 | `--runtime-binary-path` | `RELAY_RUNTIME_BINARY_PATH` | auto-detected |
 | `--codex-path` | `CLAWJS_CODEX_PATH` | auto-detected |
 | `--credential-path` | `RELAY_CONNECTOR_CREDENTIAL_PATH` | `<workspace-root>/.relay/connector-credential.json` |
+| `--services-config` | `RELAY_SERVICES_CONFIG_PATH` | none |
+| `--services` | `RELAY_SERVICES` | none |
 
 The connector stores the approved connector credential at `--credential-path` with file mode `0600`, so a launchd/system service can reconnect after restart without reusing one-time enrollment tokens or repeating device pairing.
 
