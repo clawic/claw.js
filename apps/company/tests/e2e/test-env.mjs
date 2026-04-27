@@ -6,10 +6,13 @@ const rootDir = process.env.COMPANY_E2E_ROOT || path.join(process.cwd(), ".tmp",
 const appPort = process.env.COMPANY_E2E_APP_PORT || "4460";
 const databasePort = process.env.COMPANY_E2E_DATABASE_PORT || "4516";
 
+fs.rmSync(rootDir, { recursive: true, force: true });
 fs.mkdirSync(rootDir, { recursive: true });
 
 const databaseDataDir = path.join(rootDir, "database");
 fs.mkdirSync(databaseDataDir, { recursive: true });
+const rulesDir = path.join(rootDir, "rules");
+fs.mkdirSync(rulesDir, { recursive: true });
 
 function start(command, args, env) {
   const child = spawn(command, args, {
@@ -54,6 +57,7 @@ const app = start("npx", ["next", "start", "--port", appPort], {
   CLAWJS_DATABASE_URL: `http://127.0.0.1:${databasePort}`,
   CLAWJS_DATABASE_NAMESPACE: "main",
   CLAWJS_COMPANY_FAKE_AGENT_RUNS: "1",
+  CLAWJS_RULES_DIR: rulesDir,
   NODE_ENV: "production",
 });
 

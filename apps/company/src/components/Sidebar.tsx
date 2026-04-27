@@ -15,6 +15,7 @@ import {
   Settings,
   Search,
   SquarePen,
+  FileSliders,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { SidebarSection } from "./SidebarSection";
@@ -102,6 +103,7 @@ export function Sidebar() {
 
         <SidebarSection label="Organization">
           <SidebarNavItem to="/agents" label="Agents" icon={Bot} />
+          <SidebarNavItem to="/rules" label="Rules" icon={FileSliders} />
           <SidebarNavItem
             to="/approvals"
             label="Approvals"

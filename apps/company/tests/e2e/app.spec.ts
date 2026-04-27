@@ -168,3 +168,128 @@ test("organization cockpit backend flows work end-to-end", async ({ page }) => {
   const screenshotPath = await saveBrowserScreenshot(page, "company-cockpit-dashboard.png");
   expect(path.basename(screenshotPath)).toBe("company-cockpit-dashboard.png");
 });
+
+test("rules tree, approval queue, and compile preview work end-to-end", async ({ page }) => {
+  const companyResponse = await page.request.post("/api/companies", {
+    data: {
+      name: "Rules Studio",
+      description: "Rules e2e organization.",
+      brandColor: "#14b8a6",
+    },
+  });
+  expect(companyResponse.ok()).toBeTruthy();
+
+  await page.request.post("/api/rules", {
+    data: {
+      action: "scope",
+      scope: { id: "northstar", kind: "brand", name: "Northstar Studio", aliases: ["NS", "North Star"] },
+    },
+  });
+  await page.request.post("/api/rules", {
+    data: {
+      action: "scope",
+      scope: { id: "northstar-website", kind: "output", name: "Website", parentId: "northstar", aliases: ["website", "site"] },
+    },
+  });
+
+  const seedRules = [
+    {
+      id: "northstar-tone",
+      title: "Northstar tone",
+      kind: "directive",
+      status: "active",
+      scopeId: "northstar",
+      content: "Use a concise, founder-led tone for Northstar Studio.",
+      key: "tone",
+    },
+    {
+      id: "northstar-logo",
+      title: "Northstar logo",
+      kind: "resource",
+      status: "active",
+      scopeId: "northstar",
+      content: "Use the approved Northstar logo reference.",
+      references: [{ kind: "asset", ref: "northstar-logo-primary", label: "primary logo" }],
+      key: "logo",
+    },
+    {
+      id: "northstar-type-default",
+      title: "Northstar typography",
+      kind: "default",
+      status: "active",
+      scopeId: "northstar",
+      content: "Use Source Sans for general Northstar materials.",
+      key: "typography",
+    },
+    {
+      id: "northstar-website-type",
+      title: "Northstar website typography",
+      kind: "default",
+      status: "active",
+      scopeId: "northstar-website",
+      content: "Use Inter for Northstar websites.",
+      applyWhen: { outputFormats: ["website"] },
+      key: "typography",
+    },
+    {
+      id: "northstar-slides",
+      title: "Northstar slide deck",
+      kind: "directive",
+      status: "active",
+      scopeId: "northstar",
+      content: "Use Keynote for Northstar slide decks.",
+      applyWhen: { outputFormats: ["slides", "pdf"] },
+      key: "slides",
+    },
+    {
+      id: "northstar-pending",
+      title: "Northstar pending website rule",
+      kind: "directive",
+      status: "pending",
+      scopeId: "northstar-website",
+      content: "Pending website rule is visible before approval.",
+      applyWhen: { outputFormats: ["website"] },
+      key: "pending-website",
+    },
+  ];
+
+  for (const rule of seedRules) {
+    const response = await page.request.post("/api/rules", { data: { action: "propose", rule } });
+    expect(response.ok()).toBeTruthy();
+  }
+
+  const compiledResponse = await page.request.post("/api/rules", {
+    data: {
+      action: "compile",
+      input: {
+        prompt: "Create a site for NS.",
+        brand: "North Star",
+        outputFormat: "website",
+        taskType: "website",
+      },
+    },
+  });
+  expect(compiledResponse.ok()).toBeTruthy();
+  const compiled = await compiledResponse.json() as { prompt: string; overridden: Array<{ rule: { id: string } }>; omitted: Array<{ rule: { id: string }; reason: string }> };
+  expect(compiled.prompt).toContain("Northstar tone");
+  expect(compiled.prompt).toContain("Northstar website typography");
+  expect(compiled.prompt).toContain("primary logo");
+  expect(compiled.prompt).not.toContain("Keynote");
+  expect(compiled.prompt).not.toContain("Source Sans");
+  expect(compiled.overridden.some((entry) => entry.rule.id === "northstar-type-default")).toBeTruthy();
+  expect(compiled.omitted.some((entry) => entry.rule.id === "northstar-pending" && entry.reason === "status:pending")).toBeTruthy();
+
+  await page.goto("/rules");
+  await expect(page.getByTestId("rules-page")).toBeVisible();
+  await expect(page.getByTestId("rules-scope-tree")).toContainText("Northstar Studio");
+  await expect(page.getByTestId("rules-scope-tree")).toContainText("Website");
+  await expect(page.getByTestId("rules-pending-queue")).toContainText("Northstar pending website rule");
+  await page.getByTestId("rules-approve-northstar-pending").click();
+  await expect(page.getByTestId("rules-pending-count")).toContainText("0 pending");
+  await page.getByTestId("rules-compile-input").fill("Create a website for North Star.");
+  await page.getByRole("button", { name: "Compile" }).click();
+  await expect(page.getByTestId("rules-compile-output")).toContainText("Northstar website typography");
+
+  const screenshotPath = await saveBrowserScreenshot(page, "rules-page.png");
+  expect(path.basename(screenshotPath)).toBe("rules-page.png");
+});
