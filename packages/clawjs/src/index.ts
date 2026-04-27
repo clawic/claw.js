@@ -2743,58 +2743,22 @@ const TELEGRAM_CODEX_ATTACHMENT_INSTRUCTIONS = [
   "If the user asks you to send a photo or file, do not say this session cannot send attachments just because the reply is mediated through Telegram.",
   "If the user asks for a presentation or slides, prefer the local `claw slides` CLI: create a deck, add slides with layouts, validate it, render a PDF first, and attach the rendered PDF path as a document. Render PPTX/HTML/PNG too only when the user asks for them or you need visual debugging.",
   "Use this slide CLI syntax directly without exploratory help calls: `claw slides create \"Title\" --theme executive`; `claw slides add <deck> --layout title --heading \"...\" --subtitle \"...\"`; `claw slides add <deck> --layout title-bullets --heading \"...\" --bullet \"...\" --bullet \"...\"`; `claw slides add <deck> --layout comparison --heading \"...\" --left \"...\" --right \"...\"`; `claw slides add <deck> --layout metric-grid --heading \"...\" --metrics \"Label=Value\"`; `claw slides validate <deck>`; `claw slides render <deck> --format pdf`.",
-  "Telegram forum topics are available when the chat has topics enabled and the bot is an admin. To organize work visually, include final clawjs-telegram-actions JSON with create_topic, send_topic_message, pin_topic_message, close_topic, or reopen_topic.",
-  "Topic actions must use one preset from: general, work, code, research, notes, brainstorm, done, agent, thinking. Do not invent icon ids.",
-  "To attach media or manage topics, include a final fenced block named clawjs-telegram-actions containing JSON: {\"actions\":[{\"type\":\"send_message\",\"mediaType\":\"photo|video|document|audio|animation\",\"media\":\"file_id_https_url_or_local_path\",\"text\":\"optional caption\"},{\"type\":\"create_topic\",\"name\":\"Topic name\",\"preset\":\"code\",\"text\":\"optional first message\"}]}.",
+  "To attach media, include a final fenced block named clawjs-telegram-actions containing JSON: {\"actions\":[{\"type\":\"send_message\",\"mediaType\":\"photo|video|document|audio|animation\",\"media\":\"file_id_https_url_or_local_path\",\"text\":\"optional caption\"}]}.",
 ].join(" ");
 
-type TelegramCodexBridgeAction =
-  | {
-      type: "send_message";
-      targetId?: string;
-      text?: string;
-      media?: string;
-      mediaType?: "photo" | "video" | "document" | "audio" | "animation";
-      threadId?: string | number;
-      parseMode?: "HTML" | "Markdown" | "MarkdownV2";
-      metadata?: Record<string, unknown>;
-    }
-  | {
-      type: "create_topic";
-      targetId?: string;
-      name: string;
-      preset: TelegramTopicIconPreset;
-      iconCustomEmojiId: string;
-      text?: string;
-      metadata?: Record<string, unknown>;
-    }
-  | {
-      type: "send_topic_message";
-      targetId?: string;
-      threadId: string | number;
-      text: string;
-      parseMode?: "HTML" | "Markdown" | "MarkdownV2";
-      metadata?: Record<string, unknown>;
-    }
-  | {
-      type: "pin_topic_message";
-      targetId?: string;
-      messageId: string | number;
-      metadata?: Record<string, unknown>;
-    }
-  | {
-      type: "close_topic" | "reopen_topic";
-      targetId?: string;
-      threadId: string | number;
-      metadata?: Record<string, unknown>;
-    };
+type TelegramCodexMediaAction = {
+  type: "send_message";
+  targetId?: string;
+  text?: string;
+  media?: string;
+  mediaType?: "photo" | "video" | "document" | "audio" | "animation";
+  threadId?: string | number;
+  parseMode?: "HTML" | "Markdown" | "MarkdownV2";
+  metadata?: Record<string, unknown>;
+};
 
-function isTelegramTopicIconPreset(value: unknown): value is TelegramTopicIconPreset {
-  return typeof value === "string" && value in TELEGRAM_TOPIC_ICON_PRESETS;
-}
-
-function parseTelegramCodexBridgeActions(text: string): { text: string; bridgeActions: TelegramCodexBridgeAction[] } {
-  const bridgeActions: TelegramCodexBridgeAction[] = [];
+function parseTelegramCodexMediaActions(text: string): { text: string; mediaActions: TelegramCodexMediaAction[] } {
+  const mediaActions: TelegramCodexMediaAction[] = [];
   const cleaned = text.replace(/```clawjs-telegram-actions\s*([\s\S]*?)```/gi, (_match, rawJson: string) => {
     try {
       const payload = JSON.parse(rawJson.trim()) as unknown;
@@ -2808,66 +2772,24 @@ function parseTelegramCodexBridgeActions(text: string): { text: string; bridgeAc
         const candidate = action as Record<string, unknown>;
         const media = typeof candidate.media === "string" ? candidate.media.trim() : "";
         const mediaType = typeof candidate.mediaType === "string" ? candidate.mediaType : "photo";
-        if (candidate.type === "send_message" && media && ["photo", "video", "document", "audio", "animation"].includes(mediaType)) {
-          bridgeActions.push({
-            type: "send_message",
-            ...(typeof candidate.targetId === "string" ? { targetId: candidate.targetId } : {}),
-            ...(typeof candidate.text === "string" ? { text: candidate.text } : {}),
-            media,
-            mediaType: mediaType as Extract<TelegramCodexBridgeAction, { type: "send_message" }>["mediaType"],
-            ...(typeof candidate.threadId === "string" || typeof candidate.threadId === "number" ? { threadId: candidate.threadId } : {}),
-            ...(candidate.parseMode === "HTML" || candidate.parseMode === "Markdown" || candidate.parseMode === "MarkdownV2" ? { parseMode: candidate.parseMode } : {}),
-            ...(candidate.metadata && typeof candidate.metadata === "object" && !Array.isArray(candidate.metadata) ? { metadata: candidate.metadata as Record<string, unknown> } : {}),
-          });
-          continue;
-        }
-        if (candidate.type === "create_topic" && typeof candidate.name === "string" && candidate.name.trim() && isTelegramTopicIconPreset(candidate.preset)) {
-          bridgeActions.push({
-            type: "create_topic",
-            ...(typeof candidate.targetId === "string" ? { targetId: candidate.targetId } : {}),
-            name: candidate.name.trim().slice(0, 128),
-            preset: candidate.preset,
-            iconCustomEmojiId: TELEGRAM_TOPIC_ICON_PRESETS[candidate.preset].customEmojiId,
-            ...(typeof candidate.text === "string" ? { text: candidate.text } : {}),
-            ...(candidate.metadata && typeof candidate.metadata === "object" && !Array.isArray(candidate.metadata) ? { metadata: candidate.metadata as Record<string, unknown> } : {}),
-          });
-          continue;
-        }
-        if (candidate.type === "send_topic_message" && (typeof candidate.threadId === "string" || typeof candidate.threadId === "number") && typeof candidate.text === "string" && candidate.text.trim()) {
-          bridgeActions.push({
-            type: "send_topic_message",
-            ...(typeof candidate.targetId === "string" ? { targetId: candidate.targetId } : {}),
-            threadId: candidate.threadId,
-            text: candidate.text,
-            ...(candidate.parseMode === "HTML" || candidate.parseMode === "Markdown" || candidate.parseMode === "MarkdownV2" ? { parseMode: candidate.parseMode } : {}),
-            ...(candidate.metadata && typeof candidate.metadata === "object" && !Array.isArray(candidate.metadata) ? { metadata: candidate.metadata as Record<string, unknown> } : {}),
-          });
-          continue;
-        }
-        if (candidate.type === "pin_topic_message" && (typeof candidate.messageId === "string" || typeof candidate.messageId === "number")) {
-          bridgeActions.push({
-            type: "pin_topic_message",
-            ...(typeof candidate.targetId === "string" ? { targetId: candidate.targetId } : {}),
-            messageId: candidate.messageId,
-            ...(candidate.metadata && typeof candidate.metadata === "object" && !Array.isArray(candidate.metadata) ? { metadata: candidate.metadata as Record<string, unknown> } : {}),
-          });
-          continue;
-        }
-        if ((candidate.type === "close_topic" || candidate.type === "reopen_topic") && (typeof candidate.threadId === "string" || typeof candidate.threadId === "number")) {
-          bridgeActions.push({
-            type: candidate.type,
-            ...(typeof candidate.targetId === "string" ? { targetId: candidate.targetId } : {}),
-            threadId: candidate.threadId,
-            ...(candidate.metadata && typeof candidate.metadata === "object" && !Array.isArray(candidate.metadata) ? { metadata: candidate.metadata as Record<string, unknown> } : {}),
-          });
-        }
+        if (candidate.type !== "send_message" || !media || !["photo", "video", "document", "audio", "animation"].includes(mediaType)) continue;
+        mediaActions.push({
+          type: "send_message",
+          ...(typeof candidate.targetId === "string" ? { targetId: candidate.targetId } : {}),
+          ...(typeof candidate.text === "string" ? { text: candidate.text } : {}),
+          media,
+          mediaType: mediaType as TelegramCodexMediaAction["mediaType"],
+          ...(typeof candidate.threadId === "string" || typeof candidate.threadId === "number" ? { threadId: candidate.threadId } : {}),
+          ...(candidate.parseMode === "HTML" || candidate.parseMode === "Markdown" || candidate.parseMode === "MarkdownV2" ? { parseMode: candidate.parseMode } : {}),
+          ...(candidate.metadata && typeof candidate.metadata === "object" && !Array.isArray(candidate.metadata) ? { metadata: candidate.metadata as Record<string, unknown> } : {}),
+        });
       }
     } catch {
       return _match;
     }
     return "";
   }).trim();
-  return { text: cleaned, bridgeActions };
+  return { text: cleaned, mediaActions };
 }
 
 async function runTelegramCodexProcessor(input: {
@@ -3283,16 +3205,16 @@ async function runTelegramCodexProcessor(input: {
   }
 
   const actions: Array<Record<string, unknown>> = [];
-  const bridgeActions: Array<Record<string, unknown>> = [];
+  const mediaActions: Array<Record<string, unknown>> = [];
   for (const reply of replies) {
-    const parsedReply = parseTelegramCodexBridgeActions(reply.text);
+    const parsedReply = parseTelegramCodexMediaActions(reply.text);
     for (const text of splitTelegramMessage(parsedReply.text)) {
       actions.push(sendTextAction(text, { transport: reply.transport, fallback: reply.fallback }));
     }
-    bridgeActions.push(...parsedReply.bridgeActions.map((action) => ({
+    mediaActions.push(...parsedReply.mediaActions.map((action) => ({
       ...action,
       targetId: action.targetId ?? targetId,
-      ...("threadId" in action && action.threadId !== undefined ? { threadId: action.threadId } : threadId && action.type !== "create_topic" ? { threadId } : {}),
+      ...(action.threadId !== undefined ? { threadId: action.threadId } : threadId ? { threadId } : {}),
       agentId: input.agentId,
       metadata: {
         ...(action.metadata ?? {}),
@@ -3303,19 +3225,19 @@ async function runTelegramCodexProcessor(input: {
       },
     })));
   }
-  if (actions.length > 0 || bridgeActions.length > 0) {
+  if (actions.length > 0 || mediaActions.length > 0) {
     actions.unshift({
       type: "grant_permission",
       targetId,
       agentId: input.agentId,
-      permissions: bridgeActions.some((action) => ["create_topic", "pin_topic_message", "close_topic", "reopen_topic"].includes(String(action.type))) ? ["write", "admin"] : ["write"],
+      permissions: ["write"],
       priority: 100,
       metadata: {
         source: "telegram-codex-bridge",
         ownerUserId: state.ownerUserId,
       },
     });
-    actions.push(...bridgeActions);
+    actions.push(...mediaActions);
   }
   if (actions.length === 0) {
     actions.push({ type: "ignore", reason: "codex returned empty response" });
