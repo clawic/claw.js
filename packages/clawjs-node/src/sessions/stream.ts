@@ -175,7 +175,6 @@ function collectCodexText(value: unknown, output: string[]): void {
     || type.includes("assistant")
     || type.includes("agent_message")
     || type.includes("output")
-    || method.includes("turn")
     || method.includes("codex");
 
   if (isAssistantish) {
@@ -186,7 +185,7 @@ function collectCodexText(value: unknown, output: string[]): void {
   }
 
   const content = record.content;
-  if (Array.isArray(content)) {
+  if (isAssistantish && Array.isArray(content)) {
     for (const item of content) {
       const itemRecord = asRecord(item);
       if (!itemRecord) continue;

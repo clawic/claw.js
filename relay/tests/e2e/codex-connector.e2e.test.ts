@@ -54,6 +54,7 @@ if (args[0] === "app-server") {
       process.stdout.write(JSON.stringify({ id: message.id, result: { thread: { id: "thread-1" } } }) + "\\n");
     }
     if (message.method === "turn/start") {
+      process.stdout.write(JSON.stringify({ method: "turn/started", params: { input: message.params.input } }) + "\\n");
       process.stdout.write(JSON.stringify({ method: "codex/event", params: { msg: { type: "agent_message", message: "codex relay reply" } } }) + "\\n");
       process.stdout.write(JSON.stringify({ method: "turn/completed", params: {} }) + "\\n");
     }
@@ -300,6 +301,7 @@ test("relay connector runs Codex sessions without OpenClaw and reports runtime h
   assert.equal(streamResponse.status, 200);
   const streamText = await streamResponse.text();
   assert.match(streamText, /codex relay reply/);
+  assert.doesNotMatch(streamText, /SYSTEM PROMPT/);
 
   first.socket.close();
   await new Promise((resolve) => first.socket.once("close", resolve));

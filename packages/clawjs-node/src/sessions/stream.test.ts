@@ -59,6 +59,17 @@ test("extractCodexJsonlText returns the final completed Codex agent message", ()
   assert.equal(text, "Done. The file is attached.");
 });
 
+test("extractCodexJsonlText ignores echoed Codex turn input", () => {
+  const prompt = "SYSTEM PROMPT:\nnever expose this\n\nSESSION:\nUSER: hello";
+  const text = extractCodexJsonlText([
+    JSON.stringify({ method: "turn/started", params: { input: [{ type: "text", text: prompt }] } }),
+    JSON.stringify({ method: "codex/event", params: { msg: { type: "agent_message", message: "hello from codex" } } }),
+    JSON.stringify({ method: "turn/completed", params: {} }),
+  ].join("\n"));
+
+  assert.equal(text, "hello from codex");
+});
+
 test("streamOpenClawSession streams Codex app-server and can fall back to Codex exec JSONL", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-codex-stream-"));
   const codexBin = path.join(tempRoot, "codex");
@@ -77,6 +88,7 @@ if (args[0] === "app-server") {
       process.stdout.write(JSON.stringify({ id: message.id, result: { thread: { id: "thread-1" } } }) + "\\n");
     }
     if (message.method === "turn/start") {
+      process.stdout.write(JSON.stringify({ method: "turn/started", params: { input: message.params.input } }) + "\\n");
       process.stdout.write(JSON.stringify({ method: "codex/event", params: { msg: { type: "agent_message", message: "app server reply" } } }) + "\\n");
       process.stdout.write(JSON.stringify({ method: "turn/completed", params: {} }) + "\\n");
     }
