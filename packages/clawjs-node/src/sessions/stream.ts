@@ -171,11 +171,15 @@ function collectCodexText(value: unknown, output: string[]): void {
   const type = normalizeExtractedText(record.type);
   const role = normalizeExtractedText(record.role);
   const method = normalizeExtractedText(record.method);
-  const isAssistantish = role === "assistant"
-    || type.includes("assistant")
-    || type.includes("agent_message")
-    || type.includes("output")
-    || method.includes("codex");
+  const typeLower = type.toLowerCase();
+  const roleLower = role.toLowerCase();
+  const methodLower = method.toLowerCase();
+  const isAssistantish = roleLower === "assistant"
+    || typeLower.includes("assistant")
+    || typeLower.includes("agent_message")
+    || typeLower.includes("agentmessage")
+    || typeLower.includes("output")
+    || methodLower.includes("codex");
 
   if (isAssistantish) {
     for (const key of ["delta", "text", "message", "lastMessage", "last_message", "output_text"]) {
@@ -272,9 +276,9 @@ export function extractResponseOutputText(payload: unknown): string {
 function isCodexAppServerComplete(message: unknown): boolean {
   const record = asRecord(message);
   if (!record) return false;
-  const method = normalizeExtractedText(record.method);
-  const type = normalizeExtractedText(record.type);
-  const status = normalizeExtractedText(record.status);
+  const method = normalizeExtractedText(record.method).toLowerCase();
+  const type = normalizeExtractedText(record.type).toLowerCase();
+  const status = normalizeExtractedText(record.status).toLowerCase();
   if (/turn\/(completed|complete|finished)|codex\/turn_completed/.test(method)) return true;
   if (/turn_(completed|complete|finished)|completed|complete/.test(type)) return true;
   if (["completed", "complete", "finished", "done"].includes(status)) return true;

@@ -63,7 +63,9 @@ test("extractCodexJsonlText ignores echoed Codex turn input", () => {
   const prompt = "SYSTEM PROMPT:\nnever expose this\n\nSESSION:\nUSER: hello";
   const text = extractCodexJsonlText([
     JSON.stringify({ method: "turn/started", params: { input: [{ type: "text", text: prompt }] } }),
-    JSON.stringify({ method: "codex/event", params: { msg: { type: "agent_message", message: "hello from codex" } } }),
+    JSON.stringify({ method: "item/started", params: { item: { type: "userMessage", content: [{ type: "text", text: prompt }] } } }),
+    JSON.stringify({ method: "item/completed", params: { item: { type: "userMessage", content: [{ type: "text", text: prompt }] } } }),
+    JSON.stringify({ method: "item/completed", params: { item: { type: "agentMessage", content: [{ type: "text", text: "hello from codex" }] } } }),
     JSON.stringify({ method: "turn/completed", params: {} }),
   ].join("\n"));
 
@@ -89,7 +91,9 @@ if (args[0] === "app-server") {
     }
     if (message.method === "turn/start") {
       process.stdout.write(JSON.stringify({ method: "turn/started", params: { input: message.params.input } }) + "\\n");
-      process.stdout.write(JSON.stringify({ method: "codex/event", params: { msg: { type: "agent_message", message: "app server reply" } } }) + "\\n");
+      process.stdout.write(JSON.stringify({ method: "item/started", params: { item: { type: "userMessage", content: message.params.input } } }) + "\\n");
+      process.stdout.write(JSON.stringify({ method: "item/completed", params: { item: { type: "userMessage", content: message.params.input } } }) + "\\n");
+      process.stdout.write(JSON.stringify({ method: "item/completed", params: { item: { type: "agentMessage", content: [{ type: "text", text: "app server reply" }] } } }) + "\\n");
       process.stdout.write(JSON.stringify({ method: "turn/completed", params: {} }) + "\\n");
     }
   });

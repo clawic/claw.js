@@ -55,7 +55,9 @@ if (args[0] === "app-server") {
     }
     if (message.method === "turn/start") {
       process.stdout.write(JSON.stringify({ method: "turn/started", params: { input: message.params.input } }) + "\\n");
-      process.stdout.write(JSON.stringify({ method: "codex/event", params: { msg: { type: "agent_message", message: "codex relay reply" } } }) + "\\n");
+      process.stdout.write(JSON.stringify({ method: "item/started", params: { item: { type: "userMessage", content: message.params.input } } }) + "\\n");
+      process.stdout.write(JSON.stringify({ method: "item/completed", params: { item: { type: "userMessage", content: message.params.input } } }) + "\\n");
+      process.stdout.write(JSON.stringify({ method: "item/completed", params: { item: { type: "agentMessage", content: [{ type: "text", text: "codex relay reply" }] } } }) + "\\n");
       process.stdout.write(JSON.stringify({ method: "turn/completed", params: {} }) + "\\n");
     }
   });
