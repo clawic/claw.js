@@ -2,6 +2,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { MemoryService } from "./service";
+import { initWorkspace } from "./workspace";
 import { LoadedSchema, ParsedNote } from "./types";
 
 type GraphNode = {
@@ -178,8 +179,13 @@ function sendHtml(res: http.ServerResponse, html: string) {
   res.end(html);
 }
 
-export function startServer(service: MemoryService, port: number): http.Server {
+export function startServer(
+  service: MemoryService,
+  port: number,
+  options: { host?: string; statusFile?: string; workspace?: string } = {}
+): http.Server {
   const uiPath = path.join(__dirname, "ui.html");
+  const host = options.host ?? "127.0.0.1";
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", `http://localhost:${port}`);
@@ -188,8 +194,8 @@ export function startServer(service: MemoryService, port: number): http.Server {
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, X-Memory-Editor",
       });
       res.end();
       return;
@@ -202,13 +208,18 @@ export function startServer(service: MemoryService, port: number): http.Server {
         return;
       }
 
+      if (pathname === "/v1/health" || pathname === "/health" || pathname === "/healthz") {
+        sendJson(res, { ok: true, service: "memory", host, port });
+        return;
+      }
+
       if (pathname === "/api/schema") {
         const schema = service.loadSchema();
         sendJson(res, serializeSchema(schema));
         return;
       }
 
-      if (pathname === "/api/notes") {
+      if (pathname === "/api/notes" && (req.method === "GET" || req.method === undefined)) {
         const validation = service.validate();
         const schema = validation.schema;
         const noteKind = url.searchParams.get("noteKind");
@@ -341,6 +352,37 @@ export function startServer(service: MemoryService, port: number): http.Server {
 
       if (pathname.startsWith("/api/notes/")) {
         const noteId = decodeURIComponent(pathname.slice("/api/notes/".length));
+
+        if (req.method === "PATCH") {
+          const body = (await readJsonBody(req)) as Record<string, unknown>;
+          const editorHeader = (req.headers["x-memory-editor"] as string | undefined)?.toLowerCase();
+          const editor: "user" | "agent" | "system" =
+            editorHeader === "agent" || editorHeader === "system" ? editorHeader : "user";
+          const patch: Parameters<MemoryService["updateNote"]>[1] = {};
+          if (typeof body.title === "string") patch.title = body.title;
+          if (typeof body.body === "string") patch.body = body.body;
+          if (Array.isArray(body.tags)) patch.tags = body.tags.map((t) => String(t));
+          if ("scopeUser" in body) patch.scopeUser = body.scopeUser as string | null;
+          if ("scopeAgent" in body) patch.scopeAgent = body.scopeAgent as string | null;
+          if ("scopeProject" in body) patch.scopeProject = body.scopeProject as string | null;
+          if (typeof body.memoryClass === "string") {
+            const mc = parseMemoryClass(body.memoryClass);
+            if (mc) patch.memoryClass = mc;
+          }
+          if (body.frontmatter && typeof body.frontmatter === "object" && !Array.isArray(body.frontmatter)) {
+            patch.frontmatter = body.frontmatter as Record<string, never>;
+          }
+          const result = service.updateNote(noteId, patch, editor);
+          sendJson(res, result);
+          return;
+        }
+
+        if (req.method === "DELETE") {
+          const result = service.deleteNote(noteId);
+          sendJson(res, result);
+          return;
+        }
+
         const validation = service.validate();
         const note = validation.notes.find((n) => n.id === noteId);
         if (!note) {
@@ -348,6 +390,30 @@ export function startServer(service: MemoryService, port: number): http.Server {
           return;
         }
         sendJson(res, getNoteDetail(note, validation.schema));
+        return;
+      }
+
+      if (req.method === "POST" && pathname === "/api/notes") {
+        const body = (await readJsonBody(req)) as Record<string, unknown>;
+        const noteKind = body.noteKind === "entity" ? "entity" : "memory";
+        const input: Parameters<MemoryService["createNoteManual"]>[0] = {
+          noteKind,
+          title: String(body.title ?? ""),
+          body: String(body.body ?? "")
+        };
+        if (typeof body.type === "string") input.type = body.type;
+        if (typeof body.memoryClass === "string") {
+          const mc = parseMemoryClass(body.memoryClass);
+          if (mc) input.memoryClass = mc;
+        }
+        if (Array.isArray(body.tags)) input.tags = body.tags.map((t) => String(t));
+        if (typeof body.scopeUser === "string") input.scopeUser = body.scopeUser;
+        if (typeof body.scopeAgent === "string") input.scopeAgent = body.scopeAgent;
+        if (typeof body.scopeProject === "string") input.scopeProject = body.scopeProject;
+        if (typeof body.confidence === "number") input.confidence = body.confidence;
+        if (typeof body.trustScore === "number") input.trustScore = body.trustScore;
+        const result = service.createNoteManual(input);
+        sendJson(res, result, 201);
         return;
       }
 
@@ -398,11 +464,59 @@ export function startServer(service: MemoryService, port: number): http.Server {
     }
   });
 
-  server.listen(port, () => {
-    console.log(`\n  Memory UI running at http://localhost:${port}\n`);
+  server.listen(port, host, () => {
+    console.log(`\n  Memory server running at http://${host}:${port}\n`);
+    if (options.statusFile) {
+      try {
+        fs.mkdirSync(path.dirname(options.statusFile), { recursive: true });
+        fs.writeFileSync(
+          options.statusFile,
+          JSON.stringify({
+            ready: true,
+            host,
+            port,
+            workspace: options.workspace ?? null,
+            startedAt: new Date().toISOString(),
+            pid: process.pid
+          }),
+          "utf8"
+        );
+      } catch (error) {
+        console.error("[memory] could not write status file:", error);
+      }
+    }
   });
 
   return server;
+}
+
+export interface StartMemoryServerOptions {
+  port?: number;
+  host?: string;
+  workspace?: string;
+  statusFile?: string;
+}
+
+export interface StartMemoryServerResult {
+  server: http.Server;
+  service: MemoryService;
+  config: { host: string; port: number; workspace: string };
+}
+
+export function startMemoryServer(options: StartMemoryServerOptions = {}): StartMemoryServerResult {
+  const port = Number(options.port ?? process.env.MEMORY_PORT ?? 7791);
+  const host = options.host ?? process.env.MEMORY_HOST ?? "127.0.0.1";
+  const workspace = path.resolve(
+    options.workspace ?? process.env.MEMORY_WORKSPACE ?? process.cwd()
+  );
+  initWorkspace(workspace);
+  const service = MemoryService.fromCwd(workspace);
+  const server = startServer(service, port, {
+    host,
+    statusFile: options.statusFile,
+    workspace
+  });
+  return { server, service, config: { host, port, workspace } };
 }
 
 async function readJsonBody(req: http.IncomingMessage): Promise<Record<string, unknown>> {
