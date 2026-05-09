@@ -8,7 +8,7 @@ import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 
-import { DriveAuthService, type AuthPrincipal } from "./auth.ts";
+import { DriveAuthService, loadEphemeralAdminToken, type AuthPrincipal } from "./auth.ts";
 import { loadDriveConfig, type DriveServiceConfig } from "./config.ts";
 import { DriveConverterService } from "./converters.ts";
 import { DriveConflictError, type DriveActor, DriveStore } from "./db.ts";
@@ -76,6 +76,8 @@ function queryString(request: FastifyRequest, key: string): string | undefined {
 async function resolvePrincipal(request: FastifyRequest, auth: DriveAuthService, store: DriveStore): Promise<AuthPrincipal | null> {
   const token = parseBearerToken(request);
   if (!token) return null;
+  const ephemeralAdmin = auth.verifyEphemeralAdminToken(token);
+  if (ephemeralAdmin) return ephemeralAdmin;
   const admin = await auth.verifyAdminToken(token);
   if (admin) return admin;
   const scopedToken = store.authenticateScopedToken(token);
@@ -278,8 +280,13 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
   const config = loadDriveConfig(options.config);
   fs.mkdirSync(config.dataDir, { recursive: true });
 
+  const ephemeralAdminToken = loadEphemeralAdminToken({
+    dataDir: config.dataDir,
+    envVarName: "CLAWJS_DRIVE_ADMIN_TOKEN",
+  });
+
   const app = Fastify({ logger: false });
-  const auth = new DriveAuthService(config.jwtSecret);
+  const auth = new DriveAuthService(config.jwtSecret, ephemeralAdminToken);
   const converters = new DriveConverterService(config.converterMode);
   const store = new DriveStore(config.dbPath, config.dataDir);
   const bus = new DriveEventBus();
@@ -294,6 +301,8 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
     auth,
     store,
     resolvePrincipal: async (token) => {
+      const ephemeralAdmin = auth.verifyEphemeralAdminToken(token);
+      if (ephemeralAdmin) return ephemeralAdmin;
       const admin = await auth.verifyAdminToken(token);
       if (admin) return admin;
       const scoped = store.authenticateScopedToken(token);
