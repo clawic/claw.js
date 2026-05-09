@@ -63,6 +63,7 @@ export * from "./slack/index.ts";
 export * from "./whatsapp/index.ts";
 export * from "./secrets/index.ts";
 export * from "./skills/index.ts";
+export * from "./skills-v2/index.ts";
 export * from "./tts/index.ts";
 export * from "./stt/index.ts";
 export * from "./voice-notes/index.ts";
