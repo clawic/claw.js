@@ -1047,6 +1047,25 @@ export class DatabaseServiceStore {
     return row.password_hash === hashSecret(password) ? { id: row.id, email: row.email } : null;
   }
 
+  findAdminByEmail(email: string): { id: string; email: string } | null {
+    const row = this.sqlite.prepare(`
+      SELECT id, email
+      FROM admins
+      WHERE email = ?
+    `).get(email) as { id: string; email: string } | undefined;
+    return row ? { id: row.id, email: row.email } : null;
+  }
+
+  createAdmin(input: { email: string; password: string }): { id: string; email: string } {
+    const id = `admin-${randomUUID().slice(0, 8)}`;
+    const now = nowIso();
+    this.sqlite.prepare(`
+      INSERT INTO admins (id, email, password_hash, created_at)
+      VALUES (?, ?, ?, ?)
+    `).run(id, input.email, hashSecret(input.password), now);
+    return { id, email: input.email };
+  }
+
   listNamespaces(): NamespaceRecord[] {
     return (this.sqlite.prepare(`
       SELECT id, display_name, created_at, updated_at

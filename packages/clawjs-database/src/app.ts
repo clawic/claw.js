@@ -265,6 +265,46 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     };
   });
 
+  // Idempotent bootstrap. Used by clients that own a single admin user
+  // (e.g. Clawix Mac storing the credential in the macOS Keychain).
+  //
+  //   - If no admin matches the email yet, create one with the given password.
+  //   - If the admin exists and the password matches, return a fresh JWT.
+  //   - If the admin exists with a different password, return 401.
+  //
+  // Always returns the same {accessToken, admin} shape on success so the
+  // caller can treat first-run and steady-state identically.
+  app.post("/v1/auth/admin/bootstrap", async (request, reply) => {
+    const body = readBody(request);
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const password = typeof body.password === "string" ? body.password : "";
+    if (!email || !password) {
+      return await reply.code(400).send({ error: "email and password are required" });
+    }
+    const existing = store.findAdminByEmail(email);
+    let admin: { id: string; email: string } | null;
+    if (!existing) {
+      admin = store.createAdmin({ email, password });
+    } else {
+      admin = store.verifyAdmin(email, password);
+      if (!admin) {
+        return await reply.code(401).send({ error: "Admin already exists with a different password." });
+      }
+    }
+    const accessToken = await auth.issueAdminToken({
+      adminId: admin.id,
+      email: admin.email,
+    });
+    return {
+      accessToken,
+      admin: {
+        id: admin.id,
+        email: admin.email,
+      },
+      created: !existing,
+    };
+  });
+
   app.get("/v1/auth/me", async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store);
     if (!principal) return null;
@@ -304,6 +344,28 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
         displayName,
       });
       return await reply.code(201).send(namespace);
+    } catch (error) {
+      return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Idempotent ensure-namespace. Returns the existing one if it already
+  // exists, otherwise creates it. Always seeds the built-in collections.
+  app.put("/v1/namespaces/:namespaceId", async (request, reply) => {
+    const principal = await requirePrincipal(request, reply, auth, store, { adminOnly: true });
+    if (!principal) return null;
+    try {
+      const params = request.params as { namespaceId: string };
+      const body = readBody(request);
+      const displayName = typeof body.displayName === "string" && body.displayName.trim()
+        ? body.displayName
+        : params.namespaceId;
+      const namespace = store.ensureNamespace({
+        id: params.namespaceId,
+        displayName,
+      });
+      store.ensureBuiltinCollections(namespace.id);
+      return namespace;
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
     }

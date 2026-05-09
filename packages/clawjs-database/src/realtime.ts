@@ -33,6 +33,25 @@ export class RealtimeHub {
     const client: ClientState = { socket, principal, subscriptions: [] };
     this.clients.add(client);
 
+    socket.send(JSON.stringify({ type: "hello", at: new Date().toISOString() }));
+
+    // Heartbeat: ping every 30s. Clients reply with pong; if no pong for
+    // ~70s we drop the socket so a half-open TCP connection doesn't keep
+    // a ghost subscription alive forever.
+    let alive = true;
+    const heartbeat = setInterval(() => {
+      if (!alive) {
+        try { socket.terminate(); } catch { /* ignore */ }
+        clearInterval(heartbeat);
+        this.clients.delete(client);
+        return;
+      }
+      alive = false;
+      try { socket.ping(); } catch { /* ignore */ }
+    }, 30_000);
+
+    socket.on("pong", () => { alive = true; });
+
     socket.on("message", (buffer: RawData) => {
       try {
         const payload = JSON.parse(buffer.toString()) as {
@@ -40,6 +59,16 @@ export class RealtimeHub {
           namespaceId?: string;
           collectionName?: string;
         };
+        if (payload.type === "ping") {
+          alive = true;
+          socket.send(JSON.stringify({ type: "pong", at: new Date().toISOString() }));
+          return;
+        }
+        if (payload.type === "unsubscribe" && payload.namespaceId && payload.collectionName) {
+          client.subscriptions = client.subscriptions.filter((entry) => !(entry.namespaceId === payload.namespaceId && entry.collectionName === payload.collectionName));
+          socket.send(JSON.stringify({ type: "unsubscribed", namespaceId: payload.namespaceId, collectionName: payload.collectionName }));
+          return;
+        }
         if (payload.type !== "subscribe" || !payload.namespaceId || !payload.collectionName) {
           socket.send(JSON.stringify({ type: "error", message: "Invalid subscription payload." }));
           return;
@@ -60,10 +89,12 @@ export class RealtimeHub {
     });
 
     socket.on("close", () => {
+      clearInterval(heartbeat);
       this.clients.delete(client);
     });
 
     socket.on("error", () => {
+      clearInterval(heartbeat);
       this.clients.delete(client);
     });
   }
