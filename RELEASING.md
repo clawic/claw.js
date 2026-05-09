@@ -14,9 +14,9 @@
 
 1. Add a changeset in the feature PR with `npm run changeset`.
 2. Merge feature PRs into `main` or `next` as usual.
-3. The release workflow opens or updates a release PR from pending changesets.
+3. Create or update the release PR manually from pending changesets.
 4. Review the generated version bump, update the root changelog entry if needed, and merge the release PR into `main`.
-5. After merge, GitHub Actions runs the full release gate, publishes changed packages to npm, and tags the repository as `v<semver>`.
+5. Publish and tag manually after running the local release gate; GitHub must not publish packages or create tags automatically.
 
 For preview builds from `next`, run prereleases with the npm dist-tag `next` instead of publishing to `latest`.
 
@@ -30,8 +30,9 @@ For preview builds from `next`, run prereleases with the npm dist-tag `next` ins
 6. Review the pending release PR created from changesets.
 7. Update [CHANGELOG.md](CHANGELOG.md) in that release PR if the top-level note needs curation.
 8. Merge the release PR into `main`.
-9. Confirm the `Release` workflow publishes successfully and creates the `v<semver>` tag.
-10. Copy the changelog entry into the GitHub release notes if you want a manually curated GitHub release body.
+9. Publish packages manually only after confirming the dry run and authentication state.
+10. Create the `v<semver>` tag manually after publishing.
+11. Copy the changelog entry into the GitHub release notes if you want a manually curated GitHub release body.
 
 ## Package map
 

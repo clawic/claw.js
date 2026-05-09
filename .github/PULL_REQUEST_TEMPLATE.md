@@ -3,7 +3,7 @@
 ## Checklist
 
 - [ ] The branch name is scoped and short (`feat/*`, `fix/*`, `docs/*`, `chore/*`, `release/*`).
-- [ ] I ran the relevant local gate (`npm run ci`, targeted checks, or the blocking E2E suite when behavior changed) and expect `CI` plus `Release Gate` to pass in GitHub.
+- [ ] I ran the relevant local gate (`npm run ci`, targeted checks, or the blocking E2E suite when behavior changed); GitHub does not run automatic checks for this repo.
 - [ ] I updated docs/examples/changelog if the public surface changed.
 - [ ] I added a `.changeset/*.md` entry for published package changes, or this PR is docs-only, test-only, or internal-only.
 - [ ] I confirmed the change is ready to merge into `main`, `next`, or an active `release/*` branch.

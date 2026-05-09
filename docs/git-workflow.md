@@ -29,7 +29,7 @@ Delete them after merge.
 
 - Protect `main`, `next`, and `release/*`.
 - Require pull requests for those branches.
-- Require the `CI` and `Release Gate` workflows to pass before merge.
+- Require the relevant local validation before merge. Do not configure automatic GitHub CI or release workflows for this repository.
 - Require a changeset entry for PRs that change published packages, generated template output, or public package surface unless the change is docs-only, test-only, or internal-only.
 - Prefer squash merges so the public history stays readable while individual commits can still follow `type(scope): description`.
 - Keep release prep changes explicit: changelog, docs, versioning, and packaging checks in the same pull request.

@@ -32,4 +32,4 @@ npm run ci
 - Keep commit messages in `type(scope): description` form.
 - Target `main` for releasable work, `next` for queued integration work, and `release/*` only for stabilization or hotfixes.
 - Keep branch names short and scoped, such as `feat/runtime-status` or `docs/release-policy`.
-- Expect `CI` and `Release Gate` to stay green before merge.
+- Run the relevant local validation before merge. GitHub does not run automatic CI or release checks for this repo.

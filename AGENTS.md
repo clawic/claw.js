@@ -38,9 +38,9 @@ Key published packages:
 
 ## Environment And Setup
 
-- Use Node.js `20` or `22`. The root `package.json` requires Node `>=20`, and CI runs on Node `20` and `22`.
+- Use Node.js `20` or `22`. The root `package.json` requires Node `>=20`.
 - Use the root workspace as the command entrypoint unless a task clearly belongs inside `demo/` or `website/`.
-- The repo is CI-driven with `npm`. Use the documented `npm` commands as the default workflow.
+- The repo is validated locally with `npm`. Do not add GitHub Actions workflows or other automatic GitHub checks unless the maintainer explicitly reverses that policy.
 
 Bootstrap the full repository:
 
@@ -143,7 +143,7 @@ Pull request rules:
 - Target `main` for releasable work, `next` for queued integration work, and `release/*` only for stabilization or hotfixes.
 - Prefer squash merges.
 - Treat `main`, `next`, and `release/*` as protected branches.
-- Keep `CI` and `Release Gate` green before merge.
+- Run the relevant local validation before merge. GitHub must not run automatic CI or release checks for this repo.
 - If a PR changes a published package, generated template output, or public package surface, add a `.changeset/*.md` entry unless the change is docs-only, test-only, or internal-only.
 - If a PR changes onboarding, installation, imports, CLI usage, support tiers, docs, or templates, update the related documentation in the same PR.
 - Keep release-prep changes explicit: changelog, docs, versioning, packaging, and validation should land together.
