@@ -860,6 +860,176 @@ export class MemoryService {
     };
   }
 
+  updateNote(
+    reference: string,
+    patch: {
+      title?: string;
+      body?: string;
+      tags?: string[];
+      scopeUser?: string | null;
+      scopeAgent?: string | null;
+      scopeProject?: string | null;
+      memoryClass?: MemoryClass;
+      frontmatter?: Record<string, FrontmatterValue>;
+    },
+    editor: "user" | "agent" | "system" = "user"
+  ) {
+    if (!fs.existsSync(this.workspace.indexDbPath)) {
+      throw new MemoryError("No index found. Run `memory index` first.");
+    }
+
+    const sqlite = new Database(this.workspace.indexDbPath, { readonly: true });
+    let notePath: string;
+    let noteId: string;
+    try {
+      const note = this.lookupFromIndex(sqlite, reference, { allowLoose: true });
+      notePath = note.path;
+      noteId = note.id;
+    } finally {
+      sqlite.close();
+    }
+
+    const rawContent = fs.readFileSync(notePath, "utf8");
+    const { frontmatter, body } = parseFrontmatterDocument(rawContent);
+
+    const nextFrontmatter: FrontmatterMap = { ...frontmatter };
+    let nextBody = body;
+    const nowIso = new Date().toISOString();
+    const nowDate = nowIso.slice(0, 10);
+
+    if (patch.title !== undefined && patch.title.trim().length > 0) {
+      nextFrontmatter.title = patch.title.trim();
+      nextFrontmatter.slug = slugify(patch.title.trim());
+    }
+    if (patch.body !== undefined) {
+      if (editor === "user" && nextFrontmatter.originalBody === undefined) {
+        nextFrontmatter.originalBody = body;
+      }
+      nextBody = patch.body;
+    }
+    if (patch.tags !== undefined) {
+      nextFrontmatter.tags = sortScalarArray(patch.tags.filter((tag) => tag.trim().length > 0));
+    }
+    if (patch.scopeUser !== undefined) {
+      if (patch.scopeUser === null || patch.scopeUser === "") delete nextFrontmatter.scopeUser;
+      else nextFrontmatter.scopeUser = patch.scopeUser;
+    }
+    if (patch.scopeAgent !== undefined) {
+      if (patch.scopeAgent === null || patch.scopeAgent === "") delete nextFrontmatter.scopeAgent;
+      else nextFrontmatter.scopeAgent = patch.scopeAgent;
+    }
+    if (patch.scopeProject !== undefined) {
+      if (patch.scopeProject === null || patch.scopeProject === "") delete nextFrontmatter.scopeProject;
+      else nextFrontmatter.scopeProject = patch.scopeProject;
+    }
+    if (patch.memoryClass !== undefined && nextFrontmatter.kind === "memory") {
+      const nextType = memoryTypeForClass(patch.memoryClass);
+      const schema = this.loadSchema();
+      if (schema.memoryTypes.has(nextType)) {
+        nextFrontmatter.type = nextType;
+      }
+    }
+    if (patch.frontmatter) {
+      for (const [key, value] of Object.entries(patch.frontmatter)) {
+        if (value === null) delete nextFrontmatter[key];
+        else nextFrontmatter[key] = value;
+      }
+    }
+
+    nextFrontmatter.updatedAt = nowDate;
+    nextFrontmatter.lastEditedBy = editor;
+    nextFrontmatter.lastEditedAt = nowIso;
+    nextFrontmatter.embeddingStale = true;
+
+    const preferredOrder = buildSavedMemoryKeyOrder();
+    const ordered = sortFrontmatterMap(nextFrontmatter, preferredOrder);
+    fs.writeFileSync(notePath, serializeFrontmatterDocument(ordered, nextBody), "utf8");
+
+    try {
+      this.index();
+    } catch (error) {
+      // Re-index best-effort; do not fail the update on indexing hiccups.
+    }
+
+    return {
+      updated: true,
+      id: noteId,
+      path: path.relative(this.workspace.root, notePath),
+      lastEditedBy: editor,
+      lastEditedAt: nowIso
+    };
+  }
+
+  createNoteManual(input: {
+    noteKind: NoteKind;
+    title: string;
+    body: string;
+    type?: string;
+    memoryClass?: MemoryClass;
+    tags?: string[];
+    scopeUser?: string;
+    scopeAgent?: string;
+    scopeProject?: string;
+    confidence?: number;
+    trustScore?: number;
+  }) {
+    const title = (input.title ?? "").trim();
+    if (!title) throw new MemoryError("title is required");
+    const body = (input.body ?? "").trim();
+    if (!body) throw new MemoryError("body is required");
+
+    if (input.noteKind === "memory") {
+      const saved = this.saveMemory({
+        title,
+        content: body,
+        memoryClass: input.memoryClass ?? "semantic",
+        confidence: input.confidence ?? 0.85,
+        trustScore: input.trustScore ?? 0.85,
+        scopeUser: input.scopeUser,
+        scopeAgent: input.scopeAgent,
+        scopeProject: input.scopeProject,
+        provenance: "manual_user"
+      });
+      if (input.tags && input.tags.length > 0) {
+        this.updateNote(saved.id, { tags: input.tags }, "user");
+      }
+      const file = path.join(this.workspace.root, saved.path);
+      if (fs.existsSync(file)) {
+        const raw = fs.readFileSync(file, "utf8");
+        const { frontmatter, body: noteBody } = parseFrontmatterDocument(raw);
+        frontmatter.createdBy = "user";
+        const ordered = sortFrontmatterMap(frontmatter, buildSavedMemoryKeyOrder());
+        fs.writeFileSync(file, serializeFrontmatterDocument(ordered, noteBody), "utf8");
+        try {
+          this.index();
+        } catch (error) {
+          // best-effort
+        }
+      }
+      return saved;
+    }
+
+    const schema = this.loadSchema();
+    const type = input.type ?? "topic";
+    if (!schema.entityTypes.has(type)) {
+      throw new MemoryError(`Unknown entity type "${type}"`);
+    }
+    const id = `ent_${hashString(`${new Date().toISOString()}:${title}`).slice(0, 12)}`;
+    const created = this.newNote("entity", type, id, title);
+    return this.updateNote(
+      created.id,
+      {
+        body,
+        tags: input.tags,
+        scopeUser: input.scopeUser,
+        scopeAgent: input.scopeAgent,
+        scopeProject: input.scopeProject,
+        frontmatter: { createdBy: "user" }
+      },
+      "user"
+    );
+  }
+
   doctor() {
     const validation = this.validate();
     const duplicateIdentities = validation.issues.some((issue) =>
@@ -1703,7 +1873,12 @@ function validateNoteShape(
     "scopeAgent",
     "scopeProject",
     "provenance",
-    "lastSeen"
+    "lastSeen",
+    "createdBy",
+    "lastEditedBy",
+    "lastEditedAt",
+    "originalBody",
+    "embeddingStale"
   ]);
   if (note.kind === "entity") {
     allowedKeys.add("aliases");
