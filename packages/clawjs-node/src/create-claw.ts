@@ -111,6 +111,17 @@ import type {
   MediaSearchResult,
   SkillContextCapsule,
   SkillContextResolveResult,
+  SkillCreateInput as SkillsV2CreateInput,
+  SkillImportReport,
+  SkillKind as SkillsV2Kind,
+  SkillListFilter as SkillsV2ListFilter,
+  SkillResolveContext as SkillsV2ResolveContext,
+  SkillScope as SkillsV2Scope,
+  SkillSpec as SkillsV2Spec,
+  SkillSyncReport,
+  SkillSyncTarget as SkillsV2SyncTarget,
+  SkillUpdate as SkillsV2Update,
+  SkillAssignment as SkillsV2Assignment,
   SoulAssignment,
   SoulCompileResult,
   SoulSpec,
@@ -320,6 +331,15 @@ import {
   resolveSkillSourceFromRef,
   type SkillSourceAdapter,
 } from "./skills/index.ts";
+import {
+  SkillsImporter,
+  SkillsStore as SkillsV2Store,
+  SkillsSyncEngine,
+  compileSkills as compileSkillsV2,
+  createSkillsStore,
+  generateBuiltinSkills as generateSkillsV2Builtins,
+  migrateLegacyState as migrateSkillsV2LegacyState,
+} from "./skills-v2/index.ts";
 import { callTelegramApi, createTelegramService, downloadTelegramFile, type TelegramConnectBotInput, type TelegramSendMediaInput, type TelegramSendMessageInput, type TelegramStatusResult, type TelegramWebhookConfigInput, type TelegramSyncUpdatesOptions, type TelegramBanOrRestrictInput, type TelegramInviteLinkOptions } from "./telegram/index.ts";
 import { createChannelsRegistry, type GrantChannelBindingInput, type ReadChannelMessagesInput, type RegisterChannelProcessorInput, type RegisterChannelTargetInput, type RegisterTelegramBotAccountInput, type SendChannelMessageInput, type UpsertChannelListenerInput } from "./channels/index.ts";
 import { invokeChannelProcessor, type ChannelProcessorAction } from "./channels/processors.ts";
@@ -497,6 +517,15 @@ export interface CreateClawOptions {
   rules?: {
     rootDir?: string;
     env?: NodeJS.ProcessEnv;
+  };
+  /**
+   * Skills-v2 (unified SKILL.md) configuration. Defaults: ~/.clawjs as home,
+   * auto-import enabled. Overridable via `CLAWJS_HOME` env var.
+   */
+  skills?: {
+    homeDir?: string;
+    env?: NodeJS.ProcessEnv;
+    autoImport?: boolean;
   };
   images?: {
     rootDir?: string;
@@ -855,6 +884,11 @@ export interface ClawInstance {
     inspectManagedBlock: (relativePath: string, blockId: string) => ReturnType<typeof inspectManagedWorkspaceFile>;
     mergeManagedBlocks: (originalContent: string, editedContent: string, options?: MergeManagedBlocksOptions) => string;
   };
+  /**
+   * @deprecated Souls are now skills-v2 entries with `kind: personality`.
+   * Use `claw.skills.create / activate / compile` for new code. The
+   * `claw.soul.*` API is preserved as a compatibility shim.
+   */
   soul: {
     list: () => SoulSpec[];
     get: (id: string) => SoulSpec | null;
@@ -1028,12 +1062,48 @@ export interface ClawInstance {
     compile: (input: RulesCompileInput) => RulesCompileResult;
   };
   skills: {
+    /** @deprecated v1 skill descriptors. Use `listV2()` for the unified Skill model. */
     list: () => Promise<SkillDescriptor[]>;
+    /** @deprecated v1 sync via runtime adapter. Use `syncV2()` for the unified sync engine. */
     sync: () => Promise<SkillDescriptor[]>;
+    /** @deprecated v1 source adapters. */
     sources: () => Promise<SkillSourceDescriptor[]>;
+    /** @deprecated v1 search via source adapters. Use `searchV2()` for central skill search. */
     search: (query: string, options?: { source?: string; limit?: number }) => Promise<SkillSearchResult>;
+    /** @deprecated v1 install via source adapters. */
     install: (ref: string, options?: { source?: string }) => Promise<SkillInstallResult & { syncedSkills?: SkillDescriptor[] }>;
+
+    // ───── Skills v2 (unified SKILL.md / agentskills.io) ──────────────────
+    /** List all skills under ~/.clawjs/skills (skills-v2 unified model). */
+    listV2: (filter?: SkillsV2ListFilter) => SkillsV2Spec[];
+    /** Get a single skill by slug. */
+    get: (slug: string) => SkillsV2Spec | null;
+    /** Free-text search over name+description+tags+body. */
+    searchV2: (query: string, options?: { kinds?: SkillsV2Kind[]; tags?: string[] }) => SkillsV2Spec[];
+    /** Resolve active skills for a given context (chat > project > tag > global). */
+    resolveActive: (ctx?: SkillsV2ResolveContext) => SkillsV2Spec[];
+    create: (input: SkillsV2CreateInput) => SkillsV2Spec;
+    update: (slug: string, patch: SkillsV2Update) => SkillsV2Spec;
+    removeV2: (slug: string) => boolean;
+    activate: (slug: string, scope: SkillsV2Scope, opts?: { priority?: number; params?: Record<string, unknown> }) => SkillsV2Assignment;
+    deactivate: (slug: string, scope: SkillsV2Scope) => boolean;
+    instantiate: (templateSlug: string, params: Record<string, unknown>, opts?: { saveAs?: string; freeze?: boolean }) => SkillsV2Spec;
+    freeze: (instanceSlug: string) => SkillsV2Spec;
+    /** Materialize syncTo metadata into filesystem entries in registered targets. */
+    syncV2: (opts?: { targets?: string[] }) => Promise<SkillSyncReport>;
+    syncTargets: () => SkillsV2SyncTarget[];
+    registerSyncTarget: (target: SkillsV2SyncTarget) => SkillsV2SyncTarget;
+    importExternal: (opts?: { dirs?: string[] }) => Promise<SkillImportReport>;
+    /** Compile a set of skill slugs into a single system-prompt fragment. */
+    compile: (slugs: string[]) => string;
+    /** Generate the built-in skills (14 personality presets + 20 procedures). Idempotent. */
+    initBuiltins: () => { personalitiesCreated: number; proceduresCreated: number; skipped: number };
   };
+  /**
+   * @deprecated Library assets (skills, instructions, bundles) are unified
+   * under skills-v2. Use `claw.skills.create / compile / activate` for new
+   * code. The `claw.library.*` API is preserved as a compatibility shim.
+   */
   library: {
     list: () => LibraryAsset[];
     get: (id: string) => LibraryAsset | null;
@@ -1730,6 +1800,30 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     workspaceDir,
     filesystem,
   });
+  // Skills-v2: unified central store at ~/.clawjs/skills (or $CLAWJS_HOME).
+  const skillsV2Store = createSkillsStore({
+    homeDir: options.skills?.homeDir,
+    env: options.skills?.env ?? runtimeEnv,
+    filesystem,
+  });
+  const skillsV2SyncEngine = new SkillsSyncEngine({ store: skillsV2Store, filesystem });
+  const skillsV2Importer = new SkillsImporter({ store: skillsV2Store, filesystem });
+  // Auto-migrate any legacy state (souls.json / library / skills.json) on startup.
+  // Idempotent via .skills-v2.migrated marker.
+  try {
+    migrateSkillsV2LegacyState({
+      workspaceDir,
+      store: skillsV2Store,
+      filesystem,
+      renderSoulMarkdown: (spec) => soulStore.renderMarkdown(spec),
+    });
+  } catch {
+    // best-effort, do not block claw initialization
+  }
+  // Auto-import external skills directories (silent on missing dirs).
+  if (options.skills?.autoImport !== false) {
+    void skillsV2Importer.importExternal().catch(() => undefined);
+  }
   const userStore = createUserStore({
     workspaceDir,
     filesystem,
@@ -6045,6 +6139,45 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         await refreshObservedDomain("skills");
         return result;
       },
+
+      // ─── Skills v2 (unified, agentskills.io-compatible) ────────────────
+      listV2: (filter) => skillsV2Store.list(filter),
+      get: (slug) => skillsV2Store.get(slug),
+      searchV2: (query, options) => skillsV2Store.search(query, options),
+      resolveActive: (ctx = {}) => skillsV2Store.resolveActive(ctx),
+      create: (input) => {
+        const created = skillsV2Store.create(input);
+        eventBus.emit("skills.created", { slug: created.slug, kind: created.kind });
+        return created;
+      },
+      update: (slug, patch) => {
+        const updated = skillsV2Store.update(slug, patch);
+        eventBus.emit("skills.updated", { slug: updated.slug });
+        return updated;
+      },
+      removeV2: (slug) => {
+        const removed = skillsV2Store.remove(slug);
+        if (removed) eventBus.emit("skills.removed", { slug });
+        return removed;
+      },
+      activate: (slug, scope, opts = {}) => {
+        const assignment = skillsV2Store.activate(slug, scope, opts);
+        eventBus.emit("skills.activated", { slug, scope: scope.kind });
+        return assignment;
+      },
+      deactivate: (slug, scope) => {
+        const removed = skillsV2Store.deactivate(slug, scope);
+        if (removed) eventBus.emit("skills.deactivated", { slug, scope: scope.kind });
+        return removed;
+      },
+      instantiate: (templateSlug, params, opts = {}) => skillsV2Store.instantiate(templateSlug, params, opts),
+      freeze: (instanceSlug) => skillsV2Store.freeze(instanceSlug),
+      syncV2: (opts = {}) => skillsV2SyncEngine.sync(opts),
+      syncTargets: () => skillsV2Store.syncTargets(),
+      registerSyncTarget: (target) => skillsV2Store.registerSyncTarget(target),
+      importExternal: (opts = {}) => skillsV2Importer.importExternal(opts),
+      compile: (slugs) => compileSkillsV2(skillsV2Store, slugs),
+      initBuiltins: () => generateSkillsV2Builtins(skillsV2Store, soulStore),
     },
     library: {
       list: () => libraryStore.list(),

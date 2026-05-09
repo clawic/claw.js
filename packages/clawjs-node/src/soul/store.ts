@@ -143,6 +143,12 @@ function levelText(value?: string): string | null {
 }
 function sentence(lines: string[], value: string | null | undefined): void { if (value) lines.push(value.endsWith(".") ? value : `${value}.`); }
 
+/**
+ * @deprecated SoulStore is a compatibility shim. Souls are now modeled as
+ * skills-v2 entries with `kind: personality`. Use `claw.skills.create({ kind: "personality", ... })`
+ * and `claw.skills.compile([slug])` for new code. SoulStore continues to work
+ * for the duration of the deprecation window.
+ */
 export class SoulStore {
   readonly workspaceDir: string;
   private readonly filesystem: NodeFileSystemHost;

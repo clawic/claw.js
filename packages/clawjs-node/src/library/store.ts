@@ -247,6 +247,13 @@ export function libraryProjectionTargetFile(target: LibraryInstructionProjection
   return projectionTargetFile(target);
 }
 
+/**
+ * @deprecated LocalLibraryStore is a compatibility shim. Skills, instructions,
+ * and bundles are unified under skills-v2 (kind: procedure | snippet | role).
+ * Capsules → `metadata.clawjs.capsule`. Projections → resolved at compile time.
+ * Bundles → composite skills with kind=role and `metadata.clawjs.children`.
+ * Use `claw.skills.create / compile / activate` for new code.
+ */
 export class LocalLibraryStore {
   readonly rootDir: string;
   private readonly filesystem: NodeFileSystemHost;
