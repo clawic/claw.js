@@ -1,12 +1,30 @@
-import { buildVaultApp } from "../server/app.ts";
+import { startVaultServer } from "../server/app.ts";
 
-const { app } = buildVaultApp();
+const args = process.argv.slice(2);
+const flags: Record<string, string> = {};
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i];
+  if (arg?.startsWith("--")) {
+    const key = arg.slice(2);
+    const value = args[i + 1] && !args[i + 1]?.startsWith("--") ? args[i + 1]! : "true";
+    flags[key] = value;
+    if (value !== "true") i++;
+  }
+}
 
-app.listen({ host: process.env.VAULT_HOST ?? "127.0.0.1", port: Number(process.env.VAULT_PORT ?? 4610) })
-  .then(() => {
-    console.log(`[vault] listening on ${process.env.VAULT_HOST ?? "127.0.0.1"}:${process.env.VAULT_PORT ?? 4610}`);
+const overrides: Parameters<typeof startVaultServer>[0] = {};
+if (flags.port) overrides.config = { ...(overrides.config ?? {}), port: Number(flags.port) };
+if (flags.host) overrides.config = { ...(overrides.config ?? {}), host: flags.host };
+if (flags.workspace) {
+  overrides.config = { ...(overrides.config ?? {}), dataDir: flags.workspace, dbPath: `${flags.workspace}/vault.sqlite` };
+}
+if (flags["status-file"]) overrides.statusFile = flags["status-file"];
+
+startVaultServer(overrides)
+  .then(({ config }) => {
+    console.log(`[vault] listening on ${config.host}:${config.port} (db: ${config.dbPath})`);
   })
-  .catch((error) => {
-    console.error(error);
+  .catch((err) => {
+    console.error("[vault] startup failed:", err);
     process.exit(1);
   });
