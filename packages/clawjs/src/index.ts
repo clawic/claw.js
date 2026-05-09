@@ -1694,6 +1694,39 @@ function parseSoulModulesFromSetFlags(argv: string[]): Partial<Record<SoulModule
   return modules;
 }
 
+function parseSkillScopeFlag(value: string): { kind: "global" | "project" | "tag" | "chat"; projectIds?: string[]; chatId?: string; tagFilters?: string[] } {
+  if (!value || value === "global") return { kind: "global" };
+  const [kindRaw, ref] = value.split(":", 2);
+  const kind = kindRaw as "global" | "project" | "tag" | "chat";
+  if (kind === "project") return { kind, projectIds: ref ? ref.split(",").map((s) => s.trim()).filter(Boolean) : [] };
+  if (kind === "chat") return { kind, chatId: ref ?? "" };
+  if (kind === "tag") return { kind, tagFilters: ref ? ref.split(",").map((s) => s.trim()).filter(Boolean) : [] };
+  return { kind: "global" };
+}
+
+function parseSkillParamsFlag(value: string | undefined): Record<string, unknown> {
+  if (!value) return {};
+  const out: Record<string, unknown> = {};
+  for (const pair of value.split(",")) {
+    const [k, v] = pair.split("=", 2);
+    if (!k) continue;
+    out[k.trim()] = v ?? "";
+  }
+  return out;
+}
+
+async function readAllStdin(stdin: NodeJS.ReadableStream): Promise<string> {
+  return await new Promise<string>((resolve, reject) => {
+    let acc = "";
+    stdin.setEncoding?.("utf8");
+    stdin.on("data", (chunk: string | Buffer) => {
+      acc += typeof chunk === "string" ? chunk : chunk.toString("utf8");
+    });
+    stdin.on("end", () => resolve(acc));
+    stdin.on("error", (err) => reject(err));
+  });
+}
+
 function parseUserFactValue(raw: string | undefined, label: string): UserFactValue {
   if (raw === undefined) throw new CliHandledError("usage_error", `${label} is required`, CLI_EXIT_USAGE);
   const parsed = parseLooseCliValue(raw);
@@ -3735,6 +3768,12 @@ async function createCliClaw(
     },
     rules: {
       rootDir: flags["rules-dir"],
+    },
+    skills: {
+      homeDir: flags["skills-home"],
+      // Default OFF in CLI to avoid surprising user-home filesystem mutations.
+      // Use `claw skills import` explicitly to opt in.
+      autoImport: process.env.CLAWJS_SKILLS_AUTO_IMPORT === "1",
     },
     images: {
       rootDir: flags["image-library"],
@@ -10790,13 +10829,137 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "skills" && command === "list") {
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
-    const skills = await claw.skills.list();
-    if (wantsJson) {
-      writeJson(context.stdout, skills);
-    } else {
-      context.stdout.write(`${skills.map((entry) => `${entry.enabled ? "*" : "-"} ${entry.id}`).join("\n")}\n`);
+    if (readBooleanFlag(argv, flags, "legacy", false)) {
+      const skills = await claw.skills.list();
+      if (wantsJson) writeJson(context.stdout, skills);
+      else context.stdout.write(`${skills.map((entry) => `${entry.enabled ? "*" : "-"} ${entry.id}`).join("\n")}\n`);
+      return skills.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
+    const filter: { kinds?: ("personality" | "procedure" | "snippet" | "role")[]; scope?: "global" | "project" | "tag" | "chat"; tags?: string[]; builtin?: boolean } = {};
+    if (flags.kind) filter.kinds = [flags.kind as "personality" | "procedure" | "snippet" | "role"];
+    if (flags.scope) filter.scope = flags.scope as "global" | "project" | "tag" | "chat";
+    if (flags.tag) filter.tags = String(flags.tag).split(",").map((t) => t.trim()).filter(Boolean);
+    const skills = claw.skills.listV2(filter);
+    if (wantsJson) writeJson(context.stdout, skills);
+    else context.stdout.write(`${skills.map((entry) => `${entry.kind}\t${entry.slug}\t${entry.name}`).join("\n")}\n`);
     return skills.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "skills" && (command === "view" || command === "show") && subcommand) {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const spec = claw.skills.get(subcommand);
+    if (!spec) {
+      context.stderr.write(`Skill not found: ${subcommand}\n`);
+      return CLI_EXIT_FAILURE;
+    }
+    if (wantsJson) writeJson(context.stdout, spec);
+    else context.stdout.write(`${spec.kind} ${spec.slug}\n${spec.name}\n${spec.description}\n\n${spec.body}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "skills" && command === "create" && subcommand) {
+    const slug = subcommand;
+    const kind = (flags.kind || "procedure") as "personality" | "procedure" | "snippet" | "role";
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    let body = flags.body || flags.content;
+    if (!body && readBooleanFlag(argv, flags, "from-stdin", false)) {
+      body = await readAllStdin(process.stdin);
+    }
+    const tags = flags.tags ? flags.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined;
+    const syncTo = flags["sync-to"] ? flags["sync-to"].split(",").map((t) => t.trim()).filter(Boolean) : undefined;
+    const spec = claw.skills.create({
+      slug,
+      kind,
+      name: flags.name,
+      description: flags.description,
+      body,
+      tags,
+      syncTo,
+    });
+    if (wantsJson) writeJson(context.stdout, spec);
+    else context.stdout.write(`created ${spec.kind}/${spec.slug}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "skills" && command === "remove" && subcommand) {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const ok = claw.skills.removeV2(subcommand);
+    if (wantsJson) writeJson(context.stdout, { removed: ok });
+    else context.stdout.write(ok ? `removed ${subcommand}\n` : `not found: ${subcommand}\n`);
+    return ok ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
+  }
+
+  if (group === "skills" && command === "activate" && subcommand) {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const scope = parseSkillScopeFlag(flags.scope || "global");
+    const assignment = claw.skills.activate(subcommand, scope);
+    if (wantsJson) writeJson(context.stdout, assignment);
+    else context.stdout.write(`activated ${subcommand} scope=${scope.kind}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "skills" && command === "deactivate" && subcommand) {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const scope = parseSkillScopeFlag(flags.scope || "global");
+    const removed = claw.skills.deactivate(subcommand, scope);
+    if (wantsJson) writeJson(context.stdout, { removed });
+    else context.stdout.write(removed ? `deactivated ${subcommand}\n` : `not active: ${subcommand}\n`);
+    return removed ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
+  }
+
+  if (group === "skills" && command === "compile") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const slugs = (flags.slugs ? flags.slugs.split(",") : positionals.slice(2)).map((s) => s.trim()).filter(Boolean);
+    const slugList = slugs.length > 0 ? slugs : claw.skills.resolveActive({ projectId: flags.project, chatId: flags.chat }).map((s) => s.slug);
+    const text = claw.skills.compile(slugList);
+    if (wantsJson) writeJson(context.stdout, { slugs: slugList, prompt: text });
+    else context.stdout.write(`${text}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "skills" && command === "instantiate" && subcommand) {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const params = parseSkillParamsFlag(flags.params);
+    const spec = claw.skills.instantiate(subcommand, params, {
+      saveAs: flags["save-as"],
+      freeze: readBooleanFlag(argv, flags, "freeze", false),
+    });
+    if (wantsJson) writeJson(context.stdout, spec);
+    else context.stdout.write(`instantiated ${spec.slug} (template=${subcommand})\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "skills" && command === "freeze" && subcommand) {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const spec = claw.skills.freeze(subcommand);
+    if (wantsJson) writeJson(context.stdout, spec);
+    else context.stdout.write(`frozen ${spec.slug}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "skills" && (command === "init-builtins" || command === "init")) {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const report = claw.skills.initBuiltins();
+    if (wantsJson) writeJson(context.stdout, report);
+    else context.stdout.write(`personalities=${report.personalitiesCreated} procedures=${report.proceduresCreated} skipped=${report.skipped}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "init-skills-builtins") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const report = claw.skills.initBuiltins();
+    if (wantsJson) writeJson(context.stdout, report);
+    else context.stdout.write(`personalities=${report.personalitiesCreated} procedures=${report.proceduresCreated} skipped=${report.skipped}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (group === "skills" && command === "import") {
+    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    const dirs = flags.from ? [flags.from] : flags.dirs ? flags.dirs.split(",").map((d) => d.trim()).filter(Boolean) : undefined;
+    const report = await claw.skills.importExternal({ dirs });
+    if (wantsJson) writeJson(context.stdout, report);
+    else context.stdout.write(`imported=${report.imported.length} skipped=${report.skipped.length} warnings=${report.warnings.length}\n`);
+    return CLI_EXIT_OK;
   }
 
   if (group === "skills" && command === "sources") {
@@ -10847,6 +11010,13 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "skills" && (command === "sync" || command === "inspect")) {
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+    if (command === "sync" && !readBooleanFlag(argv, flags, "legacy", false)) {
+      const targets = flags.target && flags.target !== "all" ? flags.target.split(",").map((t) => t.trim()).filter(Boolean) : undefined;
+      const report = await claw.skills.syncV2({ targets });
+      if (wantsJson) writeJson(context.stdout, report);
+      else context.stdout.write(`synced=${report.synced.length} removed=${report.removed.length} warnings=${report.warnings.length}\n`);
+      return CLI_EXIT_OK;
+    }
     const skills = command === "sync" ? await claw.skills.sync() : await claw.skills.list();
     if (wantsJson) {
       writeJson(context.stdout, skills);
