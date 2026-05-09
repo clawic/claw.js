@@ -6,3 +6,4 @@ export * from "./semantic.ts";
 export * from "./terminology.ts";
 export * from "./tts.ts";
 export * from "./types.ts";
+export * from "./skills-v2/index.ts";
