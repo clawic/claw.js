@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { once } from "node:events";
+import { chromium } from "playwright";
 import { MemoryService } from "../service";
 import { startServer } from "../server";
 
@@ -480,6 +481,91 @@ Markdown-first memory system.
     };
     assert.ok(graph.nodes.some((node) => node.id === "project_memory" && node.title === "Memory"));
   } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => {
+        if (error) reject(error);
+        else resolve();
+      });
+    });
+  }
+});
+
+test("memory UI searches notes as cards without the graph canvas", async () => {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "memory-ui-search-e2e-"));
+  runCli(["init", "--dir", workspace], workspace);
+
+  writeNote(
+    workspace,
+    "entities",
+    "tech_flutter.md",
+    `---
+id: tech_flutter
+slug: flutter-sdk
+kind: entity
+type: technology
+title: Flutter SDK
+schemaVersion: 2
+createdAt: 2026-04-15
+updatedAt: 2026-04-16
+status: active
+archived: false
+technologyKind: framework
+---
+
+Framework for fast UI iteration.
+`
+  );
+
+  writeNote(
+    workspace,
+    "entities",
+    "project_memory.md",
+    `---
+id: project_memory
+slug: memory
+kind: entity
+type: project
+title: Memory
+schemaVersion: 2
+createdAt: 2026-04-15
+updatedAt: 2026-04-15
+status: active
+archived: false
+---
+
+Markdown-first memory system.
+`
+  );
+
+  runCli(["index"], workspace);
+
+  const server = startServer(MemoryService.fromCwd(workspace), 0);
+  await once(server, "listening");
+  const browser = await chromium.launch();
+
+  try {
+    const address = server.address();
+    assert.ok(address && typeof address !== "string");
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const page = await browser.newPage({ viewport: { width: 1280, height: 860 } });
+
+    await page.goto(baseUrl);
+    await page.getByRole("button", { name: "List" }).click();
+    await page.getByLabel("Search notes").fill("Flutter");
+
+    await page.waitForFunction(() => {
+      return (
+        document.querySelectorAll(".note-card").length === 1 &&
+        document.querySelector(".list-count")?.textContent?.includes('1 note matching "Flutter"')
+      );
+    });
+
+    assert.equal(await page.locator("#graph-canvas").evaluate((el) => getComputedStyle(el).display), "none");
+    assert.equal(await page.locator(".note-card").count(), 1);
+    assert.equal(await page.locator(".note-card", { hasText: "Flutter SDK" }).count(), 1);
+    assert.match(await page.locator(".list-count").innerText(), /1 note matching "Flutter"/);
+  } finally {
+    await browser.close();
     await new Promise<void>((resolve, reject) => {
       server.close((error) => {
         if (error) reject(error);
