@@ -43,7 +43,7 @@ async function main(): Promise<void> {
   registerRoutes(app, db, config, relayCollector, localCollector);
 
   // Serve UI static files in production
-  const uiDist = path.resolve(__dirname, "../../ui/dist");
+  const uiDist = path.resolve(process.cwd(), "ui/dist");
   if (existsSync(uiDist)) {
     await app.register(fastifyStatic, {
       root: uiDist,
