@@ -84,7 +84,7 @@ if (argv.includes("--help") || argv.includes("-h") || !group) {
 
 async function main() {
   if (group === "serve") {
-    const { app, config } = buildDriveApp({
+    const { app, config } = await buildDriveApp({
       config: {
         ...(flags.host ? { host: flags.host } : {}),
         ...(flags.port ? { port: Number(flags.port) } : {}),

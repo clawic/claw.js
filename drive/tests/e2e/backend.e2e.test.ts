@@ -20,7 +20,7 @@ async function boot() {
   const port = 16200 + Math.floor(Math.random() * 1000);
   const dbPath = path.join(tmpDir, "drive.sqlite");
 
-  const { app } = buildDriveApp({
+  const { app } = await buildDriveApp({
     config: {
       host: "127.0.0.1",
       port,

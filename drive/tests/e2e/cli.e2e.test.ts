@@ -20,7 +20,7 @@ async function boot() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "drive-cli-test-"));
   const port = 17200 + Math.floor(Math.random() * 1000);
 
-  const { app } = buildDriveApp({
+  const { app } = await buildDriveApp({
     config: {
       host: "127.0.0.1",
       port,
