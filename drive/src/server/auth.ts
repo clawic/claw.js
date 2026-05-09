@@ -13,7 +13,8 @@ export interface AdminClaims {
 export type AuthPrincipal =
   | { kind: "admin"; adminId: string; email: string }
   | { kind: "token"; tokenId: string; operations: DriveOperation[] }
-  | { kind: "share"; shareId: string; itemId: string };
+  | { kind: "share"; shareId: string; itemId: string }
+  | { kind: "agent"; agentShareId: string; itemId: string; agentName: string; capabilityKind: string };
 
 export class DriveAuthService {
   private readonly secret: Uint8Array<ArrayBufferLike>;

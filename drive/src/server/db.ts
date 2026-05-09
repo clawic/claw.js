@@ -6,11 +6,20 @@ import Database from "better-sqlite3";
 
 import { generateOpaqueToken, hashSecret } from "./auth.ts";
 import type {
+  DriveAgentCapability,
+  DriveAgentShareRecord,
+  DriveAuditEvent,
+  DriveAuditEventKind,
+  DriveAuditFilter,
   DriveComment,
   DriveDocContent,
+  DriveEmbeddingRecord,
+  DriveEncryptedFolderRecord,
+  DriveExifRecord,
   DriveItem,
   DriveItemDetail,
   DriveItemKind,
+  DriveMimeClass,
   DriveNativeContent,
   DriveOperation,
   DrivePreviewKind,
@@ -19,6 +28,9 @@ import type {
   DriveShareRecord,
   DriveSheetContent,
   DriveSlideContent,
+  DriveTailnetShareRecord,
+  DriveThumbnailRecord,
+  DriveTunnelShareRecord,
   DriveUploadContent,
   DriveView,
   DriveViewCounts,
@@ -356,7 +368,135 @@ export class DriveStore {
         last_used_at TEXT,
         revoked_at TEXT
       );
+
+      -- v002 Clawix extensions ------------------------------------------------
+
+      CREATE TABLE IF NOT EXISTS drive_audit_events (
+        id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL,
+        item_id TEXT,
+        principal_kind TEXT NOT NULL,
+        principal_id TEXT NOT NULL,
+        principal_name TEXT NOT NULL,
+        timestamp TEXT NOT NULL,
+        metadata_json TEXT NOT NULL DEFAULT '{}'
+      );
+
+      CREATE INDEX IF NOT EXISTS drive_audit_events_timestamp
+        ON drive_audit_events(timestamp DESC);
+      CREATE INDEX IF NOT EXISTS drive_audit_events_item
+        ON drive_audit_events(item_id, timestamp DESC);
+      CREATE INDEX IF NOT EXISTS drive_audit_events_kind
+        ON drive_audit_events(kind, timestamp DESC);
+
+      CREATE TABLE IF NOT EXISTS encrypted_folders (
+        folder_id TEXT PRIMARY KEY,
+        wrap_strategy TEXT NOT NULL DEFAULT 'vault.master',
+        enabled_at TEXT NOT NULL,
+        enabled_by TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS tailnet_shares (
+        id TEXT PRIMARY KEY,
+        item_id TEXT NOT NULL,
+        magicdns_name TEXT NOT NULL,
+        tailnet_node_id TEXT,
+        created_at TEXT NOT NULL,
+        revoked_at TEXT,
+        last_used_at TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS tunnel_shares (
+        id TEXT PRIMARY KEY,
+        item_id TEXT NOT NULL,
+        tunnel_url TEXT NOT NULL,
+        tunnel_pid INTEGER,
+        started_at TEXT NOT NULL,
+        stopped_at TEXT,
+        status TEXT NOT NULL DEFAULT 'starting'
+      );
+
+      CREATE TABLE IF NOT EXISTS agent_shares (
+        id TEXT PRIMARY KEY,
+        item_id TEXT NOT NULL,
+        token_hash TEXT NOT NULL,
+        capability_kind TEXT NOT NULL,
+        capability_scope_json TEXT NOT NULL DEFAULT '{}',
+        ttl_minutes INTEGER NOT NULL,
+        reason TEXT,
+        agent_name TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        revoked_at TEXT,
+        used_count INTEGER NOT NULL DEFAULT 0,
+        last_used_at TEXT
+      );
+
+      CREATE INDEX IF NOT EXISTS agent_shares_token
+        ON agent_shares(token_hash);
+      CREATE INDEX IF NOT EXISTS agent_shares_item
+        ON agent_shares(item_id);
+
+      CREATE TABLE IF NOT EXISTS thumbnails (
+        item_id TEXT NOT NULL,
+        size INTEGER NOT NULL,
+        path TEXT NOT NULL,
+        mime_type TEXT NOT NULL DEFAULT 'image/jpeg',
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (item_id, size)
+      );
+
+      CREATE TABLE IF NOT EXISTS exif_metadata (
+        item_id TEXT PRIMARY KEY,
+        taken_at TEXT,
+        camera_make TEXT,
+        camera_model TEXT,
+        lens_model TEXT,
+        iso INTEGER,
+        shutter_speed TEXT,
+        aperture REAL,
+        focal_length REAL,
+        latitude REAL,
+        longitude REAL,
+        orientation INTEGER,
+        width INTEGER,
+        height INTEGER,
+        raw_json TEXT NOT NULL DEFAULT '{}'
+      );
+
+      CREATE INDEX IF NOT EXISTS exif_metadata_taken
+        ON exif_metadata(taken_at DESC);
+      CREATE INDEX IF NOT EXISTS exif_metadata_geo
+        ON exif_metadata(latitude, longitude);
+
+      CREATE TABLE IF NOT EXISTS embeddings (
+        item_id TEXT NOT NULL,
+        model_id TEXT NOT NULL,
+        dim INTEGER NOT NULL,
+        vector BLOB NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (item_id, model_id)
+      );
     `);
+
+    // Items column extensions: only add when not present (idempotent migration).
+    const existingCols = (this.sqlite.prepare("PRAGMA table_info(items)").all() as Array<{ name: string }>).map((c) => c.name);
+    if (!existingCols.includes("mime_class")) {
+      this.sqlite.exec("ALTER TABLE items ADD COLUMN mime_class TEXT NOT NULL DEFAULT 'other'");
+      this.sqlite.exec("CREATE INDEX IF NOT EXISTS items_mime_class ON items(mime_class, created_at DESC)");
+    }
+    if (!existingCols.includes("is_in_encrypted_folder")) {
+      this.sqlite.exec("ALTER TABLE items ADD COLUMN is_in_encrypted_folder INTEGER NOT NULL DEFAULT 0");
+    }
+    if (!existingCols.includes("ocr_pending")) {
+      this.sqlite.exec("ALTER TABLE items ADD COLUMN ocr_pending INTEGER NOT NULL DEFAULT 0");
+    }
+    if (!existingCols.includes("embedding_pending")) {
+      this.sqlite.exec("ALTER TABLE items ADD COLUMN embedding_pending INTEGER NOT NULL DEFAULT 0");
+    }
+
+    // Auto-purge support: index for trashed_at sweep job.
+    this.sqlite.exec("CREATE INDEX IF NOT EXISTS items_trashed_at ON items(trashed_at) WHERE trashed_at IS NOT NULL");
   }
 
   private seed(): void {
@@ -862,5 +1002,564 @@ export class DriveStore {
       return { filePath, name: row.name, mimeType: row.mime_type };
     }
     return null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mime classification (used to drive Photos/Documents adaptive views)
+  // ---------------------------------------------------------------------------
+
+  classifyMime(mimeType: string | null | undefined): DriveMimeClass {
+    if (!mimeType) return "other";
+    if (mimeType.startsWith("image/")) return "image";
+    if (mimeType.startsWith("video/")) return "video";
+    if (mimeType.startsWith("audio/")) return "audio";
+    if (
+      mimeType === "application/pdf" ||
+      mimeType.startsWith("text/") ||
+      mimeType.includes("officedocument") ||
+      mimeType === "application/msword" ||
+      mimeType === "application/vnd.ms-excel" ||
+      mimeType === "application/vnd.ms-powerpoint"
+    ) return "doc";
+    if (
+      mimeType === "application/json" ||
+      mimeType === "application/javascript" ||
+      mimeType === "application/typescript"
+    ) return "code";
+    if (
+      mimeType === "application/zip" ||
+      mimeType === "application/x-tar" ||
+      mimeType === "application/gzip"
+    ) return "archive";
+    return "other";
+  }
+
+  setItemMimeClass(itemId: string, klass: DriveMimeClass): void {
+    this.sqlite.prepare("UPDATE items SET mime_class = ? WHERE id = ?").run(klass, itemId);
+  }
+
+  setItemPending(itemId: string, kind: "ocr" | "embedding", pending: boolean): void {
+    const col = kind === "ocr" ? "ocr_pending" : "embedding_pending";
+    this.sqlite.prepare(`UPDATE items SET ${col} = ? WHERE id = ?`).run(pending ? 1 : 0, itemId);
+  }
+
+  setItemIndexedText(itemId: string, indexedText: string): void {
+    const row = this.getItemRow(itemId);
+    if (!row) return;
+    this.sqlite.prepare("UPDATE items SET indexed_text = ? WHERE id = ?")
+      .run(`${row.name} ${indexedText}`.trim(), itemId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Path queries (for encrypted folder propagation)
+  // ---------------------------------------------------------------------------
+
+  /** True if any ancestor folder is in the encrypted_folders table. */
+  isInEncryptedFolder(itemId: string): boolean {
+    let cursor = this.getItemRow(itemId);
+    while (cursor && cursor.id !== ROOT_FOLDER_ID) {
+      const enc = this.sqlite.prepare("SELECT folder_id FROM encrypted_folders WHERE folder_id = ?").get(cursor.id) as { folder_id: string } | undefined;
+      if (enc) return true;
+      if (!cursor.parent_id) break;
+      cursor = this.getItemRow(cursor.parent_id);
+    }
+    return false;
+  }
+
+  recomputeEncryptedFlag(itemId: string): void {
+    const flag = this.isInEncryptedFolder(itemId) ? 1 : 0;
+    this.sqlite.prepare("UPDATE items SET is_in_encrypted_folder = ? WHERE id = ?").run(flag, itemId);
+    const children = this.listItems({ view: "my-drive", parentId: itemId });
+    for (const c of children) this.recomputeEncryptedFlag(c.id);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Audit log (plain, no hash chain)
+  // ---------------------------------------------------------------------------
+
+  appendAuditEvent(input: {
+    kind: DriveAuditEventKind;
+    itemId?: string | null;
+    principalKind: DriveAuditEvent["principalKind"];
+    principalId: string;
+    principalName: string;
+    metadata?: Record<string, unknown>;
+  }): DriveAuditEvent {
+    const id = uuid();
+    const timestamp = nowIso();
+    this.sqlite.prepare(`
+      INSERT INTO drive_audit_events (
+        id, kind, item_id, principal_kind, principal_id, principal_name, timestamp, metadata_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      input.kind,
+      input.itemId ?? null,
+      input.principalKind,
+      input.principalId,
+      input.principalName,
+      timestamp,
+      stringifyJson(input.metadata ?? {}),
+    );
+    return {
+      id,
+      kind: input.kind,
+      itemId: input.itemId ?? null,
+      principalKind: input.principalKind,
+      principalId: input.principalId,
+      principalName: input.principalName,
+      timestamp,
+      metadata: input.metadata ?? {},
+    };
+  }
+
+  queryAuditEvents(filter: DriveAuditFilter = {}): DriveAuditEvent[] {
+    const where: string[] = [];
+    const params: unknown[] = [];
+    if (filter.kinds?.length) {
+      where.push(`kind IN (${filter.kinds.map(() => "?").join(",")})`);
+      params.push(...filter.kinds);
+    }
+    if (filter.itemId) {
+      where.push("item_id = ?");
+      params.push(filter.itemId);
+    }
+    if (filter.principalId) {
+      where.push("principal_id = ?");
+      params.push(filter.principalId);
+    }
+    if (filter.since) {
+      where.push("timestamp >= ?");
+      params.push(filter.since);
+    }
+    if (filter.until) {
+      where.push("timestamp <= ?");
+      params.push(filter.until);
+    }
+    const limit = Math.min(Math.max(filter.limit ?? 200, 1), 1000);
+    const rows = this.sqlite.prepare(`
+      SELECT id, kind, item_id, principal_kind, principal_id, principal_name, timestamp, metadata_json
+      FROM drive_audit_events
+      ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+      ORDER BY timestamp DESC
+      LIMIT ?
+    `).all(...params, limit) as Array<{
+      id: string;
+      kind: DriveAuditEventKind;
+      item_id: string | null;
+      principal_kind: DriveAuditEvent["principalKind"];
+      principal_id: string;
+      principal_name: string;
+      timestamp: string;
+      metadata_json: string;
+    }>;
+    return rows.map((row) => ({
+      id: row.id,
+      kind: row.kind,
+      itemId: row.item_id,
+      principalKind: row.principal_kind,
+      principalId: row.principal_id,
+      principalName: row.principal_name,
+      timestamp: row.timestamp,
+      metadata: parseJson<Record<string, unknown>>(row.metadata_json, {}),
+    }));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Encrypted folders
+  // ---------------------------------------------------------------------------
+
+  setFolderEncrypted(folderId: string, enabled: boolean, enabledBy: string): void {
+    if (enabled) {
+      this.sqlite.prepare(`
+        INSERT OR REPLACE INTO encrypted_folders (folder_id, wrap_strategy, enabled_at, enabled_by)
+        VALUES (?, 'vault.master', ?, ?)
+      `).run(folderId, nowIso(), enabledBy);
+    } else {
+      this.sqlite.prepare("DELETE FROM encrypted_folders WHERE folder_id = ?").run(folderId);
+    }
+    this.recomputeEncryptedFlag(folderId);
+  }
+
+  listEncryptedFolders(): DriveEncryptedFolderRecord[] {
+    const rows = this.sqlite.prepare(`
+      SELECT folder_id, wrap_strategy, enabled_at, enabled_by
+      FROM encrypted_folders
+      ORDER BY enabled_at DESC
+    `).all() as Array<{ folder_id: string; wrap_strategy: string; enabled_at: string; enabled_by: string }>;
+    return rows.map((row) => ({
+      folderId: row.folder_id,
+      wrapStrategy: row.wrap_strategy as "vault.master",
+      enabledAt: row.enabled_at,
+      enabledBy: row.enabled_by,
+    }));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tailnet / Tunnel / Agent shares
+  // ---------------------------------------------------------------------------
+
+  createTailnetShare(input: { itemId: string; magicdnsName: string; tailnetNodeId?: string | null }): DriveTailnetShareRecord {
+    const id = uuid();
+    const createdAt = nowIso();
+    this.sqlite.prepare(`
+      INSERT INTO tailnet_shares (id, item_id, magicdns_name, tailnet_node_id, created_at, revoked_at, last_used_at)
+      VALUES (?, ?, ?, ?, ?, NULL, NULL)
+    `).run(id, input.itemId, input.magicdnsName, input.tailnetNodeId ?? null, createdAt);
+    return {
+      id,
+      itemId: input.itemId,
+      magicdnsName: input.magicdnsName,
+      tailnetNodeId: input.tailnetNodeId ?? null,
+      createdAt,
+      revokedAt: null,
+      lastUsedAt: null,
+    };
+  }
+
+  listTailnetShares(itemId?: string): DriveTailnetShareRecord[] {
+    const rows = (itemId
+      ? this.sqlite.prepare("SELECT * FROM tailnet_shares WHERE item_id = ? ORDER BY created_at DESC").all(itemId)
+      : this.sqlite.prepare("SELECT * FROM tailnet_shares ORDER BY created_at DESC").all()
+    ) as Array<{
+      id: string; item_id: string; magicdns_name: string; tailnet_node_id: string | null;
+      created_at: string; revoked_at: string | null; last_used_at: string | null;
+    }>;
+    return rows.map((row) => ({
+      id: row.id,
+      itemId: row.item_id,
+      magicdnsName: row.magicdns_name,
+      tailnetNodeId: row.tailnet_node_id,
+      createdAt: row.created_at,
+      revokedAt: row.revoked_at,
+      lastUsedAt: row.last_used_at,
+    }));
+  }
+
+  revokeTailnetShare(id: string): boolean {
+    return this.sqlite.prepare("UPDATE tailnet_shares SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL")
+      .run(nowIso(), id).changes > 0;
+  }
+
+  createTunnelShare(input: { itemId: string; tunnelUrl: string; tunnelPid: number | null }): DriveTunnelShareRecord {
+    const id = uuid();
+    const startedAt = nowIso();
+    this.sqlite.prepare(`
+      INSERT INTO tunnel_shares (id, item_id, tunnel_url, tunnel_pid, started_at, stopped_at, status)
+      VALUES (?, ?, ?, ?, ?, NULL, 'running')
+    `).run(id, input.itemId, input.tunnelUrl, input.tunnelPid, startedAt);
+    return {
+      id,
+      itemId: input.itemId,
+      tunnelUrl: input.tunnelUrl,
+      tunnelPid: input.tunnelPid,
+      startedAt,
+      stoppedAt: null,
+      status: "running",
+    };
+  }
+
+  listTunnelShares(itemId?: string): DriveTunnelShareRecord[] {
+    const rows = (itemId
+      ? this.sqlite.prepare("SELECT * FROM tunnel_shares WHERE item_id = ? ORDER BY started_at DESC").all(itemId)
+      : this.sqlite.prepare("SELECT * FROM tunnel_shares ORDER BY started_at DESC").all()
+    ) as Array<{
+      id: string; item_id: string; tunnel_url: string; tunnel_pid: number | null;
+      started_at: string; stopped_at: string | null; status: string;
+    }>;
+    return rows.map((row) => ({
+      id: row.id,
+      itemId: row.item_id,
+      tunnelUrl: row.tunnel_url,
+      tunnelPid: row.tunnel_pid,
+      startedAt: row.started_at,
+      stoppedAt: row.stopped_at,
+      status: row.status as DriveTunnelShareRecord["status"],
+    }));
+  }
+
+  stopTunnelShare(id: string, status: DriveTunnelShareRecord["status"] = "stopped"): boolean {
+    return this.sqlite.prepare("UPDATE tunnel_shares SET stopped_at = ?, status = ? WHERE id = ? AND stopped_at IS NULL")
+      .run(nowIso(), status, id).changes > 0;
+  }
+
+  createAgentShare(input: {
+    itemId: string;
+    capability: DriveAgentCapability;
+    reason: string | null;
+    agentName: string;
+  }): { record: DriveAgentShareRecord; token: string } {
+    const id = uuid();
+    const token = generateOpaqueToken("svagt_drv");
+    const tokenHash = hashSecret(token);
+    const createdAt = nowIso();
+    const expiresAt = new Date(Date.now() + input.capability.ttlMinutes * 60_000).toISOString();
+    this.sqlite.prepare(`
+      INSERT INTO agent_shares (
+        id, item_id, token_hash, capability_kind, capability_scope_json, ttl_minutes,
+        reason, agent_name, created_at, expires_at, revoked_at, used_count, last_used_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL)
+    `).run(
+      id, input.itemId, tokenHash,
+      input.capability.kind,
+      stringifyJson({ itemId: input.capability.itemId }),
+      input.capability.ttlMinutes,
+      input.reason, input.agentName, createdAt, expiresAt,
+    );
+    return {
+      record: {
+        id,
+        itemId: input.itemId,
+        capability: input.capability,
+        reason: input.reason,
+        agentName: input.agentName,
+        createdAt,
+        expiresAt,
+        revokedAt: null,
+        usedCount: 0,
+        lastUsedAt: null,
+      },
+      token,
+    };
+  }
+
+  authenticateAgentShare(token: string): DriveAgentShareRecord | null {
+    const tokenHash = hashSecret(token);
+    const row = this.sqlite.prepare(`
+      SELECT id, item_id, token_hash, capability_kind, capability_scope_json, ttl_minutes,
+        reason, agent_name, created_at, expires_at, revoked_at, used_count, last_used_at
+      FROM agent_shares
+      WHERE token_hash = ? AND revoked_at IS NULL AND expires_at > ?
+      LIMIT 1
+    `).get(tokenHash, nowIso()) as undefined | {
+      id: string; item_id: string; token_hash: string;
+      capability_kind: string; capability_scope_json: string; ttl_minutes: number;
+      reason: string | null; agent_name: string; created_at: string; expires_at: string;
+      revoked_at: string | null; used_count: number; last_used_at: string | null;
+    };
+    if (!row) return null;
+    this.sqlite.prepare(`
+      UPDATE agent_shares SET used_count = used_count + 1, last_used_at = ? WHERE id = ?
+    `).run(nowIso(), row.id);
+    const scope = parseJson<{ itemId: string | null }>(row.capability_scope_json, { itemId: null });
+    return {
+      id: row.id,
+      itemId: row.item_id,
+      capability: {
+        kind: row.capability_kind as DriveAgentCapability["kind"],
+        itemId: scope.itemId,
+        ttlMinutes: row.ttl_minutes,
+      },
+      reason: row.reason,
+      agentName: row.agent_name,
+      createdAt: row.created_at,
+      expiresAt: row.expires_at,
+      revokedAt: row.revoked_at,
+      usedCount: row.used_count + 1,
+      lastUsedAt: nowIso(),
+    };
+  }
+
+  listAgentShares(itemId?: string): DriveAgentShareRecord[] {
+    const rows = (itemId
+      ? this.sqlite.prepare("SELECT * FROM agent_shares WHERE item_id = ? ORDER BY created_at DESC").all(itemId)
+      : this.sqlite.prepare("SELECT * FROM agent_shares ORDER BY created_at DESC").all()
+    ) as Array<{
+      id: string; item_id: string; capability_kind: string; capability_scope_json: string;
+      ttl_minutes: number; reason: string | null; agent_name: string;
+      created_at: string; expires_at: string; revoked_at: string | null;
+      used_count: number; last_used_at: string | null;
+    }>;
+    return rows.map((row) => {
+      const scope = parseJson<{ itemId: string | null }>(row.capability_scope_json, { itemId: null });
+      return {
+        id: row.id,
+        itemId: row.item_id,
+        capability: {
+          kind: row.capability_kind as DriveAgentCapability["kind"],
+          itemId: scope.itemId,
+          ttlMinutes: row.ttl_minutes,
+        },
+        reason: row.reason,
+        agentName: row.agent_name,
+        createdAt: row.created_at,
+        expiresAt: row.expires_at,
+        revokedAt: row.revoked_at,
+        usedCount: row.used_count,
+        lastUsedAt: row.last_used_at,
+      };
+    });
+  }
+
+  revokeAgentShare(id: string): boolean {
+    return this.sqlite.prepare("UPDATE agent_shares SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL")
+      .run(nowIso(), id).changes > 0;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Thumbnails
+  // ---------------------------------------------------------------------------
+
+  setThumbnail(record: DriveThumbnailRecord): void {
+    this.sqlite.prepare(`
+      INSERT OR REPLACE INTO thumbnails (item_id, size, path, mime_type, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(record.itemId, record.size, record.path, record.mimeType, record.createdAt);
+  }
+
+  getThumbnail(itemId: string, size: 256 | 512): DriveThumbnailRecord | null {
+    const row = this.sqlite.prepare(`
+      SELECT item_id, size, path, mime_type, created_at
+      FROM thumbnails
+      WHERE item_id = ? AND size = ?
+      LIMIT 1
+    `).get(itemId, size) as undefined | {
+      item_id: string; size: number; path: string; mime_type: string; created_at: string;
+    };
+    if (!row) return null;
+    return {
+      itemId: row.item_id,
+      size: row.size as 256 | 512,
+      path: row.path,
+      mimeType: row.mime_type,
+      createdAt: row.created_at,
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // EXIF
+  // ---------------------------------------------------------------------------
+
+  setExif(record: DriveExifRecord): void {
+    this.sqlite.prepare(`
+      INSERT OR REPLACE INTO exif_metadata (
+        item_id, taken_at, camera_make, camera_model, lens_model, iso, shutter_speed,
+        aperture, focal_length, latitude, longitude, orientation, width, height, raw_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      record.itemId, record.takenAt, record.cameraMake, record.cameraModel, record.lensModel,
+      record.iso, record.shutterSpeed, record.aperture, record.focalLength,
+      record.latitude, record.longitude, record.orientation, record.width, record.height,
+      stringifyJson(record.raw),
+    );
+  }
+
+  getExif(itemId: string): DriveExifRecord | null {
+    const row = this.sqlite.prepare(`
+      SELECT * FROM exif_metadata WHERE item_id = ? LIMIT 1
+    `).get(itemId) as undefined | {
+      item_id: string; taken_at: string | null; camera_make: string | null;
+      camera_model: string | null; lens_model: string | null; iso: number | null;
+      shutter_speed: string | null; aperture: number | null; focal_length: number | null;
+      latitude: number | null; longitude: number | null; orientation: number | null;
+      width: number | null; height: number | null; raw_json: string;
+    };
+    if (!row) return null;
+    return {
+      itemId: row.item_id,
+      takenAt: row.taken_at,
+      cameraMake: row.camera_make,
+      cameraModel: row.camera_model,
+      lensModel: row.lens_model,
+      iso: row.iso,
+      shutterSpeed: row.shutter_speed,
+      aperture: row.aperture,
+      focalLength: row.focal_length,
+      latitude: row.latitude,
+      longitude: row.longitude,
+      orientation: row.orientation,
+      width: row.width,
+      height: row.height,
+      raw: parseJson<Record<string, unknown>>(row.raw_json, {}),
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Embeddings
+  // ---------------------------------------------------------------------------
+
+  setEmbedding(itemId: string, modelId: string, vector: Float32Array): DriveEmbeddingRecord {
+    const buf = Buffer.from(vector.buffer, vector.byteOffset, vector.byteLength);
+    const createdAt = nowIso();
+    this.sqlite.prepare(`
+      INSERT OR REPLACE INTO embeddings (item_id, model_id, dim, vector, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(itemId, modelId, vector.length, buf, createdAt);
+    return { itemId, modelId, dim: vector.length, createdAt };
+  }
+
+  getEmbedding(itemId: string, modelId: string): Float32Array | null {
+    const row = this.sqlite.prepare(`
+      SELECT dim, vector FROM embeddings WHERE item_id = ? AND model_id = ? LIMIT 1
+    `).get(itemId, modelId) as undefined | { dim: number; vector: Buffer };
+    if (!row) return null;
+    return new Float32Array(row.vector.buffer, row.vector.byteOffset, row.dim);
+  }
+
+  /** All embeddings for a given model, joined with the item, used by semantic search. */
+  listAllEmbeddings(modelId: string): Array<{ itemId: string; vector: Float32Array; item: DriveItem }> {
+    const rows = this.sqlite.prepare(`
+      SELECT e.item_id AS item_id, e.dim AS dim, e.vector AS vector
+      FROM embeddings e
+      INNER JOIN items i ON i.id = e.item_id
+      WHERE e.model_id = ? AND i.trashed_at IS NULL
+    `).all(modelId) as Array<{ item_id: string; dim: number; vector: Buffer }>;
+    return rows.flatMap((row) => {
+      const item = this.getItem(row.item_id);
+      if (!item) return [];
+      return [{
+        itemId: row.item_id,
+        vector: new Float32Array(row.vector.buffer, row.vector.byteOffset, row.dim),
+        item,
+      }];
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Auto-purge (Apple-style 30 day retention for trashed items)
+  // ---------------------------------------------------------------------------
+
+  sweepTrashedOlderThan(days: number): number {
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+    const rows = this.sqlite.prepare(`
+      SELECT id FROM items WHERE trashed_at IS NOT NULL AND trashed_at < ?
+    `).all(cutoff) as Array<{ id: string }>;
+    let purged = 0;
+    for (const row of rows) {
+      if (this.deleteItemForever(row.id)) purged += 1;
+    }
+    return purged;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Project folder hook (auto-create /projects/<slug>/)
+  // ---------------------------------------------------------------------------
+
+  ensureProjectFolder(projectSlug: string, actor: DriveActor): string {
+    // Find or create /projects/
+    let projects = this.sqlite.prepare(`
+      SELECT id FROM items WHERE parent_id = ? AND name = 'projects' AND kind = 'folder' AND trashed_at IS NULL LIMIT 1
+    `).get(ROOT_FOLDER_ID) as { id: string } | undefined;
+    if (!projects) {
+      const detail = this.createItem({ kind: "folder", name: "projects", parentId: null }, actor);
+      projects = { id: detail.id };
+    }
+    // Find or create /projects/<slug>/
+    let projectFolder = this.sqlite.prepare(`
+      SELECT id FROM items WHERE parent_id = ? AND name = ? AND kind = 'folder' AND trashed_at IS NULL LIMIT 1
+    `).get(projects.id, projectSlug) as { id: string } | undefined;
+    if (!projectFolder) {
+      const detail = this.createItem({ kind: "folder", name: projectSlug, parentId: projects.id }, actor);
+      projectFolder = { id: detail.id };
+    }
+    return projectFolder.id;
+  }
+
+  /** Find a single existing item by SHA256 storage_path (dedup helper). */
+  findByStoragePath(relativePath: string): DriveItem | null {
+    const row = this.sqlite.prepare(`
+      SELECT * FROM items WHERE storage_path = ? AND trashed_at IS NULL LIMIT 1
+    `).get(relativePath) as ItemRow | undefined;
+    return row ? serializeItem(row) : null;
   }
 }
