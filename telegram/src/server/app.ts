@@ -51,6 +51,32 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
     return { workspace: config.workspace, bots };
   });
 
+  // Connect a new Telegram bot. Wraps `claw channels telegram connect`.
+  // The bot token must already live in the Secrets vault under
+  // `secretName`; the CLI looks it up there and registers the channel
+  // account in `<workspace>/.clawjs/observed/channels.json`.
+  app.post("/v1/bots", async (request, reply) => {
+    const body = (request.body ?? {}) as RouteBody & {
+      secretName?: string;
+      accountId?: string;
+      label?: string;
+      apiBaseUrl?: string;
+      webhookUrl?: string;
+      webhookSecretToken?: string;
+    };
+    if (!body.secretName) {
+      return reply.code(400).send({ error: "secretName is required" });
+    }
+    const args = ["channels", "telegram", "connect", "--secret-name", body.secretName];
+    if (body.accountId) args.push("--account", body.accountId);
+    if (body.label) args.push("--name", body.label);
+    if (body.apiBaseUrl) args.push("--api-base-url", body.apiBaseUrl);
+    if (body.webhookUrl) args.push("--webhook-url", body.webhookUrl);
+    if (body.webhookSecretToken) args.push("--webhook-secret-token", body.webhookSecretToken);
+    const result = await runClawCli({ workspace: config.workspace, args, timeoutMs: 60_000 });
+    return reply.code(result.ok ? 200 : 502).send(result);
+  });
+
   app.get("/v1/bots/:id", async (request, reply) => {
     const params = request.params as { id?: string };
     const bots = readTelegramBotsForWorkspace(config.workspace);
