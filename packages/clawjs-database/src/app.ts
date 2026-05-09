@@ -8,7 +8,7 @@ import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import websocket from "@fastify/websocket";
 
-import { DatabaseAuthService, type AuthPrincipal } from "./auth.ts";
+import { DatabaseAuthService, loadEphemeralAdminToken, type AuthPrincipal } from "./auth.ts";
 import { loadDatabaseConfig, type DatabaseServiceConfig } from "./config.ts";
 import { DatabaseServiceStore } from "./store.ts";
 import { RealtimeHub } from "./realtime.ts";
@@ -88,6 +88,8 @@ async function resolvePrincipal(
 ): Promise<AuthPrincipal | null> {
   const token = parseBearerToken(request);
   if (!token) return null;
+  const ephemeralAdmin = auth.verifyEphemeralAdminToken(token);
+  if (ephemeralAdmin) return ephemeralAdmin;
   const admin = await auth.verifyAdminToken(token);
   if (admin) return admin;
   const scopedToken = store.authenticateScopedToken(token);
@@ -184,8 +186,13 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
   fs.mkdirSync(config.dataDir, { recursive: true });
   fs.mkdirSync(config.filesDir, { recursive: true });
 
+  const ephemeralAdminToken = loadEphemeralAdminToken({
+    dataDir: config.dataDir,
+    envVarName: "CLAWJS_DATABASE_ADMIN_TOKEN",
+  });
+
   const app = Fastify({ logger: false });
-  const auth = new DatabaseAuthService(config.jwtSecret);
+  const auth = new DatabaseAuthService(config.jwtSecret, ephemeralAdminToken);
   const store = new DatabaseServiceStore(config.dbPath, config.filesDir);
   const realtime = new RealtimeHub();
 
