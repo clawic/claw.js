@@ -22,6 +22,34 @@ import { AGENTS_FAMILY } from "./agents/index.ts";
 import { HR_FAMILY } from "./hr/index.ts";
 import { CALENDAR_FAMILY } from "./calendar/index.ts";
 import { COMMERCE_FAMILY } from "./commerce/index.ts";
+import { FITNESS_FAMILY } from "./fitness/index.ts";
+import { HEALTH_FAMILY } from "./health/index.ts";
+import { HABITS_JOURNALING_FAMILY } from "./habits_journaling/index.ts";
+import { FINANCE_FAMILY } from "./finance/index.ts";
+import { POSSESSIONS_FAMILY } from "./possessions/index.ts";
+import { WARDROBE_FAMILY } from "./wardrobe/index.ts";
+import { VEHICLES_FAMILY } from "./vehicles/index.ts";
+import { HOBBIES_FAMILY } from "./hobbies/index.ts";
+import { READING_MEDIA_FAMILY } from "./reading_media/index.ts";
+import { LEARNING_FAMILY } from "./learning/index.ts";
+import { BOOKMARKS_MISC_FAMILY } from "./bookmarks_misc/index.ts";
+import { EDUCATION_SCHOOL_FAMILY } from "./education_school/index.ts";
+import { CAREER_FAMILY } from "./career/index.ts";
+import { TRAVEL_FAMILY } from "./travel/index.ts";
+import { RELATIONSHIPS_FAMILY } from "./relationships/index.ts";
+import { FAMILY_CARE_FAMILY } from "./family_care/index.ts";
+import { ROMANCE_FAMILY } from "./romance/index.ts";
+import { PETS_FAMILY } from "./pets/index.ts";
+import { GARDEN_FAMILY } from "./garden/index.ts";
+import { EVENTS_MEMORIES_FAMILY } from "./events_memories/index.ts";
+import { PERSONAL_DOCUMENTS_FAMILY } from "./personal_documents/index.ts";
+import { MARKETPLACE_REAL_ESTATE_FAMILY } from "./marketplace_real_estate/index.ts";
+import { MARKETPLACE_VEHICLES_FAMILY } from "./marketplace_vehicles/index.ts";
+import { MARKETPLACE_PRODUCTS_FAMILY } from "./marketplace_products/index.ts";
+import { MARKETPLACE_SERVICES_RENTALS_FAMILY } from "./marketplace_services_rentals/index.ts";
+import { CREATIVITY_FAMILY } from "./creativity/index.ts";
+import { COMMUNITIES_SPIRITUALITY_FAMILY } from "./communities_spirituality/index.ts";
+import { FREELANCE_CONSUMER_FAMILY } from "./freelance_consumer/index.ts";
 
 export const BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = [
   COOKING_FAMILY,
@@ -43,6 +71,34 @@ export const BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = [
   HR_FAMILY,
   CALENDAR_FAMILY,
   COMMERCE_FAMILY,
+  FITNESS_FAMILY,
+  HEALTH_FAMILY,
+  HABITS_JOURNALING_FAMILY,
+  FINANCE_FAMILY,
+  POSSESSIONS_FAMILY,
+  WARDROBE_FAMILY,
+  VEHICLES_FAMILY,
+  HOBBIES_FAMILY,
+  READING_MEDIA_FAMILY,
+  LEARNING_FAMILY,
+  BOOKMARKS_MISC_FAMILY,
+  EDUCATION_SCHOOL_FAMILY,
+  CAREER_FAMILY,
+  TRAVEL_FAMILY,
+  RELATIONSHIPS_FAMILY,
+  FAMILY_CARE_FAMILY,
+  ROMANCE_FAMILY,
+  PETS_FAMILY,
+  GARDEN_FAMILY,
+  EVENTS_MEMORIES_FAMILY,
+  PERSONAL_DOCUMENTS_FAMILY,
+  MARKETPLACE_REAL_ESTATE_FAMILY,
+  MARKETPLACE_VEHICLES_FAMILY,
+  MARKETPLACE_PRODUCTS_FAMILY,
+  MARKETPLACE_SERVICES_RENTALS_FAMILY,
+  CREATIVITY_FAMILY,
+  COMMUNITIES_SPIRITUALITY_FAMILY,
+  FREELANCE_CONSUMER_FAMILY,
 ];
 
 export const BUILTIN_COLLECTIONS: BuiltinCollectionDefinition[] = BUILTIN_FAMILIES.flatMap(
