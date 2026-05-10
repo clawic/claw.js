@@ -8,7 +8,7 @@ export const ARTWORKS: BuiltinCollectionDefinition = {
   fields: [
     { name: "title", type: "text", required: true },
     { name: "medium", type: "select", options: ["drawing","painting","sculpture","digital","mixed","other"] },
-    { name: "createdAt", type: "date" },
+    { name: "madeAt", type: "date" },
     { name: "dimensions", type: "text" },
     { name: "image", type: "file" },
     { name: "notes", type: "text" },
