@@ -234,6 +234,40 @@ export class HostStore {
     return merged;
   }
 
+  revoke(id: string, at: Date = new Date()): boolean {
+    const result = this.db
+      .prepare(
+        "UPDATE hosts SET revoked_at = ? WHERE tenant_id = ? AND id = ? AND revoked_at IS NULL",
+      )
+      .run(at.toISOString(), this.tenantId, id);
+    return result.changes > 0;
+  }
+
+  unrevoke(id: string): boolean {
+    const result = this.db
+      .prepare(
+        "UPDATE hosts SET revoked_at = NULL WHERE tenant_id = ? AND id = ? AND revoked_at IS NOT NULL",
+      )
+      .run(this.tenantId, id);
+    return result.changes > 0;
+  }
+
+  touch(id: string, at: Date = new Date()): boolean {
+    const result = this.db
+      .prepare(
+        "UPDATE hosts SET last_seen_at = ? WHERE tenant_id = ? AND id = ?",
+      )
+      .run(at.toISOString(), this.tenantId, id);
+    return result.changes > 0;
+  }
+
+  remove(id: string): boolean {
+    const result = this.db
+      .prepare("DELETE FROM hosts WHERE tenant_id = ? AND id = ?")
+      .run(this.tenantId, id);
+    return result.changes > 0;
+  }
+
   private endpointsFor(hostIds: string[]): Map<string, HostEndpoint[]> {
     const out = new Map<string, HostEndpoint[]>();
     if (hostIds.length === 0) return out;
