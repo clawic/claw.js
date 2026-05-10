@@ -9,3 +9,4 @@ export * from "./audit-store.ts";
 export * from "./heartbeat.ts";
 export * from "./bonjour.ts";
 export * from "./bridge-server.ts";
+export * from "./mesh-server.ts";
