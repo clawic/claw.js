@@ -8,3 +8,4 @@ export * from "./workspace-store.ts";
 export * from "./audit-store.ts";
 export * from "./heartbeat.ts";
 export * from "./bonjour.ts";
+export * from "./bridge-server.ts";
