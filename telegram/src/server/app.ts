@@ -51,7 +51,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
     return { workspace: config.workspace, bots };
   });
 
-  // Connect a new Telegram bot. Wraps `claw channels telegram connect`.
+  // Connect a new Telegram bot. Wraps `claw telegram connect`.
   // The bot token must already live in the Secrets vault under
   // `secretName`; the CLI looks it up there and registers the channel
   // account in `<workspace>/.clawjs/observed/channels.json`.
@@ -67,9 +67,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
     if (!body.secretName) {
       return reply.code(400).send({ error: "secretName is required" });
     }
-    const args = ["channels", "telegram", "connect", "--secret-name", body.secretName];
-    if (body.accountId) args.push("--account", body.accountId);
-    if (body.label) args.push("--name", body.label);
+    const args = ["telegram", "connect", "--secret-name", body.secretName];
     if (body.apiBaseUrl) args.push("--api-base-url", body.apiBaseUrl);
     if (body.webhookUrl) args.push("--webhook-url", body.webhookUrl);
     if (body.webhookSecretToken) args.push("--webhook-secret-token", body.webhookSecretToken);
