@@ -5,7 +5,13 @@ import Database from "better-sqlite3";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { AuditStore } from "./audit-store.ts";
-import { toBase64Url } from "./crypto.ts";
+import {
+  fromBase64Url,
+  generateAgreementKeypair,
+  generateSigningKeypair,
+  toBase64Url,
+} from "./crypto.ts";
+import { encryptEnvelope } from "./signed-envelope.ts";
 import { HostStore } from "./host-store.ts";
 import { IdentityStore, type NodeIdentity } from "./identity-store.ts";
 import { meshServerPlugin, type MeshServerDeps } from "./mesh-server.ts";
@@ -151,5 +157,107 @@ test("POST /mesh/pair persists peer and returns host identity on success", async
   assert.equal(peer!.kind, "ios");
   assert.equal(peer!.signingPublicKey, "ios-sk");
   assert.equal(auditStore.count("meshPair"), 1);
+  await app.close();
+});
+
+test("POST /mesh/jobs rejects unknown sender", async () => {
+  const { app, identity } = await makeHarness();
+  const ghost = generateSigningKeypair();
+  const recipientPubAsArray = identity.agreementPublicKey;
+  const env = encryptEnvelope({
+    senderId: "ghost",
+    recipientId: identity.nodeId,
+    recipientAgreementPublicKey: recipientPubAsArray,
+    signingPrivateKey: ghost.privateKey,
+    payload: { hello: 1 },
+  });
+  const res = await app.inject({
+    method: "POST",
+    url: "/mesh/jobs",
+    payload: env,
+  });
+  assert.equal(res.statusCode, 403);
+  await app.close();
+});
+
+test("POST /mesh/jobs accepts envelope from a known peer and runs handler", async () => {
+  let handlerCalls = 0;
+  const peerSign = generateSigningKeypair();
+  const peerAgree = generateAgreementKeypair();
+
+  const harness = await makeHarness({
+    jobHandler: async ({ payload }) => {
+      handlerCalls += 1;
+      return {
+        jobId: `j-${handlerCalls}`,
+        status: "accepted",
+        detail: JSON.stringify(payload),
+      };
+    },
+  });
+  harness.hostStore.upsert({
+    id: "peer-mac-1",
+    kind: "mac",
+    displayName: "Other Mac",
+    signingPublicKey: toBase64Url(peerSign.publicKey),
+    agreementPublicKey: toBase64Url(peerAgree.publicKey),
+    permissionProfile: "fullTrust",
+    metadata: { tags: [] },
+  });
+
+  const env = encryptEnvelope({
+    senderId: "peer-mac-1",
+    recipientId: harness.identity.nodeId,
+    recipientAgreementPublicKey: harness.identity.agreementPublicKey,
+    signingPrivateKey: peerSign.privateKey,
+    payload: { kind: "ping" },
+  });
+
+  const res = await harness.app.inject({
+    method: "POST",
+    url: "/mesh/jobs",
+    payload: env,
+  });
+  assert.equal(res.statusCode, 200);
+  const body = res.json();
+  assert.equal(body.ok, true);
+  assert.equal(body.status, "accepted");
+  assert.equal(handlerCalls, 1);
+  assert.equal(harness.auditStore.count("meshJob"), 1);
+  const peerAfter = harness.hostStore.get("peer-mac-1");
+  assert.ok(peerAfter?.lastSeenAt instanceof Date);
+  await harness.app.close();
+});
+
+test("POST /mesh/link is loopback only and uses linkClient", async () => {
+  const peerSign = generateSigningKeypair();
+  const peerAgree = generateAgreementKeypair();
+  const linkClient = async () => ({
+    remoteNodeId: "remote-mac-1",
+    remoteDisplayName: "Remote Mac",
+    remoteSigningPublicKey: toBase64Url(peerSign.publicKey),
+    remoteAgreementPublicKey: toBase64Url(peerAgree.publicKey),
+  });
+  const { app, hostStore, auditStore } = await makeHarness({ linkClient });
+
+  const remote = await app.inject({
+    method: "POST",
+    url: "/mesh/link",
+    remoteAddress: "10.0.0.5",
+    payload: { remoteHost: "h", remotePort: 7779, remoteToken: "t" },
+  });
+  assert.equal(remote.statusCode, 403);
+
+  const ok = await app.inject({
+    method: "POST",
+    url: "/mesh/link",
+    remoteAddress: "127.0.0.1",
+    payload: { remoteHost: "remote.local", remotePort: 7779, remoteToken: "t" },
+  });
+  assert.equal(ok.statusCode, 200);
+  const peer = hostStore.get("remote-mac-1");
+  assert.ok(peer);
+  assert.equal(peer!.endpoints[0].host, "remote.local");
+  assert.equal(auditStore.count("meshLink"), 1);
   await app.close();
 });
