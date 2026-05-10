@@ -41,6 +41,7 @@ ClawJS gives you one place to solve the hard parts that show up across runtimes:
 | `@clawjs/workspace` | Productivity extension for tasks, notes, people, inbox, events, search, context, and UI descriptors on top of the base SDK. |
 | `@clawjs/database` | Shared database engine, API client, auth, realtime hub, store, and embeddable service app. |
 | `@clawjs/node` | Compatibility wrapper that reexports the primary SDK surface for existing integrations that still import `@clawjs/node`. |
+| `@clawjs/ssh-client` | Audited SSH client for mesh hosts with TOFU known-host handling, exec, SFTP, and bridge installation helpers. |
 | `@clawjs/cli` | Official CLI with `claw` and `clawjs` binaries for scaffolding, runtime management, workspace ops, productivity commands, sessions, media, and package-aware project generation. |
 | `@clawjs/openclaw-plugin` | OpenClaw bridge plugin for gateway RPC methods, observability hooks, and managed tooling. |
 | `@clawjs/openclaw-context-engine` | Experimental OpenClaw context engine package for runtime-side context selection. |

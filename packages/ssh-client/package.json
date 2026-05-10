@@ -1,0 +1,49 @@
+{
+  "name": "@clawjs/ssh-client",
+  "version": "0.1.0",
+  "description": "Audited SSH client (exec + SFTP + TOFU known-hosts) for hosts registered in the Claw mesh.",
+  "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "Iván González Dávila",
+    "url": "https://github.com/ivangdavila"
+  },
+  "homepage": "https://github.com/clawic/clawjs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clawic/clawjs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/clawic/clawjs/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20"
+  },
+  "dependencies": {
+    "@clawjs/mesh": "*",
+    "ssh2": "^1.16.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/ssh2": "^1.15.5"
+  }
+}

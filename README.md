@@ -33,6 +33,7 @@ Repository ownership, issue tracking, and package publishing live under [`@clawi
 - `@clawjs/workspace`: local-first workspace productivity companion
 - `@clawjs/node`: compatibility wrapper for existing integrations
 - `@clawjs/core`: shared contracts and schemas
+- `@clawjs/ssh-client`: audited SSH client for Claw mesh hosts
 - `@clawjs/openclaw-plugin`: OpenClaw bridge plugin
 - `@clawjs/openclaw-context-engine`: experimental OpenClaw context engine
 - `create-claw-app`: Next.js starter scaffold
