@@ -50,6 +50,13 @@ import { MARKETPLACE_SERVICES_RENTALS_FAMILY } from "./marketplace_services_rent
 import { CREATIVITY_FAMILY } from "./creativity/index.ts";
 import { COMMUNITIES_SPIRITUALITY_FAMILY } from "./communities_spirituality/index.ts";
 import { FREELANCE_CONSUMER_FAMILY } from "./freelance_consumer/index.ts";
+import { LUXURY_AND_COLLECTING_FAMILY } from "./luxury_and_collecting/index.ts";
+import { PREGNANCY_EARLY_CHILDHOOD_FAMILY } from "./pregnancy_early_childhood/index.ts";
+import { MENTAL_HEALTH_RECOVERY_FAMILY } from "./mental_health_recovery/index.ts";
+import { SOCIAL_CULTURE_FAMILY } from "./social_culture/index.ts";
+import { IDENTITY_BODY_RELIGIOUS_FINE_FAMILY } from "./identity_body_religious_fine/index.ts";
+import { REPRODUCTIVE_INTIMATE_FAMILY } from "./reproductive_intimate/index.ts";
+import { PERSONAL_CARE_AESTHETICS_FAMILY } from "./personal_care_aesthetics/index.ts";
 
 export const BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = [
   COOKING_FAMILY,
@@ -99,6 +106,13 @@ export const BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = [
   CREATIVITY_FAMILY,
   COMMUNITIES_SPIRITUALITY_FAMILY,
   FREELANCE_CONSUMER_FAMILY,
+  LUXURY_AND_COLLECTING_FAMILY,
+  PREGNANCY_EARLY_CHILDHOOD_FAMILY,
+  MENTAL_HEALTH_RECOVERY_FAMILY,
+  SOCIAL_CULTURE_FAMILY,
+  IDENTITY_BODY_RELIGIOUS_FINE_FAMILY,
+  REPRODUCTIVE_INTIMATE_FAMILY,
+  PERSONAL_CARE_AESTHETICS_FAMILY,
 ];
 
 export const BUILTIN_COLLECTIONS: BuiltinCollectionDefinition[] = BUILTIN_FAMILIES.flatMap(

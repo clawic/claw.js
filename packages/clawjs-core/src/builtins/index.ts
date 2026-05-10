@@ -65,3 +65,10 @@ export { MARKETPLACE_SERVICES_RENTALS_FAMILY } from "./marketplace_services_rent
 export { CREATIVITY_FAMILY } from "./creativity/index.ts";
 export { COMMUNITIES_SPIRITUALITY_FAMILY } from "./communities_spirituality/index.ts";
 export { FREELANCE_CONSUMER_FAMILY } from "./freelance_consumer/index.ts";
+export { LUXURY_AND_COLLECTING_FAMILY } from "./luxury_and_collecting/index.ts";
+export { PREGNANCY_EARLY_CHILDHOOD_FAMILY } from "./pregnancy_early_childhood/index.ts";
+export { MENTAL_HEALTH_RECOVERY_FAMILY } from "./mental_health_recovery/index.ts";
+export { SOCIAL_CULTURE_FAMILY } from "./social_culture/index.ts";
+export { IDENTITY_BODY_RELIGIOUS_FINE_FAMILY } from "./identity_body_religious_fine/index.ts";
+export { REPRODUCTIVE_INTIMATE_FAMILY } from "./reproductive_intimate/index.ts";
+export { PERSONAL_CARE_AESTHETICS_FAMILY } from "./personal_care_aesthetics/index.ts";
