@@ -1,0 +1,25 @@
+{
+  "name": "clawjs-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/bin/start.ts",
+    "build": "tsup src/bin/start.ts --format esm --target node20 --out-dir dist --clean",
+    "start": "node dist/start.js",
+    "test": "tsx --test tests/**/*.test.ts"
+  },
+  "dependencies": {
+    "@clawjs/claw": "file:../packages/clawjs-node",
+    "@clawjs/mesh": "file:../packages/mesh",
+    "better-sqlite3": "^12.4.1",
+    "fastify": "^5.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "tsup": "^8.5.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "ws": "^8.18.0"
+  }
+}
