@@ -4,6 +4,7 @@ import type {
   FastifyReply,
   FastifyRequest,
 } from "fastify";
+import { z } from "zod";
 
 import { AuditStore, type AuditAction } from "./audit-store.ts";
 import {
@@ -13,8 +14,10 @@ import {
 } from "./crypto.ts";
 import { HostStore } from "./host-store.ts";
 import {
+  HOST_KINDS,
   type Host,
   type HostEndpoint,
+  type HostKind,
 } from "./models.ts";
 import {
   PairingAcceptRequestSchema,
@@ -38,6 +41,27 @@ export interface MeshServerDeps {
   auditStore: AuditStore;
   capabilities: string[];
   endpointResolver: () => HostEndpoint[];
+  linkClient?: MeshLinkClient;
+}
+
+export interface MeshLinkRequest {
+  remoteHost: string;
+  remotePort: number;
+  remoteToken: string;
+  remoteKind?: HostKind;
+}
+
+export type MeshLinkClient = (
+  request: MeshLinkRequest,
+  selfIdentity: NodeIdentity,
+  selfKind: HostKind,
+) => Promise<MeshLinkClientResult>;
+
+export interface MeshLinkClientResult {
+  remoteNodeId: string;
+  remoteDisplayName: string;
+  remoteSigningPublicKey: string;
+  remoteAgreementPublicKey: string;
 }
 
 export interface MeshIdentityResponse {
@@ -49,6 +73,14 @@ export interface MeshIdentityResponse {
   endpoints: HostEndpoint[];
   capabilities: string[];
 }
+
+const MeshLinkBodySchema = z.object({
+  remoteHost: z.string().min(1),
+  remotePort: z.number().int().min(1).max(65535),
+  remoteToken: z.string().min(1),
+  remoteKind: z.enum(HOST_KINDS).optional(),
+  selfKind: z.enum(HOST_KINDS).default("mac"),
+});
 
 export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
   async function plugin(app: FastifyInstance) {
@@ -120,6 +152,58 @@ export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
     app.get("/mesh/workspaces", async (request, reply) => {
       if (!ensureLoopback(request, reply)) return;
       reply.send({ workspaces: deps.workspaceStore.list() });
+    });
+
+    app.post("/mesh/link", async (request, reply) => {
+      if (!ensureLoopback(request, reply)) return;
+      const parsed = MeshLinkBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400).send({ error: "invalid body", issues: parsed.error.issues });
+        return;
+      }
+      const linkClient = deps.linkClient;
+      if (!linkClient) {
+        reply.code(501).send({ error: "link client not configured" });
+        return;
+      }
+      const identity = deps.identityStore.get();
+      if (!identity) {
+        reply.code(503).send({ error: "identity not initialized" });
+        return;
+      }
+      try {
+        const remote = await linkClient(parsed.data, identity, parsed.data.selfKind);
+        const peer = deps.hostStore.upsert({
+          id: remote.remoteNodeId,
+          kind: parsed.data.remoteKind ?? "mac",
+          displayName: remote.remoteDisplayName,
+          signingPublicKey: remote.remoteSigningPublicKey,
+          agreementPublicKey: remote.remoteAgreementPublicKey,
+          endpoints: [
+            {
+              kind: "linked",
+              host: parsed.data.remoteHost,
+              port: parsed.data.remotePort,
+              protocol: "bridge",
+            },
+          ],
+          permissionProfile: "scoped",
+          capabilities: ["bridge"],
+          metadata: { tags: ["linked"] },
+        });
+        audit("meshLink", "success", {
+          actor: identity.nodeId,
+          target: remote.remoteNodeId,
+          context: { remoteHost: parsed.data.remoteHost, remotePort: parsed.data.remotePort },
+        });
+        reply.send({ peer });
+      } catch (err) {
+        audit("meshLink", "failure", {
+          actor: identity.nodeId,
+          context: { error: String(err) },
+        });
+        reply.code(502).send({ error: "link failed", detail: String(err) });
+      }
     });
 
     app.post("/mesh/pair", async (request, reply) => {
