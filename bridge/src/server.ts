@@ -11,6 +11,7 @@ import {
   HeartbeatWriter,
   HostStore,
   IdentityStore,
+  SshSecretStore,
   WorkspaceStore,
   meshServerPlugin,
   type BridgeFrame,
@@ -20,12 +21,20 @@ import {
   type NodeIdentity,
 } from "@clawjs/mesh";
 
+import {
+  SshClient,
+  type HostResolver as SshHostResolver,
+  type SecretResolver as SshSecretResolver,
+} from "@clawjs/ssh-client";
+
 import { handleCodexJob } from "./codex-job-handler.ts";
 import { CodexRuntime, type CodexRuntimeOptions } from "./codex-runtime.ts";
 import { createCodexWsHandler } from "./codex-ws-bridge.ts";
 import type { BridgeConfig } from "./config.ts";
 import type { ComputerUse } from "./computer-use.ts";
 import { httpLinkClient } from "./link-client.ts";
+import { handleSshJob, type SshAuditSink } from "./ssh-job-handler.ts";
+import { createSshWsHandler } from "./ssh-ws-bridge.ts";
 import { handleTccJob, type TccAuditSink } from "./tcc-job-handler.ts";
 import { createTccWsHandler } from "./tcc-ws-bridge.ts";
 import type { TerminalManager } from "./terminal.ts";
@@ -45,6 +54,8 @@ export interface BridgeRuntime {
   codex?: CodexRuntime;
   computerUse?: ComputerUse;
   terminal?: TerminalManager;
+  ssh?: SshClient;
+  sshSecretStore?: SshSecretStore;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -57,6 +68,13 @@ export interface BridgeRuntimeOptions {
   codex?: CodexRuntimeOptions;
   computerUse?: ComputerUse;
   terminal?: TerminalManager;
+  ssh?: SshBridgeOptions;
+}
+
+export interface SshBridgeOptions {
+  enabled: boolean;
+  readyTimeoutMs?: number;
+  idleEvictionMs?: number;
 }
 
 export function createBridgeRuntime(
@@ -73,16 +91,41 @@ export function createBridgeRuntime(
   const codex = options.codex ? new CodexRuntime(options.codex) : undefined;
   const computerUse = options.computerUse;
   const terminal = options.terminal;
+  const sshEnabled = options.ssh?.enabled === true;
+  const sshSecretStore = sshEnabled ? new SshSecretStore(db) : undefined;
+  const sshClient = sshEnabled
+    ? new SshClient({
+        hostResolver: {
+          async resolve(id) {
+            return hostStore.get(id);
+          },
+        } satisfies SshHostResolver,
+        secretResolver: {
+          async resolve(id) {
+            return sshSecretStore!.get(id);
+          },
+        } satisfies SshSecretResolver,
+        readyTimeoutMs: options.ssh?.readyTimeoutMs,
+        idleEvictionMs: options.ssh?.idleEvictionMs,
+      })
+    : undefined;
 
   const meshJobHandler =
     options.jobHandler ??
-    buildMeshJobHandler({ codex, computerUse, terminal, auditStore });
+    buildMeshJobHandler({
+      codex,
+      computerUse,
+      terminal,
+      sshClient,
+      auditStore,
+    });
 
   const advertisedCapabilities = computeCapabilities(
     config.capabilities,
     codex,
     computerUse,
     terminal,
+    sshClient,
   );
 
   const fastify = Fastify();
@@ -92,6 +135,7 @@ export function createBridgeRuntime(
       hostStore,
       workspaceStore,
       auditStore,
+      sshSecretStore,
       capabilities: advertisedCapabilities,
       endpointResolver: () => resolveLocalEndpoints(config),
       jobHandler: meshJobHandler,
@@ -106,7 +150,10 @@ export function createBridgeRuntime(
     computerUse || terminal
       ? createTccWsHandler({ computerUse, terminal, auditStore })
       : undefined;
-  const onFrame = composeFrameHandlers(codexHandler, tccHandler);
+  const sshHandler = sshClient
+    ? createSshWsHandler({ client: sshClient, auditStore })
+    : undefined;
+  const onFrame = composeFrameHandlers(codexHandler, tccHandler, sshHandler);
   const bridgeHttpServer = createServer();
   const bridgeServer = new BridgeServer({
     identityStore,
@@ -152,6 +199,8 @@ export function createBridgeRuntime(
     codex,
     computerUse,
     terminal,
+    ssh: sshClient,
+    sshSecretStore,
     async start() {
       await fastify.listen({ port: config.httpPort, host: config.bindAddress });
       await new Promise<void>((resolve, reject) => {
@@ -177,6 +226,13 @@ export function createBridgeRuntime(
       if (codex) {
         try {
           await codex.stop();
+        } catch {
+          /* ignore */
+        }
+      }
+      if (sshClient) {
+        try {
+          await sshClient.closeAll();
         } catch {
           /* ignore */
         }
@@ -247,6 +303,7 @@ function computeCapabilities(
   codex: CodexRuntime | undefined,
   computerUse: ComputerUse | undefined,
   terminal: TerminalManager | undefined,
+  ssh: SshClient | undefined,
 ): string[] {
   const caps = new Set(base);
   if (codex) caps.add("codex");
@@ -255,6 +312,11 @@ function computeCapabilities(
   if (cu?.keystroke) caps.add("tcc.computer.input.keystroke");
   if (cu?.click) caps.add("tcc.computer.input.click");
   if (terminal) caps.add("tcc.terminal.spawn");
+  if (ssh) {
+    caps.add("ssh.exec");
+    caps.add("ssh.sftp");
+    caps.add("ssh.installBridge");
+  }
   return Array.from(caps);
 }
 
@@ -280,14 +342,20 @@ interface MeshJobHandlerDeps {
   codex?: CodexRuntime;
   computerUse?: ComputerUse;
   terminal?: TerminalManager;
+  sshClient?: SshClient;
   auditStore: AuditStore;
 }
 
 function buildMeshJobHandler(
   deps: MeshJobHandlerDeps,
 ): MeshJobHandler | undefined {
-  if (!deps.codex && !deps.computerUse && !deps.terminal) return undefined;
+  if (!deps.codex && !deps.computerUse && !deps.terminal && !deps.sshClient) {
+    return undefined;
+  }
   const auditSink: TccAuditSink = {
+    record: (input) => deps.auditStore.record(input),
+  };
+  const sshAuditSink: SshAuditSink = {
     record: (input) => deps.auditStore.record(input),
   };
   return async ({ senderId, payload }) => {
@@ -310,6 +378,22 @@ function buildMeshJobHandler(
           computerUse: deps.computerUse,
           terminal: deps.terminal,
           audit: auditSink,
+          actorId: senderId,
+        },
+        payload,
+        jobId,
+      );
+      return {
+        jobId,
+        status: outcome.ok ? "completed" : "rejected",
+        detail: outcome.ok ? undefined : outcome.error,
+      };
+    }
+    if (method.startsWith("ssh.") && deps.sshClient) {
+      const outcome = await handleSshJob(
+        {
+          client: deps.sshClient,
+          audit: sshAuditSink,
           actorId: senderId,
         },
         payload,
