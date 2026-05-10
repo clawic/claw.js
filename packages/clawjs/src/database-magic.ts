@@ -10,9 +10,7 @@ import {
   type RecordEnvelope,
 } from "@clawjs/database";
 import {
-  BUILTIN_COLLECTIONS,
   BUILTIN_COLLECTIONS_BY_ALIAS,
-  type BuiltinCollectionDefinition,
 } from "@clawjs/core";
 
 export const DB_EXIT_OK = 0;
@@ -50,57 +48,6 @@ const PRODUCTIVITY_COLLECTION_ALIASES: Record<string, string> = {
 
 function builtinB2cCollectionAlias(input: string): string | undefined {
   return BUILTIN_COLLECTIONS_BY_ALIAS.get(input);
-}
-
-const REGISTERED_B2C_NAMESPACES = new WeakMap<DatabaseServiceStore, Set<string>>();
-
-async function registerBuiltinB2cCollections(
-  store: DatabaseServiceStore,
-  namespaceId: string,
-): Promise<void> {
-  let seen = REGISTERED_B2C_NAMESPACES.get(store);
-  if (!seen) {
-    seen = new Set();
-    REGISTERED_B2C_NAMESPACES.set(store, seen);
-  }
-  if (seen.has(namespaceId)) return;
-  seen.add(namespaceId);
-
-  for (const collection of BUILTIN_COLLECTIONS) {
-    const { fields, indexes } = builtinB2cToFieldDefinitions(collection);
-    store.ensureCollection(namespaceId, {
-      name: collection.name,
-      displayName: collection.displayName,
-      fields,
-      indexes,
-      builtin: true,
-      protected: true,
-      coreFieldNames: collection.fields
-        .filter((field) => field.required)
-        .map((field) => field.name),
-    });
-  }
-}
-
-function builtinB2cToFieldDefinitions(
-  collection: BuiltinCollectionDefinition,
-): { fields: FieldDefinition[]; indexes: IndexDefinition[] } {
-  const fields: FieldDefinition[] = collection.fields.map((field) => {
-    const next: FieldDefinition = {
-      name: field.name,
-      type: field.type === "number" ? "number" : field.type === "boolean" ? "boolean" : field.type,
-    };
-    if (field.required) next.required = true;
-    if (field.options) next.options = [...field.options];
-    if (field.relation) next.relation = { collectionName: field.relation.collectionName };
-    return next;
-  });
-  const indexes: IndexDefinition[] = collection.indexes.map((index) => {
-    const next: IndexDefinition = { name: index.name, fields: [...index.fields] };
-    if (index.unique) next.unique = true;
-    return next;
-  });
-  return { fields, indexes };
 }
 
 const CUSTOM_COLLECTION_FIELDS: FieldDefinition[] = [
@@ -153,7 +100,6 @@ class LocalDbRuntime implements DbRuntime {
 
   async ensureNamespace(namespaceId: string): Promise<void> {
     this.store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
-    await registerBuiltinB2cCollections(this.store, namespaceId);
   }
 
   async getCollection(namespaceId: string, collectionName: string): Promise<CollectionDefinition | null> {
