@@ -11,6 +11,14 @@ export interface InstallBridgeInput {
   port?: number;
   httpPort?: number;
   installSystemd?: boolean;
+  /**
+   * If provided, used verbatim as the systemd unit body. Otherwise a default
+   * unit is rendered (binaryPath, CLAWJS_BRIDGE_PORT, CLAWJS_BRIDGE_HTTP_PORT).
+   * Callers that need richer units (extra Environment lines, WorkingDirectory,
+   * etc.) should render via `@clawjs/mesh` or the bridge daemon helpers.
+   */
+  unitBody?: string;
+  remoteChmod?: number;
 }
 
 export interface InstallBridgeResult {
@@ -35,14 +43,18 @@ export async function installBridgeOverSsh(
   try {
     const bytes = await readFile(input.localBinaryPath);
     await sftp.writeFile(remotePath, bytes);
-    await sftp.chmod(remotePath, 0o755);
+    await sftp.chmod(remotePath, input.remoteChmod ?? 0o755);
     let systemdUnitInstalled = false;
     if (input.installSystemd !== false) {
       systemdUnitInstalled = await installSystemdUnit(session, sftp, {
         unitName: input.systemdUnitName ?? "clawjs-bridged",
-        binaryPath: remotePath,
-        port: input.port ?? 7778,
-        httpPort: input.httpPort ?? 7779,
+        unitBody:
+          input.unitBody ??
+          defaultSystemdUnit({
+            binaryPath: remotePath,
+            port: input.port ?? 7778,
+            httpPort: input.httpPort ?? 7779,
+          }),
       });
     }
     return {
@@ -55,17 +67,15 @@ export async function installBridgeOverSsh(
   }
 }
 
-interface SystemdUnitInput {
+interface SystemdUnitInstallInput {
   unitName: string;
-  binaryPath: string;
-  port: number;
-  httpPort: number;
+  unitBody: string;
 }
 
 async function installSystemdUnit(
   session: SshSession,
   sftp: SftpClient,
-  input: SystemdUnitInput,
+  input: SystemdUnitInstallInput,
 ): Promise<boolean> {
   const homeExec = await session.exec({ command: "printf %s \"$HOME\"" });
   if (homeExec.exitCode !== 0) {
@@ -79,8 +89,7 @@ async function installSystemdUnit(
   const unitDir = `${home}/.config/systemd/user`;
   await session.exec({ command: `mkdir -p ${shellQuote(unitDir)}` });
   const unitPath = `${unitDir}/${input.unitName}.service`;
-  const unit = renderSystemdUnit(input);
-  await sftp.writeFile(unitPath, unit);
+  await sftp.writeFile(unitPath, input.unitBody);
   const reload = await session.exec({
     command: "systemctl --user daemon-reload",
   });
@@ -91,7 +100,13 @@ async function installSystemdUnit(
   return enable.exitCode === 0;
 }
 
-function renderSystemdUnit(input: SystemdUnitInput): string {
+interface DefaultUnitInput {
+  binaryPath: string;
+  port: number;
+  httpPort: number;
+}
+
+function defaultSystemdUnit(input: DefaultUnitInput): string {
   return [
     "[Unit]",
     "Description=Claw Mesh Bridge (clawjs-bridged)",

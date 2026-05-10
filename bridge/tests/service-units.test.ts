@@ -1,0 +1,90 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  buildBridgeServiceSpec,
+  detectCurrentTarget,
+  renderLaunchdPlist,
+  renderSystemdUnit,
+  SUPPORTED_TARGETS,
+  tarballName,
+} from "../src/service-units.ts";
+
+test("renderSystemdUnit emits an enabled service with ExecStart and env", () => {
+  const spec = buildBridgeServiceSpec({
+    binaryPath: "/usr/local/bin/clawjs-bridged",
+    bridgePort: 7778,
+    httpPort: 7779,
+  });
+  const unit = renderSystemdUnit(spec);
+  assert.match(unit, /\[Unit\]/);
+  assert.match(unit, /ExecStart=\/usr\/local\/bin\/clawjs-bridged/);
+  assert.match(unit, /Environment=CLAWJS_BRIDGE_PORT=7778/);
+  assert.match(unit, /Environment=CLAWJS_BRIDGE_HTTP_PORT=7779/);
+  assert.match(unit, /Restart=on-failure/);
+  assert.match(unit, /WantedBy=default\.target/);
+});
+
+test("renderSystemdUnit shell-quotes args with whitespace", () => {
+  const unit = renderSystemdUnit({
+    unitName: "demo",
+    binaryPath: "/opt/x/bin",
+    args: ["--name", "two words"],
+  });
+  assert.match(unit, /ExecStart=\/opt\/x\/bin --name "two words"/);
+});
+
+test("renderLaunchdPlist emits a valid plist with ProgramArguments", () => {
+  const spec = buildBridgeServiceSpec({
+    binaryPath: "/usr/local/bin/clawjs-bridged",
+    bridgePort: 7778,
+    httpPort: 7779,
+  });
+  const plist = renderLaunchdPlist(spec, {
+    label: "com.clawjs.bridged.user",
+    runAtLoad: true,
+    keepAlive: true,
+    stdoutLogPath: "/tmp/clawjs.out",
+    stderrLogPath: "/tmp/clawjs.err",
+  });
+  assert.match(plist, /<key>Label<\/key>/);
+  assert.match(plist, /<string>com\.clawjs\.bridged\.user<\/string>/);
+  assert.match(plist, /<key>ProgramArguments<\/key>/);
+  assert.match(plist, /<string>\/usr\/local\/bin\/clawjs-bridged<\/string>/);
+  assert.match(plist, /<key>EnvironmentVariables<\/key>/);
+  assert.match(plist, /<string>7778<\/string>/);
+  assert.match(plist, /<key>StandardErrorPath<\/key>/);
+  assert.match(plist, /<key>RunAtLoad<\/key>\n\s*<true\/>/);
+});
+
+test("renderLaunchdPlist escapes XML special chars", () => {
+  const spec = buildBridgeServiceSpec({
+    binaryPath: "/tmp/Bridge & Friends",
+  });
+  const plist = renderLaunchdPlist(spec, {});
+  assert.match(plist, /Bridge &amp; Friends/);
+});
+
+test("SUPPORTED_TARGETS covers Mac, Linux and Windows", () => {
+  const expected = new Set([
+    "darwin-arm64",
+    "darwin-x64",
+    "linux-x64",
+    "linux-arm64",
+    "windows-x64",
+  ]);
+  const got = new Set(SUPPORTED_TARGETS.map((t) => `${t.os}-${t.arch}`));
+  assert.deepEqual(got, expected);
+});
+
+test("tarballName has a predictable shape", () => {
+  assert.equal(
+    tarballName({ os: "linux", arch: "x64" }, "0.1.0"),
+    "clawjs-bridged-linux-x64-0.1.0.tar.gz",
+  );
+});
+
+test("detectCurrentTarget returns a known target for this host", () => {
+  const t = detectCurrentTarget();
+  assert.ok(SUPPORTED_TARGETS.find((x) => x.os === t.os && x.arch === t.arch));
+});

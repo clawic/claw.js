@@ -65,6 +65,7 @@ export const SshJobInputSchema = z.discriminatedUnion("method", [
     httpPort: z.number().int().min(1).max(65535).optional(),
     systemdUnitName: z.string().optional(),
     installSystemd: z.boolean().optional(),
+    unitBody: z.string().optional(),
   }),
 ]);
 
@@ -229,6 +230,7 @@ async function dispatch(
         httpPort: input.httpPort,
         systemdUnitName: input.systemdUnitName,
         installSystemd: input.installSystemd,
+        unitBody: input.unitBody,
       });
   }
 }
