@@ -3,7 +3,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 
 import Database from "better-sqlite3";
-import { PRODUCTIVITY_COLLECTION_DEFINITIONS } from "@clawjs/core";
+import { PRODUCTIVITY_COLLECTION_DEFINITIONS, BUILTIN_COLLECTIONS } from "@clawjs/core";
 
 import { generateOpaqueToken, hashSecret } from "./auth.ts";
 import type {
@@ -277,6 +277,29 @@ function builtInCollections(): Array<{
         ...(index.unique ? { unique: true } : {}),
       })),
     })),
+    // ── Built-in B2C/B2B catalog (registry) ─────────────────────────
+    // Modular collections declared under packages/clawjs-core/src/builtins/
+    // (one file per collection, grouped by family). Includes the 188
+    // B2B-style collections (identity, work, billing, crm, support,
+    // analytics, observability, infra, marketing, agents, hr, etc.) plus
+    // the B2C catalog that lives in the same registry.
+    ...BUILTIN_COLLECTIONS.map((definition) => ({
+      name: definition.name,
+      displayName: definition.displayName,
+      coreFieldNames: definition.fields.filter((f) => f.required).map((f) => f.name),
+      fields: definition.fields.map((field) => ({
+        name: field.name,
+        type: (field.type === "email" || field.type === "url" || field.type === "file") ? "text" : field.type,
+        ...(field.required ? { required: true } : {}),
+        ...(field.options ? { options: [...field.options] } : {}),
+        ...(field.relation ? { relation: { collectionName: field.relation.collectionName } } : {}),
+      })),
+      indexes: definition.indexes.map((index) => ({
+        name: index.name,
+        fields: [...index.fields],
+        ...(index.unique ? { unique: true } : {}),
+      })),
+    })),
     // ── Company app collections ─────────────────────────────────────
     // Models a virtual company where the human (board) hires AI agents
     // into roles and collaborates with them via issues and an inbox.
@@ -412,10 +435,42 @@ function builtInCollections(): Array<{
         { name: "autonomous", type: "boolean" },
         { name: "approvalState", type: "select", options: ["not_required", "pending", "approved", "rejected"] },
         { name: "dueAt", type: "date" },
+        // Plan extensions:
+        { name: "stateId", type: "relation", relation: { collectionName: "workflow_states" } },
+        { name: "teamId", type: "relation", relation: { collectionName: "teams" } },
+        { name: "resolution", type: "select", options: ["fixed", "wont_fix", "duplicate", "cannot_reproduce", "incomplete", "done"] },
+        { name: "resolvedAt", type: "date" },
+        { name: "assigneeActorId", type: "relation", relation: { collectionName: "actors" } },
+        { name: "creatorActorId", type: "relation", relation: { collectionName: "actors" } },
+        { name: "previousIdentifiers", type: "json" },
+        { name: "fixVersionId", type: "relation", relation: { collectionName: "versions" } },
+        { name: "milestoneId", type: "relation", relation: { collectionName: "milestones" } },
+        { name: "cycleId", type: "relation", relation: { collectionName: "cycles" } },
+        { name: "estimate", type: "number" },
+        { name: "estimateScale", type: "text" },
+        { name: "startedAt", type: "date" },
+        { name: "completedAt", type: "date" },
+        { name: "canceledAt", type: "date" },
+        { name: "archivedAt", type: "date" },
+        { name: "snoozedUntilAt", type: "date" },
+        { name: "trashed", type: "boolean" },
+        { name: "trashedAt", type: "date" },
+        { name: "editedAt", type: "date" },
+        { name: "sortOrder", type: "number" },
+        { name: "sourceMetadata", type: "json" },
+        { name: "customFieldValues", type: "json" },
+        { name: "slaBreachesAt", type: "date" },
+        { name: "slaStartedAt", type: "date" },
+        { name: "slaDayCount", type: "number" },
+        { name: "slaUsesBusinessDays", type: "boolean" },
       ],
       indexes: [
         { name: "issues_company_idx", fields: ["companyId"] },
         { name: "issues_identifier_unique", fields: ["companyId", "identifier"], unique: true },
+        { name: "issues_state_idx", fields: ["stateId"] },
+        { name: "issues_assignee_actor_idx", fields: ["assigneeActorId"] },
+        { name: "issues_cycle_idx", fields: ["cycleId"] },
+        { name: "issues_team_idx", fields: ["teamId"] },
       ],
     },
     {
