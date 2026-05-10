@@ -3,11 +3,12 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 
 import Database from "better-sqlite3";
-import { PRODUCTIVITY_COLLECTION_DEFINITIONS, BUILTIN_COLLECTIONS } from "@clawjs/core";
+import { PRODUCTIVITY_COLLECTION_DEFINITIONS, BUILTIN_COLLECTIONS, BUILTIN_COLLECTIONS_BY_NAME } from "@clawjs/core";
 
 import { generateOpaqueToken, hashSecret } from "./auth.ts";
 import type {
   CollectionDefinition,
+  CollectionRule,
   DatabaseOperation,
   FieldDefinition,
   FileAsset,
@@ -122,6 +123,15 @@ function normalizeField(field: FieldDefinition): FieldDefinition {
     ...(field.required ? { required: true } : {}),
     ...(field.options ? { options: [...field.options] } : {}),
     ...(field.relation ? { relation: { collectionName: field.relation.collectionName } } : {}),
+    ...(typeof field.min === "number" ? { min: field.min } : {}),
+    ...(typeof field.max === "number" ? { max: field.max } : {}),
+    ...(typeof field.minLength === "number" ? { minLength: field.minLength } : {}),
+    ...(typeof field.maxLength === "number" ? { maxLength: field.maxLength } : {}),
+    ...(field.pattern ? { pattern: field.pattern } : {}),
+    ...(field.unique ? { unique: true } : {}),
+    ...(typeof field.enumScale === "number" ? { enumScale: field.enumScale } : {}),
+    ...(field.barcodeKind ? { barcodeKind: field.barcodeKind } : {}),
+    ...(field.durationDisplayUnit ? { durationDisplayUnit: field.durationDisplayUnit } : {}),
   };
 }
 
@@ -155,6 +165,12 @@ function validateFields(fields: FieldDefinition[]): FieldDefinition[] {
     }
     if (field.type === "relation" && !field.relation?.collectionName) {
       throw new Error(`Field ${field.name} requires relation.collectionName.`);
+    }
+    if (field.type === "barcode" && !field.barcodeKind) {
+      throw new Error(`Field ${field.name} (barcode) requires barcodeKind.`);
+    }
+    if (field.type === "rating" && typeof field.enumScale === "number" && field.enumScale < 1) {
+      throw new Error(`Field ${field.name} (rating) requires enumScale >= 1.`);
     }
   }
   return normalized;
@@ -212,6 +228,36 @@ function serializeFile(row: FileRow): FileAsset {
   };
 }
 
+const CURRENCY_REGEX = /^[A-Z]{3}$/;
+const COUNTRY_REGEX = /^[A-Z]{2}$/;
+const E164_REGEX = /^\+[1-9]\d{1,14}$/;
+const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
+const ISBN10_REGEX = /^(?:\d{9}[\dXx])$/;
+const ISBN13_REGEX = /^\d{13}$/;
+const EAN13_REGEX = /^\d{13}$/;
+const UPC12_REGEX = /^\d{12}$/;
+
+function checkTextConstraints(field: FieldDefinition, value: string): void {
+  if (typeof field.minLength === "number" && value.length < field.minLength) {
+    throw new Error(`Field ${field.name} must be at least ${field.minLength} characters.`);
+  }
+  if (typeof field.maxLength === "number" && value.length > field.maxLength) {
+    throw new Error(`Field ${field.name} must be at most ${field.maxLength} characters.`);
+  }
+  if (field.pattern && !new RegExp(field.pattern).test(value)) {
+    throw new Error(`Field ${field.name} does not match required pattern.`);
+  }
+}
+
+function checkNumericConstraints(field: FieldDefinition, value: number): void {
+  if (typeof field.min === "number" && value < field.min) {
+    throw new Error(`Field ${field.name} must be >= ${field.min}.`);
+  }
+  if (typeof field.max === "number" && value > field.max) {
+    throw new Error(`Field ${field.name} must be <= ${field.max}.`);
+  }
+}
+
 function validateFieldValue(field: FieldDefinition, value: unknown): void {
   if (value === null || value === undefined) {
     if (field.required) throw new Error(`Field ${field.name} is required.`);
@@ -220,16 +266,20 @@ function validateFieldValue(field: FieldDefinition, value: unknown): void {
 
   switch (field.type) {
     case "text":
+    case "markdown":
       if (typeof value !== "string") throw new Error(`Field ${field.name} must be text.`);
+      checkTextConstraints(field, value);
       return;
     case "email":
       if (typeof value !== "string" || !value.includes("@")) throw new Error(`Field ${field.name} must be an email.`);
+      checkTextConstraints(field, value);
       return;
     case "url":
       if (typeof value !== "string" || !/^https?:\/\//.test(value)) throw new Error(`Field ${field.name} must be a url.`);
       return;
     case "number":
       if (typeof value !== "number" || Number.isNaN(value)) throw new Error(`Field ${field.name} must be a number.`);
+      checkNumericConstraints(field, value);
       return;
     case "boolean":
       if (typeof value !== "boolean") throw new Error(`Field ${field.name} must be a boolean.`);
@@ -249,6 +299,127 @@ function validateFieldValue(field: FieldDefinition, value: unknown): void {
     case "file":
       if (typeof value !== "string" || !value.trim()) throw new Error(`Field ${field.name} must be a file asset id.`);
       return;
+    case "money": {
+      if (!isPlainObject(value)) throw new Error(`Field ${field.name} must be { amountCents, currency }.`);
+      const v = value as Record<string, unknown>;
+      if (!Number.isInteger(v.amountCents)) throw new Error(`Field ${field.name}.amountCents must be an integer.`);
+      if (typeof v.currency !== "string" || !CURRENCY_REGEX.test(v.currency)) {
+        throw new Error(`Field ${field.name}.currency must be ISO 4217 (3 uppercase letters).`);
+      }
+      return;
+    }
+    case "currency":
+      if (typeof value !== "string" || !CURRENCY_REGEX.test(value)) {
+        throw new Error(`Field ${field.name} must be ISO 4217 currency code.`);
+      }
+      return;
+    case "address": {
+      if (!isPlainObject(value)) throw new Error(`Field ${field.name} must be an address object.`);
+      const v = value as Record<string, unknown>;
+      if (v.country !== undefined && (typeof v.country !== "string" || !COUNTRY_REGEX.test(v.country))) {
+        throw new Error(`Field ${field.name}.country must be ISO 3166-1 alpha-2.`);
+      }
+      return;
+    }
+    case "phone":
+      if (typeof value !== "string" || !E164_REGEX.test(value)) {
+        throw new Error(`Field ${field.name} must be E.164 phone format (e.g. +14155551234).`);
+      }
+      return;
+    case "geo_point": {
+      if (!isPlainObject(value)) throw new Error(`Field ${field.name} must be { lat, lng }.`);
+      const v = value as Record<string, unknown>;
+      if (typeof v.lat !== "number" || v.lat < -90 || v.lat > 90) throw new Error(`Field ${field.name}.lat out of range.`);
+      if (typeof v.lng !== "number" || v.lng < -180 || v.lng > 180) throw new Error(`Field ${field.name}.lng out of range.`);
+      return;
+    }
+    case "rating": {
+      if (typeof value !== "number" || Number.isNaN(value)) throw new Error(`Field ${field.name} must be a number.`);
+      const scale = field.enumScale ?? 5;
+      if (value < 0 || value > scale) throw new Error(`Field ${field.name} must be between 0 and ${scale}.`);
+      return;
+    }
+    case "duration":
+      if (typeof value !== "number" || Number.isNaN(value) || value < 0) {
+        throw new Error(`Field ${field.name} (duration) must be a non-negative number of seconds.`);
+      }
+      checkNumericConstraints(field, value);
+      return;
+    case "percent":
+      if (typeof value !== "number" || Number.isNaN(value) || value < 0 || value > 100) {
+        throw new Error(`Field ${field.name} (percent) must be between 0 and 100.`);
+      }
+      return;
+    case "color_hex":
+      if (typeof value !== "string" || !HEX_COLOR_REGEX.test(value)) {
+        throw new Error(`Field ${field.name} must be a hex color like #RRGGBB.`);
+      }
+      return;
+    case "barcode": {
+      if (typeof value !== "string") throw new Error(`Field ${field.name} must be a string.`);
+      switch (field.barcodeKind) {
+        case "isbn10": if (!ISBN10_REGEX.test(value)) throw new Error(`Field ${field.name} must be ISBN-10.`); break;
+        case "isbn13": if (!ISBN13_REGEX.test(value)) throw new Error(`Field ${field.name} must be ISBN-13.`); break;
+        case "ean13": if (!EAN13_REGEX.test(value)) throw new Error(`Field ${field.name} must be EAN-13.`); break;
+        case "upc12": if (!UPC12_REGEX.test(value)) throw new Error(`Field ${field.name} must be UPC-12.`); break;
+        case "qr_text":
+        case "generic":
+        default: break;
+      }
+      return;
+    }
+  }
+}
+
+function validateRecordRules(collection: CollectionDefinition, payload: Record<string, unknown>): void {
+  const rules = collection.rules;
+  if (!rules || rules.length === 0) return;
+  for (const rule of rules) {
+    switch (rule.kind) {
+      case "compare_dates": {
+        const a = payload[rule.left];
+        const b = payload[rule.right];
+        if (a === undefined || b === undefined || a === null || b === null) continue;
+        const av = Date.parse(String(a));
+        const bv = Date.parse(String(b));
+        if (Number.isNaN(av) || Number.isNaN(bv)) continue;
+        const cmp = av === bv ? 0 : av < bv ? -1 : 1;
+        const ok = rule.op === "<" ? cmp < 0
+          : rule.op === "<=" ? cmp <= 0
+          : rule.op === "==" ? cmp === 0
+          : rule.op === ">=" ? cmp >= 0
+          : cmp > 0;
+        if (!ok) throw new Error(rule.message ?? `Rule violated: ${rule.left} ${rule.op} ${rule.right}.`);
+        continue;
+      }
+      case "required_if": {
+        if (payload[rule.whenField] === rule.whenEquals && (payload[rule.field] === undefined || payload[rule.field] === null)) {
+          throw new Error(rule.message ?? `Field ${rule.field} is required when ${rule.whenField} = ${String(rule.whenEquals)}.`);
+        }
+        continue;
+      }
+      case "number_compare": {
+        const a = payload[rule.left];
+        const b = typeof rule.right === "string" ? payload[rule.right] : rule.right;
+        if (typeof a !== "number" || typeof b !== "number") continue;
+        const cmp = a === b ? 0 : a < b ? -1 : 1;
+        const ok = rule.op === "<" ? cmp < 0
+          : rule.op === "<=" ? cmp <= 0
+          : rule.op === "==" ? cmp === 0
+          : rule.op === ">=" ? cmp >= 0
+          : cmp > 0;
+        if (!ok) throw new Error(rule.message ?? `Rule violated: ${rule.left} ${rule.op} ${String(rule.right)}.`);
+        continue;
+      }
+      case "regex": {
+        const v = payload[rule.field];
+        if (typeof v !== "string") continue;
+        if (!new RegExp(rule.pattern).test(v)) {
+          throw new Error(rule.message ?? `Field ${rule.field} does not match required pattern.`);
+        }
+        continue;
+      }
+    }
   }
 }
 
@@ -289,10 +460,19 @@ function builtInCollections(): Array<{
       coreFieldNames: definition.fields.filter((f) => f.required).map((f) => f.name),
       fields: definition.fields.map((field) => ({
         name: field.name,
-        type: (field.type === "email" || field.type === "url" || field.type === "file") ? "text" : field.type,
+        type: field.type as FieldDefinition["type"],
         ...(field.required ? { required: true } : {}),
         ...(field.options ? { options: [...field.options] } : {}),
         ...(field.relation ? { relation: { collectionName: field.relation.collectionName } } : {}),
+        ...(typeof field.min === "number" ? { min: field.min } : {}),
+        ...(typeof field.max === "number" ? { max: field.max } : {}),
+        ...(typeof field.minLength === "number" ? { minLength: field.minLength } : {}),
+        ...(typeof field.maxLength === "number" ? { maxLength: field.maxLength } : {}),
+        ...(field.pattern ? { pattern: field.pattern } : {}),
+        ...(field.unique ? { unique: true } : {}),
+        ...(typeof field.enumScale === "number" ? { enumScale: field.enumScale } : {}),
+        ...(field.barcodeKind ? { barcodeKind: field.barcodeKind } : {}),
+        ...(field.durationDisplayUnit ? { durationDisplayUnit: field.durationDisplayUnit } : {}),
       })),
       indexes: definition.indexes.map((index) => ({
         name: index.name,
@@ -1312,6 +1492,11 @@ export class DatabaseServiceStore {
         validateFieldValue(field, value);
       }
     }
+    const builtinDef = BUILTIN_COLLECTIONS_BY_NAME.get(collection.name);
+    const effectiveCollection: CollectionDefinition = builtinDef?.rules
+      ? { ...collection, rules: builtinDef.rules as CollectionRule[] }
+      : collection;
+    validateRecordRules(effectiveCollection, payload);
     return payload;
   }
 

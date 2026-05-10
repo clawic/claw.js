@@ -11,6 +11,7 @@ import {
 } from "@clawjs/database";
 import {
   BUILTIN_COLLECTIONS_BY_ALIAS,
+  BUILTIN_COLLECTIONS_BY_NAME,
 } from "@clawjs/core";
 
 export const DB_EXIT_OK = 0;
@@ -359,9 +360,17 @@ function getPrimaryField(collectionName: string): string {
       return "displayName";
     case "projects":
       return "name";
-    default:
-      return "title";
   }
+  const builtinDef = BUILTIN_COLLECTIONS_BY_NAME.get(collectionName);
+  if (builtinDef) {
+    const fieldNames = new Set(builtinDef.fields.map((f) => f.name));
+    if (fieldNames.has("title")) return "title";
+    if (fieldNames.has("name")) return "name";
+    if (fieldNames.has("displayName")) return "displayName";
+    const firstRequired = builtinDef.fields.find((f) => f.required);
+    if (firstRequired) return firstRequired.name;
+  }
+  return "title";
 }
 
 function applyDefaults(collectionName: string, payload: Record<string, unknown>, mode: "create" | "update"): void {

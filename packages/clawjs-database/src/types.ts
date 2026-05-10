@@ -8,7 +8,22 @@ export type FieldType =
   | "relation"
   | "file"
   | "email"
-  | "url";
+  | "url"
+  | "money"
+  | "currency"
+  | "address"
+  | "phone"
+  | "geo_point"
+  | "rating"
+  | "duration"
+  | "percent"
+  | "markdown"
+  | "color_hex"
+  | "barcode";
+
+export type BarcodeKind = "isbn10" | "isbn13" | "ean13" | "upc12" | "qr_text" | "generic";
+
+export type DurationDisplayUnit = "second" | "minute" | "hour" | "day";
 
 export type DatabaseOperation =
   | "schema:read"
@@ -32,7 +47,22 @@ export interface FieldDefinition {
   relation?: {
     collectionName: string;
   };
+  min?: number;
+  max?: number;
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+  unique?: boolean;
+  enumScale?: number;
+  barcodeKind?: BarcodeKind;
+  durationDisplayUnit?: DurationDisplayUnit;
 }
+
+export type CollectionRule =
+  | { kind: "compare_dates"; left: string; op: "<" | "<=" | "==" | ">=" | ">"; right: string; message?: string }
+  | { kind: "required_if"; field: string; whenField: string; whenEquals: unknown; message?: string }
+  | { kind: "number_compare"; left: string; op: "<" | "<=" | "==" | ">=" | ">"; right: string | number; message?: string }
+  | { kind: "regex"; field: string; pattern: string; message?: string };
 
 export interface IndexDefinition {
   name: string;
@@ -49,6 +79,7 @@ export interface CollectionDefinition {
   builtin: boolean;
   protected: boolean;
   coreFieldNames: string[];
+  rules?: CollectionRule[];
   createdAt: string;
   updatedAt: string;
 }
