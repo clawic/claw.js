@@ -39,6 +39,9 @@
     "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20"
   },
   "dependencies": {
+    "@noble/ciphers": "^1.3.0",
+    "@noble/curves": "^1.9.6",
+    "@noble/hashes": "^1.7.0",
     "zod": "^3.24.1"
   },
   "peerDependencies": {
