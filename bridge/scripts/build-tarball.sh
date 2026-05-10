@@ -88,9 +88,9 @@ cd "$bridge_root"
 staging="$(mktemp -d -t clawjs-bridged-stage-XXXX)"
 trap 'rm -rf "$staging"' EXIT
 mkdir -p "$staging/bin" "$staging/lib"
-cp "$bridge_root/dist/start.js" "$staging/lib/start.js"
-if [ -f "$bridge_root/dist/start.js.map" ]; then
-  cp "$bridge_root/dist/start.js.map" "$staging/lib/start.js.map"
+cp "$bridge_root/dist/start.cjs" "$staging/lib/start.cjs"
+if [ -f "$bridge_root/dist/start.cjs.map" ]; then
+  cp "$bridge_root/dist/start.cjs.map" "$staging/lib/start.cjs.map"
 fi
 
 # 3. Generate the wrapper script. POSIX sh so it works on Alpine/BusyBox.
@@ -105,7 +105,7 @@ if [ -z "${NODE:-}" ]; then
     exit 1
   fi
 fi
-exec "$NODE" "$HERE/lib/start.js" "$@"
+exec "$NODE" "$HERE/lib/start.cjs" "$@"
 WRAPPER
 chmod +x "$staging/bin/clawjs-bridged"
 
@@ -173,14 +173,19 @@ if [ -f "$repo_root/LICENSE" ]; then
   cp "$repo_root/LICENSE" "$staging/LICENSE"
 fi
 
-# 7. Tar it up.
+# 7. Tar it up. Rename the staging dir so the archive expands into a stable
+#    `clawjs-bridged-<version>/` directory regardless of the temp path.
 mkdir -p "$out_dir"
 tarball="$out_dir/clawjs-bridged-$target_os-$target_arch-$version.tar.gz"
-( cd "$(dirname "$staging")" && \
+release_dir="$(dirname "$staging")/clawjs-bridged-$version"
+rm -rf "$release_dir"
+mv "$staging" "$release_dir"
+staging="$release_dir"
+
+( cd "$(dirname "$release_dir")" && \
   tar -czf "$tarball" \
     --exclude='*.DS_Store' \
     --exclude='node_modules/.cache' \
-    --transform "s,^$(basename "$staging"),clawjs-bridged-$version," \
-    "$(basename "$staging")" )
+    "$(basename "$release_dir")" )
 
 echo "[build-tarball] wrote $tarball"
