@@ -114,14 +114,6 @@ const MeshRemoteJobBodySchema = z.object({
   payload: z.unknown(),
 });
 
-const MeshHostUpsertBodySchema = z.object({
-  host: HostInputSchema,
-  sshSecret: z.object({
-    id: z.string().min(1),
-    secret: SshStoredSecretSchema,
-  }).optional(),
-});
-
 const MeshJobsBodySchema: z.ZodType<EncryptedEnvelope> = z.object({
   v: z.number(),
   alg: z.literal("x25519-xchacha20poly1305"),
@@ -208,24 +200,6 @@ export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
     app.get("/mesh/workspaces", async (request, reply) => {
       if (!ensureLoopback(request, reply)) return;
       reply.send({ workspaces: deps.workspaceStore.list() });
-    });
-
-    app.post("/mesh/hosts", async (request, reply) => {
-      if (!ensureLoopback(request, reply)) return;
-      const parsed = MeshHostUpsertBodySchema.safeParse(request.body);
-      if (!parsed.success) {
-        reply.code(400).send({ error: "invalid body", issues: parsed.error.issues });
-        return;
-      }
-      if (parsed.data.sshSecret && !deps.sshSecretStore) {
-        reply.code(501).send({ error: "ssh secret store not configured" });
-        return;
-      }
-      const host = deps.hostStore.upsert(parsed.data.host);
-      const sshSecret = parsed.data.sshSecret
-        ? deps.sshSecretStore!.put(parsed.data.sshSecret.id, parsed.data.sshSecret.secret)
-        : null;
-      reply.send({ host, sshSecret });
     });
 
     app.post("/mesh/link", async (request, reply) => {
@@ -394,7 +368,120 @@ export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
         context: { stub: true },
       });
     });
+
+    app.post("/mesh/hosts", async (request, reply) => {
+      if (!ensureLoopback(request, reply)) return;
+      const parsed = HostUpsertBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400).send({ error: "invalid body", issues: parsed.error.issues });
+        return;
+      }
+      let storedSecretMeta: { id: string; kind: string } | undefined;
+      if (parsed.data.sshSecret) {
+        if (!deps.sshSecretStore) {
+          reply.code(503).send({ error: "ssh secret store not configured" });
+          return;
+        }
+        const meta = deps.sshSecretStore.put(
+          parsed.data.sshSecret.id,
+          parsed.data.sshSecret.secret,
+        );
+        storedSecretMeta = { id: meta.id, kind: meta.kind };
+      }
+      const host = deps.hostStore.upsert(parsed.data.host);
+      audit("meshLink", "success", {
+        target: host.id,
+        context: {
+          op: "host-upsert",
+          kind: host.kind,
+          hasSshSecret: !!storedSecretMeta,
+        },
+      });
+      reply.send({ host, sshSecret: storedSecretMeta });
+    });
+
+    app.delete<{ Params: { id: string } }>(
+      "/mesh/hosts/:id",
+      async (request, reply) => {
+        if (!ensureLoopback(request, reply)) return;
+        const id = request.params.id;
+        const removed = deps.hostStore.remove(id);
+        audit("meshRevoke", removed ? "success" : "deny", {
+          target: id,
+          context: { op: "host-delete" },
+        });
+        if (!removed) {
+          reply.code(404).send({ error: "host not found" });
+          return;
+        }
+        reply.send({ removed: true, id });
+      },
+    );
+
+    app.post<{ Params: { id: string } }>(
+      "/mesh/hosts/:id/revoke",
+      async (request, reply) => {
+        if (!ensureLoopback(request, reply)) return;
+        const id = request.params.id;
+        const ok = deps.hostStore.revoke(id);
+        audit("meshRevoke", ok ? "success" : "deny", {
+          target: id,
+          context: { op: "host-revoke" },
+        });
+        reply.send({ revoked: ok, id });
+      },
+    );
+
+    app.post<{ Params: { id: string } }>(
+      "/mesh/hosts/:id/unrevoke",
+      async (request, reply) => {
+        if (!ensureLoopback(request, reply)) return;
+        const id = request.params.id;
+        const ok = deps.hostStore.unrevoke(id);
+        audit("meshRevoke", ok ? "success" : "deny", {
+          target: id,
+          context: { op: "host-unrevoke" },
+        });
+        reply.send({ unrevoked: ok, id });
+      },
+    );
+
+    app.get("/mesh/ssh/secrets", async (request, reply) => {
+      if (!ensureLoopback(request, reply)) return;
+      if (!deps.sshSecretStore) {
+        reply.send({ secrets: [] });
+        return;
+      }
+      reply.send({ secrets: deps.sshSecretStore.list() });
+    });
+
+    app.delete<{ Params: { id: string } }>(
+      "/mesh/ssh/secrets/:id",
+      async (request, reply) => {
+        if (!ensureLoopback(request, reply)) return;
+        if (!deps.sshSecretStore) {
+          reply.code(503).send({ error: "ssh secret store not configured" });
+          return;
+        }
+        const removed = deps.sshSecretStore.remove(request.params.id);
+        if (!removed) {
+          reply.code(404).send({ error: "secret not found" });
+          return;
+        }
+        reply.send({ removed: true, id: request.params.id });
+      },
+    );
   };
+
+const HostUpsertBodySchema = z.object({
+  host: HostInputSchema,
+  sshSecret: z
+    .object({
+      id: z.string().min(1),
+      secret: SshStoredSecretSchema,
+    })
+    .optional(),
+});
 
 const defaultJobHandler: MeshJobHandler = async ({ senderId }) => ({
   jobId: `${senderId}:${Date.now()}`,

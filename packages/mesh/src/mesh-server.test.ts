@@ -168,6 +168,47 @@ test("POST /mesh/hosts upserts a host and stores SSH secret metadata", async () 
   if (stored.kind === "password") {
     assert.equal(stored.password, "topsecret");
   }
+  const listedSecrets = await app.inject({
+    method: "GET",
+    url: "/mesh/ssh/secrets",
+    remoteAddress: "127.0.0.1",
+  });
+  assert.equal(listedSecrets.statusCode, 200);
+  assert.equal(listedSecrets.json().secrets.length, 1);
+
+  const revoke = await app.inject({
+    method: "POST",
+    url: "/mesh/hosts/server-1/revoke",
+    remoteAddress: "127.0.0.1",
+  });
+  assert.equal(revoke.statusCode, 200);
+  assert.equal(revoke.json().revoked, true);
+  assert.ok(hostStore.get("server-1")?.revokedAt instanceof Date);
+
+  const unrevoke = await app.inject({
+    method: "POST",
+    url: "/mesh/hosts/server-1/unrevoke",
+    remoteAddress: "127.0.0.1",
+  });
+  assert.equal(unrevoke.statusCode, 200);
+  assert.equal(unrevoke.json().unrevoked, true);
+  assert.equal(hostStore.get("server-1")?.revokedAt, undefined);
+
+  const deleteSecret = await app.inject({
+    method: "DELETE",
+    url: "/mesh/ssh/secrets/secret-1",
+    remoteAddress: "127.0.0.1",
+  });
+  assert.equal(deleteSecret.statusCode, 200);
+  assert.equal(sshSecretStore.get("secret-1"), null);
+
+  const deleteHost = await app.inject({
+    method: "DELETE",
+    url: "/mesh/hosts/server-1",
+    remoteAddress: "127.0.0.1",
+  });
+  assert.equal(deleteHost.statusCode, 200);
+  assert.equal(hostStore.get("server-1"), null);
   await app.close();
 });
 
