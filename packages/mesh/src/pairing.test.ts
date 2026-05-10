@@ -46,7 +46,7 @@ test("isValidShortCode accepts well-formed codes and rejects malformed", () => {
   assert.equal(isValidShortCode("ABCDEFGHJ"), false); // missing dashes
   assert.equal(isValidShortCode("ABC-DEF-GH"), false); // wrong length
   assert.equal(isValidShortCode("ABC-DEF-GHJK"), false); // too long
-  assert.equal(isValidShortCode("0AB-CDE-FGH"), false); // banned char
+  assert.equal(isValidShortCode("IAB-CDE-FGH"), false); // banned char (I)
   assert.equal(isValidShortCode("ABC-DEF GHJ"), false); // space instead of dash
 });
 
