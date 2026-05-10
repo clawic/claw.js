@@ -1,10 +1,10 @@
 import type { BuiltinCollectionDefinition } from "../_types.ts";
 
-export const ASSIGNMENTS: BuiltinCollectionDefinition = {
-  name: "assignments",
-  displayName: "Assignments",
+export const SCHOOL_ASSIGNMENTS: BuiltinCollectionDefinition = {
+  name: "school_assignments",
+  displayName: "School Assignments",
   family: "education_school",
-  aliases: ["assignment","assignments"],
+  aliases: ["school_assignment", "school_assignments"],
   fields: [
     { name: "subjectId", type: "relation", required: true, relation: { collectionName: "subjects" } },
     { name: "title", type: "text", required: true },
@@ -16,7 +16,7 @@ export const ASSIGNMENTS: BuiltinCollectionDefinition = {
     { name: "notes", type: "text" },
   ],
   indexes: [
-    { name: "assignments_due_idx", fields: ["dueAt"] },
-    { name: "assignments_status_idx", fields: ["status"] },
+    { name: "school_assignments_due_idx", fields: ["dueAt"] },
+    { name: "school_assignments_status_idx", fields: ["status"] },
   ],
 };
