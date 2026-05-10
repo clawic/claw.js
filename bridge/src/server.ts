@@ -13,11 +13,16 @@ import {
   IdentityStore,
   WorkspaceStore,
   meshServerPlugin,
+  type BridgeFrame,
+  type BridgeSession,
   type HostEndpoint,
   type MeshJobHandler,
   type NodeIdentity,
 } from "@clawjs/mesh";
 
+import { handleCodexJob } from "./codex-job-handler.ts";
+import { CodexRuntime, type CodexRuntimeOptions } from "./codex-runtime.ts";
+import { createCodexWsHandler } from "./codex-ws-bridge.ts";
 import type { BridgeConfig } from "./config.ts";
 import { httpLinkClient } from "./link-client.ts";
 
@@ -33,6 +38,7 @@ export interface BridgeRuntime {
   bridgeHttpServer: HttpServer;
   heartbeat: HeartbeatWriter;
   bonjour?: BonjourAnnouncer;
+  codex?: CodexRuntime;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -42,6 +48,7 @@ export interface BridgeRuntimeOptions {
   jobHandler?: MeshJobHandler;
   databaseFactory?: (path: string) => Database.Database;
   bonjourFactory?: () => BonjourAnnouncer;
+  codex?: CodexRuntimeOptions;
 }
 
 export function createBridgeRuntime(
@@ -55,6 +62,12 @@ export function createBridgeRuntime(
   const workspaceStore = new WorkspaceStore(db);
   const auditStore = new AuditStore(db);
 
+  const codex = options.codex ? new CodexRuntime(options.codex) : undefined;
+
+  const meshJobHandler =
+    options.jobHandler ??
+    (codex ? buildCodexMeshJobHandler(codex) : undefined);
+
   const fastify = Fastify();
   void fastify.register(
     meshServerPlugin({
@@ -62,15 +75,28 @@ export function createBridgeRuntime(
       hostStore,
       workspaceStore,
       auditStore,
-      capabilities: config.capabilities,
+      capabilities: codex
+        ? Array.from(new Set([...config.capabilities, "codex"]))
+        : config.capabilities,
       endpointResolver: () => resolveLocalEndpoints(config),
-      jobHandler: options.jobHandler,
+      jobHandler: meshJobHandler,
       linkClient: httpLinkClient,
     }),
   );
 
+  const onFrame = codex
+    ? createCodexWsHandler({ runtime: codex, auditStore })
+    : undefined;
   const bridgeHttpServer = createServer();
-  const bridgeServer = new BridgeServer({ identityStore, auditStore });
+  const bridgeServer = new BridgeServer({
+    identityStore,
+    auditStore,
+    onFrame: onFrame
+      ? (session, frame) => {
+          void onFrame(session, frame);
+        }
+      : undefined,
+  });
   bridgeServer.attach(bridgeHttpServer, "/bridge");
 
   const heartbeat = new HeartbeatWriter({
@@ -103,6 +129,7 @@ export function createBridgeRuntime(
     bridgeHttpServer,
     heartbeat,
     bonjour,
+    codex,
     async start() {
       await fastify.listen({ port: config.httpPort, host: config.bindAddress });
       await new Promise<void>((resolve, reject) => {
@@ -120,8 +147,18 @@ export function createBridgeRuntime(
         displayName: identity.displayName,
         version: config.version,
       });
+      if (codex) {
+        await codex.start();
+      }
     },
     async stop() {
+      if (codex) {
+        try {
+          await codex.stop();
+        } catch {
+          /* ignore */
+        }
+      }
       try {
         await bonjour?.destroy();
       } catch {
@@ -175,3 +212,17 @@ function listLanIPv4(): string[] {
   }
   return out;
 }
+
+function buildCodexMeshJobHandler(runtime: CodexRuntime): MeshJobHandler {
+  return async ({ senderId, payload }) => {
+    const jobId = `codex:${senderId}:${Date.now()}`;
+    const outcome = await handleCodexJob({ runtime }, payload, jobId);
+    return {
+      jobId,
+      status: outcome.ok ? "completed" : "rejected",
+      detail: outcome.ok ? undefined : outcome.error,
+    };
+  };
+}
+
+export type { BridgeFrame, BridgeSession };
