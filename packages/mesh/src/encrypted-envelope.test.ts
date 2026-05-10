@@ -63,9 +63,11 @@ test("decrypt rejects tampered ciphertext", () => {
     signingPrivateKey: senderSign.privateKey,
     payload: { x: 1 },
   });
+  const lastChar = env.ciphertext.slice(-1);
+  const flipped = lastChar === "A" ? "B" : "A";
   const tampered = {
     ...env,
-    ciphertext: env.ciphertext.replace(/.$/, "A"),
+    ciphertext: env.ciphertext.slice(0, -1) + flipped,
   };
   assert.throws(() =>
     decryptEnvelope({
