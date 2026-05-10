@@ -5,3 +5,4 @@ export * from "./signed-envelope.ts";
 export * from "./pairing.ts";
 export * from "./identity-store.ts";
 export * from "./workspace-store.ts";
+export * from "./audit-store.ts";
