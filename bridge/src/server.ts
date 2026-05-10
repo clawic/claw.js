@@ -24,7 +24,11 @@ import { handleCodexJob } from "./codex-job-handler.ts";
 import { CodexRuntime, type CodexRuntimeOptions } from "./codex-runtime.ts";
 import { createCodexWsHandler } from "./codex-ws-bridge.ts";
 import type { BridgeConfig } from "./config.ts";
+import type { ComputerUse } from "./computer-use.ts";
 import { httpLinkClient } from "./link-client.ts";
+import { handleTccJob, type TccAuditSink } from "./tcc-job-handler.ts";
+import { createTccWsHandler } from "./tcc-ws-bridge.ts";
+import type { TerminalManager } from "./terminal.ts";
 
 export interface BridgeRuntime {
   identity: NodeIdentity;
@@ -39,6 +43,8 @@ export interface BridgeRuntime {
   heartbeat: HeartbeatWriter;
   bonjour?: BonjourAnnouncer;
   codex?: CodexRuntime;
+  computerUse?: ComputerUse;
+  terminal?: TerminalManager;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -49,6 +55,8 @@ export interface BridgeRuntimeOptions {
   databaseFactory?: (path: string) => Database.Database;
   bonjourFactory?: () => BonjourAnnouncer;
   codex?: CodexRuntimeOptions;
+  computerUse?: ComputerUse;
+  terminal?: TerminalManager;
 }
 
 export function createBridgeRuntime(
@@ -63,10 +71,19 @@ export function createBridgeRuntime(
   const auditStore = new AuditStore(db);
 
   const codex = options.codex ? new CodexRuntime(options.codex) : undefined;
+  const computerUse = options.computerUse;
+  const terminal = options.terminal;
 
   const meshJobHandler =
     options.jobHandler ??
-    (codex ? buildCodexMeshJobHandler(codex) : undefined);
+    buildMeshJobHandler({ codex, computerUse, terminal, auditStore });
+
+  const advertisedCapabilities = computeCapabilities(
+    config.capabilities,
+    codex,
+    computerUse,
+    terminal,
+  );
 
   const fastify = Fastify();
   void fastify.register(
@@ -75,18 +92,21 @@ export function createBridgeRuntime(
       hostStore,
       workspaceStore,
       auditStore,
-      capabilities: codex
-        ? Array.from(new Set([...config.capabilities, "codex"]))
-        : config.capabilities,
+      capabilities: advertisedCapabilities,
       endpointResolver: () => resolveLocalEndpoints(config),
       jobHandler: meshJobHandler,
       linkClient: httpLinkClient,
     }),
   );
 
-  const onFrame = codex
+  const codexHandler = codex
     ? createCodexWsHandler({ runtime: codex, auditStore })
     : undefined;
+  const tccHandler =
+    computerUse || terminal
+      ? createTccWsHandler({ computerUse, terminal, auditStore })
+      : undefined;
+  const onFrame = composeFrameHandlers(codexHandler, tccHandler);
   const bridgeHttpServer = createServer();
   const bridgeServer = new BridgeServer({
     identityStore,
@@ -130,6 +150,8 @@ export function createBridgeRuntime(
     heartbeat,
     bonjour,
     codex,
+    computerUse,
+    terminal,
     async start() {
       await fastify.listen({ port: config.httpPort, host: config.bindAddress });
       await new Promise<void>((resolve, reject) => {
@@ -155,6 +177,13 @@ export function createBridgeRuntime(
       if (codex) {
         try {
           await codex.stop();
+        } catch {
+          /* ignore */
+        }
+      }
+      if (terminal) {
+        try {
+          await terminal.closeAll(2_000);
         } catch {
           /* ignore */
         }
@@ -213,14 +242,89 @@ function listLanIPv4(): string[] {
   return out;
 }
 
-function buildCodexMeshJobHandler(runtime: CodexRuntime): MeshJobHandler {
+function computeCapabilities(
+  base: string[],
+  codex: CodexRuntime | undefined,
+  computerUse: ComputerUse | undefined,
+  terminal: TerminalManager | undefined,
+): string[] {
+  const caps = new Set(base);
+  if (codex) caps.add("codex");
+  const cu = computerUse?.capabilities();
+  if (cu?.screenshot) caps.add("tcc.computer.screenshot");
+  if (cu?.keystroke) caps.add("tcc.computer.input.keystroke");
+  if (cu?.click) caps.add("tcc.computer.input.click");
+  if (terminal) caps.add("tcc.terminal.spawn");
+  return Array.from(caps);
+}
+
+function composeFrameHandlers(
+  ...handlers: (
+    | ((session: BridgeSession, frame: BridgeFrame) => Promise<void>)
+    | undefined
+  )[]
+): ((session: BridgeSession, frame: BridgeFrame) => Promise<void>) | undefined {
+  const concrete = handlers.filter(
+    (h): h is (s: BridgeSession, f: BridgeFrame) => Promise<void> => !!h,
+  );
+  if (concrete.length === 0) return undefined;
+  if (concrete.length === 1) return concrete[0];
+  return async (session, frame) => {
+    for (const h of concrete) {
+      await h(session, frame);
+    }
+  };
+}
+
+interface MeshJobHandlerDeps {
+  codex?: CodexRuntime;
+  computerUse?: ComputerUse;
+  terminal?: TerminalManager;
+  auditStore: AuditStore;
+}
+
+function buildMeshJobHandler(
+  deps: MeshJobHandlerDeps,
+): MeshJobHandler | undefined {
+  if (!deps.codex && !deps.computerUse && !deps.terminal) return undefined;
+  const auditSink: TccAuditSink = {
+    record: (input) => deps.auditStore.record(input),
+  };
   return async ({ senderId, payload }) => {
-    const jobId = `codex:${senderId}:${Date.now()}`;
-    const outcome = await handleCodexJob({ runtime }, payload, jobId);
+    const method =
+      payload && typeof payload === "object" && "method" in payload
+        ? String((payload as { method?: unknown }).method ?? "")
+        : "";
+    const jobId = `${senderId}:${Date.now()}`;
+    if (method.startsWith("codex.") && deps.codex) {
+      const outcome = await handleCodexJob({ runtime: deps.codex }, payload, jobId);
+      return {
+        jobId,
+        status: outcome.ok ? "completed" : "rejected",
+        detail: outcome.ok ? undefined : outcome.error,
+      };
+    }
+    if (method.startsWith("tcc.") && (deps.computerUse || deps.terminal)) {
+      const outcome = await handleTccJob(
+        {
+          computerUse: deps.computerUse,
+          terminal: deps.terminal,
+          audit: auditSink,
+          actorId: senderId,
+        },
+        payload,
+        jobId,
+      );
+      return {
+        jobId,
+        status: outcome.ok ? "completed" : "rejected",
+        detail: outcome.ok ? undefined : outcome.error,
+      };
+    }
     return {
       jobId,
-      status: outcome.ok ? "completed" : "rejected",
-      detail: outcome.ok ? undefined : outcome.error,
+      status: "rejected",
+      detail: `unknown method: ${method}`,
     };
   };
 }
