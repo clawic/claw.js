@@ -1,9 +1,14 @@
+import { randomUUID } from "node:crypto";
+
 import type Database from "better-sqlite3";
 
 import {
   HostSchema,
+  HostInputSchema,
+  HostMetadataSchema,
   type Host,
   type HostEndpoint,
+  type HostInput,
   type HostKind,
 } from "./models.ts";
 
@@ -138,6 +143,95 @@ export class HostStore {
     if (!row) return null;
     const endpoints = this.endpointsFor([id]).get(id) ?? [];
     return rowToHost(row, endpoints);
+  }
+
+  upsert(input: HostInput): Host {
+    const parsed = HostInputSchema.parse(input);
+    const existing = parsed.id ? this.get(parsed.id) : null;
+    const now = new Date();
+    const merged: Host = HostSchema.parse({
+      id: parsed.id ?? randomUUID(),
+      kind: parsed.kind,
+      displayName: parsed.displayName,
+      signingPublicKey: parsed.signingPublicKey ?? existing?.signingPublicKey,
+      agreementPublicKey:
+        parsed.agreementPublicKey ?? existing?.agreementPublicKey,
+      endpoints: parsed.endpoints ?? existing?.endpoints ?? [],
+      permissionProfile:
+        parsed.permissionProfile ?? existing?.permissionProfile ?? "scoped",
+      capabilities: parsed.capabilities ?? existing?.capabilities ?? [],
+      ssh: parsed.ssh ?? existing?.ssh,
+      metadata: HostMetadataSchema.parse({
+        tags: [],
+        ...(existing?.metadata ?? {}),
+        ...(parsed.metadata ?? {}),
+      }),
+      lastSeenAt: parsed.lastSeenAt ?? existing?.lastSeenAt,
+      revokedAt: parsed.revokedAt ?? existing?.revokedAt,
+      createdAt: parsed.createdAt ?? existing?.createdAt ?? now,
+    });
+
+    const tx = this.db.transaction((host: Host) => {
+      this.db
+        .prepare(
+          `INSERT INTO hosts (
+            id, tenant_id, kind, display_name,
+            signing_public_key, agreement_public_key,
+            permission_profile, capabilities_json,
+            ssh_json, metadata_json,
+            last_seen_at, revoked_at, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(tenant_id, id) DO UPDATE SET
+            kind = excluded.kind,
+            display_name = excluded.display_name,
+            signing_public_key = excluded.signing_public_key,
+            agreement_public_key = excluded.agreement_public_key,
+            permission_profile = excluded.permission_profile,
+            capabilities_json = excluded.capabilities_json,
+            ssh_json = excluded.ssh_json,
+            metadata_json = excluded.metadata_json,
+            last_seen_at = excluded.last_seen_at,
+            revoked_at = excluded.revoked_at`,
+        )
+        .run(
+          host.id,
+          this.tenantId,
+          host.kind,
+          host.displayName,
+          host.signingPublicKey ?? null,
+          host.agreementPublicKey ?? null,
+          host.permissionProfile,
+          JSON.stringify(host.capabilities),
+          host.ssh ? JSON.stringify(host.ssh) : null,
+          JSON.stringify(host.metadata),
+          host.lastSeenAt ? host.lastSeenAt.toISOString() : null,
+          host.revokedAt ? host.revokedAt.toISOString() : null,
+          host.createdAt.toISOString(),
+        );
+      this.db
+        .prepare(
+          "DELETE FROM host_endpoints WHERE tenant_id = ? AND host_id = ?",
+        )
+        .run(this.tenantId, host.id);
+      const insertEndpoint = this.db.prepare(
+        `INSERT INTO host_endpoints (
+          host_id, tenant_id, ord, kind, host, port, protocol
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      );
+      host.endpoints.forEach((ep, idx) => {
+        insertEndpoint.run(
+          host.id,
+          this.tenantId,
+          idx,
+          ep.kind,
+          ep.host,
+          ep.port,
+          ep.protocol ?? null,
+        );
+      });
+    });
+    tx(merged);
+    return merged;
   }
 
   private endpointsFor(hostIds: string[]): Map<string, HostEndpoint[]> {
