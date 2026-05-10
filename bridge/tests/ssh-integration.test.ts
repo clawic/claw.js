@@ -198,8 +198,8 @@ test("POST /mesh/hosts upserts host + ssh secret, then ssh.exec works via WS", a
     const auditEvents = h.runtime.auditStore.list({ action: "proxySsh" });
     assert.ok(auditEvents.length > 0, "expected at least one proxySsh event");
   } finally {
-    await fakeServer.close();
     await h.cleanup();
+    await fakeServer.close();
   }
 });
 
@@ -280,8 +280,8 @@ test("ssh.exec via WS surfaces auth failure as ok:false", async () => {
       await delay(20);
     }
   } finally {
-    await fakeServer.close();
     await h.cleanup();
+    await fakeServer.close();
   }
 });
 
