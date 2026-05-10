@@ -22,10 +22,15 @@ import {
 import { HostStore } from "./host-store.ts";
 import {
   HOST_KINDS,
+  HostInputSchema,
   type Host,
   type HostEndpoint,
   type HostKind,
 } from "./models.ts";
+import {
+  SshStoredSecretSchema,
+  type SshSecretStore,
+} from "./ssh-secret-store.ts";
 import {
   PairingAcceptRequestSchema,
   PairingAcceptResponseSchema,
@@ -51,6 +56,7 @@ export interface MeshServerDeps {
   jobHandler?: MeshJobHandler;
   linkClient?: MeshLinkClient;
   replayCache?: EnvelopeReplayCache;
+  sshSecretStore?: SshSecretStore;
   now?: () => Date;
 }
 
@@ -106,6 +112,14 @@ const MeshLinkBodySchema = z.object({
 const MeshRemoteJobBodySchema = z.object({
   peerNodeId: z.string().min(1),
   payload: z.unknown(),
+});
+
+const MeshHostUpsertBodySchema = z.object({
+  host: HostInputSchema,
+  sshSecret: z.object({
+    id: z.string().min(1),
+    secret: SshStoredSecretSchema,
+  }).optional(),
 });
 
 const MeshJobsBodySchema: z.ZodType<EncryptedEnvelope> = z.object({
@@ -194,6 +208,24 @@ export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
     app.get("/mesh/workspaces", async (request, reply) => {
       if (!ensureLoopback(request, reply)) return;
       reply.send({ workspaces: deps.workspaceStore.list() });
+    });
+
+    app.post("/mesh/hosts", async (request, reply) => {
+      if (!ensureLoopback(request, reply)) return;
+      const parsed = MeshHostUpsertBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400).send({ error: "invalid body", issues: parsed.error.issues });
+        return;
+      }
+      if (parsed.data.sshSecret && !deps.sshSecretStore) {
+        reply.code(501).send({ error: "ssh secret store not configured" });
+        return;
+      }
+      const host = deps.hostStore.upsert(parsed.data.host);
+      const sshSecret = parsed.data.sshSecret
+        ? deps.sshSecretStore!.put(parsed.data.sshSecret.id, parsed.data.sshSecret.secret)
+        : null;
+      reply.send({ host, sshSecret });
     });
 
     app.post("/mesh/link", async (request, reply) => {

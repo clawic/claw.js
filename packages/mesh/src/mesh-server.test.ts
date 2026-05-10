@@ -15,6 +15,7 @@ import { encryptEnvelope } from "./signed-envelope.ts";
 import { HostStore } from "./host-store.ts";
 import { IdentityStore, type NodeIdentity } from "./identity-store.ts";
 import { meshServerPlugin, type MeshServerDeps } from "./mesh-server.ts";
+import { SshSecretStore } from "./ssh-secret-store.ts";
 import { WorkspaceStore } from "./workspace-store.ts";
 
 interface Harness {
@@ -111,6 +112,62 @@ test("GET /mesh/workspaces is loopback only", async () => {
   });
   assert.equal(local.statusCode, 200);
   assert.equal(local.json().workspaces.length, 1);
+  await app.close();
+});
+
+test("POST /mesh/hosts upserts a host and stores SSH secret metadata", async () => {
+  const db = new Database(":memory:");
+  const sshSecretStore = new SshSecretStore(db);
+  const { app, hostStore } = await makeHarness({ sshSecretStore });
+  const remote = await app.inject({
+    method: "POST",
+    url: "/mesh/hosts",
+    remoteAddress: "10.0.0.5",
+    payload: {
+      host: {
+        kind: "linuxServer",
+        displayName: "Server",
+      },
+    },
+  });
+  assert.equal(remote.statusCode, 403);
+
+  const local = await app.inject({
+    method: "POST",
+    url: "/mesh/hosts",
+    remoteAddress: "127.0.0.1",
+    payload: {
+      host: {
+        id: "server-1",
+        kind: "linuxServer",
+        displayName: "Server",
+        endpoints: [
+          { kind: "ssh", host: "server.local", port: 22, protocol: "ssh" },
+        ],
+        ssh: {
+          user: "deploy",
+          authMethod: "password",
+          passwordSecretId: "secret-1",
+        },
+      },
+      sshSecret: {
+        id: "secret-1",
+        secret: { kind: "password", password: "topsecret" },
+      },
+    },
+  });
+  assert.equal(local.statusCode, 200);
+  const body = local.json();
+  assert.equal(body.host.id, "server-1");
+  assert.equal(body.sshSecret.id, "secret-1");
+  assert.equal(body.sshSecret.kind, "password");
+  assert.equal(body.sshSecret.password, undefined);
+  assert.equal(hostStore.get("server-1")?.ssh?.user, "deploy");
+  const stored = sshSecretStore.get("secret-1");
+  assert.ok(stored && stored.kind === "password");
+  if (stored.kind === "password") {
+    assert.equal(stored.password, "topsecret");
+  }
   await app.close();
 });
 
