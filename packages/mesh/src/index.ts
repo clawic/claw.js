@@ -3,3 +3,4 @@ export * from "./host-store.ts";
 export * from "./crypto.ts";
 export * from "./signed-envelope.ts";
 export * from "./pairing.ts";
+export * from "./identity-store.ts";
