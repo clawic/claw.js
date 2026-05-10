@@ -7,3 +7,4 @@ export * from "./terminology.ts";
 export * from "./tts.ts";
 export * from "./types.ts";
 export * from "./skills-v2/index.ts";
+export * from "./builtins/index.ts";

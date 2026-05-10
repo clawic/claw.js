@@ -307,7 +307,7 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
     coreFieldNames: ["title", "entityType", "entityId"],
     fields: withWorkspaceMetadataFields([
       { name: "title", type: "text", required: true },
-      { name: "entityType", type: "select", required: true, options: ["task", "project", "goal", "epic", "cycle", "note", "inbox_thread", "event"] },
+      { name: "entityType", type: "select", required: true, options: ["task", "project", "goal", "epic", "cycle", "note", "inbox_thread", "event", "issue", "comment", "customer_request", "deal", "support_conversation", "document"] },
       { name: "entityId", type: "text", required: true },
       { name: "name", type: "text" },
       { name: "mimeType", type: "text" },
@@ -316,10 +316,18 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
       { name: "sizeBytes", type: "number" },
       { name: "preview", type: "text" },
       { name: "uploadedBy", type: "text" },
+      // Plan extensions:
+      { name: "subtitle", type: "text" },
+      { name: "sourceType", type: "text" },
+      { name: "groupBySource", type: "boolean" },
+      { name: "creatorActorId", type: "relation", relation: { collectionName: "actors" } },
+      { name: "originalEntityId", type: "text" },
+      { name: "bodyData", type: "text" },
     ]),
     indexes: [
       { name: "attachments_entity_idx", fields: ["entityType", "entityId"] },
       { name: "attachments_mime_type_idx", fields: ["mimeType"] },
+      { name: "attachments_source_idx", fields: ["sourceType"] },
     ],
   },
   {
@@ -328,17 +336,25 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
     coreFieldNames: ["name", "domain"],
     fields: withWorkspaceMetadataFields([
       { name: "name", type: "text", required: true },
-      { name: "domain", type: "select", required: true, options: ["tasks", "projects", "goals", "inbox", "events", "workspace"] },
+      { name: "domain", type: "select", required: true, options: ["tasks", "projects", "goals", "inbox", "events", "workspace", "issues", "initiatives", "customers", "releases", "documents", "deals", "contacts", "support_conversations", "newsletter_subscribers"] },
       { name: "query", type: "text" },
       { name: "filters", type: "json" },
       { name: "sort", type: "json" },
       { name: "groupBy", type: "text" },
       { name: "favorite", type: "boolean" },
       { name: "rank", type: "number" },
+      // Plan extensions:
+      { name: "ownerActorId", type: "relation", relation: { collectionName: "actors" } },
+      { name: "isPrivate", type: "boolean" },
+      { name: "sharedWithTeams", type: "json" },
+      { name: "sharedWithUsers", type: "json" },
+      { name: "description", type: "text" },
+      { name: "sortDirection", type: "select", options: ["ascending", "descending"] },
     ]),
     indexes: [
       { name: "saved_views_domain_idx", fields: ["domain"] },
       { name: "saved_views_favorite_idx", fields: ["favorite"] },
+      { name: "saved_views_owner_idx", fields: ["ownerActorId"] },
     ],
   },
   {
@@ -445,15 +461,24 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
     coreFieldNames: ["name", "entityType", "status"],
     fields: withWorkspaceMetadataFields([
       { name: "name", type: "text", required: true },
-      { name: "entityType", type: "select", required: true, options: ["task", "project", "goal", "epic", "cycle", "note"] },
+      { name: "entityType", type: "select", required: true, options: ["task", "project", "goal", "epic", "cycle", "note", "issue", "document", "custom"] },
       { name: "status", type: "select", required: true, options: ["active", "archived"] },
       { name: "description", type: "text" },
       { name: "body", type: "json" },
       { name: "rank", type: "number" },
+      // Plan extensions:
+      { name: "templateData", type: "json" },
+      { name: "formFields", type: "json" },
+      { name: "icon", type: "text" },
+      { name: "color", type: "text" },
+      { name: "createdByActorId", type: "relation", relation: { collectionName: "actors" } },
+      { name: "companyId", type: "relation", relation: { collectionName: "companies" } },
+      { name: "teamId", type: "relation", relation: { collectionName: "teams" } },
     ]),
     indexes: [
       { name: "templates_entity_idx", fields: ["entityType"] },
       { name: "templates_status_idx", fields: ["status"] },
+      { name: "templates_company_idx", fields: ["companyId"] },
     ],
   },
   {
@@ -501,7 +526,7 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
     fields: withWorkspaceMetadataFields([
       { name: "entityType", type: "select", required: true, options: ["area", "list", "section", "task", "goal", "project", "comment", "attachment", "saved_view", "recurrence", "cycle", "epic", "custom_field", "field_value", "template", "milestone", "activity_entry", "blocker", "artifact", "decision", "work_session", "assignment", "handoff", "approval", "capacity", "agent", "release", "incident", "feedback_item", "operational_check", "reminder", "deadline", "note", "person", "inbox_thread", "inbox_message", "event"] },
       { name: "entityId", type: "text", required: true },
-      { name: "kind", type: "select", required: true, options: ["created", "updated", "completed", "archived", "processed", "commented"] },
+      { name: "kind", type: "select", required: true, options: ["created", "updated", "completed", "archived", "processed", "commented", "status_changed", "assignee_changed", "priority_changed", "estimate_changed", "label_added", "label_removed", "relation_added", "relation_removed", "field_changed", "moved", "linked", "unlinked"] },
       { name: "title", type: "text", required: true },
       { name: "content", type: "text" },
       { name: "areaId", type: "relation", relation: { collectionName: "areas" } },
@@ -511,12 +536,21 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
       { name: "taskId", type: "relation", relation: { collectionName: "tasks" } },
       { name: "threadId", type: "relation", relation: { collectionName: "inbox_threads" } },
       { name: "actor", type: "text" },
+      // Plan extensions:
+      { name: "actorId", type: "relation", relation: { collectionName: "actors" } },
+      { name: "fieldName", type: "text" },
+      { name: "fromValue", type: "json" },
+      { name: "toValue", type: "json" },
+      { name: "origin", type: "select", options: ["UI", "API", "integration", "agent", "automation", "import", "system"] },
+      { name: "requestInformation", type: "json" },
     ]),
     indexes: [
       { name: "activity_entries_entity_idx", fields: ["entityType", "entityId"] },
       { name: "activity_entries_kind_idx", fields: ["kind"] },
       { name: "activity_entries_project_idx", fields: ["projectId"] },
       { name: "activity_entries_task_idx", fields: ["taskId"] },
+      { name: "activity_entries_actor_idx", fields: ["actorId"] },
+      { name: "activity_entries_field_idx", fields: ["entityType", "entityId", "fieldName"] },
     ],
   },
   {
@@ -981,21 +1015,21 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
   {
     name: "external_users",
     displayName: "External Users",
-    coreFieldNames: ["companyId", "source", "email"],
+    coreFieldNames: ["companyId", "externalSource", "email"],
     fields: withWorkspaceMetadataFields([
       { name: "companyId", type: "relation", relation: { collectionName: "companies" } },
       { name: "email", type: "email" },
       { name: "name", type: "text" },
       { name: "displayName", type: "text" },
       { name: "avatarUrl", type: "text" },
-      { name: "source", type: "select", required: true, options: ["slack", "intercom", "zendesk", "front", "email", "discord", "telegram", "other"] },
+      { name: "externalSource", type: "select", required: true, options: ["slack", "intercom", "zendesk", "front", "email", "discord", "telegram", "other"] },
       { name: "externalUserId", type: "text" },
       { name: "externalOrganizationId", type: "text" },
       { name: "customerId", type: "relation", relation: { collectionName: "customers" } },
     ]),
     indexes: [
       { name: "external_users_company_idx", fields: ["companyId"] },
-      { name: "external_users_source_idx", fields: ["source"] },
+      { name: "external_users_source_idx", fields: ["externalSource"] },
       { name: "external_users_email_idx", fields: ["email"] },
     ],
   },
@@ -1292,7 +1326,7 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
       { name: "color", type: "text" },
       { name: "description", type: "text" },
       { name: "sortOrder", type: "number" },
-      { name: "source", type: "text" },
+      { name: "labelSource", type: "text" },
     ]),
     indexes: [
       { name: "labels_company_idx", fields: ["companyId"] },
@@ -1552,7 +1586,7 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
       { name: "title", type: "text" },
       { name: "body", type: "text" },
       { name: "priority", type: "select", options: ["low", "medium", "high", "urgent"] },
-      { name: "source", type: "select", options: ["slack", "intercom", "zendesk", "email", "front", "web_form", "manual", "other"] },
+      { name: "requestSource", type: "select", options: ["slack", "intercom", "zendesk", "email", "front", "web_form", "manual", "other"] },
       { name: "sourceMetadata", type: "json" },
       { name: "importance", type: "boolean" },
       { name: "externalIdentifier", type: "text" },
@@ -1562,7 +1596,7 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
     indexes: [
       { name: "cr_customer_idx", fields: ["customerId"] },
       { name: "cr_issue_idx", fields: ["issueId"] },
-      { name: "cr_source_idx", fields: ["source"] },
+      { name: "cr_source_idx", fields: ["requestSource"] },
     ],
   },
   {
@@ -1877,7 +1911,7 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
       { name: "externalUrl", type: "text" },
       { name: "localEntityKind", type: "text" },
       { name: "localEntityId", type: "text" },
-      { name: "source", type: "text" },
+      { name: "externalSource", type: "text" },
       { name: "sourceMetadata", type: "json" },
       { name: "syncDirection", type: "select", options: ["in", "out", "bidirectional"] },
       { name: "lastSyncedAt", type: "date" },
@@ -1890,10 +1924,10 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
   {
     name: "external_threads",
     displayName: "External Threads",
-    coreFieldNames: ["companyId", "source", "externalThreadId"],
+    coreFieldNames: ["companyId", "externalSource", "externalThreadId"],
     fields: withWorkspaceMetadataFields([
       { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
-      { name: "source", type: "text", required: true },
+      { name: "externalSource", type: "text", required: true },
       { name: "externalThreadId", type: "text", required: true },
       { name: "externalUrl", type: "text" },
       { name: "localCommentId", type: "relation", relation: { collectionName: "comments" } },
@@ -1902,7 +1936,7 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
       { name: "lastSyncedAt", type: "date" },
     ]),
     indexes: [
-      { name: "ext_threads_unique", fields: ["source", "externalThreadId"], unique: true },
+      { name: "ext_threads_unique", fields: ["externalSource", "externalThreadId"], unique: true },
       { name: "ext_threads_issue_idx", fields: ["localIssueId"] },
     ],
   },
@@ -1918,7 +1952,7 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
       { name: "body", type: "text" },
       { name: "state", type: "select", required: true, options: ["draft", "open", "merged", "closed", "abandoned"] },
       { name: "url", type: "text" },
-      { name: "source", type: "select", options: ["github", "gitlab", "bitbucket", "azure_devops"] },
+      { name: "provider", type: "select", options: ["github", "gitlab", "bitbucket", "azure_devops"] },
       { name: "externalId", type: "text" },
       { name: "branch", type: "text" },
       { name: "baseBranch", type: "text" },
@@ -2437,7 +2471,7 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
       { name: "phone", type: "text" },
       { name: "company", type: "text" },
       { name: "title", type: "text" },
-      { name: "source", type: "text" },
+      { name: "leadSource", type: "text" },
       { name: "status", type: "select", options: ["new", "working", "qualified", "unqualified", "converted"] },
       { name: "ownerActorId", type: "relation", relation: { collectionName: "actors" } },
       { name: "convertedAt", type: "date" },
@@ -2956,8 +2990,8 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
   },
   // === BLOQUE K · Analítica de producto ===
   {
-    name: "events",
-    displayName: "Events",
+    name: "analytics_events",
+    displayName: "Analytics Events",
     coreFieldNames: ["companyId", "eventName", "distinctId"],
     fields: withWorkspaceMetadataFields([
       { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
@@ -2972,10 +3006,10 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
       { name: "timestamp", type: "date", required: true },
     ]),
     indexes: [
-      { name: "events_company_time_idx", fields: ["companyId", "timestamp"] },
-      { name: "events_company_name_time_idx", fields: ["companyId", "eventName", "timestamp"] },
-      { name: "events_distinct_idx", fields: ["distinctId"] },
-      { name: "events_session_idx", fields: ["sessionId"] },
+      { name: "analytics_events_company_time_idx", fields: ["companyId", "timestamp"] },
+      { name: "analytics_events_company_name_time_idx", fields: ["companyId", "eventName", "timestamp"] },
+      { name: "analytics_events_distinct_idx", fields: ["distinctId"] },
+      { name: "analytics_events_session_idx", fields: ["sessionId"] },
     ],
   },
   {
@@ -3595,16 +3629,16 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
   {
     name: "redirects",
     displayName: "Redirects",
-    coreFieldNames: ["environmentId", "source"],
+    coreFieldNames: ["environmentId", "sourcePath"],
     fields: withWorkspaceMetadataFields([
       { name: "environmentId", type: "relation", required: true, relation: { collectionName: "infra_environments" } },
-      { name: "source", type: "text", required: true },
+      { name: "sourcePath", type: "text", required: true },
       { name: "destination", type: "text" },
       { name: "type", type: "select", options: ["permanent", "temporary"] },
       { name: "statusCode", type: "number" },
     ]),
     indexes: [
-      { name: "redirects_env_source_unique", fields: ["environmentId", "source"], unique: true },
+      { name: "redirects_env_source_unique", fields: ["environmentId", "sourcePath"], unique: true },
     ],
   },
   {
@@ -4504,5 +4538,4 @@ export const PRODUCTIVITY_COLLECTION_DEFINITIONS: ProductivityCollectionDefiniti
       { name: "carts_customer_idx", fields: ["customerId"] },
     ],
   },
-  // === SCHEMA EXTENSIONS · INSERT BEFORE THIS MARKER ===
 ];

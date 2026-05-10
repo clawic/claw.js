@@ -1,0 +1,38 @@
+import type { BuiltinCollectionDefinition } from "../_types.ts";
+
+export const ORDERS: BuiltinCollectionDefinition = {
+  name: "orders",
+  displayName: "Orders",
+  family: "commerce",
+  aliases: ["order","orders"],
+  fields: [
+    { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+    { name: "customerId", type: "relation", relation: { collectionName: "customers" } },
+    { name: "billingCustomerId", type: "relation", relation: { collectionName: "billing_customers" } },
+    { name: "email", type: "email" },
+    { name: "number", type: "text" },
+    { name: "status", type: "select", options: ["pending","paid","fulfilled","partially_fulfilled","shipped","delivered","refunded","partially_refunded","cancelled"] },
+    { name: "totalCents", type: "number" },
+    { name: "subtotalCents", type: "number" },
+    { name: "taxCents", type: "number" },
+    { name: "shippingCents", type: "number" },
+    { name: "discountCents", type: "number" },
+    { name: "currency", type: "text" },
+    { name: "paymentIntentId", type: "relation", relation: { collectionName: "payment_intents" } },
+    { name: "shippingAddress", type: "json" },
+    { name: "billingAddress", type: "json" },
+    { name: "trackingNumber", type: "text" },
+    { name: "trackingUrl", type: "text" },
+    { name: "notes", type: "text" },
+    { name: "source", type: "json" },
+    { name: "links", type: "json" },
+    { name: "metadata", type: "json" },
+    { name: "archivedAt", type: "date" },
+  ],
+  indexes: [
+    { name: "orders_company_idx", fields: ["companyId"] },
+    { name: "orders_number_unique", fields: ["companyId","number"], unique: true },
+    { name: "orders_status_idx", fields: ["status"] },
+    { name: "orders_email_idx", fields: ["email"] },
+  ],
+};

@@ -1,0 +1,36 @@
+import type { BuiltinCollectionDefinition } from "../_types.ts";
+
+export const EMPLOYEES: BuiltinCollectionDefinition = {
+  name: "employees",
+  displayName: "Employees",
+  family: "hr",
+  aliases: ["employee","employees"],
+  fields: [
+    { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
+    { name: "actorId", type: "relation", relation: { collectionName: "actors" } },
+    { name: "firstName", type: "text" },
+    { name: "lastName", type: "text" },
+    { name: "email", type: "email" },
+    { name: "employeeNumber", type: "text" },
+    { name: "hireDate", type: "date" },
+    { name: "terminationDate", type: "date" },
+    { name: "managerEmployeeId", type: "relation", relation: { collectionName: "employees" } },
+    { name: "departmentId", type: "relation", relation: { collectionName: "departments" } },
+    { name: "jobTitle", type: "text" },
+    { name: "salaryCents", type: "number" },
+    { name: "salaryCurrency", type: "text" },
+    { name: "salaryFrequency", type: "select", options: ["hour","day","week","month","year"] },
+    { name: "country", type: "text" },
+    { name: "taxId", type: "text" },
+    { name: "status", type: "select", options: ["active","on_leave","terminated","suspended"] },
+    { name: "source", type: "json" },
+    { name: "links", type: "json" },
+    { name: "metadata", type: "json" },
+    { name: "archivedAt", type: "date" },
+  ],
+  indexes: [
+    { name: "employees_company_idx", fields: ["companyId"] },
+    { name: "employees_email_idx", fields: ["email"] },
+    { name: "employees_dept_idx", fields: ["departmentId"] },
+  ],
+};
