@@ -12,6 +12,13 @@ import {
   toBase64Url,
   utf8,
 } from "./crypto.ts";
+import {
+  decryptEnvelope,
+  type EncryptedEnvelope,
+  EnvelopeReplayCache,
+  EnvelopeReplayError,
+  EnvelopeSignatureError,
+} from "./signed-envelope.ts";
 import { HostStore } from "./host-store.ts";
 import {
   HOST_KINDS,
@@ -41,7 +48,21 @@ export interface MeshServerDeps {
   auditStore: AuditStore;
   capabilities: string[];
   endpointResolver: () => HostEndpoint[];
+  jobHandler?: MeshJobHandler;
   linkClient?: MeshLinkClient;
+  replayCache?: EnvelopeReplayCache;
+  now?: () => Date;
+}
+
+export type MeshJobHandler = (input: {
+  senderId: string;
+  payload: unknown;
+}) => Promise<MeshJobHandlerResult>;
+
+export interface MeshJobHandlerResult {
+  jobId: string;
+  status: "accepted" | "rejected" | "completed";
+  detail?: string;
 }
 
 export interface MeshLinkRequest {
@@ -82,8 +103,29 @@ const MeshLinkBodySchema = z.object({
   selfKind: z.enum(HOST_KINDS).default("mac"),
 });
 
+const MeshRemoteJobBodySchema = z.object({
+  peerNodeId: z.string().min(1),
+  payload: z.unknown(),
+});
+
+const MeshJobsBodySchema: z.ZodType<EncryptedEnvelope> = z.object({
+  v: z.number(),
+  alg: z.literal("x25519-xchacha20poly1305"),
+  senderId: z.string(),
+  recipientId: z.string(),
+  ts: z.string(),
+  nonce: z.string(),
+  ephemeralPublicKey: z.string(),
+  ciphertext: z.string(),
+  aeadNonce: z.string(),
+  sig: z.string(),
+});
+
 export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
   async function plugin(app: FastifyInstance) {
+    const replayCache = deps.replayCache ?? new EnvelopeReplayCache();
+    const now = deps.now ?? (() => new Date());
+
     const requireBearer = (request: FastifyRequest): NodeIdentity | null => {
       const header = request.headers["authorization"];
       if (typeof header !== "string" || !header.startsWith("Bearer ")) {
@@ -251,7 +293,85 @@ export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
       });
       reply.send(body);
     });
+
+    app.post("/mesh/jobs", async (request, reply) => {
+      const identity = deps.identityStore.get();
+      if (!identity) {
+        reply.code(503).send({ error: "identity not initialized" });
+        return;
+      }
+      const parsed = MeshJobsBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400).send({ error: "invalid envelope", issues: parsed.error.issues });
+        return;
+      }
+      const envelope = parsed.data;
+      const sender = deps.hostStore.get(envelope.senderId);
+      if (!sender || sender.revokedAt || !sender.signingPublicKey) {
+        audit("meshJob", "deny", {
+          target: identity.nodeId,
+          actor: envelope.senderId,
+          context: { reason: "unknown-or-revoked-sender" },
+        });
+        reply.code(403).send({ error: "unknown or revoked sender" });
+        return;
+      }
+      let payload: unknown;
+      try {
+        payload = decryptEnvelope({
+          envelope,
+          recipientId: identity.nodeId,
+          recipientAgreementPrivateKey: identity.agreementPrivateKey,
+          senderSigningPublicKey: parseB64(sender.signingPublicKey),
+          replayCache,
+          now: now(),
+        });
+      } catch (err) {
+        if (err instanceof EnvelopeReplayError || err instanceof EnvelopeSignatureError) {
+          audit("meshJob", "deny", {
+            target: identity.nodeId,
+            actor: envelope.senderId,
+            context: { reason: err.name },
+          });
+          reply.code(403).send({ error: err.message });
+          return;
+        }
+        throw err;
+      }
+      const handler = deps.jobHandler ?? defaultJobHandler;
+      const result = await handler({ senderId: envelope.senderId, payload });
+      deps.hostStore.touch(envelope.senderId);
+      audit("meshJob", "success", {
+        target: identity.nodeId,
+        actor: envelope.senderId,
+        context: { jobId: result.jobId, status: result.status },
+      });
+      reply.send({ ok: true, ...result });
+    });
+
+    app.post("/mesh/remote-jobs", async (request, reply) => {
+      if (!ensureLoopback(request, reply)) return;
+      const parsed = MeshRemoteJobBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(400).send({ error: "invalid body", issues: parsed.error.issues });
+        return;
+      }
+      reply.send({ accepted: true, peerNodeId: parsed.data.peerNodeId });
+      audit("meshRemoteJob", "success", {
+        target: parsed.data.peerNodeId,
+        context: { stub: true },
+      });
+    });
   };
+
+const defaultJobHandler: MeshJobHandler = async ({ senderId }) => ({
+  jobId: `${senderId}:${Date.now()}`,
+  status: "accepted",
+});
+
+function parseB64(text: string): Uint8Array {
+  return new Uint8Array(Buffer.from(text, "base64url"));
+}
 
 export function publicHostFromIdentity(
   identity: NodeIdentity,
