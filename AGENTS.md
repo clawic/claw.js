@@ -194,6 +194,30 @@ Pull request rules:
 - When you add or rename public packages, commands, or scaffolding behavior, update docs and package-surface coverage.
 - If unsure about release or merge target, check `docs/git-workflow.md` and document any assumption you make.
 
+## Design System (Styles, Templates, References)
+
+ClawJS exposes a generalised design system surface used by any agent that needs to produce visual artifacts (presentations, cards, posters, social posts, one-pagers, CVs, invoices, certificates, menus, flyers, emails, business cards, web landings, brochures, reports).
+
+Three first-class resources live under `<workspace>/.clawjs/`:
+
+- `styles/<id>/STYLE.md` · a Style is the recipe (tokens for color, typography, spacing, radius, shadow, motion + brand voice + imagery rules + per-format overrides). 10 builtins ship out of the box (`editorial`, `studio`, `midnight`, `signal`, `paper`, `executive`, `product`, `mono`, `warm`, `claw`). Install them with `claw style install-builtins`.
+- `templates/<id>/TEMPLATE.md` · a Template is a parametrised skeleton (category + aspect + typed slots + variants + supported output formats). 30 builtins ship across 13 categories. Install with `claw template install-builtins`.
+- `references/<id>/REFERENCE.md` · a Reference is an inspiration or evidence item (web, pdf, image, video, screenshot, snippet). N:M against Styles. Link with `claw ref link <refId> --style <styleId>`.
+
+CLI surface:
+
+```
+claw style list|get|create|delete|export|import|install-builtins|builtins
+claw template list|get|create|delete|render|install-builtins|builtins
+claw ref list|get|add|delete|link
+```
+
+The canonical renderer is HTML (`packages/clawjs/src/templates/render/html.ts`). PDF and PNG are produced via Playwright; PPTX is produced via a minimal OpenXML packer; SVG wraps the HTML in `<foreignObject>`. A Node-only fallback PDF is used when Playwright is unavailable.
+
+Skills that consume this surface live under `skills/`: `style-extract`, `style-apply`, `template-render`, `brand-guidelines`, `theme-factory`, `canvas-design`. Each skill is a `SKILL.md` with frontmatter (`name`, `description`, `keywords`) plus imperative Markdown.
+
+The legacy `claw slides` command continues to work and remains the recommended path for multi-slide decks today. The new `claw template render --category presentation` renders single-slide pieces and shares the renderer pipeline. A future change will unify them; until then both coexist.
+
 ## First Files To Read For Common Tasks
 
 - New contributor or new agent: `README.md`
