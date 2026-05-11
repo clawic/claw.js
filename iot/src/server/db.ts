@@ -153,15 +153,55 @@ function matchesText(query: string, values: string[]): boolean {
   return values.some((value) => normalizeText(value) === normalized || normalizeText(value).includes(normalized));
 }
 
+/** Notification fired after `runAction` finishes the synchronous DB
+ *  update on the `executed` happy path. App-level wiring uses it to
+ *  fan out to the adapter registry so the optimistic SQLite state lines
+ *  up with the actual device shortly after. */
+export interface ActionExecutedNotice {
+  home: HomeRecord;
+  request: IoTActionRequest;
+  capabilityKey: string;
+  targets: ThingRecord[];
+  capabilityUpdates: Array<{ thingId: string; capability: string; observedValue: unknown; desiredValue: unknown }>;
+  actor: string;
+}
+
+export interface CreateThingInput {
+  label: string;
+  kind: ThingKind;
+  connectorId: string;
+  targetRef: string;
+  areaId?: string;
+  aliases?: string[];
+  risk?: RiskLevel;
+  metadata?: Record<string, unknown>;
+  capabilities?: Array<{
+    key: string;
+    label?: string;
+    valueType?: string;
+    unit?: string;
+    observedValue?: unknown;
+    desiredValue?: unknown;
+  }>;
+}
+
 export class IotServiceStore {
   private readonly db: Database.Database;
   private onEvent?: (event: IotEventEnvelope) => void;
+  private onActionExecuted?: (notice: ActionExecutedNotice) => void;
 
-  constructor(dbPath: string, options: { onEvent?: (event: IotEventEnvelope) => void } = {}) {
+  constructor(
+    dbPath: string,
+    options: {
+      onEvent?: (event: IotEventEnvelope) => void;
+      onActionExecuted?: (notice: ActionExecutedNotice) => void;
+    } = {},
+  ) {
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
     this.db = new Database(dbPath);
     this.db.pragma("journal_mode = WAL");
     this.onEvent = options.onEvent;
+    this.onActionExecuted = options.onActionExecuted;
     this.initSchema();
     this.seed();
   }
@@ -630,6 +670,14 @@ export class IotServiceStore {
       capabilityUpdates,
       actor: options.actor ?? "system",
     });
+    this.onActionExecuted?.({
+      home,
+      request,
+      capabilityKey,
+      targets: resolvedTargets.targets,
+      capabilityUpdates,
+      actor: options.actor ?? "system",
+    });
     return {
       status: "executed",
       homeId: home.id,
@@ -639,6 +687,67 @@ export class IotServiceStore {
       targets,
       capabilityUpdates,
     };
+  }
+
+  /** Insert a new thing record plus its initial capabilities. Returns
+   *  the persisted ThingRecord so callers can immediately publish it
+   *  on the realtime stream. */
+  createThing(homeId: string | undefined, input: CreateThingInput): ThingRecord {
+    const home = this.resolveHome(homeId);
+    const id = `thing_${randomUUID().slice(0, 8)}`;
+    const createdAt = nowIso();
+    this.db.prepare(`
+      INSERT INTO things (id, home_id, area_id, label, aliases_json, kind, risk, connector_id, target_ref, metadata_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      home.id,
+      input.areaId ?? null,
+      input.label,
+      stringifyJson(input.aliases ?? []),
+      input.kind,
+      (input.risk ?? "safe") satisfies RiskLevel,
+      input.connectorId,
+      input.targetRef,
+      input.metadata ? stringifyJson(input.metadata) : null,
+    );
+    for (const capability of input.capabilities ?? []) {
+      this.db.prepare(`
+        INSERT INTO capabilities (id, thing_id, key, label, value_type, unit, observed_value_json, desired_value_json, observed_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        `cap_${randomUUID().slice(0, 8)}`,
+        id,
+        capability.key,
+        capability.label ?? capability.key,
+        capability.valueType ?? "string",
+        capability.unit ?? null,
+        capability.observedValue !== undefined ? stringifyJson(capability.observedValue) : null,
+        capability.desiredValue !== undefined ? stringifyJson(capability.desiredValue) : null,
+        createdAt,
+      );
+    }
+    this.logEvent(home.id, "iot.thing.added", { id, label: input.label, kind: input.kind, connectorId: input.connectorId });
+    const thing = this.listThings(home.id).find((entry) => entry.id === id);
+    if (!thing) {
+      throw new Error(`Created thing ${id} not found after insert.`);
+    }
+    return thing;
+  }
+
+  /** Move a thing to the deleted state. Phase 2 hard-deletes; the
+   *  Phase 3 UI will introduce the trash window required by red line 4. */
+  deleteThing(homeId: string | undefined, thingId: string): { id: string; label: string } {
+    const home = this.resolveHome(homeId);
+    const things = this.listThings(home.id);
+    const thing = things.find((entry) => entry.id === thingId);
+    if (!thing) {
+      throw new Error(`Unknown thing ${thingId}`);
+    }
+    this.db.prepare(`DELETE FROM capabilities WHERE thing_id = ?`).run(thingId);
+    this.db.prepare(`DELETE FROM things WHERE id = ? AND home_id = ?`).run(thingId, home.id);
+    this.logEvent(home.id, "iot.thing.removed", { id: thingId, label: thing.label });
+    return { id: thing.id, label: thing.label };
   }
 
   rawInvoke(input: {
