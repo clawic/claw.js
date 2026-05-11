@@ -583,8 +583,131 @@ function builtInCollections(): Array<{
         { name: "autonomyLevel", type: "select", options: ["observe", "suggest", "act_limited", "act_full"] },
         { name: "approvalPolicy", type: "json" },
         { name: "watchDomains", type: "json" },
+        // v8 (2026-05): agent identity becomes first-class in the
+        // app. The fields below are all nullable so the existing
+        // company_agents rows keep working — they describe an agent's
+        // composition (personalities, skill subscriptions, secret tags,
+        // integrations, delegation policy) the way the macOS UI now
+        // models it under `~/.clawjs/agents/<id>/`. The filesystem
+        // version is the source of truth; this table is a cache for
+        // SQL joins (e.g. issue.assigneeAgentId → agent.name).
+        { name: "runtime", type: "select", options: ["codex", "openclaude", "hermes", "claw", "demo"] },
+        { name: "model", type: "text" },
+        { name: "avatarKind", type: "select", options: ["logoTint", "customImage"] },
+        { name: "avatarTintHex", type: "text" },
+        { name: "avatarImagePath", type: "text" },
+        { name: "instructionsFreeText", type: "text" },
+        { name: "personalityIds", type: "json" },
+        { name: "skillAllowlist", type: "json" },
+        { name: "skillCollectionIds", type: "json" },
+        { name: "secretAllowlist", type: "json" },
+        { name: "secretTags", type: "json" },
+        { name: "projectIds", type: "json" },
+        { name: "integrationBindings", type: "json" },
+        { name: "autonomyOverrides", type: "json" },
+        { name: "delegationReportsTo", type: "text" },
+        { name: "delegationAllowedSubagents", type: "json" },
+        { name: "delegationScopeInherits", type: "boolean" },
+        { name: "isBuiltin", type: "boolean" },
       ],
       indexes: [{ name: "company_agents_company_idx", fields: ["companyId"] }],
+    },
+    {
+      // Reusable personality fragments. Each row is a markdown prompt
+      // snippet plugged into one or more agents via
+      // `company_agents.personalityIds`. The macOS app mirrors these
+      // on the filesystem under `~/.clawjs/personalities/<id>/`;
+      // ClawJS uses this collection as the SQL index so listings and
+      // joins don't have to fan out over the filesystem.
+      name: "personalities",
+      displayName: "Personalities",
+      coreFieldNames: ["id", "name", "version"],
+      fields: [
+        { name: "id", type: "text", required: true },
+        { name: "name", type: "text", required: true },
+        { name: "description", type: "text" },
+        { name: "promptMarkdown", type: "text" },
+        { name: "version", type: "number" },
+      ],
+      indexes: [{ name: "personalities_id_idx", fields: ["id"] }],
+    },
+    {
+      // Tag-based bundles of skills an agent can subscribe to.
+      // Members are resolved at runtime by matching `includedTags`
+      // against the frontmatter of `~/.clawjs/skills/<id>/SKILL.md`.
+      name: "skill_collections",
+      displayName: "Skill Collections",
+      coreFieldNames: ["id", "name"],
+      fields: [
+        { name: "id", type: "text", required: true },
+        { name: "name", type: "text", required: true },
+        { name: "description", type: "text" },
+        { name: "includedTags", type: "json" },
+      ],
+      indexes: [{ name: "skill_collections_id_idx", fields: ["id"] }],
+    },
+    {
+      // Auth handles for third-party services (Telegram bots, Slack
+      // workspaces, etc.). Bot tokens / OAuth refresh tokens are
+      // stored encrypted at `~/.clawjs/connections/<id>/auth.encrypted`,
+      // never in this table.
+      name: "connections",
+      displayName: "Connections",
+      coreFieldNames: ["id", "service", "label"],
+      fields: [
+        { name: "id", type: "text", required: true },
+        { name: "service", type: "select", required: true,
+          options: ["telegram", "slack", "discord", "email", "sms", "webhook", "custom"] },
+        { name: "label", type: "text", required: true },
+        { name: "scopes", type: "json" },
+        { name: "lastSyncAt", type: "date" },
+      ],
+      indexes: [{ name: "connections_id_idx", fields: ["id"] }],
+    },
+    {
+      // Per-agent binding of a Connection to a specific channel /
+      // chat / group. Direction lets a binding be inbound-only
+      // (listen + reply to that channel), outbound-only (push status
+      // updates) or both. The runtime watcher in `clawjs-integrations`
+      // reads this table to know which agent should pick up an
+      // inbound message.
+      name: "integration_bindings",
+      displayName: "Integration Bindings",
+      coreFieldNames: ["id", "agentId", "connectionId"],
+      fields: [
+        { name: "id", type: "text", required: true },
+        { name: "agentId", type: "relation", required: true, relation: { collectionName: "company_agents" } },
+        { name: "connectionId", type: "relation", required: true, relation: { collectionName: "connections" } },
+        { name: "channelRef", type: "text", required: true },
+        { name: "direction", type: "select", options: ["inbound", "outbound", "both"] },
+        { name: "label", type: "text" },
+      ],
+      indexes: [
+        { name: "integration_bindings_agent_idx", fields: ["agentId"] },
+        { name: "integration_bindings_connection_idx", fields: ["connectionId"] },
+      ],
+    },
+    {
+      // Append-only audit trail. One row per delegated invocation,
+      // approval prompt, or denied action. The macOS app surfaces
+      // this on the agent detail surface ("Audit log" section). The
+      // filesystem mirror is `~/.clawjs/agents/<id>/audit.log`
+      // (JSONL); this table is the SQL index.
+      name: "agent_audit_log",
+      displayName: "Agent Audit Log",
+      coreFieldNames: ["id", "actorAgentId", "action", "result"],
+      fields: [
+        { name: "id", type: "text", required: true },
+        { name: "actorAgentId", type: "relation", required: true, relation: { collectionName: "company_agents" } },
+        { name: "subjectAgentId", type: "relation", relation: { collectionName: "company_agents" } },
+        { name: "action", type: "text", required: true },
+        { name: "result", type: "text", required: true },
+        { name: "note", type: "text" },
+      ],
+      indexes: [
+        { name: "agent_audit_log_actor_idx", fields: ["actorAgentId"] },
+        { name: "agent_audit_log_action_idx", fields: ["action"] },
+      ],
     },
     {
       name: "issues",
