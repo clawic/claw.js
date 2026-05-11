@@ -5194,6 +5194,15 @@ test("runCli manages local styles, templates, and references", async () => {
   }), CLI_EXIT_OK);
   const listPayload = JSON.parse(listOut.getOutput()) as { templates: Array<{ id: string }> };
   assert.deepEqual(listPayload.templates.map((entry) => entry.id), [templatePayload.template.id]);
+
+  const renderOut = captureStream();
+  assert.equal(await runCli(["template", "render", templatePayload.template.id, "--style", "claw", "--format", "html", "--workspace", workspaceRoot, "--json"], {
+    ...context,
+    stdout: renderOut.stream,
+  }), CLI_EXIT_OK);
+  const renderPayload = JSON.parse(renderOut.getOutput()) as { results: Array<{ format: string; outputPath: string }> };
+  assert.equal(renderPayload.results[0]?.format, "html");
+  assert.equal(fs.existsSync(renderPayload.results[0]?.outputPath ?? ""), true);
 });
 
 test("runCli supports heartbeat routines with deterministic gates", async () => {

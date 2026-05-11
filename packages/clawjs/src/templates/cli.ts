@@ -12,9 +12,9 @@ import {
   writeTemplate,
 } from "./storage.ts";
 import { normalizeTemplateManifest } from "./serializer.ts";
-import type { TemplateManifest } from "./schema.ts";
+import type { TemplateManifest, TemplateOutputFormat } from "./schema.ts";
 import { readStyle } from "../styles/storage.ts";
-import { renderTemplateHtml } from "./render/html.ts";
+import { renderTemplate } from "./render/adapters.ts";
 
 export interface TemplateCliContext {
   stdout: NodeJS.WritableStream;
@@ -127,18 +127,25 @@ export async function runTemplateCli(options: TemplateCliOptions): Promise<numbe
     const template = readTemplate(workspaceRoot, target);
     const style = readStyle(workspaceRoot, flags.style);
     const data = flags.data ? readJson(path.resolve(context.cwd, flags.data)) : {};
-    const format = (flags.format ?? "html").toLowerCase();
-    if (format !== "html") {
-      context.stderr.write(`Only 'html' format is supported in this build (PDF/PNG/PPTX adapters land next).\n`);
-      return T_FAILURE;
+    const formatFlag = (flags.format ?? "html").toLowerCase();
+    const rawFormats = formatFlag.split(",").map((f) => f.trim()).filter(Boolean);
+    const ALLOWED = new Set<TemplateOutputFormat>(["html", "pdf", "png", "svg", "pptx"]);
+    for (const f of rawFormats) if (!ALLOWED.has(f as TemplateOutputFormat)) {
+      context.stderr.write(`Unsupported render format: ${f}\n`);
+      return T_USAGE;
     }
-    const result = renderTemplateHtml({ template, style, data, variantId: flags.variant });
-    const outPath = flags.out
-      ? path.resolve(context.cwd, flags.out)
-      : path.join(workspaceRoot, ".clawjs", "templates", template.id, "outputs", `${flags.style}-${flags.variant ?? "default"}.html`);
-    fs.mkdirSync(path.dirname(outPath), { recursive: true });
-    fs.writeFileSync(outPath, result.html, "utf8");
-    writeOutput(options, { templateId: template.id, styleId: style.id, format, outputPath: outPath, width: result.width, height: result.height }, outPath);
+    const formats = rawFormats as TemplateOutputFormat[];
+    const results: Array<{ format: string; outputPath: string; renderer: string; width: number; height: number }> = [];
+    for (const format of formats) {
+      const ext = format;
+      const baseOut = flags.out
+        ? path.resolve(context.cwd, flags.out)
+        : path.join(workspaceRoot, ".clawjs", "templates", template.id, "outputs", `${flags.style}-${flags.variant ?? "default"}.${ext}`);
+      const outPath = formats.length === 1 ? baseOut : `${baseOut.replace(/\.[^.]+$/, "")}.${ext}`;
+      const result = await renderTemplate({ template, style, data, variantId: flags.variant, outPath, format });
+      results.push({ format: result.format, outputPath: result.outPath, renderer: result.renderer, width: result.width, height: result.height });
+    }
+    writeOutput(options, { templateId: template.id, styleId: style.id, results }, results.map((r) => `${r.format}\t${r.outputPath}\t(${r.renderer})`).join("\n"));
     return T_OK;
   }
 
@@ -208,8 +215,8 @@ function writeUsage(context: TemplateCliContext): void {
       "  get <id>                           Print the template manifest",
       "  create <name> --category <cat>     Create a template (optionally --from <id>)",
       "  delete <id> [--force=true]         Delete a template (builtins require --force)",
-      "  render <id> --style <styleId>      Render a template to HTML using a style",
-      "    [--data file.json] [--variant id] [--out path] [--format html]",
+      "  render <id> --style <styleId>      Render a template using a style",
+      "    [--data file.json] [--variant id] [--out path] [--format html,pdf,png,svg,pptx]",
       "  install-builtins [--overwrite]     Install the 30 builtin templates",
       "  builtins                           List builtin templates grouped by category",
       "",

@@ -663,6 +663,7 @@ claw template install-builtins
 claw template create "Launch One Pager" --category one-pager --default-style claw
 claw template list --category one-pager
 claw template get one-pager.launch-one-pager-1234
+claw template render one-pager.launch-one-pager-1234 --style claw --format html,pdf,png,svg,pptx
 
 claw ref add --type pdf --source ./brief.pdf --name "Brand Brief" --tag brand,launch
 claw ref list --tag brand
