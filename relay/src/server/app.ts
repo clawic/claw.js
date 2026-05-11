@@ -18,7 +18,9 @@ import {
 import { RelayAuthService } from "./auth.ts";
 import { loadRelayConfig, type RelayConfig } from "./config.ts";
 import { ConnectorRegistry, OfflineError } from "./connector-registry.ts";
+import { registerCoordinatorPlugin } from "./coordinator-plugin.ts";
 import { RelayDatabase } from "./db.ts";
+import { IrohRelayHost, loadIrohRelayHostOptions } from "./iroh-relay-host.ts";
 import { RelayLogger } from "./logger.ts";
 import { MonitorBus } from "./monitor-bus.ts";
 import { MemoryRateLimiter } from "./rate-limit.ts";
@@ -672,6 +674,15 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
   }
 
   await app.register(websocket);
+
+  const irohRelayHost = new IrohRelayHost(config, logger, loadIrohRelayHostOptions());
+  if (irohRelayHost.isEnabled()) {
+    irohRelayHost.start();
+  }
+  await registerCoordinatorPlugin(app, { config, db, auth, logger, irohRelayHost });
+  app.addHook("onClose", async () => {
+    irohRelayHost.stop();
+  });
 
   app.get("/v1/health", async () => ({
     ok: true,
