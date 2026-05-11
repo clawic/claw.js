@@ -6,6 +6,8 @@ Instructions for humans and coding agents working in this repository.
 
 This project is governed by `CONSTITUTION.md` at the repository root. It defines mission, principles, red lines, and canonical vocabulary for ClawJS and the sister Clawix interface. When this file and the constitution disagree, the constitution wins. Any contributor or agent making non-trivial decisions about architecture, data, agents, UX, or integrations must have read it and apply it. The constitution file is identical to the one in the Clawix repository; keep them in sync when updating.
 
+`STYLE.md` is the companion visual-language source for Clawix and ClawJS UI decisions. Read it before changing user-facing screens, chrome, visual components, or design tokens, and keep it aligned with the sister Clawix repository when updating shared product style.
+
 ## Purpose
 
 - Treat this file as the operational entrypoint for the repo.
