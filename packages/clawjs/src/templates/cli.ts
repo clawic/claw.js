@@ -138,10 +138,19 @@ export async function runTemplateCli(options: TemplateCliOptions): Promise<numbe
     const results: Array<{ format: string; outputPath: string; renderer: string; width: number; height: number }> = [];
     for (const format of formats) {
       const ext = format;
-      const baseOut = flags.out
-        ? path.resolve(context.cwd, flags.out)
-        : path.join(workspaceRoot, ".clawjs", "templates", template.id, "outputs", `${flags.style}-${flags.variant ?? "default"}.${ext}`);
-      const outPath = formats.length === 1 ? baseOut : `${baseOut.replace(/\.[^.]+$/, "")}.${ext}`;
+      let outPath: string;
+      if (flags.out) {
+        const resolved = path.resolve(context.cwd, flags.out);
+        if (formats.length === 1) {
+          outPath = resolved;
+        } else {
+          const dir = path.dirname(resolved);
+          const base = path.basename(resolved).replace(/\.[^.]+$/, "");
+          outPath = path.join(dir, `${base}.${ext}`);
+        }
+      } else {
+        outPath = path.join(workspaceRoot, ".clawjs", "templates", template.id, "outputs", `${flags.style}-${flags.variant ?? "default"}.${ext}`);
+      }
       const result = await renderTemplate({ template, style, data, variantId: flags.variant, outPath, format });
       results.push({ format: result.format, outputPath: result.outPath, renderer: result.renderer, width: result.width, height: result.height });
     }
