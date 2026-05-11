@@ -37,6 +37,7 @@ Repository ownership, issue tracking, and package publishing live under [`@clawi
 - `@clawjs/database`: shared database service app, store, API client, auth, and realtime hub
 - `@clawjs/sessions`: shared session mirror store and native runtime import adapters
 - `@clawjs/user-model`: shared user profile store, snapshots, and profile service app
+- `@clawjs/runtime`: shared runtime loops for distillation, nudges, and profile refresh
 - `@clawjs/ssh-client`: audited SSH client for Claw mesh hosts
 - `@clawjs/openclaw-plugin`: OpenClaw bridge plugin
 - `@clawjs/openclaw-context-engine`: experimental OpenClaw context engine

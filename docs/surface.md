@@ -1,6 +1,6 @@
 ---
 title: Public Surface
-description: Exhaustive published export inventory for @clawjs/claw, @clawjs/core, @clawjs/database, @clawjs/audio, @clawjs/sessions, and @clawjs/user-model.
+description: Exhaustive published export inventory for @clawjs/claw, @clawjs/core, @clawjs/database, @clawjs/audio, @clawjs/sessions, @clawjs/user-model, and @clawjs/runtime.
 ---
 
 # Public Surface
@@ -8,8 +8,8 @@ description: Exhaustive published export inventory for @clawjs/claw, @clawjs/cor
 This page is the exhaustive inventory for the published package exports.
 The docs check script validates that every current export from
 `@clawjs/claw`, `@clawjs/core`, `@clawjs/database`,
-`@clawjs/audio`, `@clawjs/sessions`, and `@clawjs/user-model`
-appear here.
+`@clawjs/audio`, `@clawjs/sessions`, `@clawjs/user-model`, and
+`@clawjs/runtime` appear here.
 
 ## @clawjs/audio Exports
 
@@ -114,6 +114,44 @@ appear here.
     UserProfileItem
     UserProfileSnapshot
     USER_MODEL_SECTIONS
+
+## @clawjs/runtime Exports
+
+    buildRuntimeApp
+    BuildRuntimeAppOptions
+    DistillationRecord
+    DistillerOptions
+    DistillerSynthesizer
+    DistillerSynthesizerInput
+    DistillerSynthesizerOutput
+    DistillInput
+    heuristicDistillerSynthesizer
+    heuristicNudgeSynthesizer
+    heuristicUserModelSynthesizer
+    loadRuntimeConfig
+    NudgeInput
+    NudgeOptions
+    NudgeRecord
+    NudgeSynthesizer
+    NudgeSynthesizerInput
+    NudgeSynthesizerOutputItem
+    runDistillation
+    runNudgeCycle
+    RuntimeApiClient
+    RuntimeApiClientOptions
+    RuntimeJobKind
+    RuntimeJobRecord
+    RuntimeJobStatus
+    RuntimeServiceConfig
+    RuntimeServicesContext
+    RuntimeServiceStore
+    runUserModelRefresh
+    UserModelRefreshInput
+    UserModelRefreshOptions
+    UserModelRefreshRecord
+    UserModelSynthesizer
+    UserModelSynthesizerAction
+    UserModelSynthesizerInput
 
 ## @clawjs/claw Exports
 

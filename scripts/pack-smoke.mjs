@@ -35,6 +35,7 @@ const packageDirs = [
   path.join(rootDir, "packages", "clawjs-audio"),
   path.join(rootDir, "packages", "clawjs-sessions"),
   path.join(rootDir, "packages", "clawjs-user-model"),
+  path.join(rootDir, "packages", "clawjs-runtime"),
   path.join(rootDir, "packages", "create-claw-app"),
   path.join(rootDir, "packages", "create-claw-agent"),
   path.join(rootDir, "packages", "create-claw-server"),
@@ -104,6 +105,10 @@ run("node", ["--input-type=module", "-e", `
   const userModel = await import("@clawjs/user-model");
   if (typeof userModel.UserModelServiceStore !== "function" || typeof userModel.buildUserModelApp !== "function") {
     throw new Error("@clawjs/user-model helpers are missing");
+  }
+  const runtime = await import("@clawjs/runtime");
+  if (typeof runtime.RuntimeServiceStore !== "function" || typeof runtime.buildRuntimeApp !== "function") {
+    throw new Error("@clawjs/runtime helpers are missing");
   }
 `], { cwd: appDir, stdio: "inherit" });
 

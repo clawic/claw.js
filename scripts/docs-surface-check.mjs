@@ -303,7 +303,8 @@ const databaseExports = new Set(extractExports(path.join(rootDir, "packages", "c
 const audioExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-audio", "dist", "index.d.ts")));
 const sessionsExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-sessions", "dist", "index.d.ts")));
 const userModelExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-user-model", "dist", "index.d.ts")));
-const expectedSurfaceEntries = new Set([...sdkExports, ...coreExports, ...databaseExports, ...audioExports, ...sessionsExports, ...userModelExports]);
+const runtimeExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-runtime", "dist", "index.d.ts")));
+const expectedSurfaceEntries = new Set([...sdkExports, ...coreExports, ...databaseExports, ...audioExports, ...sessionsExports, ...userModelExports, ...runtimeExports]);
 
 for (const exportName of expectedSurfaceEntries) {
   if (!surfaceEntries.has(exportName)) {
