@@ -3,11 +3,14 @@ import {
   Activity,
   Bot,
   FolderOpenDot,
+  Key,
   LogOut,
   Moon,
   ScrollText,
   Settings,
+  Smartphone,
   Sun,
+  Users,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { useTheme } from "../lib/theme";
@@ -29,6 +32,9 @@ const ITEMS: Item[] = [
     // Highlight Workspaces when inside a specific workspace too.
     match: (p) => p.startsWith("/workspaces") || p.startsWith("/workspace/"),
   },
+  { to: "/devices", label: "Devices", icon: Smartphone },
+  { to: "/preauth-keys", label: "Pre-auth keys", icon: Key },
+  { to: "/members", label: "Members", icon: Users },
   { to: "/monitor", label: "Monitor", icon: Activity },
   { to: "/logs", label: "Logs", icon: ScrollText },
   { to: "/settings", label: "Settings", icon: Settings, adminOnly: true },

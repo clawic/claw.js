@@ -9,6 +9,9 @@ import { WorkspacePage } from "./routes/Workspace";
 import { LogsPage } from "./routes/Logs";
 import { MonitorPage } from "./routes/Monitor";
 import { SettingsPage } from "./routes/Settings";
+import { DevicesPage } from "./routes/Devices";
+import { PreauthKeysPage } from "./routes/PreauthKeys";
+import { MembersPage } from "./routes/Members";
 
 export function App() {
   return (
@@ -42,6 +45,9 @@ export function App() {
         />
         <Route path="/monitor" element={<MonitorPage />} />
         <Route path="/logs" element={<LogsPage />} />
+        <Route path="/devices" element={<DevicesPage />} />
+        <Route path="/preauth-keys" element={<PreauthKeysPage />} />
+        <Route path="/members" element={<MembersPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
