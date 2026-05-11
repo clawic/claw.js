@@ -32,6 +32,8 @@ import { CodexRuntime, type CodexRuntimeOptions } from "./codex-runtime.ts";
 import { createCodexWsHandler } from "./codex-ws-bridge.ts";
 import type { BridgeConfig } from "./config.ts";
 import type { ComputerUse } from "./computer-use.ts";
+import { CoordinatorClient, type SignalingEnvelope } from "./coordinator-client.ts";
+import { createIrohNode, type IrohBiStream, type IrohNode } from "./iroh-node.ts";
 import { httpLinkClient } from "./link-client.ts";
 import { handleSshJob, type SshAuditSink } from "./ssh-job-handler.ts";
 import { createSshWsHandler } from "./ssh-ws-bridge.ts";
@@ -56,6 +58,8 @@ export interface BridgeRuntime {
   terminal?: TerminalManager;
   ssh?: SshClient;
   sshSecretStore?: SshSecretStore;
+  irohNode?: IrohNode;
+  coordinatorClient?: CoordinatorClient;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -184,6 +188,20 @@ export function createBridgeRuntime(
     ? (options.bonjourFactory ?? (() => new BonjourAnnouncer()))()
     : undefined;
 
+  const irohEnabled = config.iroh?.enabled !== false;
+  let irohNode: IrohNode | undefined;
+  let coordinatorClient: CoordinatorClient | undefined;
+
+  const handleInboundIrohStream = (stream: IrohBiStream) => {
+    try {
+      bridgeServer.attachExternalStream?.(stream);
+    } catch (error) {
+      stream.close();
+      // ignore: external transport is best effort
+      void error;
+    }
+  };
+
   return {
     identity,
     config,
@@ -201,6 +219,12 @@ export function createBridgeRuntime(
     terminal,
     ssh: sshClient,
     sshSecretStore,
+    get irohNode() {
+      return irohNode;
+    },
+    get coordinatorClient() {
+      return coordinatorClient;
+    },
     async start() {
       await fastify.listen({ port: config.httpPort, host: config.bindAddress });
       await new Promise<void>((resolve, reject) => {
@@ -221,8 +245,61 @@ export function createBridgeRuntime(
       if (codex) {
         await codex.start();
       }
+      if (irohEnabled) {
+        irohNode = await createIrohNode({
+          ...(config.iroh?.relayUrl ? { relayUrl: config.iroh.relayUrl } : {}),
+        }).catch(() => undefined);
+        if (irohNode) {
+          try {
+            await irohNode.start();
+            irohNode.onInbound((stream) => handleInboundIrohStream(stream));
+          } catch {
+            irohNode = undefined;
+          }
+        }
+      }
+      if (config.coordinator) {
+        const opts = config.coordinator;
+        const endpointDescriptor = irohNode
+          ? await irohNode.describeEndpoint().catch(() => null)
+          : null;
+        coordinatorClient = new CoordinatorClient({
+          baseUrl: opts.baseUrl,
+          accessToken: opts.accessToken,
+          deviceId: opts.deviceId,
+          tenantId: opts.tenantId,
+          ...(endpointDescriptor?.nodeId ? { irohNodeId: endpointDescriptor.nodeId } : {}),
+          ...(endpointDescriptor?.relayUrl ? { relayUrl: endpointDescriptor.relayUrl } : {}),
+          ...(opts.heartbeatIntervalMs ? { heartbeatIntervalMs: opts.heartbeatIntervalMs } : {}),
+          publicAddrs: async () => {
+            if (!irohNode) return [];
+            const info = await irohNode.describeEndpoint().catch(() => null);
+            return info?.publicAddrs ?? [];
+          },
+          onSignaling: (envelope: SignalingEnvelope) => {
+            void handleCoordinatorSignaling(envelope, { irohNode, coordinatorClient });
+          },
+        });
+        await coordinatorClient.start();
+      }
     },
     async stop() {
+      if (coordinatorClient) {
+        try {
+          coordinatorClient.stop();
+        } catch {
+          /* ignore */
+        }
+        coordinatorClient = undefined;
+      }
+      if (irohNode) {
+        try {
+          await irohNode.stop();
+        } catch {
+          /* ignore */
+        }
+        irohNode = undefined;
+      }
       if (codex) {
         try {
           await codex.stop();
@@ -411,6 +488,33 @@ function buildMeshJobHandler(
       detail: `unknown method: ${method}`,
     };
   };
+}
+
+async function handleCoordinatorSignaling(
+  envelope: SignalingEnvelope,
+  context: { irohNode: IrohNode | undefined; coordinatorClient: CoordinatorClient | undefined },
+): Promise<void> {
+  const payload = envelope.payload as
+    | { kind?: string; nodeId?: string; relayUrl?: string }
+    | undefined;
+  if (!payload || typeof payload !== "object") return;
+  if (payload.kind !== "iroh.invite" || !payload.nodeId || !context.irohNode) return;
+  try {
+    const stream = await context.irohNode.connect({
+      nodeId: payload.nodeId,
+      ...(payload.relayUrl ? { relayUrl: payload.relayUrl } : {}),
+    });
+    stream.on("error", () => stream.close());
+  } catch (error) {
+    if (context.coordinatorClient) {
+      await context.coordinatorClient
+        .sendSignaling(envelope.fromDeviceId, {
+          kind: "iroh.error",
+          message: error instanceof Error ? error.message : String(error),
+        })
+        .catch(() => undefined);
+    }
+  }
 }
 
 export type { BridgeFrame, BridgeSession };
