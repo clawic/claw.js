@@ -751,6 +751,7 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
     if (!file) {
       return await reply.code(404).send({ error: "download_not_available" });
     }
+    store.markViewed(itemId);
     if (file.mimeType) reply.header("content-type", file.mimeType);
     reply.header("content-disposition", `inline; filename="${file.name}"`);
     return reply.send(fs.createReadStream(file.filePath));

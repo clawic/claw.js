@@ -181,6 +181,8 @@ test("uploads, shares, download, search, trash, restore, copy, and export work",
   const downloadResponse = await authFetch(`/v1/items/${uploaded.id}/download`);
   assert.equal(downloadResponse.status, 200);
   assert.equal(Buffer.from(await downloadResponse.arrayBuffer()).toString("utf8"), "Quarterly notes for launch review");
+  const recentAfterDownload = await (await authFetch("/v1/items?view=recent")).json() as { items: Array<{ id: string }> };
+  assert.ok(recentAfterDownload.items.some((item) => item.id === uploaded.id));
 
   const searchResponse = await authFetch("/v1/items?view=my-drive&q=quarterly");
   const search = await searchResponse.json() as { items: Array<{ id: string }> };
