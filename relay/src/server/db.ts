@@ -277,6 +277,56 @@ export class RelayDatabase {
         estimated_cost_usd REAL NOT NULL,
         created_at INTEGER NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS device_endpoints (
+        device_id TEXT PRIMARY KEY,
+        iroh_node_id TEXT,
+        relay_url TEXT,
+        public_addrs_json TEXT,
+        last_seen_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_device_endpoints_node
+        ON device_endpoints(iroh_node_id);
+      CREATE TABLE IF NOT EXISTS magic_link_tokens (
+        token_id TEXT PRIMARY KEY,
+        token_hash TEXT NOT NULL,
+        email TEXT NOT NULL,
+        tenant_id TEXT NOT NULL,
+        purpose TEXT NOT NULL,
+        device_label TEXT,
+        platform TEXT,
+        expires_at INTEGER NOT NULL,
+        consumed_at INTEGER,
+        created_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_magic_link_email ON magic_link_tokens(email);
+      CREATE TABLE IF NOT EXISTS preauth_keys (
+        key_id TEXT PRIMARY KEY,
+        token_hash TEXT NOT NULL,
+        tenant_id TEXT NOT NULL,
+        created_by_user_id TEXT,
+        label TEXT,
+        scopes_json TEXT NOT NULL,
+        reusable INTEGER NOT NULL DEFAULT 0,
+        max_uses INTEGER,
+        uses INTEGER NOT NULL DEFAULT 0,
+        expires_at INTEGER,
+        revoked_at INTEGER,
+        created_at INTEGER NOT NULL,
+        last_used_at INTEGER
+      );
+      CREATE TABLE IF NOT EXISTS signaling_envelopes (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL,
+        from_device_id TEXT NOT NULL,
+        to_device_id TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        delivered_at INTEGER,
+        expires_at INTEGER NOT NULL,
+        created_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_signaling_to
+        ON signaling_envelopes(to_device_id, delivered_at);
     `);
     this.ensureColumn("agents", "role", "TEXT");
     this.ensureColumn("agents", "description", "TEXT");
@@ -292,6 +342,9 @@ export class RelayDatabase {
     this.ensureColumn("connector_enrollments", "connector_id", "TEXT");
     this.ensureColumn("connector_credentials", "connector_id", "TEXT");
     this.ensureColumn("connector_sessions", "connector_id", "TEXT");
+    this.ensureColumn("devices", "iroh_node_id", "TEXT");
+    this.ensureColumn("devices", "preauth_key_id", "TEXT");
+    this.ensureColumn("devices", "platform_version", "TEXT");
   }
 
   private ensureColumn(tableName: string, columnName: string, columnDefinition: string): void {
@@ -1732,5 +1785,513 @@ export class RelayDatabase {
         .run(tenantId, agentId);
     });
     tx();
+  }
+
+  registerDeviceWithIroh(input: {
+    userId: string;
+    tenantId: string;
+    label: string;
+    platform?: string;
+    platformVersion?: string;
+    irohNodeId?: string;
+    preauthKeyId?: string;
+  }): { deviceId: string } {
+    const deviceId = randomUUID();
+    const timestamp = now();
+    this.sqlite.prepare(`
+      INSERT INTO devices (id, user_id, tenant_id, label, platform, platform_version,
+        iroh_node_id, preauth_key_id, created_at, last_seen_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      deviceId,
+      input.userId,
+      input.tenantId,
+      input.label,
+      input.platform ?? null,
+      input.platformVersion ?? null,
+      input.irohNodeId ?? null,
+      input.preauthKeyId ?? null,
+      timestamp,
+      timestamp,
+    );
+    return { deviceId };
+  }
+
+  setDeviceIrohNodeId(deviceId: string, irohNodeId: string): void {
+    this.sqlite.prepare("UPDATE devices SET iroh_node_id = ? WHERE id = ?").run(irohNodeId, deviceId);
+  }
+
+  revokeDevice(deviceId: string): void {
+    this.sqlite.prepare("UPDATE devices SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL")
+      .run(now(), deviceId);
+  }
+
+  getDevice(deviceId: string): {
+    deviceId: string;
+    userId: string;
+    tenantId: string;
+    label: string;
+    platform: string | null;
+    platformVersion: string | null;
+    irohNodeId: string | null;
+    createdAt: number;
+    lastSeenAt: number;
+    revokedAt: number | null;
+  } | null {
+    const row = this.sqlite.prepare(`
+      SELECT id, user_id, tenant_id, label, platform, platform_version, iroh_node_id,
+        created_at, last_seen_at, revoked_at
+      FROM devices WHERE id = ?
+    `).get(deviceId) as {
+      id: string;
+      user_id: string;
+      tenant_id: string;
+      label: string;
+      platform: string | null;
+      platform_version: string | null;
+      iroh_node_id: string | null;
+      created_at: number;
+      last_seen_at: number;
+      revoked_at: number | null;
+    } | undefined;
+    if (!row) return null;
+    return {
+      deviceId: row.id,
+      userId: row.user_id,
+      tenantId: row.tenant_id,
+      label: row.label,
+      platform: row.platform,
+      platformVersion: row.platform_version,
+      irohNodeId: row.iroh_node_id,
+      createdAt: row.created_at,
+      lastSeenAt: row.last_seen_at,
+      revokedAt: row.revoked_at,
+    };
+  }
+
+  listTenantDevices(tenantId: string): Array<{
+    deviceId: string;
+    userId: string;
+    label: string;
+    platform: string | null;
+    irohNodeId: string | null;
+    lastSeenAt: number;
+    revokedAt: number | null;
+  }> {
+    const rows = this.sqlite.prepare(`
+      SELECT id, user_id, label, platform, iroh_node_id, last_seen_at, revoked_at
+      FROM devices
+      WHERE tenant_id = ?
+      ORDER BY last_seen_at DESC
+    `).all(tenantId) as Array<{
+      id: string;
+      user_id: string;
+      label: string;
+      platform: string | null;
+      iroh_node_id: string | null;
+      last_seen_at: number;
+      revoked_at: number | null;
+    }>;
+    return rows.map((row) => ({
+      deviceId: row.id,
+      userId: row.user_id,
+      label: row.label,
+      platform: row.platform,
+      irohNodeId: row.iroh_node_id,
+      lastSeenAt: row.last_seen_at,
+      revokedAt: row.revoked_at,
+    }));
+  }
+
+  upsertDeviceEndpoint(input: {
+    deviceId: string;
+    irohNodeId?: string;
+    relayUrl?: string;
+    publicAddrs?: string[];
+  }): void {
+    const timestamp = now();
+    this.sqlite.prepare(`
+      INSERT INTO device_endpoints (device_id, iroh_node_id, relay_url, public_addrs_json,
+        last_seen_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(device_id) DO UPDATE SET
+        iroh_node_id = COALESCE(excluded.iroh_node_id, device_endpoints.iroh_node_id),
+        relay_url = COALESCE(excluded.relay_url, device_endpoints.relay_url),
+        public_addrs_json = COALESCE(excluded.public_addrs_json, device_endpoints.public_addrs_json),
+        last_seen_at = excluded.last_seen_at,
+        updated_at = excluded.updated_at
+    `).run(
+      input.deviceId,
+      input.irohNodeId ?? null,
+      input.relayUrl ?? null,
+      input.publicAddrs ? JSON.stringify(input.publicAddrs) : null,
+      timestamp,
+      timestamp,
+    );
+    this.touchDevice(input.deviceId);
+  }
+
+  getDeviceEndpoint(deviceId: string): {
+    deviceId: string;
+    irohNodeId: string | null;
+    relayUrl: string | null;
+    publicAddrs: string[];
+    lastSeenAt: number;
+  } | null {
+    const row = this.sqlite.prepare(`
+      SELECT device_id, iroh_node_id, relay_url, public_addrs_json, last_seen_at
+      FROM device_endpoints WHERE device_id = ?
+    `).get(deviceId) as {
+      device_id: string;
+      iroh_node_id: string | null;
+      relay_url: string | null;
+      public_addrs_json: string | null;
+      last_seen_at: number;
+    } | undefined;
+    if (!row) return null;
+    return {
+      deviceId: row.device_id,
+      irohNodeId: row.iroh_node_id,
+      relayUrl: row.relay_url,
+      publicAddrs: parseJsonArray(row.public_addrs_json),
+      lastSeenAt: row.last_seen_at,
+    };
+  }
+
+  listPeerEndpointsForTenant(tenantId: string, excludeDeviceId?: string): Array<{
+    deviceId: string;
+    irohNodeId: string;
+    relayUrl: string | null;
+    publicAddrs: string[];
+    label: string;
+    platform: string | null;
+    lastSeenAt: number;
+  }> {
+    const rows = this.sqlite.prepare(`
+      SELECT d.id as device_id, d.label, d.platform, d.iroh_node_id as device_node,
+        de.iroh_node_id as endpoint_node, de.relay_url, de.public_addrs_json, de.last_seen_at
+      FROM devices d
+      LEFT JOIN device_endpoints de ON de.device_id = d.id
+      WHERE d.tenant_id = ? AND d.revoked_at IS NULL
+      ORDER BY de.last_seen_at DESC NULLS LAST
+    `).all(tenantId) as Array<{
+      device_id: string;
+      label: string;
+      platform: string | null;
+      device_node: string | null;
+      endpoint_node: string | null;
+      relay_url: string | null;
+      public_addrs_json: string | null;
+      last_seen_at: number | null;
+    }>;
+    return rows
+      .filter((row) => row.device_id !== excludeDeviceId)
+      .map((row) => ({
+        deviceId: row.device_id,
+        irohNodeId: row.endpoint_node ?? row.device_node ?? "",
+        relayUrl: row.relay_url,
+        publicAddrs: parseJsonArray(row.public_addrs_json),
+        label: row.label,
+        platform: row.platform,
+        lastSeenAt: row.last_seen_at ?? 0,
+      }))
+      .filter((entry) => entry.irohNodeId.length > 0);
+  }
+
+  createMagicLinkToken(input: {
+    email: string;
+    tenantId: string;
+    purpose: "sign-in" | "device-register";
+    deviceLabel?: string;
+    platform?: string;
+    ttlSec: number;
+  }): { token: string; tokenId: string; expiresAt: number } {
+    const generated = generateOpaqueToken("mlk");
+    const expiresAt = now() + input.ttlSec * 1000;
+    this.sqlite.prepare(`
+      INSERT INTO magic_link_tokens (
+        token_id, token_hash, email, tenant_id, purpose, device_label, platform,
+        expires_at, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      generated.tokenId,
+      hashSecret(generated.secret),
+      input.email.toLowerCase(),
+      input.tenantId,
+      input.purpose,
+      input.deviceLabel ?? null,
+      input.platform ?? null,
+      expiresAt,
+      now(),
+    );
+    return { token: generated.token, tokenId: generated.tokenId, expiresAt };
+  }
+
+  consumeMagicLinkToken(token: string): {
+    email: string;
+    tenantId: string;
+    purpose: "sign-in" | "device-register";
+    deviceLabel: string | null;
+    platform: string | null;
+  } | null {
+    const parsed = parseOpaqueToken("mlk", token);
+    if (!parsed) return null;
+    const row = this.sqlite.prepare(`
+      SELECT token_hash, email, tenant_id, purpose, device_label, platform,
+        expires_at, consumed_at
+      FROM magic_link_tokens WHERE token_id = ?
+    `).get(parsed.tokenId) as {
+      token_hash: string;
+      email: string;
+      tenant_id: string;
+      purpose: "sign-in" | "device-register";
+      device_label: string | null;
+      platform: string | null;
+      expires_at: number;
+      consumed_at: number | null;
+    } | undefined;
+    if (!row) return null;
+    if (row.consumed_at) return null;
+    if (row.expires_at <= now()) return null;
+    if (row.token_hash !== hashSecret(parsed.secret)) return null;
+    this.sqlite.prepare("UPDATE magic_link_tokens SET consumed_at = ? WHERE token_id = ?")
+      .run(now(), parsed.tokenId);
+    return {
+      email: row.email,
+      tenantId: row.tenant_id,
+      purpose: row.purpose,
+      deviceLabel: row.device_label,
+      platform: row.platform,
+    };
+  }
+
+  createPreauthKey(input: {
+    tenantId: string;
+    createdByUserId?: string;
+    label?: string;
+    scopes: string[];
+    reusable: boolean;
+    maxUses?: number;
+    expiresAt?: number;
+  }): { keyId: string; token: string } {
+    const generated = generateOpaqueToken("pak");
+    this.sqlite.prepare(`
+      INSERT INTO preauth_keys (
+        key_id, token_hash, tenant_id, created_by_user_id, label, scopes_json,
+        reusable, max_uses, uses, expires_at, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+    `).run(
+      generated.tokenId,
+      hashSecret(generated.secret),
+      input.tenantId,
+      input.createdByUserId ?? null,
+      input.label ?? null,
+      JSON.stringify(input.scopes),
+      input.reusable ? 1 : 0,
+      input.maxUses ?? null,
+      input.expiresAt ?? null,
+      now(),
+    );
+    return { keyId: generated.tokenId, token: generated.token };
+  }
+
+  consumePreauthKey(token: string): {
+    keyId: string;
+    tenantId: string;
+    scopes: string[];
+  } | null {
+    const parsed = parseOpaqueToken("pak", token);
+    if (!parsed) return null;
+    const row = this.sqlite.prepare(`
+      SELECT key_id, token_hash, tenant_id, scopes_json, reusable, max_uses, uses,
+        expires_at, revoked_at
+      FROM preauth_keys WHERE key_id = ?
+    `).get(parsed.tokenId) as {
+      key_id: string;
+      token_hash: string;
+      tenant_id: string;
+      scopes_json: string;
+      reusable: number;
+      max_uses: number | null;
+      uses: number;
+      expires_at: number | null;
+      revoked_at: number | null;
+    } | undefined;
+    if (!row) return null;
+    if (row.revoked_at) return null;
+    if (row.expires_at && row.expires_at <= now()) return null;
+    if (row.token_hash !== hashSecret(parsed.secret)) return null;
+    if (!row.reusable && row.uses > 0) return null;
+    if (row.max_uses != null && row.uses >= row.max_uses) return null;
+    this.sqlite.prepare(`
+      UPDATE preauth_keys SET uses = uses + 1, last_used_at = ? WHERE key_id = ?
+    `).run(now(), row.key_id);
+    return {
+      keyId: row.key_id,
+      tenantId: row.tenant_id,
+      scopes: parseJsonArray(row.scopes_json),
+    };
+  }
+
+  listPreauthKeys(tenantId: string): Array<{
+    keyId: string;
+    label: string | null;
+    scopes: string[];
+    reusable: boolean;
+    maxUses: number | null;
+    uses: number;
+    expiresAt: number | null;
+    revokedAt: number | null;
+    lastUsedAt: number | null;
+    createdAt: number;
+  }> {
+    const rows = this.sqlite.prepare(`
+      SELECT key_id, label, scopes_json, reusable, max_uses, uses, expires_at,
+        revoked_at, last_used_at, created_at
+      FROM preauth_keys
+      WHERE tenant_id = ?
+      ORDER BY created_at DESC
+    `).all(tenantId) as Array<{
+      key_id: string;
+      label: string | null;
+      scopes_json: string;
+      reusable: number;
+      max_uses: number | null;
+      uses: number;
+      expires_at: number | null;
+      revoked_at: number | null;
+      last_used_at: number | null;
+      created_at: number;
+    }>;
+    return rows.map((row) => ({
+      keyId: row.key_id,
+      label: row.label,
+      scopes: parseJsonArray(row.scopes_json),
+      reusable: row.reusable === 1,
+      maxUses: row.max_uses,
+      uses: row.uses,
+      expiresAt: row.expires_at,
+      revokedAt: row.revoked_at,
+      lastUsedAt: row.last_used_at,
+      createdAt: row.created_at,
+    }));
+  }
+
+  revokePreauthKey(tenantId: string, keyId: string): boolean {
+    const changed = this.sqlite.prepare(`
+      UPDATE preauth_keys SET revoked_at = ?
+      WHERE tenant_id = ? AND key_id = ? AND revoked_at IS NULL
+    `).run(now(), tenantId, keyId);
+    return changed.changes > 0;
+  }
+
+  enqueueSignaling(input: {
+    tenantId: string;
+    fromDeviceId: string;
+    toDeviceId: string;
+    payload: unknown;
+    ttlSec: number;
+  }): { id: string } {
+    const id = randomUUID();
+    this.sqlite.prepare(`
+      INSERT INTO signaling_envelopes (
+        id, tenant_id, from_device_id, to_device_id, payload, expires_at, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      input.tenantId,
+      input.fromDeviceId,
+      input.toDeviceId,
+      JSON.stringify(input.payload),
+      now() + input.ttlSec * 1000,
+      now(),
+    );
+    return { id };
+  }
+
+  drainSignalingFor(tenantId: string, deviceId: string): Array<{
+    id: string;
+    fromDeviceId: string;
+    payload: unknown;
+    createdAt: number;
+  }> {
+    const rows = this.sqlite.prepare(`
+      SELECT id, from_device_id, payload, created_at
+      FROM signaling_envelopes
+      WHERE tenant_id = ? AND to_device_id = ?
+        AND delivered_at IS NULL
+        AND expires_at > ?
+      ORDER BY created_at ASC
+      LIMIT 32
+    `).all(tenantId, deviceId, now()) as Array<{
+      id: string;
+      from_device_id: string;
+      payload: string;
+      created_at: number;
+    }>;
+    if (rows.length > 0) {
+      const stmt = this.sqlite.prepare("UPDATE signaling_envelopes SET delivered_at = ? WHERE id = ?");
+      const tx = this.sqlite.transaction(() => {
+        for (const row of rows) stmt.run(now(), row.id);
+      });
+      tx();
+    }
+    return rows.map((row) => ({
+      id: row.id,
+      fromDeviceId: row.from_device_id,
+      payload: parseJsonObject<unknown>(row.payload, {}),
+      createdAt: row.created_at,
+    }));
+  }
+
+  ensureTenantMembership(userId: string, tenantId: string, scopes: string[]): void {
+    this.sqlite.prepare(`
+      INSERT OR IGNORE INTO memberships (user_id, tenant_id, scopes_json)
+      VALUES (?, ?, ?)
+    `).run(userId, tenantId, JSON.stringify(scopes));
+  }
+
+  ensureTenant(tenantId: string, name: string): void {
+    this.sqlite.prepare("INSERT OR IGNORE INTO tenants (id, name, created_at) VALUES (?, ?, ?)")
+      .run(tenantId, name, now());
+  }
+
+  createUserForEmail(email: string, role: "admin" | "user"): { id: string } {
+    const normalized = email.toLowerCase();
+    const existing = this.sqlite.prepare("SELECT id FROM users WHERE email = ?")
+      .get(normalized) as { id: string } | undefined;
+    if (existing) return { id: existing.id };
+    const id = `mlk-${randomUUID()}`;
+    this.sqlite.prepare(`
+      INSERT INTO users (id, email, password_hash, role, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(id, normalized, "magic-link-only", role, now());
+    return { id };
+  }
+
+  listTenantMembers(tenantId: string): Array<{
+    userId: string;
+    email: string;
+    role: "admin" | "user";
+    scopes: string[];
+  }> {
+    const rows = this.sqlite.prepare(`
+      SELECT u.id as user_id, u.email, u.role, m.scopes_json
+      FROM memberships m
+      JOIN users u ON u.id = m.user_id
+      WHERE m.tenant_id = ?
+      ORDER BY u.email
+    `).all(tenantId) as Array<{
+      user_id: string;
+      email: string;
+      role: "admin" | "user";
+      scopes_json: string;
+    }>;
+    return rows.map((row) => ({
+      userId: row.user_id,
+      email: row.email,
+      role: row.role,
+      scopes: parseJsonArray(row.scopes_json),
+    }));
   }
 }
