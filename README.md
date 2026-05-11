@@ -35,6 +35,8 @@ Repository ownership, issue tracking, and package publishing live under [`@clawi
 - `@clawjs/core`: shared contracts and schemas
 - `@clawjs/audio`: shared audio asset store, transcript catalog, API client, and service app
 - `@clawjs/database`: shared database service app, store, API client, auth, and realtime hub
+- `@clawjs/sessions`: shared session mirror store and native runtime import adapters
+- `@clawjs/user-model`: shared user profile store, snapshots, and profile service app
 - `@clawjs/ssh-client`: audited SSH client for Claw mesh hosts
 - `@clawjs/openclaw-plugin`: OpenClaw bridge plugin
 - `@clawjs/openclaw-context-engine`: experimental OpenClaw context engine

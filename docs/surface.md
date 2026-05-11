@@ -1,14 +1,15 @@
 ---
 title: Public Surface
-description: Exhaustive published export inventory for @clawjs/claw, @clawjs/core, @clawjs/database, and @clawjs/audio.
+description: Exhaustive published export inventory for @clawjs/claw, @clawjs/core, @clawjs/database, @clawjs/audio, @clawjs/sessions, and @clawjs/user-model.
 ---
 
 # Public Surface
 
 This page is the exhaustive inventory for the published package exports.
 The docs check script validates that every current export from
-`@clawjs/claw`, `@clawjs/core`, `@clawjs/database`, and
-`@clawjs/audio` appear here.
+`@clawjs/claw`, `@clawjs/core`, `@clawjs/database`,
+`@clawjs/audio`, `@clawjs/sessions`, and `@clawjs/user-model`
+appear here.
 
 ## @clawjs/audio Exports
 
@@ -59,6 +60,60 @@ The docs check script validates that every current export from
     RecordEnvelope
     ScopedTokenRecord
     TokenClaims
+
+## @clawjs/sessions Exports
+
+    AppendMessageInput
+    BuildSessionsAppOptions
+    buildSessionsApp
+    CodexImportResult
+    CodexScanResult
+    CreateSessionInput
+    ExportTrajectoryOptions
+    ImportCodexDirOptions
+    ImportCodexFileOptions
+    importCodexRolloutFile
+    importCodexSessionsDir
+    ListSessionsFilter
+    ListSessionsResult
+    loadSessionsConfig
+    MessageRole
+    SearchSessionsInput
+    SessionAgent
+    SessionsApiClient
+    SessionsApiClientOptions
+    SessionMessageRecord
+    SessionOriginRecord
+    SessionRecord
+    SessionRuntime
+    SessionSearchHit
+    SessionsServiceConfig
+    SessionsServiceStore
+    SessionStatus
+    SessionWithMessages
+    TrajectoryRecord
+    UpsertOriginInput
+
+## @clawjs/user-model Exports
+
+    buildUserModelApp
+    BuildUserModelAppOptions
+    CommitSnapshotInput
+    ForgetInput
+    ForgetResult
+    loadUserModelConfig
+    UpdateItemInput
+    UpsertItemInput
+    UserModelApiClient
+    UserModelApiClientOptions
+    UserModelSection
+    UserModelServiceConfig
+    UserModelServiceStore
+    UserProfileBySection
+    UserProfileHistoryRecord
+    UserProfileItem
+    UserProfileSnapshot
+    USER_MODEL_SECTIONS
 
 ## @clawjs/claw Exports
 

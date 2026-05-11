@@ -25,6 +25,8 @@ Use this page when you need to answer questions like:
 | SDK | `@clawjs/claw` | Base runtime-facing surface. |
 | Database package | `@clawjs/database` | Shared database service app, store, API client, auth, and realtime hub. |
 | Audio package | `@clawjs/audio` | Shared audio asset store, transcript catalog, API client, and service app. |
+| Sessions package | `@clawjs/sessions` | Shared session mirror store, FTS search, and native runtime import adapters. |
+| User model package | `@clawjs/user-model` | Shared user profile store, snapshots, and service app. |
 | SDK workspace extension | `@clawjs/workspace` | Adds tasks, notes, people, inbox, events, search, and workspace index. |
 | CLI | `claw ...` | Local shell surface shipped by `@clawjs/cli`. |
 | Relay API | `relay/` HTTP `/v1` routes | Public remote API routed through the relay connector. |
