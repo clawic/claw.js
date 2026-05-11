@@ -84,6 +84,7 @@ export default defineConfig({
         text: "Services",
         items: [
           { text: "Database", link: "/database" },
+          { text: "Audio Service", link: "/audio" },
           { text: "Time Service", link: "/time" },
           { text: "Day", link: "/day" },
           { text: "Content Service", link: "/content" },

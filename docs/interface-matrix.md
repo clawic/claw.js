@@ -24,6 +24,7 @@ Use this page when you need to answer questions like:
 | --- | --- | --- |
 | SDK | `@clawjs/claw` | Base runtime-facing surface. |
 | Database package | `@clawjs/database` | Shared database service app, store, API client, auth, and realtime hub. |
+| Audio package | `@clawjs/audio` | Shared audio asset store, transcript catalog, API client, and service app. |
 | SDK workspace extension | `@clawjs/workspace` | Adds tasks, notes, people, inbox, events, search, and workspace index. |
 | CLI | `claw ...` | Local shell surface shipped by `@clawjs/cli`. |
 | Relay API | `relay/` HTTP `/v1` routes | Public remote API routed through the relay connector. |
@@ -182,6 +183,7 @@ The Relay also exposes equivalent project-scoped routes under:
 | Direct text inference | `claw.inference.generateText()` | `claw inference generate-text` | `-` |
 | TTS synthesize | `claw.tts.synthesize()` | `claw tts synthesize` | `-` |
 | TTS config / providers / catalog | `claw.tts.config()`, `setConfig()`, `providers()`, `catalog()` | `claw tts config`, `set-config`, `providers`, `catalog` | `-` |
+| Audio asset service | `@clawjs/audio` API client | `audio list|get|delete`, `audio serve` | standalone Audio service routes |
 | Non-stream reply helper | `-` | `-` | `POST WS/sessions/:sessionId/reply` |
 | Clear all sessions | `-` | `-` | `POST /v1/admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/sessions/clear` |
 | Delete one session | `-` | `-` | `-` |

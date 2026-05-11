@@ -40,6 +40,7 @@ ClawJS gives you one place to solve the hard parts that show up across runtimes:
 | `@clawjs/claw` | Runtime adapters, workspace management, sessions, auth, compat, doctor, media generation, secrets, watchers, and state persistence. |
 | `@clawjs/workspace` | Productivity extension for tasks, notes, people, inbox, events, search, context, and UI descriptors on top of the base SDK. |
 | `@clawjs/database` | Shared database engine, API client, auth, realtime hub, store, and embeddable service app. |
+| `@clawjs/audio` | Shared audio asset store, transcript catalog, API client, and embeddable service app. |
 | `@clawjs/node` | Compatibility wrapper that reexports the primary SDK surface for existing integrations that still import `@clawjs/node`. |
 | `@clawjs/ssh-client` | Audited SSH client for mesh hosts with TOFU known-host handling, exec, SFTP, and bridge installation helpers. |
 | `@clawjs/cli` | Official CLI with `claw` and `clawjs` binaries for scaffolding, runtime management, workspace ops, productivity commands, sessions, media, and package-aware project generation. |
@@ -94,6 +95,7 @@ ClawJS keeps a stable internal layer under `.clawjs/` even when runtimes disagre
 ### Use services
 
 - [Database](/database) for local-first CRUD, the standalone service, scoped tokens, files, and realtime.
+- [Audio Service](/audio) for app-scoped audio blobs, transcripts, and local service APIs.
 - [Time Service](/time) for calendar, routines, deadlines, follow-ups, executions, and timeline views.
 - [Content Service](/content), [Notify](/notify), [IoT](/iot), [Vault](/vault), [Drive](/drive), and [Execution Plane](/execution-plane) for standalone service surfaces.
 

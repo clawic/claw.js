@@ -33,6 +33,8 @@ Repository ownership, issue tracking, and package publishing live under [`@clawi
 - `@clawjs/workspace`: local-first workspace productivity companion
 - `@clawjs/node`: compatibility wrapper for existing integrations
 - `@clawjs/core`: shared contracts and schemas
+- `@clawjs/audio`: shared audio asset store, transcript catalog, API client, and service app
+- `@clawjs/database`: shared database service app, store, API client, auth, and realtime hub
 - `@clawjs/ssh-client`: audited SSH client for Claw mesh hosts
 - `@clawjs/openclaw-plugin`: OpenClaw bridge plugin
 - `@clawjs/openclaw-context-engine`: experimental OpenClaw context engine
@@ -72,6 +74,20 @@ Database v1 adds:
 - local file storage plus a built-in admin console
 
 Docs: [docs/database.md](docs/database.md)
+
+## Audio
+
+The repository also includes `audio/`, a standalone app-scoped audio asset and transcript service.
+
+Audio v1 adds:
+
+- SQLite metadata for user messages, dictation, and agent TTS assets
+- local blob storage with MIME-aware file extensions
+- transcript attachment and primary transcript tracking
+- an embeddable Fastify app plus `AudioApiClient`
+- a small local CLI for service inspection
+
+Docs: [docs/audio.md](docs/audio.md)
 
 ## Time
 

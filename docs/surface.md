@@ -1,13 +1,36 @@
 ---
 title: Public Surface
-description: Exhaustive published export inventory for @clawjs/claw, @clawjs/core, and @clawjs/database.
+description: Exhaustive published export inventory for @clawjs/claw, @clawjs/core, @clawjs/database, and @clawjs/audio.
 ---
 
 # Public Surface
 
 This page is the exhaustive inventory for the published package exports.
 The docs check script validates that every current export from
-`@clawjs/claw`, `@clawjs/core`, and `@clawjs/database` appears here.
+`@clawjs/claw`, `@clawjs/core`, `@clawjs/database`, and
+`@clawjs/audio` appear here.
+
+## @clawjs/audio Exports
+
+    AttachTranscriptInput
+    AudioApiClient
+    AudioApiClientOptions
+    AudioAsset
+    AudioAssetWithTranscripts
+    AudioBytes
+    AudioKind
+    AudioOriginActor
+    AudioServiceConfig
+    AudioServiceStore
+    AudioTranscript
+    AudioTranscriptRole
+    BuildAudioAppOptions
+    ListAudioFilter
+    ListAudioResult
+    ListGlobalAudioFilter
+    RegisterAudioInput
+    buildAudioApp
+    loadAudioConfig
 
 ## @clawjs/database Exports
 
