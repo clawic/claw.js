@@ -21,6 +21,7 @@ const publicDocPages = [
   "relay.md",
   "vault.md",
   "database.md",
+  "audio.md",
   "time.md",
   "content.md",
   "notify.md",
@@ -299,7 +300,8 @@ const surfaceEntries = new Set(extractSurfaceEntries(surfacePath));
 const sdkExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-node", "dist", "index.d.ts")));
 const coreExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-core", "dist", "index.d.ts")));
 const databaseExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-database", "dist", "index.d.ts")));
-const expectedSurfaceEntries = new Set([...sdkExports, ...coreExports, ...databaseExports]);
+const audioExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-audio", "dist", "index.d.ts")));
+const expectedSurfaceEntries = new Set([...sdkExports, ...coreExports, ...databaseExports, ...audioExports]);
 
 for (const exportName of expectedSurfaceEntries) {
   if (!surfaceEntries.has(exportName)) {

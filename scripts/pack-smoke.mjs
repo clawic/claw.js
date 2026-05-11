@@ -32,6 +32,7 @@ const packageDirs = [
   path.join(rootDir, "packages", "clawjs-workspace"),
   path.join(rootDir, "packages", "clawjs-node-compat"),
   path.join(rootDir, "packages", "clawjs"),
+  path.join(rootDir, "packages", "clawjs-audio"),
   path.join(rootDir, "packages", "create-claw-app"),
   path.join(rootDir, "packages", "create-claw-agent"),
   path.join(rootDir, "packages", "create-claw-server"),
@@ -89,6 +90,10 @@ run("node", ["--input-type=module", "-e", `
   const cli = await import("@clawjs/cli");
   if (typeof cli.runCli !== "function") {
     throw new Error("@clawjs/cli helpers are missing");
+  }
+  const audio = await import("@clawjs/audio");
+  if (typeof audio.AudioApiClient !== "function" || typeof audio.buildAudioApp !== "function") {
+    throw new Error("@clawjs/audio helpers are missing");
   }
 `], { cwd: appDir, stdio: "inherit" });
 
