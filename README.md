@@ -35,6 +35,8 @@ Repository ownership, issue tracking, and package publishing live under [`@clawi
 - `@clawjs/core`: shared contracts and schemas
 - `@clawjs/audio`: shared audio asset store, transcript catalog, API client, and service app
 - `@clawjs/database`: shared database service app, store, API client, auth, and realtime hub
+- `@clawjs/agents`: filesystem-first agent identity, personality, skill collection, connection, and audit records
+- `@clawjs/integrations`: connection watchers and routing for inbound channel messages
 - `@clawjs/sessions`: shared session mirror store and native runtime import adapters
 - `@clawjs/user-model`: shared user profile store, snapshots, and profile service app
 - `@clawjs/runtime`: shared runtime loops for distillation, nudges, and profile refresh

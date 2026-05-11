@@ -33,6 +33,8 @@ const packageDirs = [
   path.join(rootDir, "packages", "clawjs-node-compat"),
   path.join(rootDir, "packages", "clawjs"),
   path.join(rootDir, "packages", "clawjs-audio"),
+  path.join(rootDir, "packages", "clawjs-agents"),
+  path.join(rootDir, "packages", "clawjs-integrations"),
   path.join(rootDir, "packages", "clawjs-sessions"),
   path.join(rootDir, "packages", "clawjs-user-model"),
   path.join(rootDir, "packages", "clawjs-runtime"),
@@ -109,6 +111,14 @@ run("node", ["--input-type=module", "-e", `
   const runtime = await import("@clawjs/runtime");
   if (typeof runtime.RuntimeServiceStore !== "function" || typeof runtime.buildRuntimeApp !== "function") {
     throw new Error("@clawjs/runtime helpers are missing");
+  }
+  const agents = await import("@clawjs/agents");
+  if (typeof agents.AgentStoreFS !== "function" || typeof agents.defaultAgent !== "function") {
+    throw new Error("@clawjs/agents helpers are missing");
+  }
+  const integrations = await import("@clawjs/integrations");
+  if (typeof integrations.IntegrationManager !== "function" || typeof integrations.telegramAdapter !== "object") {
+    throw new Error("@clawjs/integrations helpers are missing");
   }
 `], { cwd: appDir, stdio: "inherit" });
 

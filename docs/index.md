@@ -41,6 +41,8 @@ ClawJS gives you one place to solve the hard parts that show up across runtimes:
 | `@clawjs/workspace` | Productivity extension for tasks, notes, people, inbox, events, search, context, and UI descriptors on top of the base SDK. |
 | `@clawjs/database` | Shared database engine, API client, auth, realtime hub, store, and embeddable service app. |
 | `@clawjs/audio` | Shared audio asset store, transcript catalog, API client, and embeddable service app. |
+| `@clawjs/agents` | Filesystem-first agent identity, personality, skill collection, connection, and audit records. |
+| `@clawjs/integrations` | Connection watchers and routing for inbound channel messages. |
 | `@clawjs/sessions` | Shared session mirror store, FTS search, and native runtime import adapters. |
 | `@clawjs/user-model` | Shared user profile store, snapshots, and embeddable profile service app. |
 | `@clawjs/runtime` | Shared runtime loops for distillation, nudges, and profile refresh. |
