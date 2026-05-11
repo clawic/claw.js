@@ -45,6 +45,7 @@
     "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20"
   },
   "dependencies": {
+    "@clawjs/audio": "0.1.0",
     "@clawjs/core": "0.1.2",
     "@clawjs/claw": "0.1.2",
     "@clawjs/database": "0.1.2",

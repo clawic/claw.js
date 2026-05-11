@@ -11,6 +11,7 @@ import { runOpenMemory } from "./memory-server-launcher.mjs";
 import { runDriveCli, DRIVE_GROUPS } from "./drive-commands.mjs";
 import { runOpenDrive } from "./drive-server-launcher.mjs";
 import { runOpenTelegram } from "./telegram-server-launcher.mjs";
+import { runOpenAudio } from "./audio-server-launcher.mjs";
 import { runCatalogCli, CATALOG_GROUPS } from "./catalog-commands.mjs";
 import { BUILTIN_COLLECTIONS_BY_ALIAS } from "@clawjs/core";
 
@@ -50,6 +51,9 @@ if (first === "open" && args[1] === "drive") {
 }
 if (first === "open" && args[1] === "telegram") {
   process.exit(await runOpenTelegram(args.slice(2)));
+}
+if (first === "open" && args[1] === "audio") {
+  process.exit(await runOpenAudio(args.slice(2)));
 }
 
 // Fall back to the existing Claw CLI for everything else.
