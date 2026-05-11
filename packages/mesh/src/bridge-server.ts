@@ -29,9 +29,19 @@ export type BridgeFrame = z.infer<typeof BridgeFrameSchema>;
 export interface BridgeSession {
   id: string;
   remoteAddress?: string;
-  socket: WebSocket;
+  socket: WebSocket | null;
+  transport: "websocket" | "iroh";
   closed: boolean;
   send(frame: BridgeFrame): void;
+}
+
+export interface ExternalDuplexStream {
+  on(event: "data", listener: (chunk: Buffer) => void): this;
+  on(event: "end", listener: () => void): this;
+  on(event: "close", listener: () => void): this;
+  on(event: "error", listener: (error: unknown) => void): this;
+  send(payload: Buffer): Promise<void>;
+  close(): void;
 }
 
 export interface BridgeServerDeps {
@@ -80,7 +90,7 @@ export class BridgeServer {
     this.pingInterval = null;
     for (const session of this.sessions) {
       try {
-        session.socket.close(CLOSE_CODES.serverShutdown, "shutdown");
+        session.socket?.close(CLOSE_CODES.serverShutdown, "shutdown");
       } catch {
         /* ignore */
       }
@@ -128,6 +138,7 @@ export class BridgeServer {
       id: `bridge-${this.nextId++}`,
       remoteAddress: req.socket.remoteAddress ?? undefined,
       socket: ws,
+      transport: "websocket",
       closed: false,
       send: (frame: BridgeFrame) => {
         if (session.closed) return;
@@ -172,6 +183,54 @@ export class BridgeServer {
         /* ignore */
       }
     });
+  }
+
+  attachExternalStream(stream: ExternalDuplexStream, options: { remoteLabel?: string } = {}): BridgeSession {
+    const session: BridgeSession = {
+      id: `bridge-iroh-${this.nextId++}`,
+      remoteAddress: options.remoteLabel,
+      socket: null,
+      transport: "iroh",
+      closed: false,
+      send: (frame: BridgeFrame) => {
+        if (session.closed) return;
+        void stream.send(Buffer.from(JSON.stringify(frame), "utf8")).catch(() => {
+          session.closed = true;
+          this.sessions.delete(session);
+        });
+      },
+    };
+    this.sessions.add(session);
+    this.deps.onSession?.(session);
+    stream.on("data", (chunk: Buffer) => {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(chunk.toString("utf8"));
+      } catch {
+        stream.close();
+        return;
+      }
+      const frame = BridgeFrameSchema.safeParse(parsed);
+      if (!frame.success) {
+        stream.close();
+        return;
+      }
+      if (frame.data.kind === "ping") {
+        session.send({ kind: "pong", id: frame.data.id });
+        return;
+      }
+      void this.deps.onFrame?.(session, frame.data);
+    });
+    const finalize = () => {
+      if (session.closed) return;
+      session.closed = true;
+      this.sessions.delete(session);
+      this.deps.onSessionClose?.(session);
+    };
+    stream.on("end", finalize);
+    stream.on("close", finalize);
+    stream.on("error", finalize);
+    return session;
   }
 
   private rejectUnauthorized(socket: Duplex, reason: string): void {
