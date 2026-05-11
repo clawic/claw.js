@@ -17,6 +17,10 @@ import { HueLocalAdapter } from "./adapters/hue-local.ts";
 import { MatterAdapter } from "./adapters/matter.ts";
 import { HomeKitAdapter } from "./adapters/homekit.ts";
 import { MqttAdapter } from "./adapters/mqtt.ts";
+import { TuyaAdapter } from "./adapters/tuya.ts";
+import { GoogleHomeAdapter } from "./adapters/google-home.ts";
+import { AlexaAdapter } from "./adapters/alexa.ts";
+import { registerCloudFulfillmentRoutes } from "./cloud-fulfillment.ts";
 import { DiscoveryOrchestrator } from "./discovery.ts";
 
 function resolveUiRoot(): string | null {
@@ -62,6 +66,11 @@ export function buildIotApp(options: BuildIotAppOptions = {}) {
   registry.register(new MatterAdapter());
   registry.register(new HomeKitAdapter());
   registry.register(new MqttAdapter());
+  registry.register(new TuyaAdapter());
+  const googleHome = new GoogleHomeAdapter();
+  const alexa = new AlexaAdapter();
+  registry.register(googleHome);
+  registry.register(alexa);
   const store = new IotServiceStore(config.dbPath, {
     onEvent: (event) => realtime.broadcast(event),
     onActionExecuted: ({ home, request, capabilityKey, targets, capabilityUpdates, actor }) => {
@@ -105,6 +114,42 @@ export function buildIotApp(options: BuildIotAppOptions = {}) {
       return "default";
     }
   });
+
+  // Cloud adapters need a thin view onto the store + a runAction
+  // shim so the fulfillment handlers can translate Google / Alexa
+  // intents into the local store mutations. We hand a callback shape
+  // here rather than passing the store directly so future adapters
+  // can be unit-tested against a stub.
+  const cloudContext = {
+    resolveThings: () => store.listThings(undefined, {}).map((thing) => ({
+      id: thing.id,
+      label: thing.label,
+      kind: thing.kind,
+      metadata: thing.metadata,
+    })),
+    runAction: (input: { thingId: string; capability: string; desired: unknown; action: string }) => {
+      return store.runAction(undefined, {
+        action: input.action as never,
+        capability: input.capability,
+        value: input.desired,
+        targets: [input.thingId],
+      }, { actor: "cloud" });
+    },
+    readThingState: (thingId: string): Record<string, unknown> => {
+      const thing = store.listThings(undefined).find((entry) => entry.id === thingId);
+      if (!thing) return {};
+      const state: Record<string, unknown> = {};
+      for (const capability of thing.capabilities) {
+        if (capability.observedValue !== undefined) {
+          state[capability.key] = capability.observedValue;
+        }
+      }
+      return state;
+    },
+  };
+  googleHome.bindContext(cloudContext);
+  alexa.bindContext(cloudContext);
+  registerCloudFulfillmentRoutes(app, { googleHome, alexa });
   const uiRoot = resolveUiRoot();
   const brandRoot = resolveBrandRoot();
 
