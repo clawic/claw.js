@@ -59,6 +59,15 @@ export interface SkillRequiredEnvVar {
   required_for?: string;
 }
 
+export type SkillProvenance = "authored" | "distilled" | "imported";
+
+export interface SkillLineage {
+  fromSessionId?: string;
+  fromTaskId?: string;
+  distilledAt?: string;
+  distilledBy?: string;
+}
+
 export interface SkillFrontmatter {
   // Standard agentskills.io fields
   name: string;
@@ -99,6 +108,17 @@ export interface SkillClawjsMetadata {
   children?: string[];
   // Projection target (legacy library compatibility): "soul" | "identity" | etc.
   projection?: string;
+  // Authorship provenance. Defaults to "authored" when absent.
+  // "distilled" means the skill was auto-created by runtime/ from a session.
+  // "imported" means the skill came from agentskills.io / SOUL.md import.
+  provenance?: SkillProvenance;
+  // 0..1 confidence score, mainly meaningful for distilled skills.
+  confidence?: number;
+  // Lineage for distilled skills: where the skill came from and when.
+  lineage?: SkillLineage;
+  // Maintained by runtime/, used by skill picker UI and self-refinement.
+  usageCount?: number;
+  lastUsedAt?: string;
 }
 
 /** Active skill assignment per scope, persisted in ~/.clawjs/state.json. */

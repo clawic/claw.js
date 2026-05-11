@@ -55,6 +55,15 @@ export const skillRequiredEnvVarSchema = z.object({
   required_for: z.string().optional(),
 });
 
+export const skillProvenanceSchema = z.enum(["authored", "distilled", "imported"]);
+
+export const skillLineageSchema = z.object({
+  fromSessionId: z.string().min(1).optional(),
+  fromTaskId: z.string().min(1).optional(),
+  distilledAt: z.string().min(1).optional(),
+  distilledBy: z.string().min(1).optional(),
+});
+
 export const skillClawjsMetadataSchema = z.object({
   schemaVersion: z.literal(1),
   kind: skillKindSchema,
@@ -71,6 +80,11 @@ export const skillClawjsMetadataSchema = z.object({
   importedFrom: z.string().min(1).optional(),
   children: z.array(z.string().min(1)).optional(),
   projection: z.string().min(1).optional(),
+  provenance: skillProvenanceSchema.optional(),
+  confidence: z.number().min(0).max(1).optional(),
+  lineage: skillLineageSchema.optional(),
+  usageCount: z.number().int().nonnegative().optional(),
+  lastUsedAt: z.string().min(1).optional(),
 }).passthrough();
 
 export const skillFrontmatterSchema = z.object({
