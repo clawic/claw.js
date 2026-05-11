@@ -9,6 +9,7 @@ import fastifyStatic from "@fastify/static";
 import { loadIotConfig, type IotServiceConfig } from "./config.ts";
 import { IotRealtimeHub } from "./realtime.ts";
 import { IotServiceStore, type IoTActionRequest } from "./db.ts";
+import { registerIotTools, registerToolRoutes } from "./tools.ts";
 
 function resolveUiRoot(): string | null {
   const candidates = [
@@ -97,6 +98,12 @@ export function buildIotApp(options: BuildIotAppOptions = {}) {
     host: config.host,
     port: config.port,
   }));
+
+  // Agent tools: read-only verbs for Phase 1. Mutating verbs land
+  // alongside the adapter SPI in Phase 2. Routes are GET /v1/tools/list
+  // and POST /v1/tools/:toolId/invoke; see `./tools.ts` for the schema.
+  registerIotTools();
+  registerToolRoutes(app, { store });
 
   app.get("/v1/homes", async () => ({
     homes: store.listHomes(),

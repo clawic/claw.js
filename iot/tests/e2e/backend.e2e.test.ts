@@ -1,6 +1,10 @@
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
+import { buildIotApp } from "../../src/server/app.ts";
 import { startIotServer } from "./helpers.ts";
 
 const servers: Array<Awaited<ReturnType<typeof startIotServer>>> = [];
@@ -80,4 +84,54 @@ test("iot backend supports semantic actions, scenes, automations, and approvals"
   });
   const runAutomationPayload = await runAutomation.json() as { result: { results: Array<{ status: string }> } };
   assert.equal(runAutomationPayload.result.results[0]?.status, "executed");
+});
+
+test("iot backend exposes read-only agent tools", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "iot-tools-"));
+  const { app } = buildIotApp({
+    config: {
+      host: "127.0.0.1",
+      port: 0,
+      dataDir: path.join(rootDir, ".data"),
+      dbPath: path.join(rootDir, ".data", "iot.sqlite"),
+    },
+  });
+  try {
+    const catalogResponse = await app.inject({ method: "GET", url: "/v1/tools/list" });
+    assert.equal(catalogResponse.statusCode, 200);
+    const catalog = catalogResponse.json() as {
+      tools: Array<{ id: string; riskLevel: string; parameters: { type: string } }>;
+    };
+    assert.deepEqual(
+      catalog.tools.map((tool) => tool.id),
+      [
+        "iot.areas.list",
+        "iot.automations.list",
+        "iot.homes.list",
+        "iot.scenes.list",
+        "iot.things.get",
+        "iot.things.list",
+      ],
+    );
+    assert.equal(catalog.tools.every((tool) => tool.riskLevel === "safe"), true);
+    assert.equal(catalog.tools.every((tool) => tool.parameters.type === "object"), true);
+
+    const invokeResponse = await app.inject({
+      method: "POST",
+      url: "/v1/tools/iot.things.list/invoke",
+      payload: { arguments: { area: "office" }, invocationId: "test-invoke" },
+    });
+    assert.equal(invokeResponse.statusCode, 200);
+    const invokePayload = invokeResponse.json() as {
+      ok: boolean;
+      invocationId: string;
+      value: { things: Array<{ id: string; areaId: string }> };
+    };
+    assert.equal(invokePayload.ok, true);
+    assert.equal(invokePayload.invocationId, "test-invoke");
+    assert.equal(invokePayload.value.things.every((thing) => thing.areaId === "office"), true);
+  } finally {
+    await app.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
 });
