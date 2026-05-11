@@ -161,6 +161,13 @@ The docs check script validates that every current export from
     activityEntryRecordSchema
     AgentRecord
     agentRecordSchema
+    AgentToolCatalog
+    AgentToolDescriptor
+    AgentToolInvocationError
+    AgentToolInvocationRequest
+    AgentToolInvocationResult
+    AgentToolParameters
+    AgentToolRiskLevel
     AppendMessageInput
     AppliedTemplateMutation
     applyTemplatePack

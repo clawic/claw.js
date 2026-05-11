@@ -51,6 +51,9 @@ import {
   type SupportedPackageManager,
 } from "./scaffold.ts";
 import { runSlidesCli } from "./slides.ts";
+import { runStyleCli } from "./styles/index.ts";
+import { runTemplateCli } from "./templates/index.ts";
+import { runReferenceCli } from "./references/index.ts";
 
 export interface CliContext {
   stdout: NodeJS.WritableStream;
@@ -266,6 +269,9 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} documents list|read|search|upload|register|download`,
     `  ${binName} media list|search|read|download|share create|revoke|list`,
     `  ${binName} slides create|add|validate|render|share|themes|layouts`,
+    `  ${binName} style list|get|create|delete|export|import|install-builtins|builtins`,
+    `  ${binName} template list|get|create|delete|install-builtins|builtins`,
+    `  ${binName} ref list|get|add|delete|link`,
     `  ${binName} inference generate-text`,
     `  ${binName} tts synthesize|config|set-config|providers|catalog`,
     `  ${binName} stt transcribe|config|set-config|providers`,
@@ -6110,6 +6116,75 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         createMediaShare: async (input) => {
           const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId) as CliMediaClaw;
           return await claw.media.share.create(input);
+        },
+      });
+    } catch (error) {
+      const handled = cliErrorFromUnknown(error);
+      if (wantsJson) writeCliError(context.stdout, handled);
+      else context.stderr.write(`${handled.message}\n`);
+      return handled.exitCode;
+    }
+  }
+
+  if (group === "style") {
+    try {
+      return await runStyleCli({
+        argv,
+        positionals,
+        flags,
+        workspaceRoot,
+        wantsJson,
+        context: {
+          stdout: context.stdout,
+          stderr: context.stderr,
+          cwd: context.cwd,
+          binName,
+        },
+      });
+    } catch (error) {
+      const handled = cliErrorFromUnknown(error);
+      if (wantsJson) writeCliError(context.stdout, handled);
+      else context.stderr.write(`${handled.message}\n`);
+      return handled.exitCode;
+    }
+  }
+
+  if (group === "template") {
+    try {
+      return await runTemplateCli({
+        argv,
+        positionals,
+        flags,
+        workspaceRoot,
+        wantsJson,
+        context: {
+          stdout: context.stdout,
+          stderr: context.stderr,
+          cwd: context.cwd,
+          binName,
+        },
+      });
+    } catch (error) {
+      const handled = cliErrorFromUnknown(error);
+      if (wantsJson) writeCliError(context.stdout, handled);
+      else context.stderr.write(`${handled.message}\n`);
+      return handled.exitCode;
+    }
+  }
+
+  if (group === "ref") {
+    try {
+      return await runReferenceCli({
+        argv,
+        positionals,
+        flags,
+        workspaceRoot,
+        wantsJson,
+        context: {
+          stdout: context.stdout,
+          stderr: context.stderr,
+          cwd: context.cwd,
+          binName,
         },
       });
     } catch (error) {

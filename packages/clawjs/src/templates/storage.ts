@@ -1,0 +1,88 @@
+import fs from "fs";
+import path from "path";
+import { randomBytes } from "crypto";
+
+import { parseTemplateMd, serializeTemplateMd } from "./serializer.ts";
+import { isTemplateCategory, type TemplateCategory, type TemplateManifest } from "./schema.ts";
+
+export function templatesRootDir(workspaceRoot: string): string {
+  return path.join(workspaceRoot, ".clawjs", "templates");
+}
+
+export function templateDir(workspaceRoot: string, templateId: string): string {
+  return path.join(templatesRootDir(workspaceRoot), templateId);
+}
+
+export function templateManifestPath(workspaceRoot: string, templateId: string): string {
+  return path.join(templateDir(workspaceRoot, templateId), "TEMPLATE.md");
+}
+
+export function generateTemplateId(category: TemplateCategory, name: string): string {
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40) || "template";
+  const suffix = randomBytes(2).toString("hex");
+  return `${category}.${slug}-${suffix}`;
+}
+
+export function readTemplate(workspaceRoot: string, templateId: string): TemplateManifest {
+  const filePath = templateManifestPath(workspaceRoot, templateId);
+  if (!fs.existsSync(filePath)) throw new Error(`Template not found: ${templateId}`);
+  const content = fs.readFileSync(filePath, "utf8");
+  return parseTemplateMd(content);
+}
+
+export function writeTemplate(workspaceRoot: string, manifest: TemplateManifest, bodyMd: string = ""): { path: string } {
+  const dir = templateDir(workspaceRoot, manifest.id);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.mkdirSync(path.join(dir, "variants"), { recursive: true });
+  const filePath = templateManifestPath(workspaceRoot, manifest.id);
+  const serialized = serializeTemplateMd(manifest, bodyMd);
+  fs.writeFileSync(filePath, serialized.full, "utf8");
+  return { path: filePath };
+}
+
+export interface TemplateSummary {
+  id: string;
+  name: string;
+  category: TemplateCategory;
+  description?: string;
+  tags: string[];
+  variants: number;
+  builtin: boolean;
+}
+
+export function listTemplates(workspaceRoot: string, filter: { category?: string } = {}): TemplateSummary[] {
+  const root = templatesRootDir(workspaceRoot);
+  if (!fs.existsSync(root)) return [];
+  const entries = fs.readdirSync(root, { withFileTypes: true });
+  const out: TemplateSummary[] = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const filePath = path.join(root, entry.name, "TEMPLATE.md");
+    if (!fs.existsSync(filePath)) continue;
+    try {
+      const manifest = parseTemplateMd(fs.readFileSync(filePath, "utf8"));
+      if (filter.category && manifest.category !== filter.category) continue;
+      out.push({
+        id: manifest.id,
+        name: manifest.name,
+        category: manifest.category,
+        description: manifest.description,
+        tags: manifest.tags ?? [],
+        variants: manifest.variants.length,
+        builtin: manifest.builtin === true,
+      });
+    } catch {
+      continue;
+    }
+  }
+  return out.sort((a, b) => (a.category.localeCompare(b.category) || a.name.localeCompare(b.name)));
+}
+
+export function templateCategoryOrThrow(value: string): TemplateCategory {
+  if (!isTemplateCategory(value)) throw new Error(`Unknown template category: ${value}`);
+  return value;
+}

@@ -647,6 +647,33 @@ the canonical visual renderer. `render` validates the deck first, exports
 PDF, PPTX, HTML, and PNG previews, registers the outputs in the media
 index, and blocks red validation issues unless `--force` is set.
 
+## Styles, Templates, And References
+
+```bash
+claw style builtins
+claw style install-builtins
+claw style create "Investor Brief" --from claw --description "Board-ready reports"
+claw style list
+claw style get investor-brief-1234
+claw style export investor-brief-1234 --out ./brand-style
+claw style import ./brand-style --overwrite
+
+claw template builtins
+claw template install-builtins
+claw template create "Launch One Pager" --category one-pager --default-style claw
+claw template list --category one-pager
+claw template get one-pager.launch-one-pager-1234
+
+claw ref add --type pdf --source ./brief.pdf --name "Brand Brief" --tag brand,launch
+claw ref list --tag brand
+claw ref link pdf.brand-brief-1234 --style claw
+```
+
+Styles live under `.clawjs/styles`, templates under `.clawjs/templates`,
+and references under `.clawjs/references`. The files are Markdown with
+JSON frontmatter so humans can edit the records directly while agents use
+the structured manifest.
+
 ## Inference and TTS
 
 ```bash

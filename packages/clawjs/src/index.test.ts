@@ -5145,6 +5145,57 @@ test("runCli supports temporal domain commands and hidden legacy aliases", async
   }
 });
 
+test("runCli manages local styles, templates, and references", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-design-assets-"));
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-design-cwd-"));
+  const context = { stdout: captureStream().stream, stderr: captureStream().stream, cwd };
+
+  const styleOut = captureStream();
+  assert.equal(await runCli(["style", "install-builtins", "--workspace", workspaceRoot, "--json"], {
+    ...context,
+    stdout: styleOut.stream,
+  }), CLI_EXIT_OK);
+  const stylePayload = JSON.parse(styleOut.getOutput()) as { installed: string[]; skipped: string[] };
+  assert.equal(stylePayload.installed.includes("claw"), true);
+  assert.equal(stylePayload.skipped.length, 0);
+
+  const templateOut = captureStream();
+  assert.equal(await runCli(["template", "create", "Launch One Pager", "--category", "one-pager", "--default-style", "claw", "--workspace", workspaceRoot, "--json"], {
+    ...context,
+    stdout: templateOut.stream,
+  }), CLI_EXIT_OK);
+  const templatePayload = JSON.parse(templateOut.getOutput()) as { template: { id: string; category: string; defaultStyleId: string } };
+  assert.equal(templatePayload.template.category, "one-pager");
+  assert.equal(templatePayload.template.defaultStyleId, "claw");
+
+  const assetPath = path.join(cwd, "sample.txt");
+  fs.writeFileSync(assetPath, "reference body\n", "utf8");
+  const refOut = captureStream();
+  assert.equal(await runCli(["ref", "add", "--type", "snippet", "--source", "sample.txt", "--name", "Sample Ref", "--tag", "brand,test", "--workspace", workspaceRoot, "--json"], {
+    ...context,
+    stdout: refOut.stream,
+  }), CLI_EXIT_OK);
+  const refPayload = JSON.parse(refOut.getOutput()) as { reference: { id: string; asset: string; tags: string[] } };
+  assert.equal(refPayload.reference.asset, "sample.txt");
+  assert.deepEqual(refPayload.reference.tags, ["brand", "test"]);
+
+  const linkedOut = captureStream();
+  assert.equal(await runCli(["ref", "link", refPayload.reference.id, "--style", "claw", "--workspace", workspaceRoot, "--json"], {
+    ...context,
+    stdout: linkedOut.stream,
+  }), CLI_EXIT_OK);
+  const linkedPayload = JSON.parse(linkedOut.getOutput()) as { styleIds: string[] };
+  assert.deepEqual(linkedPayload.styleIds, ["claw"]);
+
+  const listOut = captureStream();
+  assert.equal(await runCli(["template", "list", "--category", "one-pager", "--workspace", workspaceRoot, "--json"], {
+    ...context,
+    stdout: listOut.stream,
+  }), CLI_EXIT_OK);
+  const listPayload = JSON.parse(listOut.getOutput()) as { templates: Array<{ id: string }> };
+  assert.deepEqual(listPayload.templates.map((entry) => entry.id), [templatePayload.template.id]);
+});
+
 test("runCli supports heartbeat routines with deterministic gates", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-heartbeat-"));
   let taskMatches: Array<{ source: string; id: string; title: string; updatedAt: string }> = [];
