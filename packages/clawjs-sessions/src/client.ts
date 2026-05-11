@@ -132,4 +132,26 @@ export class SessionsApiClient {
   importCodex(input: { dir?: string; forceReimport?: boolean; machine?: string } = {}): Promise<ImportCodexResult> {
     return this.call("POST", "/v1/sessions/import/codex", input);
   }
+
+  async exportTrajectories(options: { agent?: string; since?: number; includeFailed?: boolean; tag?: string; format?: "json" | "jsonl" } = {}): Promise<unknown> {
+    const url = `${this.baseUrl}/v1/sessions/export${buildQuery({
+      agent: options.agent,
+      since: options.since,
+      includeFailed: options.includeFailed,
+      tag: options.tag,
+      format: options.format,
+    })}`;
+    const response = await this.fetchImpl(url, {
+      method: "GET",
+      headers: { authorization: `Bearer ${this.token}` },
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`sessions api GET /v1/sessions/export -> ${response.status}: ${text}`);
+    }
+    if (options.format === "jsonl") {
+      return await response.text();
+    }
+    return await response.json();
+  }
 }

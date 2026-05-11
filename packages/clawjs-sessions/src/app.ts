@@ -217,6 +217,23 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     return { items: store.listOrigins(params.id) };
   });
 
+  app.get("/v1/sessions/export", async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const query = readQuery(request);
+    const items = store.exportTrajectories({
+      agent: asString(query.agent),
+      sinceCreatedAt: asNumber(query.since),
+      includeFailed: asBool(query.includeFailed) === true,
+      tag: asString(query.tag),
+    });
+    if ((query.format ?? "json") === "jsonl") {
+      const body = items.map((entry) => JSON.stringify(entry)).join("\n") + (items.length ? "\n" : "");
+      void reply.header("content-type", "application/x-ndjson");
+      return body;
+    }
+    return { items };
+  });
+
   app.post("/v1/sessions/import/codex", async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     try {

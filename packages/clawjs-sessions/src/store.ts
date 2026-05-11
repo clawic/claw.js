@@ -449,4 +449,41 @@ export class SessionsServiceStore {
     ).get(nativePath) as OriginRow | undefined;
     return row ? rowToOrigin(row) : null;
   }
+
+  exportTrajectories(options: { agent?: string; sinceCreatedAt?: number; includeFailed?: boolean; tag?: string } = {}): import("./types.ts").TrajectoryRecord[] {
+    const conditions: string[] = [];
+    const params: Record<string, unknown> = {};
+    if (options.agent) { conditions.push("agent = @agent"); params.agent = options.agent; }
+    if (options.sinceCreatedAt !== undefined) { conditions.push("created_at >= @since"); params.since = options.sinceCreatedAt; }
+    if (!options.includeFailed) { conditions.push("status IN ('active','completed')"); }
+    const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+    const sessionRows = this.db.prepare(`SELECT * FROM sessions ${where} ORDER BY created_at ASC`).all(params) as SessionRow[];
+    const trajectories: import("./types.ts").TrajectoryRecord[] = [];
+    for (const row of sessionRows) {
+      const session = rowToSession(row);
+      const messages = this.listMessages(session.id, 5000);
+      const lastMessageAt = session.lastMessageAt ?? session.createdAt;
+      const outcome: import("./types.ts").TrajectoryRecord["outcome"] =
+        session.status === "completed" ? "success"
+        : session.status === "interrupted" ? "failure"
+        : session.status === "archived" ? "partial"
+        : "unknown";
+      trajectories.push({
+        sessionId: session.id,
+        agent: session.agent,
+        runtime: session.runtime,
+        createdAt: session.createdAt,
+        outcome,
+        outcomeReason: null,
+        durationMs: lastMessageAt - session.createdAt,
+        messages,
+        metadata: {
+          messageCount: session.messageCount,
+          tag: options.tag ?? null,
+          projectPath: session.projectPath,
+        },
+      });
+    }
+    return trajectories;
+  }
 }
