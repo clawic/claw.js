@@ -15,6 +15,8 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 
 import type { IotServiceStore } from "./db.ts";
+import type { AdapterRegistry } from "./adapters/registry.ts";
+import type { DiscoveryOrchestrator } from "./discovery.ts";
 
 /**
  * Severity grade attached to every agent tool. Drives the approval
@@ -70,6 +72,8 @@ export type ToolHandler = (
 /** Dependencies handed to every tool handler. */
 export interface ToolHandlerContext {
   store: IotServiceStore;
+  registry?: AdapterRegistry;
+  discovery?: DiscoveryOrchestrator;
 }
 
 interface RegisteredTool {
