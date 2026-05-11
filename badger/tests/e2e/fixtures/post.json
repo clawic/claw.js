@@ -1,0 +1,15 @@
+{
+  "idempotency_key": "test-fixture-1",
+  "accounts": ["__REPLACE_ACCOUNT__"],
+  "editorial_status": "ready",
+  "schedule": { "kind": "datetime", "at": "__REPLACE_AT__" },
+  "variants": [
+    {
+      "is_original": true,
+      "blocks": [
+        { "body": "hello from the test fixture" }
+      ],
+      "options": {}
+    }
+  ]
+}
