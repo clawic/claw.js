@@ -1,0 +1,45 @@
+{
+  "name": "@clawjs/integrations",
+  "version": "0.1.2",
+  "description": "Connection manager + per-service watchers (Telegram, Slack, ...) for ClawJS. Reads ~/.clawjs/connections/ + agent integration bindings; routes inbound messages to the agent that should pick them up.",
+  "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "Iván González Dávila",
+    "url": "https://github.com/ivangdavila"
+  },
+  "homepage": "https://github.com/clawic/clawjs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clawic/clawjs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/clawic/clawjs/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20"
+  },
+  "dependencies": {
+    "@clawjs/agents": "0.1.2",
+    "@clawjs/core": "0.1.2"
+  }
+}
