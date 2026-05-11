@@ -21,6 +21,9 @@ import type {
 } from "./db.ts";
 import type { AdapterRegistry } from "./adapters/registry.ts";
 import type { DiscoveryOrchestrator } from "./discovery.ts";
+import type { MatterAdapter } from "./adapters/matter.ts";
+import type { HomeKitAdapter } from "./adapters/homekit.ts";
+import type { MqttAdapter, MqttBrokerConfig } from "./adapters/mqtt.ts";
 
 /**
  * Severity grade attached to every agent tool. Drives the approval
@@ -734,6 +737,140 @@ export function registerIotTools(): void {
         requiredString(args, "approvalId"),
       ),
     }),
+  );
+
+  // -------------------------------------------------------------------------
+  // Phase 4 · Matter + HomeKit + MQTT helpers
+  // -------------------------------------------------------------------------
+
+  registerTool(
+    {
+      id: "iot.matter.commission",
+      title: "Commission a Matter device",
+      description: "Run the Matter commissioning ceremony for one device. Pass the pairing code printed on the device's sticker or the QR-encoded payload.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          pairingCode: { type: "string", description: "Matter pairing code or QR-encoded payload." },
+          label: { type: "string", description: "Optional friendly label for the new node." },
+        },
+        required: ["pairingCode"],
+        additionalProperties: false,
+      },
+      riskLevel: "sensitive",
+    },
+    async (args, { registry }) => {
+      const adapter = registry.get("matter") as MatterAdapter | undefined;
+      if (!adapter) throw new Error("Matter adapter not registered.");
+      return await adapter.commission({
+        pairingCode: requiredString(args, "pairingCode"),
+        label: optionalString(args, "label"),
+      });
+    },
+  );
+
+  registerTool(
+    {
+      id: "iot.homekit.startBridge",
+      title: "Start HomeKit bridge",
+      description: "Advertise Clawix on the local network as a HomeKit bridge so Apple Home can pair with it. Returns the setup code the user types into Apple Home.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          label: { type: "string", description: "Optional friendly label for the bridge entry in Apple Home." },
+        },
+        additionalProperties: false,
+      },
+      riskLevel: "reversible",
+    },
+    async (args, { registry }) => {
+      const adapter = registry.get("homekit") as HomeKitAdapter | undefined;
+      if (!adapter) throw new Error("HomeKit adapter not registered.");
+      return await adapter.startBridge({ label: optionalString(args, "label") });
+    },
+  );
+
+  registerTool(
+    {
+      id: "iot.homekit.exportThing",
+      title: "Export a thing to HomeKit",
+      description: "Publish one of the user's IoT things as a HomeKit accessory inside the bridge.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          thingId: { type: "string" },
+          label: { type: "string", description: "Label as it appears in Apple Home." },
+          kind: { type: "string", description: "ThingKind hint so the adapter picks the right HAP Service." },
+        },
+        required: ["thingId", "label", "kind"],
+        additionalProperties: false,
+      },
+      riskLevel: "reversible",
+    },
+    async (args, { registry }) => {
+      const adapter = registry.get("homekit") as HomeKitAdapter | undefined;
+      if (!adapter) throw new Error("HomeKit adapter not registered.");
+      return await adapter.exportThing({
+        thingId: requiredString(args, "thingId"),
+        label: requiredString(args, "label"),
+        kind: requiredString(args, "kind"),
+      });
+    },
+  );
+
+  registerTool(
+    {
+      id: "iot.mqtt.connect",
+      title: "Connect to MQTT broker",
+      description: "Open a connection to an MQTT broker so subsequent thing dispatches can publish on its topics. Auto-detects Zigbee2MQTT devices when the broker streams `zigbee2mqtt/bridge/devices`.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "Broker URL, e.g. mqtt://192.168.1.50:1883." },
+          username: { type: "string" },
+          password: { type: "string" },
+        },
+        required: ["url"],
+        additionalProperties: false,
+      },
+      riskLevel: "reversible",
+    },
+    async (args, { registry }) => {
+      const adapter = registry.get("mqtt") as MqttAdapter | undefined;
+      if (!adapter) throw new Error("MQTT adapter not registered.");
+      const broker: MqttBrokerConfig = {
+        url: requiredString(args, "url"),
+        ...(optionalString(args, "username") ? { username: optionalString(args, "username")! } : {}),
+        ...(optionalString(args, "password") ? { password: optionalString(args, "password")! } : {}),
+      };
+      return await adapter.connect(broker);
+    },
+  );
+
+  registerTool(
+    {
+      id: "iot.mqtt.disconnect",
+      title: "Disconnect MQTT broker",
+      description: "Tear down the MQTT broker connection. Idempotent.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+      riskLevel: "safe",
+    },
+    async (_args, { registry }) => {
+      const adapter = registry.get("mqtt") as MqttAdapter | undefined;
+      if (!adapter) throw new Error("MQTT adapter not registered.");
+      await adapter.disconnect();
+      return { disconnected: true };
+    },
   );
 
   registerTool(

@@ -14,6 +14,9 @@ import { AdapterRegistry } from "./adapters/registry.ts";
 import { MockSimulatorAdapter } from "./adapters/mock-simulator.ts";
 import { GenericHTTPAdapter } from "./adapters/generic-http.ts";
 import { HueLocalAdapter } from "./adapters/hue-local.ts";
+import { MatterAdapter } from "./adapters/matter.ts";
+import { HomeKitAdapter } from "./adapters/homekit.ts";
+import { MqttAdapter } from "./adapters/mqtt.ts";
 import { DiscoveryOrchestrator } from "./discovery.ts";
 
 function resolveUiRoot(): string | null {
@@ -56,6 +59,9 @@ export function buildIotApp(options: BuildIotAppOptions = {}) {
   registry.register(new MockSimulatorAdapter());
   registry.register(new GenericHTTPAdapter());
   registry.register(new HueLocalAdapter());
+  registry.register(new MatterAdapter());
+  registry.register(new HomeKitAdapter());
+  registry.register(new MqttAdapter());
   const store = new IotServiceStore(config.dbPath, {
     onEvent: (event) => realtime.broadcast(event),
     onActionExecuted: ({ home, request, capabilityKey, targets, capabilityUpdates, actor }) => {
@@ -157,9 +163,12 @@ export function buildIotApp(options: BuildIotAppOptions = {}) {
 
   // Discovery stops cleanly on shutdown so the bonjour multicast
   // sockets release. Idempotent: a stop without an active scan is a
-  // no-op.
+  // no-op. MQTT disconnect releases the broker connection so port
+  // recycling stays clean.
   app.addHook("onClose", async () => {
     discovery.stop();
+    const mqtt = registry.get("mqtt") as MqttAdapter | undefined;
+    await mqtt?.disconnect();
   });
 
   app.get("/v1/homes", async () => ({
