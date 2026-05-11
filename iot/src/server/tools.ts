@@ -24,6 +24,9 @@ import type { DiscoveryOrchestrator } from "./discovery.ts";
 import type { MatterAdapter } from "./adapters/matter.ts";
 import type { HomeKitAdapter } from "./adapters/homekit.ts";
 import type { MqttAdapter, MqttBrokerConfig } from "./adapters/mqtt.ts";
+import type { TuyaAdapter, TuyaCredentials } from "./adapters/tuya.ts";
+import type { GoogleHomeAdapter, GoogleHomeCredentials } from "./adapters/google-home.ts";
+import type { AlexaAdapter, AlexaCredentials } from "./adapters/alexa.ts";
 
 /**
  * Severity grade attached to every agent tool. Drives the approval
@@ -869,6 +872,236 @@ export function registerIotTools(): void {
       const adapter = registry.get("mqtt") as MqttAdapter | undefined;
       if (!adapter) throw new Error("MQTT adapter not registered.");
       await adapter.disconnect();
+      return { disconnected: true };
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // Phase 5 · Cloud adapters (Tuya / Google Home / Alexa)
+  // -------------------------------------------------------------------------
+
+  registerTool(
+    {
+      id: "iot.tuya.connect",
+      title: "Connect to Tuya Cloud",
+      description: "Authenticate against the Tuya IoT Cloud OpenAPI using the user's client id + client secret. Required before any Tuya device dispatch or sync.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          appKey: { type: "string", description: "Client id from the Tuya IoT Platform console." },
+          appSecret: { type: "string", description: "Client secret from the Tuya IoT Platform console." },
+          baseUrl: { type: "string", description: "Optional regional base URL, e.g. https://openapi.tuyaus.com." },
+        },
+        required: ["appKey", "appSecret"],
+        additionalProperties: false,
+      },
+      riskLevel: "reversible",
+    },
+    async (args, { registry }) => {
+      const adapter = registry.get("tuya") as TuyaAdapter | undefined;
+      if (!adapter) throw new Error("Tuya adapter not registered.");
+      const credentials: TuyaCredentials = {
+        appKey: requiredString(args, "appKey"),
+        appSecret: requiredString(args, "appSecret"),
+        ...(optionalString(args, "baseUrl") ? { baseUrl: optionalString(args, "baseUrl")! } : {}),
+      };
+      return await adapter.connect(credentials);
+    },
+  );
+
+  registerTool(
+    {
+      id: "iot.tuya.sync",
+      title: "Sync Tuya devices",
+      description: "Pull the user's Tuya cloud device list and surface each entry as a discovery candidate the wizard can promote.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+      riskLevel: "safe",
+    },
+    async (_args, { registry }) => {
+      const adapter = registry.get("tuya") as TuyaAdapter | undefined;
+      if (!adapter) throw new Error("Tuya adapter not registered.");
+      return await adapter.syncDevices();
+    },
+  );
+
+  registerTool(
+    {
+      id: "iot.tuya.disconnect",
+      title: "Disconnect Tuya Cloud",
+      description: "Drop the Tuya session. Idempotent.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+      riskLevel: "safe",
+    },
+    async (_args, { registry }) => {
+      const adapter = registry.get("tuya") as TuyaAdapter | undefined;
+      if (!adapter) throw new Error("Tuya adapter not registered.");
+      adapter.disconnect();
+      return { disconnected: true };
+    },
+  );
+
+  registerTool(
+    {
+      id: "iot.googleHome.connect",
+      title: "Connect Google Home",
+      description: "Wire the Google Smart Home Actions OAuth credentials. Subsequent fulfillment POSTs from Google to /v1/cloud/google/fulfillment authenticate against this secret.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          publicFulfillmentUrl: { type: "string" },
+          oauthClientId: { type: "string" },
+          oauthClientSecret: { type: "string" },
+          homeGraphToken: { type: "string", description: "Service-account OAuth token for ReportState pushes." },
+          agentUserId: { type: "string", description: "Stable user id Google associates the linked account with." },
+        },
+        required: ["publicFulfillmentUrl", "oauthClientId", "oauthClientSecret", "agentUserId"],
+        additionalProperties: false,
+      },
+      riskLevel: "sensitive",
+    },
+    async (args, { registry }) => {
+      const adapter = registry.get("google-home") as GoogleHomeAdapter | undefined;
+      if (!adapter) throw new Error("Google Home adapter not registered.");
+      const credentials: GoogleHomeCredentials = {
+        publicFulfillmentUrl: requiredString(args, "publicFulfillmentUrl"),
+        oauthClientId: requiredString(args, "oauthClientId"),
+        oauthClientSecret: requiredString(args, "oauthClientSecret"),
+        agentUserId: requiredString(args, "agentUserId"),
+        ...(optionalString(args, "homeGraphToken") ? { homeGraphToken: optionalString(args, "homeGraphToken")! } : {}),
+      };
+      return await adapter.connect(credentials);
+    },
+  );
+
+  registerTool(
+    {
+      id: "iot.googleHome.reportState",
+      title: "Push state to Google HomeGraph",
+      description: "Sends a ReportState update so the Google Home app and the user's voice device reflect the local state change.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          deviceId: { type: "string" },
+          state: { type: "object" },
+        },
+        required: ["deviceId", "state"],
+        additionalProperties: false,
+      },
+      riskLevel: "reversible",
+    },
+    async (args, { registry }) => {
+      const adapter = registry.get("google-home") as GoogleHomeAdapter | undefined;
+      if (!adapter) throw new Error("Google Home adapter not registered.");
+      return await adapter.reportState({
+        deviceId: requiredString(args, "deviceId"),
+        state: (args["state"] as Record<string, unknown>) ?? {},
+      });
+    },
+  );
+
+  registerTool(
+    {
+      id: "iot.googleHome.disconnect",
+      title: "Disconnect Google Home",
+      description: "Drop the Google Home session. New fulfillment POSTs from Google will be rejected with 401 until iot.googleHome.connect runs again.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+      riskLevel: "safe",
+    },
+    async (_args, { registry }) => {
+      const adapter = registry.get("google-home") as GoogleHomeAdapter | undefined;
+      if (!adapter) throw new Error("Google Home adapter not registered.");
+      adapter.disconnect();
+      return { disconnected: true };
+    },
+  );
+
+  registerTool(
+    {
+      id: "iot.alexa.connect",
+      title: "Connect Alexa Smart Home",
+      description: "Wire the Alexa Smart Home Skill OAuth credentials. Subsequent directives Amazon POSTs to /v1/cloud/alexa/fulfillment authenticate against this secret.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          publicFulfillmentUrl: { type: "string" },
+          oauthClientSecret: { type: "string" },
+          eventGatewayToken: { type: "string", description: "Skill Messaging API token for ChangeReport." },
+          eventGatewayUrl: { type: "string", description: "Region-specific event gateway URL." },
+        },
+        required: ["publicFulfillmentUrl", "oauthClientSecret"],
+        additionalProperties: false,
+      },
+      riskLevel: "sensitive",
+    },
+    async (args, { registry }) => {
+      const adapter = registry.get("alexa") as AlexaAdapter | undefined;
+      if (!adapter) throw new Error("Alexa adapter not registered.");
+      const credentials: AlexaCredentials = {
+        publicFulfillmentUrl: requiredString(args, "publicFulfillmentUrl"),
+        oauthClientSecret: requiredString(args, "oauthClientSecret"),
+        ...(optionalString(args, "eventGatewayToken") ? { eventGatewayToken: optionalString(args, "eventGatewayToken")! } : {}),
+        ...(optionalString(args, "eventGatewayUrl") ? { eventGatewayUrl: optionalString(args, "eventGatewayUrl")! } : {}),
+      };
+      return await adapter.connect(credentials);
+    },
+  );
+
+  registerTool(
+    {
+      id: "iot.alexa.reportState",
+      title: "Push ChangeReport to Alexa",
+      description: "Sends an Alexa ChangeReport so the Alexa app + voice device reflect the local state change.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          endpointId: { type: "string" },
+          properties: { type: "array" },
+        },
+        required: ["endpointId", "properties"],
+        additionalProperties: false,
+      },
+      riskLevel: "reversible",
+    },
+    async (args, { registry }) => {
+      const adapter = registry.get("alexa") as AlexaAdapter | undefined;
+      if (!adapter) throw new Error("Alexa adapter not registered.");
+      return await adapter.reportState({
+        endpointId: requiredString(args, "endpointId"),
+        properties: (args["properties"] as Array<Record<string, unknown>>) ?? [],
+      });
+    },
+  );
+
+  registerTool(
+    {
+      id: "iot.alexa.disconnect",
+      title: "Disconnect Alexa Smart Home",
+      description: "Drop the Alexa session.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+      riskLevel: "safe",
+    },
+    async (_args, { registry }) => {
+      const adapter = registry.get("alexa") as AlexaAdapter | undefined;
+      if (!adapter) throw new Error("Alexa adapter not registered.");
+      adapter.disconnect();
       return { disconnected: true };
     },
   );
