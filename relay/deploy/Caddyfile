@@ -1,0 +1,16 @@
+{$DOMAIN} {
+  tls {$ADMIN_EMAIL}
+
+  encode zstd gzip
+
+  @relayWebsocket {
+    header Connection *Upgrade*
+    header Upgrade websocket
+  }
+  reverse_proxy @relayWebsocket relay:4410
+
+  reverse_proxy /v1/* relay:4410
+  reverse_proxy /brand/* relay:4410
+
+  reverse_proxy relay:4410
+}

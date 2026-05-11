@@ -1,0 +1,55 @@
+# Canonical clawix-relay deployment.
+# Caddy terminates TLS (Let's Encrypt) and proxies to the relay container.
+# Adjust DOMAIN/ADMIN_EMAIL/SMTP_* in a .env file alongside this compose.
+
+services:
+  relay:
+    image: clawix-relay:latest
+    container_name: clawix-relay
+    restart: unless-stopped
+    environment:
+      RELAY_PUBLIC_BASE_URL: "https://${DOMAIN:?DOMAIN is required}"
+      RELAY_HOST: "0.0.0.0"
+      PORT: "4410"
+      RELAY_DB_PATH: "/var/lib/clawix-relay/relay.sqlite"
+      RELAY_JWT_SECRETS: "${RELAY_JWT_SECRETS:?RELAY_JWT_SECRETS is required}"
+      RELAY_MAGIC_LINK_FROM: "relay@${DOMAIN}"
+      RELAY_MAGIC_LINK_DRIVER: "${RELAY_MAGIC_LINK_DRIVER:-console}"
+      RELAY_MAGIC_LINK_TENANT_ID: "${RELAY_MAGIC_LINK_TENANT_ID:-default-tenant}"
+      RELAY_MAGIC_LINK_URL_TEMPLATE: "https://${DOMAIN}/v1/auth/magic-link/callback?token={{token}}"
+      RELAY_RESEND_API_KEY: "${RELAY_RESEND_API_KEY:-}"
+      RELAY_SMTP_HOST: "${RELAY_SMTP_HOST:-}"
+      RELAY_SMTP_PORT: "${RELAY_SMTP_PORT:-587}"
+      RELAY_SMTP_USER: "${RELAY_SMTP_USER:-}"
+      RELAY_SMTP_PASSWORD: "${RELAY_SMTP_PASSWORD:-}"
+      RELAY_IROH_RELAY_PUBLIC_URL: "https://${DOMAIN}/v1/iroh-relay"
+      RELAY_IROH_RELAY_LISTEN_ADDR: "0.0.0.0:7842"
+    volumes:
+      - relay_data:/var/lib/clawix-relay
+    expose:
+      - "4410"
+    ports:
+      - "3478:3478/udp"
+      - "7842:7842"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: clawix-relay-caddy
+    restart: unless-stopped
+    depends_on:
+      - relay
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: "${DOMAIN:?DOMAIN is required}"
+      ADMIN_EMAIL: "${ADMIN_EMAIL:?ADMIN_EMAIL is required}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  relay_data:
+  caddy_data:
+  caddy_config:
