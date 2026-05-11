@@ -14,7 +14,11 @@
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
 
-import type { IotServiceStore } from "./db.ts";
+import type {
+  CreateThingInput,
+  IoTActionRequest,
+  IotServiceStore,
+} from "./db.ts";
 import type { AdapterRegistry } from "./adapters/registry.ts";
 import type { DiscoveryOrchestrator } from "./discovery.ts";
 
@@ -72,8 +76,8 @@ export type ToolHandler = (
 /** Dependencies handed to every tool handler. */
 export interface ToolHandlerContext {
   store: IotServiceStore;
-  registry?: AdapterRegistry;
-  discovery?: DiscoveryOrchestrator;
+  registry: AdapterRegistry;
+  discovery: DiscoveryOrchestrator;
 }
 
 interface RegisteredTool {
@@ -325,6 +329,436 @@ export function registerIotTools(): void {
     },
     async (args, { store }) => ({
       automations: store.listAutomations(optionalString(args, "homeId")),
+    }),
+  );
+
+  // -------------------------------------------------------------------------
+  // Phase 2 · Connectors + discovery + mutating verbs
+  // -------------------------------------------------------------------------
+
+  registerTool(
+    {
+      id: "iot.connectors.list",
+      title: "List connectors",
+      description: "List the connector adapters the daemon has registered (mock simulator, generic HTTP, Hue local, ...).",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+      riskLevel: "safe",
+    },
+    async (_args, { registry }) => ({
+      connectors: registry.list().map((adapter) => ({
+        id: adapter.id,
+        label: adapter.label,
+        description: adapter.description ?? null,
+        discovers: typeof adapter.discover === "function",
+      })),
+    }),
+  );
+
+  registerTool(
+    {
+      id: "iot.discovery.start",
+      title: "Start discovery",
+      description: "Kick off an mDNS + adapter-driven scan for devices on the local network. Results stream via the SSE event channel as iot.discovery.found events.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          kind: { type: "string", description: "Optional ThingKind to focus the scan." },
+          timeoutMs: { type: "number", description: "Max scan duration. Default 8000." },
+        },
+        additionalProperties: false,
+      },
+      riskLevel: "safe",
+    },
+    async (args, { discovery }) => {
+      const timeoutRaw = args["timeoutMs"];
+      const timeoutMs = typeof timeoutRaw === "number" ? timeoutRaw : undefined;
+      const result = await discovery.start({
+        kind: optionalString(args, "kind") as never,
+        timeoutMs,
+      });
+      return result;
+    },
+  );
+
+  registerTool(
+    {
+      id: "iot.discovery.stop",
+      title: "Stop discovery",
+      description: "Stop an in-progress discovery scan. Idempotent.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+      riskLevel: "safe",
+    },
+    async (_args, { discovery }) => {
+      discovery.stop();
+      return { stopped: true };
+    },
+  );
+
+  registerTool(
+    {
+      id: "iot.discovery.list",
+      title: "List discovered devices",
+      description: "Return the in-memory snapshot of devices the orchestrator has surfaced during the current scan window.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+      riskLevel: "safe",
+    },
+    async (_args, { discovery }) => ({
+      scanning: discovery.isScanning(),
+      devices: discovery.list(),
+    }),
+  );
+
+  registerTool(
+    {
+      id: "iot.things.add",
+      title: "Add a thing",
+      description: "Register a new device in the store. Either pass a discovery fingerprint to lift a discovered device, or provide label + kind + connectorId + targetRef directly for a manual add.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          homeId: { type: "string", description: "Home scope; defaults to the resolved home." },
+          fingerprint: { type: "string", description: "Discovery fingerprint from iot.discovery.list." },
+          label: { type: "string" },
+          kind: { type: "string" },
+          connectorId: { type: "string" },
+          targetRef: { type: "string" },
+          areaId: { type: "string" },
+          aliases: { type: "array", description: "Free-form aliases the agent should match." },
+          metadata: { type: "object", description: "Adapter-specific configuration blob." },
+        },
+        additionalProperties: false,
+      },
+      riskLevel: "reversible",
+    },
+    async (args, { store, discovery }) => {
+      const homeId = optionalString(args, "homeId");
+      const fingerprint = optionalString(args, "fingerprint");
+      let input: CreateThingInput;
+      if (fingerprint) {
+        const discovered = discovery.get(fingerprint);
+        if (!discovered) {
+          throw new Error(`Unknown discovery fingerprint ${fingerprint}`);
+        }
+        input = {
+          label: optionalString(args, "label") ?? discovered.label,
+          kind: discovered.kind,
+          connectorId: discovered.connectorId,
+          targetRef: discovered.targetRef,
+          ...(optionalString(args, "areaId") ? { areaId: optionalString(args, "areaId")! } : {}),
+          metadata: discovered.metadata,
+          capabilities: discovered.capabilities?.map((capability) => ({
+            key: capability.key,
+            label: capability.label,
+            valueType: capability.valueType,
+            unit: capability.unit,
+          })),
+        };
+      } else {
+        input = {
+          label: requiredString(args, "label"),
+          kind: requiredString(args, "kind") as never,
+          connectorId: requiredString(args, "connectorId"),
+          targetRef: requiredString(args, "targetRef"),
+          ...(optionalString(args, "areaId") ? { areaId: optionalString(args, "areaId")! } : {}),
+          aliases: Array.isArray(args["aliases"]) ? (args["aliases"] as string[]) : undefined,
+          metadata: (args["metadata"] as Record<string, unknown> | undefined),
+        };
+      }
+      return { thing: store.createThing(homeId, input) };
+    },
+  );
+
+  registerTool(
+    {
+      id: "iot.things.remove",
+      title: "Remove a thing",
+      description: "Delete a thing from the store along with its capabilities. Phase 2 hard-deletes; the trash window for recoverable deletes lands in Phase 3 with the UI.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          thingId: { type: "string" },
+          homeId: { type: "string" },
+        },
+        required: ["thingId"],
+        additionalProperties: false,
+      },
+      riskLevel: "sensitive",
+    },
+    async (args, { store }) => ({
+      removed: store.deleteThing(optionalString(args, "homeId"), requiredString(args, "thingId")),
+    }),
+  );
+
+  registerTool(
+    {
+      id: "iot.things.control",
+      title: "Control a thing",
+      description: "Send a capability change to a thing. Examples: turn a light on, set brightness to 60, set thermostat target to 21, open a cover. The daemon resolves selectors and gates risky actions through the approval queue.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          homeId: { type: "string" },
+          selector: { type: "string", description: "Free-text match against id, label, alias, or targetRef." },
+          area: { type: "string", description: "Restrict to one area." },
+          family: { type: "string", description: "Restrict to one ThingKind." },
+          capability: { type: "string", description: "Capability key to write." },
+          action: {
+            type: "string",
+            description: "Verb the agent intends (on/off/toggle/set/open/close/lock/unlock/start/stop/...).",
+          },
+          value: { description: "Desired value for the capability." },
+          targets: { type: "array", description: "Explicit list of thing ids or labels." },
+        },
+        required: ["action"],
+        additionalProperties: false,
+      },
+      riskLevel: "reversible",
+    },
+    async (args, { store }) => {
+      const request: IoTActionRequest = {
+        ...(optionalString(args, "homeId") ? { homeId: optionalString(args, "homeId")! } : {}),
+        ...(optionalString(args, "selector") ? { selector: optionalString(args, "selector")! } : {}),
+        ...(optionalString(args, "area") ? { area: optionalString(args, "area")! } : {}),
+        ...(optionalString(args, "family") ? { family: optionalString(args, "family") as never } : {}),
+        ...(optionalString(args, "capability") ? { capability: optionalString(args, "capability")! } : {}),
+        action: requiredString(args, "action") as IoTActionRequest["action"],
+        value: args["value"],
+        ...(Array.isArray(args["targets"]) ? { targets: args["targets"] as string[] } : {}),
+      };
+      return { result: store.runAction(optionalString(args, "homeId"), request, { actor: "agent" }) };
+    },
+  );
+
+  registerTool(
+    {
+      id: "iot.scenes.activate",
+      title: "Activate a scene",
+      description: "Run a saved scene's action list against its things.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          sceneId: { type: "string" },
+          homeId: { type: "string" },
+        },
+        required: ["sceneId"],
+        additionalProperties: false,
+      },
+      riskLevel: "reversible",
+    },
+    async (args, { store }) => ({
+      result: store.activateScene(
+        optionalString(args, "homeId"),
+        requiredString(args, "sceneId"),
+        "agent",
+      ),
+    }),
+  );
+
+  registerTool(
+    {
+      id: "iot.automations.create",
+      title: "Create automation",
+      description: "Register a new automation (trigger + conditions + actions).",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          homeId: { type: "string" },
+          label: { type: "string" },
+          enabled: { type: "boolean", description: "Default true." },
+          trigger: { type: "object", description: "Free-form trigger descriptor." },
+          conditions: { type: "array", description: "Free-form condition descriptors." },
+          actions: { type: "array", description: "IoT action requests to run when the trigger fires." },
+        },
+        required: ["label", "actions"],
+        additionalProperties: false,
+      },
+      riskLevel: "reversible",
+    },
+    async (args, { store }) => ({
+      automation: store.createAutomation(optionalString(args, "homeId"), {
+        label: requiredString(args, "label"),
+        enabled: args["enabled"] !== false,
+        trigger: (args["trigger"] ?? {}) as Record<string, unknown>,
+        conditions: (args["conditions"] ?? []) as Array<Record<string, unknown>>,
+        actions: (args["actions"] ?? []) as IoTActionRequest[],
+      }),
+    }),
+  );
+
+  registerTool(
+    {
+      id: "iot.automations.enable",
+      title: "Enable automation",
+      description: "Flip an automation to enabled. Idempotent.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          automationId: { type: "string" },
+          homeId: { type: "string" },
+        },
+        required: ["automationId"],
+        additionalProperties: false,
+      },
+      riskLevel: "reversible",
+    },
+    async (args, { store }) => ({
+      automation: store.setAutomationEnabled(
+        optionalString(args, "homeId"),
+        requiredString(args, "automationId"),
+        true,
+      ),
+    }),
+  );
+
+  registerTool(
+    {
+      id: "iot.automations.disable",
+      title: "Disable automation",
+      description: "Flip an automation to disabled. Idempotent.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          automationId: { type: "string" },
+          homeId: { type: "string" },
+        },
+        required: ["automationId"],
+        additionalProperties: false,
+      },
+      riskLevel: "reversible",
+    },
+    async (args, { store }) => ({
+      automation: store.setAutomationEnabled(
+        optionalString(args, "homeId"),
+        requiredString(args, "automationId"),
+        false,
+      ),
+    }),
+  );
+
+  registerTool(
+    {
+      id: "iot.automations.run",
+      title: "Run automation now",
+      description: "Manually trigger an automation regardless of its scheduled trigger.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          automationId: { type: "string" },
+          homeId: { type: "string" },
+        },
+        required: ["automationId"],
+        additionalProperties: false,
+      },
+      riskLevel: "reversible",
+    },
+    async (args, { store }) => ({
+      result: store.runAutomation(
+        optionalString(args, "homeId"),
+        requiredString(args, "automationId"),
+        "agent",
+      ),
+    }),
+  );
+
+  registerTool(
+    {
+      id: "iot.approvals.approve",
+      title: "Approve a pending action",
+      description: "Approve a pending high-risk action and let the store execute it with skipApproval=true.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          approvalId: { type: "string" },
+          homeId: { type: "string" },
+        },
+        required: ["approvalId"],
+        additionalProperties: false,
+      },
+      riskLevel: "sensitive",
+    },
+    async (args, { store }) => ({
+      result: store.approveApproval(
+        optionalString(args, "homeId"),
+        requiredString(args, "approvalId"),
+      ),
+    }),
+  );
+
+  registerTool(
+    {
+      id: "iot.approvals.deny",
+      title: "Deny a pending action",
+      description: "Reject a pending action so it never reaches the device.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          approvalId: { type: "string" },
+          homeId: { type: "string" },
+        },
+        required: ["approvalId"],
+        additionalProperties: false,
+      },
+      riskLevel: "safe",
+    },
+    async (args, { store }) => ({
+      approval: store.denyApproval(
+        optionalString(args, "homeId"),
+        requiredString(args, "approvalId"),
+      ),
+    }),
+  );
+
+  registerTool(
+    {
+      id: "iot.policy.evaluate",
+      title: "Evaluate policy",
+      description: "Dry-run policy evaluation for a proposed action. Returns the decision (allow / approval_required / deny / ambiguous) without executing.",
+      domain: IOT_FEATURE,
+      sourceFeature: IOT_FEATURE,
+      parameters: {
+        type: "object",
+        properties: {
+          homeId: { type: "string" },
+          request: { type: "object", description: "An IoTActionRequest to dry-run." },
+        },
+        required: ["request"],
+        additionalProperties: false,
+      },
+      riskLevel: "safe",
+    },
+    async (args, { store }) => ({
+      evaluation: store.evaluatePolicy(
+        optionalString(args, "homeId"),
+        args["request"] as IoTActionRequest,
+      ),
     }),
   );
 }

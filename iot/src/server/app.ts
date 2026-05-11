@@ -10,6 +10,11 @@ import { loadIotConfig, type IotServiceConfig } from "./config.ts";
 import { IotRealtimeHub } from "./realtime.ts";
 import { IotServiceStore, type IoTActionRequest } from "./db.ts";
 import { registerIotTools, registerToolRoutes } from "./tools.ts";
+import { AdapterRegistry } from "./adapters/registry.ts";
+import { MockSimulatorAdapter } from "./adapters/mock-simulator.ts";
+import { GenericHTTPAdapter } from "./adapters/generic-http.ts";
+import { HueLocalAdapter } from "./adapters/hue-local.ts";
+import { DiscoveryOrchestrator } from "./discovery.ts";
 
 function resolveUiRoot(): string | null {
   const candidates = [
@@ -47,8 +52,52 @@ export function buildIotApp(options: BuildIotAppOptions = {}) {
 
   const app = Fastify({ logger: false });
   const realtime = new IotRealtimeHub();
+  const registry = new AdapterRegistry();
+  registry.register(new MockSimulatorAdapter());
+  registry.register(new GenericHTTPAdapter());
+  registry.register(new HueLocalAdapter());
   const store = new IotServiceStore(config.dbPath, {
     onEvent: (event) => realtime.broadcast(event),
+    onActionExecuted: ({ home, request, capabilityKey, targets, capabilityUpdates, actor }) => {
+      // Fan out the optimistic update to the real device(s). The
+      // adapter dispatch is async + best-effort; errors are logged and
+      // surfaced through `iot.adapter.failed` realtime events so the
+      // UI can flag the device as offline without rolling back the
+      // optimistic SQLite state.
+      for (const thing of targets) {
+        const update = capabilityUpdates.find((entry) => entry.thingId === thing.id);
+        const desiredValue = update?.desiredValue ?? request.value;
+        void (async () => {
+          const result = await registry.dispatch({
+            thing,
+            capability: capabilityKey,
+            desiredValue,
+            action: request.action,
+          });
+          if (!result) {
+            // No adapter registered for this connectorId. Keep optimistic
+            // state — useful for seed devices that don't have hardware.
+            return;
+          }
+          if (result.note?.startsWith("dispatch_failed")) {
+            realtime.broadcast({
+              id: `adapter_${thing.id}_${Date.now()}`,
+              homeId: home.id,
+              type: "iot.adapter.failed",
+              payload: { thingId: thing.id, capability: capabilityKey, actor, note: result.note },
+              createdAt: new Date().toISOString(),
+            });
+          }
+        })();
+      }
+    },
+  });
+  const discovery = new DiscoveryOrchestrator(registry, realtime, () => {
+    try {
+      return store.resolveHome().id;
+    } catch {
+      return "default";
+    }
   });
   const uiRoot = resolveUiRoot();
   const brandRoot = resolveBrandRoot();
@@ -99,11 +148,19 @@ export function buildIotApp(options: BuildIotAppOptions = {}) {
     port: config.port,
   }));
 
-  // Agent tools: read-only verbs for Phase 1. Mutating verbs land
-  // alongside the adapter SPI in Phase 2. Routes are GET /v1/tools/list
-  // and POST /v1/tools/:toolId/invoke; see `./tools.ts` for the schema.
+  // Agent tools: read-only verbs from Phase 1 plus Phase 2 mutating
+  // verbs (control, scenes, automations, approvals, discovery, things).
+  // Routes are GET /v1/tools/list and POST /v1/tools/:toolId/invoke;
+  // see `./tools.ts` for the registry.
   registerIotTools();
-  registerToolRoutes(app, { store });
+  registerToolRoutes(app, { store, registry, discovery });
+
+  // Discovery stops cleanly on shutdown so the bonjour multicast
+  // sockets release. Idempotent: a stop without an active scan is a
+  // no-op.
+  app.addHook("onClose", async () => {
+    discovery.stop();
+  });
 
   app.get("/v1/homes", async () => ({
     homes: store.listHomes(),

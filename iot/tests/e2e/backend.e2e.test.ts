@@ -102,18 +102,27 @@ test("iot backend exposes read-only agent tools", async () => {
     const catalog = catalogResponse.json() as {
       tools: Array<{ id: string; riskLevel: string; parameters: { type: string } }>;
     };
-    assert.deepEqual(
-      catalog.tools.map((tool) => tool.id),
-      [
-        "iot.areas.list",
-        "iot.automations.list",
-        "iot.homes.list",
-        "iot.scenes.list",
-        "iot.things.get",
-        "iot.things.list",
-      ],
-    );
-    assert.equal(catalog.tools.every((tool) => tool.riskLevel === "safe"), true);
+    const toolIds = catalog.tools.map((tool) => tool.id);
+    for (const expected of [
+      "iot.areas.list",
+      "iot.automations.create",
+      "iot.automations.list",
+      "iot.connectors.list",
+      "iot.discovery.list",
+      "iot.discovery.start",
+      "iot.homes.list",
+      "iot.policy.evaluate",
+      "iot.scenes.activate",
+      "iot.scenes.list",
+      "iot.things.add",
+      "iot.things.control",
+      "iot.things.get",
+      "iot.things.list",
+      "iot.things.remove",
+    ]) {
+      assert.equal(toolIds.includes(expected), true);
+    }
+    assert.equal(catalog.tools.find((tool) => tool.id === "iot.things.remove")?.riskLevel, "sensitive");
     assert.equal(catalog.tools.every((tool) => tool.parameters.type === "object"), true);
 
     const invokeResponse = await app.inject({
