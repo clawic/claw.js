@@ -77,9 +77,88 @@ export const PairingPayloadSchema = z.object({
   nodeId: z.string().min(1).optional(),
   signingPublicKey: z.string().min(1).optional(),
   agreementPublicKey: z.string().min(1).optional(),
+  coordinatorUrl: z.string().url().optional(),
+  irohNodeId: z.string().min(1).optional(),
+  relayUrl: z.string().url().optional(),
 });
 
 export type PairingPayload = z.infer<typeof PairingPayloadSchema>;
+
+export const CoordinatorJoinRequestSchema = z.object({
+  v: z.literal(1),
+  coordinatorUrl: z.string().url(),
+  email: z.string().email(),
+  deviceLabel: z.string().min(1).optional(),
+  platform: z.string().min(1).optional(),
+});
+
+export type CoordinatorJoinRequest = z.infer<typeof CoordinatorJoinRequestSchema>;
+
+export const CoordinatorJoinResultSchema = z.object({
+  status: z.enum(["pending", "approved", "expired", "invalid"]),
+  delivered: z.boolean().optional(),
+  reason: z.string().optional(),
+});
+
+export type CoordinatorJoinResult = z.infer<typeof CoordinatorJoinResultSchema>;
+
+export interface CoordinatorJoinSession {
+  start: () => Promise<CoordinatorJoinResult>;
+  consume: (token: string) => Promise<{
+    deviceId: string;
+    tenantId: string;
+    accessToken: string;
+    refreshToken: string;
+    expiresInSec: number;
+  }>;
+}
+
+export function joinViaCoordinator(request: CoordinatorJoinRequest): CoordinatorJoinSession {
+  const parsed = CoordinatorJoinRequestSchema.parse(request);
+  const base = parsed.coordinatorUrl.replace(/\/$/, "");
+  return {
+    async start() {
+      const response = await fetch(`${base}/v1/auth/magic-link/start`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: parsed.email,
+          purpose: "device-register",
+          deviceLabel: parsed.deviceLabel,
+          platform: parsed.platform,
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.text().catch(() => "");
+        throw new Error(`coordinator magic-link/start failed: ${response.status} ${body}`);
+      }
+      const json = (await response.json()) as { delivered: boolean; reason: string | null };
+      return {
+        status: "pending",
+        delivered: json.delivered,
+        ...(json.reason ? { reason: json.reason } : {}),
+      };
+    },
+    async consume(token: string) {
+      const response = await fetch(`${base}/v1/auth/magic-link/consume`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token, deviceLabel: parsed.deviceLabel, platform: parsed.platform }),
+      });
+      if (!response.ok) {
+        const body = await response.text().catch(() => "");
+        throw new Error(`coordinator magic-link/consume failed: ${response.status} ${body}`);
+      }
+      return (await response.json()) as {
+        deviceId: string;
+        tenantId: string;
+        accessToken: string;
+        refreshToken: string;
+        expiresInSec: number;
+      };
+    },
+  };
+}
 
 export function encodePairingPayload(payload: PairingPayload): string {
   return JSON.stringify(PairingPayloadSchema.parse(payload));
