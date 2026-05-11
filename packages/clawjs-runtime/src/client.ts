@@ -1,10 +1,19 @@
 import type {
+  ClaimResult,
+  CreateKanbanTaskInput,
+  DispatcherTickResult,
   DistillInput,
   DistillationRecord,
+  KanbanBoard,
+  KanbanCommentRecord,
+  KanbanEventRecord,
+  KanbanTaskRecord,
+  ListKanbanFilter,
   NudgeInput,
   NudgeRecord,
   RuntimeJobKind,
   RuntimeJobRecord,
+  UpdateKanbanTaskInput,
   UserModelRefreshInput,
   UserModelRefreshRecord,
 } from "./types.ts";
@@ -93,5 +102,72 @@ export class RuntimeApiClient {
 
   listJobs(kind?: RuntimeJobKind, limit?: number): Promise<{ items: RuntimeJobRecord[] }> {
     return this.call("GET", `/v1/runtime/jobs${buildQuery({ kind, limit })}`);
+  }
+
+  createKanbanTask(input: CreateKanbanTaskInput): Promise<KanbanTaskRecord> {
+    return this.call("POST", "/v1/kanban/tasks", input);
+  }
+
+  listKanbanTasks(filter: ListKanbanFilter = {}): Promise<{ items: KanbanTaskRecord[] }> {
+    return this.call("GET", `/v1/kanban/tasks${buildQuery({
+      status: filter.status,
+      agent: filter.agentAssigned,
+      claimedBy: filter.claimedBy,
+      projectPath: filter.projectPath,
+      limit: filter.limit,
+      offset: filter.offset,
+    })}`);
+  }
+
+  getKanbanTask(id: string): Promise<KanbanTaskRecord> {
+    return this.call("GET", `/v1/kanban/tasks/${encodeURIComponent(id)}`);
+  }
+
+  updateKanbanTask(id: string, patch: UpdateKanbanTaskInput): Promise<KanbanTaskRecord> {
+    return this.call("PATCH", `/v1/kanban/tasks/${encodeURIComponent(id)}`, patch);
+  }
+
+  deleteKanbanTask(id: string): Promise<{ deleted: boolean }> {
+    return this.call("DELETE", `/v1/kanban/tasks/${encodeURIComponent(id)}`);
+  }
+
+  claimKanbanTask(id: string, agent: string, ttlMs?: number): Promise<ClaimResult> {
+    return this.call("POST", `/v1/kanban/tasks/${encodeURIComponent(id)}/claim`, { agent, ttlMs });
+  }
+
+  completeKanbanTask(id: string, actor?: string): Promise<KanbanTaskRecord> {
+    return this.call("POST", `/v1/kanban/tasks/${encodeURIComponent(id)}/complete`, { actor });
+  }
+
+  failKanbanTask(id: string, reason: string, actor?: string): Promise<KanbanTaskRecord> {
+    return this.call("POST", `/v1/kanban/tasks/${encodeURIComponent(id)}/fail`, { reason, actor });
+  }
+
+  blockKanbanTask(id: string, reason: string, actor?: string): Promise<KanbanTaskRecord> {
+    return this.call("POST", `/v1/kanban/tasks/${encodeURIComponent(id)}/block`, { reason, actor });
+  }
+
+  unblockKanbanTask(id: string, actor?: string): Promise<KanbanTaskRecord> {
+    return this.call("POST", `/v1/kanban/tasks/${encodeURIComponent(id)}/unblock`, { actor });
+  }
+
+  addKanbanComment(taskId: string, author: string, body: string): Promise<KanbanCommentRecord> {
+    return this.call("POST", `/v1/kanban/tasks/${encodeURIComponent(taskId)}/comments`, { author, body });
+  }
+
+  listKanbanComments(taskId: string): Promise<{ items: KanbanCommentRecord[] }> {
+    return this.call("GET", `/v1/kanban/tasks/${encodeURIComponent(taskId)}/comments`);
+  }
+
+  listKanbanEvents(taskId: string): Promise<{ items: KanbanEventRecord[] }> {
+    return this.call("GET", `/v1/kanban/tasks/${encodeURIComponent(taskId)}/events`);
+  }
+
+  getKanbanBoard(): Promise<KanbanBoard> {
+    return this.call("GET", "/v1/kanban/board");
+  }
+
+  runKanbanDispatcher(options: { claimTtlMs?: number; autoBlockThreshold?: number } = {}): Promise<DispatcherTickResult> {
+    return this.call("POST", "/v1/kanban/dispatcher/tick", options);
   }
 }

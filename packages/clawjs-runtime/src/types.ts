@@ -138,6 +138,122 @@ export interface RuntimeServicesContext {
   userModelSynthesizer: UserModelSynthesizer;
 }
 
+export type KanbanStatus =
+  | "triage"
+  | "todo"
+  | "ready"
+  | "in_progress"
+  | "blocked"
+  | "done"
+  | "cancelled";
+
+export type KanbanPriority = "low" | "medium" | "high" | "urgent";
+
+export interface KanbanTaskRecord {
+  id: string;
+  title: string;
+  description: string | null;
+  status: KanbanStatus;
+  priority: KanbanPriority;
+  agentAssigned: string | null;
+  claimedBy: string | null;
+  claimedAt: number | null;
+  claimExpiresAt: number | null;
+  failureCount: number;
+  lastFailureAt: number | null;
+  failureReason: string | null;
+  blockReason: string | null;
+  dependsOnIds: string[];
+  boardOrder: number;
+  projectPath: string | null;
+  sessionId: string | null;
+  createdAt: number;
+  updatedAt: number;
+  startedAt: number | null;
+  completedAt: number | null;
+  metadata: Record<string, unknown> | null;
+}
+
+export interface KanbanCommentRecord {
+  id: string;
+  taskId: string;
+  author: string;
+  body: string;
+  createdAt: number;
+}
+
+export interface KanbanEventRecord {
+  id: number;
+  taskId: string;
+  kind: string;
+  fromStatus: KanbanStatus | null;
+  toStatus: KanbanStatus | null;
+  actor: string | null;
+  payload: Record<string, unknown> | null;
+  recordedAt: number;
+}
+
+export interface CreateKanbanTaskInput {
+  id?: string;
+  title: string;
+  description?: string | null;
+  status?: KanbanStatus;
+  priority?: KanbanPriority;
+  agentAssigned?: string | null;
+  dependsOnIds?: string[];
+  projectPath?: string | null;
+  sessionId?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface UpdateKanbanTaskInput {
+  title?: string;
+  description?: string | null;
+  priority?: KanbanPriority;
+  agentAssigned?: string | null;
+  dependsOnIds?: string[];
+  projectPath?: string | null;
+  metadata?: Record<string, unknown> | null;
+  boardOrder?: number;
+}
+
+export interface ListKanbanFilter {
+  status?: KanbanStatus;
+  agentAssigned?: string;
+  claimedBy?: string;
+  projectPath?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface KanbanBoard {
+  triage: KanbanTaskRecord[];
+  todo: KanbanTaskRecord[];
+  ready: KanbanTaskRecord[];
+  in_progress: KanbanTaskRecord[];
+  blocked: KanbanTaskRecord[];
+  done: KanbanTaskRecord[];
+  cancelled: KanbanTaskRecord[];
+}
+
+export interface ClaimResult {
+  claimed: boolean;
+  task: KanbanTaskRecord | null;
+  reason?: string;
+}
+
+export interface DispatcherTickResult {
+  reclaimedIds: string[];
+  promotedIds: string[];
+  autoBlockedIds: string[];
+  ranAt: number;
+}
+
+export interface KanbanDispatcherOptions {
+  claimTtlMs?: number;
+  autoBlockThreshold?: number;
+}
+
 export interface DistillerOptions {
   minToolCalls?: number;
   minMessageCount?: number;

@@ -16,10 +16,15 @@ import { runNudgeCycle } from "./services/nudge.ts";
 import { runUserModelRefresh } from "./services/user-model-updater.ts";
 import { RuntimeServiceStore } from "./store.ts";
 import type {
+  CreateKanbanTaskInput,
   DistillInput,
+  KanbanPriority,
+  KanbanStatus,
+  ListKanbanFilter,
   NudgeInput,
   RuntimeJobKind,
   RuntimeServicesContext,
+  UpdateKanbanTaskInput,
   UserModelRefreshInput,
 } from "./types.ts";
 
@@ -184,6 +189,159 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     return { items: store.listJobs(asString(query.kind) as RuntimeJobKind | undefined, asNumber(query.limit) ?? 50) };
+  });
+
+  app.post("/v1/kanban/tasks", async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    try {
+      const body = readBody(request);
+      const input: CreateKanbanTaskInput = {
+        id: asString(body.id),
+        title: String(body.title ?? "").trim(),
+        description: (body.description as string | null | undefined) ?? null,
+        status: body.status as KanbanStatus | undefined,
+        priority: (body.priority as KanbanPriority | undefined) ?? "medium",
+        agentAssigned: (body.agentAssigned as string | null | undefined) ?? null,
+        dependsOnIds: Array.isArray(body.dependsOnIds) ? (body.dependsOnIds as string[]) : [],
+        projectPath: (body.projectPath as string | null | undefined) ?? null,
+        sessionId: (body.sessionId as string | null | undefined) ?? null,
+        metadata: (body.metadata as Record<string, unknown> | null) ?? null,
+      };
+      if (!input.title) return await reply.code(400).send({ error: "title is required" });
+      return store.createKanbanTask(input);
+    } catch (error) {
+      return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.get("/v1/kanban/tasks", async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const query = readQuery(request);
+    const filter: ListKanbanFilter = {
+      status: asString(query.status) as KanbanStatus | undefined,
+      agentAssigned: asString(query.agent),
+      claimedBy: asString(query.claimedBy),
+      projectPath: asString(query.projectPath),
+      limit: asNumber(query.limit),
+      offset: asNumber(query.offset),
+    };
+    return { items: store.listKanbanTasks(filter) };
+  });
+
+  app.get("/v1/kanban/board", async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    return store.getKanbanBoard();
+  });
+
+  app.get("/v1/kanban/tasks/:id", async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    const task = store.getKanbanTask(params.id);
+    if (!task) return await reply.code(404).send({ error: "task_not_found" });
+    return task;
+  });
+
+  app.patch("/v1/kanban/tasks/:id", async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    const body = readBody(request);
+    const patch: UpdateKanbanTaskInput = {
+      title: asString(body.title),
+      description: body.description === undefined ? undefined : (body.description as string | null),
+      priority: body.priority as KanbanPriority | undefined,
+      agentAssigned: body.agentAssigned === undefined ? undefined : (body.agentAssigned as string | null),
+      dependsOnIds: Array.isArray(body.dependsOnIds) ? (body.dependsOnIds as string[]) : undefined,
+      projectPath: body.projectPath === undefined ? undefined : (body.projectPath as string | null),
+      metadata: body.metadata === undefined ? undefined : (body.metadata as Record<string, unknown> | null),
+      boardOrder: asNumber(body.boardOrder),
+    };
+    const updated = store.updateKanbanTask(params.id, patch);
+    if (!updated) return await reply.code(404).send({ error: "task_not_found" });
+    return updated;
+  });
+
+  app.delete("/v1/kanban/tasks/:id", async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    return { deleted: store.deleteKanbanTask(params.id) };
+  });
+
+  app.post("/v1/kanban/tasks/:id/claim", async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    const body = readBody(request);
+    const agent = asString(body.agent);
+    if (!agent) return await reply.code(400).send({ error: "agent is required" });
+    return store.claimKanbanTask(params.id, agent, { ttlMs: asNumber(body.ttlMs) });
+  });
+
+  app.post("/v1/kanban/tasks/:id/complete", async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    const body = readBody(request);
+    const result = store.completeKanbanTask(params.id, asString(body.actor) ?? null);
+    if (!result) return await reply.code(404).send({ error: "task_not_found" });
+    return result;
+  });
+
+  app.post("/v1/kanban/tasks/:id/fail", async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    const body = readBody(request);
+    const reason = asString(body.reason) ?? "unspecified";
+    const result = store.failKanbanTask(params.id, reason, asString(body.actor) ?? null);
+    if (!result) return await reply.code(404).send({ error: "task_not_found" });
+    return result;
+  });
+
+  app.post("/v1/kanban/tasks/:id/block", async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    const body = readBody(request);
+    const reason = asString(body.reason) ?? "unspecified";
+    const result = store.blockKanbanTask(params.id, reason, asString(body.actor) ?? null);
+    if (!result) return await reply.code(404).send({ error: "task_not_found" });
+    return result;
+  });
+
+  app.post("/v1/kanban/tasks/:id/unblock", async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    const body = readBody(request);
+    const result = store.unblockKanbanTask(params.id, asString(body.actor) ?? null);
+    if (!result) return await reply.code(404).send({ error: "task_not_found" });
+    return result;
+  });
+
+  app.post("/v1/kanban/tasks/:id/comments", async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    const body = readBody(request);
+    const author = asString(body.author);
+    const text = asString(body.body);
+    if (!author || !text) return await reply.code(400).send({ error: "author and body are required" });
+    return store.addKanbanComment(params.id, author, text);
+  });
+
+  app.get("/v1/kanban/tasks/:id/comments", async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    return { items: store.listKanbanComments(params.id) };
+  });
+
+  app.get("/v1/kanban/tasks/:id/events", async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    return { items: store.listKanbanEvents(params.id) };
+  });
+
+  app.post("/v1/kanban/dispatcher/tick", async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const body = readBody(request);
+    return store.runKanbanDispatcher({
+      claimTtlMs: asNumber(body.claimTtlMs),
+      autoBlockThreshold: asNumber(body.autoBlockThreshold),
+    });
   });
 
   return { app, config, store, context };
