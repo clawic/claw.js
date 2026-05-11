@@ -701,7 +701,7 @@ export interface AreaRecord extends WorkspaceRecordBase {
 export interface TaskRecord extends WorkspaceRecordBase {
   title: string;
   description?: string;
-  status: "todo" | "in_progress" | "blocked" | "done" | "cancelled";
+  status: "triage" | "todo" | "ready" | "in_progress" | "blocked" | "done" | "cancelled";
   type?: "todo" | "task" | "bug" | "story" | "feature" | "chore";
   priority: "low" | "medium" | "high" | "urgent";
   rank?: number;
@@ -757,6 +757,13 @@ export interface TaskRecord extends WorkspaceRecordBase {
   portfolioId?: string;
   portfolioItemId?: string;
   checklist: TaskChecklistItem[];
+  claimedByAgentId?: string;
+  claimedAt?: string;
+  claimExpiresAt?: string;
+  failureCount?: number;
+  lastFailureAt?: string;
+  boardColumn?: string;
+  boardOrder?: number;
 }
 
 export interface GoalRecord extends WorkspaceRecordBase {
