@@ -212,6 +212,41 @@ test("uploads, shares, download, search, trash, restore, copy, and export work",
   assert.match(Buffer.from(await exportResponse.arrayBuffer()).toString("utf8"), /Mock PDF export/);
 });
 
+test("agent share revoke writes one audit event", async () => {
+  const { authFetch } = await boot();
+
+  const form = new FormData();
+  form.set("file", new Blob([Buffer.from("Agent share audit check", "utf8")]), "agent-share.txt");
+  const uploadResponse = await authFetch("/v1/uploads", { method: "POST", body: form });
+  assert.equal(uploadResponse.status, 201);
+  const uploaded = await uploadResponse.json() as { id: string };
+
+  const shareResponse = await authFetch(`/v1/items/${uploaded.id}/shares`, {
+    method: "POST",
+    body: JSON.stringify({
+      mode: "agent",
+      capabilityKind: "drive.item.read",
+      ttlMinutes: 10,
+      agentName: "agent",
+    }),
+  });
+  assert.equal(shareResponse.status, 201);
+  const share = await shareResponse.json() as { record: { id: string } };
+
+  const revokeResponse = await authFetch(`/v1/items/${uploaded.id}/shares/${share.record.id}/revoke`, {
+    method: "POST",
+  });
+  assert.equal(revokeResponse.status, 200);
+
+  const auditResponse = await authFetch(`/v1/audit?itemId=${uploaded.id}&limit=20`);
+  assert.equal(auditResponse.status, 200);
+  const auditLog = await auditResponse.json() as { items: Array<{ kind: string; metadata?: { shareId?: string } }> };
+  const matchingRevokes = auditLog.items.filter((item) => (
+    item.kind === "share_revoked" && item.metadata?.shareId === share.record.id
+  ));
+  assert.equal(matchingRevokes.length, 1);
+});
+
 test("scoped tokens can read lists after creation", async () => {
   const { authFetch, baseUrl } = await boot();
 

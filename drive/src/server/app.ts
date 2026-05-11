@@ -646,10 +646,13 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
       name: principalNameForAudit(principal),
     } as const;
     let ok = store.revokeShare(itemId, shareId);
-    if (!ok) ok = sharing.revokeTailnet(shareId, itemId, actor);
-    if (!ok) ok = sharing.revokeTunnel(shareId, itemId, actor);
-    if (!ok) ok = sharing.revokeAgent(shareId, itemId, actor);
-    if (ok) await audit(store, bus, principal, "share_revoked", itemId, { shareId });
+    if (ok) {
+      await audit(store, bus, principal, "share_revoked", itemId, { shareId });
+    } else {
+      ok = sharing.revokeTailnet(shareId, itemId, actor)
+        || sharing.revokeTunnel(shareId, itemId, actor)
+        || sharing.revokeAgent(shareId, itemId, actor);
+    }
     return { ok };
   });
 
