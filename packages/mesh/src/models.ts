@@ -18,11 +18,12 @@ export const HOST_ENDPOINT_KINDS = [
   "linked",
   "loopback",
   "ssh",
+  "iroh-node",
 ] as const;
 
 export type HostEndpointKind = (typeof HOST_ENDPOINT_KINDS)[number];
 
-export const HOST_ENDPOINT_PROTOCOLS = ["bridge", "ssh"] as const;
+export const HOST_ENDPOINT_PROTOCOLS = ["bridge", "ssh", "iroh"] as const;
 export type HostEndpointProtocol = (typeof HOST_ENDPOINT_PROTOCOLS)[number];
 
 export const HOST_PERMISSION_PROFILES = [
@@ -40,6 +41,9 @@ export const HostEndpointSchema = z.object({
   host: z.string().min(1),
   port: z.number().int().min(1).max(65535),
   protocol: z.enum(HOST_ENDPOINT_PROTOCOLS).optional(),
+  irohNodeId: z.string().min(1).optional(),
+  relayUrl: z.string().url().optional(),
+  lastSeenEndpoint: z.string().min(1).optional(),
 });
 
 export type HostEndpoint = z.infer<typeof HostEndpointSchema>;
