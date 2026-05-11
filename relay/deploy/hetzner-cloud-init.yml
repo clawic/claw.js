@@ -1,0 +1,95 @@
+#cloud-config
+# Hetzner Cloud one-click bootstrap for clawix-relay.
+# Paste this into the "User data" field when creating a cx21 (or larger).
+# Before pasting, replace the placeholders inside `write_files`:
+#   - DOMAIN, ADMIN_EMAIL (Let's Encrypt account email)
+#   - RELAY_JWT_SECRETS  (use `openssl rand -base64 48`)
+#   - Either RELAY_RESEND_API_KEY or RELAY_SMTP_*
+#
+# After the VM boots, point your DNS A/AAAA records at the IP, wait ~60s for
+# Caddy to provision the cert, then visit https://<DOMAIN> and sign in.
+
+package_update: true
+package_upgrade: true
+packages:
+  - docker.io
+  - docker-compose-plugin
+  - curl
+  - ufw
+
+write_files:
+  - path: /opt/clawix-relay/.env
+    permissions: "0600"
+    content: |
+      DOMAIN=relay.example.com
+      ADMIN_EMAIL=you@example.com
+      RELAY_JWT_SECRETS=REPLACE_WITH_OPENSSL_RAND
+      RELAY_MAGIC_LINK_DRIVER=console
+      RELAY_MAGIC_LINK_TENANT_ID=default-tenant
+      # Resend (preferred):
+      RELAY_RESEND_API_KEY=
+      # Or SMTP:
+      RELAY_SMTP_HOST=
+      RELAY_SMTP_PORT=587
+      RELAY_SMTP_USER=
+      RELAY_SMTP_PASSWORD=
+
+  - path: /opt/clawix-relay/docker-compose.yml
+    permissions: "0644"
+    content: |
+      services:
+        relay:
+          image: ghcr.io/clawix/clawix-relay:latest
+          restart: unless-stopped
+          env_file: .env
+          environment:
+            RELAY_PUBLIC_BASE_URL: "https://${DOMAIN}"
+            RELAY_HOST: "0.0.0.0"
+            PORT: "4410"
+            RELAY_DB_PATH: "/var/lib/clawix-relay/relay.sqlite"
+            RELAY_MAGIC_LINK_URL_TEMPLATE: "https://${DOMAIN}/v1/auth/magic-link/callback?token={{token}}"
+            RELAY_MAGIC_LINK_FROM: "relay@${DOMAIN}"
+            RELAY_IROH_RELAY_PUBLIC_URL: "https://${DOMAIN}/v1/iroh-relay"
+            RELAY_IROH_RELAY_LISTEN_ADDR: "0.0.0.0:7842"
+          volumes:
+            - relay_data:/var/lib/clawix-relay
+          ports:
+            - "3478:3478/udp"
+            - "7842:7842"
+
+        caddy:
+          image: caddy:2-alpine
+          restart: unless-stopped
+          depends_on: [relay]
+          ports:
+            - "80:80"
+            - "443:443"
+          env_file: .env
+          volumes:
+            - ./Caddyfile:/etc/caddy/Caddyfile:ro
+            - caddy_data:/data
+            - caddy_config:/config
+
+      volumes:
+        relay_data:
+        caddy_data:
+        caddy_config:
+
+  - path: /opt/clawix-relay/Caddyfile
+    permissions: "0644"
+    content: |
+      {$DOMAIN} {
+        tls {$ADMIN_EMAIL}
+        encode zstd gzip
+        reverse_proxy relay:4410
+      }
+
+runcmd:
+  - systemctl enable --now docker
+  - ufw --force enable
+  - ufw allow OpenSSH
+  - ufw allow 80
+  - ufw allow 443
+  - ufw allow 3478/udp
+  - ufw allow 7842
+  - cd /opt/clawix-relay && docker compose pull && docker compose up -d
