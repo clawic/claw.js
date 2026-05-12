@@ -483,6 +483,15 @@ function authBindingForSecurityScheme(
       description: stringValue(scheme.description),
     };
   }
+  if (type === "http" && stringValue(scheme.scheme)?.toLowerCase() === "basic") {
+    return {
+      fieldName: fieldName(schemeName),
+      placement: "header",
+      name: "authorization",
+      prefix: "Basic ",
+      description: stringValue(scheme.description),
+    };
+  }
   if (type === "oauth2" || type === "openIdConnect") {
     return {
       fieldName: fieldName(schemeName),

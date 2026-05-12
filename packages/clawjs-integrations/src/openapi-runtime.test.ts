@@ -492,6 +492,49 @@ describe("OpenAPI connector runtime", () => {
     }]);
   });
 
+  it("infers basic auth bindings from OpenAPI security schemes", () => {
+    const document = {
+      ...FIXTURE_OPENAPI,
+      components: {
+        securitySchemes: {
+          basicAuth: {
+            type: "http",
+            scheme: "basic",
+            description: "Fixture basic credential.",
+          },
+        },
+      },
+      security: [{ basicAuth: [] }],
+    };
+    const options = {
+      appId: "fixture_commerce",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(document, options)];
+    const operation = catalog.apps[0]?.operations.find((candidate) => candidate.id.endsWith("list-customer-items"));
+    assert.ok(operation);
+
+    assert.deepEqual(catalog.apps[0]?.fields, [{
+      name: "basicAuth",
+      type: "string",
+      optional: false,
+      secret: true,
+      description: "Fixture basic credential.",
+    }]);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, {
+      customerId: "cus_123",
+      limit: 10,
+    }, { registry }).requestPlan?.auth, [{
+      type: "secret",
+      field: "basicAuth",
+      placement: "header",
+      name: "authorization",
+      prefix: "Basic ",
+    }]);
+  });
+
   it("infers OAuth bearer bindings from OpenAPI security schemes", () => {
     const document = {
       ...FIXTURE_OPENAPI,
