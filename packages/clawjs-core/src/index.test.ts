@@ -9,12 +9,17 @@ import {
   PRODUCTIVITY_COLLECTION_DEFINITIONS,
   activityEntryRecordSchema,
   areaRecordSchema,
+  assertCodexReadOnlyPath,
   assignmentRecordSchema,
   artifactRecordSchema,
   auditEventSchema,
   blockerRecordSchema,
   capacityRecordSchema,
+  clawCommandRequestSchema,
+  clawContractVersionV1,
+  clawHostRegistrySchema,
   agentRecordSchema,
+  createCodexReadOnlySourceDescriptor,
   createTtsPlaybackPlan,
   compatSnapshotSchema,
   createManifest,
@@ -38,6 +43,10 @@ import {
   productivityApprovalRecordSchema,
   releaseRecordSchema,
   reminderRecordSchema,
+  resolveClawGlobalDataDir,
+  resolveClawHostRegistryPath,
+  resolveClawHostStateDir,
+  resolveClawWorkspaceDir,
   taskRecordSchema,
   workSessionRecordSchema,
   stripMarkdownForTts,
@@ -103,6 +112,91 @@ test("ClawError preserves code and repair hint", () => {
 
   assert.equal(error.code, "runtime_not_found");
   assert.equal(error.repairHint, "Install the runtime first.");
+});
+
+test("host contract schemas validate v1 command and registry payloads", () => {
+  const request = clawCommandRequestSchema.parse({
+    schemaVersion: clawContractVersionV1,
+    requestId: "req-1",
+    domain: "calendar",
+    resource: "events",
+    action: "list",
+    arguments: { limit: 10 },
+    clientContext: { bundleId: "com.example.host" },
+  });
+
+  assert.equal(request.validationMode, "host_real");
+  assert.equal(request.domain, "calendar");
+
+  const registry = clawHostRegistrySchema.parse({
+    schemaVersion: clawContractVersionV1,
+    activeHostId: "claw",
+    updatedAt: "2026-05-13T10:00:00.000Z",
+    hosts: [
+      {
+        schemaVersion: clawContractVersionV1,
+        id: "claw",
+        displayName: "Claw",
+        kind: "standalone",
+        bundleId: "com.example.claw",
+        endpoint: { transport: "xpc", address: "com.example.claw.runtime" },
+        capabilities: [
+          {
+            id: "calendar.events.list",
+            domain: "calendar",
+            actions: ["list"],
+            riskLevel: "read",
+            brokerRequired: true,
+            requiresOSPermission: true,
+          },
+        ],
+        registeredAt: "2026-05-13T10:00:00.000Z",
+        updatedAt: "2026-05-13T10:00:00.000Z",
+      },
+    ],
+  });
+
+  assert.equal(registry.hosts[0]?.capabilities[0]?.osPermissionState, "unknown");
+});
+
+test("storage helpers resolve Claw roots and enforce Codex read-only policy", () => {
+  assert.equal(
+    resolveClawGlobalDataDir({ homeDir: "/Users/demo", platform: "darwin" }),
+    "/Users/demo/Library/Application Support/Claw",
+  );
+  assert.equal(resolveClawWorkspaceDir("/repo/app"), "/repo/app/.claw");
+  assert.equal(
+    resolveClawHostStateDir({ homeDir: "/Users/demo", hostName: "Clawix", platform: "darwin" }),
+    "/Users/demo/Library/Application Support/Clawix",
+  );
+  assert.equal(
+    resolveClawHostRegistryPath({ homeDir: "/Users/demo", platform: "darwin" }),
+    "/Users/demo/Library/Application Support/Claw/hosts/registry.json",
+  );
+
+  assert.doesNotThrow(() => assertCodexReadOnlyPath({
+    homeDir: "/Users/demo",
+    path: "/Users/demo/.codex/sessions/session.jsonl",
+    operation: "mirror",
+  }));
+  assert.throws(() => assertCodexReadOnlyPath({
+    homeDir: "/Users/demo",
+    path: "/Users/demo/.codex/sessions/session.jsonl",
+    operation: "delete",
+  }), /Refusing delete operation/);
+  assert.doesNotThrow(() => assertCodexReadOnlyPath({
+    homeDir: "/Users/demo",
+    path: "/Users/demo/.codex/AGENTS.md",
+    operation: "write",
+    allowAgentsMdOptIn: true,
+  }));
+
+  assert.deepEqual(createCodexReadOnlySourceDescriptor("/Users/demo"), {
+    id: "codex",
+    rootDir: "/Users/demo/.codex",
+    allowedOperations: ["read", "mirror", "index"],
+    writePolicy: "agents_md_opt_in_only",
+  });
 });
 
 test("semantic plan schema validates agent-native action previews", () => {
