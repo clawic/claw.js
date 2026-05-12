@@ -3,6 +3,10 @@ import { describe, it } from "node:test";
 
 import { normalizeConnectorCatalog } from "./catalog.ts";
 import {
+  verifyConnectorRuntimeCoverage,
+  verifyConnectorRuntimeOfflineExecutions,
+} from "./runtime-coverage.ts";
+import {
   buildGitHubOperationRequest,
 } from "./github-operation-executor.ts";
 
@@ -39,9 +43,9 @@ const GITHUB_CATALOG = normalizeConnectorCatalog({
         fields: [
           { name: "owner", type: "string", optional: false },
           { name: "repo", type: "string", optional: false },
-          { name: "state", type: "string", optional: true },
-          { name: "perPage", type: "integer", optional: true },
-          { name: "page", type: "integer", optional: true },
+          { name: "state", type: "string", optional: true, default: "open" },
+          { name: "perPage", type: "integer", optional: true, default: 30, min: 1 },
+          { name: "page", type: "integer", optional: true, default: 1, min: 1 },
         ],
         authFieldNames: ["githubToken"],
       },
@@ -173,6 +177,20 @@ describe("github operation runtime", () => {
         requiredPaths: ["id", "body"],
       },
     });
+  });
+
+  it("covers GitHub issue operations with operation-scoped offline fixtures", async () => {
+    const coverage = verifyConnectorRuntimeCoverage(GITHUB_CATALOG);
+    assert.equal(coverage.summary.missing, 0);
+    assert.equal(coverage.summary.implemented, 4);
+
+    const offline = await verifyConnectorRuntimeOfflineExecutions(GITHUB_CATALOG);
+    assert.deepEqual(offline.results.map((result) => result.operationId).sort(), [
+      "github.action.create-issue",
+      "github.action.create-issue-comment",
+      "github.action.get-issue",
+      "github.action.list-repository-issues",
+    ]);
   });
 });
 

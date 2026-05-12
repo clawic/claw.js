@@ -12,6 +12,10 @@ import {
   isSlackActionOperationSupported,
 } from "./slack-operation-executor.ts";
 import {
+  buildGitHubOperationRequest,
+  isGitHubActionOperationSupported,
+} from "./github-operation-executor.ts";
+import {
   buildWhatsAppOperationRequest,
   isWhatsAppActionOperationSupported,
 } from "./whatsapp-operation-executor.ts";
@@ -204,6 +208,53 @@ const SLACK_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
   },
 ];
 
+const GITHUB_ACTION_EVIDENCE = [
+  "packages/clawjs-integrations/src/github-operation-executor.test.ts",
+];
+
+const GITHUB_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
+  {
+    kind: "request",
+    operationId: "github.action.get-issue",
+    path: "packages/clawjs-integrations/fixtures/github-get-issue-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "github.action.get-issue",
+    path: "packages/clawjs-integrations/fixtures/github-get-issue-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "github.action.list-repository-issues",
+    path: "packages/clawjs-integrations/fixtures/github-list-repository-issues-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "github.action.list-repository-issues",
+    path: "packages/clawjs-integrations/fixtures/github-list-repository-issues-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "github.action.create-issue",
+    path: "packages/clawjs-integrations/fixtures/github-create-issue-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "github.action.create-issue",
+    path: "packages/clawjs-integrations/fixtures/github-create-issue-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "github.action.create-issue-comment",
+    path: "packages/clawjs-integrations/fixtures/github-create-issue-comment-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "github.action.create-issue-comment",
+    path: "packages/clawjs-integrations/fixtures/github-create-issue-comment-response.json",
+  },
+];
+
 const WHATSAPP_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/whatsapp-operation-executor.test.ts",
 ];
@@ -249,6 +300,20 @@ const WHATSAPP_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = [
 ];
 
 export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation[] = [
+  {
+    appId: "github",
+    kind: "action",
+    executorId: "github.issues-api.http",
+    baseUrl: "https://api.github.com/",
+    offlineValidated: true,
+    evidence: GITHUB_ACTION_EVIDENCE,
+    fixtures: GITHUB_ACTION_FIXTURES,
+    planKinds: ["request"],
+    supports: (operation) => isGitHubActionOperationSupported(operation.id),
+    buildPlan: (operation, values) => ({
+      requestPlan: buildGitHubOperationRequest(operation, values),
+    }),
+  },
   {
     appId: "slack",
     kind: "action",
