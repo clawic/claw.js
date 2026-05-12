@@ -332,6 +332,367 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   });
   app.get("/v1/devices", async (req, reply) => { if (!(await requirePrincipal(req, reply, auth))) return; return { devices: store.listDeviceTokens() }; });
 
+  // ===========================================================================
+  // mp/1.0.0 · marketplace protocol endpoints
+  // ===========================================================================
+  //
+  // These endpoints expose the local marketplace protocol state. Cryptographic
+  // operations (key generation, signing, sealed-box) are performed by the
+  // caller — typically the @clawjs/mp client running inside the Clawix
+  // process — and only the resulting blobs are persisted here.
+
+  function b64ToBytes(value: unknown): Uint8Array | null {
+    if (typeof value !== "string") return null;
+    return new Uint8Array(Buffer.from(value, "base64"));
+  }
+  function bytesToB64(value: Uint8Array | null | undefined): string | null {
+    if (!value) return null;
+    return Buffer.from(value).toString("base64");
+  }
+
+  // --- root keys ---
+  app.get("/v1/mp/identity/roots", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    return { roots: store.mp.listRootKeys().map((r) => ({ ...r, pubkey: bytesToB64(r.pubkey) })) };
+  });
+  app.post("/v1/mp/identity/roots", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const body = readBody(req);
+    const pubkey = b64ToBytes(body.pubkey);
+    const encryptedSeed = b64ToBytes(body.encryptedSeed);
+    if (!pubkey || !encryptedSeed) return reply.code(400).send({ error: "pubkey and encryptedSeed required (base64)" });
+    const row = store.mp.insertRootKey({
+      pubkey, encryptedSeed,
+      encryptionMeta: (body.encryptionMeta as Record<string, unknown> | undefined) ?? {},
+      label: body.label as string | undefined,
+    });
+    return { root: { ...row, pubkey: bytesToB64(row.pubkey) } };
+  });
+  app.get("/v1/mp/identity/roots/:id/secret", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const out = store.mp.getEncryptedRoot((req.params as { id: string }).id);
+    if (!out) return reply.code(404).send({ error: "not found" });
+    return { encryptedSeed: bytesToB64(out.encryptedSeed), encryptionMeta: out.encryptionMeta };
+  });
+
+  // --- device keys ---
+  app.get("/v1/mp/identity/devices", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const rootKeyId = (req.query as { rootKeyId?: string }).rootKeyId;
+    return { devices: store.mp.listDeviceKeys(rootKeyId).map((d) => ({ ...d, pubkey: bytesToB64(d.pubkey), certificateCbor: bytesToB64(d.certificateCbor) })) };
+  });
+  app.post("/v1/mp/identity/devices", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const body = readBody(req);
+    const pubkey = b64ToBytes(body.pubkey);
+    const encryptedPriv = b64ToBytes(body.encryptedPriv);
+    const certificateCbor = b64ToBytes(body.certificateCbor);
+    if (typeof body.rootKeyId !== "string" || !pubkey || !encryptedPriv || !certificateCbor || typeof body.deviceName !== "string") {
+      return reply.code(400).send({ error: "rootKeyId, pubkey, encryptedPriv, deviceName, certificateCbor required" });
+    }
+    const row = store.mp.insertDeviceKey({
+      rootKeyId: body.rootKeyId, pubkey, encryptedPriv,
+      encryptionMeta: (body.encryptionMeta as Record<string, unknown> | undefined) ?? {},
+      deviceName: body.deviceName, certificateCbor,
+    });
+    return { device: { ...row, pubkey: bytesToB64(row.pubkey), certificateCbor: bytesToB64(row.certificateCbor) } };
+  });
+
+  // --- role keys ---
+  app.get("/v1/mp/identity/roles", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const q = req.query as { rootKeyId?: string; vertical?: string };
+    return { roles: store.mp.listRoleKeys(q).map((r) => ({ ...r, pubkey: bytesToB64(r.pubkey), certificateCbor: bytesToB64(r.certificateCbor) })) };
+  });
+  app.post("/v1/mp/identity/roles", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const body = readBody(req);
+    const pubkey = b64ToBytes(body.pubkey);
+    const encryptedPriv = b64ToBytes(body.encryptedPriv);
+    const certificateCbor = b64ToBytes(body.certificateCbor);
+    if (typeof body.rootKeyId !== "string" || !pubkey || !encryptedPriv || !certificateCbor || typeof body.roleName !== "string" || typeof body.vertical !== "string") {
+      return reply.code(400).send({ error: "rootKeyId, pubkey, encryptedPriv, roleName, vertical, certificateCbor required" });
+    }
+    const row = store.mp.insertRoleKey({
+      rootKeyId: body.rootKeyId, pubkey, encryptedPriv,
+      encryptionMeta: (body.encryptionMeta as Record<string, unknown> | undefined) ?? {},
+      roleName: body.roleName, vertical: body.vertical, certificateCbor,
+    });
+    return { role: { ...row, pubkey: bytesToB64(row.pubkey), certificateCbor: bytesToB64(row.certificateCbor) } };
+  });
+  app.post("/v1/mp/identity/roles/:id/revoke", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    store.mp.revokeRoleKey((req.params as { id: string }).id);
+    return { ok: true };
+  });
+
+  // --- intents ---
+  app.get("/v1/mp/intents", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const q = req.query as { side?: "offer" | "want"; vertical?: string; status?: string; provenance?: "native" | "observed"; roleKeyId?: string };
+    return { intents: store.mp.listIntents(q).map((i) => ({
+      ...i,
+      intentIdHash: bytesToB64(i.intentIdHash),
+      ephemeralPubkey: bytesToB64(i.ephemeralPubkey),
+      payloadCbor: bytesToB64(i.payloadCbor),
+      signatureRole: bytesToB64(i.signatureRole),
+      signatureDevice: bytesToB64(i.signatureDevice),
+    })) };
+  });
+  app.post("/v1/mp/intents", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const body = readBody(req);
+    const intentIdHash = b64ToBytes(body.intentIdHash);
+    const payloadCbor = b64ToBytes(body.payloadCbor);
+    if (!intentIdHash || !payloadCbor || typeof body.side !== "string" || typeof body.vertical !== "string" || typeof body.status !== "string" || typeof body.provenance !== "string") {
+      return reply.code(400).send({ error: "intentIdHash, side, vertical, payloadCbor, status, provenance required" });
+    }
+    const row = store.mp.upsertObservedIntent({
+      intentIdHash,
+      side: body.side as "offer" | "want",
+      roleKeyId: (body.roleKeyId as string | undefined) ?? null,
+      ephemeralPubkey: b64ToBytes(body.ephemeralPubkey),
+      vertical: body.vertical,
+      payload: (body.payload as Record<string, unknown>) ?? {},
+      payloadCbor,
+      visibilityLevels: (body.visibilityLevels as Record<string, number>) ?? {},
+      revealKeys: (body.revealKeys as Record<string, string> | undefined) ?? null,
+      signatureRole: b64ToBytes(body.signatureRole),
+      signatureDevice: b64ToBytes(body.signatureDevice),
+      provenance: body.provenance as "native" | "observed",
+      observedSource: (body.observedSource as string | undefined) ?? null,
+      observedExternalUrl: (body.observedExternalUrl as string | undefined) ?? null,
+      status: body.status as any,
+      expiresAt: (body.expiresAt as string | undefined) ?? null,
+      publishedAt: (body.publishedAt as string | undefined) ?? null,
+      withdrawnAt: (body.withdrawnAt as string | undefined) ?? null,
+    });
+    return { intent: { ...row, intentIdHash: bytesToB64(row.intentIdHash), payloadCbor: bytesToB64(row.payloadCbor) } };
+  });
+  app.patch("/v1/mp/intents/:id/status", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const body = readBody(req);
+    if (typeof body.status !== "string") return reply.code(400).send({ error: "status required" });
+    store.mp.updateIntentStatus((req.params as { id: string }).id, body.status as any);
+    return { ok: true };
+  });
+  app.get("/v1/mp/intents/:id", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const intent = store.mp.getIntent((req.params as { id: string }).id);
+    if (!intent) return reply.code(404).send({ error: "not found" });
+    return { intent: { ...intent,
+      intentIdHash: bytesToB64(intent.intentIdHash),
+      ephemeralPubkey: bytesToB64(intent.ephemeralPubkey),
+      payloadCbor: bytesToB64(intent.payloadCbor),
+      signatureRole: bytesToB64(intent.signatureRole),
+      signatureDevice: bytesToB64(intent.signatureDevice),
+    } };
+  });
+
+  // --- peer levels ---
+  app.get("/v1/mp/peer-levels", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const q = req.query as { myRoleKeyId?: string; intentId?: string };
+    return { peers: store.mp.listPeerLevels(q).map((p) => ({ ...p, peerPubkey: bytesToB64(p.peerPubkey) })) };
+  });
+  app.post("/v1/mp/peer-levels", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const body = readBody(req);
+    const peerPubkey = b64ToBytes(body.peerPubkey);
+    if (typeof body.myRoleKeyId !== "string" || !peerPubkey || typeof body.currentLevel !== "number") {
+      return reply.code(400).send({ error: "myRoleKeyId, peerPubkey, currentLevel required" });
+    }
+    const row = store.mp.upsertPeerLevel({
+      myRoleKeyId: body.myRoleKeyId, peerPubkey,
+      intentId: (body.intentId as string | undefined) ?? null,
+      currentLevel: body.currentLevel as number,
+      proofs: body.proofs as Record<string, unknown> | undefined,
+    });
+    return { peer: { ...row, peerPubkey: bytesToB64(row.peerPubkey) } };
+  });
+
+  // --- mailbox ---
+  app.get("/v1/mp/mailbox/inbound", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const q = req.query as { recipientRoleKeyId?: string; intentIdRef?: string; limit?: number };
+    return { messages: store.mp.listInbound(q).map((m) => ({
+      ...m,
+      senderPubkey: bytesToB64(m.senderPubkey),
+      threadId: bytesToB64(m.threadId),
+      inReplyTo: bytesToB64(m.inReplyTo),
+      signature: bytesToB64(m.signature),
+    })) };
+  });
+  app.post("/v1/mp/mailbox/inbound", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const body = readBody(req);
+    const senderPubkey = b64ToBytes(body.senderPubkey);
+    if (typeof body.recipientRoleKeyId !== "string" || !senderPubkey || typeof body.kind !== "string") {
+      return reply.code(400).send({ error: "recipientRoleKeyId, senderPubkey, kind required" });
+    }
+    const row = store.mp.recordInbound({
+      recipientRoleKeyId: body.recipientRoleKeyId, senderPubkey,
+      threadId: b64ToBytes(body.threadId), inReplyTo: b64ToBytes(body.inReplyTo),
+      intentIdRef: (body.intentIdRef as string | undefined) ?? null,
+      kind: body.kind, plaintext: (body.plaintext as Record<string, unknown>) ?? {},
+      signature: b64ToBytes(body.signature),
+      ttlExpiresAt: (body.ttlExpiresAt as string | undefined) ?? null,
+    });
+    return { message: { ...row,
+      senderPubkey: bytesToB64(row.senderPubkey),
+      threadId: bytesToB64(row.threadId),
+      inReplyTo: bytesToB64(row.inReplyTo),
+      signature: bytesToB64(row.signature),
+    } };
+  });
+  app.post("/v1/mp/mailbox/inbound/:id/read", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    store.mp.markInboundRead((req.params as { id: string }).id);
+    return { ok: true };
+  });
+  app.get("/v1/mp/mailbox/outbound", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const q = req.query as { senderRoleKeyId?: string; limit?: number };
+    return { messages: store.mp.listOutbound(q).map((m) => ({
+      ...m,
+      recipientPubkey: bytesToB64(m.recipientPubkey),
+      threadId: bytesToB64(m.threadId),
+      inReplyTo: bytesToB64(m.inReplyTo),
+      ciphertext: bytesToB64(m.ciphertext),
+      signature: bytesToB64(m.signature),
+    })) };
+  });
+  app.post("/v1/mp/mailbox/outbound", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const body = readBody(req);
+    const recipientPubkey = b64ToBytes(body.recipientPubkey);
+    if (typeof body.senderRoleKeyId !== "string" || !recipientPubkey || typeof body.kind !== "string") {
+      return reply.code(400).send({ error: "senderRoleKeyId, recipientPubkey, kind required" });
+    }
+    const row = store.mp.recordOutbound({
+      senderRoleKeyId: body.senderRoleKeyId, recipientPubkey,
+      threadId: b64ToBytes(body.threadId), inReplyTo: b64ToBytes(body.inReplyTo),
+      intentIdRef: (body.intentIdRef as string | undefined) ?? null,
+      kind: body.kind, plaintext: (body.plaintext as Record<string, unknown>) ?? {},
+      ciphertext: b64ToBytes(body.ciphertext),
+      signature: b64ToBytes(body.signature),
+      deliveryStatus: (body.deliveryStatus as any) ?? "queued",
+    });
+    return { message: { ...row,
+      recipientPubkey: bytesToB64(row.recipientPubkey),
+      threadId: bytesToB64(row.threadId),
+      inReplyTo: bytesToB64(row.inReplyTo),
+      ciphertext: bytesToB64(row.ciphertext),
+      signature: bytesToB64(row.signature),
+    } };
+  });
+
+  // --- match receipts ---
+  app.get("/v1/mp/match-receipts", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const q = req.query as { myRoleKeyId?: string; status?: any };
+    return { receipts: store.mp.listMatchReceipts(q).map((r) => ({
+      ...r,
+      receiptHash: bytesToB64(r.receiptHash),
+      peerRolePubkey: bytesToB64(r.peerRolePubkey),
+      mySignature: bytesToB64(r.mySignature),
+      peerSignature: bytesToB64(r.peerSignature),
+      payloadCbor: bytesToB64(r.payloadCbor),
+    })) };
+  });
+  app.post("/v1/mp/match-receipts", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const body = readBody(req);
+    const receiptHash = b64ToBytes(body.receiptHash);
+    const peerRolePubkey = b64ToBytes(body.peerRolePubkey);
+    const payloadCbor = b64ToBytes(body.payloadCbor);
+    if (!receiptHash || !peerRolePubkey || !payloadCbor || typeof body.myRoleKeyId !== "string" || typeof body.status !== "string" || typeof body.reachedLevel !== "number") {
+      return reply.code(400).send({ error: "receiptHash, myRoleKeyId, peerRolePubkey, reachedLevel, status, payloadCbor required" });
+    }
+    const row = store.mp.insertMatchReceipt({
+      receiptHash, myRoleKeyId: body.myRoleKeyId, peerRolePubkey,
+      offerIntentId: (body.offerIntentId as string | undefined) ?? null,
+      wantIntentId: (body.wantIntentId as string | undefined) ?? null,
+      reachedLevel: body.reachedLevel,
+      fieldsRevealed: (body.fieldsRevealed as string[] | undefined) ?? [],
+      contactHandover: (body.contactHandover as Record<string, unknown> | undefined) ?? null,
+      mySignature: b64ToBytes(body.mySignature),
+      peerSignature: b64ToBytes(body.peerSignature),
+      status: body.status as any,
+      signedAt: (body.signedAt as string | undefined) ?? null,
+      rejectedAt: (body.rejectedAt as string | undefined) ?? null,
+      payloadCbor,
+    });
+    return { receipt: { ...row,
+      receiptHash: bytesToB64(row.receiptHash),
+      peerRolePubkey: bytesToB64(row.peerRolePubkey),
+      mySignature: bytesToB64(row.mySignature),
+      peerSignature: bytesToB64(row.peerSignature),
+      payloadCbor: bytesToB64(row.payloadCbor),
+    } };
+  });
+  app.patch("/v1/mp/match-receipts/:id", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const body = readBody(req);
+    const updated = store.mp.updateMatchReceipt((req.params as { id: string }).id, {
+      status: body.status as any,
+      mySignature: b64ToBytes(body.mySignature) ?? undefined,
+      peerSignature: b64ToBytes(body.peerSignature) ?? undefined,
+      signedAt: body.signedAt as string | undefined,
+      rejectedAt: body.rejectedAt as string | undefined,
+      contactHandover: body.contactHandover as Record<string, unknown> | undefined,
+      fieldsRevealed: body.fieldsRevealed as string[] | undefined,
+      payloadCbor: b64ToBytes(body.payloadCbor) ?? undefined,
+      receiptHash: b64ToBytes(body.receiptHash) ?? undefined,
+    });
+    if (!updated) return reply.code(404).send({ error: "not found" });
+    return { receipt: { ...updated,
+      receiptHash: bytesToB64(updated.receiptHash),
+      peerRolePubkey: bytesToB64(updated.peerRolePubkey),
+      mySignature: bytesToB64(updated.mySignature),
+      peerSignature: bytesToB64(updated.peerSignature),
+      payloadCbor: bytesToB64(updated.payloadCbor),
+    } };
+  });
+
+  // --- brokers ---
+  app.get("/v1/mp/brokers", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const q = req.query as { vertical?: string };
+    return { brokers: store.mp.listBrokers(q).map((b) => ({ ...b, brokerPubkey: bytesToB64(b.brokerPubkey) })) };
+  });
+  app.post("/v1/mp/brokers", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const body = readBody(req);
+    const brokerPubkey = b64ToBytes(body.brokerPubkey);
+    if (!brokerPubkey) return reply.code(400).send({ error: "brokerPubkey required" });
+    const row = store.mp.upsertBroker({
+      brokerPubkey,
+      endpoints: (body.endpoints as string[] | undefined) ?? [],
+      verticalsSupported: (body.verticalsSupported as string[] | undefined) ?? [],
+      policies: (body.policies as Record<string, unknown> | undefined) ?? null,
+      trustLocal: body.trustLocal === true,
+    });
+    return { broker: { ...row, brokerPubkey: bytesToB64(row.brokerPubkey) } };
+  });
+
+  // --- revocations ---
+  app.post("/v1/mp/revocations", async (req, reply) => {
+    if (!(await requirePrincipal(req, reply, auth))) return;
+    const body = readBody(req);
+    const revokedPubkey = b64ToBytes(body.revokedPubkey);
+    const rootPubkey = b64ToBytes(body.rootPubkey);
+    const rootSignature = b64ToBytes(body.rootSignature);
+    if (!revokedPubkey || !rootPubkey || !rootSignature || (body.revokedKind !== "device" && body.revokedKind !== "role") || typeof body.signedAt !== "string") {
+      return reply.code(400).send({ error: "revokedPubkey, revokedKind, signedAt, rootPubkey, rootSignature required" });
+    }
+    const row = store.mp.insertRevocation({
+      revokedPubkey, revokedKind: body.revokedKind, reason: (body.reason as string | undefined) ?? null,
+      signedAt: body.signedAt, rootPubkey, rootSignature,
+    });
+    return { revocation: { ...row, revokedPubkey: bytesToB64(row.revokedPubkey), rootPubkey: bytesToB64(row.rootPubkey), rootSignature: bytesToB64(row.rootSignature) } };
+  });
+
   if (options.startScheduler !== false) scheduler.start();
   return { app, store, auth, scheduler, config, ephemeralAdminToken };
 }
