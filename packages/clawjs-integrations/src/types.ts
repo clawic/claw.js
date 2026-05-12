@@ -5,6 +5,76 @@
 
 import type { Connection } from "@clawjs/agents";
 
+export type IntegrationJson =
+  | null
+  | boolean
+  | number
+  | string
+  | IntegrationJson[]
+  | { [key: string]: IntegrationJson };
+
+export type ConnectorComponentKind = "action" | "source";
+
+export interface ConnectorFieldOption {
+  label?: string;
+  value: string | number | boolean;
+  description?: string;
+}
+
+export interface ConnectorFieldDefinition {
+  name: string;
+  type: string;
+  label?: string;
+  description?: string;
+  optional: boolean;
+  default?: IntegrationJson;
+  options?: ConnectorFieldOption[];
+  secret?: boolean;
+}
+
+export interface ConnectorOperationDefinition {
+  id: string;
+  appId: string;
+  kind: ConnectorComponentKind;
+  key?: string;
+  name: string;
+  description?: string;
+  version?: string;
+  fields: ConnectorFieldDefinition[];
+  authFieldNames: string[];
+  sourcePath?: string;
+}
+
+export interface ConnectorAppDefinition {
+  id: string;
+  name: string;
+  description?: string;
+  authType?: string;
+  authFieldNames: string[];
+  fields: ConnectorFieldDefinition[];
+  operations: ConnectorOperationDefinition[];
+}
+
+export interface ConnectorCatalog {
+  version: 1;
+  generatedAt?: string;
+  sourceRevision?: string;
+  apps: ConnectorAppDefinition[];
+}
+
+export interface ConnectorCatalogSummary {
+  apps: number;
+  actions: number;
+  sources: number;
+  fields: number;
+  authFields: number;
+}
+
+export interface ConnectorOperationInput {
+  values?: Record<string, IntegrationJson>;
+  secretRefs?: Record<string, string>;
+}
+
 export interface IntegrationInboundMessage {
   /** ID of the connection that produced the message
    * (`Connection.id`). */

@@ -17,3 +17,35 @@ await manager.startAll();
 ```
 
 Auth tokens never leave `~/.clawjs/connections/<id>/auth.encrypted`; the manager reads them through `AgentStoreFS.readConnectionAuth` so they stay encapsulated in one place.
+
+## Connector catalogs
+
+The package also exposes a generic catalog surface for app operations. Catalogs are plain JSON, can be extracted from an external component checkout, and can be searched or dry-run without contacting providers.
+
+```ts
+import {
+  loadConnectorCatalogFromFile,
+  runConnectorOperation,
+  searchConnectorCatalog,
+} from "@clawjs/integrations";
+
+const catalog = loadConnectorCatalogFromFile("./catalog.json");
+const matches = searchConnectorCatalog(catalog, { query: "send message", kind: "action" });
+
+const preview = await runConnectorOperation({
+  catalog,
+  operationId: matches[0].operation.id,
+  input: {
+    values: { text: "hello" },
+    secretRefs: { bot: "vault://connections/chat/bot" },
+  },
+});
+```
+
+`runConnectorOperation` defaults to dry-run mode. Real execution requires both `dryRun: false` and an explicit executor, so tests and UI previews cannot accidentally connect to a third-party API.
+
+To build a catalog from a local component checkout:
+
+```bash
+npm --workspace @clawjs/integrations run catalog:extract -- --source /path/to/checkout --out /tmp/clawjs-catalog.json
+```

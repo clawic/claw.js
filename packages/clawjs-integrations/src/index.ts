@@ -6,14 +6,45 @@
 // New adapters plug into the same `IntegrationAdapter` contract; pass
 // them via `new IntegrationManager({ adapters: { slack: slackAdapter } })`.
 
+export {
+  ConnectorCatalogError,
+  findConnectorApp,
+  findConnectorOperation,
+  loadConnectorCatalogFromFile,
+  normalizeConnectorCatalog,
+  searchConnectorCatalog,
+  summarizeConnectorCatalog,
+} from "./catalog.js";
 export { IntegrationManager } from "./manager.js";
+export { runConnectorOperation } from "./operation-runner.js";
+export type {
+  ConnectorCatalogSearchOptions,
+  ConnectorCatalogSearchResult,
+} from "./catalog.js";
 export type {
   IntegrationManagerOptions,
   IntegrationDeliveryContext,
 } from "./manager.js";
+export type {
+  ConnectorExecutionContext,
+  ConnectorExecutor,
+  ConnectorOperationDryRun,
+  ConnectorOperationRunResult,
+  ConnectorSecretResolver,
+  RunConnectorOperationOptions,
+} from "./operation-runner.js";
 export { telegramAdapter } from "./telegram.js";
 export type {
+  ConnectorAppDefinition,
+  ConnectorCatalog,
+  ConnectorCatalogSummary,
+  ConnectorComponentKind,
+  ConnectorFieldDefinition,
+  ConnectorFieldOption,
+  ConnectorOperationDefinition,
+  ConnectorOperationInput,
   IntegrationAdapter,
   IntegrationInboundMessage,
+  IntegrationJson,
   IntegrationOutboundMessage,
 } from "./types.js";

@@ -117,7 +117,12 @@ run("node", ["--input-type=module", "-e", `
     throw new Error("@clawjs/agents helpers are missing");
   }
   const integrations = await import("@clawjs/integrations");
-  if (typeof integrations.IntegrationManager !== "function" || typeof integrations.telegramAdapter !== "object") {
+  if (
+    typeof integrations.IntegrationManager !== "function"
+    || typeof integrations.telegramAdapter !== "object"
+    || typeof integrations.normalizeConnectorCatalog !== "function"
+    || typeof integrations.runConnectorOperation !== "function"
+  ) {
     throw new Error("@clawjs/integrations helpers are missing");
   }
 `], { cwd: appDir, stdio: "inherit" });
