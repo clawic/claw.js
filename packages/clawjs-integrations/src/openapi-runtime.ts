@@ -99,6 +99,8 @@ interface OpenApiSchema {
   nullable?: unknown;
   format?: unknown;
   description?: unknown;
+  readOnly?: unknown;
+  writeOnly?: unknown;
   default?: unknown;
   enum?: unknown;
   minimum?: unknown;
@@ -754,6 +756,7 @@ function openApiBodyBindings(
   const required = new Set(Array.isArray(schema.required) ? schema.required.filter((item): item is string => typeof item === "string") : []);
   return Object.entries(properties).flatMap(([sourceName, propertySchema]) => {
     if (!propertySchema) return [];
+    if (resolveOpenApiSchema(document, propertySchema)?.readOnly === true) return [];
     const fieldName = uniqueFieldName(sourceName, "body", usedFieldNames);
     return [{
       fieldName,
@@ -813,6 +816,7 @@ function requiredPathsForSchema(
     if (!name.trim()) return [];
     const path = prefix ? `${prefix}.${name}` : name;
     const child = schemaProperty(document, resolved, name);
+    if (child?.writeOnly === true) return [];
     return [
       path,
       ...requiredPathsForSchema(document, child, path, seen),

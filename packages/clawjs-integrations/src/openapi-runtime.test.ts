@@ -1119,6 +1119,102 @@ describe("OpenAPI connector runtime", () => {
     });
   });
 
+  it("honors OpenAPI readOnly and writeOnly schema properties", () => {
+    const document = {
+      openapi: "3.0.0",
+      info: {
+        title: "Fixture Access Schemas",
+        version: "2026-05-12",
+      },
+      servers: [{ url: "https://api.example.invalid/v1/" }],
+      paths: {
+        "/tokens": {
+          post: {
+            operationId: "createToken",
+            summary: "Create token",
+            requestBody: {
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["id", "name", "secret"],
+                    properties: {
+                      id: {
+                        type: "string",
+                        readOnly: true,
+                      },
+                      name: {
+                        type: "string",
+                      },
+                      secret: {
+                        type: "string",
+                        writeOnly: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            responses: {
+              "200": {
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      required: ["id", "secret"],
+                      properties: {
+                        id: { type: "string" },
+                        secret: {
+                          type: "string",
+                          writeOnly: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const options = {
+      appId: "fixture_access_modes",
+      authFieldName: "apiKey",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(document, options)];
+    const operation = catalog.apps[0]?.operations[0];
+    assert.ok(operation);
+
+    assert.deepEqual(operation.fields.map((field) => [field.name, field.optional]), [
+      ["name", false],
+      ["secret", false],
+    ]);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, {
+      name: "example",
+      secret: "fixture",
+    }, { registry }).requestPlan, {
+      method: "POST",
+      endpoint: "/tokens",
+      auth: [{ type: "secret", field: "apiKey", placement: "bearer" }],
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+      },
+      body: {
+        name: "example",
+        secret: "fixture",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id"],
+      },
+    });
+  });
+
   it("merges OpenAPI oneOf schema fields conservatively", () => {
     const document = {
       openapi: "3.0.0",

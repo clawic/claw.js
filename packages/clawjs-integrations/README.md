@@ -112,6 +112,7 @@ OpenAPI conversion resolves local component references for path items, operation
 OpenAPI content maps can use vendor or problem-detail media types ending in `+json`; those schemas are treated as JSON for fields and output validation, and generated plans preserve the selected request and response media types in headers.
 OpenAPI request bodies whose schema cannot be decomposed into object properties are exposed as a single `body` field and serialized as the whole JSON payload.
 OpenAPI schemas using nullable unions such as `["string", "null"]` keep their non-null field and output types while preserving required-path validation separately.
+OpenAPI request fields skip `readOnly` properties, and output validation ignores `writeOnly` properties that providers should not return.
 OpenAPI schemas that compose fields with `allOf` are flattened before field and output-schema inference so request plans keep inherited properties and required paths.
 OpenAPI `oneOf` and `anyOf` schemas are flattened conservatively: alternative properties become available fields while only required properties common to every alternative become required output paths.
 OpenAPI response schemas derive nested required output paths for required object properties, so offline validation can catch missing nested objects without real provider calls.
