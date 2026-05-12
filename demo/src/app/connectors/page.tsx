@@ -39,6 +39,7 @@ interface CatalogSummary {
   webhookSources: number;
   hybridSources: number;
   statefulSources: number;
+  sampleEventSources: number;
   dynamicPropOperations: number;
   dynamicPropFields: number;
   dynamicOptionFields: number;
@@ -114,6 +115,10 @@ interface CatalogOperation {
     usesTimer: boolean;
     usesHttp: boolean;
     usesServiceDb: boolean;
+  };
+  sampleEvent?: {
+    shape: "object" | "array" | "string" | "unknown";
+    keys: string[];
   };
 }
 
@@ -372,6 +377,7 @@ export default function ConnectorsPage() {
             <span>{catalog?.summary.pollingSources ?? 0} polling</span>
             <span>{catalog?.summary.webhookSources ?? 0} webhooks</span>
             <span>{catalog?.summary.statefulSources ?? 0} stateful</span>
+            <span>{catalog?.summary.sampleEventSources ?? 0} samples</span>
             <span>{catalog?.summary.dynamicPropOperations ?? 0} dynamic props</span>
             <span>{catalog?.summary.dynamicPropFields ?? 0} dynamic fields</span>
             <span>{catalog?.summary.dynamicOptionFields ?? 0} dynamic options</span>
@@ -416,6 +422,9 @@ export default function ConnectorsPage() {
                       ) : null}
                       {entry.operation.source ? (
                         <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground font-mono">{entry.operation.source.delivery}</span>
+                      ) : null}
+                      {entry.operation.sampleEvent ? (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground font-mono">sample</span>
                       ) : null}
                     </div>
                     <div className="text-[11px] text-muted-foreground mt-0.5 truncate">{entry.app.name}</div>
@@ -462,6 +471,7 @@ export default function ConnectorsPage() {
                       <span>http={String(selected.operation.source.usesHttp)}</span>
                       <span>customResponse={String(selected.operation.fields.some((field) => field.customResponse))}</span>
                       <span>state={String(selected.operation.source.usesServiceDb)}</span>
+                      {selected.operation.sampleEvent ? <span>sample={selected.operation.sampleEvent.shape}:{selected.operation.sampleEvent.keys.length}</span> : null}
                     </div>
                   ) : null}
                 </div>

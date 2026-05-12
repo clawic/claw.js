@@ -67,6 +67,7 @@ export async function GET(req: NextRequest) {
         webhookSources: 0,
         hybridSources: 0,
         statefulSources: 0,
+        sampleEventSources: 0,
         dynamicPropOperations: 0,
         dynamicPropFields: 0,
         dynamicOptionFields: 0,
