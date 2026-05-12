@@ -44,6 +44,9 @@ export {
   executeConnectorRuntimeRequestPlan,
 } from "./runtime-http.js";
 export {
+  handleConnectorRuntimeWebhook,
+} from "./runtime-webhook.js";
+export {
   validateConnectorRuntimeOutput,
 } from "./runtime-output.js";
 export {
@@ -120,6 +123,10 @@ export type {
   ConnectorRuntimeRateLimitInfo,
   ConnectorRuntimeHttpResponse,
 } from "./runtime-http.js";
+export type {
+  ConnectorRuntimeWebhookInput,
+  ConnectorRuntimeWebhookResult,
+} from "./runtime-webhook.js";
 export type {
   ConnectorRuntimeFixtureFetchOptions,
   ConnectorRuntimeLoadedFixture,
