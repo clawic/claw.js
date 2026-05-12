@@ -364,4 +364,44 @@ describe("connector runtime coverage", () => {
       /requires a registered source executor.*requires a source plan kind.*requires a request plan kind.*requires a runtime plan builder/s,
     );
   });
+
+  it("rejects plan builders that do not return declared plan kinds", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [{
+          id: "fixture_service.action.send-message",
+          appId: "fixture_service",
+          kind: "action",
+          name: "Send Message",
+          fields: [{ name: "text", type: "string", optional: false }],
+          authFieldNames: [],
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "action",
+      executorId: "fixture.action.offline",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      planKinds: ["request"],
+      supports: (operation) => operation.id === "fixture_service.action.send-message",
+      createExecutor: () => ({
+        async execute() {
+          return { ok: true };
+        },
+      }),
+      buildPlan: () => ({}),
+    }];
+
+    assert.throws(
+      () => verifyConnectorRuntimeCoverage(catalog, { registry }),
+      /must build a request plan/,
+    );
+  });
 });

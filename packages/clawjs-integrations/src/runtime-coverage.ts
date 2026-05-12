@@ -8,6 +8,7 @@ import {
 } from "./runtime-registry.ts";
 import type {
   ConnectorCatalog,
+  ConnectorFieldDefinition,
   ConnectorOperationDefinition,
   ConnectorUnsupportedRealRuntimeReason,
   IntegrationJson,
@@ -123,7 +124,21 @@ export function verifyConnectorRuntimeCoverage(
           errors.push(`runtime implementation for ${entry.operationId} requires a request plan kind for polling delivery`);
         }
       }
+      if (!operation) errors.push(`runtime implementation for ${entry.operationId} requires a catalog operation`);
       if (!implementation?.buildPlan) errors.push(`runtime implementation for ${entry.operationId} requires a runtime plan builder`);
+      else if (operation) {
+        try {
+          const details = implementation.buildPlan(operation, sampleValuesForOperation(operation));
+          if (implementation.planKinds.includes("request") && !isRequestPlan(details.requestPlan)) {
+            errors.push(`runtime implementation for ${entry.operationId} must build a request plan`);
+          }
+          if (implementation.planKinds.includes("source") && !isSourcePlan(details.sourcePlan)) {
+            errors.push(`runtime implementation for ${entry.operationId} must build a source plan`);
+          }
+        } catch (error) {
+          errors.push(`runtime implementation for ${entry.operationId} plan builder failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
     }
     if (entry.status !== "unsupported") continue;
     const reason = entry.unsupported_real_runtime_reason;
@@ -140,6 +155,50 @@ export function verifyConnectorRuntimeCoverage(
     );
   }
   return report;
+}
+
+function isRequestPlan(value: ConnectorRuntimeRequestPlan | undefined): boolean {
+  return Boolean(
+    value
+    && typeof value.method === "string"
+    && value.method.trim()
+    && typeof value.endpoint === "string"
+    && value.endpoint.trim()
+    && Array.isArray(value.auth)
+    && value.auth.every((entry) => entry.type === "secret" && typeof entry.field === "string" && entry.field.trim())
+    && value.body
+    && typeof value.body === "object"
+    && !Array.isArray(value.body),
+  );
+}
+
+function isSourcePlan(value: ConnectorRuntimeSourcePlan | undefined): boolean {
+  return Boolean(
+    value
+    && typeof value.delivery === "string"
+    && value.delivery.trim()
+    && Array.isArray(value.hooks),
+  );
+}
+
+function sampleValuesForOperation(operation: ConnectorOperationDefinition): Record<string, IntegrationJson> {
+  const values: Record<string, IntegrationJson> = {};
+  for (const field of operation.fields) {
+    if (field.managed || field.secret) continue;
+    values[field.name] = sampleValueForField(field);
+  }
+  return values;
+}
+
+function sampleValueForField(field: ConnectorFieldDefinition): IntegrationJson {
+  if (Object.prototype.hasOwnProperty.call(field, "default")) return field.default ?? null;
+  if (field.options?.length) return field.options[0]?.value ?? null;
+  if (field.type === "boolean") return false;
+  if (field.type === "integer" || field.type === "number") return field.min ?? 1;
+  if (field.type === "array") return [];
+  if (field.name === "mediaType") return "Document/Image";
+  if (field.name === "media") return "https://example.invalid/media";
+  return "sample";
 }
 
 function findCatalogOperation(
