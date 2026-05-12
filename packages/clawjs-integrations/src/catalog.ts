@@ -38,6 +38,9 @@ export function normalizeConnectorCatalog(input: unknown): ConnectorCatalog {
   if (!isRecord(input)) {
     throw new ConnectorCatalogError("Catalog must be an object.");
   }
+  if (input.version !== 1) {
+    throw new ConnectorCatalogError(`Unsupported catalog version: ${String(input.version ?? "<missing>")}`);
+  }
   const rawApps = Array.isArray(input.apps) ? input.apps : [];
   const apps = rawApps.map(normalizeApp).sort((left, right) => left.name.localeCompare(right.name));
   const appIds = new Set<string>();

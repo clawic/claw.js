@@ -121,6 +121,13 @@ function fixtureCatalog(): ConnectorCatalog {
 }
 
 describe("connector catalog", () => {
+  it("rejects unknown catalog contract versions", () => {
+    assert.throws(
+      () => normalizeConnectorCatalog({ version: 2, apps: [] }),
+      /Unsupported catalog version: 2/,
+    );
+  });
+
   it("normalizes, searches, and summarizes apps and operations", () => {
     const catalog = fixtureCatalog();
     assert.deepEqual(summarizeConnectorCatalog(catalog), {
