@@ -292,7 +292,7 @@ CREATE TABLE IF NOT EXISTS plugin_registry (
 );
 `;
 
-// ---------- VaultMeta serialization ----------
+// ---------- SecretsMeta serialization ----------
 
 interface SerializedMeta {
   formatVersion: number;
