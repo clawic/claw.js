@@ -36,6 +36,11 @@ export interface ConnectorFieldDefinition {
   default?: IntegrationJson;
   options?: ConnectorFieldOption[];
   dynamicOptions?: ConnectorFieldDynamicOptions;
+  hidden?: boolean;
+  disabled?: boolean;
+  reloadProps?: boolean;
+  min?: number;
+  max?: number;
   secret?: boolean;
   managed?: boolean;
 }
@@ -116,6 +121,10 @@ export interface ConnectorCatalogSummary {
   managedFields: number;
   defaults: number;
   options: number;
+  hiddenFields: number;
+  disabledFields: number;
+  reloadFields: number;
+  boundedFields: number;
   annotatedOperations: number;
   destructiveOperations: number;
   readOnlyOperations: number;

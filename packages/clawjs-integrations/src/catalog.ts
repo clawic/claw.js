@@ -74,6 +74,10 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       summary.managedFields += app.fields.filter((field) => field.managed).length;
       summary.defaults += app.fields.filter((field) => Object.prototype.hasOwnProperty.call(field, "default")).length;
       summary.options += app.fields.filter((field) => field.options?.length).length;
+      summary.hiddenFields += app.fields.filter((field) => field.hidden === true).length;
+      summary.disabledFields += app.fields.filter((field) => field.disabled === true).length;
+      summary.reloadFields += app.fields.filter((field) => field.reloadProps === true).length;
+      summary.boundedFields += app.fields.filter((field) => field.min !== undefined || field.max !== undefined).length;
       summary.dynamicOptionFields += app.fields.filter((field) => field.dynamicOptions).length;
       for (const operation of app.operations) {
         if (operation.kind === "action") summary.actions += 1;
@@ -83,6 +87,10 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
         summary.managedFields += operation.fields.filter((field) => field.managed).length;
         summary.defaults += operation.fields.filter((field) => Object.prototype.hasOwnProperty.call(field, "default")).length;
         summary.options += operation.fields.filter((field) => field.options?.length).length;
+        summary.hiddenFields += operation.fields.filter((field) => field.hidden === true).length;
+        summary.disabledFields += operation.fields.filter((field) => field.disabled === true).length;
+        summary.reloadFields += operation.fields.filter((field) => field.reloadProps === true).length;
+        summary.boundedFields += operation.fields.filter((field) => field.min !== undefined || field.max !== undefined).length;
         summary.dynamicOptionFields += operation.fields.filter((field) => field.dynamicOptions).length;
         if (operation.annotations) summary.annotatedOperations += 1;
         if (operation.annotations?.destructiveHint === true) summary.destructiveOperations += 1;
@@ -110,6 +118,10 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       managedFields: 0,
       defaults: 0,
       options: 0,
+      hiddenFields: 0,
+      disabledFields: 0,
+      reloadFields: 0,
+      boundedFields: 0,
       annotatedOperations: 0,
       destructiveOperations: 0,
       readOnlyOperations: 0,
@@ -223,6 +235,11 @@ function normalizeFields(input: unknown): ConnectorFieldDefinition[] {
         ...(typeof option.description === "string" ? { description: option.description } : {}),
       })).filter((option) => isOptionValue(option.value)) } : {}),
       ...optionalDynamicOptions(field.dynamicOptions),
+      ...(field.hidden === true ? { hidden: true } : {}),
+      ...(field.disabled === true ? { disabled: true } : {}),
+      ...(field.reloadProps === true ? { reloadProps: true } : {}),
+      ...(typeof field.min === "number" && Number.isFinite(field.min) ? { min: field.min } : {}),
+      ...(typeof field.max === "number" && Number.isFinite(field.max) ? { max: field.max } : {}),
       ...(field.secret === true ? { secret: true } : {}),
       ...(field.managed === true || type.startsWith("$.") ? { managed: true } : {}),
     };
