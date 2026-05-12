@@ -182,6 +182,28 @@ describe("telegram operation executor", () => {
     });
   });
 
+  it("maps voice messages through the reference audio send path", () => {
+    assert.deepEqual(buildTelegramOperationRequest(
+      "telegram_bot_api.action.send-voice-message-send-voice-message",
+      {
+        chatId: "123",
+        voice: "https://example.com/voice.ogg",
+        caption: "voice",
+        duration: 30,
+        contentType: "audio/ogg",
+      },
+    ), {
+      method: "POST",
+      endpoint: "sendAudio",
+      body: {
+        chat_id: "123",
+        caption: "voice",
+        duration: 30,
+        audio: "https://example.com/voice.ogg",
+      },
+    });
+  });
+
   it("omits wrapper-only file and paging fields from REST payloads", () => {
     assert.deepEqual(buildTelegramOperationRequest(
       "telegram_bot_api.action.send-photo-send-photo",
