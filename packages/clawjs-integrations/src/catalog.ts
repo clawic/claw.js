@@ -80,10 +80,26 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
         summary.authFields += operation.authFieldNames.length;
         summary.defaults += operation.fields.filter((field) => Object.prototype.hasOwnProperty.call(field, "default")).length;
         summary.options += operation.fields.filter((field) => field.options?.length).length;
+        if (operation.annotations) summary.annotatedOperations += 1;
+        if (operation.annotations?.destructiveHint === true) summary.destructiveOperations += 1;
+        if (operation.annotations?.readOnlyHint === true) summary.readOnlyOperations += 1;
+        if (operation.annotations?.openWorldHint === true) summary.openWorldOperations += 1;
       }
       return summary;
     },
-    { apps: 0, actions: 0, sources: 0, fields: 0, authFields: 0, defaults: 0, options: 0 },
+    {
+      apps: 0,
+      actions: 0,
+      sources: 0,
+      fields: 0,
+      authFields: 0,
+      defaults: 0,
+      options: 0,
+      annotatedOperations: 0,
+      destructiveOperations: 0,
+      readOnlyOperations: 0,
+      openWorldOperations: 0,
+    },
   );
 }
 
@@ -153,6 +169,7 @@ function normalizeOperation(input: unknown, appId: string): ConnectorOperationDe
     ...(typeof input.version === "string" ? { version: input.version } : {}),
     fields: normalizeFields(input.fields),
     authFieldNames: normalizeStringArray(input.authFieldNames),
+    ...optionalAnnotations(input.annotations),
     ...(typeof input.sourcePath === "string" ? { sourcePath: input.sourcePath } : {}),
   };
 }
@@ -201,6 +218,16 @@ function normalizeStringArray(input: unknown): string[] {
   return Array.isArray(input)
     ? input.filter((entry): entry is string => typeof entry === "string").sort()
     : [];
+}
+
+function optionalAnnotations(input: unknown) {
+  if (!isRecord(input)) return {};
+  const annotations = {
+    ...(typeof input.destructiveHint === "boolean" ? { destructiveHint: input.destructiveHint } : {}),
+    ...(typeof input.readOnlyHint === "boolean" ? { readOnlyHint: input.readOnlyHint } : {}),
+    ...(typeof input.openWorldHint === "boolean" ? { openWorldHint: input.openWorldHint } : {}),
+  };
+  return Object.keys(annotations).length ? { annotations } : {};
 }
 
 function stringValue(input: unknown): string | null {

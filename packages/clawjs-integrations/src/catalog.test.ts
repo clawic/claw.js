@@ -39,6 +39,11 @@ function fixtureCatalog(): ConnectorCatalog {
               },
             ],
             authFieldNames: ["bot"],
+            annotations: {
+              destructiveHint: false,
+              readOnlyHint: false,
+              openWorldHint: true,
+            },
           },
           {
             id: "chat_service.source.new-message",
@@ -67,6 +72,10 @@ describe("connector catalog", () => {
       authFields: 3,
       defaults: 1,
       options: 1,
+      annotatedOperations: 1,
+      destructiveOperations: 0,
+      readOnlyOperations: 0,
+      openWorldOperations: 1,
     });
     assert.equal(searchConnectorCatalog(catalog, { query: "send", kind: "action" }).length, 1);
     assert.equal(searchConnectorCatalog(catalog, { query: "send", kind: "source" }).length, 0);

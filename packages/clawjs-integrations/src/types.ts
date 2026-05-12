@@ -32,6 +32,12 @@ export interface ConnectorFieldDefinition {
   secret?: boolean;
 }
 
+export interface ConnectorOperationAnnotations {
+  destructiveHint?: boolean;
+  readOnlyHint?: boolean;
+  openWorldHint?: boolean;
+}
+
 export interface ConnectorOperationDefinition {
   id: string;
   appId: string;
@@ -42,6 +48,7 @@ export interface ConnectorOperationDefinition {
   version?: string;
   fields: ConnectorFieldDefinition[];
   authFieldNames: string[];
+  annotations?: ConnectorOperationAnnotations;
   sourcePath?: string;
 }
 
@@ -70,6 +77,10 @@ export interface ConnectorCatalogSummary {
   authFields: number;
   defaults: number;
   options: number;
+  annotatedOperations: number;
+  destructiveOperations: number;
+  readOnlyOperations: number;
+  openWorldOperations: number;
 }
 
 export interface ConnectorOperationInput {

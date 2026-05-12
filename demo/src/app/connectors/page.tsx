@@ -13,6 +13,10 @@ interface CatalogSummary {
   authFields: number;
   defaults: number;
   options: number;
+  annotatedOperations: number;
+  destructiveOperations: number;
+  readOnlyOperations: number;
+  openWorldOperations: number;
 }
 
 interface CatalogField {
@@ -34,6 +38,11 @@ interface CatalogOperation {
   description?: string;
   fields: CatalogField[];
   authFieldNames: string[];
+  annotations?: {
+    destructiveHint?: boolean;
+    readOnlyHint?: boolean;
+    openWorldHint?: boolean;
+  };
 }
 
 interface CatalogEntry {
@@ -164,6 +173,8 @@ export default function ConnectorsPage() {
             <span>{catalog?.summary.fields ?? 0} fields</span>
             <span>{catalog?.summary.defaults ?? 0} defaults</span>
             <span>{catalog?.summary.options ?? 0} option sets</span>
+            <span>{catalog?.summary.annotatedOperations ?? 0} annotated</span>
+            <span>{catalog?.summary.destructiveOperations ?? 0} destructive</span>
           </div>
           {catalog && !catalog.configured ? (
             <p className="text-[11px] text-muted-foreground mt-2 font-mono">Catalog not found at {catalog.path}</p>
@@ -191,6 +202,12 @@ export default function ConnectorsPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-[13px] font-medium text-foreground truncate">{entry.operation.name}</span>
                       <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground font-mono">{entry.operation.kind}</span>
+                      {entry.operation.annotations?.readOnlyHint ? (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground font-mono">read</span>
+                      ) : null}
+                      {entry.operation.annotations?.destructiveHint ? (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-600 dark:text-red-400 font-mono">destructive</span>
+                      ) : null}
                     </div>
                     <div className="text-[11px] text-muted-foreground mt-0.5 truncate">{entry.app.name}</div>
                     {entry.operation.description ? (
@@ -213,6 +230,13 @@ export default function ConnectorsPage() {
                 <div className="mb-3">
                   <div className="text-[13px] font-medium text-foreground">{selected.operation.name}</div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">{selected.app.name}</div>
+                  {selected.operation.annotations ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-mono text-muted-foreground">
+                      <span>readOnly={String(selected.operation.annotations.readOnlyHint ?? false)}</span>
+                      <span>destructive={String(selected.operation.annotations.destructiveHint ?? false)}</span>
+                      <span>openWorld={String(selected.operation.annotations.openWorldHint ?? false)}</span>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="mb-4">
                   <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Required fields</div>
