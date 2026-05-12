@@ -654,6 +654,101 @@ describe("OpenAPI connector runtime", () => {
     });
   });
 
+  it("resolves local OpenAPI path item refs", () => {
+    const document = {
+      openapi: "3.0.0",
+      info: {
+        title: "Fixture Path Items",
+        version: "2026-05-12",
+      },
+      servers: [{ url: "https://api.example.invalid/v1/" }],
+      components: {
+        pathItems: {
+          item: {
+            parameters: [{
+              name: "customerId",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            }],
+            get: {
+              operationId: "getCustomerItem",
+              summary: "Get customer item",
+              responses: {
+                "200": {
+                  content: {
+                    "application/json": {
+                      schema: {
+                        type: "object",
+                        required: ["id"],
+                        properties: {
+                          id: { type: "string" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          itemEvents: {
+            post: {
+              operationId: "itemEvents",
+              summary: "Item events",
+              requestBody: {
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      properties: {
+                        events: {
+                          type: "array",
+                          items: { type: "object" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      paths: {
+        "/customers/{customerId}/items/current": {
+          $ref: "#/components/pathItems/item",
+        },
+      },
+      webhooks: {
+        itemEvents: {
+          $ref: "#/components/pathItems/itemEvents",
+        },
+      },
+    };
+    const options = {
+      appId: "fixture_path_items",
+      authFieldName: "apiKey",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = createOpenApiConnectorRuntimeImplementations(document, options);
+    const action = catalog.apps[0]?.operations.find((operation) => operation.kind === "action");
+    const source = catalog.apps[0]?.operations.find((operation) => operation.kind === "source");
+    assert.ok(action);
+    assert.ok(source);
+
+    assert.deepEqual(action.fields.map((field) => [field.name, field.optional]), [["customerId", false]]);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(action, {
+      customerId: "cus_123",
+    }, { registry }).requestPlan?.endpoint, "/customers/cus_123/items/current");
+    assert.deepEqual(buildConnectorOperationRuntimePlan(source, {}, { registry }).sourcePlan, {
+      delivery: "webhook",
+      hooks: [],
+      eventsPath: "events",
+    });
+  });
+
   it("builds webhook sources from OpenAPI webhook operations", async () => {
     const options = {
       appId: "fixture_commerce",

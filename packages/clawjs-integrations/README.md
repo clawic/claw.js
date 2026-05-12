@@ -107,7 +107,7 @@ Runtime implementations that cover multiple operations must attach offline fixtu
 Webhook sources can reuse `handleConnectorRuntimeWebhook` to extract events from an incoming payload with the same registered source plan used by dry-runs and audits. This keeps webhook validation offline-friendly: tests can pass fixture payloads directly, without opening a real HTTP endpoint or contacting the provider.
 
 REST providers that publish OpenAPI 3 documents can use `buildOpenApiConnectorCatalog` and `createOpenApiConnectorRuntimeImplementation` to produce action catalogs and HTTP request plans from a supplied spec. The spec remains external input; the package does not vendor provider specifications.
-OpenAPI conversion resolves local component references for operations, parameters, request bodies, responses, schemas, and security schemes; remote `$ref` values are rejected so validation stays local and explicit.
+OpenAPI conversion resolves local component references for path items, operations, parameters, request bodies, responses, schemas, and security schemes; remote `$ref` values are rejected so validation stays local and explicit.
 OpenAPI schemas that compose fields with `allOf` are flattened before field and output-schema inference so request plans keep inherited properties and required paths.
 OpenAPI server URLs may use server variables with defaults; the runtime resolves those defaults before constructing request plans.
 OpenAPI request bodies declared as `application/x-www-form-urlencoded` are converted into form-encoded runtime request plans when no JSON body schema is present.

@@ -24,6 +24,7 @@ interface OpenApiDocument {
     version?: unknown;
   };
   components?: {
+    pathItems?: Record<string, OpenApiPathItem | undefined>;
     securitySchemes?: Record<string, OpenApiSecurityScheme | undefined>;
   };
   security?: OpenApiSecurityRequirement[];
@@ -49,6 +50,7 @@ interface OpenApiSecurityScheme {
 }
 
 type OpenApiPathItem = Partial<Record<OpenApiHttpMethod, OpenApiOperation>> & {
+  $ref?: unknown;
   parameters?: OpenApiParameter[];
 };
 
@@ -302,12 +304,13 @@ function collectOpenApiOperations(
   options: OpenApiConnectorRuntimeOptions,
 ): Array<{ definition: ConnectorOperationDefinition; metadata: OpenApiConnectorOperationMetadata }> {
   return Object.entries(document.paths ?? {}).flatMap(([path, pathItem]) => {
-    if (!pathItem) return [];
+    const resolvedPathItem = resolveOpenApiPathItem(document, pathItem);
+    if (!resolvedPathItem) return [];
     return HTTP_METHODS.flatMap((method) => {
-      const operation = resolveOpenApiOperation(document, pathItem[method]);
+      const operation = resolveOpenApiOperation(document, resolvedPathItem[method]);
       if (!operation) return [];
       const usedFieldNames = new Set<string>();
-      const parameters = [...(pathItem.parameters ?? []), ...(operation.parameters ?? [])]
+      const parameters = [...(resolvedPathItem.parameters ?? []), ...(operation.parameters ?? [])]
         .map((parameter) => openApiParameterBinding(document, parameter, usedFieldNames))
         .filter((parameter): parameter is OpenApiConnectorParameterBinding & { field: ConnectorFieldDefinition } => Boolean(parameter));
       const bodyFields = openApiBodyBindings(document, operation.requestBody, usedFieldNames);
@@ -356,7 +359,8 @@ function collectOpenApiWebhookSources(
   options: OpenApiConnectorRuntimeOptions,
 ): Array<{ definition: ConnectorOperationDefinition; metadata: OpenApiConnectorSourceMetadata }> {
   return Object.entries(document.webhooks ?? {}).flatMap(([name, pathItem]) => {
-    const operation = resolveOpenApiOperation(document, pathItem?.post ?? pathItem?.put ?? pathItem?.patch);
+    const resolvedPathItem = resolveOpenApiPathItem(document, pathItem);
+    const operation = resolveOpenApiOperation(document, resolvedPathItem?.post ?? resolvedPathItem?.put ?? resolvedPathItem?.patch);
     if (!operation) return [];
     const slug = operationSlug("webhook", name, stringValue(operation.operationId) ?? name);
     const id = `${options.appId}.source.${slug}`;
@@ -731,6 +735,10 @@ function parameterLocation(value: unknown): OpenApiParameterLocation | null {
 
 function resolveOpenApiOperation(document: OpenApiDocument, value: OpenApiOperation | undefined): OpenApiOperation | undefined {
   return resolveOpenApiRef(document, value) as OpenApiOperation | undefined;
+}
+
+function resolveOpenApiPathItem(document: OpenApiDocument, value: OpenApiPathItem | undefined): OpenApiPathItem | undefined {
+  return resolveOpenApiRef(document, value) as OpenApiPathItem | undefined;
 }
 
 function resolveOpenApiParameter(document: OpenApiDocument, value: OpenApiParameter | undefined): OpenApiParameter | undefined {
