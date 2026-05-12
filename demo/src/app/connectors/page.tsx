@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertCircle, Loader2, Play, RefreshCw, Search, Unplug } from "lucide-react";
+import { AlertCircle, Loader2, Play, RefreshCw, Save, Search, Trash2, Unplug } from "lucide-react";
 
 type ConnectorKind = "action" | "source" | "all";
 
@@ -82,6 +82,18 @@ interface CatalogResponse {
   entries: CatalogEntry[];
 }
 
+interface SourceSubscription {
+  id: string;
+  status: "ready" | "blocked" | "disabled";
+  operationId: string;
+  appId: string;
+  delivery: "polling" | "webhook" | "hybrid" | "manual";
+  blockReasons: string[];
+  missingFields: string[];
+  missingSecrets: string[];
+  updatedAt: string;
+}
+
 export default function ConnectorsPage() {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<ConnectorKind>("all");
@@ -90,9 +102,12 @@ export default function ConnectorsPage() {
   const [valuesJson, setValuesJson] = useState("{}");
   const [secretRefsJson, setSecretRefsJson] = useState("{}");
   const [preview, setPreview] = useState<unknown>(null);
+  const [subscriptions, setSubscriptions] = useState<SourceSubscription[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
+  const [savingSubscription, setSavingSubscription] = useState(false);
+  const [updatingSubscriptionId, setUpdatingSubscriptionId] = useState<string | null>(null);
 
   const loadCatalog = useCallback(async () => {
     setLoading(true);
@@ -114,14 +129,34 @@ export default function ConnectorsPage() {
     setLoading(false);
   }, [kind, query]);
 
+  const loadSubscriptions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/connectors/subscriptions", { cache: "no-store" });
+      const data = await res.json() as { subscriptions?: SourceSubscription[] };
+      setSubscriptions(data.subscriptions ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, []);
+
   useEffect(() => {
     const timer = setTimeout(() => { void loadCatalog(); }, 200);
     return () => clearTimeout(timer);
   }, [loadCatalog]);
 
+  useEffect(() => {
+    void loadSubscriptions();
+  }, [loadSubscriptions]);
+
   const requiredFields = useMemo(() => (
     selected?.operation.fields.filter((field) => !field.optional && !field.secret && !field.managed) ?? []
   ), [selected]);
+
+  const selectedSubscriptions = useMemo(() => (
+    selected
+      ? subscriptions.filter((subscription) => subscription.operationId === selected.operation.id)
+      : []
+  ), [selected, subscriptions]);
 
   useEffect(() => {
     if (!selected) {
@@ -156,6 +191,64 @@ export default function ConnectorsPage() {
     }
     setRunning(false);
   }, [secretRefsJson, selected, valuesJson]);
+
+  const saveSubscription = useCallback(async () => {
+    if (!selected || selected.operation.kind !== "source") return;
+    setSavingSubscription(true);
+    setError(null);
+    try {
+      const values = JSON.parse(valuesJson || "{}");
+      const secretRefs = JSON.parse(secretRefsJson || "{}");
+      const res = await fetch("/api/connectors/subscriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ operationId: selected.operation.id, values, secretRefs, enabled: true }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.ok === false) throw new Error(data.error ?? "Subscription save failed");
+      setSubscriptions(data.subscriptions ?? []);
+      setPreview(data.subscription);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+    setSavingSubscription(false);
+  }, [secretRefsJson, selected, valuesJson]);
+
+  const setSubscriptionEnabled = useCallback(async (subscription: SourceSubscription, enabled: boolean) => {
+    setUpdatingSubscriptionId(subscription.id);
+    setError(null);
+    try {
+      const res = await fetch("/api/connectors/subscriptions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: subscription.id, enabled }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.ok === false) throw new Error(data.error ?? "Subscription update failed");
+      setSubscriptions(data.subscriptions ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+    setUpdatingSubscriptionId(null);
+  }, []);
+
+  const deleteSubscription = useCallback(async (subscription: SourceSubscription) => {
+    setUpdatingSubscriptionId(subscription.id);
+    setError(null);
+    try {
+      const res = await fetch("/api/connectors/subscriptions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: subscription.id }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.ok === false) throw new Error(data.error ?? "Subscription delete failed");
+      setSubscriptions(data.subscriptions ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+    setUpdatingSubscriptionId(null);
+  }, []);
 
   return (
     <div className="h-full overflow-y-auto" data-testid="connectors-page">
@@ -351,8 +444,69 @@ export default function ConnectorsPage() {
                   {running ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
                   Dry-run
                 </button>
+                {selected.operation.kind === "source" ? (
+                  <button
+                    data-testid="connector-save-subscription"
+                    onClick={saveSubscription}
+                    disabled={savingSubscription}
+                    className="mt-2 w-full px-4 py-2 bg-background border border-border text-[12px] font-medium rounded-lg hover:bg-muted disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    {savingSubscription ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                    Save subscription
+                  </button>
+                ) : null}
                 {preview ? (
                   <pre className="mt-4 max-h-64 overflow-auto text-[11px] bg-background border border-border rounded-lg p-3 text-muted-foreground">{JSON.stringify(preview, null, 2)}</pre>
+                ) : null}
+                {selected.operation.kind === "source" ? (
+                  <div className="mt-4">
+                    <div className="text-[11px] font-medium text-muted-foreground mb-2">Source subscriptions</div>
+                    {selectedSubscriptions.length ? (
+                      <div className="space-y-2">
+                        {selectedSubscriptions.map((subscription) => {
+                          const busy = updatingSubscriptionId === subscription.id;
+                          return (
+                            <div key={subscription.id} className="bg-background border border-border rounded-lg p-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="text-[12px] font-mono text-foreground truncate">{subscription.id}</div>
+                                  <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
+                                    {subscription.status} · {subscription.delivery}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => void setSubscriptionEnabled(subscription, subscription.status === "disabled")}
+                                    className="text-[10px] px-2 py-1 rounded-md bg-muted text-muted-foreground hover:text-foreground disabled:opacity-40"
+                                  >
+                                    {subscription.status === "disabled" ? "Enable" : "Disable"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    aria-label="Delete subscription"
+                                    disabled={busy}
+                                    onClick={() => void deleteSubscription(subscription)}
+                                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40"
+                                  >
+                                    {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                                  </button>
+                                </div>
+                              </div>
+                              {subscription.blockReasons.length ? (
+                                <div className="text-[10px] text-muted-foreground mt-2 font-mono">
+                                  {subscription.blockReasons.join(", ")}
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-[12px] text-muted-foreground">None</p>
+                    )}
+                  </div>
                 ) : null}
               </>
             ) : (
