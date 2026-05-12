@@ -67,3 +67,9 @@ To build a catalog from a local component checkout:
 ```bash
 npm --workspace @clawjs/integrations run catalog:extract -- --source /path/to/checkout --out /tmp/clawjs-catalog.json
 ```
+
+To verify that the generated catalog still covers every local component file:
+
+```bash
+npm --workspace @clawjs/integrations run catalog:verify -- --source /path/to/checkout --catalog /tmp/clawjs-catalog.json
+```
