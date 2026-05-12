@@ -778,7 +778,7 @@ function connectorFieldType(schema: OpenApiSchema | undefined): string {
 }
 
 function jsonContentSchema(document: OpenApiDocument, content: OpenApiRequestBody["content"] | undefined): OpenApiSchema | undefined {
-  return resolveOpenApiSchema(document, content?.["application/json"]?.schema ?? content?.["application/x-www-form-urlencoded"]?.schema);
+  return resolveOpenApiSchema(document, jsonLikeContentSchema(content) ?? content?.["application/x-www-form-urlencoded"]?.schema);
 }
 
 function requestBodyEncoding(document: OpenApiDocument, requestBody: OpenApiRequestBody | undefined): OpenApiConnectorOperationMetadata["bodyEncoding"] | undefined {
@@ -791,13 +791,24 @@ function requestBodyContent(
 ): { schema: OpenApiSchema | undefined; encoding?: OpenApiConnectorOperationMetadata["bodyEncoding"] } | undefined {
   const content = resolveOpenApiRequestBody(document, requestBody)?.content;
   if (!content) return undefined;
-  const jsonSchema = resolveOpenApiSchema(document, content["application/json"]?.schema);
+  const jsonSchema = resolveOpenApiSchema(document, jsonLikeContentSchema(content));
   if (jsonSchema) return { schema: jsonSchema };
   const formSchema = resolveOpenApiSchema(document, content["application/x-www-form-urlencoded"]?.schema);
   if (formSchema) return { schema: formSchema, encoding: "form" };
   const multipartSchema = resolveOpenApiSchema(document, content["multipart/form-data"]?.schema);
   if (multipartSchema) return { schema: multipartSchema, encoding: "multipart" };
   return undefined;
+}
+
+function jsonLikeContentSchema(content: OpenApiRequestBody["content"] | undefined): OpenApiSchema | undefined {
+  if (!content) return undefined;
+  return Object.entries(content)
+    .find(([mediaType]) => isJsonMediaType(mediaType))?.[1]?.schema;
+}
+
+function isJsonMediaType(mediaType: string): boolean {
+  const type = mediaType.split(";")[0]?.trim().toLowerCase() ?? "";
+  return type === "application/json" || type.endsWith("+json");
 }
 
 function schemaProperty(document: OpenApiDocument, schema: OpenApiSchema | undefined, name: string): OpenApiSchema | undefined {

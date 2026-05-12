@@ -404,6 +404,78 @@ describe("OpenAPI connector runtime", () => {
     });
   });
 
+  it("uses JSON suffix media types from OpenAPI content maps", () => {
+    const document = {
+      ...FIXTURE_OPENAPI,
+      paths: {
+        "/items": {
+          post: {
+            operationId: "createVendorItem",
+            summary: "Create vendor item",
+            requestBody: {
+              content: {
+                "application/vnd.fixture.item+json": {
+                  schema: {
+                    type: "object",
+                    required: ["name"],
+                    properties: {
+                      name: {
+                        type: "string",
+                        description: "Display name.",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            responses: {
+              "200": {
+                content: {
+                  "application/vnd.fixture.item+json": {
+                    schema: {
+                      type: "object",
+                      required: ["id"],
+                      properties: {
+                        id: { type: "string" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const options = {
+      appId: "fixture_vendor_json",
+      authFieldName: "apiKey",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(document, options)];
+    const operation = catalog.apps[0]?.operations[0];
+    assert.ok(operation);
+
+    assert.deepEqual(operation.fields.map((field) => [field.name, field.description ?? null, field.optional]), [
+      ["name", "Display name.", false],
+    ]);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, {
+      name: "example",
+    }, { registry }).requestPlan, {
+      method: "POST",
+      endpoint: "/items",
+      auth: [{ type: "secret", field: "apiKey", placement: "bearer" }],
+      headers: { accept: "application/json" },
+      body: { name: "example" },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id"],
+      },
+    });
+  });
+
   it("preserves OpenAPI query serialization hints", () => {
     const document = {
       ...FIXTURE_OPENAPI,
