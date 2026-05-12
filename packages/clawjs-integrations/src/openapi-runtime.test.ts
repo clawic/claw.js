@@ -517,6 +517,104 @@ describe("OpenAPI connector runtime", () => {
     });
   });
 
+  it("merges OpenAPI oneOf schema fields conservatively", () => {
+    const document = {
+      openapi: "3.0.0",
+      info: {
+        title: "Fixture Alternative Schemas",
+        version: "2026-05-12",
+      },
+      servers: [{ url: "https://api.example.invalid/v1/" }],
+      paths: {
+        "/contacts": {
+          post: {
+            operationId: "createContact",
+            summary: "Create contact",
+            requestBody: {
+              content: {
+                "application/json": {
+                  schema: {
+                    oneOf: [
+                      {
+                        type: "object",
+                        required: ["email"],
+                        properties: {
+                          email: {
+                            type: "string",
+                            description: "Email address.",
+                          },
+                        },
+                      },
+                      {
+                        type: "object",
+                        required: ["phone"],
+                        properties: {
+                          phone: {
+                            type: "string",
+                            description: "Phone number.",
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            responses: {
+              "200": {
+                content: {
+                  "application/json": {
+                    schema: {
+                      oneOf: [
+                        {
+                          type: "object",
+                          required: ["id", "email"],
+                          properties: {
+                            id: { type: "string" },
+                            email: { type: "string" },
+                          },
+                        },
+                        {
+                          type: "object",
+                          required: ["id", "phone"],
+                          properties: {
+                            id: { type: "string" },
+                            phone: { type: "string" },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const options = {
+      appId: "fixture_alternatives",
+      authFieldName: "apiKey",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(document, options)];
+    const operation = catalog.apps[0]?.operations[0];
+    assert.ok(operation);
+
+    assert.deepEqual(operation.fields.map((field) => [field.name, field.description ?? null, field.optional]), [
+      ["email", "Email address.", true],
+      ["phone", "Phone number.", true],
+    ]);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, {
+      email: "person@example.invalid",
+    }, { registry }).requestPlan?.responseSchema, {
+      type: "object",
+      requiredPaths: ["id"],
+    });
+  });
+
   it("infers api key auth bindings from OpenAPI security schemes", () => {
     const document = {
       ...FIXTURE_OPENAPI,

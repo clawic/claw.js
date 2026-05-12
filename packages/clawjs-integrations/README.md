@@ -109,6 +109,7 @@ Webhook sources can reuse `handleConnectorRuntimeWebhook` to extract events from
 REST providers that publish OpenAPI 3 documents can use `buildOpenApiConnectorCatalog` and `createOpenApiConnectorRuntimeImplementation` to produce action catalogs and HTTP request plans from a supplied spec. The spec remains external input; the package does not vendor provider specifications.
 OpenAPI conversion resolves local component references for path items, operations, parameters, request bodies, responses, schemas, and security schemes; remote `$ref` values are rejected so validation stays local and explicit.
 OpenAPI schemas that compose fields with `allOf` are flattened before field and output-schema inference so request plans keep inherited properties and required paths.
+OpenAPI `oneOf` and `anyOf` schemas are flattened conservatively: alternative properties become available fields while only required properties common to every alternative become required output paths.
 OpenAPI response schemas derive nested required output paths for required object properties, so offline validation can catch missing nested objects without real provider calls.
 OpenAPI server URLs may use server variables with defaults; the runtime resolves those defaults before constructing request plans.
 OpenAPI request bodies declared as `application/x-www-form-urlencoded` are converted into form-encoded runtime request plans when no JSON body schema is present.
