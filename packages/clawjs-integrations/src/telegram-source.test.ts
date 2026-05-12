@@ -51,6 +51,27 @@ describe("telegram source events", () => {
     assert.deepEqual(events.map((event) => event.kind), ["new-updates"]);
   });
 
+  it("accepts JSON command lists like the source prop value", () => {
+    const events = telegramSourceEventsForUpdate(
+      {
+        update_id: 104,
+        message: {
+          message_id: 24,
+          date: 1_700_000_400,
+          chat: { id: 123 },
+          text: "/deploy now",
+        },
+      },
+      { commands: "[\"/deploy\"]" },
+    );
+
+    assert.deepEqual(events.map((event) => event.kind), [
+      "new-updates",
+      "message-updates",
+      "new-bot-command-received",
+    ]);
+  });
+
   it("emits channel source events with the channel summary", () => {
     const events = telegramSourceEventsForUpdate({
       update_id: 102,

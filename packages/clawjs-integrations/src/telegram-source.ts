@@ -58,7 +58,7 @@ export const TELEGRAM_POLL_UPDATE_TYPES = [
 export function telegramSourceEventsForUpdate(
   update: TelegramUpdate,
   options: {
-    commands?: string[];
+    commands?: string[] | string;
     updateTypes?: string[];
     chatId?: string | number;
   } = {},
@@ -193,8 +193,20 @@ function matchesChat(message: TelegramMessage, chatId?: string | number): boolea
   return chatId == null || String(message.chat.id) === String(chatId);
 }
 
-function matchesCommand(message: TelegramMessage, commands?: string[]): boolean {
-  if (!commands?.length || !message.text) return false;
+function matchesCommand(message: TelegramMessage, commands?: string[] | string): boolean {
+  const commandList = normalizeCommands(commands);
+  if (!commandList.length || !message.text) return false;
   const command = message.text.split(" ")[0] ?? "";
-  return commands.some((candidate) => command.includes(candidate));
+  return commandList.some((candidate) => command.includes(candidate));
+}
+
+function normalizeCommands(commands?: string[] | string): string[] {
+  if (Array.isArray(commands)) return commands;
+  if (typeof commands !== "string" || !commands.trim()) return [];
+  try {
+    const parsed = JSON.parse(commands) as unknown;
+    return Array.isArray(parsed) ? parsed.filter((entry): entry is string => typeof entry === "string") : [];
+  } catch {
+    return [];
+  }
 }
