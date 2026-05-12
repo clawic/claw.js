@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "channel": "sample",
+  "ts": "1710000000.000000",
+  "message": {
+    "text": "sample"
+  }
+}

@@ -104,6 +104,7 @@ npm --workspace @clawjs/integrations run catalog:verify-runtime -- --catalog /tm
 Runtime HTTP responses and `ConnectorRuntimeHttpError` instances expose normalized `rateLimit` metadata from common provider headers, including retry delay, remaining quota, reset timing, and policy text when present.
 Runtime HTTP parsing treats `application/*+json` responses as JSON, so provider problem-detail and vendor media types stay structured in success and error paths.
 Runtime implementations that cover multiple operations must attach offline fixtures to each `operationId`, so the audit cannot treat one generic fixture as proof for an entire provider.
+Slack channel operations are registered as offline-validable Web API request plans for sending messages, listing conversations, and reading conversation info.
 
 Webhook sources can reuse `handleConnectorRuntimeWebhook` to extract events from an incoming payload with the same registered source plan used by dry-runs and audits. This keeps webhook validation offline-friendly: tests can pass fixture payloads directly, without opening a real HTTP endpoint or contacting the provider.
 

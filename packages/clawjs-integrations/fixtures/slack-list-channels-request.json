@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://slack.com/api/conversations.list?types=public_channel%2Cprivate_channel&limit=1&cursor=sample&exclude_archived=true",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret"
+  }
+}

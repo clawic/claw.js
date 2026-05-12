@@ -3,6 +3,10 @@ import { describe, it } from "node:test";
 
 import { normalizeConnectorCatalog } from "./catalog.ts";
 import {
+  verifyConnectorRuntimeCoverage,
+  verifyConnectorRuntimeOfflineExecutions,
+} from "./runtime-coverage.ts";
+import {
   buildSlackOperationRequest,
 } from "./slack-operation-executor.ts";
 const SLACK_CATALOG = normalizeConnectorCatalog({
@@ -119,6 +123,18 @@ describe("slack operation runtime", () => {
     });
   });
 
+  it("covers Slack operations with operation-scoped offline fixtures", async () => {
+    const coverage = verifyConnectorRuntimeCoverage(SLACK_CATALOG);
+    assert.equal(coverage.summary.missing, 0);
+    assert.equal(coverage.summary.implemented, 3);
+
+    const offline = await verifyConnectorRuntimeOfflineExecutions(SLACK_CATALOG);
+    assert.deepEqual(offline.results.map((result) => result.operationId).sort(), [
+      "slack.action.get-channel",
+      "slack.action.list-channels",
+      "slack.action.send-message",
+    ]);
+  });
 });
 
 function operation(operationId: string) {
