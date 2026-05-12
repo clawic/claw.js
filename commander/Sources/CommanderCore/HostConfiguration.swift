@@ -8,6 +8,9 @@ public struct HostConfiguration: Codable, Equatable, Sendable {
     public var cliExecutableName: String
     public var daemonExecutableName: String
     public var launchAgentLabel: String
+    public var machServiceName: String?
+    public var logSubsystem: String
+    public var permissionPromptName: String
 
     public init(
         id: String,
@@ -16,7 +19,10 @@ public struct HostConfiguration: Codable, Equatable, Sendable {
         appSupportDirectoryName: String,
         cliExecutableName: String,
         daemonExecutableName: String,
-        launchAgentLabel: String
+        launchAgentLabel: String,
+        machServiceName: String? = nil,
+        logSubsystem: String? = nil,
+        permissionPromptName: String? = nil
     ) {
         self.id = id
         self.displayName = displayName
@@ -25,6 +31,9 @@ public struct HostConfiguration: Codable, Equatable, Sendable {
         self.cliExecutableName = cliExecutableName
         self.daemonExecutableName = daemonExecutableName
         self.launchAgentLabel = launchAgentLabel
+        self.machServiceName = machServiceName
+        self.logSubsystem = logSubsystem ?? id
+        self.permissionPromptName = permissionPromptName ?? displayName
     }
 
     public static let claw = HostConfiguration(
@@ -33,7 +42,22 @@ public struct HostConfiguration: Codable, Equatable, Sendable {
         appSupportDirectoryName: "Claw",
         cliExecutableName: "claw",
         daemonExecutableName: "claw-hostd",
-        launchAgentLabel: "com.example.claw.host"
+        launchAgentLabel: "com.example.claw.host",
+        machServiceName: "com.example.claw.runtime",
+        logSubsystem: "com.example.claw",
+        permissionPromptName: "Claw"
+    )
+
+    public static let clawix = HostConfiguration(
+        id: "clawix",
+        displayName: "Clawix",
+        appSupportDirectoryName: "Clawix",
+        cliExecutableName: "claw",
+        daemonExecutableName: "clawix-hostd",
+        launchAgentLabel: "com.example.clawix.host",
+        machServiceName: "com.example.clawix.runtime",
+        logSubsystem: "com.example.clawix",
+        permissionPromptName: "Clawix"
     )
 
     public static let commanderLegacy = HostConfiguration(
@@ -42,7 +66,10 @@ public struct HostConfiguration: Codable, Equatable, Sendable {
         appSupportDirectoryName: "Commander",
         cliExecutableName: "commander",
         daemonExecutableName: "commanderd",
-        launchAgentLabel: "com.clawjs.commander.daemon"
+        launchAgentLabel: "com.clawjs.commander.daemon",
+        machServiceName: "com.clawjs.commander.runtime",
+        logSubsystem: "com.clawjs.commander",
+        permissionPromptName: "Commander"
     )
 
     public static func current(environment: [String: String] = ProcessInfo.processInfo.environment) -> HostConfiguration {
@@ -54,7 +81,10 @@ public struct HostConfiguration: Codable, Equatable, Sendable {
             appSupportDirectoryName: environment["CLAW_HOST_APP_SUPPORT_NAME"]?.nilIfEmpty ?? base.appSupportDirectoryName,
             cliExecutableName: environment["CLAW_HOST_CLI_NAME"]?.nilIfEmpty ?? base.cliExecutableName,
             daemonExecutableName: environment["CLAW_HOST_DAEMON_NAME"]?.nilIfEmpty ?? base.daemonExecutableName,
-            launchAgentLabel: environment["CLAW_HOST_LAUNCH_AGENT_LABEL"]?.nilIfEmpty ?? base.launchAgentLabel
+            launchAgentLabel: environment["CLAW_HOST_LAUNCH_AGENT_LABEL"]?.nilIfEmpty ?? base.launchAgentLabel,
+            machServiceName: environment["CLAW_HOST_MACH_SERVICE"]?.nilIfEmpty ?? base.machServiceName,
+            logSubsystem: environment["CLAW_HOST_LOG_SUBSYSTEM"]?.nilIfEmpty ?? base.logSubsystem,
+            permissionPromptName: environment["CLAW_HOST_PERMISSION_NAME"]?.nilIfEmpty ?? base.permissionPromptName
         )
     }
 }

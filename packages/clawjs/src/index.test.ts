@@ -127,6 +127,104 @@ test("host registry CLI fails clearly when no active host exists", async () => {
   assert.equal(payload.error.code, "host_unavailable");
 });
 
+test("direct domain CLI forwards v1 requests to the active host", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-host-forward-"));
+  const clawHome = path.join(workspaceRoot, "claw-home");
+  const requests: unknown[] = [];
+  const server = http.createServer((req, res) => {
+    assert.equal(req.method, "POST");
+    assert.equal(req.url, "/v1/commands");
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+    req.on("end", () => {
+      const payload = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      requests.push(payload);
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({
+        schemaVersion: 1,
+        requestId: payload.requestId,
+        ok: true,
+        data: { received: `${payload.domain}.${payload.resource}.${payload.action}` },
+        meta: {
+          hostId: "test-host",
+          riskLevel: "read",
+          validationMode: "host_real",
+          durationMs: 1,
+        },
+      }));
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const address = server.address() as AddressInfo;
+    await runCliCapture([
+      "host",
+      "register",
+      "test-host",
+      "--name",
+      "Test Host",
+      "--kind",
+      "embedded",
+      "--transport",
+      "http",
+      "--address",
+      `http://127.0.0.1:${address.port}`,
+      "--claw-home",
+      clawHome,
+      "--use",
+    ], workspaceRoot);
+
+    const forwarded = await runCliCapture(["contacts", "list", "--claw-home", clawHome, "--json"], workspaceRoot);
+    assert.equal(forwarded.code, CLI_EXIT_OK, forwarded.stderr);
+    const response = JSON.parse(forwarded.stdout);
+    assert.equal(response.data.received, "contacts.contacts.list");
+    assert.equal((requests[0] as { domain: string }).domain, "contacts");
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});
+
+test("system capabilities CLI uses the active host contract", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-host-system-"));
+  const clawHome = path.join(workspaceRoot, "claw-home");
+  let requestPayload: Record<string, unknown> | null = null;
+  const server = http.createServer((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+    req.on("end", () => {
+      requestPayload = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      res.end(JSON.stringify({
+        schemaVersion: 1,
+        requestId: requestPayload?.["requestId"],
+        ok: true,
+        data: [{ id: "calendar.read" }],
+        meta: { hostId: "test-host", riskLevel: "read", validationMode: "host_real", durationMs: 1 },
+      }));
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const address = server.address() as AddressInfo;
+    await runCliCapture([
+      "host", "register", "test-host",
+      "--name", "Test Host",
+      "--kind", "embedded",
+      "--transport", "http",
+      "--address", `http://127.0.0.1:${address.port}`,
+      "--claw-home", clawHome,
+      "--use",
+    ], workspaceRoot);
+
+    const result = await runCliCapture(["system", "capabilities", "list", "--claw-home", clawHome, "--json"], workspaceRoot);
+    assert.equal(result.code, CLI_EXIT_OK, result.stderr);
+    assert.equal(requestPayload?.domain, "system");
+    assert.equal(requestPayload?.resource, "capabilities");
+    assert.equal(requestPayload?.action, "list");
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});
+
 async function startDelegationPlaneTestServer(workspaceRoot: string): Promise<{ url: string; stop: () => Promise<void> }> {
   const port = 18_000 + Math.floor(Math.random() * 1_000);
   const url = `http://127.0.0.1:${port}`;

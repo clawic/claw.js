@@ -7,6 +7,75 @@ import XCTest
 @testable import CommanderCore
 
 final class CommanderE2ETests: XCTestCase {
+    func testHostContractV1FixturesDecodeInSwift() throws {
+        let decoder = JSONDecoder()
+        let request = try decoder.decode(CommandRequest.self, from: Data("""
+        {
+          "schemaVersion": 1,
+          "requestId": "req-calendar-list",
+          "domain": "calendar",
+          "resource": "events",
+          "action": "list",
+          "arguments": { "limit": "10" },
+          "clientContext": { "bundleId": "com.example.clawix", "executablePath": "/Applications/Clawix.app/Contents/MacOS/Clawix", "tty": false },
+          "validationMode": "host_real"
+        }
+        """.utf8))
+        XCTAssertEqual(request.schemaVersion, 1)
+        XCTAssertEqual(request.requestId, "req-calendar-list")
+        XCTAssertEqual(request.domain, .calendar)
+        XCTAssertEqual(request.validationMode, .hostReal)
+
+        let response = try decoder.decode(CommandResponse.self, from: Data("""
+        {
+          "schemaVersion": 1,
+          "requestId": "req-calendar-list",
+          "ok": true,
+          "data": { "events": [] },
+          "meta": {
+            "hostId": "clawix",
+            "capabilityId": "calendar.events.list",
+            "riskLevel": "read",
+            "validationMode": "host_real",
+            "durationMs": 4
+          }
+        }
+        """.utf8))
+        XCTAssertTrue(response.ok)
+        XCTAssertEqual(response.requestId, "req-calendar-list")
+        XCTAssertEqual(response.meta.hostId, "clawix")
+
+        let host = try decoder.decode(HostDescriptor.self, from: Data("""
+        {
+          "schemaVersion": 1,
+          "id": "clawix",
+          "displayName": "Clawix",
+          "kind": "embedded",
+          "bundleId": "com.example.clawix",
+          "appSupportDir": "/Users/demo/Library/Application Support/Clawix",
+          "endpoint": { "transport": "unix_socket", "address": "/Users/demo/Library/Application Support/Clawix/daemon.sock" },
+          "capabilities": [
+            {
+              "id": "models.remote.generate",
+              "domain": "models",
+              "actions": ["generate"],
+              "riskLevel": "cost",
+              "brokerRequired": true,
+              "costSensitive": true,
+              "requiresOSPermission": false,
+              "osPermissionState": "not_applicable"
+            }
+          ],
+          "registeredAt": "2026-05-13T10:00:00.000Z",
+          "updatedAt": "2026-05-13T10:00:00.000Z"
+        }
+        """.utf8))
+        XCTAssertEqual(host.id, "clawix")
+        XCTAssertEqual(host.kind, .embedded)
+        XCTAssertEqual(host.capabilities.first?.domain, .models)
+        XCTAssertEqual(host.capabilities.first?.brokerRequired, true)
+    }
+
     func testCapabilityRevokeAndMetadata() throws {
         let context = try TestContext()
         defer { context.cleanup() }
@@ -157,14 +226,14 @@ final class CommanderE2ETests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let output = context.tmp.appendingPathComponent("Commander.app")
+        let output = context.tmp.appendingPathComponent("Claw.app")
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
         process.arguments = [
             packageRoot.appendingPathComponent("scripts/package_app.sh").path,
             "--output", output.path,
-            "--binary-path", context.binary(named: "CommanderApp"),
+            "--binary-path", context.binary(named: "ClawApp"),
             "--skip-build",
             "--skip-sign",
         ]
@@ -176,13 +245,13 @@ final class CommanderE2ETests: XCTestCase {
         process.waitUntilExit()
         XCTAssertEqual(process.terminationStatus, 0, String(data: stderr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? "")
 
-        XCTAssertTrue(FileManager.default.fileExists(atPath: output.appendingPathComponent("Contents/MacOS/CommanderApp").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: output.appendingPathComponent("Contents/MacOS/ClawApp").path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: output.appendingPathComponent("Contents/Info.plist").path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: output.appendingPathComponent("Contents/Resources/AppIcon.icns").path))
 
         let info = NSDictionary(contentsOf: output.appendingPathComponent("Contents/Info.plist")) as? [String: Any]
-        XCTAssertEqual(info?["CFBundleIdentifier"] as? String, "com.clawjs.commander")
-        XCTAssertEqual(info?["CFBundleExecutable"] as? String, "CommanderApp")
+        XCTAssertEqual(info?["CFBundleIdentifier"] as? String, "com.example.claw")
+        XCTAssertEqual(info?["CFBundleExecutable"] as? String, "ClawApp")
         XCTAssertEqual(info?["CFBundleIconFile"] as? String, "AppIcon")
         XCTAssertNotNil(info?["NSRemindersFullAccessUsageDescription"] as? String)
         XCTAssertNotNil(info?["NSAppleEventsUsageDescription"] as? String)
@@ -196,7 +265,7 @@ final class CommanderE2ETests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let output = context.tmp.appendingPathComponent("Commander.app")
+        let output = context.tmp.appendingPathComponent("Claw.app")
         let requestLog = context.tmp.appendingPathComponent("permission-requests.log")
 
         let packageProcess = Process()
@@ -204,7 +273,7 @@ final class CommanderE2ETests: XCTestCase {
         packageProcess.arguments = [
             packageRoot.appendingPathComponent("scripts/package_app.sh").path,
             "--output", output.path,
-            "--binary-path", context.binary(named: "CommanderApp"),
+            "--binary-path", context.binary(named: "ClawApp"),
             "--skip-build",
         ]
         packageProcess.standardOutput = Pipe()
@@ -214,7 +283,7 @@ final class CommanderE2ETests: XCTestCase {
         XCTAssertEqual(packageProcess.terminationStatus, 0)
 
         let launchProcess = Process()
-        launchProcess.executableURL = output.appendingPathComponent("Contents/MacOS/CommanderApp")
+        launchProcess.executableURL = output.appendingPathComponent("Contents/MacOS/ClawApp")
         launchProcess.arguments = [
             "--request-os-permissions",
             "all",
@@ -233,7 +302,7 @@ final class CommanderE2ETests: XCTestCase {
         }
         if launchProcess.isRunning {
             launchProcess.terminate()
-            XCTFail("Packaged Commander app did not finish permission request flow in time")
+            XCTFail("Packaged Claw app did not finish permission request flow in time")
         }
         XCTAssertEqual(launchProcess.terminationStatus, 0)
 
@@ -251,14 +320,14 @@ final class CommanderE2ETests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let output = context.tmp.appendingPathComponent("Commander.app")
+        let output = context.tmp.appendingPathComponent("Claw.app")
 
         let packageProcess = Process()
         packageProcess.executableURL = URL(fileURLWithPath: "/bin/zsh")
         packageProcess.arguments = [
             packageRoot.appendingPathComponent("scripts/package_app.sh").path,
             "--output", output.path,
-            "--binary-path", context.binary(named: "CommanderApp"),
+            "--binary-path", context.binary(named: "ClawApp"),
             "--skip-build",
             "--skip-sign",
         ]
@@ -298,14 +367,14 @@ final class CommanderE2ETests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let output = context.tmp.appendingPathComponent("Commander.app")
+        let output = context.tmp.appendingPathComponent("Claw.app")
 
         let packageProcess = Process()
         packageProcess.executableURL = URL(fileURLWithPath: "/bin/zsh")
         packageProcess.arguments = [
             packageRoot.appendingPathComponent("scripts/package_app.sh").path,
             "--output", output.path,
-            "--binary-path", context.binary(named: "CommanderApp"),
+            "--binary-path", context.binary(named: "ClawApp"),
             "--skip-build",
             "--skip-sign",
         ]

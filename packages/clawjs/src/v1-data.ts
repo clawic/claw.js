@@ -7,6 +7,7 @@ import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
 import type { FieldDefinition, IndexDefinition } from "@clawjs/database";
 import { redactSecrets } from "@clawjs/claw";
+import { assertCodexReadOnlyPath, resolveClawGlobalDataDir } from "@clawjs/core";
 
 export const V1_DATA_EXIT_OK = 0;
 export const V1_DATA_EXIT_FAILURE = 1;
@@ -58,12 +59,14 @@ const LIFE_CATALOG_COLLECTION_INDEXES: IndexDefinition[] = [
 ];
 
 export function resolveClawjsDataRoot(env: NodeJS.ProcessEnv = process.env): string {
-  const explicit = env.CLAWJS_MAIN_DATA_DIR || env.CLAWIX_CLAWJS_DATA_DIR;
+  const explicit = env.CLAWJS_MAIN_DATA_DIR || env.CLAWIX_CLAWJS_DATA_DIR || env.CLAW_HOME;
   if (explicit) return path.resolve(expandHome(explicit));
-  if (process.platform === "darwin") {
-    return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
-  }
-  return path.join(os.homedir(), ".clawjs");
+  return path.join(resolveClawGlobalDataDir({
+    homeDir: os.homedir(),
+    platform: process.platform as "darwin" | "linux" | "win32",
+    xdgDataHome: process.env.XDG_DATA_HOME,
+    appDataDir: process.env.APPDATA,
+  }), "data");
 }
 
 export function resolveClawjsMainDbPath(env: NodeJS.ProcessEnv = process.env): string {
@@ -901,11 +904,14 @@ function sessionRoots(input: V1DataCliInput): string[] {
     ...(input.flags.root ? [input.flags.root] : []),
     ...(input.flags.roots ? input.flags.roots.split(",") : []),
   ].map((entry) => path.resolve(input.cwd, expandHome(entry.trim()))).filter(Boolean);
-  if (roots.length > 0) return roots;
-  return [
+  const resolved = roots.length > 0 ? roots : [
     path.join(os.homedir(), ".codex", "sessions"),
     path.join(os.homedir(), ".codex", "archived_sessions"),
   ];
+  for (const root of resolved) {
+    assertCodexReadOnlyPath({ homeDir: os.homedir(), path: root, operation: "read" });
+  }
+  return resolved;
 }
 
 function indexSessionRoots(sqlite: Database.Database, roots: string[], source: string): number {

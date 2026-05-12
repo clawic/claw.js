@@ -2,6 +2,13 @@ import Foundation
 import Darwin
 
 public enum Domain: String, Codable, CaseIterable, Sendable {
+    case agents
+    case skills
+    case design
+    case sessions
+    case projects
+    case memory
+    case productivity
     case calendar
     case mail
     case things
@@ -10,6 +17,7 @@ public enum Domain: String, Codable, CaseIterable, Sendable {
     case notes
     case messages
     case safari
+    case browser
     case clipboard
     case notifications
     case apps
@@ -18,6 +26,14 @@ public enum Domain: String, Codable, CaseIterable, Sendable {
     case processes
     case obsidian
     case files
+    case terminal
+    case voice
+    case models
+    case services
+    case database
+    case integrations
+    case secrets
+    case miniApps = "mini_apps"
     case system
 }
 
@@ -33,29 +49,88 @@ public enum AdapterSource: String, Codable, CaseIterable, Sendable {
 
 public enum ValidationMode: String, Codable, CaseIterable, Sendable {
     case fixture
+    case dryRun = "dry_run"
     case hostIsolated = "host_isolated"
     case hostReal = "host_real"
 }
 
 public struct CommandRequest: Codable, Sendable {
+    public static let schemaVersionV1 = 1
+
+    public var schemaVersion: Int
+    public var requestId: String
     public var domain: Domain
     public var resource: String
     public var action: String
     public var arguments: [String: String]
     public var clientContext: ClientContext
+    public var validationMode: ValidationMode
 
     public init(
         domain: Domain,
         resource: String,
         action: String,
         arguments: [String: String],
-        clientContext: ClientContext
+        clientContext: ClientContext,
+        requestId: String = UUID().uuidString,
+        schemaVersion: Int = CommandRequest.schemaVersionV1,
+        validationMode: ValidationMode = .hostReal
     ) {
+        self.schemaVersion = schemaVersion
+        self.requestId = requestId
         self.domain = domain
         self.resource = resource
         self.action = action
         self.arguments = arguments
         self.clientContext = clientContext
+        self.validationMode = validationMode
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case schemaVersion
+        case schema_version
+        case requestId
+        case request_id
+        case domain
+        case resource
+        case action
+        case arguments
+        case clientContext
+        case client_context
+        case validationMode
+        case validation_mode
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion)
+            ?? container.decodeIfPresent(Int.self, forKey: .schema_version)
+            ?? CommandRequest.schemaVersionV1
+        requestId = try container.decodeIfPresent(String.self, forKey: .requestId)
+            ?? container.decodeIfPresent(String.self, forKey: .request_id)
+            ?? UUID().uuidString
+        domain = try container.decode(Domain.self, forKey: .domain)
+        resource = try container.decode(String.self, forKey: .resource)
+        action = try container.decode(String.self, forKey: .action)
+        arguments = try container.decodeIfPresent([String: String].self, forKey: .arguments) ?? [:]
+        clientContext = try container.decodeIfPresent(ClientContext.self, forKey: .clientContext)
+            ?? container.decodeIfPresent(ClientContext.self, forKey: .client_context)
+            ?? .current()
+        validationMode = try container.decodeIfPresent(ValidationMode.self, forKey: .validationMode)
+            ?? container.decodeIfPresent(ValidationMode.self, forKey: .validation_mode)
+            ?? .hostReal
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
+        try container.encode(requestId, forKey: .requestId)
+        try container.encode(domain, forKey: .domain)
+        try container.encode(resource, forKey: .resource)
+        try container.encode(action, forKey: .action)
+        try container.encode(arguments, forKey: .arguments)
+        try container.encode(clientContext, forKey: .clientContext)
+        try container.encode(validationMode, forKey: .validationMode)
     }
 }
 
@@ -99,6 +174,39 @@ public struct ClientContext: Codable, Equatable, Sendable {
         let workingDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
         return URL(fileURLWithPath: executablePath, relativeTo: workingDirectory).standardizedFileURL.path
     }
+
+    enum CodingKeys: String, CodingKey {
+        case pid
+        case bundleID
+        case bundleId
+        case executablePath
+        case executable_path
+        case signingIdentity
+        case signing_identity
+        case tty
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        pid = try container.decodeIfPresent(Int32.self, forKey: .pid) ?? getpid()
+        bundleID = try container.decodeIfPresent(String.self, forKey: .bundleID)
+            ?? container.decodeIfPresent(String.self, forKey: .bundleId)
+        executablePath = try container.decodeIfPresent(String.self, forKey: .executablePath)
+            ?? container.decodeIfPresent(String.self, forKey: .executable_path)
+            ?? (CommandLine.arguments.first ?? "claw")
+        signingIdentity = try container.decodeIfPresent(String.self, forKey: .signingIdentity)
+            ?? container.decodeIfPresent(String.self, forKey: .signing_identity)
+        tty = try container.decodeIfPresent(Bool.self, forKey: .tty) ?? false
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(pid, forKey: .pid)
+        try container.encodeIfPresent(bundleID, forKey: .bundleId)
+        try container.encode(executablePath, forKey: .executablePath)
+        try container.encodeIfPresent(signingIdentity, forKey: .signingIdentity)
+        try container.encode(tty, forKey: .tty)
+    }
 }
 
 public struct CommandErrorPayload: Codable, Equatable, Sendable {
@@ -114,6 +222,8 @@ public struct CommandErrorPayload: Codable, Equatable, Sendable {
 }
 
 public struct CommandMeta: Codable, Equatable, Sendable {
+    public var hostId: String?
+    public var capabilityId: String?
     public var adapter: String
     public var source: AdapterSource
     public var riskLevel: String
@@ -123,10 +233,14 @@ public struct CommandMeta: Codable, Equatable, Sendable {
     public init(
         adapter: String,
         source: AdapterSource,
+        hostId: String? = nil,
+        capabilityId: String? = nil,
         riskLevel: String = "read",
         validationMode: ValidationMode = .hostReal,
         durationMS: Int
     ) {
+        self.hostId = hostId
+        self.capabilityId = capabilityId
         self.adapter = adapter
         self.source = source
         self.riskLevel = riskLevel
@@ -135,6 +249,10 @@ public struct CommandMeta: Codable, Equatable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
+        case hostId = "hostId"
+        case host_id
+        case capabilityId = "capabilityId"
+        case capability_id
         case adapter
         case source
         case riskLevel = "riskLevel"
@@ -142,12 +260,17 @@ public struct CommandMeta: Codable, Equatable, Sendable {
         case validationMode = "validationMode"
         case validation_mode
         case durationMS = "durationMS"
+        case durationMs = "durationMs"
         case duration_ms
     }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        adapter = try container.decode(String.self, forKey: .adapter)
+        hostId = try container.decodeIfPresent(String.self, forKey: .host_id)
+            ?? container.decodeIfPresent(String.self, forKey: .hostId)
+        capabilityId = try container.decodeIfPresent(String.self, forKey: .capability_id)
+            ?? container.decodeIfPresent(String.self, forKey: .capabilityId)
+        adapter = try container.decodeIfPresent(String.self, forKey: .adapter) ?? "unknown"
         source = try container.decodeIfPresent(AdapterSource.self, forKey: .source) ?? .filesystem
         riskLevel = try container.decodeIfPresent(String.self, forKey: .risk_level)
             ?? container.decodeIfPresent(String.self, forKey: .riskLevel)
@@ -157,11 +280,14 @@ public struct CommandMeta: Codable, Equatable, Sendable {
             ?? .hostReal
         durationMS = try container.decodeIfPresent(Int.self, forKey: .duration_ms)
             ?? container.decodeIfPresent(Int.self, forKey: .durationMS)
+            ?? container.decodeIfPresent(Int.self, forKey: .durationMs)
             ?? 0
     }
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(hostId, forKey: .host_id)
+        try container.encodeIfPresent(capabilityId, forKey: .capability_id)
         try container.encode(adapter, forKey: .adapter)
         try container.encode(source, forKey: .source)
         try container.encode(riskLevel, forKey: .risk_level)
@@ -171,16 +297,62 @@ public struct CommandMeta: Codable, Equatable, Sendable {
 }
 
 public struct CommandResponse: Codable, Equatable, Sendable {
+    public var schemaVersion: Int
+    public var requestId: String
     public var ok: Bool
     public var data: JSONValue?
     public var error: CommandErrorPayload?
     public var meta: CommandMeta
 
-    public init(ok: Bool, data: JSONValue?, error: CommandErrorPayload?, meta: CommandMeta) {
+    public init(
+        ok: Bool,
+        data: JSONValue?,
+        error: CommandErrorPayload?,
+        meta: CommandMeta,
+        requestId: String = UUID().uuidString,
+        schemaVersion: Int = CommandRequest.schemaVersionV1
+    ) {
+        self.schemaVersion = schemaVersion
+        self.requestId = requestId
         self.ok = ok
         self.data = data
         self.error = error
         self.meta = meta
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case schemaVersion
+        case schema_version
+        case requestId
+        case request_id
+        case ok
+        case data
+        case error
+        case meta
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion)
+            ?? container.decodeIfPresent(Int.self, forKey: .schema_version)
+            ?? CommandRequest.schemaVersionV1
+        requestId = try container.decodeIfPresent(String.self, forKey: .requestId)
+            ?? container.decodeIfPresent(String.self, forKey: .request_id)
+            ?? UUID().uuidString
+        ok = try container.decode(Bool.self, forKey: .ok)
+        data = try container.decodeIfPresent(JSONValue.self, forKey: .data)
+        error = try container.decodeIfPresent(CommandErrorPayload.self, forKey: .error)
+        meta = try container.decode(CommandMeta.self, forKey: .meta)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
+        try container.encode(requestId, forKey: .requestId)
+        try container.encode(ok, forKey: .ok)
+        try container.encodeIfPresent(data, forKey: .data)
+        try container.encodeIfPresent(error, forKey: .error)
+        try container.encode(meta, forKey: .meta)
     }
 }
 
@@ -190,6 +362,9 @@ public struct Capability: Codable, Equatable, Identifiable, Sendable {
     public var actions: [String]
     public var granted: Bool
     public var riskLevel: String
+    public var brokerRequired: Bool
+    public var destructive: Bool
+    public var costSensitive: Bool
     public var requiresOSPermission: Bool
     public var osPermissionState: String
 
@@ -199,6 +374,9 @@ public struct Capability: Codable, Equatable, Identifiable, Sendable {
         actions: [String],
         granted: Bool,
         riskLevel: String,
+        brokerRequired: Bool = false,
+        destructive: Bool = false,
+        costSensitive: Bool = false,
         requiresOSPermission: Bool,
         osPermissionState: String
     ) {
@@ -207,6 +385,9 @@ public struct Capability: Codable, Equatable, Identifiable, Sendable {
         self.actions = actions
         self.granted = granted
         self.riskLevel = riskLevel
+        self.brokerRequired = brokerRequired
+        self.destructive = destructive
+        self.costSensitive = costSensitive
         self.requiresOSPermission = requiresOSPermission
         self.osPermissionState = osPermissionState
     }
@@ -217,8 +398,13 @@ public struct Capability: Codable, Equatable, Identifiable, Sendable {
         case actions
         case granted
         case riskLevel = "riskLevel"
+        case brokerRequired = "brokerRequired"
+        case destructive
+        case costSensitive = "costSensitive"
         case requiresOSPermission = "requiresOSPermission"
         case risk_level
+        case broker_required
+        case cost_sensitive
         case requires_os_permission
         case osPermissionState = "osPermissionState"
         case os_permission_state
@@ -229,10 +415,17 @@ public struct Capability: Codable, Equatable, Identifiable, Sendable {
         id = try container.decode(String.self, forKey: .id)
         domain = try container.decode(Domain.self, forKey: .domain)
         actions = try container.decode([String].self, forKey: .actions)
-        granted = try container.decode(Bool.self, forKey: .granted)
+        granted = try container.decodeIfPresent(Bool.self, forKey: .granted) ?? false
         riskLevel = try container.decodeIfPresent(String.self, forKey: .risk_level)
             ?? container.decodeIfPresent(String.self, forKey: .riskLevel)
             ?? "read"
+        brokerRequired = try container.decodeIfPresent(Bool.self, forKey: .broker_required)
+            ?? container.decodeIfPresent(Bool.self, forKey: .brokerRequired)
+            ?? false
+        destructive = try container.decodeIfPresent(Bool.self, forKey: .destructive) ?? false
+        costSensitive = try container.decodeIfPresent(Bool.self, forKey: .cost_sensitive)
+            ?? container.decodeIfPresent(Bool.self, forKey: .costSensitive)
+            ?? false
         requiresOSPermission = try container.decodeIfPresent(Bool.self, forKey: .requires_os_permission)
             ?? container.decodeIfPresent(Bool.self, forKey: .requiresOSPermission)
             ?? false
@@ -248,9 +441,118 @@ public struct Capability: Codable, Equatable, Identifiable, Sendable {
         try container.encode(actions, forKey: .actions)
         try container.encode(granted, forKey: .granted)
         try container.encode(riskLevel, forKey: .risk_level)
+        try container.encode(brokerRequired, forKey: .broker_required)
+        try container.encode(destructive, forKey: .destructive)
+        try container.encode(costSensitive, forKey: .cost_sensitive)
         try container.encode(requiresOSPermission, forKey: .requires_os_permission)
         try container.encode(osPermissionState, forKey: .os_permission_state)
     }
+}
+
+public enum HostKind: String, Codable, Sendable {
+    case standalone
+    case embedded
+    case thirdParty = "third_party"
+}
+
+public enum HostTransportKind: String, Codable, Sendable {
+    case xpc
+    case unixSocket = "unix_socket"
+    case http
+    case stdio
+}
+
+public struct HostEndpoint: Codable, Equatable, Sendable {
+    public var transport: HostTransportKind
+    public var address: String
+    public var tokenRef: String?
+
+    public init(transport: HostTransportKind, address: String, tokenRef: String? = nil) {
+        self.transport = transport
+        self.address = address
+        self.tokenRef = tokenRef
+    }
+}
+
+public struct HostDescriptor: Codable, Equatable, Identifiable, Sendable {
+    public var schemaVersion: Int
+    public var id: String
+    public var displayName: String
+    public var kind: HostKind
+    public var bundleId: String?
+    public var executablePath: String?
+    public var appSupportDir: String?
+    public var endpoint: HostEndpoint?
+    public var capabilities: [Capability]
+    public var registeredAt: String
+    public var updatedAt: String
+
+    public init(
+        id: String,
+        displayName: String,
+        kind: HostKind,
+        bundleId: String? = nil,
+        executablePath: String? = nil,
+        appSupportDir: String? = nil,
+        endpoint: HostEndpoint? = nil,
+        capabilities: [Capability] = [],
+        registeredAt: String = Timestamp.now(),
+        updatedAt: String = Timestamp.now(),
+        schemaVersion: Int = CommandRequest.schemaVersionV1
+    ) {
+        self.schemaVersion = schemaVersion
+        self.id = id
+        self.displayName = displayName
+        self.kind = kind
+        self.bundleId = bundleId
+        self.executablePath = executablePath
+        self.appSupportDir = appSupportDir
+        self.endpoint = endpoint
+        self.capabilities = capabilities
+        self.registeredAt = registeredAt
+        self.updatedAt = updatedAt
+    }
+}
+
+public struct Grant: Codable, Equatable, Identifiable, Sendable {
+    public var schemaVersion: Int
+    public var id: String
+    public var hostId: String
+    public var capabilityId: String
+    public var domain: Domain
+    public var action: String
+    public var status: String
+    public var reason: String?
+    public var createdAt: String
+    public var expiresAt: String?
+    public var revokedAt: String?
+}
+
+public struct Approval: Codable, Equatable, Identifiable, Sendable {
+    public var schemaVersion: Int
+    public var id: String
+    public var hostId: String
+    public var requestId: String
+    public var capabilityId: String
+    public var status: String
+    public var riskLevel: String
+    public var reason: String?
+    public var createdAt: String
+    public var decidedAt: String?
+}
+
+public struct AuditEvent: Codable, Equatable, Identifiable, Sendable {
+    public var schemaVersion: Int
+    public var id: String
+    public var hostId: String?
+    public var requestId: String?
+    public var capabilityId: String?
+    public var domain: Domain?
+    public var action: String?
+    public var riskLevel: String?
+    public var result: String
+    public var message: String?
+    public var createdAt: String
 }
 
 public struct OperationLog: Codable, Identifiable, Sendable {

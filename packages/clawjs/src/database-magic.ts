@@ -93,7 +93,10 @@ class LocalDbRuntime implements DbRuntime {
 
   constructor(workspaceRoot: string) {
     this.workspaceRoot = workspaceRoot;
-    this.store = openMainDataStore();
+    this.store = openMainDataStore({
+      ...process.env,
+      CLAWJS_MAIN_DATA_DIR: path.join(workspaceRoot, ".claw", "data"),
+    });
   }
 
   async ensureNamespace(namespaceId: string): Promise<void> {

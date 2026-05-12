@@ -2,6 +2,8 @@ export * from "./agent_tools.ts";
 export * from "./errors.ts";
 export * from "./helpers.ts";
 export * from "./host-contracts.ts";
+export * from "./host-contract-fixtures.ts";
+export * from "./host-json-schemas.ts";
 export * from "./productivity.ts";
 export * from "./schemas.ts";
 export * from "./semantic.ts";

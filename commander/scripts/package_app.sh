@@ -3,17 +3,17 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIGURATION="debug"
-OUTPUT_PATH="$ROOT_DIR/dist/Commander.app"
-BUNDLE_ID="com.clawjs.commander"
-APP_NAME="Commander"
-APP_EXECUTABLE="CommanderApp"
+OUTPUT_PATH="$ROOT_DIR/dist/Claw.app"
+BUNDLE_ID="com.example.claw"
+APP_NAME="Claw"
+APP_EXECUTABLE="ClawApp"
 ICON_FILE="AppIcon.icns"
 ICON_SOURCE_PATH="$ROOT_DIR/assets/$ICON_FILE"
-TEAM_ID="MU5SX8MTL9"
+TEAM_ID="${CLAW_HOST_TEAM_ID:-}"
 SKIP_SIGN="0"
 SKIP_BUILD="0"
 EXECUTABLE_PATH=""
-SIGN_IDENTITY="${COMMANDER_SIGN_IDENTITY:-}"
+SIGN_IDENTITY="${CLAW_HOST_SIGN_IDENTITY:-${COMMANDER_SIGN_IDENTITY:-}}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -27,6 +27,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --bundle-id)
       BUNDLE_ID="$2"
+      shift 2
+      ;;
+    --app-name)
+      APP_NAME="$2"
+      shift 2
+      ;;
+    --app-executable)
+      APP_EXECUTABLE="$2"
       shift 2
       ;;
     --team-id)
@@ -62,21 +70,13 @@ detect_sign_identity() {
     return 0
   fi
 
-  local secrets_app="/Users/trabajo/Applications/Secrets Vault.app"
-  if [[ -d "$secrets_app" ]]; then
-    local authority
-    authority="$(codesign -dv --verbose=4 "$secrets_app" 2>&1 | sed -n 's/^Authority=//p' | grep '^Apple Development:' | head -n 1 || true)"
-    if [[ -n "$authority" ]]; then
-      echo "$authority"
+  local detected
+  if [[ -n "$TEAM_ID" ]]; then
+    detected="$(security find-identity -v -p codesigning 2>/dev/null | grep "Apple Development:" | grep "($TEAM_ID)" | head -n 1 | sed 's/.*"\(.*\)"/\1/' || true)"
+    if [[ -n "$detected" ]]; then
+      echo "$detected"
       return 0
     fi
-  fi
-
-  local detected
-  detected="$(security find-identity -v -p codesigning 2>/dev/null | grep "Apple Development:" | grep "($TEAM_ID)" | head -n 1 | sed 's/.*"\(.*\)"/\1/' || true)"
-  if [[ -n "$detected" ]]; then
-    echo "$detected"
-    return 0
   fi
 
   detected="$(security find-identity -v -p codesigning 2>/dev/null | grep "Apple Development:" | head -n 1 | sed 's/.*"\(.*\)"/\1/' || true)"
@@ -142,19 +142,19 @@ cat > "$APP_CONTENTS/Info.plist" <<EOF
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
   <key>NSAppleEventsUsageDescription</key>
-  <string>Commander needs Apple Events access to control Finder, Mail, Notes, Messages, Safari, and Things on your Mac.</string>
+  <string>$APP_NAME needs Apple Events access to control Finder, Mail, Notes, Messages, Safari, and Things on your Mac.</string>
   <key>NSCalendarsFullAccessUsageDescription</key>
-  <string>Commander needs Calendar access to let local agents read and manage events on this Mac.</string>
+  <string>$APP_NAME needs Calendar access to let local agents read and manage events on this Mac.</string>
   <key>NSCalendarsUsageDescription</key>
-  <string>Commander needs Calendar access to let local agents read and manage events on this Mac.</string>
+  <string>$APP_NAME needs Calendar access to let local agents read and manage events on this Mac.</string>
   <key>NSContactsUsageDescription</key>
-  <string>Commander needs Contacts access to let local agents read and manage contacts on this Mac.</string>
+  <string>$APP_NAME needs Contacts access to let local agents read and manage contacts on this Mac.</string>
   <key>NSRemindersFullAccessUsageDescription</key>
-  <string>Commander needs Reminders access to let local agents read and manage reminders on this Mac.</string>
+  <string>$APP_NAME needs Reminders access to let local agents read and manage reminders on this Mac.</string>
   <key>NSRemindersUsageDescription</key>
-  <string>Commander needs Reminders access to let local agents read and manage reminders on this Mac.</string>
+  <string>$APP_NAME needs Reminders access to let local agents read and manage reminders on this Mac.</string>
   <key>NSUserNotificationUsageDescription</key>
-  <string>Commander needs notification access to post local status updates for agent actions.</string>
+  <string>$APP_NAME needs notification access to post local status updates for agent actions.</string>
 </dict>
 </plist>
 EOF

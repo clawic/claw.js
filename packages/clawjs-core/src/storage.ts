@@ -12,8 +12,27 @@ function normalizePath(value: string): string {
   return value.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/\/$/, "");
 }
 
+function resolvePathLike(value: string): string {
+  const normalized = normalizePath(value);
+  const absolute = normalized.startsWith("/");
+  const parts: string[] = [];
+  for (const part of normalized.split("/")) {
+    if (!part || part === ".") continue;
+    if (part === "..") {
+      if (parts.length > 0 && parts[parts.length - 1] !== "..") {
+        parts.pop();
+      } else if (!absolute) {
+        parts.push(part);
+      }
+      continue;
+    }
+    parts.push(part);
+  }
+  return `${absolute ? "/" : ""}${parts.join("/")}` || (absolute ? "/" : ".");
+}
+
 function joinPath(...parts: string[]): string {
-  return normalizePath(parts.filter(Boolean).join("/"));
+  return resolvePathLike(parts.filter(Boolean).join("/"));
 }
 
 export function resolveClawGlobalDataDir(input: ClawStorageRootsInput): string {
@@ -39,7 +58,7 @@ export function resolveClawHostRegistryPath(input: ClawStorageRootsInput): strin
 }
 
 export function isInsideCodexHome(pathname: string, homeDir: string): boolean {
-  const target = normalizePath(pathname);
+  const target = resolvePathLike(pathname);
   const codexRoot = joinPath(homeDir, ".codex");
   return target === codexRoot || target.startsWith(`${codexRoot}/`);
 }
@@ -53,7 +72,7 @@ export function assertCodexReadOnlyPath(input: {
   if (!isInsideCodexHome(input.path, input.homeDir)) return;
   if (input.operation === "read" || input.operation === "mirror" || input.operation === "index") return;
 
-  const normalized = normalizePath(input.path);
+  const normalized = resolvePathLike(input.path);
   const agentsPath = joinPath(input.homeDir, ".codex", "AGENTS.md");
   if (input.operation === "write" && input.allowAgentsMdOptIn === true && normalized === agentsPath) return;
 

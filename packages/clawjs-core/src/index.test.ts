@@ -16,8 +16,11 @@ import {
   blockerRecordSchema,
   capacityRecordSchema,
   clawCommandRequestSchema,
+  clawCommandResponseSchema,
+  clawContractFixturesV1,
   clawContractVersionV1,
   clawHostRegistrySchema,
+  clawJsonSchemasV1,
   agentRecordSchema,
   createCodexReadOnlySourceDescriptor,
   createTtsPlaybackPlan,
@@ -159,6 +162,20 @@ test("host contract schemas validate v1 command and registry payloads", () => {
   assert.equal(registry.hosts[0]?.capabilities[0]?.osPermissionState, "unknown");
 });
 
+test("host contract fixtures and JSON schema exports cover the public v1 surface", () => {
+  assert.equal(clawJsonSchemasV1.commandRequest.$id, "https://schemas.claw.dev/v1/command-request.schema.json");
+  assert.equal(clawJsonSchemasV1.commandResponse.$id, "https://schemas.claw.dev/v1/command-response.schema.json");
+  assert.equal(clawJsonSchemasV1.hostDescriptor.$id, "https://schemas.claw.dev/v1/host-descriptor.schema.json");
+
+  const request = clawCommandRequestSchema.parse(clawContractFixturesV1.commandRequest);
+  const response = clawCommandResponseSchema.parse(clawContractFixturesV1.commandResponse);
+  const registry = clawHostRegistrySchema.parse(clawContractFixturesV1.hostRegistry);
+
+  assert.equal(request.schemaVersion, clawContractVersionV1);
+  assert.equal(response.meta.hostId, "clawix");
+  assert.equal(registry.activeHostId, "clawix");
+});
+
 test("storage helpers resolve Claw roots and enforce Codex read-only policy", () => {
   assert.equal(
     resolveClawGlobalDataDir({ homeDir: "/Users/demo", platform: "darwin" }),
@@ -184,6 +201,11 @@ test("storage helpers resolve Claw roots and enforce Codex read-only policy", ()
     path: "/Users/demo/.codex/sessions/session.jsonl",
     operation: "delete",
   }), /Refusing delete operation/);
+  assert.throws(() => assertCodexReadOnlyPath({
+    homeDir: "/Users/demo",
+    path: "/Users/demo/projects/../.codex/auth.json",
+    operation: "write",
+  }), /Refusing write operation/);
   assert.doesNotThrow(() => assertCodexReadOnlyPath({
     homeDir: "/Users/demo",
     path: "/Users/demo/.codex/AGENTS.md",

@@ -82,7 +82,7 @@ public struct PermissionService: Sendable {
             return resolved
         case .files:
             return .authorized
-        case .mail, .things, .notes, .messages, .safari, .clipboard, .apps, .finder, .screenshots, .processes, .obsidian, .system:
+        case .agents, .skills, .design, .sessions, .projects, .memory, .productivity, .mail, .things, .notes, .messages, .safari, .browser, .clipboard, .apps, .finder, .screenshots, .processes, .obsidian, .terminal, .voice, .models, .services, .database, .integrations, .secrets, .miniApps, .system:
             return .notApplicable
         }
     }
@@ -201,7 +201,7 @@ public struct PermissionService: Sendable {
             return result.granted ? .authorized : status(for: domain)
         case .files:
             return .authorized
-        case .mail, .things, .notes, .messages, .safari, .clipboard, .apps, .finder, .screenshots, .processes, .obsidian, .system:
+        case .agents, .skills, .design, .sessions, .projects, .memory, .productivity, .mail, .things, .notes, .messages, .safari, .browser, .clipboard, .apps, .finder, .screenshots, .processes, .obsidian, .terminal, .voice, .models, .services, .database, .integrations, .secrets, .miniApps, .system:
             return .notApplicable
         }
     }

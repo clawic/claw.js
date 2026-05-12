@@ -26,8 +26,8 @@ import { buildDatabaseApp } from "@clawjs/database";
 import type { ClawInstance, ImageOperation, ImageProvenance, ImageType, TelegramSendMediaInput, TelegramSendMessageInput, VoiceNoteStatus } from "@clawjs/claw";
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
-import { semanticPlanSchema } from "@clawjs/core";
-import type { CommitmentKind, CommitmentStatus, ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
+import { clawCommandRequestSchema, clawContractVersionV1, semanticPlanSchema } from "@clawjs/core";
+import type { ClawCommandResponse, ClawDomain, CommitmentKind, CommitmentStatus, ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
 import { runEmbeddedDatabaseCli } from "./database-advanced.ts";
 import { runMagicDbCli } from "./database-magic.ts";
 import { runMemoryCli } from "./memory-local.ts";
@@ -56,6 +56,7 @@ import { runTemplateCli } from "./templates/index.ts";
 import { runReferenceCli } from "./references/index.ts";
 import { runV1DataCli } from "./v1-data.ts";
 import { activeHost, readHostRegistry, registerHost, resolveHostRegistryFile, useHost } from "./host-registry.ts";
+import { HostClientError, sendHostCommand } from "./host-client.ts";
 
 export interface CliContext {
   stdout: NodeJS.WritableStream;
@@ -1692,6 +1693,186 @@ async function runHostCli(input: {
 
   input.context.stderr.write(`Usage: ${input.binName} host list|register|use|status\n`);
   return CLI_EXIT_USAGE;
+}
+
+const HOST_FORWARD_DOMAINS = new Set<ClawDomain>([
+  "agents",
+  "skills",
+  "design",
+  "sessions",
+  "projects",
+  "memory",
+  "files",
+  "productivity",
+  "calendar",
+  "contacts",
+  "reminders",
+  "mail",
+  "notes",
+  "messages",
+  "browser",
+  "terminal",
+  "voice",
+  "models",
+  "services",
+  "database",
+  "integrations",
+  "system",
+  "secrets",
+  "mini_apps",
+]);
+
+const DEFAULT_HOST_RESOURCES: Partial<Record<ClawDomain, string>> = {
+  agents: "agents",
+  skills: "skills",
+  design: "design",
+  sessions: "sessions",
+  projects: "projects",
+  memory: "notes",
+  files: "entries",
+  productivity: "items",
+  calendar: "events",
+  contacts: "contacts",
+  reminders: "items",
+  mail: "messages",
+  notes: "notes",
+  messages: "conversations",
+  browser: "sessions",
+  terminal: "sessions",
+  voice: "transcripts",
+  models: "models",
+  services: "services",
+  database: "records",
+  integrations: "integrations",
+  secrets: "secrets",
+  mini_apps: "apps",
+};
+
+function requestId(prefix: string): string {
+  return `${prefix}-${randomBytes(8).toString("hex")}`;
+}
+
+function hostForwardArguments(flags: Record<string, string>): Record<string, unknown> {
+  const skipped = new Set(["json", "claw-home", "host", "host-id"]);
+  return Object.fromEntries(Object.entries(flags).filter(([key]) => !skipped.has(key)));
+}
+
+async function runSystemCapabilitiesCli(input: {
+  positionals: string[];
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+}): Promise<number> {
+  const [, resource, action = "list"] = input.positionals;
+  if (resource !== "capabilities") return CLI_EXIT_USAGE;
+  if (!["list", "grant", "revoke"].includes(action)) {
+    throw new CliHandledError("usage_error", `Usage: ${input.binName} system capabilities list|grant|revoke [scope]`, CLI_EXIT_USAGE);
+  }
+  return runHostForwardCli({
+    domain: "system",
+    resource: "capabilities",
+    action,
+    flags: input.flags,
+    context: input.context,
+    wantsJson: input.wantsJson,
+    extraArguments: {
+      ...(input.positionals[3] ? { scope: input.positionals[3] } : {}),
+    },
+  });
+}
+
+async function runDirectHostDomainCli(input: {
+  positionals: string[];
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+}): Promise<number> {
+  const [group, command, subcommand] = input.positionals;
+  const domain = group as ClawDomain;
+  const resource = subcommand ? command : DEFAULT_HOST_RESOURCES[domain];
+  const action = subcommand ?? command ?? "list";
+  if (!resource || !action) return CLI_EXIT_USAGE;
+  return runHostForwardCli({
+    domain,
+    resource,
+    action,
+    flags: input.flags,
+    context: input.context,
+    wantsJson: input.wantsJson,
+  });
+}
+
+async function runHostForwardCli(input: {
+  domain: ClawDomain;
+  resource: string;
+  action: string;
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+  extraArguments?: Record<string, unknown>;
+}): Promise<number> {
+  const registry = readHostRegistry(hostRegistryOptions(input.flags));
+  const requestedHostId = input.flags.host ?? input.flags["host-id"];
+  const host = requestedHostId
+    ? registry.hosts.find((entry) => entry.id === requestedHostId) ?? null
+    : activeHost(registry);
+  if (!host) {
+    throw new CliHandledError(
+      "host_unavailable",
+      requestedHostId
+        ? `Host not registered: ${requestedHostId}.`
+        : "No active host configured. Run `claw host register ... --use` or start Clawix/Claw.app first.",
+      CLI_EXIT_DEGRADED,
+    );
+  }
+
+  const request = clawCommandRequestSchema.parse({
+    schemaVersion: clawContractVersionV1,
+    requestId: requestId(`${input.domain}-${input.action}`),
+    domain: input.domain,
+    resource: input.resource,
+    action: input.action,
+    arguments: {
+      ...hostForwardArguments(input.flags),
+      ...(input.extraArguments ?? {}),
+    },
+    clientContext: {
+      pid: process.pid,
+      executablePath: process.argv[1] ?? "claw",
+      tty: Boolean(process.stdout.isTTY),
+    },
+    validationMode: input.flags["validation-mode"] ?? "host_real",
+  });
+
+  try {
+    const response = await sendHostCommand(host, request);
+    writeHostResponse(input.context, response, input.wantsJson);
+    return response.ok ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
+  } catch (error) {
+    if (error instanceof HostClientError) {
+      throw new CliHandledError(error.code, error.message, error.code === "host_transport_unsupported" ? CLI_EXIT_USAGE : CLI_EXIT_DEGRADED);
+    }
+    throw error;
+  }
+}
+
+function writeHostResponse(context: CliContext, response: ClawCommandResponse, wantsJson: boolean): void {
+  if (wantsJson) {
+    writeJson(context.stdout, response);
+    return;
+  }
+  if (!response.ok) {
+    context.stderr.write(`${response.error?.message ?? "Host command failed."}\n`);
+    return;
+  }
+  if (response.data === undefined) {
+    context.stdout.write("ok\n");
+  } else if (typeof response.data === "string") {
+    context.stdout.write(`${response.data}\n`);
+  } else {
+    writeJson(context.stdout, response.data);
+  }
 }
 
 function temporalNext(item: TemporalItem): string {
@@ -5935,6 +6116,10 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "host") {
     return await runHostCli({ argv, positionals, flags, context, wantsJson, binName });
+  }
+
+  if (group === "system" && command === "capabilities") {
+    return await runSystemCapabilitiesCli({ positionals, flags, context, wantsJson, binName });
   }
 
   if (group === "chat") {
@@ -13624,9 +13809,13 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return removed ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
   }
 
-    context.stderr.write(`${usage}\n`);
-    return CLI_EXIT_USAGE;
+  if (group && HOST_FORWARD_DOMAINS.has(group as ClawDomain)) {
+    return await runDirectHostDomainCli({ positionals, flags, context, wantsJson });
   }
+
+  context.stderr.write(`${usage}\n`);
+  return CLI_EXIT_USAGE;
+}
 
 export async function runCli(argv: string[], context: CliContext): Promise<number> {
   const wantsJson = argv.includes("--json");

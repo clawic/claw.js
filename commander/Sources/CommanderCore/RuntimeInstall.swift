@@ -49,6 +49,9 @@ public enum RuntimeInstaller {
     }
 
     public static func appRuntimeMachServiceName(environment: [String: String] = ProcessInfo.processInfo.environment) -> String {
+        if let configured = HostConfiguration.current(environment: environment).machServiceName, !configured.isEmpty {
+            return configured
+        }
         let statePath = StatePaths.stateDirectory(environment: environment).path
         return "com.claw.host.runtime.\(stableIdentifier(for: statePath))"
     }
