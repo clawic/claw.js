@@ -1,0 +1,18 @@
+{
+  "domain": "recipes-cooked",
+  "version": "0.1.0",
+  "entries": [
+    {
+      "id": "recipes-cooked.note",
+      "label": "Recipes cooked — free-form note",
+      "unit": {
+        "id": "text",
+        "label": "text",
+        "group": "abstract"
+      },
+      "valueType": "text",
+      "category": "general",
+      "description": "Free-form text observation for Recipes cooked."
+    }
+  ]
+}
