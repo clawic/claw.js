@@ -12,6 +12,10 @@ import {
   isSlackActionOperationSupported,
 } from "./slack-operation-executor.ts";
 import {
+  buildWhatsAppOperationRequest,
+  isWhatsAppActionOperationSupported,
+} from "./whatsapp-operation-executor.ts";
+import {
   createTelegramSourceExecutor,
 } from "./telegram-source-executor.ts";
 import {
@@ -196,6 +200,33 @@ const SLACK_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
   },
 ];
 
+const WHATSAPP_ACTION_EVIDENCE = [
+  "packages/clawjs-integrations/src/whatsapp-operation-executor.test.ts",
+];
+
+const WHATSAPP_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
+  {
+    kind: "request",
+    operationId: "whatsapp.action.verify-phone-number",
+    path: "packages/clawjs-integrations/fixtures/whatsapp-verify-phone-number-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "whatsapp.action.verify-phone-number",
+    path: "packages/clawjs-integrations/fixtures/whatsapp-verify-phone-number-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "whatsapp.action.send-message",
+    path: "packages/clawjs-integrations/fixtures/whatsapp-send-message-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "whatsapp.action.send-message",
+    path: "packages/clawjs-integrations/fixtures/whatsapp-send-message-response.json",
+  },
+];
+
 export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation[] = [
   {
     appId: "slack",
@@ -209,6 +240,20 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     supports: (operation) => isSlackActionOperationSupported(operation.id),
     buildPlan: (operation, values) => ({
       requestPlan: buildSlackOperationRequest(operation, values),
+    }),
+  },
+  {
+    appId: "whatsapp",
+    kind: "action",
+    executorId: "whatsapp.business-api.http",
+    baseUrl: "https://graph.facebook.com/v21.0/",
+    offlineValidated: true,
+    evidence: WHATSAPP_ACTION_EVIDENCE,
+    fixtures: WHATSAPP_ACTION_FIXTURES,
+    planKinds: ["request"],
+    supports: (operation) => isWhatsAppActionOperationSupported(operation.id),
+    buildPlan: (operation, values) => ({
+      requestPlan: buildWhatsAppOperationRequest(operation, values),
     }),
   },
   {

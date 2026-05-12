@@ -3,6 +3,10 @@ import { describe, it } from "node:test";
 
 import { normalizeConnectorCatalog } from "./catalog.ts";
 import {
+  verifyConnectorRuntimeCoverage,
+  verifyConnectorRuntimeOfflineExecutions,
+} from "./runtime-coverage.ts";
+import {
   buildWhatsAppOperationRequest,
 } from "./whatsapp-operation-executor.ts";
 
@@ -86,6 +90,18 @@ describe("whatsapp operation runtime", () => {
         requiredPaths: ["messages"],
       },
     });
+  });
+
+  it("covers WhatsApp operations with operation-scoped offline fixtures", async () => {
+    const coverage = verifyConnectorRuntimeCoverage(WHATSAPP_CATALOG);
+    assert.equal(coverage.summary.missing, 0);
+    assert.equal(coverage.summary.implemented, 2);
+
+    const offline = await verifyConnectorRuntimeOfflineExecutions(WHATSAPP_CATALOG);
+    assert.deepEqual(offline.results.map((result) => result.operationId).sort(), [
+      "whatsapp.action.send-message",
+      "whatsapp.action.verify-phone-number",
+    ]);
   });
 });
 

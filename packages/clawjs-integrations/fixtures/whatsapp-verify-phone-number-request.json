@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://graph.facebook.com/v21.0/sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-whatsAppAccessToken-secret"
+  }
+}
