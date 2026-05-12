@@ -1,0 +1,18 @@
+{
+  "domain": "events-attended",
+  "version": "0.1.0",
+  "entries": [
+    {
+      "id": "events-attended.note",
+      "label": "Events attended — free-form note",
+      "unit": {
+        "id": "text",
+        "label": "text",
+        "group": "abstract"
+      },
+      "valueType": "text",
+      "category": "general",
+      "description": "Free-form text observation for Events attended."
+    }
+  ]
+}
