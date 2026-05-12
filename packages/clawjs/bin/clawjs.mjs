@@ -13,6 +13,7 @@ import { runOpenDrive } from "./drive-server-launcher.mjs";
 import { runOpenTelegram } from "./telegram-server-launcher.mjs";
 import { runOpenAudio } from "./audio-server-launcher.mjs";
 import { runOpenIndex } from "./index-server-launcher.mjs";
+import { runOpenSessions } from "./sessions-server-launcher.mjs";
 import { runCatalogCli, CATALOG_GROUPS } from "./catalog-commands.mjs";
 import { BUILTIN_COLLECTIONS_BY_ALIAS } from "@clawjs/core";
 
@@ -58,6 +59,9 @@ if (first === "open" && args[1] === "audio") {
 }
 if (first === "open" && args[1] === "index") {
   process.exit(await runOpenIndex(args.slice(2)));
+}
+if (first === "open" && args[1] === "sessions") {
+  process.exit(await runOpenSessions(args.slice(2)));
 }
 
 // Fall back to the existing Claw CLI for everything else.
