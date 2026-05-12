@@ -2,6 +2,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+const {
+  ConnectorRuntimeCoverageError,
+  normalizeConnectorCatalog,
+  verifyConnectorRuntimeCoverage,
+} = await loadIntegrationRuntimeCoverage();
 
 const args = parseArgs(process.argv.slice(2));
 const sourceRoot = path.resolve(args.source ?? process.env.CLAWJS_COMPONENTS_SOURCE_DIR ?? "");
@@ -270,89 +277,24 @@ function verify(catalog, expectedApps) {
   return errors;
 }
 
-const TELEGRAM_ACTION_SLUGS = new Set([
-  "create-chat-invite-link",
-  "delete-message",
-  "edit-media-message",
-  "edit-text-message",
-  "export-chat-invite-link",
-  "forward-message",
-  "get-num-members-in-chat",
-  "kick-chat-member",
-  "list-administrators-in-chat",
-  "list-chats",
-  "list-updates",
-  "pin-message",
-  "promote-chat-member",
-  "restrict-chat-member",
-  "send-album",
-  "send-audio-file",
-  "send-document-or-image",
-  "send-media-by-url-or-id",
-  "send-photo",
-  "send-sticker",
-  "send-text-message-or-reply",
-  "send-video-note",
-  "send-video",
-  "send-voice-message",
-  "set-chat-permissions",
-  "unpin-message",
-]);
-
-const TELEGRAM_SOURCE_SLUGS = new Set([
-  "new-updates",
-  "message-updates",
-  "channel-updates",
-  "new-bot-command-received",
-]);
-
 function verifyRuntimeCoverage(catalog, options) {
-  const errors = [];
-  for (const app of Array.isArray(catalog.apps) ? catalog.apps : []) {
-    if (!isRecord(app)) continue;
-    for (const operation of Array.isArray(app.operations) ? app.operations : []) {
-      if (!isRecord(operation) || typeof operation.id !== "string") continue;
-      const unsupported = operation.unsupported_real_runtime_reason;
-      if (isRuntimeSupported(operation)) continue;
-      if (isRecord(unsupported)) {
-        const reasonErrors = unsupportedReasonErrors(operation.id, unsupported);
-        errors.push(...reasonErrors);
-        if (!options.allowUnsupportedRuntime) {
-          errors.push(`operation ${operation.id} has unsupported_real_runtime_reason ${String(unsupported.code ?? "<missing>")} but runtime coverage requires a functional offline-validable executor`);
-        }
-      } else {
-        errors.push(`operation ${operation.id} missing functional offline-validable runtime executor`);
-      }
-    }
+  try {
+    verifyConnectorRuntimeCoverage(normalizeConnectorCatalog(catalog), {
+      allowUnsupportedReasons: options.allowUnsupportedRuntime,
+    });
+    return [];
+  } catch (error) {
+    if (error instanceof ConnectorRuntimeCoverageError) return error.report.errors;
+    throw error;
   }
-  return errors;
 }
 
-function isRuntimeSupported(operation) {
-  if (operation.appId !== "telegram_bot_api") return false;
-  const marker = operation.kind === "source" ? ".source." : ".action.";
-  const raw = operation.id.includes(marker)
-    ? operation.id.slice(operation.id.indexOf(marker) + marker.length)
-    : operation.id;
-  const slugs = operation.kind === "source" ? TELEGRAM_SOURCE_SLUGS : TELEGRAM_ACTION_SLUGS;
-  for (const slug of slugs) {
-    if (raw === slug || raw.startsWith(`${slug}-`)) return true;
+async function loadIntegrationRuntimeCoverage() {
+  const modulePath = fileURLToPath(new URL("../packages/clawjs-integrations/dist/index.js", import.meta.url));
+  if (!fs.existsSync(modulePath)) {
+    throw new Error("Missing @clawjs/integrations dist build. Run npm --workspace @clawjs/integrations run build before catalog verification.");
   }
-  return false;
-}
-
-function unsupportedReasonErrors(operationId, reason) {
-  const errors = [];
-  if (typeof reason.code !== "string" || !reason.code.trim()) {
-    errors.push(`operation ${operationId} unsupported_real_runtime_reason.code is required`);
-  }
-  if (typeof reason.message !== "string" || !reason.message.trim()) {
-    errors.push(`operation ${operationId} unsupported_real_runtime_reason.message is required`);
-  }
-  if (!Array.isArray(reason.evidence) || reason.evidence.filter((entry) => typeof entry === "string" && entry.trim()).length === 0) {
-    errors.push(`operation ${operationId} unsupported_real_runtime_reason.evidence must include concrete evidence`);
-  }
-  return errors;
+  return import(modulePath);
 }
 
 function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
