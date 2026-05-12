@@ -146,6 +146,7 @@ function verify(catalog, expectedApps) {
   const expectedRevision = readRevision(sourceRoot);
   const forbidden = new RegExp(String.fromCharCode(80, 105, 112, 101, 100, 114, 101, 97, 109), "i");
   if (forbidden.test(JSON.stringify(catalog))) errors.push("catalog contains forbidden upstream brand text");
+  if (catalog.version !== 1) errors.push(`catalog version ${catalog.version ?? "<missing>"} expected 1`);
   if (expectedRevision && catalog.sourceRevision !== expectedRevision) {
     errors.push(`sourceRevision ${catalog.sourceRevision ?? "<missing>"} expected ${expectedRevision}`);
   }
