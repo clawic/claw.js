@@ -8,7 +8,11 @@ import {
   summarizeConnectorCatalog,
 } from "./catalog.ts";
 import { runConnectorOperation } from "./operation-runner.ts";
-import { runConnectorSource } from "./source-runner.ts";
+import {
+  ConnectorSourceScheduler,
+  runConnectorSource,
+  sourceSubscriptionFromPlan,
+} from "./source-runner.ts";
 import type { ConnectorCatalog } from "./types.ts";
 
 function fixtureCatalog(): ConnectorCatalog {
@@ -196,5 +200,69 @@ describe("connector catalog", () => {
       appId: "chat_service",
       output: { subscribed: true, channel: "general" },
     });
+  });
+
+  it("builds blocked and ready source subscriptions from plans", async () => {
+    const blockedPlan = await runConnectorSource({
+      catalog: fixtureCatalog(),
+      operationId: "chat_service.source.new-message",
+      input: { values: { channel: "general" } },
+    });
+    const blocked = sourceSubscriptionFromPlan(blockedPlan, {
+      now: "2026-05-12T12:00:00.000Z",
+    });
+    assert.equal(blocked.status, "blocked");
+    assert.deepEqual(blocked.blockReasons, ["missing_secrets"]);
+    assert.equal(blocked.createdAt, "2026-05-12T12:00:00.000Z");
+    assert.equal(blocked.updatedAt, "2026-05-12T12:00:00.000Z");
+
+    const readyPlan = await runConnectorSource({
+      catalog: fixtureCatalog(),
+      operationId: "chat_service.source.new-message",
+      input: {
+        values: { channel: "general" },
+        secretRefs: { bot: "secret://bot" },
+      },
+    });
+    const ready = sourceSubscriptionFromPlan(readyPlan, {
+      id: "sub_1",
+      now: "2026-05-12T12:01:00.000Z",
+    });
+    assert.equal(ready.id, "sub_1");
+    assert.equal(ready.status, "ready");
+    assert.deepEqual(ready.blockReasons, []);
+    assert.equal(ready.delivery, "webhook");
+    assert.equal(ready.stateful, true);
+  });
+
+  it("stores local source subscriptions without starting providers", async () => {
+    const scheduler = new ConnectorSourceScheduler();
+    const plan = await runConnectorSource({
+      catalog: fixtureCatalog(),
+      operationId: "chat_service.source.new-message",
+      input: {
+        values: { channel: "general" },
+        secretRefs: { bot: "secret://bot" },
+      },
+    });
+    const first = scheduler.register(plan, {
+      id: "sub_1",
+      now: "2026-05-12T12:00:00.000Z",
+    });
+    const second = scheduler.register(plan, {
+      id: "sub_1",
+      enabled: false,
+      now: "2026-05-12T12:02:00.000Z",
+    });
+
+    assert.equal(first.status, "ready");
+    assert.equal(second.status, "disabled");
+    assert.deepEqual(second.blockReasons, ["disabled"]);
+    assert.equal(second.createdAt, "2026-05-12T12:00:00.000Z");
+    assert.equal(second.updatedAt, "2026-05-12T12:02:00.000Z");
+    assert.deepEqual(scheduler.list(), [second]);
+    assert.equal(scheduler.get("sub_1"), second);
+    assert.equal(scheduler.unregister("sub_1"), true);
+    assert.deepEqual(scheduler.list(), []);
   });
 });

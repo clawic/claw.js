@@ -53,6 +53,34 @@ export interface ConnectorSourceRunResult {
   output: Record<string, IntegrationJson>;
 }
 
+export type ConnectorSourceSubscriptionStatus = "ready" | "blocked" | "disabled";
+export type ConnectorSourceSubscriptionBlockReason = "missing_fields" | "missing_secrets" | "disabled";
+
+export interface ConnectorSourceSubscription {
+  id: string;
+  status: ConnectorSourceSubscriptionStatus;
+  operationId: string;
+  appId: string;
+  delivery: ConnectorSourceCapabilities["delivery"];
+  managedInterfaces: ConnectorManagedInterface[];
+  values: Record<string, IntegrationJson>;
+  secretRefs: Record<string, string>;
+  blockReasons: ConnectorSourceSubscriptionBlockReason[];
+  missingFields: string[];
+  missingSecrets: string[];
+  stateful: boolean;
+  hasHooks: boolean;
+  createdAt: string;
+  updatedAt: string;
+  dedupe?: string;
+}
+
+export interface RegisterConnectorSourceOptions {
+  id?: string;
+  enabled?: boolean;
+  now?: Date | string;
+}
+
 export interface RunConnectorSourceOptions {
   catalog: ConnectorCatalog;
   operationId: string;
@@ -60,6 +88,64 @@ export interface RunConnectorSourceOptions {
   dryRun?: boolean;
   resolveSecret?: ConnectorSecretResolver;
   executor?: ConnectorSourceExecutor;
+}
+
+export class ConnectorSourceScheduler {
+  readonly #subscriptions = new Map<string, ConnectorSourceSubscription>();
+
+  register(plan: ConnectorSourcePlan, options: RegisterConnectorSourceOptions = {}): ConnectorSourceSubscription {
+    const subscription = sourceSubscriptionFromPlan(plan, {
+      id: options.id,
+      enabled: options.enabled,
+      now: options.now,
+      existing: options.id ? this.#subscriptions.get(options.id) : undefined,
+    });
+    this.#subscriptions.set(subscription.id, subscription);
+    return subscription;
+  }
+
+  get(id: string): ConnectorSourceSubscription | null {
+    return this.#subscriptions.get(id) ?? null;
+  }
+
+  list(): ConnectorSourceSubscription[] {
+    return [...this.#subscriptions.values()];
+  }
+
+  unregister(id: string): boolean {
+    return this.#subscriptions.delete(id);
+  }
+}
+
+export function sourceSubscriptionFromPlan(
+  plan: ConnectorSourcePlan,
+  options: RegisterConnectorSourceOptions & { existing?: ConnectorSourceSubscription } = {},
+): ConnectorSourceSubscription {
+  const id = options.id ?? stableSubscriptionId(plan);
+  const now = isoTimestamp(options.now);
+  const enabled = options.enabled !== false;
+  const blockReasons = blockReasonsForPlan(plan, enabled);
+  const status: ConnectorSourceSubscriptionStatus = enabled
+    ? blockReasons.length ? "blocked" : "ready"
+    : "disabled";
+  return {
+    id,
+    status,
+    operationId: plan.operationId,
+    appId: plan.appId,
+    delivery: plan.delivery,
+    managedInterfaces: plan.managedInterfaces,
+    values: plan.values,
+    secretRefs: plan.secretRefs,
+    blockReasons,
+    missingFields: plan.missingFields,
+    missingSecrets: plan.missingSecrets,
+    stateful: plan.stateful,
+    hasHooks: plan.hasHooks,
+    createdAt: options.existing?.createdAt ?? now,
+    updatedAt: now,
+    ...(plan.dedupe ? { dedupe: plan.dedupe } : {}),
+  };
 }
 
 export async function runConnectorSource(
@@ -198,6 +284,26 @@ function redactSecretValues(
   return Object.fromEntries(
     Object.entries(values).map(([key, value]) => [key, secretFields.has(key) ? "[secret]" : value]),
   );
+}
+
+function stableSubscriptionId(plan: ConnectorSourcePlan): string {
+  return `${plan.appId}:${plan.operationId}`;
+}
+
+function blockReasonsForPlan(
+  plan: ConnectorSourcePlan,
+  enabled: boolean,
+): ConnectorSourceSubscriptionBlockReason[] {
+  if (!enabled) return ["disabled"];
+  const reasons: ConnectorSourceSubscriptionBlockReason[] = [];
+  if (plan.missingFields.length) reasons.push("missing_fields");
+  if (plan.missingSecrets.length) reasons.push("missing_secrets");
+  return reasons;
+}
+
+function isoTimestamp(value: Date | string | undefined): string {
+  if (typeof value === "string") return value;
+  return (value ?? new Date()).toISOString();
 }
 
 export type { ConnectorCatalogError };
