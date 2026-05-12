@@ -33,7 +33,7 @@ const summary = summarize(catalog.apps ?? []);
 
 for (const error of errors.slice(0, maxErrors)) console.error(`FAIL ${error}`);
 if (errors.length > maxErrors) console.error(`FAIL ... ${errors.length - maxErrors} additional errors hidden`);
-console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} dynamicOptions=${summary.dynamicOptionFields} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} methods=${summary.methodOperations}`);
+console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} dynamicOptions=${summary.dynamicOptionFields} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} dynamicPropFields=${summary.dynamicPropFields} methods=${summary.methodOperations}`);
 if (errors.length > 0) {
   console.error(`catalog verification failed with ${errors.length} error(s)`);
   process.exit(1);
@@ -110,6 +110,7 @@ function verify(catalog, expectedApps) {
   if (actualSummary.hybridSources !== expectedSummary.hybridSources) errors.push(`hybridSources ${actualSummary.hybridSources} expected ${expectedSummary.hybridSources}`);
   if (actualSummary.statefulSources !== expectedSummary.statefulSources) errors.push(`statefulSources ${actualSummary.statefulSources} expected ${expectedSummary.statefulSources}`);
   if (actualSummary.dynamicPropOperations !== expectedSummary.dynamicPropOperations) errors.push(`dynamicProps ${actualSummary.dynamicPropOperations} expected ${expectedSummary.dynamicPropOperations}`);
+  if (actualSummary.dynamicPropFields !== expectedSummary.dynamicPropFields) errors.push(`dynamicPropFields ${actualSummary.dynamicPropFields} expected ${expectedSummary.dynamicPropFields}`);
   if (actualSummary.methodOperations !== expectedSummary.methodOperations) errors.push(`methods ${actualSummary.methodOperations} expected ${expectedSummary.methodOperations}`);
 
   for (const app of Array.isArray(catalog.apps) ? catalog.apps : []) {
@@ -282,6 +283,31 @@ function findMatchingBrace(source, openIndex) {
   return -1;
 }
 
+function findMatchingDelimiter(source, openIndex, openChar, closeChar) {
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  for (let index = openIndex; index < source.length; index += 1) {
+    const char = source[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === openChar) depth += 1;
+    else if (char === closeChar) {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return -1;
+}
+
 function isSecretField(name, body, appId) {
   if (body.includes('type: "app"') || body.includes("type: 'app'")) return true;
   const scrubbedBody = scrubBrand(body);
@@ -321,6 +347,7 @@ function summarize(apps) {
       if (operation.source?.delivery === "hybrid") summary.hybridSources += 1;
       if (operation.source?.usesServiceDb === true) summary.statefulSources += 1;
       if (operation.runtime?.hasAdditionalProps === true) summary.dynamicPropOperations += 1;
+      summary.dynamicPropFields += operation.runtime?.additionalProps?.fieldNames?.length ?? 0;
       if (operation.runtime?.hasMethods === true) summary.methodOperations += 1;
     }
     return summary;
@@ -345,6 +372,7 @@ function summarize(apps) {
     hybridSources: 0,
     statefulSources: 0,
     dynamicPropOperations: 0,
+    dynamicPropFields: 0,
     dynamicOptionFields: 0,
     methodOperations: 0,
   });
@@ -367,6 +395,7 @@ function summarizeExpected(apps) {
     hybridSources: 0,
     statefulSources: 0,
     dynamicPropOperations: 0,
+    dynamicPropFields: 0,
     dynamicOptionFields: 0,
     methodOperations: 0,
   };
@@ -392,6 +421,7 @@ function summarizeExpected(apps) {
       if (operation.sourceCapabilities?.delivery === "hybrid") summary.hybridSources += 1;
       if (operation.sourceCapabilities?.usesServiceDb === true) summary.statefulSources += 1;
       if (operation.runtime.hasAdditionalProps === true) summary.dynamicPropOperations += 1;
+      summary.dynamicPropFields += operation.runtime.additionalProps?.fieldNames?.length ?? 0;
       if (operation.runtime.hasMethods === true) summary.methodOperations += 1;
     }
   }
@@ -416,6 +446,20 @@ function compareRuntime(operationId, expected, actual, errors) {
   const expectedMethods = new Set(expected.methodNames ?? []);
   const actualMethods = new Set(Array.isArray(actual?.methodNames) ? actual.methodNames : []);
   compareSets(`operation ${operationId} methods`, expectedMethods, actualMethods, errors);
+  compareAdditionalProps(operationId, expected.additionalProps, actual?.additionalProps, errors);
+}
+
+function compareAdditionalProps(operationId, expected, actual, errors) {
+  if (!expected && !actual) return;
+  if (!expected || !actual) {
+    errors.push(`operation ${operationId} additionalProps ${actual ? "present" : "<missing>"} expected ${expected ? "present" : "<missing>"}`);
+    return;
+  }
+  for (const key of ["mode", "usesPreviousProps", "usesThis"]) {
+    if (expected[key] !== actual[key]) errors.push(`operation ${operationId} additionalProps ${key} ${actual[key]} expected ${expected[key]}`);
+  }
+  compareSets(`operation ${operationId} additionalProps fields`, new Set(expected.fieldNames ?? []), new Set(actual.fieldNames ?? []), errors);
+  compareSets(`operation ${operationId} additionalProps context`, new Set(expected.contextKeys ?? []), new Set(actual.contextKeys ?? []), errors);
 }
 
 function compareSourceCapabilities(operationId, expected, actual, errors) {
@@ -462,10 +506,12 @@ function readAnnotations(source) {
 }
 
 function readRuntime(source, filePath, seen = new Set()) {
+  const additionalProps = readAdditionalPropsMetadata(source);
   const runtime = {
     hasRun: hasComponentMember(source, "run"),
     hasHooks: hasComponentMember(source, "hooks"),
-    hasAdditionalProps: /\badditionalProps\s*[:(]/.test(source),
+    hasAdditionalProps: Boolean(additionalProps),
+    ...optionalAdditionalProps(additionalProps),
     hasMethods: hasComponentMember(source, "methods"),
     methodNames: readMethodNames(source),
     ...optionalString("dedupe", firstMatch(source, /\bdedupe\s*:\s*["'`]([^"'`]+)["'`]/)),
@@ -479,11 +525,125 @@ function readRuntime(source, filePath, seen = new Set()) {
     runtime.hasRun ||= inherited.hasRun;
     runtime.hasHooks ||= inherited.hasHooks;
     runtime.hasAdditionalProps ||= inherited.hasAdditionalProps;
+    runtime.additionalProps = mergeAdditionalProps(runtime.additionalProps, inherited.additionalProps);
     runtime.hasMethods ||= inherited.hasMethods;
     runtime.methodNames = [...runtime.methodNames, ...inherited.methodNames].filter(unique).sort();
     if (!runtime.dedupe && inherited.dedupe) runtime.dedupe = inherited.dedupe;
   }
   return runtime;
+}
+
+function optionalAdditionalProps(metadata) {
+  return metadata ? { additionalProps: metadata } : {};
+}
+
+function mergeAdditionalProps(current, inherited) {
+  if (!current) return inherited;
+  if (!inherited) return current;
+  return {
+    mode: current.mode === "function" || inherited.mode === "function" ? "function" : "object",
+    fieldNames: [...current.fieldNames, ...inherited.fieldNames].filter(unique).sort(),
+    contextKeys: [...current.contextKeys, ...inherited.contextKeys].filter(unique).sort(),
+    usesPreviousProps: current.usesPreviousProps || inherited.usesPreviousProps,
+    usesThis: current.usesThis || inherited.usesThis,
+  };
+}
+
+function readAdditionalPropsMetadata(source) {
+  const body = readExportObjectBody(source);
+  if (!body) return undefined;
+  const raw = readTopLevelValue(body, "additionalProps");
+  const method = readTopLevelMethod(body, "additionalProps");
+  if (!raw && !method) return undefined;
+  const value = raw ?? method?.body ?? "";
+  const params = method?.params ?? readFunctionParams(value.trim()) ?? "";
+  const objectBody = objectBodyFromValue(value);
+  const functionBody = method?.body ?? value;
+  const thisKeys = readThisKeys(functionBody);
+  const contextKeys = [...contextKeysFromParams(params), ...thisKeys].filter(unique).sort();
+  return {
+    mode: objectBody && !method && value.trim().startsWith("{") ? "object" : "function",
+    fieldNames: objectBody ? readObjectKeys(objectBody) : readReturnObjectKeys(functionBody),
+    contextKeys,
+    usesPreviousProps: contextKeysFromParams(params).some((key) => /^(prev|previous|prevContext)$/.test(key)),
+    usesThis: thisKeys.length > 0,
+  };
+}
+
+function readExportObjectBody(source) {
+  const match = /(?:export\s+default|module\.exports\s*=)\s*{/.exec(source);
+  if (!match) return undefined;
+  const openIndex = source.indexOf("{", match.index);
+  const closeIndex = findMatchingBrace(source, openIndex);
+  return closeIndex < 0 ? undefined : source.slice(openIndex + 1, closeIndex);
+}
+
+function readTopLevelMethod(body, key) {
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  for (let index = 0; index < body.length; index += 1) {
+    const char = body[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{" || char === "[" || char === "(") {
+      depth += 1;
+      continue;
+    }
+    if (char === "}" || char === "]" || char === ")") {
+      depth -= 1;
+      continue;
+    }
+    if (depth !== 0 || body.slice(index, index + key.length) !== key) continue;
+    const rest = body.slice(index + key.length);
+    const parenOffset = rest.search(/\s*\(/);
+    if (parenOffset !== 0) continue;
+    const openParen = index + key.length + rest.indexOf("(");
+    const closeParen = findMatchingDelimiter(body, openParen, "(", ")");
+    if (closeParen < 0) return undefined;
+    const openBrace = body.indexOf("{", closeParen);
+    if (openBrace < 0) return undefined;
+    const closeBrace = findMatchingBrace(body, openBrace);
+    if (closeBrace < 0) return undefined;
+    return {
+      params: body.slice(openParen + 1, closeParen),
+      body: body.slice(openBrace + 1, closeBrace),
+    };
+  }
+  return undefined;
+}
+
+function objectBodyFromValue(value) {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("{")) return undefined;
+  const closeIndex = findMatchingBrace(trimmed, 0);
+  return closeIndex < 0 ? undefined : trimmed.slice(1, closeIndex);
+}
+
+function readReturnObjectKeys(body) {
+  const keys = [];
+  for (const match of body.matchAll(/\breturn\s*{/g)) {
+    const openIndex = match.index + match[0].lastIndexOf("{");
+    const closeIndex = findMatchingBrace(body, openIndex);
+    if (closeIndex < 0) continue;
+    keys.push(...readObjectKeys(body.slice(openIndex + 1, closeIndex)));
+  }
+  return keys.filter(unique).sort();
+}
+
+function readThisKeys(body) {
+  return [...body.matchAll(/\bthis\.([A-Za-z_$][\w$]*)/g)]
+    .map((match) => scrub(match[1]))
+    .filter(unique)
+    .sort();
 }
 
 function readMethodNames(source) {
