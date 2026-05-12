@@ -2,6 +2,73 @@
   "version": 1,
   "apps": [
     {
+      "id": "github",
+      "name": "GitHub",
+      "authFieldNames": ["githubToken"],
+      "fields": [
+        {
+          "name": "githubToken",
+          "type": "app",
+          "optional": false,
+          "secret": true
+        }
+      ],
+      "operations": [
+        {
+          "id": "github.action.create-issue",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Issue",
+          "fields": [
+            { "name": "body", "type": "string", "optional": true },
+            { "name": "owner", "type": "string", "optional": false },
+            { "name": "repo", "type": "string", "optional": false },
+            { "name": "title", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["githubToken"]
+        },
+        {
+          "id": "github.action.create-issue-comment",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Issue Comment",
+          "fields": [
+            { "name": "body", "type": "string", "optional": false },
+            { "name": "issueNumber", "type": "integer", "optional": false, "min": 1 },
+            { "name": "owner", "type": "string", "optional": false },
+            { "name": "repo", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["githubToken"]
+        },
+        {
+          "id": "github.action.get-issue",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Issue",
+          "fields": [
+            { "name": "issueNumber", "type": "integer", "optional": false, "min": 1 },
+            { "name": "owner", "type": "string", "optional": false },
+            { "name": "repo", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["githubToken"]
+        },
+        {
+          "id": "github.action.list-repository-issues",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Repository Issues",
+          "fields": [
+            { "name": "owner", "type": "string", "optional": false },
+            { "name": "page", "type": "integer", "optional": true, "default": 1, "min": 1 },
+            { "name": "perPage", "type": "integer", "optional": true, "default": 30, "min": 1, "max": 100 },
+            { "name": "repo", "type": "string", "optional": false },
+            { "name": "state", "type": "string", "optional": true, "default": "open" }
+          ],
+          "authFieldNames": ["githubToken"]
+        }
+      ]
+    },
+    {
       "id": "slack",
       "name": "Slack",
       "authFieldNames": ["slackBotToken"],
