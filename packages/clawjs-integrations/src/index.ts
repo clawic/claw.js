@@ -34,6 +34,11 @@ export {
   createConnectorSourceExecutor,
   findConnectorRuntimeImplementation,
 } from "./runtime-registry.js";
+export {
+  ConnectorRuntimeHttpError,
+  buildConnectorRuntimeFetchRequest,
+  executeConnectorRuntimeRequestPlan,
+} from "./runtime-http.js";
 export type {
   ConnectorCatalogSearchOptions,
   ConnectorCatalogSearchResult,
@@ -72,6 +77,8 @@ export type {
   VerifyConnectorRuntimeCoverageOptions,
 } from "./runtime-coverage.js";
 export type {
+  ConnectorRuntimeAuthBinding,
+  ConnectorRuntimeAuthPlacement,
   ConnectorRuntimeExecutorOptions,
   ConnectorRuntimeImplementation,
   ConnectorRuntimePlanKind,
@@ -79,6 +86,11 @@ export type {
   ConnectorRuntimeRequestPlan,
   ConnectorRuntimeSourcePlan,
 } from "./runtime-registry.js";
+export type {
+  ConnectorRuntimeHttpInput,
+  ConnectorRuntimeHttpOptions,
+  ConnectorRuntimeHttpResponse,
+} from "./runtime-http.js";
 export { telegramAdapter } from "./telegram.js";
 export {
   buildTelegramOperationRequest,

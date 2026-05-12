@@ -25,13 +25,25 @@ export interface ConnectorRuntimeExecutorOptions {
   fetchImpl?: typeof fetch;
 }
 
+export type ConnectorRuntimeAuthPlacement = "bearer" | "header" | "query" | "path";
+
+export interface ConnectorRuntimeAuthBinding {
+  type: "secret";
+  field: string;
+  placement?: ConnectorRuntimeAuthPlacement;
+  name?: string;
+  prefix?: string;
+}
+
 export interface ConnectorRuntimeRequestPlan {
   method: string;
+  url?: string;
   endpoint: string;
-  auth: { type: "secret"; field: string }[];
+  auth: ConnectorRuntimeAuthBinding[];
   headers?: Record<string, string>;
   query?: Record<string, IntegrationJson>;
   body: Record<string, IntegrationJson>;
+  bodyEncoding?: "json" | "form" | "none";
 }
 
 export interface ConnectorRuntimeSourcePlan {
