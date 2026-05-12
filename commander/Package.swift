@@ -2,11 +2,16 @@
 import PackageDescription
 
 let package = Package(
-    name: "Commander",
+    name: "ClawHostKit",
     platforms: [
         .macOS(.v14),
     ],
     products: [
+        .library(name: "ClawHostKit", targets: ["CommanderCore"]),
+        .library(name: "ClawHostAdapters", targets: ["CommanderAdapters"]),
+        .executable(name: "claw-host", targets: ["commander"]),
+        .executable(name: "claw-hostd", targets: ["commanderd"]),
+        .executable(name: "ClawApp", targets: ["CommanderApp"]),
         .library(name: "CommanderCore", targets: ["CommanderCore"]),
         .library(name: "CommanderAdapters", targets: ["CommanderAdapters"]),
         .executable(name: "commander", targets: ["commander"]),

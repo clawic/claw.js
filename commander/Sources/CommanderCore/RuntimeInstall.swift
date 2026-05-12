@@ -41,13 +41,16 @@ public struct InstallStatus: Codable, Equatable, Sendable {
 }
 
 public enum RuntimeInstaller {
-    public static let launchAgentLabel = "io.commander.daemon"
     public static let appOwnedRuntimeTransport = "app_xpc"
     public static let legacySocketRuntimeTransport = "unix_socket"
 
+    public static func launchAgentLabel(environment: [String: String] = ProcessInfo.processInfo.environment) -> String {
+        HostConfiguration.current(environment: environment).launchAgentLabel
+    }
+
     public static func appRuntimeMachServiceName(environment: [String: String] = ProcessInfo.processInfo.environment) -> String {
         let statePath = StatePaths.stateDirectory(environment: environment).path
-        return "com.clawjs.commander.runtime.\(stableIdentifier(for: statePath))"
+        return "com.claw.host.runtime.\(stableIdentifier(for: statePath))"
     }
 
     public static func installCLI(
@@ -88,7 +91,7 @@ public enum RuntimeInstaller {
             launchAgentInstalled: FileManager.default.fileExists(atPath: launchAgentURL.path),
             launchAgentLoaded: launchAgentIsLoaded(environment: environment),
             launchAgentPath: launchAgentURL.path,
-            launchAgentLabel: launchAgentLabel,
+            launchAgentLabel: launchAgentLabel(environment: environment),
             runtimeTransport: runtimeTransport,
             hostAppRunning: hostAppRunning,
             hostBundlePath: hostBundlePath,
@@ -118,6 +121,9 @@ public enum RuntimeInstaller {
         if let override = environment["COMMANDER_APP_BUNDLE"], FileManager.default.fileExists(atPath: override) {
             return override
         }
+        if let override = environment["CLAW_HOST_APP_BUNDLE"], FileManager.default.fileExists(atPath: override) {
+            return override
+        }
 
         let bundlePath = Bundle.main.bundleURL.path
         if Bundle.main.bundleURL.pathExtension == "app", FileManager.default.fileExists(atPath: bundlePath) {
@@ -133,8 +139,11 @@ public enum RuntimeInstaller {
             return maybeBundle.path
         }
 
+        let host = HostConfiguration.current(environment: environment)
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let candidates = [
+            "\(home)/Applications/\(host.displayName).app",
+            "/Applications/\(host.displayName).app",
             "\(home)/Applications/Commander.app",
             "/Applications/Commander.app",
         ]
@@ -149,8 +158,15 @@ public enum RuntimeInstaller {
         let executable = URL(fileURLWithPath: bundlePath)
             .appendingPathComponent("Contents", isDirectory: true)
             .appendingPathComponent("MacOS", isDirectory: true)
+            .appendingPathComponent(HostConfiguration.current(environment: environment).displayName == "Claw" ? "ClawApp" : "CommanderApp")
+        if FileManager.default.isExecutableFile(atPath: executable.path) {
+            return executable.path
+        }
+        let legacyExecutable = URL(fileURLWithPath: bundlePath)
+            .appendingPathComponent("Contents", isDirectory: true)
+            .appendingPathComponent("MacOS", isDirectory: true)
             .appendingPathComponent("CommanderApp")
-        return FileManager.default.isExecutableFile(atPath: executable.path) ? executable.path : nil
+        return FileManager.default.isExecutableFile(atPath: legacyExecutable.path) ? legacyExecutable.path : nil
     }
 
     public static func hostProcessIsRunning(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
@@ -179,7 +195,7 @@ public enum RuntimeInstaller {
         }
         let result = runProcess(
             "/bin/launchctl",
-            arguments: ["print", "gui/\(uid)/\(launchAgentLabel)"],
+            arguments: ["print", "gui/\(uid)/\(launchAgentLabel(environment: environment))"],
             environment: environment
         )
         return result.status == 0
@@ -218,7 +234,7 @@ public enum RuntimeInstaller {
         <plist version="1.0">
         <dict>
             <key>Label</key>
-            <string>\(launchAgentLabel)</string>
+            <string>\(launchAgentLabel(environment: environment))</string>
             <key>ProgramArguments</key>
             <array>
         \(programArguments)
@@ -226,11 +242,11 @@ public enum RuntimeInstaller {
         \(machServices)
             <key>EnvironmentVariables</key>
             <dict>
-                <key>COMMANDER_HOME</key>
+                <key>CLAW_HOST_HOME</key>
                 <string>\(statePath)</string>
                 <key>COMMANDER_RUNTIME_TRANSPORT</key>
                 <string>\(appExecutablePath(environment: environment) == nil ? legacySocketRuntimeTransport : appOwnedRuntimeTransport)</string>
-                <key>COMMANDER_APP_BUNDLE</key>
+                <key>CLAW_HOST_APP_BUNDLE</key>
                 <string>\(appBundlePath(environment: environment) ?? "")</string>
             </dict>
             <key>RunAtLoad</key>

@@ -99,14 +99,14 @@ public enum DaemonLauncher {
             environment: environment
         )
         let launchdTarget = launchdTarget(environment: environment)
-        _ = runLaunchctl(arguments: ["bootout", launchdTarget + "/\(RuntimeInstaller.launchAgentLabel)"], environment: environment)
+        _ = runLaunchctl(arguments: ["bootout", launchdTarget + "/\(RuntimeInstaller.launchAgentLabel(environment: environment))"], environment: environment)
 
         let bootstrap = runLaunchctl(arguments: ["bootstrap", launchdTarget, plistPath], environment: environment)
         guard bootstrap.status == 0 else {
             throw CommanderError.transport("Unable to bootstrap app runtime: \(bootstrap.output)")
         }
 
-        let kickstart = runLaunchctl(arguments: ["kickstart", "-k", launchdTarget + "/\(RuntimeInstaller.launchAgentLabel)"], environment: environment)
+        let kickstart = runLaunchctl(arguments: ["kickstart", "-k", launchdTarget + "/\(RuntimeInstaller.launchAgentLabel(environment: environment))"], environment: environment)
         guard kickstart.status == 0 else {
             throw CommanderError.transport("Unable to start app runtime: \(kickstart.output)")
         }
@@ -127,7 +127,7 @@ public enum DaemonLauncher {
         }
 
         let launchdTarget = launchdTarget(environment: environment)
-        _ = runLaunchctl(arguments: ["bootout", launchdTarget + "/\(RuntimeInstaller.launchAgentLabel)"], environment: environment)
+        _ = runLaunchctl(arguments: ["bootout", launchdTarget + "/\(RuntimeInstaller.launchAgentLabel(environment: environment))"], environment: environment)
 
         if let status = try? DaemonStatusStore(environment: environment).read(),
            let pid = status.pid {

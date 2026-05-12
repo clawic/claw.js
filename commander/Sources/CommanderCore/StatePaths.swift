@@ -2,14 +2,18 @@ import Foundation
 
 public enum StatePaths {
     public static func stateDirectory(environment: [String: String] = ProcessInfo.processInfo.environment) -> URL {
+        if let override = environment["CLAW_HOST_HOME"], !override.isEmpty {
+            return URL(fileURLWithPath: override, isDirectory: true)
+        }
         if let override = environment["COMMANDER_HOME"], !override.isEmpty {
             return URL(fileURLWithPath: override, isDirectory: true)
         }
 
+        let host = HostConfiguration.current(environment: environment)
         return FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library", isDirectory: true)
             .appendingPathComponent("Application Support", isDirectory: true)
-            .appendingPathComponent("Commander", isDirectory: true)
+            .appendingPathComponent(host.appSupportDirectoryName, isDirectory: true)
     }
 
     public static func ensureStateDirectory(environment: [String: String] = ProcessInfo.processInfo.environment) throws -> URL {
@@ -43,20 +47,21 @@ public enum StatePaths {
             return URL(fileURLWithPath: override, isDirectory: true).appendingPathComponent("commander")
         }
 
+        let host = HostConfiguration.current(environment: environment)
         return FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".local", isDirectory: true)
             .appendingPathComponent("bin", isDirectory: true)
-            .appendingPathComponent("commander")
+            .appendingPathComponent(host.cliExecutableName)
     }
 
     public static func launchAgentPlistPath(environment: [String: String] = ProcessInfo.processInfo.environment) throws -> URL {
         if let override = environment["COMMANDER_LAUNCH_AGENTS_DIR"], !override.isEmpty {
-            return URL(fileURLWithPath: override, isDirectory: true).appendingPathComponent("\(RuntimeInstaller.launchAgentLabel).plist")
+            return URL(fileURLWithPath: override, isDirectory: true).appendingPathComponent("\(RuntimeInstaller.launchAgentLabel(environment: environment)).plist")
         }
 
         return FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library", isDirectory: true)
             .appendingPathComponent("LaunchAgents", isDirectory: true)
-            .appendingPathComponent("\(RuntimeInstaller.launchAgentLabel).plist")
+            .appendingPathComponent("\(RuntimeInstaller.launchAgentLabel(environment: environment)).plist")
     }
 }
