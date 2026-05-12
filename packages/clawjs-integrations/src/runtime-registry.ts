@@ -76,6 +76,9 @@ export interface ConnectorRuntimeSourcePlan {
   delivery: string;
   dedupe?: string;
   hooks: string[];
+  eventsPath?: string;
+  nextCursorPath?: string;
+  nextOffsetPath?: string;
 }
 
 export interface ConnectorRuntimePlanDetails {
@@ -225,7 +228,10 @@ export function createConnectorSourceExecutor(
   registry: readonly ConnectorRuntimeImplementation[] = CONNECTOR_RUNTIME_REGISTRY,
 ): ConnectorSourceExecutor | null {
   if (operation.kind !== "source") return null;
-  return findConnectorRuntimeImplementation(operation, registry)?.createSourceExecutor?.(options) ?? null;
+  const implementation = findConnectorRuntimeImplementation(operation, registry);
+  if (!implementation) return null;
+  return implementation.createSourceExecutor?.(options)
+    ?? createHttpConnectorSourceExecutor(implementation, options);
 }
 
 function createHttpConnectorOperationExecutor(
@@ -263,6 +269,47 @@ function createHttpConnectorOperationExecutor(
   };
 }
 
+function createHttpConnectorSourceExecutor(
+  implementation: ConnectorRuntimeImplementation,
+  options: ConnectorRuntimeExecutorOptions,
+): ConnectorSourceExecutor | null {
+  if (!implementation.baseUrl || !implementation.buildPlan || !implementation.planKinds.includes("request") || !implementation.planKinds.includes("source")) {
+    return null;
+  }
+  return {
+    async start(ctx) {
+      const details = implementation.buildPlan?.(ctx.operation, ctx.values);
+      if (!details?.requestPlan || !details.sourcePlan) {
+        throw new Error(`Connector runtime implementation ${implementation.executorId} did not build a source request plan.`);
+      }
+      const baseUrl = options.baseUrl ?? implementation.baseUrl;
+      if (details.requestPlan.pagination) {
+        const result = await executeConnectorRuntimePaginatedRequestPlan({
+          ...httpOptions(options),
+          baseUrl,
+          plan: details.requestPlan,
+          secrets: ctx.secrets,
+        });
+        return {
+          events: result.items,
+          responses: result.responses as unknown as IntegrationJson,
+        };
+      }
+      const response = await executeConnectorRuntimeRequestPlan({
+        ...httpOptions(options),
+        baseUrl,
+        plan: details.requestPlan,
+        secrets: ctx.secrets,
+      });
+      const output: Record<string, IntegrationJson> = {
+        events: eventsFromRuntimeSourceResponse(response.body, details.sourcePlan.eventsPath),
+        ...cursorOutputsFromRuntimeSourceResponse(response.body, details.sourcePlan),
+      };
+      return output;
+    },
+  };
+}
+
 function httpOptions(options: ConnectorRuntimeExecutorOptions): ConnectorRuntimeHttpOptions {
   return {
     ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
@@ -276,4 +323,35 @@ function recordFromRuntimeOutput(output: IntegrationJson): Record<string, Integr
   return output && typeof output === "object" && !Array.isArray(output)
     ? output as Record<string, IntegrationJson>
     : { result: output };
+}
+
+function eventsFromRuntimeSourceResponse(body: IntegrationJson, eventsPath: string | undefined): IntegrationJson[] {
+  const value = valueAtRuntimePath(body, eventsPath);
+  if (Array.isArray(value)) return value;
+  if (value == null) return [];
+  return [value];
+}
+
+function cursorOutputsFromRuntimeSourceResponse(
+  body: IntegrationJson,
+  sourcePlan: ConnectorRuntimeSourcePlan,
+): Record<string, IntegrationJson> {
+  return {
+    ...(sourcePlan.nextCursorPath ? optionalOutput("nextCursor", valueAtRuntimePath(body, sourcePlan.nextCursorPath)) : {}),
+    ...(sourcePlan.nextOffsetPath ? optionalOutput("nextOffset", valueAtRuntimePath(body, sourcePlan.nextOffsetPath)) : {}),
+  };
+}
+
+function optionalOutput(key: string, value: IntegrationJson | undefined): Record<string, IntegrationJson> {
+  return value == null || value === "" ? {} : { [key]: value };
+}
+
+function valueAtRuntimePath(value: IntegrationJson, path: string | undefined): IntegrationJson | undefined {
+  if (!path) return value;
+  let current: IntegrationJson | undefined = value;
+  for (const segment of path.split(".").filter(Boolean)) {
+    if (!current || typeof current !== "object" || Array.isArray(current)) return undefined;
+    current = current[segment];
+  }
+  return current;
 }

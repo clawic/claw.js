@@ -12,6 +12,7 @@ import {
 import type { ConnectorRuntimeImplementation } from "./runtime-registry.ts";
 import {
   createConnectorOperationExecutor,
+  createConnectorSourceExecutor,
 } from "./runtime-registry.ts";
 import type { IntegrationJson } from "./types.ts";
 
@@ -593,6 +594,179 @@ describe("connector runtime coverage", () => {
     assert.throws(
       () => verifyConnectorRuntimeCoverage(catalog, { registry }),
       /generic HTTP request auth apiKey requires a transport placement/,
+    );
+  });
+
+  it("executes declarative HTTP polling sources from request and source plans", async () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: ["apiKey"],
+        fields: [{ name: "apiKey", type: "string", optional: false, secret: true }],
+        operations: [{
+          id: "fixture_service.source.new-items",
+          appId: "fixture_service",
+          kind: "source",
+          name: "New Items",
+          fields: [{ name: "cursor", type: "string", optional: true }],
+          authFieldNames: ["apiKey"],
+          runtime: {
+            hasRun: true,
+            hasHooks: false,
+            hookNames: [],
+            hasAdditionalProps: false,
+            hasMethods: false,
+            methodNames: [],
+            dedupe: "unique",
+          },
+          source: {
+            delivery: "polling",
+            usesTimer: true,
+            usesHttp: false,
+            usesServiceDb: true,
+          },
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "source",
+      executorId: "fixture.source.http",
+      baseUrl: "https://api.example.invalid/v1/",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [{
+        kind: "source_event",
+        path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
+      }],
+      planKinds: ["request", "source"],
+      supports: (operation) => operation.id === "fixture_service.source.new-items",
+      buildPlan: (operation, values) => ({
+        requestPlan: {
+          method: "GET",
+          endpoint: "items",
+          auth: operation.authFieldNames.map((field) => ({ type: "secret", field, placement: "header", name: "x-api-key" })),
+          query: {
+            ...(values.cursor == null || values.cursor === "" ? {} : { cursor: values.cursor }),
+          },
+          body: {},
+          responseSchema: { type: "object", requiredPaths: ["data"] },
+        },
+        sourcePlan: {
+          delivery: operation.source?.delivery ?? "manual",
+          dedupe: operation.runtime?.dedupe,
+          hooks: operation.runtime?.hookNames ?? [],
+          eventsPath: "data",
+          nextCursorPath: "paging.next",
+        },
+      }),
+    }];
+
+    assert.equal(verifyConnectorRuntimeCoverage(catalog, { registry }).summary.implemented, 1);
+    const operation = catalog.apps[0]?.operations[0];
+    assert.ok(operation);
+    const calls: Array<{ url: string; apiKey: string | null }> = [];
+    const executor = createConnectorSourceExecutor(operation, {
+      fetchImpl: async (input, init) => {
+        calls.push({
+          url: String(input),
+          apiKey: new Headers(init?.headers).get("x-api-key"),
+        });
+        return Response.json({
+          data: [{ id: "item_1" }, { id: "item_2" }],
+          paging: { next: "cursor_2" },
+        });
+      },
+    }, registry);
+
+    const output = await executor?.start({
+      operation,
+      values: { cursor: "cursor_1" },
+      secrets: { apiKey: "secret-token" },
+      plan: {
+        status: "source_plan",
+        operationId: operation.id,
+        appId: operation.appId,
+        delivery: "polling",
+        missingFields: [],
+        missingSecrets: [],
+        invalidFields: [],
+        values: { cursor: "cursor_1" },
+        secretRefs: { apiKey: "secret://fixture" },
+        managedInterfaces: [],
+        hasHooks: false,
+        stateful: true,
+        dedupe: "unique",
+      },
+    });
+
+    assert.deepEqual(output, {
+      events: [{ id: "item_1" }, { id: "item_2" }],
+      nextCursor: "cursor_2",
+    });
+    assert.deepEqual(calls, [{
+      url: "https://api.example.invalid/v1/items?cursor=cursor_1",
+      apiKey: "secret-token",
+    }]);
+  });
+
+  it("rejects declarative HTTP sources without event extraction", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [{
+          id: "fixture_service.source.new-items",
+          appId: "fixture_service",
+          kind: "source",
+          name: "New Items",
+          fields: [],
+          authFieldNames: [],
+          source: {
+            delivery: "polling",
+            usesTimer: true,
+            usesHttp: false,
+            usesServiceDb: false,
+          },
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "source",
+      executorId: "fixture.source.http",
+      baseUrl: "https://api.example.invalid/",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [{
+        kind: "source_event",
+        path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
+      }],
+      planKinds: ["request", "source"],
+      supports: (operation) => operation.id === "fixture_service.source.new-items",
+      buildPlan: (operation) => ({
+        requestPlan: {
+          method: "GET",
+          endpoint: "items",
+          auth: [],
+          body: {},
+          responseSchema: { type: "object" },
+        },
+        sourcePlan: {
+          delivery: operation.source?.delivery ?? "manual",
+          hooks: [],
+        },
+      }),
+    }];
+
+    assert.throws(
+      () => verifyConnectorRuntimeCoverage(catalog, { registry }),
+      /generic HTTP source plan requires eventsPath or paginated request itemsPath/,
     );
   });
 

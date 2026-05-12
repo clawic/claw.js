@@ -172,7 +172,7 @@ export function verifyConnectorRuntimeCoverage(
         if (!implementation?.planKinds.includes("request")) errors.push(`runtime implementation for ${entry.operationId} requires a request plan kind`);
       }
       if (operation?.kind === "source") {
-        if (!implementation?.createSourceExecutor) errors.push(`runtime implementation for ${entry.operationId} requires a registered source executor`);
+        if (!hasSourceExecutor(implementation)) errors.push(`runtime implementation for ${entry.operationId} requires a registered source executor`);
         if (!implementation?.planKinds.includes("source")) errors.push(`runtime implementation for ${entry.operationId} requires a source plan kind`);
         if ((operation.source?.delivery === "polling" || operation.source?.delivery === "hybrid") && !implementation?.planKinds.includes("request")) {
           errors.push(`runtime implementation for ${entry.operationId} requires a request plan kind for polling delivery`);
@@ -200,6 +200,10 @@ export function verifyConnectorRuntimeCoverage(
           if (details.sourcePlan) {
             const sourceErrors = sourcePlanContractErrors(operation, details.sourcePlan);
             errors.push(...sourceErrors.map((error) => `runtime implementation for ${entry.operationId} ${error}`));
+            if (usesGenericHttpSourceExecutor(implementation)) {
+              const genericSourceErrors = genericHttpSourcePlanErrors(details.sourcePlan, details.requestPlan);
+              errors.push(...genericSourceErrors.map((error) => `runtime implementation for ${entry.operationId} ${error}`));
+            }
           }
         } catch (error) {
           errors.push(`runtime implementation for ${entry.operationId} plan builder failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -291,8 +295,21 @@ function hasActionExecutor(implementation: ConnectorRuntimeImplementation | null
   return Boolean(implementation?.createExecutor || usesGenericHttpActionExecutor(implementation));
 }
 
+function hasSourceExecutor(implementation: ConnectorRuntimeImplementation | null): boolean {
+  return Boolean(implementation?.createSourceExecutor || usesGenericHttpSourceExecutor(implementation));
+}
+
 function usesGenericHttpActionExecutor(implementation: ConnectorRuntimeImplementation | null): boolean {
   return Boolean(implementation?.baseUrl && implementation.buildPlan && implementation.planKinds.includes("request"));
+}
+
+function usesGenericHttpSourceExecutor(implementation: ConnectorRuntimeImplementation | null): boolean {
+  return Boolean(
+    implementation?.baseUrl
+    && implementation.buildPlan
+    && implementation.planKinds.includes("request")
+    && implementation.planKinds.includes("source"),
+  );
 }
 
 function evidencePathErrors(label: string, evidence: readonly string[], evidenceRoot: string): string[] {
@@ -363,6 +380,16 @@ function genericHttpRequestPlanErrors(requestPlan: ConnectorRuntimeRequestPlan):
     if (!binding.placement) errors.push(`generic HTTP request auth ${binding.field} requires a transport placement`);
   }
   return errors;
+}
+
+function genericHttpSourcePlanErrors(
+  sourcePlan: ConnectorRuntimeSourcePlan,
+  requestPlan: ConnectorRuntimeRequestPlan | undefined,
+): string[] {
+  if (requestPlan?.pagination?.itemsPath) return [];
+  return typeof sourcePlan.eventsPath === "string" && sourcePlan.eventsPath.trim()
+    ? []
+    : ["generic HTTP source plan requires eventsPath or paginated request itemsPath"];
 }
 
 function sourcePlanContractErrors(
@@ -473,8 +500,15 @@ function isSourcePlan(value: ConnectorRuntimeSourcePlan | undefined): boolean {
     value
     && typeof value.delivery === "string"
     && value.delivery.trim()
-    && Array.isArray(value.hooks),
+    && Array.isArray(value.hooks)
+    && isOptionalPath(value.eventsPath)
+    && isOptionalPath(value.nextCursorPath)
+    && isOptionalPath(value.nextOffsetPath),
   );
+}
+
+function isOptionalPath(value: string | undefined): boolean {
+  return value === undefined || (typeof value === "string" && value.trim().length > 0);
 }
 
 function sampleValuesForOperation(operation: ConnectorOperationDefinition): Record<string, IntegrationJson> {
