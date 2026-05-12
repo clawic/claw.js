@@ -106,6 +106,69 @@ describe("connector runtime http transport", () => {
     );
   });
 
+  it("retries retryable responses with retry-after delays", async () => {
+    const delays: number[] = [];
+    let calls = 0;
+    const response = await executeConnectorRuntimeRequestPlan({
+      baseUrl: "https://api.example.invalid/",
+      secrets: {},
+      maxRetries: 2,
+      sleep: async (ms) => {
+        delays.push(ms);
+      },
+      plan: {
+        method: "GET",
+        endpoint: "items",
+        auth: [],
+        body: {},
+      },
+      fetchImpl: async () => {
+        calls += 1;
+        if (calls === 1) {
+          return new Response("{\"error\":\"slow down\"}", {
+            status: 429,
+            headers: {
+              "content-type": "application/json",
+              "retry-after": "2",
+            },
+          });
+        }
+        return Response.json({ ok: true });
+      },
+    });
+
+    assert.equal(calls, 2);
+    assert.deepEqual(delays, [2_000]);
+    assert.deepEqual(response.body, { ok: true });
+  });
+
+  it("does not retry non-retryable client errors", async () => {
+    let calls = 0;
+    await assert.rejects(
+      () => executeConnectorRuntimeRequestPlan({
+        baseUrl: "https://api.example.invalid/",
+        secrets: {},
+        maxRetries: 3,
+        retryDelayMs: 1,
+        sleep: async () => {
+          throw new Error("sleep should not run");
+        },
+        plan: {
+          method: "GET",
+          endpoint: "items",
+          auth: [],
+          body: {},
+        },
+        fetchImpl: async () => {
+          calls += 1;
+          return Response.json({ error: "bad input" }, { status: 400 });
+        },
+      }),
+      ConnectorRuntimeHttpError,
+    );
+    assert.equal(calls, 1);
+  });
+
   it("follows cursor pagination and aggregates items", async () => {
     const urls: string[] = [];
     const result = await executeConnectorRuntimePaginatedRequestPlan({

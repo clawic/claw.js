@@ -7,6 +7,9 @@ import type { IntegrationJson } from "./types.ts";
 export interface ConnectorRuntimeHttpOptions {
   baseUrl?: string;
   fetchImpl?: typeof fetch;
+  maxRetries?: number;
+  retryDelayMs?: number;
+  sleep?: (ms: number) => Promise<void>;
 }
 
 export interface ConnectorRuntimeHttpInput extends ConnectorRuntimeHttpOptions {
@@ -41,15 +44,21 @@ export async function executeConnectorRuntimeRequestPlan(
 ): Promise<ConnectorRuntimeHttpResponse> {
   const fetcher = input.fetchImpl ?? fetch;
   const request = buildConnectorRuntimeFetchRequest(input);
-  const response = await fetcher(request.url, request.init);
-  const parsed = await parseRuntimeHttpResponse(response);
-  if (!response.ok) {
+  const maxRetries = input.maxRetries ?? 0;
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    const response = await fetcher(request.url, request.init);
+    const parsed = await parseRuntimeHttpResponse(response);
+    if (response.ok) return parsed;
+    if (attempt < maxRetries && isRetryableStatus(response.status)) {
+      await (input.sleep ?? defaultSleep)(retryDelayMs(response, input.retryDelayMs));
+      continue;
+    }
     throw new ConnectorRuntimeHttpError(
       `Connector request failed: ${response.status} ${response.statusText}`,
       parsed,
     );
   }
-  return parsed;
+  throw new Error("Connector request retry loop exited unexpectedly.");
 }
 
 export async function executeConnectorRuntimePaginatedRequestPlan(
@@ -233,6 +242,26 @@ function parseRuntimeHttpBody(text: string, contentType: string): IntegrationJso
     return JSON.parse(text) as IntegrationJson;
   }
   return text;
+}
+
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || (status >= 500 && status <= 599);
+}
+
+function retryDelayMs(response: Response, fallbackMs: number | undefined): number {
+  const retryAfter = response.headers.get("retry-after");
+  if (!retryAfter) return fallbackMs ?? 1_000;
+  const seconds = Number(retryAfter);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1_000);
+  const timestamp = Date.parse(retryAfter);
+  if (Number.isFinite(timestamp)) return Math.max(0, timestamp - Date.now());
+  return fallbackMs ?? 1_000;
+}
+
+function defaultSleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 function valueAtPath(value: IntegrationJson, path: string | undefined): IntegrationJson | undefined {
