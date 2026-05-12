@@ -196,6 +196,8 @@ test("connectors show offline execution plans for supported sources", async ({ p
 
   await expect(page.getByText('"runtimePlan"')).toBeVisible();
   await expect(page.getByText('"executorId": "telegram-bot-api.source.polling"')).toBeVisible();
+  await expect(page.getByText('"endpoint": "getUpdates"')).toBeVisible();
+  await expect(page.getByText('"allowed_updates"')).toBeVisible();
   await expect(page.getByText('"sourcePlan"')).toBeVisible();
   await expect(page.getByText('"delivery": "polling"')).toBeVisible();
   await expect(page.getByText('"dedupe": "unique"')).toBeVisible();

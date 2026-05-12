@@ -91,6 +91,74 @@ describe("connector runtime coverage", () => {
     });
   });
 
+  it("accepts supported Telegram sources and prepares an offline polling plan", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "telegram_bot_api",
+        name: "Telegram Bot",
+        authFieldNames: ["telegramBotApi"],
+        fields: [{ name: "telegramBotApi", type: "app", optional: false, secret: true }],
+        operations: [{
+          id: "telegram_bot_api.source.new-bot-command-received-new-bot-command-received",
+          appId: "telegram_bot_api",
+          kind: "source",
+          name: "New Bot Command",
+          fields: [
+            { name: "commands", type: "string", optional: true },
+            { name: "offset", type: "integer", optional: true },
+            { name: "timer", type: "$.interface.timer", optional: false, managed: true },
+          ],
+          authFieldNames: ["telegramBotApi"],
+          runtime: {
+            hasRun: false,
+            hasHooks: true,
+            hookNames: ["deploy"],
+            hasAdditionalProps: false,
+            hasMethods: false,
+            methodNames: [],
+            dedupe: "unique",
+          },
+          source: {
+            delivery: "polling",
+            usesTimer: true,
+            usesHttp: false,
+            usesServiceDb: false,
+          },
+        }],
+      }],
+    });
+
+    const operation = catalog.apps[0]?.operations[0];
+    assert.ok(operation);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, { offset: 10 }), {
+      status: "implemented",
+      operationId: "telegram_bot_api.source.new-bot-command-received-new-bot-command-received",
+      appId: "telegram_bot_api",
+      kind: "source",
+      executorId: "telegram-bot-api.source.polling",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/telegram-source.test.ts"],
+      requestPlan: {
+        method: "GET",
+        endpoint: "getUpdates",
+        auth: [{ type: "secret", field: "telegramBotApi" }],
+        headers: { accept: "application/json" },
+        query: {
+          timeout: "0",
+          allowed_updates: "[\"message\",\"edited_message\",\"channel_post\",\"edited_channel_post\"]",
+          offset: 10,
+        },
+        body: {},
+      },
+      sourcePlan: {
+        delivery: "polling",
+        dedupe: "unique",
+        hooks: ["deploy"],
+      },
+    });
+  });
+
   it("preserves structured unsupported reasons but fails them by default", () => {
     const catalog = normalizeConnectorCatalog({
       version: 1,

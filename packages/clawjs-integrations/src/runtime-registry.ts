@@ -5,6 +5,7 @@ import {
 } from "./telegram-operation-executor.ts";
 import {
   isTelegramSourceOperationSupported,
+  TELEGRAM_POLL_UPDATE_TYPES,
 } from "./telegram-source.ts";
 import {
   createTelegramSourceExecutor,
@@ -28,6 +29,8 @@ export interface ConnectorRuntimeRequestPlan {
   method: string;
   endpoint: string;
   auth: { type: "secret"; field: string }[];
+  headers?: Record<string, string>;
+  query?: Record<string, IntegrationJson>;
   body: Record<string, IntegrationJson>;
 }
 
@@ -94,7 +97,20 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     evidence: TELEGRAM_SOURCE_EVIDENCE,
     supports: (operation) => isTelegramSourceOperationSupported(operation.id),
     createSourceExecutor: (options) => createTelegramSourceExecutor(options),
-    buildPlan: (operation) => ({
+    buildPlan: (operation, values) => ({
+      requestPlan: {
+        method: "GET",
+        endpoint: "getUpdates",
+        auth: operation.authFieldNames.map((field) => ({ type: "secret", field })),
+        headers: { accept: "application/json" },
+        query: {
+          timeout: "0",
+          allowed_updates: JSON.stringify(TELEGRAM_POLL_UPDATE_TYPES),
+          ...(values.offset == null || values.offset === "" ? {} : { offset: values.offset }),
+          ...(values.limit == null || values.limit === "" ? {} : { limit: values.limit }),
+        },
+        body: {},
+      },
       sourcePlan: {
         delivery: operation.source?.delivery ?? "manual",
         ...(operation.runtime?.dedupe ? { dedupe: operation.runtime.dedupe } : {}),
