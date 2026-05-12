@@ -318,6 +318,7 @@ function readRuntime(source, filePath, seen = new Set()) {
     hasHooks: hasComponentMember(source, "hooks"),
     hasAdditionalProps: /\badditionalProps\s*[:(]/.test(source),
     hasMethods: hasComponentMember(source, "methods"),
+    methodNames: readMethodNames(source),
     ...optionalString("dedupe", firstMatch(source, /\bdedupe\s*:\s*["'`]([^"'`]+)["'`]/)),
   };
   if (!filePath) return runtime;
@@ -330,9 +331,48 @@ function readRuntime(source, filePath, seen = new Set()) {
     runtime.hasHooks ||= inherited.hasHooks;
     runtime.hasAdditionalProps ||= inherited.hasAdditionalProps;
     runtime.hasMethods ||= inherited.hasMethods;
+    runtime.methodNames = [...runtime.methodNames, ...inherited.methodNames].filter(unique).sort();
     if (!runtime.dedupe && inherited.dedupe) runtime.dedupe = inherited.dedupe;
   }
   return runtime;
+}
+
+function readMethodNames(source) {
+  const match = /\bmethods\s*:\s*{/.exec(source);
+  if (!match) return [];
+  const bodyStart = match.index + match[0].length;
+  const bodyEnd = findMatchingBrace(source, bodyStart - 1);
+  if (bodyEnd < 0) return [];
+  return readObjectKeys(source.slice(bodyStart, bodyEnd));
+}
+
+function readObjectKeys(body) {
+  const keys = [];
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  for (let index = 0; index < body.length; index += 1) {
+    const char = body[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{" || char === "[" || char === "(") depth += 1;
+    else if (char === "}" || char === "]" || char === ")") depth -= 1;
+    if (depth !== 0 || !/[A-Za-z_$]/.test(char)) continue;
+    const rest = body.slice(index);
+    const match = /^([A-Za-z_$][\w$]*)\s*(?::|\()/.exec(rest);
+    if (!match) continue;
+    keys.push(scrubIdentifier(match[1]));
+    index += match[1].length - 1;
+  }
+  return keys.filter(unique).sort();
 }
 
 function optionalSourceCapabilities(kind, fields, runtime) {

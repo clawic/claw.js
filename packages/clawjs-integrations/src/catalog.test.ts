@@ -60,6 +60,7 @@ function fixtureCatalog(): ConnectorCatalog {
               hasHooks: false,
               hasAdditionalProps: true,
               hasMethods: true,
+              methodNames: ["request"],
             },
           },
           {
@@ -78,6 +79,7 @@ function fixtureCatalog(): ConnectorCatalog {
               hasHooks: true,
               hasAdditionalProps: false,
               hasMethods: true,
+              methodNames: ["subscribe"],
               dedupe: "unique",
             },
             source: {

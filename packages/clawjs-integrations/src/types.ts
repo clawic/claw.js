@@ -51,6 +51,7 @@ export interface ConnectorOperationRuntime {
   hasHooks: boolean;
   hasAdditionalProps: boolean;
   hasMethods: boolean;
+  methodNames?: string[];
   dedupe?: string;
 }
 

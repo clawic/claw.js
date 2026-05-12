@@ -278,6 +278,7 @@ function optionalRuntime(input: unknown) {
       hasHooks: input.hasHooks === true,
       hasAdditionalProps: input.hasAdditionalProps === true,
       hasMethods: input.hasMethods === true,
+      methodNames: normalizeStringArray(input.methodNames),
       ...(typeof input.dedupe === "string" && input.dedupe.trim() ? { dedupe: input.dedupe.trim() } : {}),
     },
   };
