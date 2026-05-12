@@ -65,6 +65,7 @@ interface CatalogOperation {
     hasHooks: boolean;
     hasAdditionalProps: boolean;
     hasMethods: boolean;
+    methodNames?: string[];
     dedupe?: string;
   };
   source?: {
@@ -394,7 +395,7 @@ export default function ConnectorsPage() {
                       <span>run={String(selected.operation.runtime.hasRun)}</span>
                       <span>hooks={String(selected.operation.runtime.hasHooks)}</span>
                       <span>dynamicProps={String(selected.operation.runtime.hasAdditionalProps)}</span>
-                      <span>methods={String(selected.operation.runtime.hasMethods)}</span>
+                      <span>methods={selected.operation.runtime.methodNames?.length || String(selected.operation.runtime.hasMethods)}</span>
                       {selected.operation.runtime.dedupe ? <span>dedupe={selected.operation.runtime.dedupe}</span> : null}
                     </div>
                   ) : null}
