@@ -102,9 +102,12 @@ function readExpectedOperations(appDir, appId, kind, appAuth, appFields) {
       const sampleEvent = kind === "source" ? readSampleEventMetadata(file) : undefined;
       const eventSummary = kind === "source" ? readEventSummaryMetadata(source) : undefined;
       const slug = scrub(operationSlug(root, file));
+      const key = scrub(firstMatch(source, /\bkey:\s*["']([^"']+)["']/) ?? `${appId}-${slug}`);
       return {
         id: `${appId}.${kind}.${slug}`,
         kind,
+        key,
+        version: scrub(firstMatch(source, /\bversion:\s*["']([^"']+)["']/)),
         fields: names(fields),
         fieldStats: summarizeFields(fields),
         annotations: readAnnotations(source),
@@ -204,6 +207,13 @@ function verify(catalog, expectedApps) {
       if (!operation) {
         errors.push(`missing ${expectedOperation.kind} ${operationId}`);
         continue;
+      }
+      if (operation.key !== expectedOperation.key) {
+        errors.push(`operation ${operationId} key ${operation.key ?? "<missing>"} expected ${expectedOperation.key}`);
+      }
+      const actualOperationVersion = typeof operation.version === "string" ? operation.version : undefined;
+      if (actualOperationVersion !== expectedOperation.version) {
+        errors.push(`operation ${operationId} version ${actualOperationVersion ?? "<missing>"} expected ${expectedOperation.version ?? "<missing>"}`);
       }
       compareSets(`operation ${operationId} fields`, expectedOperation.fields, new Set(fieldNames(operation.fields)), errors);
       compareSets(`operation ${operationId} auth fields`, expectedOperation.auth, new Set(strings(operation.authFieldNames)), errors);
