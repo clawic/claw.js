@@ -4,8 +4,10 @@ import { describe, it } from "node:test";
 import { normalizeConnectorCatalog } from "./catalog.ts";
 import {
   buildConnectorOperationRuntimePlan,
+  buildConnectorRuntimeAudit,
   evaluateConnectorRuntimeCoverage,
   verifyConnectorRuntimeCoverage,
+  type ConnectorRuntimeCoverageReport,
 } from "./runtime-coverage.ts";
 import type { ConnectorRuntimeImplementation } from "./runtime-registry.ts";
 import type { IntegrationJson } from "./types.ts";
@@ -203,6 +205,142 @@ describe("connector runtime coverage", () => {
       /unsupported runtime implementation for manual_service\.source\.external-only/,
     );
     assert.equal(verifyConnectorRuntimeCoverage(catalog, { allowUnsupportedReasons: true }).summary.unsupported, 1);
+  });
+
+  it("builds final audit summaries with impossible and partial operation states", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [
+          {
+            id: "fixture_service.action.ready",
+            appId: "fixture_service",
+            kind: "action",
+            name: "Ready",
+            fields: [],
+            authFieldNames: [],
+          },
+          {
+            id: "fixture_service.action.partial",
+            appId: "fixture_service",
+            kind: "action",
+            name: "Partial",
+            fields: [],
+            authFieldNames: [],
+          },
+          {
+            id: "fixture_service.action.missing",
+            appId: "fixture_service",
+            kind: "action",
+            name: "Missing",
+            fields: [],
+            authFieldNames: [],
+          },
+          {
+            id: "fixture_service.source.external-only",
+            appId: "fixture_service",
+            kind: "source",
+            name: "External Only",
+            fields: [],
+            authFieldNames: [],
+            unsupported_real_runtime_reason: {
+              code: "external_contract_unavailable",
+              message: "The provider does not expose enough local contract data for offline validation.",
+              evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+            },
+          },
+        ],
+      }],
+    });
+    const coverageReport: ConnectorRuntimeCoverageReport = {
+      summary: {
+        total: 4,
+        implemented: 2,
+        unsupported: 1,
+        missing: 1,
+        offlineValidated: 2,
+      },
+      entries: [
+        {
+          operationId: "fixture_service.action.ready",
+          appId: "fixture_service",
+          kind: "action",
+          status: "implemented",
+          executorId: "fixture.ready",
+          offlineValidated: true,
+          evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+          fixtures: [{
+            kind: "response",
+            path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
+          }],
+        },
+        {
+          operationId: "fixture_service.action.partial",
+          appId: "fixture_service",
+          kind: "action",
+          status: "implemented",
+          executorId: "fixture.partial",
+          offlineValidated: true,
+          evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+          fixtures: [{
+            kind: "response",
+            path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
+          }],
+        },
+        {
+          operationId: "fixture_service.action.missing",
+          appId: "fixture_service",
+          kind: "action",
+          status: "missing",
+          offlineValidated: false,
+          evidence: [],
+          fixtures: [],
+        },
+        {
+          operationId: "fixture_service.source.external-only",
+          appId: "fixture_service",
+          kind: "source",
+          status: "unsupported",
+          offlineValidated: false,
+          evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+          fixtures: [],
+          unsupported_real_runtime_reason: {
+            code: "external_contract_unavailable",
+            message: "The provider does not expose enough local contract data for offline validation.",
+            evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+          },
+        },
+      ],
+      errors: [
+        "runtime implementation for fixture_service.action.partial requires a runtime plan builder",
+        "missing runtime implementation for fixture_service.action.missing",
+      ],
+    };
+
+    const audit = buildConnectorRuntimeAudit(catalog, coverageReport);
+
+    assert.deepEqual(audit.summary, {
+      total: 4,
+      implemented: 1,
+      missing: 1,
+      partial: 1,
+      impossible: 1,
+      offlineValidated: 2,
+    });
+    assert.deepEqual(audit.providers[0]?.summary, audit.summary);
+    assert.deepEqual(audit.providers[0]?.operations.map((operation) => operation.status), [
+      "implemented",
+      "partial",
+      "missing",
+      "impossible",
+    ]);
+    assert.deepEqual(audit.providers[0]?.operations[1]?.errors, [
+      "runtime implementation for fixture_service.action.partial requires a runtime plan builder",
+    ]);
   });
 
   it("rejects unsupported reasons without concrete evidence", () => {

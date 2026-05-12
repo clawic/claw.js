@@ -20,6 +20,7 @@ import type {
 } from "./types.ts";
 
 export type ConnectorRuntimeCoverageStatus = "implemented" | "unsupported" | "missing";
+export type ConnectorRuntimeAuditStatus = "implemented" | "missing" | "partial" | "impossible";
 
 export interface ConnectorRuntimeCoverageEntry {
   operationId: string;
@@ -44,6 +45,41 @@ export interface ConnectorRuntimeCoverageSummary {
 export interface ConnectorRuntimeCoverageReport {
   summary: ConnectorRuntimeCoverageSummary;
   entries: ConnectorRuntimeCoverageEntry[];
+  errors: string[];
+}
+
+export interface ConnectorRuntimeAuditSummary {
+  total: number;
+  implemented: number;
+  missing: number;
+  partial: number;
+  impossible: number;
+  offlineValidated: number;
+}
+
+export interface ConnectorRuntimeAuditOperation {
+  operationId: string;
+  kind: ConnectorOperationDefinition["kind"];
+  status: ConnectorRuntimeAuditStatus;
+  coverageStatus: ConnectorRuntimeCoverageStatus;
+  executorId: string | null;
+  offlineValidated: boolean;
+  evidence: string[];
+  fixtures: ConnectorRuntimeFixture[];
+  unsupported_real_runtime_reason?: ConnectorUnsupportedRealRuntimeReason;
+  errors: string[];
+}
+
+export interface ConnectorRuntimeAuditProvider {
+  appId: string;
+  name: string;
+  summary: ConnectorRuntimeAuditSummary;
+  operations: ConnectorRuntimeAuditOperation[];
+}
+
+export interface ConnectorRuntimeAuditReport {
+  summary: ConnectorRuntimeAuditSummary;
+  providers: ConnectorRuntimeAuditProvider[];
   errors: string[];
 }
 
@@ -182,6 +218,69 @@ export function verifyConnectorRuntimeCoverage(
     );
   }
   return report;
+}
+
+export function buildConnectorRuntimeAudit(
+  catalog: ConnectorCatalog,
+  report: ConnectorRuntimeCoverageReport,
+): ConnectorRuntimeAuditReport {
+  const providers = catalog.apps.map((app) => {
+    const entries = report.entries.filter((entry) => entry.appId === app.id);
+    const operations = entries.map((entry) => auditOperation(entry, report.errors));
+    return {
+      appId: app.id,
+      name: app.name,
+      summary: summarizeAuditOperations(operations),
+      operations,
+    };
+  });
+  return {
+    summary: summarizeAuditOperations(providers.flatMap((provider) => provider.operations)),
+    providers,
+    errors: report.errors,
+  };
+}
+
+function auditOperation(
+  entry: ConnectorRuntimeCoverageEntry,
+  errors: readonly string[],
+): ConnectorRuntimeAuditOperation {
+  const operationErrors = errors.filter((error) => error.includes(entry.operationId));
+  return {
+    operationId: entry.operationId,
+    kind: entry.kind,
+    status: auditStatusForEntry(entry, operationErrors),
+    coverageStatus: entry.status,
+    executorId: entry.executorId ?? null,
+    offlineValidated: entry.offlineValidated,
+    evidence: entry.evidence,
+    fixtures: entry.fixtures,
+    ...(entry.unsupported_real_runtime_reason ? { unsupported_real_runtime_reason: entry.unsupported_real_runtime_reason } : {}),
+    errors: operationErrors,
+  };
+}
+
+function auditStatusForEntry(
+  entry: ConnectorRuntimeCoverageEntry,
+  errors: readonly string[],
+): ConnectorRuntimeAuditStatus {
+  if (entry.status === "unsupported") return "impossible";
+  if (entry.status === "missing") return "missing";
+  return errors.length > 0 ? "partial" : "implemented";
+}
+
+function summarizeAuditOperations(
+  operations: readonly ConnectorRuntimeAuditOperation[],
+): ConnectorRuntimeAuditSummary {
+  return operations.reduce<ConnectorRuntimeAuditSummary>(
+    (summary, operation) => {
+      summary.total += 1;
+      summary[operation.status] += 1;
+      if (operation.offlineValidated) summary.offlineValidated += 1;
+      return summary;
+    },
+    { total: 0, implemented: 0, missing: 0, partial: 0, impossible: 0, offlineValidated: 0 },
+  );
 }
 
 function evidencePathErrors(label: string, evidence: readonly string[], evidenceRoot: string): string[] {

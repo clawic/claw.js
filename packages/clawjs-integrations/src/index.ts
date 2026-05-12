@@ -23,6 +23,7 @@ export {
   sourceSubscriptionFromPlan,
 } from "./source-runner.js";
 export {
+  buildConnectorRuntimeAudit,
   ConnectorRuntimeCoverageError,
   buildConnectorOperationRuntimePlan,
   evaluateConnectorRuntimeCoverage,
@@ -78,6 +79,11 @@ export type {
   RegisterConnectorSourceOptions,
 } from "./source-runner.js";
 export type {
+  ConnectorRuntimeAuditOperation,
+  ConnectorRuntimeAuditProvider,
+  ConnectorRuntimeAuditReport,
+  ConnectorRuntimeAuditStatus,
+  ConnectorRuntimeAuditSummary,
   ConnectorOperationRuntimePlan,
   ConnectorRuntimeCoverageEntry,
   ConnectorRuntimeCoverageReport,
