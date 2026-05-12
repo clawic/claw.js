@@ -42,12 +42,12 @@ const preview = await runConnectorOperation({
 });
 ```
 
-`runConnectorOperation` defaults to dry-run mode. Real execution requires both `dryRun: false` and an explicit executor, so tests and UI previews cannot accidentally connect to a third-party API.
+`runConnectorOperation` and `runConnectorSource` default to dry-run mode. Real execution requires `dryRun: false`, resolved secret refs, and either a registered runtime executor or an explicit executor override, so tests and UI previews cannot accidentally connect to a third-party API.
 
 Telegram ships the first native executor for this surface:
 
 ```ts
-import { createTelegramOperationExecutor, runConnectorOperation } from "@clawjs/integrations";
+import { runConnectorOperation } from "@clawjs/integrations";
 
 await runConnectorOperation({
   catalog,
@@ -58,7 +58,26 @@ await runConnectorOperation({
     secretRefs: { telegramBotApi: "vault://connections/telegram/bot" },
   },
   resolveSecret: async (ref) => secretStore.resolve(ref),
-  executor: createTelegramOperationExecutor(),
+});
+```
+
+Registered source executors follow the same rule and can be validated offline with an injected fetch implementation:
+
+```ts
+import { runConnectorSource } from "@clawjs/integrations";
+
+await runConnectorSource({
+  catalog,
+  operationId: "telegram_bot_api.source.new-bot-command-received-new-bot-command-received",
+  dryRun: false,
+  input: {
+    values: { commands: "[\"/start\"]" },
+    secretRefs: { telegramBotApi: "vault://connections/telegram/bot" },
+  },
+  resolveSecret: async (ref) => secretStore.resolve(ref),
+  runtimeExecutorOptions: {
+    fetchImpl: async () => new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 }),
+  },
 });
 ```
 
