@@ -404,6 +404,94 @@ describe("OpenAPI connector runtime", () => {
     });
   });
 
+  it("preserves OpenAPI query serialization hints", () => {
+    const document = {
+      ...FIXTURE_OPENAPI,
+      paths: {
+        "/items/search": {
+          get: {
+            operationId: "searchItems",
+            summary: "Search items",
+            parameters: [
+              {
+                name: "ids",
+                in: "query",
+                style: "form",
+                explode: false,
+                schema: {
+                  type: "array",
+                  items: { type: "string" },
+                },
+              },
+              {
+                name: "filter",
+                in: "query",
+                style: "deepObject",
+                schema: {
+                  type: "object",
+                  properties: {
+                    status: { type: "string" },
+                  },
+                },
+              },
+            ],
+            responses: {
+              "200": {
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      required: ["data"],
+                      properties: {
+                        data: {
+                          type: "array",
+                          items: { type: "object" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const options = {
+      appId: "fixture_query_serialization",
+      authFieldName: "apiKey",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(document, options)];
+    const operation = catalog.apps[0]?.operations[0];
+    assert.ok(operation);
+
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, {
+      ids: ["one", "two"],
+      filter: { status: "active" },
+    }, { registry }).requestPlan, {
+      method: "GET",
+      endpoint: "/items/search",
+      auth: [{ type: "secret", field: "apiKey", placement: "bearer" }],
+      headers: { accept: "application/json" },
+      query: {
+        ids: ["one", "two"],
+        filter: { status: "active" },
+      },
+      querySerialization: {
+        ids: { style: "form", explode: false },
+        filter: { style: "deepObject" },
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["data"],
+      },
+    });
+  });
+
   it("uses default values for OpenAPI server variables", () => {
     const document = {
       ...FIXTURE_OPENAPI,

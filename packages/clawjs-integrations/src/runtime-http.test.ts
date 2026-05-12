@@ -76,6 +76,34 @@ describe("connector runtime http transport", () => {
     assert.equal(new Headers(request.init.headers).get("cookie"), "existing=true; session_id=session%20123");
   });
 
+  it("builds requests with explicit query serialization", () => {
+    const request = buildConnectorRuntimeFetchRequest({
+      baseUrl: "https://api.example.invalid/",
+      secrets: {},
+      plan: {
+        method: "GET",
+        endpoint: "/items",
+        auth: [],
+        query: {
+          ids: ["one", "two"],
+          tags: ["alpha", "beta"],
+          filter: { status: "active" },
+        },
+        querySerialization: {
+          ids: { style: "form", explode: false },
+          tags: { style: "pipeDelimited" },
+          filter: { style: "deepObject" },
+        },
+        body: {},
+      },
+    });
+
+    assert.equal(
+      request.url,
+      "https://api.example.invalid/items?ids=one%2Ctwo&tags=alpha%7Cbeta&filter%5Bstatus%5D=active",
+    );
+  });
+
   it("builds multipart encoded requests", () => {
     const request = buildConnectorRuntimeFetchRequest({
       baseUrl: "https://api.example.invalid/",

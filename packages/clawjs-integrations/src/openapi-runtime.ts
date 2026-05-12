@@ -5,6 +5,7 @@ import type {
   ConnectorRuntimeImplementation,
   ConnectorRuntimePaginationPlan,
   ConnectorRuntimeRequestPlan,
+  ConnectorRuntimeQuerySerialization,
   ConnectorRuntimeOutputSchema,
 } from "./runtime-registry.ts";
 import type {
@@ -72,6 +73,8 @@ interface OpenApiParameter {
   required?: unknown;
   description?: unknown;
   schema?: OpenApiSchema;
+  style?: unknown;
+  explode?: unknown;
 }
 
 interface OpenApiRequestBody {
@@ -131,6 +134,7 @@ interface OpenApiConnectorParameterBinding {
   fieldName: string;
   sourceName: string;
   location: OpenApiParameterLocation;
+  querySerialization?: ConnectorRuntimeQuerySerialization;
 }
 
 interface OpenApiConnectorBodyBinding {
@@ -263,6 +267,7 @@ function buildOpenApiRequestPlan(
 ): ConnectorRuntimeRequestPlan {
   const headers: Record<string, string> = { accept: "application/json" };
   const query: Record<string, IntegrationJson> = {};
+  const querySerialization: NonNullable<ConnectorRuntimeRequestPlan["querySerialization"]> = {};
   const body: Record<string, IntegrationJson> = {};
   let endpoint = metadata.path;
   for (const parameter of metadata.parameters) {
@@ -270,7 +275,10 @@ function buildOpenApiRequestPlan(
     if (value == null || value === "") continue;
     if (parameter.location === "path") {
       endpoint = replaceOpenApiPathParameter(endpoint, parameter.sourceName, value);
-    } else if (parameter.location === "query") query[parameter.sourceName] = value;
+    } else if (parameter.location === "query") {
+      query[parameter.sourceName] = value;
+      if (parameter.querySerialization) querySerialization[parameter.sourceName] = parameter.querySerialization;
+    }
     else if (parameter.location === "header") headers[parameter.sourceName] = String(value);
   }
   for (const field of metadata.bodyFields) {
@@ -290,6 +298,7 @@ function buildOpenApiRequestPlan(
     })),
     headers,
     ...(Object.keys(query).length > 0 ? { query } : {}),
+    ...(Object.keys(querySerialization).length > 0 ? { querySerialization } : {}),
     body,
     ...(metadata.bodyEncoding ? { bodyEncoding: metadata.bodyEncoding } : {}),
     ...(metadata.pagination ? { pagination: metadata.pagination } : {}),
@@ -644,12 +653,36 @@ function openApiParameterBinding(
     fieldName,
     sourceName,
     location,
+    ...optionalQuerySerialization(openApiQuerySerialization(resolved, location)),
     field: {
       ...fieldFromSchema(document, fieldName, resolved.schema),
       ...optionalString("description", stringValue(resolved.description)),
       optional: location === "path" ? false : resolved.required !== true,
     },
   };
+}
+
+function optionalQuerySerialization(
+  value: ConnectorRuntimeQuerySerialization | undefined,
+): Pick<OpenApiConnectorParameterBinding, "querySerialization"> | Record<string, never> {
+  return value ? { querySerialization: value } : {};
+}
+
+function openApiQuerySerialization(
+  parameter: OpenApiParameter,
+  location: OpenApiParameterLocation,
+): ConnectorRuntimeQuerySerialization | undefined {
+  if (location !== "query") return undefined;
+  const style = stringValue(parameter.style);
+  const explode = typeof parameter.explode === "boolean" ? parameter.explode : undefined;
+  if (style === "form" || style === "spaceDelimited" || style === "pipeDelimited" || style === "deepObject") {
+    return {
+      style,
+      ...(explode === undefined ? {} : { explode }),
+    };
+  }
+  if (explode !== undefined) return { explode };
+  return undefined;
 }
 
 function openApiBodyBindings(

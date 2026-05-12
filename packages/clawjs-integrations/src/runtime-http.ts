@@ -1,6 +1,7 @@
 import type {
   ConnectorRuntimeAuthBinding,
   ConnectorRuntimeRequestPlan,
+  ConnectorRuntimeQuerySerialization,
 } from "./runtime-registry.ts";
 import { validateConnectorRuntimeOutput } from "./runtime-output.ts";
 import type { IntegrationJson } from "./types.ts";
@@ -138,7 +139,7 @@ export function buildConnectorRuntimeFetchRequest(input: ConnectorRuntimeHttpInp
   const headers = new Headers(input.plan.headers ?? {});
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(input.plan.query ?? {})) {
-    appendQueryValue(query, key, value);
+    appendQueryValue(query, key, value, input.plan.querySerialization?.[key]);
   }
   let endpoint = input.plan.url ?? input.plan.endpoint;
   for (const binding of input.plan.auth) {
@@ -247,13 +248,40 @@ function requestBody(plan: ConnectorRuntimeRequestPlan, headers: Headers): BodyI
   return JSON.stringify(plan.body);
 }
 
-function appendQueryValue(params: URLSearchParams, key: string, value: IntegrationJson): void {
+function appendQueryValue(
+  params: URLSearchParams,
+  key: string,
+  value: IntegrationJson,
+  serialization?: ConnectorRuntimeQuerySerialization,
+): void {
   if (value == null) return;
   if (Array.isArray(value)) {
+    if (serialization?.style === "spaceDelimited") {
+      params.append(key, value.map(String).join(" "));
+      return;
+    }
+    if (serialization?.style === "pipeDelimited") {
+      params.append(key, value.map(String).join("|"));
+      return;
+    }
+    if (serialization?.explode === false) {
+      params.append(key, value.map(String).join(","));
+      return;
+    }
     for (const item of value) appendQueryValue(params, key, item);
     return;
   }
   if (typeof value === "object") {
+    if (serialization?.style === "deepObject") {
+      for (const [childKey, childValue] of Object.entries(value)) {
+        appendQueryValue(params, `${key}[${childKey}]`, childValue);
+      }
+      return;
+    }
+    if (serialization?.style === "form" && serialization.explode === false) {
+      params.append(key, Object.entries(value).map(([childKey, childValue]) => `${childKey},${String(childValue)}`).join(","));
+      return;
+    }
     params.append(key, JSON.stringify(value));
     return;
   }

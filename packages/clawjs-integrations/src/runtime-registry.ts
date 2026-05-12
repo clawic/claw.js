@@ -45,10 +45,16 @@ export interface ConnectorRuntimeRequestPlan {
   auth: ConnectorRuntimeAuthBinding[];
   headers?: Record<string, string>;
   query?: Record<string, IntegrationJson>;
+  querySerialization?: Record<string, ConnectorRuntimeQuerySerialization>;
   body: Record<string, IntegrationJson>;
   bodyEncoding?: "json" | "form" | "multipart" | "none";
   pagination?: ConnectorRuntimePaginationPlan;
   responseSchema?: ConnectorRuntimeOutputSchema;
+}
+
+export interface ConnectorRuntimeQuerySerialization {
+  style?: "form" | "spaceDelimited" | "pipeDelimited" | "deepObject";
+  explode?: boolean;
 }
 
 export type ConnectorRuntimeJsonType = "object" | "array" | "string" | "number" | "boolean" | "null";
