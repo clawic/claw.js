@@ -34,6 +34,7 @@ function fixtureCatalog(): ConnectorCatalog {
             name: "Send Message",
             fields: [
               { name: "channel", type: "string", optional: false },
+              { name: "license", type: "string", optional: false, secret: true },
               { name: "syncDir", type: "dir", optional: true, accessMode: "read", sync: true },
               { name: "workspace", type: "$.workspace", optional: false },
               { name: "text", type: "string", optional: false },
@@ -52,7 +53,7 @@ function fixtureCatalog(): ConnectorCatalog {
                 },
               },
             ],
-            authFieldNames: ["bot"],
+            authFieldNames: ["bot", "license"],
             annotations: {
               destructiveHint: false,
               readOnlyHint: false,
@@ -114,8 +115,8 @@ describe("connector catalog", () => {
       apps: 1,
       actions: 1,
       sources: 1,
-      fields: 10,
-      authFields: 3,
+      fields: 11,
+      authFields: 4,
       managedFields: 3,
       defaults: 1,
       options: 1,
@@ -158,7 +159,7 @@ describe("connector catalog", () => {
     });
     assert.equal(dryRun.status, "dry_run");
     assert.deepEqual(dryRun.missingFields, ["text"]);
-    assert.deepEqual(dryRun.missingSecrets, ["bot"]);
+    assert.deepEqual(dryRun.missingSecrets, ["bot", "license"]);
     assert.deepEqual(dryRun.values, { channel: "general", silent: false });
   });
 
@@ -169,12 +170,13 @@ describe("connector catalog", () => {
       dryRun: false,
       input: {
         values: { channel: "general", text: "hello" },
-        secretRefs: { bot: "secret://bot" },
+        secretRefs: { bot: "secret://bot", license: "secret://license" },
       },
-      resolveSecret: async (ref) => ref === "secret://bot" ? "resolved-token" : null,
+      resolveSecret: async (ref) => ref === "secret://bot" ? "resolved-token" : ref === "secret://license" ? "resolved-license" : null,
       executor: {
         async execute(ctx) {
           assert.equal(ctx.secrets.bot, "resolved-token");
+          assert.equal(ctx.secrets.license, "resolved-license");
           return { ok: true, channel: ctx.values.channel };
         },
       },

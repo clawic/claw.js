@@ -235,7 +235,7 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
       ...optionalBoolean("withLabel", readBoolean(body, "withLabel") ?? inherited?.withLabel),
       ...optionalAccessMode(readTopLevelString(body, "accessMode") ?? inherited?.accessMode),
       ...optionalBoolean("sync", readBoolean(body, "sync") ?? inherited?.sync),
-      ...(inherited?.secret || isSecretField(name, body, appId) ? { secret: true } : {}),
+      ...(inherited?.secret || readBoolean(body, "secret") === true || isSecretField(name, body, appId) ? { secret: true } : {}),
       ...(inherited?.managed || type.startsWith("$.") ? { managed: true } : {}),
     });
   }
