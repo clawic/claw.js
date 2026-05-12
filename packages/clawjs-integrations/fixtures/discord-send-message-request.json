@@ -1,0 +1,16 @@
+{
+  "method": "POST",
+  "url": "https://discord.com/api/v10/channels/sample/messages",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret"
+  },
+  "body": {
+    "content": "sample",
+    "message_reference": {
+      "message_id": "sample",
+      "channel_id": "sample",
+      "guild_id": "sample"
+    }
+  }
+}
