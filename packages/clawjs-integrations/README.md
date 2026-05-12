@@ -138,3 +138,9 @@ For OpenAPI-backed providers, build and verify a runtime catalog directly from a
 ```bash
 npm --workspace @clawjs/integrations run openapi:verify-runtime -- --spec /tmp/provider-openapi.yaml --app-id provider --evidence packages/clawjs-integrations/src/openapi-runtime.test.ts --fixtures /tmp/provider-fixtures.yaml --report /tmp/provider-runtime-audit.json --execute-offline
 ```
+
+Or generate a deterministic offline harness before replaying intercepted fetch:
+
+```bash
+npm --workspace @clawjs/integrations run openapi:verify-runtime -- --spec /tmp/provider-openapi.yaml --app-id provider --evidence packages/clawjs-integrations/src/openapi-runtime.test.ts --generate-fixtures /tmp/provider-runtime-fixtures --report /tmp/provider-runtime-audit.json --execute-offline
+```

@@ -493,9 +493,17 @@ function fixturePathErrors(label: string, fixtures: readonly ConnectorRuntimeFix
     if (!["request", "response", "source_event"].includes(fixture.kind)) {
       errors.push(`${label} fixture has invalid kind: ${String(fixture.kind)}`);
     }
-    errors.push(...evidencePathErrors(`${label} fixture`, [fixture.path], evidenceRoot));
+    errors.push(...fixtureFilePathErrors(`${label} fixture`, fixture.path, evidenceRoot));
   }
   return errors;
+}
+
+function fixtureFilePathErrors(label: string, fixturePath: string, evidenceRoot: string): string[] {
+  const normalized = path.normalize(fixturePath);
+  if (path.isAbsolute(normalized)) {
+    return isFile(normalized) ? [] : [`${label} file not found: ${fixturePath}`];
+  }
+  return evidencePathErrors(label, [fixturePath], evidenceRoot);
 }
 
 function runtimeFixtureKindErrors(
