@@ -1,0 +1,21 @@
+{
+  "domain": "habits",
+  "version": "0.1.0",
+  "entries": [
+    { "id": "habits.meditation", "label": "Meditation", "unit": { "id": "boolean", "label": "yes/no", "group": "abstract" }, "valueType": "boolean", "category": "mind" },
+    { "id": "habits.journaling", "label": "Journaling", "unit": { "id": "boolean", "label": "yes/no", "group": "abstract" }, "valueType": "boolean", "category": "mind" },
+    { "id": "habits.exercise", "label": "Exercise", "unit": { "id": "boolean", "label": "yes/no", "group": "abstract" }, "valueType": "boolean", "category": "body" },
+    { "id": "habits.stretching", "label": "Stretching", "unit": { "id": "boolean", "label": "yes/no", "group": "abstract" }, "valueType": "boolean", "category": "body" },
+    { "id": "habits.read", "label": "Read", "unit": { "id": "boolean", "label": "yes/no", "group": "abstract" }, "valueType": "boolean", "category": "mind" },
+    { "id": "habits.walk", "label": "Walk", "unit": { "id": "boolean", "label": "yes/no", "group": "abstract" }, "valueType": "boolean", "category": "body" },
+    { "id": "habits.deep_work", "label": "Deep work block", "unit": { "id": "boolean", "label": "yes/no", "group": "abstract" }, "valueType": "boolean", "category": "productivity" },
+    { "id": "habits.sleep_by_target", "label": "In bed by target time", "unit": { "id": "boolean", "label": "yes/no", "group": "abstract" }, "valueType": "boolean", "category": "body" },
+    { "id": "habits.wake_by_target", "label": "Wake by target time", "unit": { "id": "boolean", "label": "yes/no", "group": "abstract" }, "valueType": "boolean", "category": "body" },
+    { "id": "habits.no_screens_before_bed", "label": "No screens before bed", "unit": { "id": "boolean", "label": "yes/no", "group": "abstract" }, "valueType": "boolean", "category": "body" },
+    { "id": "habits.no_alcohol", "label": "No alcohol", "unit": { "id": "boolean", "label": "yes/no", "group": "abstract" }, "valueType": "boolean", "category": "body" },
+    { "id": "habits.cold_shower", "label": "Cold shower", "unit": { "id": "boolean", "label": "yes/no", "group": "abstract" }, "valueType": "boolean", "category": "body" },
+    { "id": "habits.sunlight", "label": "Morning sunlight", "unit": { "id": "boolean", "label": "yes/no", "group": "abstract" }, "valueType": "boolean", "category": "body" },
+    { "id": "habits.tidy_space", "label": "Tidy space", "unit": { "id": "boolean", "label": "yes/no", "group": "abstract" }, "valueType": "boolean", "category": "home" },
+    { "id": "habits.review_day", "label": "Daily review", "unit": { "id": "boolean", "label": "yes/no", "group": "abstract" }, "valueType": "boolean", "category": "productivity" }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "domain": "meetings",
+  "version": "0.1.0",
+  "entries": [
+    {
+      "id": "meetings.note",
+      "label": "Meetings — free-form note",
+      "unit": {
+        "id": "text",
+        "label": "text",
+        "group": "abstract"
+      },
+      "valueType": "text",
+      "category": "general",
+      "description": "Free-form text observation for Meetings."
+    }
+  ]
+}

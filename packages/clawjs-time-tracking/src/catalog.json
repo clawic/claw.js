@@ -1,0 +1,18 @@
+{
+  "domain": "time-tracking",
+  "version": "0.1.0",
+  "entries": [
+    {
+      "id": "time-tracking.note",
+      "label": "Time tracking — free-form note",
+      "unit": {
+        "id": "text",
+        "label": "text",
+        "group": "abstract"
+      },
+      "valueType": "text",
+      "category": "general",
+      "description": "Free-form text observation for Time tracking."
+    }
+  ]
+}
