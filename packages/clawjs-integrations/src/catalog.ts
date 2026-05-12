@@ -69,6 +69,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
   return catalog.apps.reduce<ConnectorCatalogSummary>(
     (summary, app) => {
       summary.apps += 1;
+      if (app.packageVersion) summary.versionedApps += 1;
       summary.fields += app.fields.length;
       summary.authFields += app.authFieldNames.length;
       summary.managedFields += app.fields.filter((field) => field.managed).length;
@@ -136,6 +137,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
     },
     {
       apps: 0,
+      versionedApps: 0,
       actions: 0,
       sources: 0,
       fields: 0,
@@ -220,6 +222,7 @@ function normalizeApp(input: unknown): ConnectorAppDefinition {
     id,
     name: stringValue(input.name) ?? id,
     ...(typeof input.description === "string" ? { description: input.description } : {}),
+    ...(typeof input.packageVersion === "string" ? { packageVersion: input.packageVersion } : {}),
     ...(typeof input.authType === "string" ? { authType: input.authType } : {}),
     authFieldNames: normalizeStringArray(input.authFieldNames),
     fields,

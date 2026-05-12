@@ -127,6 +127,7 @@ export interface ConnectorAppDefinition {
   id: string;
   name: string;
   description?: string;
+  packageVersion?: string;
   authType?: string;
   authFieldNames: string[];
   fields: ConnectorFieldDefinition[];
@@ -142,6 +143,7 @@ export interface ConnectorCatalog {
 
 export interface ConnectorCatalogSummary {
   apps: number;
+  versionedApps: number;
   actions: number;
   sources: number;
   fields: number;

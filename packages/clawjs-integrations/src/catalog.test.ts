@@ -22,6 +22,7 @@ function fixtureCatalog(): ConnectorCatalog {
       {
         id: "chat_service",
         name: "Chat Service",
+        packageVersion: "1.2.3",
         authFieldNames: ["bot"],
         fields: [
           { name: "bot", type: "app", optional: false, secret: true },
@@ -124,6 +125,7 @@ describe("connector catalog", () => {
     const catalog = fixtureCatalog();
     assert.deepEqual(summarizeConnectorCatalog(catalog), {
       apps: 1,
+      versionedApps: 1,
       actions: 1,
       sources: 1,
       fields: 13,
