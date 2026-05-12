@@ -1,0 +1,18 @@
+{
+  "domain": "emotions",
+  "version": "0.1.0",
+  "entries": [
+    { "id": "emotions.mood", "label": "Mood", "unit": { "id": "score:1-5", "label": "score 1-5", "group": "score" }, "valueType": "numeric", "validRange": { "min": 1, "max": 5 }, "category": "summary" },
+    { "id": "emotions.energy", "label": "Energy", "unit": { "id": "score:0-10", "label": "score 0-10", "group": "score" }, "valueType": "numeric", "validRange": { "min": 0, "max": 10 }, "category": "summary" },
+    { "id": "emotions.anxiety", "label": "Anxiety", "unit": { "id": "score:0-10", "label": "score 0-10", "group": "score" }, "valueType": "numeric", "validRange": { "min": 0, "max": 10 }, "category": "summary" },
+    { "id": "emotions.stress", "label": "Stress", "unit": { "id": "score:0-10", "label": "score 0-10", "group": "score" }, "valueType": "numeric", "validRange": { "min": 0, "max": 10 }, "category": "summary" },
+    { "id": "emotions.joy", "label": "Joy", "unit": { "id": "score:0-10", "label": "score 0-10", "group": "score" }, "valueType": "numeric", "validRange": { "min": 0, "max": 10 }, "category": "primary" },
+    { "id": "emotions.sadness", "label": "Sadness", "unit": { "id": "score:0-10", "label": "score 0-10", "group": "score" }, "valueType": "numeric", "validRange": { "min": 0, "max": 10 }, "category": "primary" },
+    { "id": "emotions.anger", "label": "Anger", "unit": { "id": "score:0-10", "label": "score 0-10", "group": "score" }, "valueType": "numeric", "validRange": { "min": 0, "max": 10 }, "category": "primary" },
+    { "id": "emotions.fear", "label": "Fear", "unit": { "id": "score:0-10", "label": "score 0-10", "group": "score" }, "valueType": "numeric", "validRange": { "min": 0, "max": 10 }, "category": "primary" },
+    { "id": "emotions.surprise", "label": "Surprise", "unit": { "id": "score:0-10", "label": "score 0-10", "group": "score" }, "valueType": "numeric", "validRange": { "min": 0, "max": 10 }, "category": "primary" },
+    { "id": "emotions.disgust", "label": "Disgust", "unit": { "id": "score:0-10", "label": "score 0-10", "group": "score" }, "valueType": "numeric", "validRange": { "min": 0, "max": 10 }, "category": "primary" },
+    { "id": "emotions.gratitude", "label": "Gratitude", "unit": { "id": "score:0-10", "label": "score 0-10", "group": "score" }, "valueType": "numeric", "validRange": { "min": 0, "max": 10 }, "category": "extended" },
+    { "id": "emotions.note", "label": "Emotion note", "unit": { "id": "text", "label": "text", "group": "abstract" }, "valueType": "text", "category": "general" }
+  ]
+}
