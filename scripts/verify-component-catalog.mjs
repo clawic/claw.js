@@ -78,6 +78,7 @@ function readExpected(root) {
     const app = {
       packageVersion: scrub(packageJson?.version),
       fields: names(fields),
+      fieldDefinitions: fields,
       fieldStats: summarizeFields(fields),
       auth: new Set(auth),
       operations: new Map(),
@@ -109,6 +110,7 @@ function readExpectedOperations(appDir, appId, kind, appAuth, appFields) {
         key,
         version: scrub(firstMatch(source, /\bversion:\s*["']([^"']+)["']/)),
         fields: names(fields),
+        fieldDefinitions: fields,
         fieldStats: summarizeFields(fields),
         annotations: readAnnotations(source),
         runtime,
@@ -201,6 +203,7 @@ function verify(catalog, expectedApps) {
       errors.push(`app ${id} packageVersion ${actualVersion ?? "<missing>"} expected ${expectedApp.packageVersion ?? "<missing>"}`);
     }
     compareSets(`app ${id} fields`, expectedApp.fields, new Set(fieldNames(app.fields)), errors);
+    compareFieldMetadata(`app ${id}`, expectedApp.fieldDefinitions, app.fields, errors);
     compareSets(`app ${id} auth fields`, expectedApp.auth, new Set(strings(app.authFieldNames)), errors);
     for (const [operationId, expectedOperation] of expectedApp.operations) {
       const operation = actualOps.get(operationId);
@@ -216,6 +219,7 @@ function verify(catalog, expectedApps) {
         errors.push(`operation ${operationId} version ${actualOperationVersion ?? "<missing>"} expected ${expectedOperation.version ?? "<missing>"}`);
       }
       compareSets(`operation ${operationId} fields`, expectedOperation.fields, new Set(fieldNames(operation.fields)), errors);
+      compareFieldMetadata(`operation ${operationId}`, expectedOperation.fieldDefinitions, operation.fields, errors);
       compareSets(`operation ${operationId} auth fields`, expectedOperation.auth, new Set(strings(operation.authFieldNames)), errors);
       if (operation.sourcePath !== expectedOperation.sourcePath) {
         errors.push(`operation ${operationId} sourcePath ${operation.sourcePath ?? "<missing>"} expected ${expectedOperation.sourcePath}`);
@@ -269,6 +273,8 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
       ...(inherited ?? {}),
       name,
       type,
+      ...optionalString("label", scrub(readTopLevelString(body, "label"))),
+      ...optionalString("description", scrub(readTopLevelString(body, "description"))),
       ...optionalString("alertType", scrub(readTopLevelString(body, "alertType") ?? inherited?.alertType)),
       ...optionalString("content", scrub(readTopLevelText(body, "content") ?? inherited?.content)),
       optional: inherited?.optional ?? /\boptional:\s*true\b/.test(body),
@@ -619,6 +625,93 @@ function summarizeExpected(apps) {
 function compareSets(label, expected, actual, errors) {
   for (const value of expected) if (!actual.has(value)) errors.push(`${label} missing ${value}`);
   for (const value of actual) if (!expected.has(value)) errors.push(`${label} extra ${value}`);
+}
+
+function compareFieldMetadata(scope, expectedFields, actualFields, errors) {
+  const actualByName = new Map((Array.isArray(actualFields) ? actualFields : [])
+    .filter(isRecord)
+    .map((field) => [field.name, field]));
+  for (const expected of expectedFields) {
+    const actual = actualByName.get(expected.name);
+    if (!actual) continue;
+    for (const key of ["type", "label", "description", "optional", "secret", "managed", "hidden", "disabled", "reloadProps", "min", "max", "placeholder", "useQuery", "withLabel", "accessMode", "sync", "customResponse", "alertType", "content"]) {
+      if (normalizeFieldValue(actual[key]) !== normalizeFieldValue(expected[key])) {
+        errors.push(`${scope} field ${expected.name} ${key} ${formatValue(actual[key])} expected ${formatValue(expected[key])}`);
+      }
+    }
+    compareJsonValue(`${scope} field ${expected.name} default`, expected.default, actual.default, errors);
+    compareOptionValues(`${scope} field ${expected.name} options`, expected.options, actual.options, errors);
+    comparePropDefinition(`${scope} field ${expected.name} propDefinition`, expected.propDefinition, actual.propDefinition, errors);
+    compareDynamicOptions(`${scope} field ${expected.name} dynamicOptions`, expected.dynamicOptions, actual.dynamicOptions, errors);
+  }
+}
+
+function compareJsonValue(label, expected, actual, errors) {
+  if (stableJson(expected) !== stableJson(actual)) errors.push(`${label} ${formatValue(actual)} expected ${formatValue(expected)}`);
+}
+
+function compareOptionValues(label, expected, actual, errors) {
+  const expectedValues = new Set((Array.isArray(expected) ? expected : []).map((option) => stableJson(option?.value)));
+  const actualValues = new Set((Array.isArray(actual) ? actual : []).map((option) => stableJson(option?.value)));
+  compareSets(label, expectedValues, actualValues, errors);
+}
+
+function comparePropDefinition(label, expected, actual, errors) {
+  if (!expected && !actual) return;
+  if (!expected || !actual) {
+    errors.push(`${label} ${actual ? "present" : "<missing>"} expected ${expected ? "present" : "<missing>"}`);
+    return;
+  }
+  if (actual.fieldName !== expected.fieldName) errors.push(`${label} fieldName ${actual.fieldName ?? "<missing>"} expected ${expected.fieldName}`);
+  compareSets(`${label} contextKeys`, new Set(expected.contextKeys ?? []), new Set(strings(actual.contextKeys)), errors);
+  compareSets(`${label} dependsOn`, new Set(expected.dependsOn ?? []), new Set(strings(actual.dependsOn)), errors);
+}
+
+function compareDynamicOptions(label, expected, actual, errors) {
+  if (!expected && !actual) return;
+  if (!expected || !actual) {
+    errors.push(`${label} ${actual ? "present" : "<missing>"} expected ${expected ? "present" : "<missing>"}`);
+    return;
+  }
+  for (const key of ["paginated", "usesPreviousContext"]) {
+    if (actual[key] !== expected[key]) errors.push(`${label} ${key} ${actual[key]} expected ${expected[key]}`);
+  }
+  compareSets(`${label} contextKeys`, new Set(expected.contextKeys ?? []), new Set(strings(actual.contextKeys)), errors);
+}
+
+function normalizeFieldValue(value) {
+  if (value === false) return undefined;
+  return normalizePublicValue(value);
+}
+
+function stableJson(value) {
+  return stableJsonValue(normalizePublicValue(value));
+}
+
+function formatValue(value) {
+  return value === undefined ? "<missing>" : stableJson(value);
+}
+
+function normalizePublicValue(value) {
+  if (typeof value === "string") return cleanText(value) ?? "";
+  if (Array.isArray(value)) return value.map(normalizePublicValue);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, normalizePublicValue(entry)]));
+  }
+  return value;
+}
+
+function stableJsonValue(value) {
+  if (value === undefined) return "<undefined>";
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableJsonValue).join(",")}]`;
+  return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJsonValue(value[key])}`).join(",")}}`;
+}
+
+function cleanText(value) {
+  if (typeof value !== "string") return undefined;
+  const cleaned = scrubBrand(value).replace(/\s+/g, " ").trim();
+  return cleaned || undefined;
 }
 
 function compareAnnotations(operationId, expected, actual, errors) {
