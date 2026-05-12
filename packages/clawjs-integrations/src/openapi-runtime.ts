@@ -470,6 +470,13 @@ function authBindingForSecurityScheme(
       description: stringValue(scheme.description),
     };
   }
+  if (type === "oauth2" || type === "openIdConnect") {
+    return {
+      fieldName: fieldName(schemeName),
+      placement: "bearer",
+      description: stringValue(scheme.description),
+    };
+  }
   if (type === "apiKey") {
     const location = stringValue(scheme.in);
     const name = stringValue(scheme.name);

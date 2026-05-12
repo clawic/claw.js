@@ -108,7 +108,7 @@ Webhook sources can reuse `handleConnectorRuntimeWebhook` to extract events from
 
 REST providers that publish OpenAPI 3 documents can use `buildOpenApiConnectorCatalog` and `createOpenApiConnectorRuntimeImplementation` to produce action catalogs and HTTP request plans from a supplied spec. The spec remains external input; the package does not vendor provider specifications.
 OpenAPI conversion resolves local component references for operations, parameters, request bodies, responses, schemas, and security schemes; remote `$ref` values are rejected so validation stays local and explicit.
-When a spec declares standard bearer or API key security schemes, the OpenAPI runtime can derive secret fields and auth transport bindings automatically; explicit auth options still override the spec.
+When a spec declares standard bearer, OAuth/OpenID bearer, or API key security schemes, the OpenAPI runtime can derive secret fields and auth transport bindings automatically; explicit auth options still override the spec.
 The OpenAPI runtime infers conservative offset, cursor, and next-URL pagination plans from common query parameters and response schemas, then replays them through the same offline fixture executor used by hand-written runtimes.
 OpenAPI webhook definitions are exposed as webhook `source` operations and validate through operation-scoped `source_event` fixtures plus `handleConnectorRuntimeWebhook`.
 

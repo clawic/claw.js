@@ -293,6 +293,52 @@ describe("OpenAPI connector runtime", () => {
     }]);
   });
 
+  it("infers OAuth bearer bindings from OpenAPI security schemes", () => {
+    const document = {
+      ...FIXTURE_OPENAPI,
+      components: {
+        securitySchemes: {
+          oauthToken: {
+            type: "oauth2",
+            description: "Fixture OAuth access token.",
+            flows: {
+              clientCredentials: {
+                tokenUrl: "https://api.example.invalid/oauth/token",
+                scopes: {},
+              },
+            },
+          },
+        },
+      },
+      security: [{ oauthToken: [] }],
+    };
+    const options = {
+      appId: "fixture_commerce",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(document, options)];
+    const operation = catalog.apps[0]?.operations.find((candidate) => candidate.id.endsWith("list-customer-items"));
+    assert.ok(operation);
+
+    assert.deepEqual(catalog.apps[0]?.fields, [{
+      name: "oauthToken",
+      type: "string",
+      optional: false,
+      secret: true,
+      description: "Fixture OAuth access token.",
+    }]);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, {
+      customerId: "cus_123",
+      limit: 10,
+    }, { registry }).requestPlan?.auth, [{
+      type: "secret",
+      field: "oauthToken",
+      placement: "bearer",
+    }]);
+  });
+
   it("resolves local OpenAPI component refs", () => {
     const document = {
       openapi: "3.0.0",
