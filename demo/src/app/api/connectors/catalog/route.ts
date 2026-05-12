@@ -49,6 +49,7 @@ export async function GET(req: NextRequest) {
         placeholderFields: 0,
         queryFields: 0,
         labelFields: 0,
+        alertFields: 0,
         readAccessFields: 0,
         writeAccessFields: 0,
         syncedFields: 0,

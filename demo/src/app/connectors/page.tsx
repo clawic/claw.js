@@ -21,6 +21,7 @@ interface CatalogSummary {
   placeholderFields: number;
   queryFields: number;
   labelFields: number;
+  alertFields: number;
   readAccessFields: number;
   writeAccessFields: number;
   syncedFields: number;
@@ -49,6 +50,8 @@ interface CatalogField {
   type: string;
   label?: string;
   description?: string;
+  alertType?: string;
+  content?: string;
   optional: boolean;
   default?: unknown;
   options?: Array<{ label?: string; value: string | number | boolean; description?: string }>;
@@ -355,6 +358,7 @@ export default function ConnectorsPage() {
             <span>{catalog?.summary.placeholderFields ?? 0} placeholders</span>
             <span>{catalog?.summary.queryFields ?? 0} query</span>
             <span>{catalog?.summary.labelFields ?? 0} labels</span>
+            <span>{catalog?.summary.alertFields ?? 0} alerts</span>
             <span>{catalog?.summary.readAccessFields ?? 0} read access</span>
             <span>{catalog?.summary.writeAccessFields ?? 0} write access</span>
             <span>{catalog?.summary.syncedFields ?? 0} synced</span>
@@ -480,6 +484,7 @@ export default function ConnectorsPage() {
                             {field.placeholder ? " · placeholder" : ""}
                             {field.useQuery ? " · query" : ""}
                             {field.withLabel ? " · label" : ""}
+                            {field.alertType ? ` · ${field.alertType}` : field.content ? " · alert" : ""}
                             {field.accessMode ? ` · ${field.accessMode}` : ""}
                             {field.sync ? " · sync" : ""}
                             {field.customResponse ? " · custom response" : ""}
