@@ -106,6 +106,7 @@ Runtime HTTP parsing treats `application/*+json` responses as JSON, so provider 
 Runtime implementations that cover multiple operations must attach offline fixtures to each `operationId`, so the audit cannot treat one generic fixture as proof for an entire provider.
 Slack channel operations are registered as offline-validable Web API request plans for sending messages, listing conversations, and reading conversation info.
 WhatsApp Business API operations are registered as offline-validable request plans for verifying a phone number id and sending text messages.
+WhatsApp webhook sources are registered for inbound message and message-status payloads, including nested event extraction from Cloud API webhook envelopes.
 
 Webhook sources can reuse `handleConnectorRuntimeWebhook` to extract events from an incoming payload with the same registered source plan used by dry-runs and audits. This keeps webhook validation offline-friendly: tests can pass fixture payloads directly, without opening a real HTTP endpoint or contacting the provider.
 

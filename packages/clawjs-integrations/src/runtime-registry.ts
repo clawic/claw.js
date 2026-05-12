@@ -16,6 +16,10 @@ import {
   isWhatsAppActionOperationSupported,
 } from "./whatsapp-operation-executor.ts";
 import {
+  buildWhatsAppSourcePlan,
+  isWhatsAppSourceOperationSupported,
+} from "./whatsapp-source.ts";
+import {
   createTelegramSourceExecutor,
 } from "./telegram-source-executor.ts";
 import {
@@ -227,6 +231,23 @@ const WHATSAPP_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
   },
 ];
 
+const WHATSAPP_SOURCE_EVIDENCE = [
+  "packages/clawjs-integrations/src/whatsapp-source.test.ts",
+];
+
+const WHATSAPP_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = [
+  {
+    kind: "source_event",
+    operationId: "whatsapp.source.new-message",
+    path: "packages/clawjs-integrations/fixtures/whatsapp-webhook-message-event.json",
+  },
+  {
+    kind: "source_event",
+    operationId: "whatsapp.source.message-status",
+    path: "packages/clawjs-integrations/fixtures/whatsapp-webhook-status-event.json",
+  },
+];
+
 export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation[] = [
   {
     appId: "slack",
@@ -254,6 +275,19 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     supports: (operation) => isWhatsAppActionOperationSupported(operation.id),
     buildPlan: (operation, values) => ({
       requestPlan: buildWhatsAppOperationRequest(operation, values),
+    }),
+  },
+  {
+    appId: "whatsapp",
+    kind: "source",
+    executorId: "whatsapp.business-api.webhook",
+    offlineValidated: true,
+    evidence: WHATSAPP_SOURCE_EVIDENCE,
+    fixtures: WHATSAPP_SOURCE_FIXTURES,
+    planKinds: ["source"],
+    supports: (operation) => isWhatsAppSourceOperationSupported(operation.id),
+    buildPlan: (operation) => ({
+      sourcePlan: buildWhatsAppSourcePlan(operation),
     }),
   },
   {
