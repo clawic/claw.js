@@ -3,6 +3,10 @@ import { describe, it } from "node:test";
 
 import { normalizeConnectorCatalog } from "./catalog.ts";
 import {
+  verifyConnectorRuntimeCoverage,
+  verifyConnectorRuntimeOfflineExecutions,
+} from "./runtime-coverage.ts";
+import {
   buildGitLabOperationRequest,
 } from "./gitlab-operation-executor.ts";
 
@@ -199,6 +203,21 @@ describe("gitlab operation runtime", () => {
         requiredPaths: ["id", "body"],
       },
     });
+  });
+
+  it("covers GitLab issue operations with operation-scoped offline fixtures", async () => {
+    const coverage = verifyConnectorRuntimeCoverage(GITLAB_CATALOG);
+    assert.equal(coverage.summary.missing, 0);
+    assert.equal(coverage.summary.implemented, 5);
+
+    const offline = await verifyConnectorRuntimeOfflineExecutions(GITLAB_CATALOG);
+    assert.deepEqual(offline.results.map((result) => result.operationId).sort(), [
+      "gitlab.action.create-issue",
+      "gitlab.action.create-issue-note",
+      "gitlab.action.get-project-issue",
+      "gitlab.action.list-project-issues",
+      "gitlab.action.update-issue",
+    ]);
   });
 });
 

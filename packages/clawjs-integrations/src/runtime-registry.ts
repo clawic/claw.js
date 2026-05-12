@@ -16,6 +16,10 @@ import {
   isGitHubActionOperationSupported,
 } from "./github-operation-executor.ts";
 import {
+  buildGitLabOperationRequest,
+  isGitLabActionOperationSupported,
+} from "./gitlab-operation-executor.ts";
+import {
   buildDiscordOperationRequest,
   isDiscordActionOperationSupported,
 } from "./discord-operation-executor.ts";
@@ -296,6 +300,63 @@ const DISCORD_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
   },
 ];
 
+const GITLAB_ACTION_EVIDENCE = [
+  "packages/clawjs-integrations/src/gitlab-operation-executor.test.ts",
+];
+
+const GITLAB_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
+  {
+    kind: "request",
+    operationId: "gitlab.action.list-project-issues",
+    path: "packages/clawjs-integrations/fixtures/gitlab-list-project-issues-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "gitlab.action.list-project-issues",
+    path: "packages/clawjs-integrations/fixtures/gitlab-list-project-issues-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "gitlab.action.get-project-issue",
+    path: "packages/clawjs-integrations/fixtures/gitlab-get-project-issue-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "gitlab.action.get-project-issue",
+    path: "packages/clawjs-integrations/fixtures/gitlab-get-project-issue-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "gitlab.action.create-issue",
+    path: "packages/clawjs-integrations/fixtures/gitlab-create-issue-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "gitlab.action.create-issue",
+    path: "packages/clawjs-integrations/fixtures/gitlab-create-issue-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "gitlab.action.update-issue",
+    path: "packages/clawjs-integrations/fixtures/gitlab-update-issue-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "gitlab.action.update-issue",
+    path: "packages/clawjs-integrations/fixtures/gitlab-update-issue-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "gitlab.action.create-issue-note",
+    path: "packages/clawjs-integrations/fixtures/gitlab-create-issue-note-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "gitlab.action.create-issue-note",
+    path: "packages/clawjs-integrations/fixtures/gitlab-create-issue-note-response.json",
+  },
+];
+
 const WHATSAPP_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/whatsapp-operation-executor.test.ts",
 ];
@@ -367,6 +428,20 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     supports: (operation) => isGitHubActionOperationSupported(operation.id),
     buildPlan: (operation, values) => ({
       requestPlan: buildGitHubOperationRequest(operation, values),
+    }),
+  },
+  {
+    appId: "gitlab",
+    kind: "action",
+    executorId: "gitlab.issues-api.http",
+    baseUrl: "https://gitlab.com/api/v4/",
+    offlineValidated: true,
+    evidence: GITLAB_ACTION_EVIDENCE,
+    fixtures: GITLAB_ACTION_FIXTURES,
+    planKinds: ["request"],
+    supports: (operation) => isGitLabActionOperationSupported(operation.id),
+    buildPlan: (operation, values) => ({
+      requestPlan: buildGitLabOperationRequest(operation, values),
     }),
   },
   {
