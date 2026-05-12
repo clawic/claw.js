@@ -57,6 +57,7 @@ export interface ConnectorAdditionalPropsMetadata {
 export interface ConnectorOperationRuntime {
   hasRun: boolean;
   hasHooks: boolean;
+  hookNames?: string[];
   hasAdditionalProps: boolean;
   additionalProps?: ConnectorAdditionalPropsMetadata;
   hasMethods: boolean;

@@ -292,6 +292,7 @@ function optionalRuntime(input: unknown) {
     runtime: {
       hasRun: input.hasRun === true,
       hasHooks: input.hasHooks === true,
+      hookNames: normalizeStringArray(input.hookNames),
       hasAdditionalProps: input.hasAdditionalProps === true,
       ...optionalAdditionalProps(input.additionalProps),
       hasMethods: input.hasMethods === true,

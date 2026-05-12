@@ -84,6 +84,7 @@ function fixtureCatalog(): ConnectorCatalog {
             runtime: {
               hasRun: true,
               hasHooks: true,
+              hookNames: ["activate", "deactivate"],
               hasAdditionalProps: false,
               hasMethods: true,
               methodNames: ["subscribe"],
