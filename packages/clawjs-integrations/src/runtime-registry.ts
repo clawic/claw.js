@@ -6,9 +6,15 @@ import {
 import {
   isTelegramSourceOperationSupported,
 } from "./telegram-source.ts";
+import {
+  createTelegramSourceExecutor,
+} from "./telegram-source-executor.ts";
 import type {
   ConnectorExecutor,
 } from "./operation-runner.js";
+import type {
+  ConnectorSourceExecutor,
+} from "./source-runner.js";
 import type {
   ConnectorOperationDefinition,
   IntegrationJson,
@@ -44,6 +50,7 @@ export interface ConnectorRuntimeImplementation {
   evidence: string[];
   supports(operation: ConnectorOperationDefinition): boolean;
   createExecutor?(options?: ConnectorRuntimeExecutorOptions): ConnectorExecutor;
+  createSourceExecutor?(options?: ConnectorRuntimeExecutorOptions): ConnectorSourceExecutor;
   buildPlan?(
     operation: ConnectorOperationDefinition,
     values: Record<string, IntegrationJson>,
@@ -86,6 +93,7 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     offlineValidated: true,
     evidence: TELEGRAM_SOURCE_EVIDENCE,
     supports: (operation) => isTelegramSourceOperationSupported(operation.id),
+    createSourceExecutor: (options) => createTelegramSourceExecutor(options),
     buildPlan: (operation) => ({
       sourcePlan: {
         delivery: operation.source?.delivery ?? "manual",
@@ -114,4 +122,13 @@ export function createConnectorOperationExecutor(
 ): ConnectorExecutor | null {
   if (operation.kind !== "action") return null;
   return findConnectorRuntimeImplementation(operation, registry)?.createExecutor?.(options) ?? null;
+}
+
+export function createConnectorSourceExecutor(
+  operation: ConnectorOperationDefinition,
+  options: ConnectorRuntimeExecutorOptions = {},
+  registry: readonly ConnectorRuntimeImplementation[] = CONNECTOR_RUNTIME_REGISTRY,
+): ConnectorSourceExecutor | null {
+  if (operation.kind !== "source") return null;
+  return findConnectorRuntimeImplementation(operation, registry)?.createSourceExecutor?.(options) ?? null;
 }

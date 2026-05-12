@@ -31,6 +31,7 @@ export {
 export {
   CONNECTOR_RUNTIME_REGISTRY,
   createConnectorOperationExecutor,
+  createConnectorSourceExecutor,
   findConnectorRuntimeImplementation,
 } from "./runtime-registry.js";
 export type {
@@ -91,6 +92,10 @@ export {
   telegramInboundMessageFromUpdate,
   telegramSourceEventsForUpdate,
 } from "./telegram-source.js";
+export {
+  createTelegramSourceExecutor,
+  executeTelegramSource,
+} from "./telegram-source-executor.js";
 export type {
   TelegramOperationExecutorOptions,
   TelegramRequestPlan,
@@ -101,6 +106,9 @@ export type {
   TelegramSourceKind,
   TelegramUpdate,
 } from "./telegram-source.js";
+export type {
+  TelegramSourceExecutorOptions,
+} from "./telegram-source-executor.js";
 export type {
   ConnectorAppDefinition,
   ConnectorCatalog,

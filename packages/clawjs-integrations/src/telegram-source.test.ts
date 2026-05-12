@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { normalizeConnectorCatalog } from "./catalog.ts";
+import { runConnectorSource } from "./source-runner.ts";
 import {
   telegramInboundMessageFromUpdate,
   telegramSourceEventsForUpdate,
@@ -108,5 +110,81 @@ describe("telegram source events", () => {
         timestamp: "2023-11-14T22:18:20.000Z",
       },
     );
+  });
+
+  it("runs supported polling sources through the registered runtime executor", async () => {
+    const calls: string[] = [];
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "telegram_bot_api",
+        name: "Telegram Bot",
+        authFieldNames: ["telegramBotApi"],
+        fields: [{ name: "telegramBotApi", type: "app", optional: false, secret: true }],
+        operations: [{
+          id: "telegram_bot_api.source.new-bot-command-received-new-bot-command-received",
+          appId: "telegram_bot_api",
+          kind: "source",
+          name: "New Bot Command",
+          fields: [
+            { name: "commands", type: "string", optional: true },
+            { name: "timer", type: "$.interface.timer", optional: false, managed: true },
+          ],
+          authFieldNames: ["telegramBotApi"],
+          runtime: {
+            hasRun: false,
+            hasHooks: true,
+            hookNames: ["deploy"],
+            hasAdditionalProps: false,
+            hasMethods: false,
+            methodNames: [],
+            dedupe: "unique",
+          },
+          source: {
+            delivery: "polling",
+            usesTimer: true,
+            usesHttp: false,
+            usesServiceDb: false,
+          },
+        }],
+      }],
+    });
+
+    const result = await runConnectorSource({
+      catalog,
+      operationId: "telegram_bot_api.source.new-bot-command-received-new-bot-command-received",
+      dryRun: false,
+      input: {
+        values: { commands: "[\"/start\"]" },
+        secretRefs: { telegramBotApi: "secret://telegram" },
+      },
+      resolveSecret: async (ref) => ref === "secret://telegram" ? "runtime-token" : null,
+      runtimeExecutorOptions: {
+        fetchImpl: async (input) => {
+          calls.push(String(input));
+          return new Response(JSON.stringify({
+            ok: true,
+            result: [{
+              update_id: 101,
+              message: {
+                message_id: 202,
+                date: 1_700_000_000,
+                chat: { id: 303 },
+                from: { id: 404, first_name: "Ada" },
+                text: "/start hello",
+              },
+            }],
+          }), { status: 200 });
+        },
+      },
+    });
+
+    assert.equal(result.status, "source_started");
+    assert.equal(result.output.nextOffset, 102);
+    assert.equal((result.output.events as unknown[]).length, 1);
+    const url = new URL(calls[0] ?? "");
+    assert.equal(url.pathname, "/botruntime-token/getUpdates");
+    assert.equal(url.searchParams.get("timeout"), "0");
+    assert.equal(url.searchParams.get("allowed_updates"), "[\"message\",\"edited_message\",\"channel_post\",\"edited_channel_post\"]");
   });
 });
