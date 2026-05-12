@@ -7,6 +7,7 @@ const args = parseArgs(process.argv.slice(2));
 const sourceRoot = path.resolve(args.source ?? process.env.CLAWJS_COMPONENTS_SOURCE_DIR ?? "");
 const catalogPath = path.resolve(args.catalog ?? process.env.CLAWJS_CONNECTOR_CATALOG_PATH ?? "");
 const maxErrors = Number.parseInt(args["max-errors"] ?? "50", 10);
+const allowUnsupportedRuntime = args["allow-unsupported-runtime"] === true || args["allow-unsupported-runtime"] === "true";
 
 if (!sourceRoot || !fs.existsSync(sourceRoot) || !catalogPath || !fs.existsSync(catalogPath)) {
   console.error("Usage: node scripts/verify-component-catalog.mjs --source <checkout> --catalog <catalog.json>");
@@ -58,7 +59,10 @@ const countPropDefinitions = (fields) => Array.isArray(fields) ? fields.filter((
 const countContextualProps = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && isRecord(field.propDefinition) && Array.isArray(field.propDefinition.contextKeys) && field.propDefinition.contextKeys.length > 0).length : 0;
 const expected = readExpected(componentsDir);
 const catalog = JSON.parse(readText(catalogPath));
-const errors = verify(catalog, expected);
+const errors = [
+  ...verify(catalog, expected),
+  ...verifyRuntimeCoverage(catalog, { allowUnsupportedRuntime }),
+];
 const summary = summarize(catalog.apps ?? []);
 
 for (const error of errors.slice(0, maxErrors)) console.error(`FAIL ${error}`);
@@ -263,6 +267,91 @@ function verify(catalog, expectedApps) {
   for (const id of actualApps.keys()) if (!expectedApps.has(id)) errors.push(`extra app ${id}`);
   for (const id of actualOps.keys()) if (!expectedOperationIds.has(id)) errors.push(`extra operation ${id}`);
   for (const sourcePath of actualPaths) if (!expectedPaths.has(sourcePath)) errors.push(`extra sourcePath ${sourcePath}`);
+  return errors;
+}
+
+const TELEGRAM_ACTION_SLUGS = new Set([
+  "create-chat-invite-link",
+  "delete-message",
+  "edit-media-message",
+  "edit-text-message",
+  "export-chat-invite-link",
+  "forward-message",
+  "get-num-members-in-chat",
+  "kick-chat-member",
+  "list-administrators-in-chat",
+  "list-chats",
+  "list-updates",
+  "pin-message",
+  "promote-chat-member",
+  "restrict-chat-member",
+  "send-album",
+  "send-audio-file",
+  "send-document-or-image",
+  "send-media-by-url-or-id",
+  "send-photo",
+  "send-sticker",
+  "send-text-message-or-reply",
+  "send-video-note",
+  "send-video",
+  "send-voice-message",
+  "set-chat-permissions",
+  "unpin-message",
+]);
+
+const TELEGRAM_SOURCE_SLUGS = new Set([
+  "new-updates",
+  "message-updates",
+  "channel-updates",
+  "new-bot-command-received",
+]);
+
+function verifyRuntimeCoverage(catalog, options) {
+  const errors = [];
+  for (const app of Array.isArray(catalog.apps) ? catalog.apps : []) {
+    if (!isRecord(app)) continue;
+    for (const operation of Array.isArray(app.operations) ? app.operations : []) {
+      if (!isRecord(operation) || typeof operation.id !== "string") continue;
+      const unsupported = operation.unsupported_real_runtime_reason;
+      if (isRuntimeSupported(operation)) continue;
+      if (isRecord(unsupported)) {
+        const reasonErrors = unsupportedReasonErrors(operation.id, unsupported);
+        errors.push(...reasonErrors);
+        if (!options.allowUnsupportedRuntime) {
+          errors.push(`operation ${operation.id} has unsupported_real_runtime_reason ${String(unsupported.code ?? "<missing>")} but runtime coverage requires a functional offline-validable executor`);
+        }
+      } else {
+        errors.push(`operation ${operation.id} missing functional offline-validable runtime executor`);
+      }
+    }
+  }
+  return errors;
+}
+
+function isRuntimeSupported(operation) {
+  if (operation.appId !== "telegram_bot_api") return false;
+  const marker = operation.kind === "source" ? ".source." : ".action.";
+  const raw = operation.id.includes(marker)
+    ? operation.id.slice(operation.id.indexOf(marker) + marker.length)
+    : operation.id;
+  const slugs = operation.kind === "source" ? TELEGRAM_SOURCE_SLUGS : TELEGRAM_ACTION_SLUGS;
+  for (const slug of slugs) {
+    if (raw === slug || raw.startsWith(`${slug}-`)) return true;
+  }
+  return false;
+}
+
+function unsupportedReasonErrors(operationId, reason) {
+  const errors = [];
+  if (typeof reason.code !== "string" || !reason.code.trim()) {
+    errors.push(`operation ${operationId} unsupported_real_runtime_reason.code is required`);
+  }
+  if (typeof reason.message !== "string" || !reason.message.trim()) {
+    errors.push(`operation ${operationId} unsupported_real_runtime_reason.message is required`);
+  }
+  if (!Array.isArray(reason.evidence) || reason.evidence.filter((entry) => typeof entry === "string" && entry.trim()).length === 0) {
+    errors.push(`operation ${operationId} unsupported_real_runtime_reason.evidence must include concrete evidence`);
+  }
   return errors;
 }
 
@@ -1731,6 +1820,8 @@ function parseArgs(argv) {
     if (value && !value.startsWith("--")) {
       parsed[token.slice(2)] = value;
       index += 1;
+    } else {
+      parsed[token.slice(2)] = true;
     }
   }
   return parsed;
