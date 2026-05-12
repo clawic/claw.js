@@ -38,7 +38,7 @@ Use this section as the canonical place to track what is active, what is done, a
 | Service stack | Content | Track content control-plane work as a separate stream | `planned` | Baseline repo area and public docs already exist | Seed the first content-specific backlog entries | - | 2026-04-16 |
 | Service stack | Notify | Track notification delivery work independently | `planned` | Baseline repo area and public docs already exist | Seed the first notify-specific backlog entries | - | 2026-04-16 |
 | Service stack | IoT | Track IoT control-plane work independently | `planned` | Baseline repo area and public docs already exist | Seed the first IoT-specific backlog entries | - | 2026-04-16 |
-| Service stack | Vault | Track secret-broker work independently | `planned` | Baseline repo area and public docs already exist | Seed the first vault-specific backlog entries | - | 2026-04-16 |
+| Service stack | Secrets | Track secret-broker work independently | `planned` | Baseline repo area and public docs already exist | Seed the first secrets-specific backlog entries | - | 2026-04-16 |
 | Service stack | Drive | Track drive product work independently | `planned` | Baseline repo area and public docs already exist | Seed the first drive-specific backlog entries | - | 2026-04-16 |
 | Service stack | Execution Plane | Track execution-plane work independently | `planned` | Baseline repo area and public docs already exist | Seed the first execution-plane-specific backlog entries | - | 2026-04-16 |
 

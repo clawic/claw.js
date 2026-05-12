@@ -5,7 +5,7 @@ description: Overview of the standalone execution-plane service for agent-author
 
 # Execution Plane
 
-`execution-plane/` is a standalone top-level service for running, reviewing, and deploying agent-authored code without coupling that state to the core SDK, `relay`, or `vault`.
+`execution-plane/` is a standalone top-level service for running, reviewing, and deploying agent-authored code without coupling that state to the core SDK, `relay`, or `secrets`.
 
 The current implementation includes:
 

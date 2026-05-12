@@ -64,7 +64,7 @@ maximum risk, and explicit human-approval requirements.
 | `--dry-run` | Prints command or plan output instead of mutating state when supported. |
 | `--agent-dir`, `--home-dir`, `--config-path`, `--runtime-workspace`, `--auth-store` | Adapter path overrides. |
 | `--gateway-url`, `--gateway-token`, `--gateway-port`, `--gateway-config` | Gateway overrides passed through to the runtime adapter. |
-| `--vault-url`, `--vault-token`, `--vault-tenant-id`, `--vault-sidecar` | Vault connection and compatibility-sidecar overrides for `claw secrets ...`. |
+| `--secrets-url`, `--secrets-token`, `--secrets-tenant-id`, `--secrets-sidecar` | Secrets connection and compatibility-sidecar overrides for `claw secrets ...`. |
 | `--template-pack` | Template-pack path used by `workspace init` or `files apply-template-pack`. |
 | `--library-dir` | Overrides the local personal library root. Defaults to `~/.clawjs/library` or `CLAWJS_LIBRARY_DIR`. |
 
@@ -251,7 +251,7 @@ that service is fronted by a gateway.
 ## Secrets Commands
 
 ```bash
-claw secrets list --vault-url http://127.0.0.1:4610 --vault-token <token> --vault-tenant-id demo-tenant
+claw secrets list --secrets-url http://127.0.0.1:4610 --secrets-token <token> --secrets-tenant-id demo-tenant
 claw secrets describe revenuecat_admin --json
 claw secrets types --search revenuecat
 claw secrets capabilities revenuecat_admin
@@ -259,12 +259,12 @@ claw secrets broker http --method GET --url https://api.revenuecat.com/v2/projec
 claw secrets leases list
 ```
 
-Use `--vault-url`, `--vault-token`, and `--vault-tenant-id` or the
-matching `VAULT_BASE_URL`, `VAULT_TOKEN`, and `VAULT_TENANT_ID`
-environment variables to make Vault the active backend. When those
+Use `--secrets-url`, `--secrets-token`, and `--secrets-tenant-id` or the
+matching `SECRETS_BASE_URL`, `SECRETS_TOKEN`, and `SECRETS_TENANT_ID`
+environment variables to make Secrets the active backend. When those
 settings are present, `claw.secrets` and `claw secrets ...` default to
-Vault instead of the legacy local proxy. Add `--vault-sidecar` or
-`CLAWJS_VAULT_SIDECAR_PATH` when you need proxy-compatible sidecar flows
+Secrets instead of the legacy local proxy. Add `--secrets-sidecar` or
+`CLAWJS_SECRETS_SIDECAR_PATH` when you need proxy-compatible sidecar flows
 such as `{{secretName}}` injection or lease-backed process/browser
 execution.
 

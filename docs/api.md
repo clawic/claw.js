@@ -54,9 +54,9 @@ const same = await createClaw({
 | `workspace.agentId` | Stable agent id for runtime-specific state. |
 | `workspace.rootDir` | Workspace root on disk. |
 | `templates.pack` | Optional template-pack path applied during workspace initialization. |
-| `secrets.backend` | Optional secrets backend. Defaults to `vault` when `VAULT_BASE_URL`, `VAULT_TOKEN`, and `VAULT_TENANT_ID` are configured, otherwise `local_proxy`. |
-| `secrets.baseUrl`, `secrets.credential`, `secrets.tenantId` | Vault connection used by `claw.secrets`, typed actions, and brokered HTTP execution. |
-| `secrets.sidecarPath` | Optional Vault sidecar path used for proxy-compatible `{{secretName}}` flows and lease-backed process/browser injection. |
+| `secrets.backend` | Optional secrets backend. Defaults to `secrets` when `SECRETS_BASE_URL`, `SECRETS_TOKEN`, and `SECRETS_TENANT_ID` are configured, otherwise `local_proxy`. |
+| `secrets.baseUrl`, `secrets.credential`, `secrets.tenantId` | Secrets connection used by `claw.secrets`, typed actions, and brokered HTTP execution. |
+| `secrets.sidecarPath` | Optional Secrets sidecar path used for proxy-compatible `{{secretName}}` flows and lease-backed process/browser injection. |
 | `notify.baseUrl`, `sourceToken`, `clientToken` | Optional Notify service endpoint and source/client credentials for `claw.notify`. |
 | `time.baseUrl`, `time.token` | Optional standalone time-service endpoint used for calendar, routines, reminders, deadlines, and follow-ups. |
 | `time.dbPath`, `defaultTimeZone`, `schedulerIntervalMs`, `notifyBaseUrl`, `notifySourceToken` | Optional embedded temporal engine and notification integration settings when no time-service URL is configured. |
@@ -379,8 +379,8 @@ launched. `login()` returns the same distinction plus the launch mode when
 an interactive flow starts.
 
 For real secrets, prefer the `claw.secrets` helpers plus brokered
-execution rather than hardcoding credentials in source. Vault is now the
-default backend whenever its `VAULT_*` connection settings are present.
+execution rather than hardcoding credentials in source. Secrets is now the
+default backend whenever its `SECRETS_*` connection settings are present.
 
 ## Speech / TTS
 
@@ -617,7 +617,7 @@ await claw.secrets.ensureTelegramBotReference({
 });
 ```
 
-Use explicit Vault settings when you want the SDK to treat Vault as the
+Use explicit Secrets settings when you want the SDK to treat Secrets as the
 canonical backend and still keep sidecar compatibility for
 `{{secretName}}` references:
 
@@ -631,11 +631,11 @@ const claw = await createClaw({
     rootDir: "./workspace",
   },
   secrets: {
-    backend: "vault",
+    backend: "secrets",
     baseUrl: "http://127.0.0.1:4610",
     credential: "<sidecar-principal-token>",
     tenantId: "demo-tenant",
-    sidecarPath: "/absolute/path/to/vault/dist/sidecar.js",
+    sidecarPath: "/absolute/path/to/secrets/dist/sidecar.js",
   },
 });
 ```
@@ -643,7 +643,7 @@ const claw = await createClaw({
 `types()` returns the typed secret catalog, `capabilities()` returns the
 effective allow/deny view for the current principal, `actions()` exposes
 brokered typed actions for the selected secret type, and `brokerHttp()`
-or `runAction()` keeps execution inside Vault without exposing plaintext
+or `runAction()` keeps execution inside Secrets without exposing plaintext
 credentials to the caller.
 
 Slack and WhatsApp currently live on the same instance when the adapter
