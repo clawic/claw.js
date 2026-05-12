@@ -68,6 +68,8 @@ export async function GET(req: NextRequest) {
         hybridSources: 0,
         statefulSources: 0,
         sampleEventSources: 0,
+        eventSummarySources: 0,
+        eventSummaryTemplates: 0,
         dynamicPropOperations: 0,
         dynamicPropFields: 0,
         dynamicOptionFields: 0,

@@ -40,6 +40,8 @@ interface CatalogSummary {
   hybridSources: number;
   statefulSources: number;
   sampleEventSources: number;
+  eventSummarySources: number;
+  eventSummaryTemplates: number;
   dynamicPropOperations: number;
   dynamicPropFields: number;
   dynamicOptionFields: number;
@@ -119,6 +121,11 @@ interface CatalogOperation {
   sampleEvent?: {
     shape: "object" | "array" | "string" | "unknown";
     keys: string[];
+  };
+  eventSummary?: {
+    count: number;
+    templates: string[];
+    dynamic: boolean;
   };
 }
 
@@ -378,6 +385,7 @@ export default function ConnectorsPage() {
             <span>{catalog?.summary.webhookSources ?? 0} webhooks</span>
             <span>{catalog?.summary.statefulSources ?? 0} stateful</span>
             <span>{catalog?.summary.sampleEventSources ?? 0} samples</span>
+            <span>{catalog?.summary.eventSummarySources ?? 0} summaries</span>
             <span>{catalog?.summary.dynamicPropOperations ?? 0} dynamic props</span>
             <span>{catalog?.summary.dynamicPropFields ?? 0} dynamic fields</span>
             <span>{catalog?.summary.dynamicOptionFields ?? 0} dynamic options</span>
@@ -426,6 +434,9 @@ export default function ConnectorsPage() {
                       {entry.operation.sampleEvent ? (
                         <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground font-mono">sample</span>
                       ) : null}
+                      {entry.operation.eventSummary ? (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground font-mono">summary</span>
+                      ) : null}
                     </div>
                     <div className="text-[11px] text-muted-foreground mt-0.5 truncate">{entry.app.name}</div>
                     {entry.operation.description ? (
@@ -472,6 +483,7 @@ export default function ConnectorsPage() {
                       <span>customResponse={String(selected.operation.fields.some((field) => field.customResponse))}</span>
                       <span>state={String(selected.operation.source.usesServiceDb)}</span>
                       {selected.operation.sampleEvent ? <span>sample={selected.operation.sampleEvent.shape}:{selected.operation.sampleEvent.keys.length}</span> : null}
+                      {selected.operation.eventSummary ? <span>summary={selected.operation.eventSummary.count}:{selected.operation.eventSummary.templates.length}</span> : null}
                     </div>
                   ) : null}
                 </div>
