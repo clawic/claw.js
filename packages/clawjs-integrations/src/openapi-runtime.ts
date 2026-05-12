@@ -27,9 +27,14 @@ interface OpenApiDocument {
     securitySchemes?: Record<string, OpenApiSecurityScheme | undefined>;
   };
   security?: OpenApiSecurityRequirement[];
-  servers?: Array<{ url?: unknown }>;
+  servers?: OpenApiServer[];
   paths?: Record<string, OpenApiPathItem | undefined>;
   webhooks?: Record<string, OpenApiPathItem | undefined>;
+}
+
+interface OpenApiServer {
+  url?: unknown;
+  variables?: Record<string, { default?: unknown } | undefined>;
 }
 
 type OpenApiSecurityRequirement = Record<string, unknown[]>;
@@ -816,7 +821,15 @@ function titleize(value: string): string {
 }
 
 function firstServerUrl(document: OpenApiDocument): string | undefined {
-  return document.servers?.map((server) => stringValue(server.url)).find((url): url is string => Boolean(url));
+  return document.servers?.map(serverUrl).find((url): url is string => Boolean(url));
+}
+
+function serverUrl(server: OpenApiServer): string | undefined {
+  const url = stringValue(server.url);
+  if (!url) return undefined;
+  return url.replace(/{([^}]+)}/g, (match, name: string) => (
+    stringValue(server.variables?.[name]?.default) ?? match
+  ));
 }
 
 function enumOptions(value: unknown): Pick<ConnectorFieldDefinition, "options"> | Record<string, never> {

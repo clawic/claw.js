@@ -325,6 +325,28 @@ describe("OpenAPI connector runtime", () => {
     });
   });
 
+  it("uses default values for OpenAPI server variables", () => {
+    const document = {
+      ...FIXTURE_OPENAPI,
+      servers: [{
+        url: "https://{environment}.api.example.invalid/{version}/",
+        variables: {
+          environment: { default: "sandbox" },
+          version: { default: "v2" },
+        },
+      }],
+    };
+    const options = {
+      appId: "fixture_server_variables",
+      authFieldName: "apiKey",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const implementation = createOpenApiConnectorRuntimeImplementation(document, options);
+
+    assert.equal(implementation.baseUrl, "https://sandbox.api.example.invalid/v2/");
+  });
+
   it("infers api key auth bindings from OpenAPI security schemes", () => {
     const document = {
       ...FIXTURE_OPENAPI,
