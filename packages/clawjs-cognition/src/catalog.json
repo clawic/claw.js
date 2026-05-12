@@ -1,0 +1,18 @@
+{
+  "domain": "cognition",
+  "version": "0.1.0",
+  "entries": [
+    {
+      "id": "cognition.note",
+      "label": "Cognition — free-form note",
+      "unit": {
+        "id": "text",
+        "label": "text",
+        "group": "abstract"
+      },
+      "valueType": "text",
+      "category": "general",
+      "description": "Free-form text observation for Cognition."
+    }
+  ]
+}

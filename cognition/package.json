@@ -1,0 +1,26 @@
+{
+  "name": "clawjs-cognition",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/bin/server.ts",
+    "build": "tsup src/bin/server.ts src/bin/cli.ts --format esm --target node20 --out-dir dist --clean",
+    "start": "node dist/server.js",
+    "cli": "node dist/cli.js",
+    "test": "node --import tsx --test tests/e2e/cognition.e2e.test.ts"
+  },
+  "dependencies": {
+    "@clawjs/cognition": "file:../packages/clawjs-cognition",
+    "@clawjs/tracking-core": "file:../packages/clawjs-tracking-core",
+    "@clawjs/tracking-runtime": "file:../packages/clawjs-tracking-runtime",
+    "better-sqlite3": "^12.9.0",
+    "fastify": "^5.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "tsup": "^8.5.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

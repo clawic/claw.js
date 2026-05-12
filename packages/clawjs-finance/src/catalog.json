@@ -1,0 +1,17 @@
+{
+  "domain": "finance",
+  "version": "0.1.0",
+  "entries": [
+    { "id": "finance.transaction_amount", "label": "Transaction amount", "unit": { "id": "currency:EUR", "label": "€", "group": "currency" }, "valueType": "currency", "category": "transactions" },
+    { "id": "finance.transaction_category", "label": "Transaction category", "unit": { "id": "text", "label": "category", "group": "abstract" }, "valueType": "enum", "enumValues": ["food", "groceries", "rent", "utilities", "transport", "fuel", "entertainment", "subscriptions", "health", "education", "travel", "shopping", "clothes", "gifts", "donations", "taxes", "savings", "investment", "salary", "freelance", "interest", "dividends", "refund", "other"], "category": "transactions" },
+    { "id": "finance.transaction_account", "label": "Account", "unit": { "id": "text", "label": "account", "group": "abstract" }, "valueType": "text", "category": "transactions" },
+    { "id": "finance.transaction_direction", "label": "Direction", "unit": { "id": "text", "label": "direction", "group": "abstract" }, "valueType": "enum", "enumValues": ["expense", "income", "transfer", "investment_in", "investment_out"], "category": "transactions" },
+    { "id": "finance.transaction_note", "label": "Transaction note", "unit": { "id": "text", "label": "text", "group": "abstract" }, "valueType": "text", "category": "transactions" },
+    { "id": "finance.budget_amount", "label": "Budget amount", "unit": { "id": "currency:EUR", "label": "€", "group": "currency" }, "valueType": "currency", "category": "budgets" },
+    { "id": "finance.budget_category", "label": "Budget category", "unit": { "id": "text", "label": "category", "group": "abstract" }, "valueType": "text", "category": "budgets" },
+    { "id": "finance.savings_goal", "label": "Savings goal target", "unit": { "id": "currency:EUR", "label": "€", "group": "currency" }, "valueType": "currency", "category": "savings" },
+    { "id": "finance.account_balance", "label": "Account balance", "unit": { "id": "currency:EUR", "label": "€", "group": "currency" }, "valueType": "currency", "category": "accounts" },
+    { "id": "finance.net_worth", "label": "Net worth snapshot", "unit": { "id": "currency:EUR", "label": "€", "group": "currency" }, "valueType": "currency", "category": "net-worth" },
+    { "id": "finance.note", "label": "Finance note", "unit": { "id": "text", "label": "text", "group": "abstract" }, "valueType": "text", "category": "general" }
+  ]
+}
