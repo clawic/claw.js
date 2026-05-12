@@ -210,7 +210,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `Usage: ${binName} <command> [options]`,
     "",
     "Primary workflow:",
-    `  ${binName} open <memory|storage|database|vault|time|feed|drive|wiki|relay|monitor|execution|delegation|content|erp|iot|day|company|notify>`,
+    `  ${binName} open <memory|storage|database|secrets|time|feed|drive|wiki|relay|monitor|execution|delegation|content|erp|iot|day|company|notify>`,
     `  ${binName} db <collection> <title>`,
     `  ${binName} db <collection> list|get|create|update|delete|schema`,
     `  ${binName} tasks|notes|people|projects|goals|reminders|deadlines ...`,
@@ -335,7 +335,7 @@ const OPEN_SURFACES: OpenSurface[] = [
   { id: "memory", label: "Memory", port: 18273, kind: "memory", dir: "memory", buildCheck: "dist/cli.js" },
   { id: "storage", label: "Storage", port: 18419, kind: "internal-storage", dir: "storage/ui", buildCheck: "dist/index.html" },
   { id: "database", label: "Database", port: 18647, aliases: ["db"], kind: "internal-database" },
-  { id: "vault", label: "Vault", port: 18853, kind: "server-script", dir: "vault", script: "dist/server.js", envHost: "VAULT_HOST", envPort: "VAULT_PORT", buildCheck: "dist/server.js" },
+  { id: "secrets", label: "Secrets", port: 18853, kind: "server-script", dir: "secrets", script: "dist/server.js", envHost: "SECRETS_HOST", envPort: "SECRETS_PORT", buildCheck: "dist/server.js" },
   { id: "time", label: "Time", port: 19121, kind: "server-script", dir: "time", script: "dist/server.js", envHost: "CLAWJS_TIME_HOST", envPort: "CLAWJS_TIME_PORT", buildCheck: "dist/server.js" },
   { id: "feed", label: "Feed", port: 19337, kind: "cli-serve", dir: "feed", buildCheck: "dist/cli.js" },
   { id: "relay", label: "Relay", port: 19543, kind: "server-script", dir: "relay", script: "dist/server.js", envHost: "HOST", envPort: "PORT", buildCheck: "dist/server.js" },
@@ -3727,7 +3727,7 @@ async function createCliClaw(
   agentId: string,
   argv: string[] = [],
 ) {
-  const explicitVaultBackend = flags["vault-url"] || flags["vault-token"] || flags["vault-tenant-id"] ? "vault" : undefined;
+  const explicitSecretsBackend = flags["secrets-url"] || flags["secrets-token"] || flags["secrets-tenant-id"] ? "secrets" : undefined;
   return createClaw({
     runtime: {
       adapter: runtimeAdapter,
@@ -3758,19 +3758,19 @@ async function createCliClaw(
     },
     secrets: (
       flags["secrets-backend"]
-      || flags["vault-url"]
-      || flags["vault-token"]
-      || flags["vault-tenant-id"]
+      || flags["secrets-url"]
+      || flags["secrets-token"]
+      || flags["secrets-tenant-id"]
       || process.env.CLAWJS_SECRETS_BACKEND
-      || process.env.VAULT_BASE_URL
-      || process.env.VAULT_TOKEN
-      || process.env.VAULT_TENANT_ID
+      || process.env.SECRETS_BASE_URL
+      || process.env.SECRETS_TOKEN
+      || process.env.SECRETS_TENANT_ID
     ) ? {
-      backend: (flags["secrets-backend"] || explicitVaultBackend || process.env.CLAWJS_SECRETS_BACKEND) as "local_proxy" | "vault" | undefined,
-      baseUrl: flags["vault-url"] || process.env.VAULT_BASE_URL,
-      credential: flags["vault-token"] || process.env.VAULT_TOKEN,
-      tenantId: flags["vault-tenant-id"] || process.env.VAULT_TENANT_ID,
-      sidecarPath: flags["vault-sidecar"] || process.env.CLAWJS_VAULT_SIDECAR_PATH,
+      backend: (flags["secrets-backend"] || explicitSecretsBackend || process.env.CLAWJS_SECRETS_BACKEND) as "local_proxy" | "secrets" | undefined,
+      baseUrl: flags["secrets-url"] || process.env.SECRETS_BASE_URL,
+      credential: flags["secrets-token"] || process.env.SECRETS_TOKEN,
+      tenantId: flags["secrets-tenant-id"] || process.env.SECRETS_TENANT_ID,
+      sidecarPath: flags["secrets-sidecar"] || process.env.CLAWJS_SECRETS_SIDECAR_PATH,
     } : undefined,
     templates: {
       pack: flags["template-pack"],

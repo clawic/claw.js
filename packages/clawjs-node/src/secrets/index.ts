@@ -4,7 +4,7 @@ import path from "path";
 import type { CommandRunner } from "../runtime/contracts.ts";
 import { buildSecretsRunnerEnv, resolveSecretsBackend, resolveSecretsCommandSpec } from "./command.ts";
 
-export const DEFAULT_SECRETS_VAULT_APP_PATH = path.join(os.homedir(), "Applications", "ClawJS Vault.app");
+export const DEFAULT_SECRETS_APP_PATH = path.join(os.homedir(), "Applications", "ClawJS Secrets.app");
 
 export interface SecretProxyMetadata {
   name: string;
@@ -178,13 +178,13 @@ function normalizeSecretMetadata(raw: Record<string, unknown>): SecretProxyMetad
   };
 }
 
-function resolveVaultConfig(env?: NodeJS.ProcessEnv): { baseUrl: string; token: string; tenantId: string } {
+function resolveSecretsConfig(env?: NodeJS.ProcessEnv): { baseUrl: string; token: string; tenantId: string } {
   const mergedEnv = buildRunnerEnv(env);
-  const baseUrl = mergedEnv.VAULT_BASE_URL?.trim();
-  const token = mergedEnv.VAULT_TOKEN?.trim();
-  const tenantId = mergedEnv.VAULT_TENANT_ID?.trim();
+  const baseUrl = mergedEnv.SECRETS_BASE_URL?.trim();
+  const token = mergedEnv.SECRETS_TOKEN?.trim();
+  const tenantId = mergedEnv.SECRETS_TENANT_ID?.trim();
   if (!baseUrl || !token || !tenantId) {
-    throw new Error("VAULT_BASE_URL, VAULT_TOKEN, and VAULT_TENANT_ID are required for the vault backend.");
+    throw new Error("SECRETS_BASE_URL, SECRETS_TOKEN, and SECRETS_TENANT_ID are required for the secrets backend.");
   }
   return {
     baseUrl: baseUrl.replace(/\/+$/, ""),
@@ -206,7 +206,7 @@ async function runProxyJsonCommand<TResult>(
   return JSON.parse(result.stdout || "null") as TResult;
 }
 
-async function runVaultJsonRequest<TResult>(
+async function runSecretsJsonRequest<TResult>(
   env: NodeJS.ProcessEnv | undefined,
   input: {
     pathname: string;
@@ -214,34 +214,34 @@ async function runVaultJsonRequest<TResult>(
     body?: unknown;
   },
 ): Promise<TResult> {
-  const vault = resolveVaultConfig(env);
-  const response = await fetch(`${vault.baseUrl}${input.pathname}`, {
+  const secrets = resolveSecretsConfig(env);
+  const response = await fetch(`${secrets.baseUrl}${input.pathname}`, {
     method: input.method ?? "GET",
     headers: {
-      Authorization: `Bearer ${vault.token}`,
+      Authorization: `Bearer ${secrets.token}`,
       ...(input.body !== undefined ? { "Content-Type": "application/json" } : {}),
     },
     ...(input.body !== undefined ? { body: JSON.stringify(input.body) } : {}),
   });
   const text = await response.text();
   if (!response.ok) {
-    throw new Error(text || `Vault request failed with ${response.status}`);
+    throw new Error(text || `Secrets request failed with ${response.status}`);
   }
   return (text ? JSON.parse(text) : null) as TResult;
 }
 
-function usesVaultBackend(env?: NodeJS.ProcessEnv): boolean {
-  return resolveSecretsBackend(env) === "vault";
+function usesSecretsBackend(env?: NodeJS.ProcessEnv): boolean {
+  return resolveSecretsBackend(env) === "secrets";
 }
 
 export async function listSecrets(
   runner: CommandRunner,
   options: { search?: string; env?: NodeJS.ProcessEnv } = {},
 ): Promise<SecretProxyMetadata[]> {
-  if (usesVaultBackend(options.env)) {
-    const { tenantId } = resolveVaultConfig(options.env);
+  if (usesSecretsBackend(options.env)) {
+    const { tenantId } = resolveSecretsConfig(options.env);
     const query = options.search?.trim() ? `?search=${encodeURIComponent(options.search.trim())}` : "";
-    const payload = await runVaultJsonRequest<{ secrets: Array<Record<string, unknown>> }>(options.env, {
+    const payload = await runSecretsJsonRequest<{ secrets: Array<Record<string, unknown>> }>(options.env, {
       pathname: `/v1/tenants/${tenantId}/secrets${query}`,
     });
     return payload.secrets.map(normalizeSecretMetadata);
@@ -262,10 +262,10 @@ export async function describeSecret(
   runner: CommandRunner,
   options: { name: string; env?: NodeJS.ProcessEnv },
 ): Promise<SecretProxyMetadata | null> {
-  if (usesVaultBackend(options.env)) {
-    const { tenantId } = resolveVaultConfig(options.env);
+  if (usesSecretsBackend(options.env)) {
+    const { tenantId } = resolveSecretsConfig(options.env);
     try {
-      const payload = await runVaultJsonRequest<{ secret: Record<string, unknown> }>(options.env, {
+      const payload = await runSecretsJsonRequest<{ secret: Record<string, unknown> }>(options.env, {
         pathname: `/v1/tenants/${tenantId}/secrets/${encodeURIComponent(options.name.trim())}`,
       });
       return normalizeSecretMetadata(payload.secret);
@@ -292,7 +292,7 @@ export async function listSecretTypes(
   options: { search?: string; env?: NodeJS.ProcessEnv } = {},
 ): Promise<SecretTypeDescriptor[]> {
   const query = options.search?.trim() ? `?search=${encodeURIComponent(options.search.trim())}` : "";
-  const payload = await runVaultJsonRequest<{ types: SecretTypeDescriptor[] }>(options.env, {
+  const payload = await runSecretsJsonRequest<{ types: SecretTypeDescriptor[] }>(options.env, {
     pathname: `/v1/secret-types${query}`,
   });
   return payload.types;
@@ -302,8 +302,8 @@ export async function getSecretCapabilities(
   _runner: CommandRunner,
   options: { name: string; env?: NodeJS.ProcessEnv },
 ): Promise<{ secret: SecretProxyMetadata; capabilities: SecretCapabilityStatus[] }> {
-  const { tenantId } = resolveVaultConfig(options.env);
-  const payload = await runVaultJsonRequest<{ secret: Record<string, unknown>; capabilities: SecretCapabilityStatus[] }>(options.env, {
+  const { tenantId } = resolveSecretsConfig(options.env);
+  const payload = await runSecretsJsonRequest<{ secret: Record<string, unknown>; capabilities: SecretCapabilityStatus[] }>(options.env, {
     pathname: `/v1/tenants/${tenantId}/secrets/${encodeURIComponent(options.name.trim())}/capabilities`,
   });
   return {
@@ -316,8 +316,8 @@ export async function listSecretActions(
   _runner: CommandRunner,
   options: { name: string; env?: NodeJS.ProcessEnv },
 ): Promise<{ secret: SecretProxyMetadata; actions: SecretTypedActionDescriptor[] }> {
-  const { tenantId } = resolveVaultConfig(options.env);
-  const payload = await runVaultJsonRequest<{ secret: Record<string, unknown>; actions: SecretTypedActionDescriptor[] }>(options.env, {
+  const { tenantId } = resolveSecretsConfig(options.env);
+  const payload = await runSecretsJsonRequest<{ secret: Record<string, unknown>; actions: SecretTypedActionDescriptor[] }>(options.env, {
     pathname: `/v1/tenants/${tenantId}/secrets/${encodeURIComponent(options.name.trim())}/actions`,
   });
   return {
@@ -331,8 +331,8 @@ export async function brokerSecretHttp(
   input: SecretBrokerHttpInput,
   options: { env?: NodeJS.ProcessEnv } = {},
 ): Promise<SecretBrokerHttpResult> {
-  const { tenantId } = resolveVaultConfig(options.env);
-  return await runVaultJsonRequest<SecretBrokerHttpResult>(options.env, {
+  const { tenantId } = resolveSecretsConfig(options.env);
+  return await runSecretsJsonRequest<SecretBrokerHttpResult>(options.env, {
     pathname: `/v1/tenants/${tenantId}/broker/http`,
     method: "POST",
     body: input,
@@ -343,8 +343,8 @@ export async function runSecretAction(
   _runner: CommandRunner,
   options: { name: string; actionId: string; env?: NodeJS.ProcessEnv },
 ): Promise<{ action: SecretTypedActionDescriptor; result: SecretBrokerHttpResult }> {
-  const { tenantId } = resolveVaultConfig(options.env);
-  return await runVaultJsonRequest<{ action: SecretTypedActionDescriptor; result: SecretBrokerHttpResult }>(options.env, {
+  const { tenantId } = resolveSecretsConfig(options.env);
+  return await runSecretsJsonRequest<{ action: SecretTypedActionDescriptor; result: SecretBrokerHttpResult }>(options.env, {
     pathname: `/v1/tenants/${tenantId}/secrets/${encodeURIComponent(options.name.trim())}/actions/${encodeURIComponent(options.actionId)}`,
     method: "POST",
   });
@@ -354,8 +354,8 @@ export async function listSecretLeases(
   _runner: CommandRunner,
   options: { env?: NodeJS.ProcessEnv } = {},
 ): Promise<SecretLeaseRecord[]> {
-  const { tenantId } = resolveVaultConfig(options.env);
-  const payload = await runVaultJsonRequest<{ leases: SecretLeaseRecord[] }>(options.env, {
+  const { tenantId } = resolveSecretsConfig(options.env);
+  const payload = await runSecretsJsonRequest<{ leases: SecretLeaseRecord[] }>(options.env, {
     pathname: `/v1/tenants/${tenantId}/leases`,
   });
   return payload.leases;
@@ -365,9 +365,9 @@ export async function doctorKeychain(
   runner: CommandRunner,
   options: { env?: NodeJS.ProcessEnv } = {},
 ): Promise<SecretDoctorResult> {
-  if (usesVaultBackend(options.env)) {
+  if (usesSecretsBackend(options.env)) {
     try {
-      const payload = await runVaultJsonRequest<{ ok: boolean; service: string; host: string; port: number }>(options.env, {
+      const payload = await runSecretsJsonRequest<{ ok: boolean; service: string; host: string; port: number }>(options.env, {
         pathname: "/v1/health",
       });
       return {
@@ -426,7 +426,7 @@ function summarizeEnsureResult(
     return `Secret ${secretName} already matches the required metadata.`;
   }
   if (status === "missing") {
-    return `Secret ${secretName} does not exist in Vault yet.`;
+    return `Secret ${secretName} does not exist in Secrets yet.`;
   }
   const parts: string[] = [];
   if (missingHosts.length > 0) parts.push(`missing hosts: ${missingHosts.join(", ")}`);
@@ -480,7 +480,7 @@ export async function ensureSecretReference(
     missingHeaderNames,
     mismatched,
     instructions: {
-      openAppPath: DEFAULT_SECRETS_VAULT_APP_PATH,
+      openAppPath: DEFAULT_SECRETS_APP_PATH,
       summary: summarizeEnsureResult(status, requirement.name, missingHosts, missingHeaderNames, mismatched),
     },
   };

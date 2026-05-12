@@ -1,4 +1,4 @@
-// Launcher for `claw open database`. Mirrors `vault-server-launcher.mjs`.
+// Launcher for `claw open database`. Mirrors `secrets-server-launcher.mjs`.
 // Boots the bundled @clawjs/database server with deterministic flags so the
 // Clawix Mac supervisor can spawn it with --port / --workspace /
 // --status-file and read back the status file to know we are ready.

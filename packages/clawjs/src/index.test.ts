@@ -109,7 +109,7 @@ async function startDelegationPlaneTestServer(workspaceRoot: string): Promise<{ 
   throw new Error("Delegation Plane test server did not start.");
 }
 
-async function createFakeVaultCliServer() {
+async function createFakeSecretsCliServer() {
   const server = http.createServer((request, response) => {
     const url = new URL(request.url || "/", "http://127.0.0.1");
     if (url.pathname === "/v1/secret-types") {
@@ -4647,8 +4647,8 @@ test("runCli exposes provider catalog and auth state commands", async () => {
   assert.match(stateStdout.getOutput(), /"providers"/);
 });
 
-test("runCli exposes vault-backed secrets commands", async () => {
-  const vault = await createFakeVaultCliServer();
+test("runCli exposes secrets-backed secrets commands", async () => {
+  const secrets = await createFakeSecretsCliServer();
   try {
     const listStdout = captureStream();
     const listExitCode = await runCli([
@@ -4656,10 +4656,10 @@ test("runCli exposes vault-backed secrets commands", async () => {
       "secrets",
       "list",
       "--workspace", fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-secrets-list-")),
-      "--secrets-backend", "vault",
-      "--vault-url", vault.baseUrl,
-      "--vault-token", "vault-token",
-      "--vault-tenant-id", "demo-tenant",
+      "--secrets-backend", "secrets",
+      "--secrets-url", secrets.baseUrl,
+      "--secrets-token", "secrets-token",
+      "--secrets-tenant-id", "demo-tenant",
       "--json",
     ], {
       stdout: listStdout.stream,
@@ -4675,10 +4675,10 @@ test("runCli exposes vault-backed secrets commands", async () => {
       "secrets",
       "types",
       "--workspace", fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-secrets-types-")),
-      "--secrets-backend", "vault",
-      "--vault-url", vault.baseUrl,
-      "--vault-token", "vault-token",
-      "--vault-tenant-id", "demo-tenant",
+      "--secrets-backend", "secrets",
+      "--secrets-url", secrets.baseUrl,
+      "--secrets-token", "secrets-token",
+      "--secrets-tenant-id", "demo-tenant",
       "--json",
     ], {
       stdout: typesStdout.stream,
@@ -4695,10 +4695,10 @@ test("runCli exposes vault-backed secrets commands", async () => {
       "capabilities",
       "--name", "npm_token_main",
       "--workspace", fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-secrets-capabilities-")),
-      "--secrets-backend", "vault",
-      "--vault-url", vault.baseUrl,
-      "--vault-token", "vault-token",
-      "--vault-tenant-id", "demo-tenant",
+      "--secrets-backend", "secrets",
+      "--secrets-url", secrets.baseUrl,
+      "--secrets-token", "secrets-token",
+      "--secrets-tenant-id", "demo-tenant",
       "--json",
     ], {
       stdout: capabilitiesStdout.stream,
@@ -4708,7 +4708,7 @@ test("runCli exposes vault-backed secrets commands", async () => {
     assert.equal(capabilitiesExitCode, CLI_EXIT_OK);
     assert.match(capabilitiesStdout.getOutput(), /"capabilities"/);
   } finally {
-    await vault.close();
+    await secrets.close();
   }
 });
 

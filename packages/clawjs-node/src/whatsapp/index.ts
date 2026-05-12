@@ -95,7 +95,7 @@ function validatePhoneNumberId(phoneNumberId: string | undefined): string {
 }
 
 function maskSecretReference(secretName: string): string {
-  return `vault:${maskCredential(secretName) ?? "configured"}`;
+  return `secrets:${maskCredential(secretName) ?? "configured"}`;
 }
 
 function resolveWacliPath(env?: NodeJS.ProcessEnv): string {

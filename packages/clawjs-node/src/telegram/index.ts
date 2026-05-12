@@ -165,7 +165,7 @@ function validateWebhookSecretToken(value: string | undefined): string | undefin
 }
 
 function maskSecretReference(secretName: string): string {
-  return `vault:${maskCredential(secretName) ?? "configured"}`;
+  return `secrets:${maskCredential(secretName) ?? "configured"}`;
 }
 
 function buildRunnerEnv(env?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
@@ -220,12 +220,12 @@ export async function downloadTelegramFile(
   filePath: string,
   timeoutMs = 30_000,
 ): Promise<Buffer> {
-  if (resolveSecretsBackend(env) === "vault") {
-    const baseUrl = (env?.VAULT_BASE_URL ?? process.env.VAULT_BASE_URL)?.trim()?.replace(/\/+$/, "");
-    const token = (env?.VAULT_TOKEN ?? process.env.VAULT_TOKEN)?.trim();
-    const tenantId = (env?.VAULT_TENANT_ID ?? process.env.VAULT_TENANT_ID)?.trim();
+  if (resolveSecretsBackend(env) === "secrets") {
+    const baseUrl = (env?.SECRETS_BASE_URL ?? process.env.SECRETS_BASE_URL)?.trim()?.replace(/\/+$/, "");
+    const token = (env?.SECRETS_TOKEN ?? process.env.SECRETS_TOKEN)?.trim();
+    const tenantId = (env?.SECRETS_TENANT_ID ?? process.env.SECRETS_TENANT_ID)?.trim();
     if (!baseUrl || !token || !tenantId) {
-      throw new Error("VAULT_BASE_URL, VAULT_TOKEN, and VAULT_TENANT_ID are required to download Telegram files.");
+      throw new Error("SECRETS_BASE_URL, SECRETS_TOKEN, and SECRETS_TENANT_ID are required to download Telegram files.");
     }
     const normalizedBase = normalizeApiBaseUrl(apiBaseUrl);
     const fileBase = normalizedBase.replace(/\/api\/?$/, "");

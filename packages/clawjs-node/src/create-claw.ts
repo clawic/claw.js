@@ -542,7 +542,7 @@ export interface CreateClawOptions {
     };
   };
   secrets?: {
-    backend?: "local_proxy" | "vault";
+    backend?: "local_proxy" | "secrets";
     baseUrl?: string;
     credential?: string;
     tenantId?: string;
@@ -1747,10 +1747,10 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     ...(runtimeEnv ?? {}),
     ...(options.secrets?.env ?? {}),
     ...(options.secrets?.backend ? { CLAWJS_SECRETS_BACKEND: options.secrets.backend } : {}),
-    ...(options.secrets?.baseUrl ? { VAULT_BASE_URL: options.secrets.baseUrl } : {}),
-    ...(options.secrets?.credential ? { VAULT_TOKEN: options.secrets.credential } : {}),
-    ...(options.secrets?.tenantId ? { VAULT_TENANT_ID: options.secrets.tenantId } : {}),
-    ...(options.secrets?.sidecarPath ? { CLAWJS_VAULT_SIDECAR_PATH: options.secrets.sidecarPath } : {}),
+    ...(options.secrets?.baseUrl ? { SECRETS_BASE_URL: options.secrets.baseUrl } : {}),
+    ...(options.secrets?.credential ? { SECRETS_TOKEN: options.secrets.credential } : {}),
+    ...(options.secrets?.tenantId ? { SECRETS_TENANT_ID: options.secrets.tenantId } : {}),
+    ...(options.secrets?.sidecarPath ? { CLAWJS_SECRETS_SIDECAR_PATH: options.secrets.sidecarPath } : {}),
   };
   const processHost = adapter.id === "openclaw"
     ? withOpenClawCommandRunner(baseProcessHost, {

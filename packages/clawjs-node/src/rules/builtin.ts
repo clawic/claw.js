@@ -73,7 +73,7 @@ export const BUILTIN_CLAWJS_RULES: RuleRecord[] = [
     key: "clawjs-secrets",
     priority: 2,
     content: "Use secret references and brokered requests only; never request, print, store, or copy literal secret values.",
-    references: [reference("docs/agent-rules/secrets.md", "Secrets and Vault")],
+    references: [reference("docs/agent-rules/secrets.md", "Secrets")],
   }),
   rule({
     id: "clawjs-command-surface",

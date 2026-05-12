@@ -3,8 +3,8 @@
 import path from "path";
 import { fileURLToPath } from "node:url";
 
-import { runVaultCli, VAULT_GROUPS } from "./vault-commands.mjs";
-import { runOpenVault } from "./vault-server-launcher.mjs";
+import { runSecretsCli, SECRETS_GROUPS } from "./secrets-commands.mjs";
+import { runOpenSecrets } from "./secrets-server-launcher.mjs";
 import { runOpenDatabase } from "./database-server-launcher.mjs";
 import { runMemoryCli, MEMORY_GROUPS } from "./memory-commands.mjs";
 import { runOpenMemory } from "./memory-server-launcher.mjs";
@@ -19,10 +19,10 @@ import { BUILTIN_COLLECTIONS_BY_ALIAS } from "@clawjs/core";
 
 const args = process.argv.slice(2);
 
-// Vault/Memory/Drive subcommands first (small router; the heavy CLI lives in dist/index.js).
+// Secrets/Memory/Drive subcommands first (small router; the heavy CLI lives in dist/index.js).
 const first = args[0];
-if (first && VAULT_GROUPS.has(first)) {
-  process.exit(await runVaultCli(args));
+if (first && SECRETS_GROUPS.has(first)) {
+  process.exit(await runSecretsCli(args));
 }
 if (first && MEMORY_GROUPS.has(first)) {
   process.exit(await runMemoryCli(args));
@@ -39,8 +39,8 @@ if (first && BUILTIN_COLLECTIONS_BY_ALIAS.has(first.toLowerCase())) {
   const rest = args.slice(2);
   args.splice(0, args.length, "db", canonical, verb, ...rest);
 }
-if (first === "open" && args[1] === "vault") {
-  process.exit(await runOpenVault(args.slice(2)));
+if (first === "open" && args[1] === "secrets") {
+  process.exit(await runOpenSecrets(args.slice(2)));
 }
 if (first === "open" && args[1] === "database") {
   process.exit(await runOpenDatabase(args.slice(2)));

@@ -1,11 +1,11 @@
-// Vault subcommands for the Clawix CLI. Implemented as a small HTTP
-// client against the local Vault server (default 127.0.0.1:7793).
+// Secrets subcommands for the Clawix CLI. Implemented as a small HTTP
+// client against the local Secrets server (default 127.0.0.1:7793).
 
 import readline from "node:readline/promises";
 import process from "node:process";
 
-const DEFAULT_BASE = process.env.CLAWJS_VAULT_BASE ?? "http://127.0.0.1:7793";
-const DEFAULT_TENANT = process.env.CLAWJS_VAULT_TENANT ?? "clawix-local";
+const DEFAULT_BASE = process.env.SECRETS_BASE_URL ?? process.env.CLAWJS_SECRETS_BASE ?? "http://127.0.0.1:7793";
+const DEFAULT_TENANT = process.env.SECRETS_TENANT_ID ?? process.env.CLAWJS_SECRETS_TENANT ?? "clawix-local";
 
 function parseFlags(args) {
   const out = { _: [], flags: {} };
@@ -30,7 +30,8 @@ function parseFlags(args) {
 async function fetchJson(path, init = {}) {
   const headers = { ...(init.headers ?? {}) };
   if (init.body !== undefined) headers["Content-Type"] = "application/json";
-  if (process.env.CLAWJS_VAULT_TOKEN) headers["Authorization"] = `Bearer ${process.env.CLAWJS_VAULT_TOKEN}`;
+  const token = process.env.SECRETS_TOKEN ?? process.env.SECRETS_ADMIN_TOKEN ?? process.env.CLAWJS_SECRETS_TOKEN;
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${DEFAULT_BASE}${path}`, { ...init, headers });
   let body;
   try { body = await res.json(); } catch { body = null; }
@@ -73,17 +74,17 @@ function fmt(value) {
   return JSON.stringify(value, null, 2);
 }
 
-const HELP = `claw vault | secrets | grants | leases | policies | audit
+const HELP = `claw secrets <command>
 
-  vault setup                              initialize the vault (interactive password)
-  vault unlock                             unlock with password
-  vault lock                               lock the in-memory keys
-  vault recover                            recover via 12-word phrase
-  vault change-password                    rotate password (issues new recovery phrase)
-  vault doctor                             health + integrity report
-  vault state                              show locked/unlocked state
+  secrets setup                              initialize the secrets (interactive password)
+  secrets unlock                             unlock with password
+  secrets lock                               lock the in-memory keys
+  secrets recover                            recover via 24-word phrase
+  secrets change-password                    rotate password (issues new recovery phrase)
+  secrets doctor                             health + integrity report
+  secrets state                              show locked/unlocked state
 
-  secrets list [--search <q>] [--vault <id>]
+  secrets list [--search <q>] [--folder <id>]
   secrets describe <name>
   secrets create --file <draft.json>       payload as JSON file
   secrets reveal <name> --field <f> [--purpose uiCopy|uiReveal]
@@ -96,65 +97,65 @@ const HELP = `claw vault | secrets | grants | leases | policies | audit
   secrets types                            list registered typeIds
   secrets plugins                          list registered plugins
 
-  grants issue --secret <name> --agent <id> --capability <kind> [--scope <json>] [--vault-caps <list>] [--reason <r>] [--minutes <n>]
-  grants list
-  grants revoke <id>
+  secrets grants issue --secret <name> --agent <id> --capability <kind> [--scope <json>] [--secrets-caps <list>] [--reason <r>] [--minutes <n>]
+  secrets grants list
+  secrets grants revoke <id>
 
-  leases issue --secret <name> --mode process|browser [--minutes <n>]
-  leases list
-  leases revoke <id>
+  secrets leases issue --secret <name> --mode process|browser [--minutes <n>]
+  secrets leases list
+  secrets leases revoke <id>
 
-  policies list
-  policies create --subject-type <t> --subject-id <id> --secret <name> --capability <c> --effect allow|deny
-  policies delete <id>
+  secrets policies list
+  secrets policies create --subject-type <t> --subject-id <id> --secret <name> --capability <c> --effect allow|deny
+  secrets policies delete <id>
 
-  audit query [--kinds <csv>] [--since <iso>] [--limit <n>]
-  audit verify-integrity
+  secrets audit query [--kinds <csv>] [--since <iso>] [--limit <n>]
+  secrets audit verify-integrity
 
-Env: CLAWJS_VAULT_BASE (${DEFAULT_BASE}), CLAWJS_VAULT_TENANT (${DEFAULT_TENANT}), CLAWJS_VAULT_TOKEN
+Env: SECRETS_BASE_URL (${DEFAULT_BASE}), SECRETS_TENANT_ID (${DEFAULT_TENANT}), SECRETS_TOKEN
 `;
 
-async function vaultSetup() {
+async function secretsSetup() {
   const password = await prompt("Master password: ", true);
   const confirm = await prompt("Confirm password: ", true);
   if (password !== confirm) {
     console.error("Passwords do not match.");
     return 1;
   }
-  const res = await fetchJson("/v1/vault/setup", { method: "POST", body: JSON.stringify({ password }) });
+  const res = await fetchJson("/v1/secrets/setup", { method: "POST", body: JSON.stringify({ password }) });
   if (!res.ok) { console.error(fmt(res.body)); return 1; }
-  console.log("Vault initialized.");
+  console.log("Secrets initialized.");
   console.log("\nRecovery phrase (write it down NOW, it is shown ONCE):\n");
   console.log(`  ${res.body.recoveryPhrase}\n`);
   return 0;
 }
 
-async function vaultUnlock() {
+async function secretsUnlock() {
   const password = await prompt("Master password: ", true);
-  const res = await fetchJson("/v1/vault/unlock", { method: "POST", body: JSON.stringify({ password }) });
+  const res = await fetchJson("/v1/secrets/unlock", { method: "POST", body: JSON.stringify({ password }) });
   if (!res.ok) { console.error(fmt(res.body)); return 1; }
-  console.log("Vault unlocked.");
+  console.log("Secrets unlocked.");
   return 0;
 }
 
-async function vaultLock() {
-  const res = await fetchJson("/v1/vault/lock", { method: "POST" });
-  console.log(res.ok ? "Vault locked." : fmt(res.body));
+async function secretsLock() {
+  const res = await fetchJson("/v1/secrets/lock", { method: "POST" });
+  console.log(res.ok ? "Secrets locked." : fmt(res.body));
   return res.ok ? 0 : 1;
 }
 
-async function vaultRecover() {
-  const phrase = await prompt("Recovery phrase (12 words): ");
-  const res = await fetchJson("/v1/vault/recover", { method: "POST", body: JSON.stringify({ phrase }) });
+async function secretsRecover() {
+  const phrase = await prompt("Recovery phrase (24 words): ");
+  const res = await fetchJson("/v1/secrets/recover", { method: "POST", body: JSON.stringify({ phrase }) });
   if (!res.ok) { console.error(fmt(res.body)); return 1; }
-  console.log("Vault unlocked via recovery phrase.");
+  console.log("Secrets unlocked via recovery phrase.");
   return 0;
 }
 
-async function vaultChangePassword() {
+async function secretsChangePassword() {
   const oldPassword = await prompt("Current password: ", true);
   const newPassword = await prompt("New password: ", true);
-  const res = await fetchJson("/v1/vault/change-password", { method: "POST", body: JSON.stringify({ oldPassword, newPassword }) });
+  const res = await fetchJson("/v1/secrets/change-password", { method: "POST", body: JSON.stringify({ oldPassword, newPassword }) });
   if (!res.ok) { console.error(fmt(res.body)); return 1; }
   console.log("Password rotated.");
   console.log("\nNew recovery phrase (write it down NOW):\n");
@@ -162,14 +163,14 @@ async function vaultChangePassword() {
   return 0;
 }
 
-async function vaultDoctor() {
-  const res = await fetchJson("/v1/vault/doctor");
+async function secretsDoctor() {
+  const res = await fetchJson("/v1/secrets/doctor");
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
 
-async function vaultState() {
-  const res = await fetchJson("/v1/vault/state");
+async function secretsState() {
+  const res = await fetchJson("/v1/secrets/state");
   console.log(fmt(res.body));
   return 0;
 }
@@ -177,7 +178,7 @@ async function vaultState() {
 async function secretsList(flags) {
   const q = new URLSearchParams();
   if (flags.search) q.set("search", String(flags.search));
-  if (flags.vault) q.set("vaultId", String(flags.vault));
+  if (flags.folder) q.set("folderId", String(flags.folder));
   if (flags["include-trashed"]) q.set("includeTrashed", "true");
   const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/secrets?${q.toString()}`);
   if (!res.ok) { console.error(fmt(res.body)); return 1; }
@@ -306,7 +307,7 @@ async function grantsIssue(args) {
     secretName: args.flags.secret,
     agent: args.flags.agent,
     capability: { kind: args.flags.capability, ...(args.flags.scope ? JSON.parse(String(args.flags.scope)) : {}) },
-    vaultCapabilities: args.flags["vault-caps"] ? String(args.flags["vault-caps"]).split(",") : [],
+    secretsCapabilities: args.flags["secrets-caps"] ? String(args.flags["secrets-caps"]).split(",") : [],
     reason: args.flags.reason ?? "issued via CLI",
     durationMinutes: args.flags.minutes ? Number(args.flags.minutes) : 10,
   };
@@ -322,7 +323,8 @@ async function grantsList() {
 }
 
 async function grantsRevoke(args) {
-  const id = args._[1];
+  const id = args._[2];
+  if (!id) { console.error("id required"); return 1; }
   const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/grants/${encodeURIComponent(id)}`, { method: "DELETE" });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
@@ -346,7 +348,8 @@ async function leasesList() {
 }
 
 async function leasesRevoke(args) {
-  const id = args._[1];
+  const id = args._[2];
+  if (!id) { console.error("id required"); return 1; }
   const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/leases/${encodeURIComponent(id)}/revoke`, { method: "POST" });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
@@ -372,7 +375,8 @@ async function policiesCreate(args) {
 }
 
 async function policiesDelete(args) {
-  const id = args._[1];
+  const id = args._[2];
+  if (!id) { console.error("id required"); return 1; }
   const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/policies/${encodeURIComponent(id)}`, { method: "DELETE" });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
@@ -394,66 +398,62 @@ async function auditVerify() {
   return res.ok ? 0 : 1;
 }
 
-export async function runVaultCli(rawArgs) {
+export async function runSecretsCli(rawArgs) {
   if (rawArgs.length === 0 || rawArgs[0] === "--help" || rawArgs[0] === "-h") {
     console.log(HELP);
     return 0;
   }
-  const [group, sub, ...rest] = rawArgs;
-  const args = parseFlags([sub ?? "", ...rest].filter(Boolean));
+  if (rawArgs[0] !== "secrets") {
+    console.log(HELP);
+    return 1;
+  }
+  const [, sub, nested, ...rest] = rawArgs;
+  const args = parseFlags([sub ?? "", nested ?? "", ...rest].filter(Boolean));
 
   try {
-    switch (group) {
-      case "vault":
-        switch (sub) {
-          case "setup": return await vaultSetup();
-          case "unlock": return await vaultUnlock();
-          case "lock": return await vaultLock();
-          case "recover": return await vaultRecover();
-          case "change-password": return await vaultChangePassword();
-          case "doctor": return await vaultDoctor();
-          case "state": return await vaultState();
-          default: console.log(HELP); return 1;
-        }
-      case "secrets":
-        switch (sub) {
-          case "list": return await secretsList(args.flags);
-          case "describe": return await secretsDescribe(args);
-          case "create": return await secretsCreate(args);
-          case "reveal": return await secretsReveal(args);
-          case "archive": return await secretsArchive(args);
-          case "compromise": return await secretsCompromise(args);
-          case "trash": return await secretsTrash(args);
-          case "restore": return await secretsRestore(args);
-          case "execute": return await secretsExecute(args);
-          case "sync": return await secretsSync(args);
-          case "types": return await secretsTypes();
-          case "plugins": return await secretsPlugins();
-          default: console.log(HELP); return 1;
-        }
+    switch (sub) {
+      case "setup": return await secretsSetup();
+      case "unlock": return await secretsUnlock();
+      case "lock": return await secretsLock();
+      case "recover": return await secretsRecover();
+      case "change-password": return await secretsChangePassword();
+      case "doctor": return await secretsDoctor();
+      case "state": return await secretsState();
+      case "list": return await secretsList(args.flags);
+      case "describe": return await secretsDescribe(args);
+      case "create": return await secretsCreate(args);
+      case "reveal": return await secretsReveal(args);
+      case "archive": return await secretsArchive(args);
+      case "compromise": return await secretsCompromise(args);
+      case "trash": return await secretsTrash(args);
+      case "restore": return await secretsRestore(args);
+      case "execute": return await secretsExecute(args);
+      case "sync": return await secretsSync(args);
+      case "types": return await secretsTypes();
+      case "plugins": return await secretsPlugins();
       case "grants":
-        switch (sub) {
+        switch (nested) {
           case "issue": return await grantsIssue(args);
           case "list": return await grantsList();
           case "revoke": return await grantsRevoke(args);
           default: console.log(HELP); return 1;
         }
       case "leases":
-        switch (sub) {
+        switch (nested) {
           case "issue": return await leasesIssue(args);
           case "list": return await leasesList();
           case "revoke": return await leasesRevoke(args);
           default: console.log(HELP); return 1;
         }
       case "policies":
-        switch (sub) {
+        switch (nested) {
           case "list": return await policiesList();
           case "create": return await policiesCreate(args);
           case "delete": return await policiesDelete(args);
           default: console.log(HELP); return 1;
         }
       case "audit":
-        switch (sub) {
+        switch (nested) {
           case "query": return await auditQuery(args);
           case "verify-integrity": return await auditVerify();
           default: console.log(HELP); return 1;
@@ -463,9 +463,9 @@ export async function runVaultCli(rawArgs) {
         return 1;
     }
   } catch (err) {
-    console.error("[claw vault]", err?.message ?? err);
+    console.error("[claw secrets]", err?.message ?? err);
     return 1;
   }
 }
 
-export const VAULT_GROUPS = new Set(["vault", "secrets", "grants", "leases", "policies", "audit"]);
+export const SECRETS_GROUPS = new Set(["secrets"]);

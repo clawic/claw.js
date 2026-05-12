@@ -593,7 +593,7 @@ function providerSelectionFromFlags(input: ChatCliInput, providerId: string): Ch
   };
 }
 
-async function describeConfiguredVaultSecret(secretRef: string, input: ChatCliInput): Promise<"configured" | "missing" | "unknown"> {
+async function describeConfiguredSecretsSecret(secretRef: string, input: ChatCliInput): Promise<"configured" | "missing" | "unknown"> {
   try {
     const runner = new NodeProcessHost();
     const result = await ensureHttpSecretReference(runner, {
@@ -607,10 +607,10 @@ async function describeConfiguredVaultSecret(secretRef: string, input: ChatCliIn
       env: {
         ...process.env,
         ...(input.flags["secrets-backend"] ? { CLAWJS_SECRETS_BACKEND: input.flags["secrets-backend"] } : {}),
-        ...(input.flags["vault-url"] ? { VAULT_BASE_URL: input.flags["vault-url"] } : {}),
-        ...(input.flags["vault-token"] ? { VAULT_TOKEN: input.flags["vault-token"] } : {}),
-        ...(input.flags["vault-tenant-id"] ? { VAULT_TENANT_ID: input.flags["vault-tenant-id"] } : {}),
-        ...(input.flags["vault-sidecar"] ? { CLAWJS_VAULT_SIDECAR_PATH: input.flags["vault-sidecar"] } : {}),
+        ...(input.flags["secrets-url"] ? { SECRETS_BASE_URL: input.flags["secrets-url"] } : {}),
+        ...(input.flags["secrets-token"] ? { SECRETS_TOKEN: input.flags["secrets-token"] } : {}),
+        ...(input.flags["secrets-tenant-id"] ? { SECRETS_TENANT_ID: input.flags["secrets-tenant-id"] } : {}),
+        ...(input.flags["secrets-sidecar"] ? { CLAWJS_SECRETS_SIDECAR_PATH: input.flags["secrets-sidecar"] } : {}),
       },
     });
     return result.status === "configured" ? "configured" : "missing";
@@ -619,14 +619,14 @@ async function describeConfiguredVaultSecret(secretRef: string, input: ChatCliIn
   }
 }
 
-function writeDeepSeekVaultInstructions(context: ChatCliContext, secretRef: string): void {
+function writeDeepSeekSecretsInstructions(context: ChatCliContext, secretRef: string): void {
   context.stdout.write([
     `Secret required: ${secretRef}`,
     "Internal name: claw_deepseek_api_key",
     "Allowed hosts: api.deepseek.com",
     "Allowed headers: Authorization",
     "readOnly: true",
-    `Open: ${path.join(os.homedir(), "Applications", "ClawJS Vault.app")}`,
+    `Open: ${path.join(os.homedir(), "Applications", "ClawJS Secrets.app")}`,
     "Then rerun: claw provider login deepseek",
     "",
   ].join("\n"));
@@ -660,7 +660,7 @@ export async function runProviderCli(input: ChatCliInput): Promise<number> {
   if (command === "status") {
     const selection = providerSelectionFromFlags(input, providerId);
     const config = resolveClawRuntimeConfig(buildRuntimeOptions(selection));
-    const vaultStatus = config.provider.secretRef ? await describeConfiguredVaultSecret(config.provider.secretRef, input) : "unknown";
+    const secretsStatus = config.provider.secretRef ? await describeConfiguredSecretsSecret(config.provider.secretRef, input) : "unknown";
     const payload = {
       provider: config.provider.id,
       model: config.model,
@@ -668,11 +668,11 @@ export async function runProviderCli(input: ChatCliInput): Promise<number> {
       authSource: config.authSource,
       envKey: config.provider.envKey,
       secretRef: config.provider.secretRef ?? null,
-      vaultStatus,
+      secretsStatus,
     };
     if (input.wantsJson) writeJson(input.context.stdout, payload);
-    else input.context.stdout.write(`${payload.provider}:${payload.authSource}${payload.secretRef ? `:${payload.vaultStatus}` : ""}\n`);
-    return config.authSource === "missing" || vaultStatus === "missing" ? CHAT_EXIT_DEGRADED : CHAT_EXIT_OK;
+    else input.context.stdout.write(`${payload.provider}:${payload.authSource}${payload.secretRef ? `:${payload.secretsStatus}` : ""}\n`);
+    return config.authSource === "missing" || secretsStatus === "missing" ? CHAT_EXIT_DEGRADED : CHAT_EXIT_OK;
   }
 
   if (command === "login") {
@@ -695,10 +695,10 @@ export async function runProviderCli(input: ChatCliInput): Promise<number> {
         env: {
           ...process.env,
           ...(input.flags["secrets-backend"] ? { CLAWJS_SECRETS_BACKEND: input.flags["secrets-backend"] } : {}),
-          ...(input.flags["vault-url"] ? { VAULT_BASE_URL: input.flags["vault-url"] } : {}),
-          ...(input.flags["vault-token"] ? { VAULT_TOKEN: input.flags["vault-token"] } : {}),
-          ...(input.flags["vault-tenant-id"] ? { VAULT_TENANT_ID: input.flags["vault-tenant-id"] } : {}),
-          ...(input.flags["vault-sidecar"] ? { CLAWJS_VAULT_SIDECAR_PATH: input.flags["vault-sidecar"] } : {}),
+          ...(input.flags["secrets-url"] ? { SECRETS_BASE_URL: input.flags["secrets-url"] } : {}),
+          ...(input.flags["secrets-token"] ? { SECRETS_TOKEN: input.flags["secrets-token"] } : {}),
+          ...(input.flags["secrets-tenant-id"] ? { SECRETS_TENANT_ID: input.flags["secrets-tenant-id"] } : {}),
+          ...(input.flags["secrets-sidecar"] ? { CLAWJS_SECRETS_SIDECAR_PATH: input.flags["secrets-sidecar"] } : {}),
         },
       });
       status = result.status;
@@ -710,7 +710,7 @@ export async function runProviderCli(input: ChatCliInput): Promise<number> {
     if (status === "configured") {
       const configPath = writeRuntimeConfig({ ...selection, secretRef });
       if (input.wantsJson) writeJson(input.context.stdout, { provider: "deepseek", status, secretRef, configPath });
-      else input.context.stdout.write(`deepseek vault configured\n`);
+      else input.context.stdout.write(`deepseek secrets configured\n`);
       return CHAT_EXIT_OK;
     }
 
@@ -719,7 +719,7 @@ export async function runProviderCli(input: ChatCliInput): Promise<number> {
       writeJson(input.context.stdout, { provider: "deepseek", status, secretRef, configured: false });
     } else {
       input.context.stdout.write(`deepseek ${status}\n`);
-      writeDeepSeekVaultInstructions(input.context, secretRef);
+      writeDeepSeekSecretsInstructions(input.context, secretRef);
     }
     return CHAT_EXIT_DEGRADED;
   }

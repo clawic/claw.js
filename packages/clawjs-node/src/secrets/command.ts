@@ -15,20 +15,20 @@ function resolveSecretsProxyPath(env?: NodeJS.ProcessEnv): string {
     || DEFAULT_SECRETS_PROXY_PATH;
 }
 
-function resolveSecretsBackend(env?: NodeJS.ProcessEnv): "local_proxy" | "vault" {
+function resolveSecretsBackend(env?: NodeJS.ProcessEnv): "local_proxy" | "secrets" {
   const explicitBackend = env?.CLAWJS_SECRETS_BACKEND?.trim()
     || process.env.CLAWJS_SECRETS_BACKEND?.trim();
   if (explicitBackend) {
-    return explicitBackend === "vault" ? "vault" : "local_proxy";
+    return explicitBackend === "secrets" ? "secrets" : "local_proxy";
   }
   const mergedEnv = buildSecretsRunnerEnv(env);
-  const hasVaultConfig = !!(
-    mergedEnv.VAULT_BASE_URL?.trim()
-    && mergedEnv.VAULT_TOKEN?.trim()
-    && mergedEnv.VAULT_TENANT_ID?.trim()
+  const hasSecretsConfig = !!(
+    mergedEnv.SECRETS_BASE_URL?.trim()
+    && mergedEnv.SECRETS_TOKEN?.trim()
+    && mergedEnv.SECRETS_TENANT_ID?.trim()
   );
-  const backend = hasVaultConfig ? "vault" : "local_proxy";
-  return backend === "vault" ? "vault" : "local_proxy";
+  const backend = hasSecretsConfig ? "secrets" : "local_proxy";
+  return backend === "secrets" ? "secrets" : "local_proxy";
 }
 
 export function buildSecretsRunnerEnv(env?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
@@ -40,10 +40,10 @@ export function buildSecretsRunnerEnv(env?: NodeJS.ProcessEnv): NodeJS.ProcessEn
 
 export function resolveSecretsCommandSpec(env?: NodeJS.ProcessEnv): SecretsCommandSpec {
   const mergedEnv = buildSecretsRunnerEnv(env);
-  if (resolveSecretsBackend(env) === "vault") {
-    const sidecarPath = mergedEnv.CLAWJS_VAULT_SIDECAR_PATH?.trim();
+  if (resolveSecretsBackend(env) === "secrets") {
+    const sidecarPath = mergedEnv.CLAWJS_SECRETS_SIDECAR_PATH?.trim();
     if (!sidecarPath) {
-      throw new Error("CLAWJS_VAULT_SIDECAR_PATH is required when CLAWJS_SECRETS_BACKEND=vault");
+      throw new Error("CLAWJS_SECRETS_SIDECAR_PATH is required when CLAWJS_SECRETS_BACKEND=secrets");
     }
     const nodePath = mergedEnv.CLAWJS_SECRETS_NODE_PATH?.trim() || process.execPath;
     return {

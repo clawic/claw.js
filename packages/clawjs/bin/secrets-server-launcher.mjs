@@ -1,5 +1,5 @@
-// Launcher for `claw open vault`. Starts the bundled Vault server. The
-// vault server source lives in `vault/` (workspace sibling) and is
+// Launcher for `claw open secrets`. Starts the bundled Secrets server. The
+// secrets server source lives in `secrets/` (workspace sibling) and is
 // bundled by the Clawix Mac packaging step into the same dir as this
 // launcher; in dev mode (running from the workspace) we resolve via the
 // sibling path.
@@ -12,10 +12,10 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 function findServerEntry() {
   const candidates = [
-    path.join(HERE, "vault-server.mjs"),                                       // co-located after Mac bundling
-    path.join(HERE, "../vault-server/dist/server.js"),                         // packed monorepo dep
-    path.join(HERE, "../../../vault/dist/server.js"),                          // dev: built once
-    path.join(HERE, "../../../vault/src/bin/server.ts"),                       // dev: tsx fallback
+    path.join(HERE, "secrets-server.mjs"),                                       // co-located after Mac bundling
+    path.join(HERE, "../secrets-server/dist/server.js"),                         // packed monorepo dep
+    path.join(HERE, "../../../secrets/dist/server.js"),                          // dev: built once
+    path.join(HERE, "../../../secrets/src/bin/server.ts"),                       // dev: tsx fallback
   ];
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) return candidate;
@@ -23,7 +23,7 @@ function findServerEntry() {
   return null;
 }
 
-export async function runOpenVault(args) {
+export async function runOpenSecrets(args) {
   const flags = {};
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -39,20 +39,20 @@ export async function runOpenVault(args) {
     }
   }
 
-  if (flags.port) process.env.VAULT_PORT = flags.port;
-  if (flags.host) process.env.VAULT_HOST = flags.host;
+  if (flags.port) process.env.SECRETS_PORT = flags.port;
+  if (flags.host) process.env.SECRETS_HOST = flags.host;
   if (flags.workspace) {
-    process.env.VAULT_DATA_DIR = flags.workspace;
-    process.env.VAULT_DB_PATH = path.join(flags.workspace, "vault.sqlite");
+    process.env.SECRETS_DATA_DIR = flags.workspace;
+    process.env.SECRETS_DB_PATH = path.join(flags.workspace, "secrets.sqlite");
   }
 
   const entry = findServerEntry();
   if (!entry) {
-    console.error("[claw open vault] could not locate the vault server entrypoint.");
+    console.error("[claw open secrets] could not locate the secrets server entrypoint.");
     console.error("Expected one of:");
-    console.error("  - <cli>/bin/vault-server.mjs (bundled)");
-    console.error("  - clawjs/vault/dist/server.js (built)");
-    console.error("  - clawjs/vault/src/bin/server.ts (dev, requires tsx)");
+    console.error("  - <cli>/bin/secrets-server.mjs (bundled)");
+    console.error("  - clawjs/secrets/dist/server.js (built)");
+    console.error("  - clawjs/secrets/src/bin/server.ts (dev, requires tsx)");
     return 1;
   }
 
@@ -67,7 +67,7 @@ export async function runOpenVault(args) {
     return await new Promise((resolve) => child.on("close", (code) => resolve(code ?? 1)));
   }
 
-  if (entry.endsWith("/vault/dist/server.js")) {
+  if (entry.endsWith("/secrets/dist/server.js")) {
     const { spawn } = await import("node:child_process");
     const child = spawn(process.execPath, [entry, ...args], {
       stdio: "inherit",
@@ -77,7 +77,7 @@ export async function runOpenVault(args) {
   }
 
   const mod = await import(pathToFileURL(entry).href);
-  if (mod && typeof mod.startVaultServer === "function") {
+  if (mod && typeof mod.startSecretsServer === "function") {
     const overrides = {};
     if (flags.port) overrides.config = { ...(overrides.config ?? {}), port: Number(flags.port) };
     if (flags.host) overrides.config = { ...(overrides.config ?? {}), host: flags.host };
@@ -85,15 +85,15 @@ export async function runOpenVault(args) {
       overrides.config = {
         ...(overrides.config ?? {}),
         dataDir: flags.workspace,
-        dbPath: path.join(flags.workspace, "vault.sqlite"),
+        dbPath: path.join(flags.workspace, "secrets.sqlite"),
       };
     }
     if (flags["status-file"]) overrides.statusFile = flags["status-file"];
-    const { config } = await mod.startVaultServer(overrides);
-    console.log(`[vault] listening on ${config.host}:${config.port}`);
+    const { config } = await mod.startSecretsServer(overrides);
+    console.log(`[secrets] listening on ${config.host}:${config.port}`);
     return 0;
   }
 
-  console.error("[claw open vault] entry does not export startVaultServer().");
+  console.error("[claw open secrets] entry does not export startSecretsServer().");
   return 1;
 }

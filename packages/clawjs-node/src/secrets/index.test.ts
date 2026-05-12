@@ -85,12 +85,12 @@ process.exit(1);
   };
 }
 
-async function createFakeVaultServer() {
+async function createFakeSecretsServer() {
   const server = http.createServer(async (request, response) => {
     const url = new URL(request.url || "/", "http://127.0.0.1");
     if (url.pathname === "/v1/health") {
       response.setHeader("content-type", "application/json");
-      response.end(JSON.stringify({ ok: true, service: "vault", host: "127.0.0.1", port: 0 }));
+      response.end(JSON.stringify({ ok: true, service: "secrets", host: "127.0.0.1", port: 0 }));
       return;
     }
     if (url.pathname === "/v1/secret-types") {
@@ -276,15 +276,15 @@ test("ensureTelegramBotSecretReference validates Telegram-specific URL requireme
   assert.deepEqual(result.requirement.allowedHosts, ["api.telegram.org"]);
 });
 
-test("vault backend is used directly for list/types/capabilities/actions/leases", async () => {
-  const vault = await createFakeVaultServer();
+test("secrets backend is used directly for list/types/capabilities/actions/leases", async () => {
+  const secrets = await createFakeSecretsServer();
   try {
     const runner = new NodeProcessHost();
     const env = {
       ...process.env,
-      VAULT_BASE_URL: vault.baseUrl,
-      VAULT_TOKEN: "vault-token",
-      VAULT_TENANT_ID: "demo-tenant",
+      SECRETS_BASE_URL: secrets.baseUrl,
+      SECRETS_TOKEN: "secrets-token",
+      SECRETS_TENANT_ID: "demo-tenant",
     };
 
     const listed = await listSecrets(runner, { env });
@@ -303,19 +303,19 @@ test("vault backend is used directly for list/types/capabilities/actions/leases"
     assert.equal(leases.length, 0);
     assert.equal(doctor.ok, true);
   } finally {
-    await vault.close();
+    await secrets.close();
   }
 });
 
-test("vault backend brokers generic HTTP and typed actions without exposing plaintext", async () => {
-  const vault = await createFakeVaultServer();
+test("secrets backend brokers generic HTTP and typed actions without exposing plaintext", async () => {
+  const secrets = await createFakeSecretsServer();
   try {
     const runner = new NodeProcessHost();
     const env = {
       ...process.env,
-      VAULT_BASE_URL: vault.baseUrl,
-      VAULT_TOKEN: "vault-token",
-      VAULT_TENANT_ID: "demo-tenant",
+      SECRETS_BASE_URL: secrets.baseUrl,
+      SECRETS_TOKEN: "secrets-token",
+      SECRETS_TENANT_ID: "demo-tenant",
     };
 
     const generic = await brokerSecretHttp(runner, {
@@ -335,6 +335,6 @@ test("vault backend brokers generic HTTP and typed actions without exposing plai
     const typedPayload = JSON.parse(typed.result.bodyText) as { authorization: string };
     assert.equal(typedPayload.authorization, "Bearer xoxb-secret-123");
   } finally {
-    await vault.close();
+    await secrets.close();
   }
 });

@@ -92,7 +92,7 @@ function validateSecretName(secretName: string): string {
 }
 
 function maskSecretReference(secretName: string): string {
-  return `vault:${maskCredential(secretName) ?? "configured"}`;
+  return `secrets:${maskCredential(secretName) ?? "configured"}`;
 }
 
 function buildRunnerEnv(env?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {

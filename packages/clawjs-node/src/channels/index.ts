@@ -447,7 +447,7 @@ export function createChannelsRegistry(options: CreateChannelsRegistryOptions): 
           enabled: input.enabled ?? true,
           status: input.status ?? "configured",
           secretRef: input.secretName,
-          maskedCredential: input.secretName ? `vault:${input.secretName.replace(/.(?=.{4})/g, "*")}` : null,
+          maskedCredential: input.secretName ? `secrets:${input.secretName.replace(/.(?=.{4})/g, "*")}` : null,
           profile: input.botProfile ? { ...input.botProfile } : existing?.profile ?? null,
           transport: input.transport ? { ...input.transport } : existing?.transport ?? null,
           createdAt: existing?.createdAt ?? timestamp,

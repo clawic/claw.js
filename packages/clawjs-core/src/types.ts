@@ -1687,7 +1687,7 @@ export interface ProviderAuthSummary {
   hasEnvKey: boolean;
   authType: "oauth" | "token" | "api_key" | "env" | null;
   maskedCredential?: string | null;
-  source?: "vault" | "env" | "missing" | "disabled" | "runtime" | "config" | "store";
+  source?: "secrets" | "env" | "missing" | "disabled" | "runtime" | "config" | "store";
 }
 
 export interface AuthProfileSummary {

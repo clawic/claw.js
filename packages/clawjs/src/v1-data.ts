@@ -826,7 +826,7 @@ function doctorPayload(sqlite: Database.Database): JsonRecord {
     policy: {
       writer: "clawjs-core",
       clients: "cli-json",
-      secrets: "external-vault",
+      secrets: "external-secrets",
       sessionBodies: "external-artifacts-indexed",
       blobs: "filesystem-referenced",
     },
@@ -853,7 +853,7 @@ function backupData(outDir: string): JsonRecord {
     filesDir: resolveClawjsFilesDir(),
     copied,
     includes: ["main-db"],
-    excludes: ["vault", "raw-session-artifacts", "blob-files"],
+    excludes: ["secrets", "raw-session-artifacts", "blob-files"],
   };
   const manifestPath = path.join(outDir, "backup-manifest.json");
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));

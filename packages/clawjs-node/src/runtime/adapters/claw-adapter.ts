@@ -46,16 +46,16 @@ import {
 
 function buildCapabilityMap(options: RuntimeAdapterOptions): RuntimeCapabilityMap {
   const resolved = resolveClawRuntimeConfig(options);
-  const authReady = resolved.authSource === "vault" || resolved.authSource === "env";
+  const authReady = resolved.authSource === "secrets" || resolved.authSource === "env";
   return buildRuntimeCapabilityMap({
     runtime: { supported: true, status: "ready", strategy: "native" },
     workspace: { supported: true, status: "ready", strategy: "native" },
     auth: {
       supported: true,
       status: authReady ? "ready" : "degraded",
-      strategy: resolved.authSource === "vault" ? "config" : "config",
+      strategy: resolved.authSource === "secrets" ? "config" : "config",
       diagnostics: { source: "config", provider: resolved.provider.id, authSource: resolved.authSource },
-      limitations: authReady ? undefined : ["Configure a Vault secret reference or provider environment key before real model calls."],
+      limitations: authReady ? undefined : ["Configure a Secrets secret reference or provider environment key before real model calls."],
     },
     models: { supported: true, status: "ready", strategy: "config", diagnostics: { source: "config", inventoryFreshness: "static" } },
     session_cli: { supported: false, status: "unsupported", strategy: "unsupported" },
@@ -175,7 +175,7 @@ export const clawAdapter: RuntimeAdapter = {
       compat,
       issues: compat.issues,
       suggestedRepairs: compat.issues.length > 0
-        ? ["Configure a provider Vault secret reference or the provider environment key."]
+        ? ["Configure a provider Secrets secret reference or the provider environment key."]
         : [],
     };
   },
@@ -252,24 +252,24 @@ export const clawAdapter: RuntimeAdapter = {
       provider,
       status: "reused",
       launchMode: "none",
-      message: "Claw Runtime uses Vault secret references or environment keys.",
+      message: "Claw Runtime uses Secrets secret references or environment keys.",
     };
   },
   diagnostics(provider, options): AuthDiagnostics {
     const resolved = resolveClawRuntimeConfig(options);
     return {
       provider: provider ?? resolved.provider.id,
-      authStorePath: resolved.provider.secretRef ? `vault:${resolved.provider.secretRef}` : undefined,
+      authStorePath: resolved.provider.secretRef ? `secrets:${resolved.provider.secretRef}` : undefined,
       profiles: [],
       issues: resolved.authSource === "missing" ? [`Missing ${resolved.provider.envKey}.`] : [],
       authSource: resolved.authSource,
     };
   },
   setApiKey(): never {
-    throw new Error("Claw Runtime does not persist literal API keys. Use Vault secret references or environment keys.");
+    throw new Error("Claw Runtime does not persist literal API keys. Use Secrets secret references or environment keys.");
   },
   async saveApiKey(): Promise<SaveApiKeyResult> {
-    throw new Error("Claw Runtime does not persist literal API keys. Use Vault secret references or environment keys.");
+    throw new Error("Claw Runtime does not persist literal API keys. Use Secrets secret references or environment keys.");
   },
   removeProvider() {
     return 0;

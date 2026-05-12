@@ -24,7 +24,7 @@ import {
 import { brokerSecretHttp } from "../secrets/index.ts";
 
 export type ClawRuntimeWire = "chat_completions" | "responses";
-export type ClawRuntimeAuthSource = "vault" | "env" | "missing" | "disabled";
+export type ClawRuntimeAuthSource = "secrets" | "env" | "missing" | "disabled";
 export type ClawRuntimePermissionMode = "read-only" | "workspace-write" | "danger-full-access";
 
 export interface ClawRuntimeModelMetadata {
@@ -225,7 +225,7 @@ export function resolveClawRuntimeConfig(options: RuntimeAdapterOptions = { adap
   const envKey = mergedProvider.envKey;
   const apiKey = envKey ? options.env?.[envKey]?.trim() || process.env[envKey]?.trim() : undefined;
   const authSource: ClawRuntimeAuthSource = mergedProvider.secretRef
-    ? "vault"
+    ? "secrets"
     : apiKey
       ? "env"
       : envKey
@@ -250,7 +250,7 @@ export function listClawRuntimeProviders(): ProviderDescriptor[] {
     envVars: provider.envKey ? [provider.envKey] : [],
     auth: { supportsApiKey: true, supportsEnv: !!provider.envKey },
     credentialSources: [
-      ...(provider.secretRef ? [{ kind: "store" as const, key: provider.secretRef, location: "vault" }] : []),
+      ...(provider.secretRef ? [{ kind: "store" as const, key: provider.secretRef, location: "secrets" }] : []),
       ...(provider.envKey ? [{ kind: "env" as const, key: provider.envKey }] : []),
     ],
   }));
@@ -287,17 +287,17 @@ export function getClawRuntimeProviderAuth(options: RuntimeAdapterOptions = { ad
     const secretRef = options.provider === base.id ? options.secretRef ?? provider.secretRef : provider.secretRef;
     const envKey = options.provider === base.id ? options.envKey ?? provider.envKey : provider.envKey;
     const envCredential = envKey ? options.env?.[envKey]?.trim() || process.env[envKey]?.trim() : "";
-    const source: ClawRuntimeAuthSource = secretRef ? "vault" : envCredential ? "env" : envKey ? "missing" : "disabled";
-    const hasAuth = source === "vault" || source === "env";
+    const source: ClawRuntimeAuthSource = secretRef ? "secrets" : envCredential ? "env" : envKey ? "missing" : "disabled";
+    const hasAuth = source === "secrets" || source === "env";
     return [base.id, {
       provider: base.id,
       hasAuth,
       hasSubscription: hasAuth,
       hasApiKey: hasAuth,
-      hasProfileApiKey: source === "vault",
+      hasProfileApiKey: source === "secrets",
       hasEnvKey: source === "env",
       authType: hasAuth ? "api_key" : null,
-      maskedCredential: source === "vault" ? `vault:${maskCredential(secretRef) ?? "configured"}` : maskCredential(envCredential),
+      maskedCredential: source === "secrets" ? `secrets:${maskCredential(secretRef) ?? "configured"}` : maskCredential(envCredential),
       source,
     } satisfies ProviderAuthSummary];
   }));
@@ -596,7 +596,7 @@ export async function* streamClawRuntimeGatewayChunks(
   });
 
   if (config.authSource === "missing") {
-    throw new Error(`Missing API key for ${config.provider.label}. Set ${config.provider.envKey} or configure a Vault secret reference.`);
+    throw new Error(`Missing API key for ${config.provider.label}. Set ${config.provider.envKey} or configure a Secrets secret reference.`);
   }
 
   if (config.wire === "responses") {

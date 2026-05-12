@@ -73,7 +73,7 @@ test("observed store round-trips capability, workspace, provider, and telegram s
     connected: true,
     apiBaseUrl: "https://api.telegram.org",
     secretName: "telegram_support_bot_token",
-    maskedCredential: "vault:******oken",
+    maskedCredential: "secrets:******oken",
     botProfile: {
       id: "42",
       isBot: true,
