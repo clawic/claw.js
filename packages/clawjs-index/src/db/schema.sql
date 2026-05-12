@@ -186,3 +186,234 @@ CREATE VIRTUAL TABLE IF NOT EXISTS entities_fts USING fts5(
   body,
   tokenize = 'porter unicode61'
 );
+
+-- ============================================================================
+-- mp/1.0.0 · marketplace protocol tables
+-- ============================================================================
+-- All `*_keys` tables store encrypted private material; encryption is done in
+-- the clawjs-mp identity module (XChaCha20-Poly1305 with a passphrase-derived
+-- key) before the bytes ever reach SQLite. Public keys are stored raw.
+
+CREATE TABLE IF NOT EXISTS mp_root_keys (
+  id              TEXT PRIMARY KEY,
+  pubkey          BLOB NOT NULL UNIQUE,
+  encrypted_seed  BLOB NOT NULL,
+  encryption_meta TEXT NOT NULL,
+  label           TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  revoked_at      TEXT
+);
+
+CREATE TABLE IF NOT EXISTS mp_device_keys (
+  id              TEXT PRIMARY KEY,
+  root_key_id     TEXT NOT NULL REFERENCES mp_root_keys(id) ON DELETE CASCADE,
+  pubkey          BLOB NOT NULL UNIQUE,
+  encrypted_priv  BLOB NOT NULL,
+  encryption_meta TEXT NOT NULL,
+  device_name     TEXT NOT NULL,
+  certificate_cbor BLOB NOT NULL,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  revoked_at      TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_mp_device_keys_root ON mp_device_keys(root_key_id);
+
+CREATE TABLE IF NOT EXISTS mp_role_keys (
+  id              TEXT PRIMARY KEY,
+  root_key_id     TEXT NOT NULL REFERENCES mp_root_keys(id) ON DELETE CASCADE,
+  pubkey          BLOB NOT NULL UNIQUE,
+  encrypted_priv  BLOB NOT NULL,
+  encryption_meta TEXT NOT NULL,
+  role_name       TEXT NOT NULL,
+  vertical        TEXT NOT NULL,
+  certificate_cbor BLOB NOT NULL,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  revoked_at      TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_mp_role_keys_root ON mp_role_keys(root_key_id);
+CREATE INDEX IF NOT EXISTS idx_mp_role_keys_vertical ON mp_role_keys(vertical);
+
+CREATE TABLE IF NOT EXISTS mp_cross_role_attestations (
+  id              TEXT PRIMARY KEY,
+  root_key_id     TEXT NOT NULL REFERENCES mp_root_keys(id) ON DELETE CASCADE,
+  roles_json      TEXT NOT NULL,
+  signed_payload  BLOB NOT NULL,
+  signature       BLOB NOT NULL,
+  issued_at       TEXT NOT NULL,
+  expires_at      TEXT
+);
+
+CREATE TABLE IF NOT EXISTS mp_intents (
+  id                  TEXT PRIMARY KEY,
+  intent_id_hash      BLOB NOT NULL UNIQUE,
+  side                TEXT NOT NULL CHECK (side IN ('offer', 'want')),
+  role_key_id         TEXT REFERENCES mp_role_keys(id) ON DELETE SET NULL,
+  ephemeral_pubkey    BLOB,
+  vertical            TEXT NOT NULL,
+  payload_json        TEXT NOT NULL,
+  payload_cbor        BLOB NOT NULL,
+  visibility_levels_json TEXT NOT NULL,
+  reveal_keys_json    TEXT,
+  signature_role      BLOB,
+  signature_device    BLOB,
+  provenance          TEXT NOT NULL CHECK (provenance IN ('native', 'observed')),
+  observed_source     TEXT,
+  observed_external_url TEXT,
+  status              TEXT NOT NULL CHECK (status IN ('draft', 'published', 'withdrawn', 'expired')),
+  expires_at          TEXT,
+  created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+  published_at        TEXT,
+  withdrawn_at        TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_mp_intents_vertical ON mp_intents(vertical, status);
+CREATE INDEX IF NOT EXISTS idx_mp_intents_role ON mp_intents(role_key_id);
+CREATE INDEX IF NOT EXISTS idx_mp_intents_side ON mp_intents(side, status);
+
+CREATE TABLE IF NOT EXISTS mp_intent_observations (
+  id              TEXT PRIMARY KEY,
+  intent_id       TEXT NOT NULL REFERENCES mp_intents(id) ON DELETE CASCADE,
+  source_layer    TEXT NOT NULL CHECK (source_layer IN ('dht', 'broker', 'gossip', 'direct', 'local')),
+  source_node     TEXT,
+  observed_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  raw_blob        BLOB
+);
+
+CREATE INDEX IF NOT EXISTS idx_mp_intent_obs_intent ON mp_intent_observations(intent_id);
+
+CREATE TABLE IF NOT EXISTS mp_peer_levels (
+  id                  TEXT PRIMARY KEY,
+  my_role_key_id      TEXT NOT NULL REFERENCES mp_role_keys(id) ON DELETE CASCADE,
+  peer_pubkey         BLOB NOT NULL,
+  current_level       INTEGER NOT NULL DEFAULT 0 CHECK (current_level BETWEEN 0 AND 5),
+  intent_id           TEXT REFERENCES mp_intents(id) ON DELETE SET NULL,
+  proofs_json         TEXT,
+  last_updated_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (my_role_key_id, peer_pubkey, intent_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_mp_peer_levels_role ON mp_peer_levels(my_role_key_id);
+
+CREATE TABLE IF NOT EXISTS mp_inbound_messages (
+  id                  TEXT PRIMARY KEY,
+  recipient_role_key_id TEXT NOT NULL REFERENCES mp_role_keys(id) ON DELETE CASCADE,
+  sender_pubkey       BLOB NOT NULL,
+  thread_id           BLOB,
+  in_reply_to         BLOB,
+  intent_id_ref       TEXT REFERENCES mp_intents(id) ON DELETE SET NULL,
+  kind                TEXT NOT NULL,
+  plaintext_json      TEXT NOT NULL,
+  signature_blob      BLOB,
+  ttl_expires_at      TEXT,
+  received_at         TEXT NOT NULL DEFAULT (datetime('now')),
+  read_at             TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_mp_inbound_recipient ON mp_inbound_messages(recipient_role_key_id, received_at DESC);
+CREATE INDEX IF NOT EXISTS idx_mp_inbound_thread ON mp_inbound_messages(thread_id);
+
+CREATE TABLE IF NOT EXISTS mp_outbound_messages (
+  id                  TEXT PRIMARY KEY,
+  sender_role_key_id  TEXT NOT NULL REFERENCES mp_role_keys(id) ON DELETE CASCADE,
+  recipient_pubkey    BLOB NOT NULL,
+  thread_id           BLOB,
+  in_reply_to         BLOB,
+  intent_id_ref       TEXT REFERENCES mp_intents(id) ON DELETE SET NULL,
+  kind                TEXT NOT NULL,
+  plaintext_json      TEXT NOT NULL,
+  ciphertext_blob     BLOB,
+  signature_blob      BLOB,
+  sent_at             TEXT NOT NULL DEFAULT (datetime('now')),
+  delivery_status     TEXT NOT NULL DEFAULT 'queued' CHECK (delivery_status IN ('queued','sent','delivered','failed'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_mp_outbound_sender ON mp_outbound_messages(sender_role_key_id, sent_at DESC);
+
+CREATE TABLE IF NOT EXISTS mp_match_receipts (
+  id                  TEXT PRIMARY KEY,
+  receipt_hash        BLOB NOT NULL UNIQUE,
+  my_role_key_id      TEXT NOT NULL REFERENCES mp_role_keys(id) ON DELETE CASCADE,
+  peer_role_pubkey    BLOB NOT NULL,
+  offer_intent_id     TEXT REFERENCES mp_intents(id) ON DELETE SET NULL,
+  want_intent_id      TEXT REFERENCES mp_intents(id) ON DELETE SET NULL,
+  reached_level       INTEGER NOT NULL,
+  fields_revealed_json TEXT NOT NULL,
+  contact_handover_json TEXT,
+  my_signature        BLOB,
+  peer_signature      BLOB,
+  status              TEXT NOT NULL CHECK (status IN (
+    'proposed_by_peer','proposed_by_me','awaiting_human_approval','signed','rejected','expired'
+  )),
+  proposed_at         TEXT NOT NULL DEFAULT (datetime('now')),
+  signed_at           TEXT,
+  rejected_at         TEXT,
+  payload_cbor        BLOB NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_mp_match_receipts_role ON mp_match_receipts(my_role_key_id);
+CREATE INDEX IF NOT EXISTS idx_mp_match_receipts_status ON mp_match_receipts(status);
+
+CREATE TABLE IF NOT EXISTS mp_vouches_outbound (
+  id                  TEXT PRIMARY KEY,
+  voucher_role_key_id TEXT NOT NULL REFERENCES mp_role_keys(id) ON DELETE CASCADE,
+  vouchee_pubkey      BLOB NOT NULL,
+  context             TEXT NOT NULL,
+  text                TEXT NOT NULL,
+  signed_at           TEXT NOT NULL DEFAULT (datetime('now')),
+  expires_at          TEXT,
+  signature_blob      BLOB NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS mp_vouches_inbound (
+  id                  TEXT PRIMARY KEY,
+  my_role_key_id      TEXT NOT NULL REFERENCES mp_role_keys(id) ON DELETE CASCADE,
+  voucher_pubkey      BLOB NOT NULL,
+  context             TEXT NOT NULL,
+  text                TEXT NOT NULL,
+  received_at         TEXT NOT NULL DEFAULT (datetime('now')),
+  signature_blob      BLOB NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS mp_ratings (
+  id                  TEXT PRIMARY KEY,
+  match_receipt_id    TEXT NOT NULL REFERENCES mp_match_receipts(id) ON DELETE CASCADE,
+  rater_role_pubkey   BLOB NOT NULL,
+  score               INTEGER NOT NULL CHECK (score BETWEEN -5 AND 5),
+  comment             TEXT,
+  signed_at           TEXT NOT NULL DEFAULT (datetime('now')),
+  signature_blob      BLOB NOT NULL,
+  countersignature_blob BLOB,
+  mutual_consent      INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS mp_known_brokers (
+  id                  TEXT PRIMARY KEY,
+  broker_pubkey       BLOB NOT NULL UNIQUE,
+  endpoints_json      TEXT NOT NULL,
+  verticals_supported_json TEXT NOT NULL,
+  policies_json       TEXT,
+  trust_local         INTEGER NOT NULL DEFAULT 0,
+  last_seen_at        TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS mp_dht_records_cache (
+  key                 BLOB NOT NULL,
+  intent_id_hash      BLOB NOT NULL,
+  value_blob          BLOB NOT NULL,
+  ttl_expires_at      TEXT NOT NULL,
+  source_node_id      TEXT,
+  cached_at           TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (key, intent_id_hash)
+);
+
+CREATE TABLE IF NOT EXISTS mp_revocations (
+  id                  TEXT PRIMARY KEY,
+  revoked_pubkey      BLOB NOT NULL UNIQUE,
+  revoked_kind        TEXT NOT NULL CHECK (revoked_kind IN ('device','role')),
+  reason              TEXT,
+  signed_at           TEXT NOT NULL,
+  root_pubkey         BLOB NOT NULL,
+  root_signature      BLOB NOT NULL,
+  observed_at         TEXT NOT NULL DEFAULT (datetime('now'))
+);

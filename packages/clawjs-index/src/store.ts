@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 
 import { canonicalTypes } from "./schema/registry.ts";
+import { MpStore } from "./mp-store.ts";
 import type {
   AlertRow, AlertRule, AlertRuleKind, CollectionRow, DeviceTokenRow, EntityRow,
   EntityType, FieldHistoryPoint, IndexEvent, JsonSchema, MonitorRow,
@@ -133,6 +134,7 @@ function alertFromRow(row: any): AlertRow {
 export class IndexStore {
   private readonly db: Database.Database;
   private readonly listeners = new Set<IndexEventListener>();
+  readonly mp: MpStore;
 
   constructor(dbPath: string) {
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -141,6 +143,7 @@ export class IndexStore {
     this.db.pragma("foreign_keys = ON");
     this.db.exec(readSchema());
     this.seedCanonicalTypes();
+    this.mp = new MpStore(this.db);
   }
 
   close(): void { this.db.close(); }
