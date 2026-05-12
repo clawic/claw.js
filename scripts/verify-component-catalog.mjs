@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 
 const args = parseArgs(process.argv.slice(2));
 const sourceRoot = path.resolve(args.source ?? process.env.CLAWJS_COMPONENTS_SOURCE_DIR ?? "");
@@ -29,6 +30,13 @@ const readPackageJson = (filePath) => {
     return JSON.parse(readText(filePath));
   } catch {
     return null;
+  }
+};
+const readRevision = (root) => {
+  try {
+    return execFileSync("git", ["-C", root, "rev-parse", "--short=12", "HEAD"], { encoding: "utf8" }).trim();
+  } catch {
+    return undefined;
   }
 };
 const countDefaults = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.default !== undefined).length : 0;
@@ -135,8 +143,12 @@ function verify(catalog, expectedApps) {
   const actualPaths = new Set();
   const actualSummary = summarize(catalog.apps ?? []);
   const expectedSummary = summarizeExpected(expectedApps);
+  const expectedRevision = readRevision(sourceRoot);
   const forbidden = new RegExp(String.fromCharCode(80, 105, 112, 101, 100, 114, 101, 97, 109), "i");
   if (forbidden.test(JSON.stringify(catalog))) errors.push("catalog contains forbidden upstream brand text");
+  if (expectedRevision && catalog.sourceRevision !== expectedRevision) {
+    errors.push(`sourceRevision ${catalog.sourceRevision ?? "<missing>"} expected ${expectedRevision}`);
+  }
   if (actualSummary.versionedApps !== expectedSummary.versionedApps) errors.push(`versionedApps ${actualSummary.versionedApps} expected ${expectedSummary.versionedApps}`);
   if (actualSummary.defaults !== expectedSummary.defaults) errors.push(`defaults ${actualSummary.defaults} expected ${expectedSummary.defaults}`);
   if (actualSummary.managedFields !== expectedSummary.managedFields) errors.push(`managedFields ${actualSummary.managedFields} expected ${expectedSummary.managedFields}`);
