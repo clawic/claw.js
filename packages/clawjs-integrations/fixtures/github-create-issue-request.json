@@ -1,0 +1,13 @@
+{
+  "method": "POST",
+  "url": "https://api.github.com/repos/sample/sample/issues",
+  "headers": {
+    "accept": "application/vnd.github+json",
+    "authorization": "Bearer offline-githubToken-secret",
+    "x-github-api-version": "2026-03-10"
+  },
+  "body": {
+    "title": "sample",
+    "body": "sample"
+  }
+}
