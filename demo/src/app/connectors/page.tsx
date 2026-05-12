@@ -18,6 +18,9 @@ interface CatalogSummary {
   disabledFields: number;
   reloadFields: number;
   boundedFields: number;
+  placeholderFields: number;
+  queryFields: number;
+  labelFields: number;
   annotatedOperations: number;
   destructiveOperations: number;
   readOnlyOperations: number;
@@ -53,6 +56,9 @@ interface CatalogField {
   reloadProps?: boolean;
   min?: number;
   max?: number;
+  placeholder?: string;
+  useQuery?: boolean;
+  withLabel?: boolean;
   secret?: boolean;
   managed?: boolean;
 }
@@ -332,6 +338,9 @@ export default function ConnectorsPage() {
             <span>{catalog?.summary.disabledFields ?? 0} disabled</span>
             <span>{catalog?.summary.reloadFields ?? 0} reload</span>
             <span>{catalog?.summary.boundedFields ?? 0} bounded</span>
+            <span>{catalog?.summary.placeholderFields ?? 0} placeholders</span>
+            <span>{catalog?.summary.queryFields ?? 0} query</span>
+            <span>{catalog?.summary.labelFields ?? 0} labels</span>
             <span>{catalog?.summary.annotatedOperations ?? 0} annotated</span>
             <span>{catalog?.summary.destructiveOperations ?? 0} destructive</span>
             <span>{catalog?.summary.runnableOperations ?? 0} runnable</span>
@@ -445,6 +454,9 @@ export default function ConnectorsPage() {
                             {field.hidden ? " · hidden" : ""}
                             {field.disabled ? " · disabled" : ""}
                             {field.min !== undefined || field.max !== undefined ? ` · ${field.min ?? ""}..${field.max ?? ""}` : ""}
+                            {field.placeholder ? " · placeholder" : ""}
+                            {field.useQuery ? " · query" : ""}
+                            {field.withLabel ? " · label" : ""}
                           </span>
                         </div>
                       ))}
