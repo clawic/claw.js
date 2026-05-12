@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   buildConnectorRuntimeFetchRequest,
   ConnectorRuntimeHttpError,
+  executeConnectorRuntimePaginatedRequestPlan,
   executeConnectorRuntimeRequestPlan,
 } from "./runtime-http.ts";
 
@@ -103,5 +104,108 @@ describe("connector runtime http transport", () => {
         return true;
       },
     );
+  });
+
+  it("follows cursor pagination and aggregates items", async () => {
+    const urls: string[] = [];
+    const result = await executeConnectorRuntimePaginatedRequestPlan({
+      baseUrl: "https://api.example.invalid/",
+      secrets: {},
+      plan: {
+        method: "GET",
+        endpoint: "items",
+        auth: [],
+        query: { limit: 2 },
+        body: {},
+        pagination: {
+          mode: "cursor",
+          cursorParam: "cursor",
+          nextCursorPath: "paging.next",
+          itemsPath: "data",
+          maxPages: 3,
+        },
+      },
+      fetchImpl: async (input) => {
+        urls.push(String(input));
+        const cursor = new URL(String(input)).searchParams.get("cursor");
+        const body = cursor
+          ? { data: [{ id: "c" }], paging: {} }
+          : { data: [{ id: "a" }, { id: "b" }], paging: { next: "page_2" } };
+        return Response.json(body);
+      },
+    });
+
+    assert.deepEqual(urls, [
+      "https://api.example.invalid/items?limit=2",
+      "https://api.example.invalid/items?limit=2&cursor=page_2",
+    ]);
+    assert.deepEqual(result.items, [{ id: "a" }, { id: "b" }, { id: "c" }]);
+  });
+
+  it("follows offset pagination until a short page", async () => {
+    const urls: string[] = [];
+    const result = await executeConnectorRuntimePaginatedRequestPlan({
+      baseUrl: "https://api.example.invalid/",
+      secrets: {},
+      plan: {
+        method: "GET",
+        endpoint: "items",
+        auth: [],
+        query: { limit: 2 },
+        body: {},
+        pagination: {
+          mode: "offset",
+          offsetParam: "offset",
+          limitParam: "limit",
+          itemsPath: "items",
+        },
+      },
+      fetchImpl: async (input) => {
+        urls.push(String(input));
+        const offset = Number(new URL(String(input)).searchParams.get("offset") ?? "0");
+        const items = offset < 2 ? [{ id: "a" }, { id: "b" }] : [{ id: "c" }];
+        return Response.json({ items });
+      },
+    });
+
+    assert.deepEqual(urls, [
+      "https://api.example.invalid/items?limit=2&offset=0",
+      "https://api.example.invalid/items?limit=2&offset=2",
+    ]);
+    assert.deepEqual(result.items, [{ id: "a" }, { id: "b" }, { id: "c" }]);
+  });
+
+  it("follows next URL pagination without replaying original query params", async () => {
+    const urls: string[] = [];
+    const result = await executeConnectorRuntimePaginatedRequestPlan({
+      baseUrl: "https://api.example.invalid/",
+      secrets: { apiKey: "secret" },
+      plan: {
+        method: "GET",
+        endpoint: "items",
+        auth: [{ type: "secret", field: "apiKey", placement: "header", name: "x-api-key" }],
+        query: { limit: 1 },
+        body: {},
+        pagination: {
+          mode: "next_url",
+          nextUrlPath: "links.next",
+          itemsPath: "items",
+        },
+      },
+      fetchImpl: async (input, init) => {
+        urls.push(String(input));
+        assert.equal(new Headers(init?.headers).get("x-api-key"), "secret");
+        const first = urls.length === 1;
+        return Response.json(first
+          ? { items: [{ id: "a" }], links: { next: "https://api.example.invalid/items?page=2" } }
+          : { items: [{ id: "b" }], links: {} });
+      },
+    });
+
+    assert.deepEqual(urls, [
+      "https://api.example.invalid/items?limit=1",
+      "https://api.example.invalid/items?page=2",
+    ]);
+    assert.deepEqual(result.items, [{ id: "a" }, { id: "b" }]);
   });
 });
