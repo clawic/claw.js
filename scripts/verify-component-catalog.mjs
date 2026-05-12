@@ -150,6 +150,9 @@ function verify(catalog, expectedApps) {
   if (expectedRevision && catalog.sourceRevision !== expectedRevision) {
     errors.push(`sourceRevision ${catalog.sourceRevision ?? "<missing>"} expected ${expectedRevision}`);
   }
+  if (actualSummary.apps !== expectedSummary.apps) errors.push(`apps ${actualSummary.apps} expected ${expectedSummary.apps}`);
+  if (actualSummary.actions !== expectedSummary.actions) errors.push(`actions ${actualSummary.actions} expected ${expectedSummary.actions}`);
+  if (actualSummary.sources !== expectedSummary.sources) errors.push(`sources ${actualSummary.sources} expected ${expectedSummary.sources}`);
   if (actualSummary.versionedApps !== expectedSummary.versionedApps) errors.push(`versionedApps ${actualSummary.versionedApps} expected ${expectedSummary.versionedApps}`);
   if (actualSummary.defaults !== expectedSummary.defaults) errors.push(`defaults ${actualSummary.defaults} expected ${expectedSummary.defaults}`);
   if (actualSummary.managedFields !== expectedSummary.managedFields) errors.push(`managedFields ${actualSummary.managedFields} expected ${expectedSummary.managedFields}`);
@@ -545,6 +548,9 @@ function summarize(apps) {
 
 function summarizeExpected(apps) {
   const summary = {
+    apps: 0,
+    actions: 0,
+    sources: 0,
     versionedApps: 0,
     defaults: 0,
     options: 0,
@@ -583,6 +589,7 @@ function summarizeExpected(apps) {
     methodOperations: 0,
   };
   for (const app of apps.values()) {
+    summary.apps += 1;
     if (app.packageVersion) summary.versionedApps += 1;
     summary.defaults += app.fieldStats.defaults;
     summary.options += app.fieldStats.options;
@@ -603,6 +610,8 @@ function summarizeExpected(apps) {
     summary.dynamicOptionFields += app.fieldStats.dynamicOptions;
     summary.managedFields += app.fieldStats.managed;
     for (const operation of app.operations.values()) {
+      if (operation.kind === "source") summary.sources += 1;
+      else summary.actions += 1;
       summary.defaults += operation.fieldStats.defaults;
       summary.options += operation.fieldStats.options;
       summary.hiddenFields += operation.fieldStats.hidden;
