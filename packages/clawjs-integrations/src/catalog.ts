@@ -96,6 +96,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
         if (operation.source?.delivery === "hybrid") summary.hybridSources += 1;
         if (operation.source?.usesServiceDb === true) summary.statefulSources += 1;
         if (operation.runtime?.hasAdditionalProps === true) summary.dynamicPropOperations += 1;
+        summary.dynamicPropFields += operation.runtime?.additionalProps?.fieldNames.length ?? 0;
         if (operation.runtime?.hasMethods === true) summary.methodOperations += 1;
       }
       return summary;
@@ -121,6 +122,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       hybridSources: 0,
       statefulSources: 0,
       dynamicPropOperations: 0,
+      dynamicPropFields: 0,
       dynamicOptionFields: 0,
       methodOperations: 0,
     },
@@ -270,6 +272,20 @@ function optionalDynamicOptions(input: unknown) {
   };
 }
 
+function optionalAdditionalProps(input: unknown) {
+  if (!isRecord(input)) return {};
+  const mode: "object" | "function" = input.mode === "object" ? "object" : "function";
+  return {
+    additionalProps: {
+      mode,
+      fieldNames: normalizeStringArray(input.fieldNames),
+      contextKeys: normalizeStringArray(input.contextKeys),
+      usesPreviousProps: input.usesPreviousProps === true,
+      usesThis: input.usesThis === true,
+    },
+  };
+}
+
 function optionalRuntime(input: unknown) {
   if (!isRecord(input)) return {};
   return {
@@ -277,6 +293,7 @@ function optionalRuntime(input: unknown) {
       hasRun: input.hasRun === true,
       hasHooks: input.hasHooks === true,
       hasAdditionalProps: input.hasAdditionalProps === true,
+      ...optionalAdditionalProps(input.additionalProps),
       hasMethods: input.hasMethods === true,
       methodNames: normalizeStringArray(input.methodNames),
       ...(typeof input.dedupe === "string" && input.dedupe.trim() ? { dedupe: input.dedupe.trim() } : {}),

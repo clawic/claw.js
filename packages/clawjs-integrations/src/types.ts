@@ -46,10 +46,19 @@ export interface ConnectorOperationAnnotations {
   openWorldHint?: boolean;
 }
 
+export interface ConnectorAdditionalPropsMetadata {
+  mode: "object" | "function";
+  fieldNames: string[];
+  contextKeys: string[];
+  usesPreviousProps: boolean;
+  usesThis: boolean;
+}
+
 export interface ConnectorOperationRuntime {
   hasRun: boolean;
   hasHooks: boolean;
   hasAdditionalProps: boolean;
+  additionalProps?: ConnectorAdditionalPropsMetadata;
   hasMethods: boolean;
   methodNames?: string[];
   dedupe?: string;
@@ -118,6 +127,7 @@ export interface ConnectorCatalogSummary {
   hybridSources: number;
   statefulSources: number;
   dynamicPropOperations: number;
+  dynamicPropFields: number;
   dynamicOptionFields: number;
   methodOperations: number;
 }

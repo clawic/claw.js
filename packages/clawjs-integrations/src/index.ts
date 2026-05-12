@@ -78,6 +78,7 @@ export type {
   ConnectorCatalog,
   ConnectorCatalogSummary,
   ConnectorComponentKind,
+  ConnectorAdditionalPropsMetadata,
   ConnectorFieldDefinition,
   ConnectorFieldDynamicOptions,
   ConnectorFieldOption,

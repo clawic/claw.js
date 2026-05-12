@@ -59,6 +59,13 @@ function fixtureCatalog(): ConnectorCatalog {
               hasRun: true,
               hasHooks: false,
               hasAdditionalProps: true,
+              additionalProps: {
+                mode: "function",
+                fieldNames: ["thread"],
+                contextKeys: ["channel"],
+                usesPreviousProps: false,
+                usesThis: true,
+              },
               hasMethods: true,
               methodNames: ["request"],
             },
@@ -119,6 +126,7 @@ describe("connector catalog", () => {
       hybridSources: 0,
       statefulSources: 1,
       dynamicPropOperations: 1,
+      dynamicPropFields: 1,
       dynamicOptionFields: 1,
       methodOperations: 2,
     });
