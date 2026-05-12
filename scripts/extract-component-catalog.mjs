@@ -70,9 +70,8 @@ function readApp(appDir, fallbackId) {
 function readOperations(appDir, appId, kind, appAuthFields, appFields) {
   const dir = path.join(appDir, kind === "action" ? "actions" : "sources");
   if (!fs.existsSync(dir)) return [];
-  const files = listFiles(dir).filter((file) => file.endsWith(".mjs") || file.endsWith(".js") || file.endsWith(".ts"));
+  const files = listFiles(dir).filter(isOperationFile);
   return files
-    .filter((file) => !file.endsWith("test-event.mjs") && !file.includes(`${path.sep}common${path.sep}`))
     .map((file) => {
       const source = readText(file);
       const slug = operationSlug(dir, file);
@@ -213,6 +212,13 @@ function listFiles(dir) {
     else out.push(full);
   }
   return out;
+}
+
+function isOperationFile(file) {
+  if (!/\.(mjs|js|ts)$/i.test(file)) return false;
+  if (file.endsWith("test-event.mjs")) return false;
+  if (file.includes(`${path.sep}common${path.sep}`)) return false;
+  return !["common.mjs", "common.js", "common.ts", "base.mjs", "base.js", "base.ts", "utils.mjs", "utils.js", "utils.ts"].includes(path.basename(file));
 }
 
 function cleanText(value) {

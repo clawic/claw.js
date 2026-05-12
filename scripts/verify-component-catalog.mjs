@@ -64,8 +64,7 @@ function readExpectedOperations(appDir, appId, kind, appAuth, appFields) {
   const root = path.join(appDir, kind === "action" ? "actions" : "sources");
   if (!fs.existsSync(root)) return [];
   return listFiles(root)
-    .filter((file) => /\.(mjs|js|ts)$/i.test(file))
-    .filter((file) => !file.endsWith("test-event.mjs") && !file.includes(`${path.sep}common${path.sep}`))
+    .filter(isOperationFile)
     .map((file) => {
       const source = readText(file);
       const fields = readFields(source, appId, appFields, file);
@@ -540,6 +539,13 @@ function listFiles(dir) {
     const full = path.join(dir, entry.name);
     return entry.isDirectory() ? listFiles(full) : [full];
   });
+}
+
+function isOperationFile(file) {
+  if (!/\.(mjs|js|ts)$/i.test(file)) return false;
+  if (file.endsWith("test-event.mjs")) return false;
+  if (file.includes(`${path.sep}common${path.sep}`)) return false;
+  return !["common.mjs", "common.js", "common.ts", "base.mjs", "base.js", "base.ts", "utils.mjs", "utils.js", "utils.ts"].includes(path.basename(file));
 }
 
 function parseArgs(argv) {
