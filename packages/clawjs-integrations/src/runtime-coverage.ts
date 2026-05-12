@@ -4,13 +4,20 @@ import path from "node:path";
 import { ConnectorCatalogError } from "./catalog.ts";
 import {
   CONNECTOR_RUNTIME_REGISTRY,
+  createConnectorOperationExecutor,
+  createConnectorSourceExecutor,
   findConnectorRuntimeImplementation,
   type ConnectorRuntimeFixture,
+  type ConnectorRuntimeExecutorOptions,
   type ConnectorRuntimeImplementation,
   type ConnectorRuntimeOutputSchema,
   type ConnectorRuntimeRequestPlan,
   type ConnectorRuntimeSourcePlan,
 } from "./runtime-registry.ts";
+import {
+  createConnectorRuntimeFixtureFetch,
+  loadConnectorRuntimeFixtures,
+} from "./runtime-fixtures.ts";
 import type {
   ConnectorCatalog,
   ConnectorFieldDefinition,
@@ -87,6 +94,24 @@ export interface VerifyConnectorRuntimeCoverageOptions {
   allowUnsupportedReasons?: boolean;
   evidenceRoot?: string;
   registry?: readonly ConnectorRuntimeImplementation[];
+}
+
+export interface VerifyConnectorRuntimeOfflineExecutionOptions extends VerifyConnectorRuntimeCoverageOptions {
+  runtimeExecutorOptions?: Omit<ConnectorRuntimeExecutorOptions, "fetchImpl">;
+}
+
+export interface ConnectorRuntimeOfflineExecutionResult {
+  operationId: string;
+  appId: string;
+  kind: ConnectorOperationDefinition["kind"];
+  executorId: string;
+  ok: boolean;
+  error?: string;
+}
+
+export interface ConnectorRuntimeOfflineExecutionReport {
+  results: ConnectorRuntimeOfflineExecutionResult[];
+  errors: string[];
 }
 
 export interface ConnectorOperationRuntimePlan {
@@ -226,6 +251,101 @@ export function verifyConnectorRuntimeCoverage(
     );
   }
   return report;
+}
+
+export async function verifyConnectorRuntimeOfflineExecutions(
+  catalog: ConnectorCatalog,
+  options: VerifyConnectorRuntimeOfflineExecutionOptions = {},
+): Promise<ConnectorRuntimeOfflineExecutionReport> {
+  const registry = options.registry ?? CONNECTOR_RUNTIME_REGISTRY;
+  const coverage = verifyConnectorRuntimeCoverage(catalog, options);
+  const evidenceRoot = path.resolve(options.evidenceRoot ?? process.cwd());
+  const results: ConnectorRuntimeOfflineExecutionResult[] = [];
+
+  for (const entry of coverage.entries.filter((item) => item.status === "implemented")) {
+    const operation = findCatalogOperation(catalog, entry.operationId);
+    const implementation = operation ? findConnectorRuntimeImplementation(operation, registry) : null;
+    if (!operation || !implementation) continue;
+    const result = await executeRuntimeImplementationOffline({
+      operation,
+      implementation,
+      evidenceRoot,
+      runtimeExecutorOptions: options.runtimeExecutorOptions,
+    });
+    results.push(result);
+  }
+
+  const errors = results
+    .filter((result) => !result.ok)
+    .map((result) => `runtime offline execution for ${result.operationId} failed: ${result.error ?? "unknown error"}`);
+  if (errors.length > 0) {
+    throw new ConnectorRuntimeCoverageError(
+      `Connector runtime offline execution failed with ${errors.length} error(s): ${errors.join("; ")}`,
+      { ...coverage, errors: [...coverage.errors, ...errors] },
+    );
+  }
+  return { results, errors };
+}
+
+async function executeRuntimeImplementationOffline(input: {
+  operation: ConnectorOperationDefinition;
+  implementation: ConnectorRuntimeImplementation;
+  evidenceRoot: string;
+  runtimeExecutorOptions?: Omit<ConnectorRuntimeExecutorOptions, "fetchImpl">;
+}): Promise<ConnectorRuntimeOfflineExecutionResult> {
+  try {
+    const fixtures = loadConnectorRuntimeFixtures(input.implementation.fixtures ?? [], { evidenceRoot: input.evidenceRoot });
+    const runtimeExecutorOptions = {
+      ...input.runtimeExecutorOptions,
+      fetchImpl: createConnectorRuntimeFixtureFetch(fixtures),
+    };
+    const values = sampleValuesForOperation(input.operation);
+    const secrets = sampleSecretsForOperation(input.operation);
+    if (input.operation.kind === "action") {
+      const executor = createConnectorOperationExecutor(input.operation, runtimeExecutorOptions, [input.implementation]);
+      if (!executor) throw new Error("missing action executor");
+      await executor.execute({ operation: input.operation, values, secrets });
+    } else {
+      const executor = createConnectorSourceExecutor(input.operation, runtimeExecutorOptions, [input.implementation]);
+      if (!executor) throw new Error("missing source executor");
+      await executor.start({
+        operation: input.operation,
+        values,
+        secrets,
+        plan: {
+          status: "source_plan",
+          operationId: input.operation.id,
+          appId: input.operation.appId,
+          delivery: input.operation.source?.delivery ?? "manual",
+          missingFields: [],
+          missingSecrets: [],
+          invalidFields: [],
+          values,
+          secretRefs: Object.fromEntries(input.operation.authFieldNames.map((field) => [field, `secret://${field}`])),
+          managedInterfaces: [],
+          ...(input.operation.runtime?.dedupe ? { dedupe: input.operation.runtime.dedupe } : {}),
+          hasHooks: input.operation.runtime?.hasHooks === true,
+          stateful: input.operation.source?.usesServiceDb === true,
+        },
+      });
+    }
+    return {
+      operationId: input.operation.id,
+      appId: input.operation.appId,
+      kind: input.operation.kind,
+      executorId: input.implementation.executorId,
+      ok: true,
+    };
+  } catch (error) {
+    return {
+      operationId: input.operation.id,
+      appId: input.operation.appId,
+      kind: input.operation.kind,
+      executorId: input.implementation.executorId,
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 export function buildConnectorRuntimeAudit(
@@ -518,6 +638,10 @@ function sampleValuesForOperation(operation: ConnectorOperationDefinition): Reco
     values[field.name] = sampleValueForField(field);
   }
   return values;
+}
+
+function sampleSecretsForOperation(operation: ConnectorOperationDefinition): Record<string, string> {
+  return Object.fromEntries(operation.authFieldNames.map((field) => [field, `offline-${field}-secret`]));
 }
 
 function sampleValueForField(field: ConnectorFieldDefinition): IntegrationJson {

@@ -28,6 +28,7 @@ export {
   buildConnectorOperationRuntimePlan,
   evaluateConnectorRuntimeCoverage,
   verifyConnectorRuntimeCoverage,
+  verifyConnectorRuntimeOfflineExecutions,
 } from "./runtime-coverage.js";
 export {
   CONNECTOR_RUNTIME_REGISTRY,
@@ -85,12 +86,15 @@ export type {
   ConnectorRuntimeAuditReport,
   ConnectorRuntimeAuditStatus,
   ConnectorRuntimeAuditSummary,
+  ConnectorRuntimeOfflineExecutionReport,
+  ConnectorRuntimeOfflineExecutionResult,
   ConnectorOperationRuntimePlan,
   ConnectorRuntimeCoverageEntry,
   ConnectorRuntimeCoverageReport,
   ConnectorRuntimeCoverageStatus,
   ConnectorRuntimeCoverageSummary,
   VerifyConnectorRuntimeCoverageOptions,
+  VerifyConnectorRuntimeOfflineExecutionOptions,
 } from "./runtime-coverage.js";
 export type {
   ConnectorRuntimeAuthBinding,

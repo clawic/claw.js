@@ -7,6 +7,7 @@ import {
   buildConnectorRuntimeAudit,
   evaluateConnectorRuntimeCoverage,
   verifyConnectorRuntimeCoverage,
+  verifyConnectorRuntimeOfflineExecutions,
   type ConnectorRuntimeCoverageReport,
 } from "./runtime-coverage.ts";
 import type { ConnectorRuntimeImplementation } from "./runtime-registry.ts";
@@ -548,6 +549,110 @@ describe("connector runtime coverage", () => {
       authorization: "Bearer secret-token",
       body: { text: "hello" },
     }]);
+  });
+
+  it("verifies implemented runtime operations through offline fixtures", async () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: ["apiKey"],
+        fields: [{ name: "apiKey", type: "string", optional: false, secret: true }],
+        operations: [{
+          id: "fixture_service.action.send-message",
+          appId: "fixture_service",
+          kind: "action",
+          name: "Send Message",
+          fields: [{ name: "text", type: "string", optional: false }],
+          authFieldNames: ["apiKey"],
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "action",
+      executorId: "fixture.action.http",
+      baseUrl: "https://api.example.invalid/v1/",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [{
+        kind: "response",
+        path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
+      }],
+      planKinds: ["request"],
+      supports: (operation) => operation.id === "fixture_service.action.send-message",
+      buildPlan: (operation, values) => ({
+        requestPlan: {
+          method: "POST",
+          endpoint: "messages",
+          auth: operation.authFieldNames.map((field) => ({ type: "secret", field, placement: "bearer" })),
+          body: values,
+          responseSchema: { type: "object", requiredPaths: ["ok"] },
+        },
+      }),
+    }];
+
+    const report = await verifyConnectorRuntimeOfflineExecutions(catalog, { registry });
+
+    assert.deepEqual(report, {
+      results: [{
+        operationId: "fixture_service.action.send-message",
+        appId: "fixture_service",
+        kind: "action",
+        executorId: "fixture.action.http",
+        ok: true,
+      }],
+      errors: [],
+    });
+  });
+
+  it("reports runtime fixture execution failures", async () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [{
+          id: "fixture_service.action.send-message",
+          appId: "fixture_service",
+          kind: "action",
+          name: "Send Message",
+          fields: [],
+          authFieldNames: [],
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "action",
+      executorId: "fixture.action.http",
+      baseUrl: "https://api.example.invalid/",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [{
+        kind: "response",
+        path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
+      }],
+      planKinds: ["request"],
+      supports: (operation) => operation.id === "fixture_service.action.send-message",
+      buildPlan: () => ({
+        requestPlan: {
+          method: "GET",
+          endpoint: "messages",
+          auth: [],
+          body: {},
+          responseSchema: { type: "object", requiredPaths: ["missing"] },
+        },
+      }),
+    }];
+
+    await assert.rejects(
+      () => verifyConnectorRuntimeOfflineExecutions(catalog, { registry }),
+      /runtime offline execution for fixture_service\.action\.send-message failed.*output missing required path missing/s,
+    );
   });
 
   it("rejects declarative HTTP auth bindings without transport placement", () => {
