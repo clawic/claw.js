@@ -76,7 +76,10 @@ function readExpected(root) {
     const fields = readFields(source, id, [], appPath);
     const auth = fields.filter((field) => field.secret).map((field) => field.name);
     const app = {
+      name: scrub(firstMatch(source, /\bname:\s*["']([^"']+)["']/) ?? packageJson?.displayName ?? id),
+      description: scrub(firstMatch(source, /\bdescription:\s*["'`]([^"'`]+)["'`]/)),
       packageVersion: scrub(packageJson?.version),
+      authType: scrub(firstMatch(source, /\bauth:\s*{[^}]*\btype:\s*["']([^"']+)["']/s)),
       fields: names(fields),
       fieldDefinitions: fields,
       fieldStats: summarizeFields(fields),
@@ -108,6 +111,8 @@ function readExpectedOperations(appDir, appId, kind, appAuth, appFields) {
         id: `${appId}.${kind}.${slug}`,
         kind,
         key,
+        name: scrub(firstMatch(source, /\bname:\s*["'`]([^"'`]+)["'`]/) ?? titleize(slug)),
+        description: scrub(firstMatch(source, /\bdescription:\s*["'`]([^"'`]+)["'`]/)),
         version: scrub(firstMatch(source, /\bversion:\s*["']([^"']+)["']/)),
         fields: names(fields),
         fieldDefinitions: fields,
@@ -202,6 +207,9 @@ function verify(catalog, expectedApps) {
     if (actualVersion !== expectedApp.packageVersion) {
       errors.push(`app ${id} packageVersion ${actualVersion ?? "<missing>"} expected ${expectedApp.packageVersion ?? "<missing>"}`);
     }
+    compareStringValue(`app ${id} name`, expectedApp.name, app.name, errors);
+    compareStringValue(`app ${id} description`, expectedApp.description, app.description, errors);
+    compareStringValue(`app ${id} authType`, expectedApp.authType, app.authType, errors);
     compareSets(`app ${id} fields`, expectedApp.fields, new Set(fieldNames(app.fields)), errors);
     compareFieldMetadata(`app ${id}`, expectedApp.fieldDefinitions, app.fields, errors);
     compareSets(`app ${id} auth fields`, expectedApp.auth, new Set(strings(app.authFieldNames)), errors);
@@ -218,6 +226,8 @@ function verify(catalog, expectedApps) {
       if (actualOperationVersion !== expectedOperation.version) {
         errors.push(`operation ${operationId} version ${actualOperationVersion ?? "<missing>"} expected ${expectedOperation.version ?? "<missing>"}`);
       }
+      compareStringValue(`operation ${operationId} name`, expectedOperation.name, operation.name, errors);
+      compareStringValue(`operation ${operationId} description`, expectedOperation.description, operation.description, errors);
       compareSets(`operation ${operationId} fields`, expectedOperation.fields, new Set(fieldNames(operation.fields)), errors);
       compareFieldMetadata(`operation ${operationId}`, expectedOperation.fieldDefinitions, operation.fields, errors);
       compareSets(`operation ${operationId} auth fields`, expectedOperation.auth, new Set(strings(operation.authFieldNames)), errors);
@@ -650,6 +660,10 @@ function compareJsonValue(label, expected, actual, errors) {
   if (stableJson(expected) !== stableJson(actual)) errors.push(`${label} ${formatValue(actual)} expected ${formatValue(expected)}`);
 }
 
+function compareStringValue(label, expected, actual, errors) {
+  if (normalizePublicValue(actual) !== normalizePublicValue(expected)) errors.push(`${label} ${formatValue(actual)} expected ${formatValue(expected)}`);
+}
+
 function compareOptionValues(label, expected, actual, errors) {
   const expectedValues = new Set((Array.isArray(expected) ? expected : []).map((option) => stableJson(option?.value)));
   const actualValues = new Set((Array.isArray(actual) ? actual : []).map((option) => stableJson(option?.value)));
@@ -712,6 +726,10 @@ function cleanText(value) {
   if (typeof value !== "string") return undefined;
   const cleaned = scrubBrand(value).replace(/\s+/g, " ").trim();
   return cleaned || undefined;
+}
+
+function titleize(value) {
+  return value.split(/[-_]+/g).filter(Boolean).map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
 }
 
 function compareAnnotations(operationId, expected, actual, errors) {
