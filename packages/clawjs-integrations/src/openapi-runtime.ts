@@ -53,6 +53,7 @@ interface OpenApiSecurityScheme {
 type OpenApiPathItem = Partial<Record<OpenApiHttpMethod, OpenApiOperation>> & {
   $ref?: unknown;
   parameters?: OpenApiParameter[];
+  servers?: OpenApiServer[];
 };
 
 interface OpenApiOperation {
@@ -64,6 +65,7 @@ interface OpenApiOperation {
   parameters?: OpenApiParameter[];
   requestBody?: OpenApiRequestBody;
   responses?: Record<string, OpenApiResponse | undefined>;
+  servers?: OpenApiServer[];
 }
 
 interface OpenApiParameter {
@@ -109,6 +111,7 @@ interface OpenApiConnectorOperationMetadata {
   id: string;
   method: string;
   path: string;
+  baseUrl?: string;
   parameters: OpenApiConnectorParameterBinding[];
   bodyFields: OpenApiConnectorBodyBinding[];
   bodyEncoding?: "form" | "multipart";
@@ -289,6 +292,7 @@ function buildOpenApiRequestPlan(
   return {
     method: metadata.method,
     endpoint,
+    ...(metadata.baseUrl ? { url: absoluteOpenApiOperationUrl(metadata.baseUrl, endpoint) } : {}),
     auth: metadata.auth.map((binding) => ({
       type: "secret",
       field: binding.fieldName,
@@ -308,6 +312,11 @@ function buildOpenApiRequestPlan(
 
 function replaceOpenApiPathParameter(endpoint: string, sourceName: string, value: IntegrationJson): string {
   return endpoint.replaceAll(`{${sourceName}}`, encodeURIComponent(String(value)));
+}
+
+function absoluteOpenApiOperationUrl(baseUrl: string, endpoint: string): string {
+  if (/^https?:\/\//i.test(endpoint)) return endpoint;
+  return new URL(endpoint.replace(/^\/+/, ""), baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`).toString();
 }
 
 function collectOpenApiOperations(
@@ -331,6 +340,7 @@ function collectOpenApiOperations(
         id,
         method: method.toUpperCase(),
         path,
+        ...optionalString("baseUrl", firstServerUrl(operation) ?? firstServerUrl(resolvedPathItem)),
         parameters: parameters.map(({ field: _field, ...parameter }) => parameter),
         bodyFields: bodyFields.map(({ field: _field, ...field }) => field),
         ...optionalBodyEncoding(requestBodyEncoding(document, operation.requestBody)),
@@ -954,8 +964,8 @@ function titleize(value: string): string {
     .join(" ");
 }
 
-function firstServerUrl(document: OpenApiDocument): string | undefined {
-  return document.servers?.map(serverUrl).find((url): url is string => Boolean(url));
+function firstServerUrl(input: { servers?: OpenApiServer[] }): string | undefined {
+  return input.servers?.map(serverUrl).find((url): url is string => Boolean(url));
 }
 
 function serverUrl(server: OpenApiServer): string | undefined {

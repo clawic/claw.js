@@ -514,6 +514,88 @@ describe("OpenAPI connector runtime", () => {
     assert.equal(implementation.baseUrl, "https://sandbox.api.example.invalid/v2/");
   });
 
+  it("uses path and operation OpenAPI servers for request plans", () => {
+    const document = {
+      ...FIXTURE_OPENAPI,
+      servers: [{ url: "https://api.example.invalid/v1/" }],
+      paths: {
+        "/accounts/{accountId}": {
+          servers: [{ url: "https://accounts.example.invalid/{version}/", variables: { version: { default: "v2" } } }],
+          get: {
+            operationId: "getAccount",
+            summary: "Get account",
+            parameters: [{
+              name: "accountId",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            }],
+            responses: {
+              "200": {
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      required: ["id"],
+                      properties: {
+                        id: { type: "string" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          post: {
+            operationId: "updateAccount",
+            summary: "Update account",
+            servers: [{ url: "https://write.example.invalid/" }],
+            parameters: [{
+              name: "accountId",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            }],
+            responses: {
+              "200": {
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      required: ["id"],
+                      properties: {
+                        id: { type: "string" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const options = {
+      appId: "fixture_operation_servers",
+      authFieldName: "apiKey",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(document, options)];
+    const getOperation = catalog.apps[0]?.operations.find((operation) => operation.id.endsWith("get-account"));
+    const updateOperation = catalog.apps[0]?.operations.find((operation) => operation.id.endsWith("update-account"));
+    assert.ok(getOperation);
+    assert.ok(updateOperation);
+
+    assert.equal(buildConnectorOperationRuntimePlan(getOperation, {
+      accountId: "acct_123",
+    }, { registry }).requestPlan?.url, "https://accounts.example.invalid/v2/accounts/acct_123");
+    assert.equal(buildConnectorOperationRuntimePlan(updateOperation, {
+      accountId: "acct_123",
+    }, { registry }).requestPlan?.url, "https://write.example.invalid/accounts/acct_123");
+  });
+
   it("merges OpenAPI allOf schema fields", () => {
     const document = {
       openapi: "3.0.0",

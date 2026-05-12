@@ -112,6 +112,7 @@ OpenAPI schemas that compose fields with `allOf` are flattened before field and 
 OpenAPI `oneOf` and `anyOf` schemas are flattened conservatively: alternative properties become available fields while only required properties common to every alternative become required output paths.
 OpenAPI response schemas derive nested required output paths for required object properties, so offline validation can catch missing nested objects without real provider calls.
 OpenAPI server URLs may use server variables with defaults; the runtime resolves those defaults before constructing request plans.
+OpenAPI path-level and operation-level `servers` override the document base URL per generated request plan, including server variable defaults.
 OpenAPI request bodies declared as `application/x-www-form-urlencoded` are converted into form-encoded runtime request plans when no JSON body schema is present.
 OpenAPI request bodies declared as `multipart/form-data` are converted into multipart runtime request plans when no JSON or URL-encoded body schema is present.
 OpenAPI query parameters preserve supported serialization hints (`form`, `spaceDelimited`, `pipeDelimited`, and `deepObject`) so generated runtime plans can encode arrays and structured filters without provider-specific code.
