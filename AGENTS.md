@@ -151,6 +151,7 @@ Pull request rules:
 - Treat `main`, `next`, and `release/*` as protected branches.
 - Run the relevant local validation before merge. GitHub must not run automatic CI or release checks for this repo.
 - If a PR changes a published package, generated template output, or public package surface, add a `.changeset/*.md` entry unless the change is docs-only, test-only, or internal-only.
+- Commit related changesets with the behavior they document. Do not split a `.changeset/*.md` file into a standalone commit merely because it is a changeset; split it only when it documents a distinct independently reviewable change, or when the related code/docs commit was already created by another process and the changeset is the only remaining pending artifact.
 - If a PR changes onboarding, installation, imports, CLI usage, support tiers, docs, or templates, update the related documentation in the same PR.
 - Keep release-prep changes explicit: changelog, docs, versioning, packaging, and validation should land together.
 
