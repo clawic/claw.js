@@ -177,7 +177,7 @@ describe("connector runtime coverage", () => {
           unsupported_real_runtime_reason: {
             code: "missing_reference_contract",
             message: "The available component metadata does not include a request contract.",
-            evidence: ["component source has no run or hook body"],
+            evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
           },
         }],
       }],
@@ -187,7 +187,7 @@ describe("connector runtime coverage", () => {
     assert.deepEqual(operation?.unsupported_real_runtime_reason, {
       code: "missing_reference_contract",
       message: "The available component metadata does not include a request contract.",
-      evidence: ["component source has no run or hook body"],
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
     });
     assert.throws(
       () => verifyConnectorRuntimeCoverage(catalog),
@@ -223,6 +223,36 @@ describe("connector runtime coverage", () => {
     assert.throws(
       () => verifyConnectorRuntimeCoverage(catalog, { allowUnsupportedReasons: true }),
       /requires concrete evidence/,
+    );
+  });
+
+  it("rejects unsupported reasons without local evidence files", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "manual_service",
+        name: "Manual Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [{
+          id: "manual_service.source.external-only",
+          appId: "manual_service",
+          kind: "source",
+          name: "External Only",
+          fields: [],
+          authFieldNames: [],
+          unsupported_real_runtime_reason: {
+            code: "missing_reference_contract",
+            message: "The available component metadata does not include a request contract.",
+            evidence: ["missing/evidence-file.test.ts"],
+          },
+        }],
+      }],
+    });
+
+    assert.throws(
+      () => verifyConnectorRuntimeCoverage(catalog, { allowUnsupportedReasons: true }),
+      /evidence file not found: missing\/evidence-file\.test\.ts/,
     );
   });
 
@@ -322,6 +352,53 @@ describe("connector runtime coverage", () => {
     assert.throws(
       () => verifyConnectorRuntimeCoverage(catalog, { registry }),
       /requires offline validation.*requires concrete evidence/s,
+    );
+  });
+
+  it("rejects registry implementations without local evidence files", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [{
+          id: "fixture_service.action.send-message",
+          appId: "fixture_service",
+          kind: "action",
+          name: "Send Message",
+          fields: [],
+          authFieldNames: [],
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "action",
+      executorId: "fixture.action.offline",
+      offlineValidated: true,
+      evidence: ["missing/runtime-evidence.test.ts"],
+      planKinds: ["request"],
+      supports: (operation) => operation.id === "fixture_service.action.send-message",
+      createExecutor: () => ({
+        async execute() {
+          return { ok: true };
+        },
+      }),
+      buildPlan: (operation) => ({
+        requestPlan: {
+          method: "POST",
+          endpoint: "messages",
+          auth: operation.authFieldNames.map((field) => ({ type: "secret", field })),
+          body: {},
+        },
+      }),
+    }];
+
+    assert.throws(
+      () => verifyConnectorRuntimeCoverage(catalog, { registry }),
+      /evidence file not found: missing\/runtime-evidence\.test\.ts/,
     );
   });
 

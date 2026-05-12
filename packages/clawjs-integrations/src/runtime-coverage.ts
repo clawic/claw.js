@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+
 import { ConnectorCatalogError } from "./catalog.ts";
 import {
   CONNECTOR_RUNTIME_REGISTRY,
@@ -43,6 +46,7 @@ export interface ConnectorRuntimeCoverageReport {
 
 export interface VerifyConnectorRuntimeCoverageOptions {
   allowUnsupportedReasons?: boolean;
+  evidenceRoot?: string;
   registry?: readonly ConnectorRuntimeImplementation[];
 }
 
@@ -96,6 +100,7 @@ export function verifyConnectorRuntimeCoverage(
 ): ConnectorRuntimeCoverageReport {
   const report = evaluateConnectorRuntimeCoverage(catalog, { registry: options.registry });
   const errors = [...report.errors];
+  const evidenceRoot = path.resolve(options.evidenceRoot ?? process.cwd());
   if (!options.allowUnsupportedReasons) {
     for (const entry of report.entries) {
       if (entry.status === "unsupported") {
@@ -110,6 +115,7 @@ export function verifyConnectorRuntimeCoverage(
     if (entry.status === "implemented" && !entry.evidence.some((item) => item.trim())) {
       errors.push(`runtime implementation for ${entry.operationId} requires concrete evidence`);
     }
+    errors.push(...evidencePathErrors(`runtime implementation for ${entry.operationId}`, entry.evidence, evidenceRoot));
     if (entry.status === "implemented") {
       const operation = findCatalogOperation(catalog, entry.operationId);
       const implementation = operation ? findConnectorRuntimeImplementation(operation, options.registry ?? CONNECTOR_RUNTIME_REGISTRY) : null;
@@ -151,6 +157,7 @@ export function verifyConnectorRuntimeCoverage(
     if (!reason?.evidence?.some((item) => item.trim())) {
       errors.push(`unsupported runtime reason for ${entry.operationId} requires concrete evidence`);
     }
+    errors.push(...evidencePathErrors(`unsupported runtime reason for ${entry.operationId}`, reason?.evidence ?? [], evidenceRoot));
   }
   if (errors.length > 0) {
     throw new ConnectorRuntimeCoverageError(
@@ -159,6 +166,41 @@ export function verifyConnectorRuntimeCoverage(
     );
   }
   return report;
+}
+
+function evidencePathErrors(label: string, evidence: readonly string[], evidenceRoot: string): string[] {
+  const errors: string[] = [];
+  for (const item of evidence) {
+    const evidencePath = item.trim();
+    if (!evidencePath) continue;
+    const normalized = path.normalize(evidencePath);
+    if (path.isAbsolute(normalized) || normalized === ".." || normalized.startsWith(`..${path.sep}`)) {
+      errors.push(`${label} evidence must be a repository-relative file path: ${evidencePath}`);
+      continue;
+    }
+    const resolved = resolveExistingEvidenceFile(evidenceRoot, normalized);
+    if (!resolved) errors.push(`${label} evidence file not found: ${evidencePath}`);
+  }
+  return errors;
+}
+
+function resolveExistingEvidenceFile(evidenceRoot: string, evidencePath: string): string | null {
+  let candidateRoot = evidenceRoot;
+  for (;;) {
+    const candidate = path.resolve(candidateRoot, evidencePath);
+    if (isFile(candidate)) return candidate;
+    const parent = path.dirname(candidateRoot);
+    if (parent === candidateRoot) return null;
+    candidateRoot = parent;
+  }
+}
+
+function isFile(filePath: string): boolean {
+  try {
+    return fs.statSync(filePath).isFile();
+  } catch {
+    return false;
+  }
 }
 
 function requestPlanAuthErrors(
