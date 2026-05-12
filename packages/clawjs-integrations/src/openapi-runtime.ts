@@ -23,8 +23,22 @@ interface OpenApiDocument {
     description?: unknown;
     version?: unknown;
   };
+  components?: {
+    securitySchemes?: Record<string, OpenApiSecurityScheme | undefined>;
+  };
+  security?: OpenApiSecurityRequirement[];
   servers?: Array<{ url?: unknown }>;
   paths?: Record<string, OpenApiPathItem | undefined>;
+}
+
+type OpenApiSecurityRequirement = Record<string, unknown[]>;
+
+interface OpenApiSecurityScheme {
+  type?: unknown;
+  in?: unknown;
+  name?: unknown;
+  scheme?: unknown;
+  description?: unknown;
 }
 
 type OpenApiPathItem = Partial<Record<OpenApiHttpMethod, OpenApiOperation>> & {
@@ -35,6 +49,7 @@ interface OpenApiOperation {
   operationId?: unknown;
   summary?: unknown;
   description?: unknown;
+  security?: OpenApiSecurityRequirement[];
   parameters?: OpenApiParameter[];
   requestBody?: OpenApiRequestBody;
   responses?: Record<string, OpenApiResponse | undefined>;
@@ -76,8 +91,17 @@ interface OpenApiConnectorOperationMetadata {
   path: string;
   parameters: OpenApiConnectorParameterBinding[];
   bodyFields: OpenApiConnectorBodyBinding[];
+  auth: OpenApiConnectorAuthBinding[];
   pagination?: ConnectorRuntimePaginationPlan;
   responseSchema: ConnectorRuntimeOutputSchema;
+}
+
+interface OpenApiConnectorAuthBinding {
+  fieldName: string;
+  placement: ConnectorRuntimeAuthPlacement;
+  name?: string;
+  prefix?: string;
+  description?: string;
 }
 
 interface OpenApiConnectorParameterBinding {
@@ -114,9 +138,7 @@ export function buildOpenApiConnectorCatalog(
 ): ConnectorCatalog {
   const openapi = asOpenApiDocument(document);
   const operations = collectOpenApiOperations(openapi, options);
-  const fields = options.authFieldName
-    ? [{ name: options.authFieldName, type: "string", optional: false, secret: true }]
-    : [];
+  const fields = authFieldsForOperations(operations);
   return normalizeConnectorCatalog({
     version: 1,
     apps: [{
@@ -124,7 +146,7 @@ export function buildOpenApiConnectorCatalog(
       name: options.appName ?? stringValue(openapi.info?.title) ?? options.appId,
       ...optionalString("description", options.description ?? stringValue(openapi.info?.description)),
       ...optionalString("packageVersion", stringValue(openapi.info?.version)),
-      authFieldNames: options.authFieldName ? [options.authFieldName] : [],
+      authFieldNames: fields.map((field) => field.name),
       fields,
       operations: operations.map((operation) => operation.definition),
     }],
@@ -185,13 +207,13 @@ function buildOpenApiRequestPlan(
   return {
     method: metadata.method,
     endpoint,
-    auth: options.authFieldName ? [{
+    auth: metadata.auth.map((binding) => ({
       type: "secret",
-      field: options.authFieldName,
-      placement: options.authPlacement ?? "bearer",
-      ...(options.authHeaderName ? { name: options.authHeaderName } : {}),
-      ...(options.authPrefix ? { prefix: options.authPrefix } : {}),
-    }] : [],
+      field: binding.fieldName,
+      placement: binding.placement,
+      ...(binding.name ? { name: binding.name } : {}),
+      ...(binding.prefix ? { prefix: binding.prefix } : {}),
+    })),
     headers,
     ...(Object.keys(query).length > 0 ? { query } : {}),
     body,
@@ -219,12 +241,14 @@ function collectOpenApiOperations(
         .filter((parameter): parameter is OpenApiConnectorParameterBinding & { field: ConnectorFieldDefinition } => Boolean(parameter));
       const bodyFields = openApiBodyBindings(operation.requestBody, usedFieldNames);
       const id = `${options.appId}.action.${operationSlug(method, path, stringValue(operation.operationId))}`;
+      const auth = openApiAuthBindings(document, operation, options);
       const metadata: OpenApiConnectorOperationMetadata = {
         id,
         method: method.toUpperCase(),
         path,
         parameters: parameters.map(({ field: _field, ...parameter }) => parameter),
         bodyFields: bodyFields.map(({ field: _field, ...field }) => field),
+        auth,
         ...optionalPagination(inferOpenApiPagination(method, operation, parameters)),
         responseSchema: responseSchemaForOperation(operation),
       };
@@ -241,7 +265,7 @@ function collectOpenApiOperations(
             ...parameters.map((parameter) => parameter.field),
             ...bodyFields.map((field) => field.field),
           ],
-          authFieldNames: options.authFieldName ? [options.authFieldName] : [],
+          authFieldNames: auth.map((binding) => binding.fieldName),
           runtime: {
             hasRun: true,
             hasHooks: false,
@@ -253,6 +277,83 @@ function collectOpenApiOperations(
       }];
     });
   });
+}
+
+function authFieldsForOperations(
+  operations: Array<{ definition: ConnectorOperationDefinition; metadata: OpenApiConnectorOperationMetadata }>,
+): ConnectorFieldDefinition[] {
+  const fields = new Map<string, ConnectorFieldDefinition>();
+  for (const operation of operations) {
+    for (const binding of operation.metadata.auth) {
+      fields.set(binding.fieldName, {
+        name: binding.fieldName,
+        type: "string",
+        optional: false,
+        secret: true,
+        ...optionalString("description", binding.description),
+      });
+    }
+  }
+  return [...fields.values()].sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function openApiAuthBindings(
+  document: OpenApiDocument,
+  operation: OpenApiOperation,
+  options: OpenApiConnectorRuntimeOptions,
+): OpenApiConnectorAuthBinding[] {
+  if (options.authFieldName) {
+    return [{
+      fieldName: options.authFieldName,
+      placement: options.authPlacement ?? "bearer",
+      ...(options.authHeaderName ? { name: options.authHeaderName } : {}),
+      ...(options.authPrefix ? { prefix: options.authPrefix } : {}),
+    }];
+  }
+  const requirements = operation.security ?? document.security ?? [];
+  const referenced = requirements.flatMap((requirement) => Object.keys(requirement));
+  const schemeNames = referenced.length > 0 ? referenced : Object.keys(document.components?.securitySchemes ?? {});
+  return schemeNames.flatMap((schemeName) => {
+    const scheme = document.components?.securitySchemes?.[schemeName];
+    if (!scheme) return [];
+    const binding = authBindingForSecurityScheme(schemeName, scheme);
+    return binding ? [binding] : [];
+  });
+}
+
+function authBindingForSecurityScheme(
+  schemeName: string,
+  scheme: OpenApiSecurityScheme,
+): OpenApiConnectorAuthBinding | null {
+  const type = stringValue(scheme.type);
+  if (type === "http" && stringValue(scheme.scheme)?.toLowerCase() === "bearer") {
+    return {
+      fieldName: fieldName(schemeName),
+      placement: "bearer",
+      description: stringValue(scheme.description),
+    };
+  }
+  if (type === "apiKey") {
+    const location = stringValue(scheme.in);
+    const name = stringValue(scheme.name);
+    if (location === "header" && name) {
+      return {
+        fieldName: fieldName(schemeName),
+        placement: "header",
+        name,
+        description: stringValue(scheme.description),
+      };
+    }
+    if (location === "query" && name) {
+      return {
+        fieldName: fieldName(schemeName),
+        placement: "query",
+        name,
+        description: stringValue(scheme.description),
+      };
+    }
+  }
+  return null;
 }
 
 function inferOpenApiPagination(
