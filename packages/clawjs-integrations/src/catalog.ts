@@ -78,6 +78,9 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       summary.disabledFields += app.fields.filter((field) => field.disabled === true).length;
       summary.reloadFields += app.fields.filter((field) => field.reloadProps === true).length;
       summary.boundedFields += app.fields.filter((field) => field.min !== undefined || field.max !== undefined).length;
+      summary.placeholderFields += app.fields.filter((field) => field.placeholder).length;
+      summary.queryFields += app.fields.filter((field) => field.useQuery === true).length;
+      summary.labelFields += app.fields.filter((field) => field.withLabel === true).length;
       summary.dynamicOptionFields += app.fields.filter((field) => field.dynamicOptions).length;
       for (const operation of app.operations) {
         if (operation.kind === "action") summary.actions += 1;
@@ -91,6 +94,9 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
         summary.disabledFields += operation.fields.filter((field) => field.disabled === true).length;
         summary.reloadFields += operation.fields.filter((field) => field.reloadProps === true).length;
         summary.boundedFields += operation.fields.filter((field) => field.min !== undefined || field.max !== undefined).length;
+        summary.placeholderFields += operation.fields.filter((field) => field.placeholder).length;
+        summary.queryFields += operation.fields.filter((field) => field.useQuery === true).length;
+        summary.labelFields += operation.fields.filter((field) => field.withLabel === true).length;
         summary.dynamicOptionFields += operation.fields.filter((field) => field.dynamicOptions).length;
         if (operation.annotations) summary.annotatedOperations += 1;
         if (operation.annotations?.destructiveHint === true) summary.destructiveOperations += 1;
@@ -122,6 +128,9 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       disabledFields: 0,
       reloadFields: 0,
       boundedFields: 0,
+      placeholderFields: 0,
+      queryFields: 0,
+      labelFields: 0,
       annotatedOperations: 0,
       destructiveOperations: 0,
       readOnlyOperations: 0,
@@ -240,6 +249,9 @@ function normalizeFields(input: unknown): ConnectorFieldDefinition[] {
       ...(field.reloadProps === true ? { reloadProps: true } : {}),
       ...(typeof field.min === "number" && Number.isFinite(field.min) ? { min: field.min } : {}),
       ...(typeof field.max === "number" && Number.isFinite(field.max) ? { max: field.max } : {}),
+      ...(typeof field.placeholder === "string" && field.placeholder.trim() ? { placeholder: field.placeholder.trim() } : {}),
+      ...(field.useQuery === true ? { useQuery: true } : {}),
+      ...(field.withLabel === true ? { withLabel: true } : {}),
       ...(field.secret === true ? { secret: true } : {}),
       ...(field.managed === true || type.startsWith("$.") ? { managed: true } : {}),
     };

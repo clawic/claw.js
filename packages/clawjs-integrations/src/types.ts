@@ -41,6 +41,9 @@ export interface ConnectorFieldDefinition {
   reloadProps?: boolean;
   min?: number;
   max?: number;
+  placeholder?: string;
+  useQuery?: boolean;
+  withLabel?: boolean;
   secret?: boolean;
   managed?: boolean;
 }
@@ -125,6 +128,9 @@ export interface ConnectorCatalogSummary {
   disabledFields: number;
   reloadFields: number;
   boundedFields: number;
+  placeholderFields: number;
+  queryFields: number;
+  labelFields: number;
   annotatedOperations: number;
   destructiveOperations: number;
   readOnlyOperations: number;

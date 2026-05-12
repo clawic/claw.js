@@ -148,6 +148,9 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
       ...optionalBoolean("reloadProps", readBoolean(body, "reloadProps") ?? inherited?.reloadProps),
       ...optionalNumber("min", min ?? inherited?.min),
       ...optionalNumber("max", max ?? inherited?.max),
+      ...optionalString("placeholder", cleanText(readTopLevelString(body, "placeholder") ?? inherited?.placeholder)),
+      ...optionalBoolean("useQuery", readBoolean(body, "useQuery") ?? inherited?.useQuery),
+      ...optionalBoolean("withLabel", readBoolean(body, "withLabel") ?? inherited?.withLabel),
       ...(inherited?.secret || isSecretField(name, body, appId) ? { secret: true } : {}),
       ...(inherited?.managed || type.startsWith("$.") ? { managed: true } : {}),
     };
