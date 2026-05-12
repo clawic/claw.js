@@ -8,33 +8,14 @@
 
 import type {
   IntegrationAdapter,
-  IntegrationInboundMessage,
   IntegrationOutboundMessage,
 } from "./types.js";
 import { sendTelegramRequest } from "./telegram-operation-executor.ts";
-
-interface TelegramUser {
-  id: number;
-  first_name?: string;
-  username?: string;
-}
-
-interface TelegramChat {
-  id: number;
-}
-
-interface TelegramMessage {
-  message_id: number;
-  date: number;
-  chat: TelegramChat;
-  from?: TelegramUser;
-  text?: string;
-}
-
-interface TelegramUpdate {
-  update_id: number;
-  message?: TelegramMessage;
-}
+import {
+  TELEGRAM_POLL_UPDATE_TYPES,
+  telegramInboundMessageFromUpdate,
+  type TelegramUpdate,
+} from "./telegram-source.ts";
 
 interface TelegramResponse<T> {
   ok: boolean;
@@ -58,7 +39,7 @@ export const telegramAdapter: IntegrationAdapter = {
         try {
           const params = new URLSearchParams({
             timeout: String(LONG_POLL_TIMEOUT_S),
-            allowed_updates: JSON.stringify(["message"]),
+            allowed_updates: JSON.stringify(TELEGRAM_POLL_UPDATE_TYPES),
           });
           if (offset != null) params.set("offset", String(offset));
           const res = await fetch(`${BASE}${auth}/getUpdates?${params.toString()}`);
@@ -75,15 +56,8 @@ export const telegramAdapter: IntegrationAdapter = {
             offset = upd.update_id + 1;
             if (seen.has(upd.update_id)) continue;
             seen.add(upd.update_id);
-            if (!upd.message?.text) continue;
-            const inbound: IntegrationInboundMessage = {
-              connectionId: connection.id,
-              channelRef: String(upd.message.chat.id),
-              externalId: `tg.${upd.message.message_id}`,
-              text: upd.message.text,
-              senderName: upd.message.from?.first_name ?? upd.message.from?.username,
-              timestamp: new Date(upd.message.date * 1_000).toISOString(),
-            };
+            const inbound = telegramInboundMessageFromUpdate(connection.id, upd);
+            if (!inbound) continue;
             await onMessage(inbound);
           }
         } catch (err) {

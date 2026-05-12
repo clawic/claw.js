@@ -40,10 +40,21 @@ export {
   executeTelegramOperation,
   sendTelegramRequest,
 } from "./telegram-operation-executor.js";
+export {
+  TELEGRAM_POLL_UPDATE_TYPES,
+  telegramInboundMessageFromUpdate,
+  telegramSourceEventsForUpdate,
+} from "./telegram-source.js";
 export type {
   TelegramOperationExecutorOptions,
   TelegramRequestPlan,
 } from "./telegram-operation-executor.js";
+export type {
+  TelegramMessage,
+  TelegramSourceEvent,
+  TelegramSourceKind,
+  TelegramUpdate,
+} from "./telegram-source.js";
 export type {
   ConnectorAppDefinition,
   ConnectorCatalog,
