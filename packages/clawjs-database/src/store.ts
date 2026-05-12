@@ -623,7 +623,6 @@ function builtInCollections(): Array<{
       displayName: "Personalities",
       coreFieldNames: ["id", "name", "version"],
       fields: [
-        { name: "id", type: "text", required: true },
         { name: "name", type: "text", required: true },
         { name: "description", type: "text" },
         { name: "promptMarkdown", type: "text" },
@@ -639,7 +638,6 @@ function builtInCollections(): Array<{
       displayName: "Skill Collections",
       coreFieldNames: ["id", "name"],
       fields: [
-        { name: "id", type: "text", required: true },
         { name: "name", type: "text", required: true },
         { name: "description", type: "text" },
         { name: "includedTags", type: "json" },
@@ -655,7 +653,6 @@ function builtInCollections(): Array<{
       displayName: "Connections",
       coreFieldNames: ["id", "service", "label"],
       fields: [
-        { name: "id", type: "text", required: true },
         { name: "service", type: "select", required: true,
           options: ["telegram", "slack", "discord", "email", "sms", "webhook", "custom"] },
         { name: "label", type: "text", required: true },
@@ -675,7 +672,6 @@ function builtInCollections(): Array<{
       displayName: "Integration Bindings",
       coreFieldNames: ["id", "agentId", "connectionId"],
       fields: [
-        { name: "id", type: "text", required: true },
         { name: "agentId", type: "relation", required: true, relation: { collectionName: "company_agents" } },
         { name: "connectionId", type: "relation", required: true, relation: { collectionName: "connections" } },
         { name: "channelRef", type: "text", required: true },
@@ -697,7 +693,6 @@ function builtInCollections(): Array<{
       displayName: "Agent Audit Log",
       coreFieldNames: ["id", "actorAgentId", "action", "result"],
       fields: [
-        { name: "id", type: "text", required: true },
         { name: "actorAgentId", type: "relation", required: true, relation: { collectionName: "company_agents" } },
         { name: "subjectAgentId", type: "relation", relation: { collectionName: "company_agents" } },
         { name: "action", type: "text", required: true },
@@ -1532,7 +1527,7 @@ export class DatabaseServiceStore {
     const indexes = (input.indexes ?? []).map(normalizeIndex);
     const coreFieldNames = [...new Set((input.coreFieldNames ?? []).map((entry) => entry.trim()).filter(Boolean))];
     for (const fieldName of coreFieldNames) {
-      if (!fields.some((field) => field.name === fieldName)) {
+      if (!SYSTEM_FIELDS.includes(fieldName as typeof SYSTEM_FIELDS[number]) && !fields.some((field) => field.name === fieldName)) {
         throw new Error(`Protected core field ${fieldName} is missing from collection ${input.name}.`);
       }
     }
@@ -1566,7 +1561,7 @@ export class DatabaseServiceStore {
     if (!current) throw new Error(`Collection ${name} does not exist.`);
     const fields = input.fields ? validateFields(input.fields) : current.fields;
     for (const fieldName of current.coreFieldNames) {
-      if (!fields.some((field) => field.name === fieldName)) {
+      if (!SYSTEM_FIELDS.includes(fieldName as typeof SYSTEM_FIELDS[number]) && !fields.some((field) => field.name === fieldName)) {
         throw new Error(`Protected collection ${name} cannot remove core field ${fieldName}.`);
       }
     }
