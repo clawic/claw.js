@@ -38,6 +38,8 @@ export interface ConnectorFieldDefinition {
   type: string;
   label?: string;
   description?: string;
+  alertType?: string;
+  content?: string;
   optional: boolean;
   default?: IntegrationJson;
   options?: ConnectorFieldOption[];
@@ -141,6 +143,7 @@ export interface ConnectorCatalogSummary {
   placeholderFields: number;
   queryFields: number;
   labelFields: number;
+  alertFields: number;
   readAccessFields: number;
   writeAccessFields: number;
   syncedFields: number;

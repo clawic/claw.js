@@ -33,6 +33,7 @@ const countBounded = (fields) => Array.isArray(fields) ? fields.filter((field) =
 const countPlaceholders = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && typeof field.placeholder === "string" && field.placeholder.length > 0).length : 0;
 const countQuery = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.useQuery === true).length : 0;
 const countLabels = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.withLabel === true).length : 0;
+const countAlerts = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && (field.type === "alert" || typeof field.alertType === "string" || typeof field.content === "string")).length : 0;
 const countReadAccess = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.accessMode === "read").length : 0;
 const countWriteAccess = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.accessMode === "write").length : 0;
 const countSynced = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.sync === true).length : 0;
@@ -117,6 +118,7 @@ function verify(catalog, expectedApps) {
   if (actualSummary.placeholderFields !== expectedSummary.placeholderFields) errors.push(`placeholderFields ${actualSummary.placeholderFields} expected ${expectedSummary.placeholderFields}`);
   if (actualSummary.queryFields !== expectedSummary.queryFields) errors.push(`queryFields ${actualSummary.queryFields} expected ${expectedSummary.queryFields}`);
   if (actualSummary.labelFields !== expectedSummary.labelFields) errors.push(`labelFields ${actualSummary.labelFields} expected ${expectedSummary.labelFields}`);
+  if (actualSummary.alertFields !== expectedSummary.alertFields) errors.push(`alertFields ${actualSummary.alertFields} expected ${expectedSummary.alertFields}`);
   if (actualSummary.readAccessFields !== expectedSummary.readAccessFields) errors.push(`readAccess ${actualSummary.readAccessFields} expected ${expectedSummary.readAccessFields}`);
   if (actualSummary.writeAccessFields !== expectedSummary.writeAccessFields) errors.push(`writeAccess ${actualSummary.writeAccessFields} expected ${expectedSummary.writeAccessFields}`);
   if (actualSummary.syncedFields !== expectedSummary.syncedFields) errors.push(`synced ${actualSummary.syncedFields} expected ${expectedSummary.syncedFields}`);
@@ -228,6 +230,8 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
       ...(inherited ?? {}),
       name,
       type,
+      ...optionalString("alertType", scrub(readTopLevelString(body, "alertType") ?? inherited?.alertType)),
+      ...optionalString("content", scrub(readTopLevelText(body, "content") ?? inherited?.content)),
       optional: inherited?.optional ?? /\boptional:\s*true\b/.test(body),
       ...(defaultValue === undefined ? {} : { default: defaultValue }),
       ...(options.length ? { options } : {}),
@@ -372,6 +376,7 @@ function summarize(apps) {
     summary.placeholderFields += countPlaceholders(app.fields);
     summary.queryFields += countQuery(app.fields);
     summary.labelFields += countLabels(app.fields);
+    summary.alertFields += countAlerts(app.fields);
     summary.readAccessFields += countReadAccess(app.fields);
     summary.writeAccessFields += countWriteAccess(app.fields);
     summary.syncedFields += countSynced(app.fields);
@@ -395,6 +400,7 @@ function summarize(apps) {
       summary.placeholderFields += countPlaceholders(operation.fields);
       summary.queryFields += countQuery(operation.fields);
       summary.labelFields += countLabels(operation.fields);
+      summary.alertFields += countAlerts(operation.fields);
       summary.readAccessFields += countReadAccess(operation.fields);
       summary.writeAccessFields += countWriteAccess(operation.fields);
       summary.syncedFields += countSynced(operation.fields);
@@ -434,6 +440,7 @@ function summarize(apps) {
     placeholderFields: 0,
     queryFields: 0,
     labelFields: 0,
+    alertFields: 0,
     readAccessFields: 0,
     writeAccessFields: 0,
     syncedFields: 0,
@@ -470,6 +477,7 @@ function summarizeExpected(apps) {
     placeholderFields: 0,
     queryFields: 0,
     labelFields: 0,
+    alertFields: 0,
     readAccessFields: 0,
     writeAccessFields: 0,
     syncedFields: 0,
@@ -502,6 +510,7 @@ function summarizeExpected(apps) {
     summary.placeholderFields += app.fieldStats.placeholders;
     summary.queryFields += app.fieldStats.query;
     summary.labelFields += app.fieldStats.labels;
+    summary.alertFields += app.fieldStats.alerts;
     summary.readAccessFields += app.fieldStats.readAccess;
     summary.writeAccessFields += app.fieldStats.writeAccess;
     summary.syncedFields += app.fieldStats.synced;
@@ -520,6 +529,7 @@ function summarizeExpected(apps) {
       summary.placeholderFields += operation.fieldStats.placeholders;
       summary.queryFields += operation.fieldStats.query;
       summary.labelFields += operation.fieldStats.labels;
+      summary.alertFields += operation.fieldStats.alerts;
       summary.readAccessFields += operation.fieldStats.readAccess;
       summary.writeAccessFields += operation.fieldStats.writeAccess;
       summary.syncedFields += operation.fieldStats.synced;
@@ -611,6 +621,7 @@ function summarizeFields(fields) {
     placeholders: fields.filter((field) => field.placeholder).length,
     query: fields.filter((field) => field.useQuery === true).length,
     labels: fields.filter((field) => field.withLabel === true).length,
+    alerts: fields.filter(isAlertField).length,
     readAccess: fields.filter((field) => field.accessMode === "read").length,
     writeAccess: fields.filter((field) => field.accessMode === "write").length,
     synced: fields.filter((field) => field.sync === true).length,
@@ -619,6 +630,10 @@ function summarizeFields(fields) {
     contextualProps: fields.filter((field) => field.propDefinition?.contextKeys.length).length,
     managed: fields.filter((field) => field.managed).length,
   };
+}
+
+function isAlertField(field) {
+  return field.type === "alert" || Boolean(field.alertType) || Boolean(field.content);
 }
 
 function readDefault(body) {
@@ -1268,6 +1283,34 @@ function parseLiteral(raw) {
 function readTopLevelString(body, key) {
   const raw = readTopLevelValue(body, key);
   return raw ? /^["'`]([^"'`]*)["'`]$/.exec(raw.trim())?.[1] : undefined;
+}
+
+function readTopLevelText(body, key) {
+  const raw = readTopLevelValue(body, key);
+  if (!raw) return undefined;
+  return parseStringContent(raw.trim());
+}
+
+function parseStringContent(raw) {
+  const quote = raw[0];
+  if (quote !== "\"" && quote !== "'" && quote !== "`") return undefined;
+  if (raw[raw.length - 1] !== quote) return undefined;
+  let value = "";
+  let escaped = false;
+  for (let index = 1; index < raw.length - 1; index += 1) {
+    const char = raw[index];
+    if (escaped) {
+      if (char === "n") value += "\n";
+      else if (char === "t") value += "\t";
+      else value += char;
+      escaped = false;
+    } else if (char === "\\") {
+      escaped = true;
+    } else {
+      value += char;
+    }
+  }
+  return value;
 }
 
 function readTopLevelValue(body, key) {

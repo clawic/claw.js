@@ -140,6 +140,8 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
       type: inherited?.type ?? type,
       ...optionalString("label", cleanText(readTopLevelString(body, "label"))),
       ...optionalString("description", cleanText(readTopLevelString(body, "description"))),
+      ...optionalString("alertType", cleanText(readTopLevelString(body, "alertType") ?? inherited?.alertType)),
+      ...optionalString("content", cleanText(readTopLevelText(body, "content") ?? inherited?.content)),
       optional: inherited?.optional ?? /\boptional:\s*true\b/.test(body),
       ...optionalJson("default", readDefault(body)),
       ...optionalOptions(readOptions(body, source, filePath)),
@@ -987,6 +989,34 @@ function parseLiteral(raw) {
 function readTopLevelString(body, key) {
   const raw = readTopLevelValue(body, key);
   return raw ? /^["'`]([^"'`]*)["'`]$/.exec(raw.trim())?.[1] : undefined;
+}
+
+function readTopLevelText(body, key) {
+  const raw = readTopLevelValue(body, key);
+  if (!raw) return undefined;
+  return parseStringContent(raw.trim());
+}
+
+function parseStringContent(raw) {
+  const quote = raw[0];
+  if (quote !== "\"" && quote !== "'" && quote !== "`") return undefined;
+  if (raw[raw.length - 1] !== quote) return undefined;
+  let value = "";
+  let escaped = false;
+  for (let index = 1; index < raw.length - 1; index += 1) {
+    const char = raw[index];
+    if (escaped) {
+      if (char === "n") value += "\n";
+      else if (char === "t") value += "\t";
+      else value += char;
+      escaped = false;
+    } else if (char === "\\") {
+      escaped = true;
+    } else {
+      value += char;
+    }
+  }
+  return value;
 }
 
 function readTopLevelValue(body, key) {

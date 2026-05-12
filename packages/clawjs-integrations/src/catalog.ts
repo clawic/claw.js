@@ -81,6 +81,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       summary.placeholderFields += app.fields.filter((field) => field.placeholder).length;
       summary.queryFields += app.fields.filter((field) => field.useQuery === true).length;
       summary.labelFields += app.fields.filter((field) => field.withLabel === true).length;
+      summary.alertFields += app.fields.filter(isAlertField).length;
       summary.readAccessFields += app.fields.filter((field) => field.accessMode === "read").length;
       summary.writeAccessFields += app.fields.filter((field) => field.accessMode === "write").length;
       summary.syncedFields += app.fields.filter((field) => field.sync === true).length;
@@ -103,6 +104,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
         summary.placeholderFields += operation.fields.filter((field) => field.placeholder).length;
         summary.queryFields += operation.fields.filter((field) => field.useQuery === true).length;
         summary.labelFields += operation.fields.filter((field) => field.withLabel === true).length;
+        summary.alertFields += operation.fields.filter(isAlertField).length;
         summary.readAccessFields += operation.fields.filter((field) => field.accessMode === "read").length;
         summary.writeAccessFields += operation.fields.filter((field) => field.accessMode === "write").length;
         summary.syncedFields += operation.fields.filter((field) => field.sync === true).length;
@@ -143,6 +145,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       placeholderFields: 0,
       queryFields: 0,
       labelFields: 0,
+      alertFields: 0,
       readAccessFields: 0,
       writeAccessFields: 0,
       syncedFields: 0,
@@ -256,6 +259,8 @@ function normalizeFields(input: unknown): ConnectorFieldDefinition[] {
       type,
       ...(typeof field.label === "string" ? { label: field.label } : {}),
       ...(typeof field.description === "string" ? { description: field.description } : {}),
+      ...(typeof field.alertType === "string" && field.alertType.trim() ? { alertType: field.alertType.trim() } : {}),
+      ...(typeof field.content === "string" && field.content.trim() ? { content: field.content.trim() } : {}),
       optional: field.optional === true,
       ...(isJson(field.default) ? { default: field.default } : {}),
       ...(Array.isArray(field.options) ? { options: field.options.filter(isRecord).map((option) => ({
@@ -280,6 +285,10 @@ function normalizeFields(input: unknown): ConnectorFieldDefinition[] {
       ...(field.managed === true || type.startsWith("$.") ? { managed: true } : {}),
     };
   }).sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function isAlertField(field: ConnectorFieldDefinition): boolean {
+  return field.type === "alert" || Boolean(field.alertType) || Boolean(field.content);
 }
 
 function matchesQuery(
