@@ -1643,6 +1643,9 @@ async function runHostCli(input: {
     if (transport && transport !== "xpc" && transport !== "unix_socket" && transport !== "http" && transport !== "stdio") {
       throw new CliHandledError("usage_error", "Host transport must be xpc, unix_socket, http, or stdio.", CLI_EXIT_USAGE);
     }
+    const endpoint = transport && address
+      ? { transport: transport as "xpc" | "unix_socket" | "http" | "stdio", address }
+      : undefined;
     const registry = registerHost({
       id,
       displayName,
@@ -1650,7 +1653,7 @@ async function runHostCli(input: {
       ...(input.flags["bundle-id"] ? { bundleId: input.flags["bundle-id"] } : {}),
       ...(input.flags.executable ? { executablePath: path.resolve(input.flags.executable) } : {}),
       ...(input.flags["app-support-dir"] ? { appSupportDir: path.resolve(input.flags["app-support-dir"]) } : {}),
-      ...(transport && address ? { endpoint: { transport, address } } : {}),
+      ...(endpoint ? { endpoint } : {}),
     }, options, input.argv.includes("--use"));
     const host = registry.hosts.find((entry) => entry.id === id);
     if (input.wantsJson) writeJson(input.context.stdout, { ok: true, host, registryPath: resolveHostRegistryFile(options), activeHostId: registry.activeHostId });
