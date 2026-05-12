@@ -1,0 +1,13 @@
+{
+  "object": "list",
+  "type": "file_upload",
+  "results": [
+    {
+      "object": "file_upload",
+      "id": "file_upload_sample",
+      "status": "uploaded"
+    }
+  ],
+  "next_cursor": null,
+  "has_more": false
+}

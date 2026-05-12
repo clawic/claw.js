@@ -1,0 +1,10 @@
+{
+  "id": "evt_view_sample",
+  "api_version": "2026-03-11",
+  "type": "view.updated",
+  "entity": {
+    "id": "view_sample",
+    "type": "view"
+  },
+  "data": {}
+}

@@ -1,0 +1,13 @@
+{
+  "object": "list",
+  "type": "page",
+  "query_id": "query_sample",
+  "results": [
+    {
+      "object": "page",
+      "id": "page_sample"
+    }
+  ],
+  "next_cursor": null,
+  "has_more": false
+}

@@ -1,0 +1,9 @@
+{
+  "method": "POST",
+  "url": "https://api.notion.com/v1/file_uploads/sample/send",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-notionToken-secret",
+    "notion-version": "2026-03-11"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "method": "POST",
+  "url": "https://api.notion.com/v1/file_uploads",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-notionToken-secret",
+    "notion-version": "2026-03-11"
+  },
+  "body": {
+    "mode": "single_part",
+    "filename": "sample",
+    "content_type": "text/plain"
+  }
+}

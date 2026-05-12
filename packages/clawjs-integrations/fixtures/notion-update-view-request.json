@@ -1,0 +1,12 @@
+{
+  "method": "PATCH",
+  "url": "https://api.notion.com/v1/views/sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-notionToken-secret",
+    "notion-version": "2026-03-11"
+  },
+  "body": {
+    "name": "sample"
+  }
+}

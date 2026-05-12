@@ -302,6 +302,159 @@ const NOTION_CATALOG = normalizeConnectorCatalog({
         fields: [],
         authFieldNames: ["notionToken"],
       },
+      {
+        id: "notion.action.list-views",
+        appId: "notion",
+        kind: "action",
+        name: "List Views",
+        fields: [
+          { name: "databaseId", type: "string", optional: false },
+          { name: "pageSize", type: "integer", optional: true, default: 10, min: 1 },
+        ],
+        authFieldNames: ["notionToken"],
+      },
+      {
+        id: "notion.action.get-view",
+        appId: "notion",
+        kind: "action",
+        name: "Get View",
+        fields: [
+          { name: "viewId", type: "string", optional: false },
+        ],
+        authFieldNames: ["notionToken"],
+      },
+      {
+        id: "notion.action.create-view",
+        appId: "notion",
+        kind: "action",
+        name: "Create View",
+        fields: [
+          { name: "databaseId", type: "string", optional: false },
+          { name: "dataSourceId", type: "string", optional: false },
+          { name: "name", type: "string", optional: false },
+          { name: "type", type: "string", optional: false, default: "table" },
+        ],
+        authFieldNames: ["notionToken"],
+      },
+      {
+        id: "notion.action.update-view",
+        appId: "notion",
+        kind: "action",
+        name: "Update View",
+        fields: [
+          { name: "viewId", type: "string", optional: false },
+          { name: "name", type: "string", optional: true },
+        ],
+        authFieldNames: ["notionToken"],
+      },
+      {
+        id: "notion.action.delete-view",
+        appId: "notion",
+        kind: "action",
+        name: "Delete View",
+        fields: [
+          { name: "viewId", type: "string", optional: false },
+        ],
+        authFieldNames: ["notionToken"],
+      },
+      {
+        id: "notion.action.create-view-query",
+        appId: "notion",
+        kind: "action",
+        name: "Create View Query",
+        fields: [
+          { name: "viewId", type: "string", optional: false },
+          { name: "pageSize", type: "integer", optional: true, default: 10, min: 1 },
+        ],
+        authFieldNames: ["notionToken"],
+      },
+      {
+        id: "notion.action.get-view-query-results",
+        appId: "notion",
+        kind: "action",
+        name: "Get View Query Results",
+        fields: [
+          { name: "viewId", type: "string", optional: false },
+          { name: "queryId", type: "string", optional: false },
+          { name: "pageSize", type: "integer", optional: true, default: 10, min: 1 },
+        ],
+        authFieldNames: ["notionToken"],
+      },
+      {
+        id: "notion.action.delete-view-query",
+        appId: "notion",
+        kind: "action",
+        name: "Delete View Query",
+        fields: [
+          { name: "viewId", type: "string", optional: false },
+          { name: "queryId", type: "string", optional: false },
+        ],
+        authFieldNames: ["notionToken"],
+      },
+      {
+        id: "notion.action.create-file-upload",
+        appId: "notion",
+        kind: "action",
+        name: "Create File Upload",
+        fields: [
+          { name: "mode", type: "string", optional: true, default: "single_part" },
+          { name: "filename", type: "string", optional: true },
+          { name: "contentType", type: "string", optional: true, default: "text/plain" },
+        ],
+        authFieldNames: ["notionToken"],
+      },
+      {
+        id: "notion.action.send-file-upload",
+        appId: "notion",
+        kind: "action",
+        name: "Send File Upload",
+        fields: [
+          { name: "fileUploadId", type: "string", optional: false },
+          { name: "file", type: "string", optional: false },
+          { name: "partNumber", type: "integer", optional: true, default: 1, min: 1 },
+        ],
+        authFieldNames: ["notionToken"],
+      },
+      {
+        id: "notion.action.complete-file-upload",
+        appId: "notion",
+        kind: "action",
+        name: "Complete File Upload",
+        fields: [
+          { name: "fileUploadId", type: "string", optional: false },
+        ],
+        authFieldNames: ["notionToken"],
+      },
+      {
+        id: "notion.action.get-file-upload",
+        appId: "notion",
+        kind: "action",
+        name: "Get File Upload",
+        fields: [
+          { name: "fileUploadId", type: "string", optional: false },
+        ],
+        authFieldNames: ["notionToken"],
+      },
+      {
+        id: "notion.action.list-file-uploads",
+        appId: "notion",
+        kind: "action",
+        name: "List File Uploads",
+        fields: [
+          { name: "pageSize", type: "integer", optional: true, default: 10, min: 1 },
+        ],
+        authFieldNames: ["notionToken"],
+      },
+      {
+        id: "notion.action.list-custom-emojis",
+        appId: "notion",
+        kind: "action",
+        name: "List Custom Emojis",
+        fields: [
+          { name: "pageSize", type: "integer", optional: true, default: 10, min: 1 },
+        ],
+        authFieldNames: ["notionToken"],
+      },
     ],
   }],
 });
@@ -562,41 +715,155 @@ describe("notion operation runtime", () => {
       endpoint: "users/me",
       body: {},
     });
+    assertRequest("notion.action.list-views", { databaseId: "database-sample", pageSize: 10 }, {
+      method: "GET",
+      endpoint: "views",
+      query: { database_id: "database-sample", page_size: 10 },
+      body: {},
+    });
+    assertRequest("notion.action.get-view", { viewId: "view-sample" }, {
+      method: "GET",
+      endpoint: "views/view-sample",
+      body: {},
+    });
+    assertRequest("notion.action.create-view", {
+      databaseId: "database-sample",
+      dataSourceId: "data-source-sample",
+      name: "Recent",
+      type: "table",
+    }, {
+      method: "POST",
+      endpoint: "views",
+      body: {
+        database_id: "database-sample",
+        data_source_id: "data-source-sample",
+        name: "Recent",
+        type: "table",
+      },
+    });
+    assertRequest("notion.action.update-view", { viewId: "view-sample", name: "Updated" }, {
+      method: "PATCH",
+      endpoint: "views/view-sample",
+      body: {
+        name: "Updated",
+      },
+    });
+    assertRequest("notion.action.delete-view", { viewId: "view-sample" }, {
+      method: "DELETE",
+      endpoint: "views/view-sample",
+      body: {},
+    });
+    assertRequest("notion.action.create-view-query", { viewId: "view-sample", pageSize: 10 }, {
+      method: "POST",
+      endpoint: "views/view-sample/queries",
+      body: {
+        page_size: 10,
+      },
+    });
+    assertRequest("notion.action.get-view-query-results", { viewId: "view-sample", queryId: "query-sample", pageSize: 10 }, {
+      method: "GET",
+      endpoint: "views/view-sample/queries/query-sample/results",
+      query: { page_size: 10 },
+      body: {},
+    });
+    assertRequest("notion.action.delete-view-query", { viewId: "view-sample", queryId: "query-sample" }, {
+      method: "DELETE",
+      endpoint: "views/view-sample/queries/query-sample",
+      body: {},
+    });
+    assertRequest("notion.action.create-file-upload", {
+      mode: "single_part",
+      filename: "sample.txt",
+      contentType: "text/plain",
+    }, {
+      method: "POST",
+      endpoint: "file_uploads",
+      body: {
+        mode: "single_part",
+        filename: "sample.txt",
+        content_type: "text/plain",
+      },
+    });
+    assertRequest("notion.action.send-file-upload", { fileUploadId: "file-sample", file: "sample", partNumber: 1 }, {
+      method: "POST",
+      endpoint: "file_uploads/file-sample/send",
+      bodyEncoding: "multipart",
+      body: {
+        file: "sample",
+        part_number: 1,
+      },
+    });
+    assertRequest("notion.action.complete-file-upload", { fileUploadId: "file-sample" }, {
+      method: "POST",
+      endpoint: "file_uploads/file-sample/complete",
+      body: {},
+    });
+    assertRequest("notion.action.get-file-upload", { fileUploadId: "file-sample" }, {
+      method: "GET",
+      endpoint: "file_uploads/file-sample",
+      body: {},
+    });
+    assertRequest("notion.action.list-file-uploads", { pageSize: 10 }, {
+      method: "GET",
+      endpoint: "file_uploads",
+      query: { page_size: 10 },
+      body: {},
+    });
+    assertRequest("notion.action.list-custom-emojis", { pageSize: 10 }, {
+      method: "GET",
+      endpoint: "custom_emojis",
+      query: { page_size: 10 },
+      body: {},
+    });
   });
 
   it("covers Notion page operations with operation-scoped offline fixtures", async () => {
     const coverage = verifyConnectorRuntimeCoverage(NOTION_CATALOG);
     assert.equal(coverage.summary.missing, 0);
-    assert.equal(coverage.summary.implemented, 26);
+    assert.equal(coverage.summary.implemented, 40);
 
     const offline = await verifyConnectorRuntimeOfflineExecutions(NOTION_CATALOG);
     assert.deepEqual(offline.results.map((result) => result.operationId).sort(), [
       "notion.action.append-block-children",
+      "notion.action.complete-file-upload",
       "notion.action.create-comment",
       "notion.action.create-data-source",
       "notion.action.create-database",
+      "notion.action.create-file-upload",
       "notion.action.create-page",
+      "notion.action.create-view",
+      "notion.action.create-view-query",
       "notion.action.delete-block",
       "notion.action.delete-comment",
+      "notion.action.delete-view",
+      "notion.action.delete-view-query",
       "notion.action.get-block",
       "notion.action.get-comment",
       "notion.action.get-data-source",
       "notion.action.get-database",
+      "notion.action.get-file-upload",
       "notion.action.get-page",
       "notion.action.get-page-property",
       "notion.action.get-self",
       "notion.action.get-user",
+      "notion.action.get-view",
+      "notion.action.get-view-query-results",
       "notion.action.list-block-children",
       "notion.action.list-comments",
+      "notion.action.list-custom-emojis",
       "notion.action.list-data-source-templates",
+      "notion.action.list-file-uploads",
       "notion.action.list-users",
+      "notion.action.list-views",
       "notion.action.query-data-source",
       "notion.action.search",
+      "notion.action.send-file-upload",
       "notion.action.update-block",
       "notion.action.update-comment",
       "notion.action.update-data-source",
       "notion.action.update-database",
       "notion.action.update-page",
+      "notion.action.update-view",
     ]);
   });
 });

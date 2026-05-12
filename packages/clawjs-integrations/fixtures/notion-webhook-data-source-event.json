@@ -1,0 +1,10 @@
+{
+  "id": "evt_data_source_sample",
+  "api_version": "2026-03-11",
+  "type": "data_source.schema_updated",
+  "entity": {
+    "id": "data_source_sample",
+    "type": "data_source"
+  },
+  "data": {}
+}

@@ -1,0 +1,12 @@
+{
+  "object": "list",
+  "type": "view",
+  "results": [
+    {
+      "object": "view",
+      "id": "view_sample"
+    }
+  ],
+  "next_cursor": null,
+  "has_more": false
+}

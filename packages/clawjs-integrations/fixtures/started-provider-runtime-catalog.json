@@ -552,6 +552,159 @@
           "authFieldNames": ["notionToken"]
         },
         {
+          "id": "notion.action.list-views",
+          "appId": "notion",
+          "kind": "action",
+          "name": "List Views",
+          "fields": [
+            { "name": "databaseId", "type": "string", "optional": false },
+            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.get-view",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Get View",
+          "fields": [
+            { "name": "viewId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.create-view",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Create View",
+          "fields": [
+            { "name": "databaseId", "type": "string", "optional": false },
+            { "name": "dataSourceId", "type": "string", "optional": false },
+            { "name": "name", "type": "string", "optional": false },
+            { "name": "type", "type": "string", "optional": false, "default": "table" }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.update-view",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Update View",
+          "fields": [
+            { "name": "name", "type": "string", "optional": true },
+            { "name": "viewId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.delete-view",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Delete View",
+          "fields": [
+            { "name": "viewId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.create-view-query",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Create View Query",
+          "fields": [
+            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 },
+            { "name": "viewId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.get-view-query-results",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Get View Query Results",
+          "fields": [
+            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 },
+            { "name": "queryId", "type": "string", "optional": false },
+            { "name": "viewId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.delete-view-query",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Delete View Query",
+          "fields": [
+            { "name": "queryId", "type": "string", "optional": false },
+            { "name": "viewId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.create-file-upload",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Create File Upload",
+          "fields": [
+            { "name": "contentType", "type": "string", "optional": true, "default": "text/plain" },
+            { "name": "filename", "type": "string", "optional": true },
+            { "name": "mode", "type": "string", "optional": true, "default": "single_part" }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.send-file-upload",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Send File Upload",
+          "fields": [
+            { "name": "file", "type": "string", "optional": false },
+            { "name": "fileUploadId", "type": "string", "optional": false },
+            { "name": "partNumber", "type": "integer", "optional": true, "default": 1, "min": 1 }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.complete-file-upload",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Complete File Upload",
+          "fields": [
+            { "name": "fileUploadId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.get-file-upload",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Get File Upload",
+          "fields": [
+            { "name": "fileUploadId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.list-file-uploads",
+          "appId": "notion",
+          "kind": "action",
+          "name": "List File Uploads",
+          "fields": [
+            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.list-custom-emojis",
+          "appId": "notion",
+          "kind": "action",
+          "name": "List Custom Emojis",
+          "fields": [
+            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
           "id": "notion.action.update-page",
           "appId": "notion",
           "kind": "action",
@@ -562,6 +715,111 @@
             { "name": "title", "type": "string", "optional": true }
           ],
           "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.source.page-event",
+          "appId": "notion",
+          "kind": "source",
+          "name": "Page Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "notion.source.data-source-event",
+          "appId": "notion",
+          "kind": "source",
+          "name": "Data Source Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "notion.source.comment-event",
+          "appId": "notion",
+          "kind": "source",
+          "name": "Comment Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "notion.source.file-upload-event",
+          "appId": "notion",
+          "kind": "source",
+          "name": "File Upload Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "notion.source.view-event",
+          "appId": "notion",
+          "kind": "source",
+          "name": "View Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
         }
       ]
     },

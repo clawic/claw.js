@@ -1,0 +1,10 @@
+{
+  "id": "evt_file_upload_sample",
+  "api_version": "2026-03-11",
+  "type": "file_upload.succeeded",
+  "entity": {
+    "id": "file_upload_sample",
+    "type": "file_upload"
+  },
+  "data": {}
+}

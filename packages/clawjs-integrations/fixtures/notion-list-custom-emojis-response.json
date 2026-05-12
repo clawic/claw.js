@@ -1,0 +1,13 @@
+{
+  "object": "list",
+  "type": "custom_emoji",
+  "results": [
+    {
+      "id": "emoji_sample",
+      "name": "sample",
+      "url": "https://example.invalid/emoji.png"
+    }
+  ],
+  "next_cursor": null,
+  "has_more": false
+}

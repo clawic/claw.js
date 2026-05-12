@@ -1,0 +1,10 @@
+{
+  "id": "evt_comment_sample",
+  "api_version": "2026-03-11",
+  "type": "comment.created",
+  "entity": {
+    "id": "comment_sample",
+    "type": "comment"
+  },
+  "data": {}
+}

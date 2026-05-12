@@ -28,6 +28,10 @@ import {
   isNotionActionOperationSupported,
 } from "./notion-operation-executor.ts";
 import {
+  buildNotionSourcePlan,
+  isNotionSourceOperationSupported,
+} from "./notion-source.ts";
+import {
   buildDiscordOperationRequest,
   isDiscordActionOperationSupported,
 } from "./discord-operation-executor.ts";
@@ -463,6 +467,20 @@ const NOTION_ACTION_FIXTURE_NAMES = [
   "list-users",
   "get-user",
   "get-self",
+  "list-views",
+  "get-view",
+  "create-view",
+  "update-view",
+  "delete-view",
+  "create-view-query",
+  "get-view-query-results",
+  "delete-view-query",
+  "create-file-upload",
+  "send-file-upload",
+  "complete-file-upload",
+  "get-file-upload",
+  "list-file-uploads",
+  "list-custom-emojis",
 ] as const;
 
 const NOTION_ACTION_FIXTURES: ConnectorRuntimeFixture[] = NOTION_ACTION_FIXTURE_NAMES.flatMap((name) => [
@@ -477,6 +495,24 @@ const NOTION_ACTION_FIXTURES: ConnectorRuntimeFixture[] = NOTION_ACTION_FIXTURE_
     path: `packages/clawjs-integrations/fixtures/notion-${name}-response.json`,
   },
 ]);
+
+const NOTION_SOURCE_EVIDENCE = [
+  "packages/clawjs-integrations/src/notion-source.test.ts",
+];
+
+const NOTION_SOURCE_FIXTURE_NAMES = [
+  "page-event",
+  "data-source-event",
+  "comment-event",
+  "file-upload-event",
+  "view-event",
+] as const;
+
+const NOTION_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = NOTION_SOURCE_FIXTURE_NAMES.map((name) => ({
+  kind: "source_event" as const,
+  operationId: `notion.source.${name}`,
+  path: `packages/clawjs-integrations/fixtures/notion-webhook-${name}.json`,
+}));
 
 const WHATSAPP_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/whatsapp-operation-executor.test.ts",
@@ -591,6 +627,19 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     supports: (operation) => isNotionActionOperationSupported(operation.id),
     buildPlan: (operation, values) => ({
       requestPlan: buildNotionOperationRequest(operation, values),
+    }),
+  },
+  {
+    appId: "notion",
+    kind: "source",
+    executorId: "notion.webhook",
+    offlineValidated: true,
+    evidence: NOTION_SOURCE_EVIDENCE,
+    fixtures: NOTION_SOURCE_FIXTURES,
+    planKinds: ["source"],
+    supports: (operation) => isNotionSourceOperationSupported(operation.id),
+    buildPlan: (operation) => ({
+      sourcePlan: buildNotionSourcePlan(operation),
     }),
   },
   {

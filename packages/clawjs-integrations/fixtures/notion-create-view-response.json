@@ -1,0 +1,9 @@
+{
+  "object": "view",
+  "id": "view_created_sample",
+  "type": "table",
+  "parent": {
+    "type": "database_id",
+    "database_id": "sample"
+  }
+}

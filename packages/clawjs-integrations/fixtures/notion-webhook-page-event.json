@@ -1,0 +1,10 @@
+{
+  "id": "evt_page_sample",
+  "api_version": "2026-03-11",
+  "type": "page.content_updated",
+  "entity": {
+    "id": "page_sample",
+    "type": "page"
+  },
+  "data": {}
+}
