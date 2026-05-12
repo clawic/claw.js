@@ -1,0 +1,18 @@
+{
+  "domain": "personality-tests",
+  "version": "0.1.0",
+  "entries": [
+    {
+      "id": "personality-tests.note",
+      "label": "Personality tests — free-form note",
+      "unit": {
+        "id": "text",
+        "label": "text",
+        "group": "abstract"
+      },
+      "valueType": "text",
+      "category": "general",
+      "description": "Free-form text observation for Personality tests."
+    }
+  ]
+}

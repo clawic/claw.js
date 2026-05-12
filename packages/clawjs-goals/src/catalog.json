@@ -1,0 +1,12 @@
+{
+  "domain": "goals",
+  "version": "0.1.0",
+  "entries": [
+    { "id": "goals.statement", "label": "Goal statement", "unit": { "id": "text", "label": "text", "group": "abstract" }, "valueType": "text", "category": "goal" },
+    { "id": "goals.category", "label": "Category", "unit": { "id": "text", "label": "category", "group": "abstract" }, "valueType": "enum", "enumValues": ["career", "finance", "health", "relationships", "learning", "creative", "lifestyle", "spiritual", "other"], "category": "goal" },
+    { "id": "goals.target_date", "label": "Target date (epoch ms)", "unit": { "id": "count", "label": "ms", "group": "time" }, "valueType": "numeric", "category": "goal" },
+    { "id": "goals.progress", "label": "Progress", "unit": { "id": "percent", "label": "%", "group": "ratio" }, "valueType": "numeric", "validRange": { "min": 0, "max": 100 }, "category": "goal" },
+    { "id": "goals.status", "label": "Status", "unit": { "id": "text", "label": "status", "group": "abstract" }, "valueType": "enum", "enumValues": ["planned", "active", "paused", "achieved", "abandoned"], "category": "goal" },
+    { "id": "goals.reflection", "label": "Reflection / note", "unit": { "id": "text", "label": "text", "group": "abstract" }, "valueType": "text", "category": "goal" }
+  ]
+}

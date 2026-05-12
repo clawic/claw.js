@@ -1,0 +1,18 @@
+{
+  "domain": "yes-no",
+  "version": "0.1.0",
+  "entries": [
+    {
+      "id": "yes-no.note",
+      "label": "Yes/No log — free-form note",
+      "unit": {
+        "id": "text",
+        "label": "text",
+        "group": "abstract"
+      },
+      "valueType": "text",
+      "category": "general",
+      "description": "Free-form text observation for Yes/No log."
+    }
+  ]
+}
