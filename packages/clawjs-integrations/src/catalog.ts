@@ -89,6 +89,10 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
         if (operation.runtime?.hasRun === true) summary.runnableOperations += 1;
         if (operation.kind === "source" && operation.runtime?.hasHooks === true) summary.hookSources += 1;
         if (operation.kind === "source" && operation.runtime?.dedupe) summary.dedupedSources += 1;
+        if (operation.source?.delivery === "polling") summary.pollingSources += 1;
+        if (operation.source?.delivery === "webhook") summary.webhookSources += 1;
+        if (operation.source?.delivery === "hybrid") summary.hybridSources += 1;
+        if (operation.source?.usesServiceDb === true) summary.statefulSources += 1;
         if (operation.runtime?.hasAdditionalProps === true) summary.dynamicPropOperations += 1;
         if (operation.runtime?.hasMethods === true) summary.methodOperations += 1;
       }
@@ -110,6 +114,10 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       runnableOperations: 0,
       hookSources: 0,
       dedupedSources: 0,
+      pollingSources: 0,
+      webhookSources: 0,
+      hybridSources: 0,
+      statefulSources: 0,
       dynamicPropOperations: 0,
       methodOperations: 0,
     },
@@ -184,6 +192,7 @@ function normalizeOperation(input: unknown, appId: string): ConnectorOperationDe
     authFieldNames: normalizeStringArray(input.authFieldNames),
     ...optionalAnnotations(input.annotations),
     ...optionalRuntime(input.runtime),
+    ...optionalSource(input.source),
     ...(typeof input.sourcePath === "string" ? { sourcePath: input.sourcePath } : {}),
   };
 }
@@ -255,6 +264,21 @@ function optionalRuntime(input: unknown) {
       hasAdditionalProps: input.hasAdditionalProps === true,
       hasMethods: input.hasMethods === true,
       ...(typeof input.dedupe === "string" && input.dedupe.trim() ? { dedupe: input.dedupe.trim() } : {}),
+    },
+  };
+}
+
+function optionalSource(input: unknown) {
+  if (!isRecord(input)) return {};
+  const delivery = ["polling", "webhook", "hybrid", "manual"].includes(String(input.delivery))
+    ? input.delivery as "polling" | "webhook" | "hybrid" | "manual"
+    : "manual";
+  return {
+    source: {
+      delivery,
+      usesTimer: input.usesTimer === true,
+      usesHttp: input.usesHttp === true,
+      usesServiceDb: input.usesServiceDb === true,
     },
   };
 }

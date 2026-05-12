@@ -77,6 +77,7 @@ function readOperations(appDir, appId, kind, appAuthFields, appFields) {
       const slug = operationSlug(dir, file);
       const key = scrubIdentifier(firstMatch(source, /\bkey:\s*["']([^"']+)["']/) ?? `${appId}-${slug}`);
       const fields = readFields(source, appId, appFields, file);
+      const runtime = readRuntime(source, file);
       const authFieldNames = [
         ...appAuthFields,
         ...fields.filter((field) => field.secret).map((field) => field.name),
@@ -92,7 +93,8 @@ function readOperations(appDir, appId, kind, appAuthFields, appFields) {
         fields,
         authFieldNames,
         ...optionalAnnotations(readAnnotations(source)),
-        runtime: readRuntime(source, file),
+        runtime,
+        ...optionalSourceCapabilities(kind, fields, runtime),
         sourcePath: scrubPath(path.relative(path.dirname(appDir), file).replaceAll(path.sep, "/")),
       };
     });
@@ -142,6 +144,16 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
     };
     fields.set(name, field);
   }
+  for (const entry of readManagedStringFieldEntries(source)) {
+    if (!fields.has(entry.name)) {
+      fields.set(entry.name, {
+        name: entry.name,
+        type: entry.type,
+        optional: false,
+        managed: true,
+      });
+    }
+  }
   return [...fields.values()].sort((left, right) => left.name.localeCompare(right.name));
 }
 
@@ -169,6 +181,16 @@ function readFieldEntries(source) {
     const body = source.slice(bodyStart, bodyEnd);
     if (!/\b(type|label|propDefinition)\b/.test(body)) continue;
     entries.push({ name: match[1], body });
+  }
+  return entries;
+}
+
+function readManagedStringFieldEntries(source) {
+  const entries = [];
+  for (const match of source.matchAll(/(?:^|[\n,{])\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*["'](\$\.[^"']+)["']/g)) {
+    const name = scrubIdentifier(match[1]);
+    const type = match[2];
+    if (name && type) entries.push({ name, type });
   }
   return entries;
 }
@@ -305,6 +327,29 @@ function readRuntime(source, filePath, seen = new Set()) {
     if (!runtime.dedupe && inherited.dedupe) runtime.dedupe = inherited.dedupe;
   }
   return runtime;
+}
+
+function optionalSourceCapabilities(kind, fields, runtime) {
+  if (kind !== "source") return {};
+  const usesTimer = fields.some((field) => field.type === "$.interface.timer");
+  const usesHttp = fields.some((field) => field.type === "$.interface.http");
+  const usesServiceDb = fields.some((field) => field.type === "$.service.db");
+  return {
+    source: {
+      delivery: sourceDeliveryMode({ usesTimer, usesHttp, runtime }),
+      usesTimer,
+      usesHttp,
+      usesServiceDb,
+    },
+  };
+}
+
+function sourceDeliveryMode({ usesTimer, usesHttp, runtime }) {
+  if (usesTimer && usesHttp) return "hybrid";
+  if (usesTimer) return "polling";
+  if (usesHttp || runtime.hasHooks) return "webhook";
+  if (runtime.hasRun) return "polling";
+  return "manual";
 }
 
 function hasComponentMember(source, name) {

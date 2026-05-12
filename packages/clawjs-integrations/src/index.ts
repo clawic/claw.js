@@ -65,6 +65,8 @@ export type {
   ConnectorOperationDefinition,
   ConnectorOperationRuntime,
   ConnectorOperationInput,
+  ConnectorSourceCapabilities,
+  ConnectorSourceDeliveryMode,
   IntegrationAdapter,
   IntegrationInboundMessage,
   IntegrationJson,

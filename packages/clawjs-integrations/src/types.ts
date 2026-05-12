@@ -47,6 +47,15 @@ export interface ConnectorOperationRuntime {
   dedupe?: string;
 }
 
+export type ConnectorSourceDeliveryMode = "polling" | "webhook" | "hybrid" | "manual";
+
+export interface ConnectorSourceCapabilities {
+  delivery: ConnectorSourceDeliveryMode;
+  usesTimer: boolean;
+  usesHttp: boolean;
+  usesServiceDb: boolean;
+}
+
 export interface ConnectorOperationDefinition {
   id: string;
   appId: string;
@@ -59,6 +68,7 @@ export interface ConnectorOperationDefinition {
   authFieldNames: string[];
   annotations?: ConnectorOperationAnnotations;
   runtime?: ConnectorOperationRuntime;
+  source?: ConnectorSourceCapabilities;
   sourcePath?: string;
 }
 
@@ -95,6 +105,10 @@ export interface ConnectorCatalogSummary {
   runnableOperations: number;
   hookSources: number;
   dedupedSources: number;
+  pollingSources: number;
+  webhookSources: number;
+  hybridSources: number;
+  statefulSources: number;
   dynamicPropOperations: number;
   methodOperations: number;
 }

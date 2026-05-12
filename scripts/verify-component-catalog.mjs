@@ -32,7 +32,7 @@ const summary = summarize(catalog.apps ?? []);
 
 for (const error of errors.slice(0, maxErrors)) console.error(`FAIL ${error}`);
 if (errors.length > maxErrors) console.error(`FAIL ... ${errors.length - maxErrors} additional errors hidden`);
-console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} dynamicProps=${summary.dynamicPropOperations} methods=${summary.methodOperations}`);
+console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} methods=${summary.methodOperations}`);
 if (errors.length > 0) {
   console.error(`catalog verification failed with ${errors.length} error(s)`);
   process.exit(1);
@@ -68,6 +68,7 @@ function readExpectedOperations(appDir, appId, kind, appAuth, appFields) {
     .map((file) => {
       const source = readText(file);
       const fields = readFields(source, appId, appFields, file);
+      const runtime = readRuntime(source, file);
       const slug = scrub(operationSlug(root, file));
       return {
         id: `${appId}.${kind}.${slug}`,
@@ -75,7 +76,8 @@ function readExpectedOperations(appDir, appId, kind, appAuth, appFields) {
         fields: names(fields),
         fieldStats: summarizeFields(fields),
         annotations: readAnnotations(source),
-        runtime: readRuntime(source, file),
+        runtime,
+        sourceCapabilities: readSourceCapabilities(kind, fields, runtime),
         auth: new Set([...appAuth, ...fields.filter((field) => field.secret).map((field) => field.name)]),
         sourcePath: scrubPath(path.relative(path.dirname(appDir), file).replaceAll(path.sep, "/")),
       };
@@ -101,6 +103,10 @@ function verify(catalog, expectedApps) {
   if (actualSummary.runnableOperations !== expectedSummary.runnableOperations) errors.push(`runnable ${actualSummary.runnableOperations} expected ${expectedSummary.runnableOperations}`);
   if (actualSummary.hookSources !== expectedSummary.hookSources) errors.push(`hookSources ${actualSummary.hookSources} expected ${expectedSummary.hookSources}`);
   if (actualSummary.dedupedSources !== expectedSummary.dedupedSources) errors.push(`dedupedSources ${actualSummary.dedupedSources} expected ${expectedSummary.dedupedSources}`);
+  if (actualSummary.pollingSources !== expectedSummary.pollingSources) errors.push(`pollingSources ${actualSummary.pollingSources} expected ${expectedSummary.pollingSources}`);
+  if (actualSummary.webhookSources !== expectedSummary.webhookSources) errors.push(`webhookSources ${actualSummary.webhookSources} expected ${expectedSummary.webhookSources}`);
+  if (actualSummary.hybridSources !== expectedSummary.hybridSources) errors.push(`hybridSources ${actualSummary.hybridSources} expected ${expectedSummary.hybridSources}`);
+  if (actualSummary.statefulSources !== expectedSummary.statefulSources) errors.push(`statefulSources ${actualSummary.statefulSources} expected ${expectedSummary.statefulSources}`);
   if (actualSummary.dynamicPropOperations !== expectedSummary.dynamicPropOperations) errors.push(`dynamicProps ${actualSummary.dynamicPropOperations} expected ${expectedSummary.dynamicPropOperations}`);
   if (actualSummary.methodOperations !== expectedSummary.methodOperations) errors.push(`methods ${actualSummary.methodOperations} expected ${expectedSummary.methodOperations}`);
 
@@ -148,6 +154,7 @@ function verify(catalog, expectedApps) {
       }
       compareAnnotations(operationId, expectedOperation.annotations, operation.annotations, errors);
       compareRuntime(operationId, expectedOperation.runtime, operation.runtime, errors);
+      compareSourceCapabilities(operationId, expectedOperation.sourceCapabilities, operation.source, errors);
     }
   }
 
@@ -195,6 +202,16 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
       ...(inherited?.managed || type.startsWith("$.") ? { managed: true } : {}),
     });
   }
+  for (const entry of readManagedStringFieldEntries(source)) {
+    if (!fields.has(entry.name)) {
+      fields.set(entry.name, {
+        name: entry.name,
+        type: entry.type,
+        optional: false,
+        managed: true,
+      });
+    }
+  }
   return [...fields.values()].sort((left, right) => left.name.localeCompare(right.name));
 }
 
@@ -222,6 +239,16 @@ function readFieldEntries(source) {
     const body = source.slice(bodyStart, bodyEnd);
     if (!/\b(type|label|propDefinition)\b/.test(body)) continue;
     entries.push({ name: match[1], body });
+  }
+  return entries;
+}
+
+function readManagedStringFieldEntries(source) {
+  const entries = [];
+  for (const match of source.matchAll(/(?:^|[\n,{])\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*["'](\$\.[^"']+)["']/g)) {
+    const name = scrub(match[1]);
+    const type = match[2];
+    if (name && type) entries.push({ name, type });
   }
   return entries;
 }
@@ -283,6 +310,10 @@ function summarize(apps) {
       if (operation.runtime?.hasRun === true) summary.runnableOperations += 1;
       if (operation.kind === "source" && operation.runtime?.hasHooks === true) summary.hookSources += 1;
       if (operation.kind === "source" && operation.runtime?.dedupe) summary.dedupedSources += 1;
+      if (operation.source?.delivery === "polling") summary.pollingSources += 1;
+      if (operation.source?.delivery === "webhook") summary.webhookSources += 1;
+      if (operation.source?.delivery === "hybrid") summary.hybridSources += 1;
+      if (operation.source?.usesServiceDb === true) summary.statefulSources += 1;
       if (operation.runtime?.hasAdditionalProps === true) summary.dynamicPropOperations += 1;
       if (operation.runtime?.hasMethods === true) summary.methodOperations += 1;
     }
@@ -303,6 +334,10 @@ function summarize(apps) {
     runnableOperations: 0,
     hookSources: 0,
     dedupedSources: 0,
+    pollingSources: 0,
+    webhookSources: 0,
+    hybridSources: 0,
+    statefulSources: 0,
     dynamicPropOperations: 0,
     methodOperations: 0,
   });
@@ -320,6 +355,10 @@ function summarizeExpected(apps) {
     runnableOperations: 0,
     hookSources: 0,
     dedupedSources: 0,
+    pollingSources: 0,
+    webhookSources: 0,
+    hybridSources: 0,
+    statefulSources: 0,
     dynamicPropOperations: 0,
     methodOperations: 0,
   };
@@ -338,6 +377,10 @@ function summarizeExpected(apps) {
       if (operation.runtime.hasRun === true) summary.runnableOperations += 1;
       if (operation.kind === "source" && operation.runtime.hasHooks === true) summary.hookSources += 1;
       if (operation.kind === "source" && operation.runtime.dedupe) summary.dedupedSources += 1;
+      if (operation.sourceCapabilities?.delivery === "polling") summary.pollingSources += 1;
+      if (operation.sourceCapabilities?.delivery === "webhook") summary.webhookSources += 1;
+      if (operation.sourceCapabilities?.delivery === "hybrid") summary.hybridSources += 1;
+      if (operation.sourceCapabilities?.usesServiceDb === true) summary.statefulSources += 1;
       if (operation.runtime.hasAdditionalProps === true) summary.dynamicPropOperations += 1;
       if (operation.runtime.hasMethods === true) summary.methodOperations += 1;
     }
@@ -359,6 +402,13 @@ function compareAnnotations(operationId, expected, actual, errors) {
 function compareRuntime(operationId, expected, actual, errors) {
   for (const key of ["hasRun", "hasHooks", "hasAdditionalProps", "hasMethods", "dedupe"]) {
     if (expected[key] !== actual?.[key]) errors.push(`operation ${operationId} runtime ${key} ${actual?.[key] ?? "<missing>"} expected ${expected[key]}`);
+  }
+}
+
+function compareSourceCapabilities(operationId, expected, actual, errors) {
+  if (!expected && !actual) return;
+  for (const key of ["delivery", "usesTimer", "usesHttp", "usesServiceDb"]) {
+    if (expected?.[key] !== actual?.[key]) errors.push(`operation ${operationId} source ${key} ${actual?.[key] ?? "<missing>"} expected ${expected?.[key] ?? "<missing>"}`);
   }
 }
 
@@ -418,6 +468,27 @@ function readRuntime(source, filePath, seen = new Set()) {
     if (!runtime.dedupe && inherited.dedupe) runtime.dedupe = inherited.dedupe;
   }
   return runtime;
+}
+
+function readSourceCapabilities(kind, fields, runtime) {
+  if (kind !== "source") return null;
+  const usesTimer = fields.some((field) => field.type === "$.interface.timer");
+  const usesHttp = fields.some((field) => field.type === "$.interface.http");
+  const usesServiceDb = fields.some((field) => field.type === "$.service.db");
+  return {
+    delivery: sourceDeliveryMode({ usesTimer, usesHttp, runtime }),
+    usesTimer,
+    usesHttp,
+    usesServiceDb,
+  };
+}
+
+function sourceDeliveryMode({ usesTimer, usesHttp, runtime }) {
+  if (usesTimer && usesHttp) return "hybrid";
+  if (usesTimer) return "polling";
+  if (usesHttp || runtime.hasHooks) return "webhook";
+  if (runtime.hasRun) return "polling";
+  return "manual";
 }
 
 function hasComponentMember(source, name) {
