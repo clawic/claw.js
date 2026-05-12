@@ -16,7 +16,7 @@ import type {
 } from "./types.ts";
 
 type OpenApiHttpMethod = "get" | "post" | "put" | "patch" | "delete";
-type OpenApiParameterLocation = "path" | "query" | "header";
+type OpenApiParameterLocation = "path" | "query" | "header" | "cookie";
 
 interface OpenApiDocument {
   info?: {
@@ -283,6 +283,7 @@ function buildOpenApiRequestPlan(
       if (parameter.querySerialization) querySerialization[parameter.sourceName] = parameter.querySerialization;
     }
     else if (parameter.location === "header") headers[parameter.sourceName] = String(value);
+    else if (parameter.location === "cookie") appendCookieHeader(headers, parameter.sourceName, value);
   }
   for (const field of metadata.bodyFields) {
     const value = values[field.fieldName];
@@ -312,6 +313,11 @@ function buildOpenApiRequestPlan(
 
 function replaceOpenApiPathParameter(endpoint: string, sourceName: string, value: IntegrationJson): string {
   return endpoint.replaceAll(`{${sourceName}}`, encodeURIComponent(String(value)));
+}
+
+function appendCookieHeader(headers: Record<string, string>, name: string, value: IntegrationJson): void {
+  const cookie = `${name}=${encodeURIComponent(String(value))}`;
+  headers.cookie = headers.cookie ? `${headers.cookie}; ${cookie}` : cookie;
 }
 
 function absoluteOpenApiOperationUrl(baseUrl: string, endpoint: string): string {
@@ -820,7 +826,7 @@ function schemaProperties(document: OpenApiDocument, schema: OpenApiSchema): Arr
 }
 
 function parameterLocation(value: unknown): OpenApiParameterLocation | null {
-  return value === "path" || value === "query" || value === "header" ? value : null;
+  return value === "path" || value === "query" || value === "header" || value === "cookie" ? value : null;
 }
 
 function resolveOpenApiOperation(document: OpenApiDocument, value: OpenApiOperation | undefined): OpenApiOperation | undefined {

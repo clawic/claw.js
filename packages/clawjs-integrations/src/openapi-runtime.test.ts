@@ -668,6 +668,73 @@ describe("OpenAPI connector runtime", () => {
     }, { registry }).requestPlan?.url, "https://write.example.invalid/accounts/acct_123");
   });
 
+  it("maps OpenAPI cookie parameters to request headers", () => {
+    const document = {
+      ...FIXTURE_OPENAPI,
+      paths: {
+        "/items": {
+          get: {
+            operationId: "listItemsWithCookie",
+            summary: "List items with cookie",
+            parameters: [
+              {
+                name: "session_id",
+                in: "cookie",
+                required: true,
+                schema: { type: "string" },
+              },
+              {
+                name: "workspace",
+                in: "cookie",
+                schema: { type: "string" },
+              },
+            ],
+            responses: {
+              "200": {
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      required: ["data"],
+                      properties: {
+                        data: {
+                          type: "array",
+                          items: { type: "object" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const options = {
+      appId: "fixture_cookie_parameters",
+      authFieldName: "apiKey",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(document, options)];
+    const operation = catalog.apps[0]?.operations[0];
+    assert.ok(operation);
+
+    assert.deepEqual(operation.fields.map((field) => [field.name, field.optional]), [
+      ["session_id", false],
+      ["workspace", true],
+    ]);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, {
+      session_id: "session 123",
+      workspace: "main",
+    }, { registry }).requestPlan?.headers, {
+      accept: "application/json",
+      cookie: "session_id=session%20123; workspace=main",
+    });
+  });
+
   it("merges OpenAPI allOf schema fields", () => {
     const document = {
       openapi: "3.0.0",
