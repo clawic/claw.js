@@ -17,6 +17,11 @@ interface CatalogSummary {
   destructiveOperations: number;
   readOnlyOperations: number;
   openWorldOperations: number;
+  runnableOperations: number;
+  hookSources: number;
+  dedupedSources: number;
+  dynamicPropOperations: number;
+  methodOperations: number;
 }
 
 interface CatalogField {
@@ -42,6 +47,13 @@ interface CatalogOperation {
     destructiveHint?: boolean;
     readOnlyHint?: boolean;
     openWorldHint?: boolean;
+  };
+  runtime?: {
+    hasRun: boolean;
+    hasHooks: boolean;
+    hasAdditionalProps: boolean;
+    hasMethods: boolean;
+    dedupe?: string;
   };
 }
 
@@ -187,6 +199,9 @@ export default function ConnectorsPage() {
             <span>{catalog?.summary.options ?? 0} option sets</span>
             <span>{catalog?.summary.annotatedOperations ?? 0} annotated</span>
             <span>{catalog?.summary.destructiveOperations ?? 0} destructive</span>
+            <span>{catalog?.summary.runnableOperations ?? 0} runnable</span>
+            <span>{catalog?.summary.hookSources ?? 0} hooks</span>
+            <span>{catalog?.summary.dynamicPropOperations ?? 0} dynamic props</span>
           </div>
           {catalog && !catalog.configured ? (
             <p className="text-[11px] text-muted-foreground mt-2 font-mono">Catalog not found at {catalog.path}</p>
@@ -220,6 +235,12 @@ export default function ConnectorsPage() {
                       {entry.operation.annotations?.destructiveHint ? (
                         <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-600 dark:text-red-400 font-mono">destructive</span>
                       ) : null}
+                      {entry.operation.runtime?.hasRun ? (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground font-mono">run</span>
+                      ) : null}
+                      {entry.operation.runtime?.hasHooks ? (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground font-mono">hooks</span>
+                      ) : null}
                     </div>
                     <div className="text-[11px] text-muted-foreground mt-0.5 truncate">{entry.app.name}</div>
                     {entry.operation.description ? (
@@ -247,6 +268,15 @@ export default function ConnectorsPage() {
                       <span>readOnly={String(selected.operation.annotations.readOnlyHint ?? false)}</span>
                       <span>destructive={String(selected.operation.annotations.destructiveHint ?? false)}</span>
                       <span>openWorld={String(selected.operation.annotations.openWorldHint ?? false)}</span>
+                    </div>
+                  ) : null}
+                  {selected.operation.runtime ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-mono text-muted-foreground">
+                      <span>run={String(selected.operation.runtime.hasRun)}</span>
+                      <span>hooks={String(selected.operation.runtime.hasHooks)}</span>
+                      <span>dynamicProps={String(selected.operation.runtime.hasAdditionalProps)}</span>
+                      <span>methods={String(selected.operation.runtime.hasMethods)}</span>
+                      {selected.operation.runtime.dedupe ? <span>dedupe={selected.operation.runtime.dedupe}</span> : null}
                     </div>
                   ) : null}
                 </div>
