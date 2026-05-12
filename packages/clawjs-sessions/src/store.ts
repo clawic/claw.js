@@ -1,15 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import Database from "better-sqlite3";
 
 import type {
   AppendMessageInput,
+  CreateProjectInput,
   CreateSessionInput,
+  ListProjectsFilter,
+  ListProjectsResult,
   ListSessionsFilter,
   ListSessionsResult,
   MessageRole,
+  ProjectRecord,
   SearchSessionsInput,
   SessionMessageRecord,
   SessionOriginRecord,
@@ -17,16 +21,32 @@ import type {
   SessionSearchHit,
   SessionStatus,
   SessionWithMessages,
+  UpdateProjectInput,
   UpsertOriginInput,
 } from "./types.ts";
 
 const SCHEMA_DDL = `
+  CREATE TABLE IF NOT EXISTS projects (
+    id                 TEXT PRIMARY KEY,
+    display_name       TEXT NOT NULL,
+    path               TEXT NOT NULL UNIQUE,
+    hidden             INTEGER NOT NULL DEFAULT 0,
+    archived           INTEGER NOT NULL DEFAULT 0,
+    sort_rank          INTEGER NOT NULL DEFAULT 0,
+    created_at         INTEGER NOT NULL,
+    updated_at         INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_projects_hidden_archived ON projects(hidden, archived, sort_rank, updated_at DESC);
+
   CREATE TABLE IF NOT EXISTS sessions (
     id                 TEXT PRIMARY KEY,
     agent              TEXT NOT NULL,
     runtime            TEXT,
+    runtime_adapter    TEXT,
+    runtime_session_id TEXT,
     machine            TEXT,
     workspace_id       TEXT,
+    project_id         TEXT REFERENCES projects(id) ON DELETE SET NULL,
     project_path       TEXT,
     title              TEXT NOT NULL,
     created_at         INTEGER NOT NULL,
@@ -42,7 +62,9 @@ const SCHEMA_DDL = `
   );
   CREATE INDEX IF NOT EXISTS idx_sessions_agent          ON sessions(agent);
   CREATE INDEX IF NOT EXISTS idx_sessions_runtime        ON sessions(runtime);
+  CREATE INDEX IF NOT EXISTS idx_sessions_runtime_adapter ON sessions(runtime_adapter);
   CREATE INDEX IF NOT EXISTS idx_sessions_machine        ON sessions(machine);
+  CREATE INDEX IF NOT EXISTS idx_sessions_project_id     ON sessions(project_id);
   CREATE INDEX IF NOT EXISTS idx_sessions_project        ON sessions(project_path);
   CREATE INDEX IF NOT EXISTS idx_sessions_workspace      ON sessions(workspace_id);
   CREATE INDEX IF NOT EXISTS idx_sessions_created_at     ON sessions(created_at DESC);
@@ -58,7 +80,9 @@ const SCHEMA_DDL = `
     content_blocks     TEXT,
     timestamp          INTEGER NOT NULL,
     tool_calls         TEXT,
+    timeline           TEXT,
     work_summary       TEXT,
+    streaming_state    TEXT,
     audio_ref          TEXT,
     attachments        TEXT,
     source_native_id   TEXT,
@@ -101,8 +125,11 @@ interface SessionRow {
   id: string;
   agent: string;
   runtime: string | null;
+  runtime_adapter: string | null;
+  runtime_session_id: string | null;
   machine: string | null;
   workspace_id: string | null;
+  project_id: string | null;
   project_path: string | null;
   title: string;
   created_at: number;
@@ -125,10 +152,23 @@ interface MessageRow {
   content_blocks: string | null;
   timestamp: number;
   tool_calls: string | null;
+  timeline: string | null;
   work_summary: string | null;
+  streaming_state: import("./types.ts").MessageStreamingState | null;
   audio_ref: string | null;
   attachments: string | null;
   source_native_id: string | null;
+}
+
+interface ProjectRow {
+  id: string;
+  display_name: string;
+  path: string;
+  hidden: number;
+  archived: number;
+  sort_rank: number;
+  created_at: number;
+  updated_at: number;
 }
 
 interface OriginRow {
@@ -148,6 +188,37 @@ function parseJson<T>(value: string | null): T | null {
   }
 }
 
+export function normalizeProjectPath(projectPath: string): string {
+  const trimmed = projectPath.trim();
+  if (!trimmed) throw new Error("project path cannot be empty");
+  const resolved = path.resolve(trimmed);
+  return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+}
+
+export function stableProjectIdFromPath(projectPath: string): string {
+  const normalized = normalizeProjectPath(projectPath);
+  const hash = createHash("sha1").update(normalized).digest("hex").slice(0, 20);
+  return `project_${hash}`;
+}
+
+function displayNameFromPath(projectPath: string): string {
+  const base = path.basename(projectPath);
+  return base || projectPath;
+}
+
+function rowToProject(row: ProjectRow): ProjectRecord {
+  return {
+    id: row.id,
+    displayName: row.display_name,
+    path: row.path,
+    hidden: row.hidden === 1,
+    archived: row.archived === 1,
+    sortRank: row.sort_rank,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 function rowToSession(row: SessionRow): SessionRecord {
   return {
     id: row.id,
@@ -155,7 +226,10 @@ function rowToSession(row: SessionRow): SessionRecord {
     runtime: row.runtime,
     machine: row.machine,
     workspaceId: row.workspace_id,
+    projectId: row.project_id,
     projectPath: row.project_path,
+    runtimeAdapter: row.runtime_adapter,
+    runtimeSessionId: row.runtime_session_id,
     title: row.title,
     createdAt: row.created_at,
     lastMessageAt: row.last_message_at,
@@ -179,7 +253,9 @@ function rowToMessage(row: MessageRow): SessionMessageRecord {
     contentBlocks: parseJson<unknown[]>(row.content_blocks),
     timestamp: row.timestamp,
     toolCalls: parseJson<unknown[]>(row.tool_calls),
+    timeline: parseJson<unknown[]>(row.timeline),
     workSummary: parseJson<unknown>(row.work_summary),
+    streamingState: row.streaming_state,
     audioRef: parseJson<{ id: string; mimeType: string; durationMs: number }>(row.audio_ref),
     attachments: parseJson<unknown[]>(row.attachments),
     sourceNativeId: row.source_native_id,
@@ -205,23 +281,134 @@ export class SessionsServiceStore {
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("foreign_keys = ON");
     this.db.exec(SCHEMA_DDL);
+    this.ensureLegacyColumns();
   }
 
   close(): void {
     this.db.close();
   }
 
+  private ensureLegacyColumns(): void {
+    this.ensureColumn("sessions", "runtime_adapter", "TEXT");
+    this.ensureColumn("sessions", "runtime_session_id", "TEXT");
+    this.ensureColumn("sessions", "project_id", "TEXT REFERENCES projects(id) ON DELETE SET NULL");
+    this.ensureColumn("session_messages", "timeline", "TEXT");
+    this.ensureColumn("session_messages", "streaming_state", "TEXT");
+  }
+
+  private ensureColumn(table: string, column: string, definition: string): void {
+    const rows = this.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+    if (rows.some((row) => row.name === column)) return;
+    this.db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
+  }
+
+  createProject(input: CreateProjectInput): ProjectRecord {
+    const normalizedPath = normalizeProjectPath(input.path);
+    const now = input.createdAt ?? Date.now();
+    const id = input.id ?? stableProjectIdFromPath(normalizedPath);
+    const displayName = input.displayName?.trim() || displayNameFromPath(normalizedPath);
+    this.db.prepare(`
+      INSERT INTO projects (
+        id, display_name, path, hidden, archived, sort_rank, created_at, updated_at
+      ) VALUES (
+        @id, @display_name, @path, @hidden, @archived, @sort_rank, @created_at, @updated_at
+      )
+      ON CONFLICT(id) DO UPDATE SET
+        display_name = excluded.display_name,
+        path         = excluded.path,
+        hidden       = excluded.hidden,
+        archived     = excluded.archived,
+        sort_rank    = excluded.sort_rank,
+        updated_at   = excluded.updated_at
+    `).run({
+      id,
+      display_name: displayName,
+      path: normalizedPath,
+      hidden: input.hidden ? 1 : 0,
+      archived: input.archived ? 1 : 0,
+      sort_rank: input.sortRank ?? 0,
+      created_at: now,
+      updated_at: now,
+    });
+    const project = this.getProject(id);
+    if (!project) throw new Error(`createProject: failed to read back ${id}`);
+    return project;
+  }
+
+  getProject(id: string): ProjectRecord | null {
+    const row = this.db.prepare("SELECT * FROM projects WHERE id = ?").get(id) as ProjectRow | undefined;
+    return row ? rowToProject(row) : null;
+  }
+
+  getProjectByPath(projectPath: string): ProjectRecord | null {
+    const normalizedPath = normalizeProjectPath(projectPath);
+    const row = this.db.prepare("SELECT * FROM projects WHERE path = ?").get(normalizedPath) as ProjectRow | undefined;
+    return row ? rowToProject(row) : null;
+  }
+
+  listProjects(filter: ListProjectsFilter = {}): ListProjectsResult {
+    const conditions: string[] = [];
+    const params: Record<string, unknown> = {};
+    if (filter.hidden !== undefined) { conditions.push("hidden = @hidden"); params.hidden = filter.hidden ? 1 : 0; }
+    if (filter.archived !== undefined) { conditions.push("archived = @archived"); params.archived = filter.archived ? 1 : 0; }
+    const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+    const limit = Math.min(filter.limit ?? 500, 1000);
+    const offset = filter.offset ?? 0;
+    const total = (this.db.prepare(`SELECT COUNT(*) AS n FROM projects ${where}`).get(params) as { n: number }).n;
+    const rows = this.db.prepare(
+      `SELECT * FROM projects ${where} ORDER BY sort_rank ASC, updated_at DESC LIMIT ${limit} OFFSET ${offset}`,
+    ).all(params) as ProjectRow[];
+    return { items: rows.map(rowToProject), total };
+  }
+
+  updateProject(id: string, patch: UpdateProjectInput): ProjectRecord | null {
+    const existing = this.getProject(id);
+    if (!existing) return null;
+    const nextPath = patch.path !== undefined ? normalizeProjectPath(patch.path) : existing.path;
+    const nextName = patch.displayName !== undefined ? patch.displayName.trim() : existing.displayName;
+    if (!nextName) throw new Error("updateProject: displayName cannot be empty");
+    this.db.prepare(`
+      UPDATE projects
+      SET display_name = @display_name,
+          path = @path,
+          hidden = @hidden,
+          archived = @archived,
+          sort_rank = @sort_rank,
+          updated_at = @updated_at
+      WHERE id = @id
+    `).run({
+      id,
+      display_name: nextName,
+      path: nextPath,
+      hidden: (patch.hidden ?? existing.hidden) ? 1 : 0,
+      archived: (patch.archived ?? existing.archived) ? 1 : 0,
+      sort_rank: patch.sortRank ?? existing.sortRank,
+      updated_at: Date.now(),
+    });
+    return this.getProject(id);
+  }
+
+  deleteProject(id: string): boolean {
+    const tx = this.db.transaction(() => {
+      this.db.prepare("UPDATE sessions SET project_id = NULL WHERE project_id = ?").run(id);
+      return this.db.prepare("DELETE FROM projects WHERE id = ?").run(id).changes > 0;
+    });
+    return tx();
+  }
+
   createSession(input: CreateSessionInput): SessionRecord {
     const id = input.id ?? randomUUID();
     const createdAt = input.createdAt ?? Date.now();
     const title = input.title?.trim() || `${input.agent} session ${new Date(createdAt).toISOString().slice(0, 16)}`;
+    const projectPath = input.projectPath ? normalizeProjectPath(input.projectPath) : null;
+    const projectId = input.projectId ?? (projectPath ? this.getProjectByPath(projectPath)?.id ?? null : null);
     this.db.prepare(`
       INSERT INTO sessions (
-        id, agent, runtime, machine, workspace_id, project_path, title,
+        id, agent, runtime, runtime_adapter, runtime_session_id, machine, workspace_id, project_id, project_path, title,
         created_at, last_message_at, message_count, pinned, archived, sidebar_visible,
         branch, cwd, status, custom_metadata
       ) VALUES (
-        @id, @agent, @runtime, @machine, @workspace_id, @project_path, @title,
+        @id, @agent, @runtime, @runtime_adapter, @runtime_session_id, @machine, @workspace_id, @project_id, @project_path, @title,
         @created_at, NULL, 0, 0, 0, 1,
         @branch, @cwd, @status, @custom_metadata
       )
@@ -230,9 +417,12 @@ export class SessionsServiceStore {
       id,
       agent: input.agent,
       runtime: input.runtime ?? null,
+      runtime_adapter: input.runtimeAdapter ?? input.runtime ?? null,
+      runtime_session_id: input.runtimeSessionId ?? null,
       machine: input.machine ?? null,
       workspace_id: input.workspaceId ?? null,
-      project_path: input.projectPath ?? null,
+      project_id: projectId,
+      project_path: projectPath,
       title,
       created_at: createdAt,
       branch: input.branch ?? null,
@@ -264,6 +454,7 @@ export class SessionsServiceStore {
     if (filter.runtime) { conditions.push("runtime = @runtime"); params.runtime = filter.runtime; }
     if (filter.machine) { conditions.push("machine = @machine"); params.machine = filter.machine; }
     if (filter.workspaceId) { conditions.push("workspace_id = @workspace_id"); params.workspace_id = filter.workspaceId; }
+    if (filter.projectId) { conditions.push("project_id = @project_id"); params.project_id = filter.projectId; }
     if (filter.projectPath) { conditions.push("project_path = @project_path"); params.project_path = filter.projectPath; }
     if (filter.pinned !== undefined) { conditions.push("pinned = @pinned"); params.pinned = filter.pinned ? 1 : 0; }
     if (filter.archived !== undefined) { conditions.push("archived = @archived"); params.archived = filter.archived ? 1 : 0; }
@@ -306,7 +497,19 @@ export class SessionsServiceStore {
   }
 
   assignProject(id: string, projectPath: string | null): SessionRecord | null {
-    this.db.prepare("UPDATE sessions SET project_path = ? WHERE id = ?").run(projectPath, id);
+    const normalizedPath = projectPath ? normalizeProjectPath(projectPath) : null;
+    const projectId = normalizedPath ? this.getProjectByPath(normalizedPath)?.id ?? null : null;
+    this.db.prepare("UPDATE sessions SET project_id = ?, project_path = ? WHERE id = ?").run(projectId, normalizedPath, id);
+    return this.getSession(id);
+  }
+
+  assignProjectById(id: string, projectId: string | null): SessionRecord | null {
+    const project = projectId ? this.getProject(projectId) : null;
+    this.db.prepare("UPDATE sessions SET project_id = ?, project_path = ? WHERE id = ?").run(
+      project?.id ?? null,
+      project?.path ?? null,
+      id,
+    );
     return this.getSession(id);
   }
 
@@ -337,10 +540,10 @@ export class SessionsServiceStore {
       this.db.prepare(`
         INSERT INTO session_messages (
           id, session_id, role, content_text, content_blocks, timestamp,
-          tool_calls, work_summary, audio_ref, attachments, source_native_id
+          tool_calls, timeline, work_summary, streaming_state, audio_ref, attachments, source_native_id
         ) VALUES (
           @id, @session_id, @role, @content_text, @content_blocks, @timestamp,
-          @tool_calls, @work_summary, @audio_ref, @attachments, @source_native_id
+          @tool_calls, @timeline, @work_summary, @streaming_state, @audio_ref, @attachments, @source_native_id
         )
       `).run({
         id,
@@ -350,7 +553,9 @@ export class SessionsServiceStore {
         content_blocks: input.contentBlocks ? JSON.stringify(input.contentBlocks) : null,
         timestamp,
         tool_calls: input.toolCalls ? JSON.stringify(input.toolCalls) : null,
+        timeline: input.timeline ? JSON.stringify(input.timeline) : null,
         work_summary: input.workSummary != null ? JSON.stringify(input.workSummary) : null,
+        streaming_state: input.streamingState ?? null,
         audio_ref: input.audioRef ? JSON.stringify(input.audioRef) : null,
         attachments: input.attachments ? JSON.stringify(input.attachments) : null,
         source_native_id: input.sourceNativeId ?? null,
@@ -372,6 +577,34 @@ export class SessionsServiceStore {
     return { message: rowToMessage(row), inserted: resolved.inserted };
   }
 
+  updateMessage(id: string, patch: Partial<Pick<AppendMessageInput, "contentText" | "contentBlocks" | "toolCalls" | "timeline" | "workSummary" | "streamingState" | "attachments">>): SessionMessageRecord | null {
+    const row = this.db.prepare("SELECT * FROM session_messages WHERE id = ?").get(id) as MessageRow | undefined;
+    if (!row) return null;
+    const next = {
+      id,
+      content_text: patch.contentText ?? row.content_text,
+      content_blocks: patch.contentBlocks !== undefined ? JSON.stringify(patch.contentBlocks) : row.content_blocks,
+      tool_calls: patch.toolCalls !== undefined ? JSON.stringify(patch.toolCalls) : row.tool_calls,
+      timeline: patch.timeline !== undefined ? JSON.stringify(patch.timeline) : row.timeline,
+      work_summary: patch.workSummary !== undefined ? JSON.stringify(patch.workSummary) : row.work_summary,
+      streaming_state: patch.streamingState !== undefined ? patch.streamingState : row.streaming_state,
+      attachments: patch.attachments !== undefined ? JSON.stringify(patch.attachments) : row.attachments,
+    };
+    this.db.prepare(`
+      UPDATE session_messages
+      SET content_text = @content_text,
+          content_blocks = @content_blocks,
+          tool_calls = @tool_calls,
+          timeline = @timeline,
+          work_summary = @work_summary,
+          streaming_state = @streaming_state,
+          attachments = @attachments
+      WHERE id = @id
+    `).run(next);
+    const updated = this.db.prepare("SELECT * FROM session_messages WHERE id = ?").get(id) as MessageRow;
+    return rowToMessage(updated);
+  }
+
   listMessages(sessionId: string, limit = 500, offset = 0): SessionMessageRecord[] {
     const rows = this.db.prepare(
       `SELECT * FROM session_messages
@@ -390,6 +623,7 @@ export class SessionsServiceStore {
     const conditions: string[] = [];
     const params: Record<string, unknown> = { query, limit };
     if (input.agent) { conditions.push("s.agent = @agent"); params.agent = input.agent; }
+    if (input.projectId) { conditions.push("s.project_id = @project_id"); params.project_id = input.projectId; }
     if (input.projectPath) { conditions.push("s.project_path = @project_path"); params.project_path = input.projectPath; }
     const extra = conditions.length ? `AND ${conditions.join(" AND ")}` : "";
 

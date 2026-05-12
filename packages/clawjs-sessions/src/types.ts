@@ -5,13 +5,29 @@ export type SessionStatus = "active" | "completed" | "interrupted" | "archived";
 
 export type MessageRole = "user" | "assistant" | "system" | "tool";
 
+export type MessageStreamingState = "pending" | "streaming" | "complete" | "interrupted" | "error";
+
+export interface ProjectRecord {
+  id: string;
+  displayName: string;
+  path: string;
+  hidden: boolean;
+  archived: boolean;
+  sortRank: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface SessionRecord {
   id: string;
   agent: SessionAgent;
   runtime: SessionRuntime | null;
   machine: string | null;
   workspaceId: string | null;
+  projectId: string | null;
   projectPath: string | null;
+  runtimeAdapter: string | null;
+  runtimeSessionId: string | null;
   title: string;
   createdAt: number;
   lastMessageAt: number | null;
@@ -33,7 +49,9 @@ export interface SessionMessageRecord {
   contentBlocks: unknown[] | null;
   timestamp: number;
   toolCalls: unknown[] | null;
+  timeline: unknown[] | null;
   workSummary: unknown | null;
+  streamingState: MessageStreamingState | null;
   audioRef: { id: string; mimeType: string; durationMs: number } | null;
   attachments: unknown[] | null;
   sourceNativeId: string | null;
@@ -52,6 +70,7 @@ export interface ListSessionsFilter {
   runtime?: SessionRuntime;
   machine?: string;
   workspaceId?: string;
+  projectId?: string;
   projectPath?: string;
   pinned?: boolean;
   archived?: boolean;
@@ -71,6 +90,7 @@ export interface ListSessionsResult {
 export interface SearchSessionsInput {
   query: string;
   agent?: SessionAgent;
+  projectId?: string;
   projectPath?: string;
   limit?: number;
 }
@@ -88,7 +108,10 @@ export interface CreateSessionInput {
   runtime?: SessionRuntime | null;
   machine?: string | null;
   workspaceId?: string | null;
+  projectId?: string | null;
   projectPath?: string | null;
+  runtimeAdapter?: string | null;
+  runtimeSessionId?: string | null;
   title?: string;
   createdAt?: number;
   branch?: string | null;
@@ -105,10 +128,71 @@ export interface AppendMessageInput {
   contentBlocks?: unknown[] | null;
   timestamp?: number;
   toolCalls?: unknown[] | null;
+  timeline?: unknown[] | null;
   workSummary?: unknown | null;
+  streamingState?: MessageStreamingState | null;
   audioRef?: { id: string; mimeType: string; durationMs: number } | null;
   attachments?: unknown[] | null;
   sourceNativeId?: string | null;
+}
+
+export interface CreateProjectInput {
+  id?: string;
+  displayName?: string;
+  path: string;
+  hidden?: boolean;
+  archived?: boolean;
+  sortRank?: number;
+  createdAt?: number;
+}
+
+export interface UpdateProjectInput {
+  displayName?: string;
+  path?: string;
+  hidden?: boolean;
+  archived?: boolean;
+  sortRank?: number;
+}
+
+export interface ListProjectsFilter {
+  hidden?: boolean;
+  archived?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+export interface ListProjectsResult {
+  items: ProjectRecord[];
+  total: number;
+}
+
+export interface StartTurnInput {
+  prompt: string;
+  sessionId?: string;
+  projectId?: string | null;
+  projectPath?: string | null;
+  cwd?: string | null;
+  title?: string;
+  attachments?: unknown[] | null;
+  audioRef?: AppendMessageInput["audioRef"];
+  fakeReply?: string;
+}
+
+export type SessionEventType =
+  | "message.appended"
+  | "message.updated"
+  | "turn.finished"
+  | "session.updated"
+  | "project.updated"
+  | "error";
+
+export interface SessionEvent {
+  type: SessionEventType;
+  sessionId?: string;
+  projectId?: string;
+  messageId?: string;
+  at: number;
+  payload: unknown;
 }
 
 export interface UpsertOriginInput {
