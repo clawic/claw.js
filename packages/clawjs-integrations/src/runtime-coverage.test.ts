@@ -289,6 +289,10 @@ describe("connector runtime coverage", () => {
       executorId: "fixture.action.offline",
       offlineValidated: true,
       evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [{
+        kind: "response",
+        path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
+      }],
       planKinds: ["request"],
       supports: (operation) => operation.id === "fixture_service.action.send-message",
       createExecutor: () => ({
@@ -363,6 +367,54 @@ describe("connector runtime coverage", () => {
     assert.throws(
       () => verifyConnectorRuntimeCoverage(catalog, { registry }),
       /requires offline validation.*requires concrete evidence/s,
+    );
+  });
+
+  it("rejects registry implementations without offline fixtures", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [{
+          id: "fixture_service.action.send-message",
+          appId: "fixture_service",
+          kind: "action",
+          name: "Send Message",
+          fields: [],
+          authFieldNames: [],
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "action",
+      executorId: "fixture.action.offline",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      planKinds: ["request"],
+      supports: (operation) => operation.id === "fixture_service.action.send-message",
+      createExecutor: () => ({
+        async execute() {
+          return { ok: true };
+        },
+      }),
+      buildPlan: () => ({
+        requestPlan: {
+          method: "POST",
+          endpoint: "messages",
+          auth: [],
+          body: {},
+          responseSchema: { type: "object" },
+        },
+      }),
+    }];
+
+    assert.throws(
+      () => verifyConnectorRuntimeCoverage(catalog, { registry }),
+      /requires offline fixtures/,
     );
   });
 

@@ -84,6 +84,8 @@ export type {
   ConnectorRuntimeAuthBinding,
   ConnectorRuntimeAuthPlacement,
   ConnectorRuntimeExecutorOptions,
+  ConnectorRuntimeFixture,
+  ConnectorRuntimeFixtureKind,
   ConnectorRuntimeImplementation,
   ConnectorRuntimeJsonType,
   ConnectorRuntimeOutputSchema,

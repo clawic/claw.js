@@ -5,6 +5,7 @@ import { ConnectorCatalogError } from "./catalog.ts";
 import {
   CONNECTOR_RUNTIME_REGISTRY,
   findConnectorRuntimeImplementation,
+  type ConnectorRuntimeFixture,
   type ConnectorRuntimeImplementation,
   type ConnectorRuntimeOutputSchema,
   type ConnectorRuntimeRequestPlan,
@@ -28,6 +29,7 @@ export interface ConnectorRuntimeCoverageEntry {
   executorId?: string;
   offlineValidated: boolean;
   evidence: string[];
+  fixtures: ConnectorRuntimeFixture[];
   unsupported_real_runtime_reason?: ConnectorUnsupportedRealRuntimeReason;
 }
 
@@ -117,7 +119,11 @@ export function verifyConnectorRuntimeCoverage(
     if (entry.status === "implemented" && !entry.evidence.some((item) => item.trim())) {
       errors.push(`runtime implementation for ${entry.operationId} requires concrete evidence`);
     }
+    if (entry.status === "implemented" && entry.fixtures.length === 0) {
+      errors.push(`runtime implementation for ${entry.operationId} requires offline fixtures`);
+    }
     errors.push(...evidencePathErrors(`runtime implementation for ${entry.operationId}`, entry.evidence, evidenceRoot));
+    errors.push(...fixturePathErrors(`runtime implementation for ${entry.operationId}`, entry.fixtures, evidenceRoot));
     if (entry.status === "implemented") {
       const operation = findCatalogOperation(catalog, entry.operationId);
       const implementations = operation ? findConnectorRuntimeImplementations(operation, registry) : [];
@@ -190,6 +196,17 @@ function evidencePathErrors(label: string, evidence: readonly string[], evidence
     }
     const resolved = resolveExistingEvidenceFile(evidenceRoot, normalized);
     if (!resolved) errors.push(`${label} evidence file not found: ${evidencePath}`);
+  }
+  return errors;
+}
+
+function fixturePathErrors(label: string, fixtures: readonly ConnectorRuntimeFixture[], evidenceRoot: string): string[] {
+  const errors: string[] = [];
+  for (const fixture of fixtures) {
+    if (!["request", "response", "source_event"].includes(fixture.kind)) {
+      errors.push(`${label} fixture has invalid kind: ${String(fixture.kind)}`);
+    }
+    errors.push(...evidencePathErrors(`${label} fixture`, [fixture.path], evidenceRoot));
   }
   return errors;
 }
@@ -423,6 +440,7 @@ function coverageEntry(
       status: "unsupported",
       offlineValidated: false,
       evidence: unsupported.evidence,
+      fixtures: [],
       unsupported_real_runtime_reason: unsupported,
     };
   }
@@ -436,6 +454,7 @@ function coverageEntry(
       executorId: implementation.executorId,
       offlineValidated: implementation.offlineValidated,
       evidence: implementation.evidence,
+      fixtures: implementation.fixtures ?? [],
     };
   }
   return {
@@ -445,5 +464,6 @@ function coverageEntry(
     status: "missing",
     offlineValidated: false,
     evidence: [],
+    fixtures: [],
   };
 }

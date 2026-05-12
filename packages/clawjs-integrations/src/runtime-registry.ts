@@ -82,12 +82,20 @@ export interface ConnectorRuntimePlanDetails {
 
 export type ConnectorRuntimePlanKind = "request" | "source";
 
+export type ConnectorRuntimeFixtureKind = "request" | "response" | "source_event";
+
+export interface ConnectorRuntimeFixture {
+  kind: ConnectorRuntimeFixtureKind;
+  path: string;
+}
+
 export interface ConnectorRuntimeImplementation {
   appId: string;
   kind: ConnectorOperationDefinition["kind"];
   executorId: string;
   offlineValidated: boolean;
   evidence: string[];
+  fixtures?: ConnectorRuntimeFixture[];
   planKinds: ConnectorRuntimePlanKind[];
   supports(operation: ConnectorOperationDefinition): boolean;
   createExecutor?(options?: ConnectorRuntimeExecutorOptions): ConnectorExecutor;
@@ -102,8 +110,22 @@ const TELEGRAM_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/telegram-operation-executor.test.ts",
 ];
 
+const TELEGRAM_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
+  {
+    kind: "response",
+    path: "packages/clawjs-integrations/fixtures/telegram-send-message-response.json",
+  },
+];
+
 const TELEGRAM_SOURCE_EVIDENCE = [
   "packages/clawjs-integrations/src/telegram-source.test.ts",
+];
+
+const TELEGRAM_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = [
+  {
+    kind: "source_event",
+    path: "packages/clawjs-integrations/fixtures/telegram-get-updates-response.json",
+  },
 ];
 
 export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation[] = [
@@ -113,6 +135,7 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     executorId: "telegram-bot-api.action.http",
     offlineValidated: true,
     evidence: TELEGRAM_ACTION_EVIDENCE,
+    fixtures: TELEGRAM_ACTION_FIXTURES,
     planKinds: ["request"],
     supports: (operation) => isTelegramActionOperationSupported(operation.id),
     createExecutor: (options) => createTelegramOperationExecutor(options),
@@ -138,6 +161,7 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     executorId: "telegram-bot-api.source.polling",
     offlineValidated: true,
     evidence: TELEGRAM_SOURCE_EVIDENCE,
+    fixtures: TELEGRAM_SOURCE_FIXTURES,
     planKinds: ["request", "source"],
     supports: (operation) => isTelegramSourceOperationSupported(operation.id),
     createSourceExecutor: (options) => createTelegramSourceExecutor(options),
