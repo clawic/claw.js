@@ -8,6 +8,7 @@ import {
   summarizeConnectorCatalog,
 } from "./catalog.ts";
 import { runConnectorOperation } from "./operation-runner.ts";
+import { runConnectorSource } from "./source-runner.ts";
 import type { ConnectorCatalog } from "./types.ts";
 
 function fixtureCatalog(): ConnectorCatalog {
@@ -148,6 +149,52 @@ describe("connector catalog", () => {
       operationId: "chat_service.action.send-message",
       appId: "chat_service",
       output: { ok: true, channel: "general" },
+    });
+  });
+
+  it("plans source managed interfaces without resolving secrets", async () => {
+    const plan = await runConnectorSource({
+      catalog: fixtureCatalog(),
+      operationId: "chat_service.source.new-message",
+      input: { values: { channel: "general" } },
+    });
+    assert.equal(plan.status, "source_plan");
+    assert.equal(plan.delivery, "webhook");
+    assert.deepEqual(plan.missingFields, []);
+    assert.deepEqual(plan.missingSecrets, ["bot"]);
+    assert.equal(plan.dedupe, "unique");
+    assert.equal(plan.hasHooks, true);
+    assert.equal(plan.stateful, true);
+    assert.deepEqual(plan.values, { channel: "general" });
+    assert.deepEqual(plan.managedInterfaces, [
+      { name: "db", type: "$.service.db", role: "service_db" },
+      { name: "http", type: "$.interface.http", role: "http" },
+    ]);
+  });
+
+  it("starts sources only with an explicit executor", async () => {
+    const result = await runConnectorSource({
+      catalog: fixtureCatalog(),
+      operationId: "chat_service.source.new-message",
+      dryRun: false,
+      input: {
+        values: { channel: "general" },
+        secretRefs: { bot: "secret://bot" },
+      },
+      resolveSecret: async (ref) => ref === "secret://bot" ? "resolved-token" : null,
+      executor: {
+        async start(ctx) {
+          assert.equal(ctx.secrets.bot, "resolved-token");
+          assert.equal(ctx.plan.delivery, "webhook");
+          return { subscribed: true, channel: ctx.values.channel };
+        },
+      },
+    });
+    assert.deepEqual(result, {
+      status: "source_started",
+      operationId: "chat_service.source.new-message",
+      appId: "chat_service",
+      output: { subscribed: true, channel: "general" },
     });
   });
 });

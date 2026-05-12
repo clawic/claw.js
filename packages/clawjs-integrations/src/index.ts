@@ -17,6 +17,7 @@ export {
 } from "./catalog.js";
 export { IntegrationManager } from "./manager.js";
 export { runConnectorOperation } from "./operation-runner.js";
+export { runConnectorSource } from "./source-runner.js";
 export type {
   ConnectorCatalogSearchOptions,
   ConnectorCatalogSearchResult,
@@ -33,6 +34,15 @@ export type {
   ConnectorSecretResolver,
   RunConnectorOperationOptions,
 } from "./operation-runner.js";
+export type {
+  ConnectorManagedInterface,
+  ConnectorManagedInterfaceRole,
+  ConnectorSourceExecutionContext,
+  ConnectorSourceExecutor,
+  ConnectorSourcePlan,
+  ConnectorSourceRunResult,
+  RunConnectorSourceOptions,
+} from "./source-runner.js";
 export { telegramAdapter } from "./telegram.js";
 export {
   buildTelegramOperationRequest,
