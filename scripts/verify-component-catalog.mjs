@@ -11,6 +11,7 @@ const {
 } = await loadIntegrationRuntimeCoverage();
 
 const args = parseArgs(process.argv.slice(2));
+const rootDir = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const sourceRoot = path.resolve(args.source ?? process.env.CLAWJS_COMPONENTS_SOURCE_DIR ?? "");
 const catalogPath = path.resolve(args.catalog ?? process.env.CLAWJS_CONNECTOR_CATALOG_PATH ?? "");
 const maxErrors = Number.parseInt(args["max-errors"] ?? "50", 10);
@@ -281,6 +282,7 @@ function verifyRuntimeCoverage(catalog, options) {
   try {
     verifyConnectorRuntimeCoverage(normalizeConnectorCatalog(catalog), {
       allowUnsupportedReasons: options.allowUnsupportedRuntime,
+      evidenceRoot: rootDir,
     });
     return [];
   } catch (error) {
