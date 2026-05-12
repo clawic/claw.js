@@ -196,6 +196,115 @@ export function encodeMailboxEnvelope(m: MailboxMessage): Uint8Array {
   return encodeCanonicalCbor(obj);
 }
 
+// ---- v2: Double Ratchet ----
+//
+// A v2 mailbox message carries a Double Ratchet header + ciphertext instead
+// of a sealed-box. The sender keeps long-term `DoubleRatchetState` per peer
+// (and per device of that peer when multi-device sync is on) outside of this
+// envelope.
+
+import {
+  dratchetEncrypt, dratchetDecrypt, encodeMessage as encodeDrMessage,
+  decodeMessage as decodeDrMessage, type DoubleRatchetMessage, type DoubleRatchetState,
+} from "./ratchet/double-ratchet.ts";
+
+export const MAILBOX_V2_KIND = "mailbox-v2-dr" as const;
+
+export interface SealAndSignV2Input {
+  recipientPubkey: Uint8Array;
+  senderRolePrivate: Uint8Array;
+  senderRolePubkey: Uint8Array;
+  senderDevicePrivate: Uint8Array;
+  threadId?: Uint8Array;
+  inReplyTo?: Uint8Array;
+  kind: string;
+  plaintext: CborValue;
+  ratchetState: DoubleRatchetState;
+  ttlExpiresAt?: number;
+}
+
+export interface MailboxMessageV2 extends Omit<MailboxMessage, "ciphertext"> {
+  ratchetMessage: DoubleRatchetMessage;
+  ciphertext: Uint8Array;        // encoded DR message (header || nonce || ct)
+}
+
+export function sealAndSignV2(input: SealAndSignV2Input): { message: MailboxMessageV2; nextState: DoubleRatchetState } {
+  const plaintextBuf = encodeCanonicalCbor(input.plaintext);
+  const ad = encodeCanonicalCbor({
+    to: input.recipientPubkey,
+    from: input.senderRolePubkey,
+    kind: input.kind,
+  });
+  const { message: ratchetMessage, nextState } = dratchetEncrypt(input.ratchetState, plaintextBuf, ad);
+  const ciphertext = encodeDrMessage(ratchetMessage);
+  const envelope = envelopePayload({
+    recipientPubkey: input.recipientPubkey,
+    senderPubkey: input.senderRolePubkey,
+    threadId: input.threadId,
+    inReplyTo: input.inReplyTo,
+    kind: input.kind,
+    ciphertext,
+    ttlExpiresAt: input.ttlExpiresAt,
+  });
+  const envelopeBuf = encodeCanonicalCbor(envelope);
+  const signature = compoundSign({
+    payload: envelopeBuf,
+    rolePrivate: input.senderRolePrivate,
+    devicePrivate: input.senderDevicePrivate,
+  });
+  return {
+    nextState,
+    message: {
+      recipientPubkey: input.recipientPubkey,
+      senderPubkey: input.senderRolePubkey,
+      threadId: input.threadId,
+      inReplyTo: input.inReplyTo,
+      kind: input.kind,
+      plaintext: input.plaintext,
+      ratchetMessage,
+      ciphertext,
+      signature,
+      ttlExpiresAt: input.ttlExpiresAt,
+    },
+  };
+}
+
+export interface OpenAndVerifyV2Input {
+  message: MailboxMessage;
+  ratchetState: DoubleRatchetState;
+  senderDevicePub: Uint8Array;
+}
+
+export function openAndVerifyV2(input: OpenAndVerifyV2Input):
+  { plaintext: CborValue; ok: boolean; nextState: DoubleRatchetState } {
+  const m = input.message;
+  const envelope = envelopePayload({
+    recipientPubkey: m.recipientPubkey,
+    senderPubkey: m.senderPubkey,
+    threadId: m.threadId,
+    inReplyTo: m.inReplyTo,
+    kind: m.kind,
+    ciphertext: m.ciphertext,
+    ttlExpiresAt: m.ttlExpiresAt,
+  });
+  const envelopeBuf = encodeCanonicalCbor(envelope);
+  const sig = m.signature;
+  const ok = sig ? compoundVerify({
+    payload: envelopeBuf,
+    rolePub: m.senderPubkey,
+    devicePub: input.senderDevicePub,
+    signature: sig,
+  }) : false;
+  const ratchetMessage = decodeDrMessage(m.ciphertext);
+  const ad = encodeCanonicalCbor({
+    to: m.recipientPubkey,
+    from: m.senderPubkey,
+    kind: m.kind,
+  });
+  const { plaintext: plaintextBuf, nextState } = dratchetDecrypt(input.ratchetState, ratchetMessage, ad);
+  return { plaintext: decodeCanonicalCbor(plaintextBuf), ok, nextState };
+}
+
 export function decodeMailboxEnvelope(value: CborValue): MailboxMessage {
   const obj = value as Record<string, CborValue>;
   const signature = obj.signature && obj.device_signature
