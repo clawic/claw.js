@@ -100,6 +100,8 @@ Runtime coverage can also write a provider-by-provider audit with final-state `i
 npm --workspace @clawjs/integrations run catalog:verify-runtime -- --catalog /tmp/clawjs-catalog.json --report /tmp/clawjs-runtime-audit.json
 ```
 
+Runtime HTTP responses and `ConnectorRuntimeHttpError` instances expose normalized `rateLimit` metadata from common provider headers, including retry delay, remaining quota, reset timing, and policy text when present.
+
 Add `--execute-offline` to replay implemented runtimes against their local fixtures with intercepted fetch:
 
 ```bash
