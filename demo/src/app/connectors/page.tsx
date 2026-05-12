@@ -99,6 +99,18 @@ export default function ConnectorsPage() {
     selected?.operation.fields.filter((field) => !field.optional && !field.secret) ?? []
   ), [selected]);
 
+  useEffect(() => {
+    if (!selected) {
+      setValuesJson("{}");
+      setSecretRefsJson("{}");
+      setPreview(null);
+      return;
+    }
+    setValuesJson(JSON.stringify(buildValuesTemplate(selected.operation), null, 2));
+    setSecretRefsJson(JSON.stringify(buildSecretRefsTemplate(selected), null, 2));
+    setPreview(null);
+  }, [selected?.operation.id]);
+
   const dryRun = useCallback(async () => {
     if (!selected) return;
     setRunning(true);
@@ -260,7 +272,7 @@ export default function ConnectorsPage() {
                   <textarea
                     value={valuesJson}
                     onChange={(event) => setValuesJson(event.target.value)}
-                    rows={7}
+                    rows={9}
                     className="mt-1 w-full font-mono text-[12px] px-2 py-2 bg-background border border-border rounded-lg outline-none focus:border-muted-foreground"
                   />
                 </label>
@@ -294,4 +306,31 @@ export default function ConnectorsPage() {
       </div>
     </div>
   );
+}
+
+function buildValuesTemplate(operation: CatalogOperation): Record<string, unknown> {
+  return Object.fromEntries(
+    operation.fields
+      .filter((field) => !field.secret && (!field.optional || field.default !== undefined || field.options?.length))
+      .map((field) => [field.name, sampleValue(field)]),
+  );
+}
+
+function buildSecretRefsTemplate(entry: CatalogEntry): Record<string, string> {
+  return Object.fromEntries(
+    entry.operation.authFieldNames.map((fieldName) => [
+      fieldName,
+      `vault://connections/${entry.app.id}/${fieldName}`,
+    ]),
+  );
+}
+
+function sampleValue(field: CatalogField): unknown {
+  if (field.default !== undefined) return field.default;
+  if (field.options?.length) return field.options[0].value;
+  if (field.type.includes("[]") || field.type === "string[]" || field.type === "integer[]") return [];
+  if (field.type === "object") return {};
+  if (field.type === "boolean") return false;
+  if (field.type === "integer" || field.type === "number") return 0;
+  return "";
 }
