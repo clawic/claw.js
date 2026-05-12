@@ -28,7 +28,7 @@ import type {
 
 export interface ConnectorRuntimeExecutorOptions extends ConnectorRuntimeHttpOptions {}
 
-export type ConnectorRuntimeAuthPlacement = "bearer" | "header" | "query" | "path";
+export type ConnectorRuntimeAuthPlacement = "bearer" | "header" | "query" | "path" | "cookie";
 
 export interface ConnectorRuntimeAuthBinding {
   type: "secret";

@@ -518,6 +518,14 @@ function authBindingForSecurityScheme(
         description: stringValue(scheme.description),
       };
     }
+    if (location === "cookie" && name) {
+      return {
+        fieldName: fieldName(schemeName),
+        placement: "cookie",
+        name,
+        description: stringValue(scheme.description),
+      };
+    }
   }
   return null;
 }

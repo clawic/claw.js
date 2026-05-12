@@ -59,6 +59,23 @@ describe("connector runtime http transport", () => {
     assert.equal(request.init.body, "q=claw&page=2");
   });
 
+  it("builds requests with cookie auth", () => {
+    const request = buildConnectorRuntimeFetchRequest({
+      baseUrl: "https://api.example.invalid/",
+      secrets: { sessionToken: "session 123" },
+      plan: {
+        method: "GET",
+        endpoint: "/profile",
+        auth: [{ type: "secret", field: "sessionToken", placement: "cookie", name: "session_id" }],
+        headers: { cookie: "existing=true" },
+        body: {},
+      },
+    });
+
+    assert.equal(request.url, "https://api.example.invalid/profile");
+    assert.equal(new Headers(request.init.headers).get("cookie"), "existing=true; session_id=session%20123");
+  });
+
   it("executes plans through an injected fetch and parses JSON", async () => {
     const calls: { input: string | URL | Request; init?: RequestInit }[] = [];
     const response = await executeConnectorRuntimeRequestPlan({

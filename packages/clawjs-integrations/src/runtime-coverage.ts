@@ -634,9 +634,9 @@ function isOutputSchema(value: ConnectorRuntimeOutputSchema | undefined): boolea
 function isAuthBinding(value: ConnectorRuntimeRequestPlan["auth"][number]): boolean {
   if (value.type !== "secret") return false;
   if (typeof value.field !== "string" || !value.field.trim()) return false;
-  if (value.placement && !["bearer", "header", "query", "path"].includes(value.placement)) return false;
+  if (value.placement && !["bearer", "header", "query", "path", "cookie"].includes(value.placement)) return false;
   if (
-    (value.placement === "header" || value.placement === "query" || value.placement === "path")
+    (value.placement === "header" || value.placement === "query" || value.placement === "path" || value.placement === "cookie")
     && (typeof value.name !== "string" || !value.name.trim())
   ) {
     return false;

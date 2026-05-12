@@ -492,6 +492,49 @@ describe("OpenAPI connector runtime", () => {
     }]);
   });
 
+  it("infers cookie api key bindings from OpenAPI security schemes", () => {
+    const document = {
+      ...FIXTURE_OPENAPI,
+      components: {
+        securitySchemes: {
+          sessionCookie: {
+            type: "apiKey",
+            in: "cookie",
+            name: "session_id",
+            description: "Fixture session cookie.",
+          },
+        },
+      },
+      security: [{ sessionCookie: [] }],
+    };
+    const options = {
+      appId: "fixture_commerce",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(document, options)];
+    const operation = catalog.apps[0]?.operations.find((candidate) => candidate.id.endsWith("list-customer-items"));
+    assert.ok(operation);
+
+    assert.deepEqual(catalog.apps[0]?.fields, [{
+      name: "sessionCookie",
+      type: "string",
+      optional: false,
+      secret: true,
+      description: "Fixture session cookie.",
+    }]);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, {
+      customerId: "cus_123",
+      limit: 10,
+    }, { registry }).requestPlan?.auth, [{
+      type: "secret",
+      field: "sessionCookie",
+      placement: "cookie",
+      name: "session_id",
+    }]);
+  });
+
   it("infers basic auth bindings from OpenAPI security schemes", () => {
     const document = {
       ...FIXTURE_OPENAPI,

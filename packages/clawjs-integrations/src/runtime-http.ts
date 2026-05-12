@@ -196,6 +196,12 @@ function applyAuthBinding(input: {
       const name = requiredBindingName(input.binding);
       return replacePathToken(name, value, input.endpoint);
     }
+    case "cookie": {
+      const cookie = `${requiredBindingName(input.binding)}=${encodeURIComponent(value)}`;
+      const existing = input.headers.get("cookie");
+      input.headers.set("cookie", existing ? `${existing}; ${cookie}` : cookie);
+      return input.endpoint;
+    }
   }
   throw new Error(`Unsupported connector runtime auth placement: ${String(input.binding.placement)}`);
 }
