@@ -145,6 +145,10 @@ export function verifyConnectorRuntimeCoverage(
           if (implementation.planKinds.includes("source") && !isSourcePlan(details.sourcePlan)) {
             errors.push(`runtime implementation for ${entry.operationId} must build a source plan`);
           }
+          if (details.sourcePlan) {
+            const sourceErrors = sourcePlanContractErrors(operation, details.sourcePlan);
+            errors.push(...sourceErrors.map((error) => `runtime implementation for ${entry.operationId} ${error}`));
+          }
         } catch (error) {
           errors.push(`runtime implementation for ${entry.operationId} plan builder failed: ${error instanceof Error ? error.message : String(error)}`);
         }
@@ -217,6 +221,37 @@ function requestPlanAuthErrors(
     if (!expected.has(field)) errors.push(`request plan auth includes unknown ${field}`);
   }
   return errors;
+}
+
+function sourcePlanContractErrors(
+  operation: ConnectorOperationDefinition,
+  sourcePlan: ConnectorRuntimeSourcePlan,
+): string[] {
+  if (operation.kind !== "source") return ["source plan is only valid for source operations"];
+  const errors: string[] = [];
+  const expectedDelivery = operation.source?.delivery ?? "manual";
+  if (sourcePlan.delivery !== expectedDelivery) {
+    errors.push(`source plan delivery ${sourcePlan.delivery} expected ${expectedDelivery}`);
+  }
+  const expectedHooks = operation.runtime?.hookNames ?? [];
+  if (!sameStringSet(sourcePlan.hooks, expectedHooks)) {
+    errors.push(`source plan hooks ${formatStringList(sourcePlan.hooks)} expected ${formatStringList(expectedHooks)}`);
+  }
+  const expectedDedupe = operation.runtime?.dedupe;
+  if (sourcePlan.dedupe !== expectedDedupe) {
+    errors.push(`source plan dedupe ${sourcePlan.dedupe ?? "<missing>"} expected ${expectedDedupe ?? "<missing>"}`);
+  }
+  return errors;
+}
+
+function sameStringSet(left: readonly string[], right: readonly string[]): boolean {
+  if (left.length !== right.length) return false;
+  const rightValues = new Set(right);
+  return left.every((value) => rightValues.has(value));
+}
+
+function formatStringList(values: readonly string[]): string {
+  return values.length ? values.join(",") : "<empty>";
 }
 
 function isRequestPlan(value: ConnectorRuntimeRequestPlan | undefined): boolean {

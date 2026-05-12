@@ -578,4 +578,71 @@ describe("connector runtime coverage", () => {
       /request plan auth missing apiKey.*request plan auth includes unknown wrongKey/s,
     );
   });
+
+  it("rejects source plans that do not match the source contract", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [{
+          id: "fixture_service.source.poll",
+          appId: "fixture_service",
+          kind: "source",
+          name: "Poll",
+          fields: [],
+          authFieldNames: [],
+          runtime: {
+            hasRun: true,
+            hasHooks: true,
+            hookNames: ["deploy"],
+            hasAdditionalProps: false,
+            hasMethods: false,
+            methodNames: [],
+            dedupe: "unique",
+          },
+          source: {
+            delivery: "polling",
+            usesTimer: true,
+            usesHttp: false,
+            usesServiceDb: false,
+          },
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "source",
+      executorId: "fixture.source.offline",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      planKinds: ["request", "source"],
+      supports: (operation) => operation.id === "fixture_service.source.poll",
+      createSourceExecutor: () => ({
+        async start() {
+          return { ok: true };
+        },
+      }),
+      buildPlan: () => ({
+        requestPlan: {
+          method: "GET",
+          endpoint: "poll",
+          auth: [],
+          body: {},
+        },
+        sourcePlan: {
+          delivery: "webhook",
+          hooks: ["activate"],
+          dedupe: "none",
+        },
+      }),
+    }];
+
+    assert.throws(
+      () => verifyConnectorRuntimeCoverage(catalog, { registry }),
+      /source plan delivery webhook expected polling.*source plan hooks activate expected deploy.*source plan dedupe none expected unique/s,
+    );
+  });
 });
