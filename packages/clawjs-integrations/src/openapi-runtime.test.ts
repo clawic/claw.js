@@ -312,7 +312,10 @@ describe("OpenAPI connector runtime", () => {
       method: "POST",
       endpoint: "/oauth/token",
       auth: [{ type: "secret", field: "clientSecret", placement: "bearer" }],
-      headers: { accept: "application/json" },
+      headers: {
+        accept: "application/json",
+        "content-type": "application/x-www-form-urlencoded",
+      },
       body: {
         grant_type: "client_credentials",
         scope: "items:read",
@@ -467,7 +470,10 @@ describe("OpenAPI connector runtime", () => {
       method: "POST",
       endpoint: "/items",
       auth: [{ type: "secret", field: "apiKey", placement: "bearer" }],
-      headers: { accept: "application/json" },
+      headers: {
+        accept: "application/vnd.fixture.item+json",
+        "content-type": "application/vnd.fixture.item+json",
+      },
       body: { name: "example" },
       responseSchema: {
         type: "object",
@@ -1286,7 +1292,10 @@ describe("OpenAPI connector runtime", () => {
       method: "POST",
       endpoint: "/customers/cus_123/items",
       auth: [{ type: "secret", field: "bearerAuth", placement: "bearer" }],
-      headers: { accept: "application/json" },
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+      },
       body: { name: "example" },
       responseSchema: {
         type: "object",

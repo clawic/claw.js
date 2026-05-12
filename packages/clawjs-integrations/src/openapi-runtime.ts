@@ -112,6 +112,8 @@ interface OpenApiConnectorOperationMetadata {
   method: string;
   path: string;
   baseUrl?: string;
+  requestContentType?: string;
+  responseContentType?: string;
   parameters: OpenApiConnectorParameterBinding[];
   bodyFields: OpenApiConnectorBodyBinding[];
   bodyEncoding?: "form" | "multipart";
@@ -268,7 +270,10 @@ function buildOpenApiRequestPlan(
   values: Record<string, IntegrationJson>,
   options: OpenApiConnectorRuntimeOptions,
 ): ConnectorRuntimeRequestPlan {
-  const headers: Record<string, string> = { accept: "application/json" };
+  const headers: Record<string, string> = { accept: metadata.responseContentType ?? "application/json" };
+  if (metadata.requestContentType && metadata.bodyEncoding !== "multipart") {
+    headers["content-type"] = metadata.requestContentType;
+  }
   const query: Record<string, IntegrationJson> = {};
   const querySerialization: NonNullable<ConnectorRuntimeRequestPlan["querySerialization"]> = {};
   const body: Record<string, IntegrationJson> = {};
@@ -347,6 +352,8 @@ function collectOpenApiOperations(
         method: method.toUpperCase(),
         path,
         ...optionalString("baseUrl", firstServerUrl(operation) ?? firstServerUrl(resolvedPathItem)),
+        ...optionalString("requestContentType", requestBodyContentType(document, operation.requestBody)),
+        ...optionalString("responseContentType", responseContentForOperation(document, operation)?.mediaType),
         parameters: parameters.map(({ field: _field, ...parameter }) => parameter),
         bodyFields: bodyFields.map(({ field: _field, ...field }) => field),
         ...optionalBodyEncoding(requestBodyEncoding(document, operation.requestBody)),
@@ -746,9 +753,16 @@ function responseSchemaForOperation(document: OpenApiDocument, operation: OpenAp
 }
 
 function responseBodySchema(document: OpenApiDocument, operation: OpenApiOperation): OpenApiSchema | undefined {
+  return responseContentForOperation(document, operation)?.schema;
+}
+
+function responseContentForOperation(
+  document: OpenApiDocument,
+  operation: OpenApiOperation,
+): { mediaType: string; schema: OpenApiSchema | undefined } | undefined {
   const response = resolveOpenApiResponse(document, Object.entries(operation.responses ?? {})
     .find(([status]) => status.startsWith("2"))?.[1]);
-  return jsonContentSchema(document, response?.content);
+  return contentSchema(document, response?.content);
 }
 
 function requiredPathsForSchema(
@@ -784,7 +798,11 @@ function connectorFieldType(schema: OpenApiSchema | undefined): string {
 }
 
 function jsonContentSchema(document: OpenApiDocument, content: OpenApiRequestBody["content"] | undefined): OpenApiSchema | undefined {
-  return resolveOpenApiSchema(document, jsonLikeContentSchema(content) ?? content?.["application/x-www-form-urlencoded"]?.schema);
+  return contentSchema(document, content)?.schema;
+}
+
+function requestBodyContentType(document: OpenApiDocument, requestBody: OpenApiRequestBody | undefined): string | undefined {
+  return requestBodyContent(document, requestBody)?.mediaType;
 }
 
 function requestBodyEncoding(document: OpenApiDocument, requestBody: OpenApiRequestBody | undefined): OpenApiConnectorOperationMetadata["bodyEncoding"] | undefined {
@@ -794,22 +812,38 @@ function requestBodyEncoding(document: OpenApiDocument, requestBody: OpenApiRequ
 function requestBodyContent(
   document: OpenApiDocument,
   requestBody: OpenApiRequestBody | undefined,
-): { schema: OpenApiSchema | undefined; encoding?: OpenApiConnectorOperationMetadata["bodyEncoding"] } | undefined {
+): { mediaType: string; schema: OpenApiSchema | undefined; encoding?: OpenApiConnectorOperationMetadata["bodyEncoding"] } | undefined {
   const content = resolveOpenApiRequestBody(document, requestBody)?.content;
   if (!content) return undefined;
-  const jsonSchema = resolveOpenApiSchema(document, jsonLikeContentSchema(content));
-  if (jsonSchema) return { schema: jsonSchema };
+  const jsonEntry = jsonLikeContentEntry(content);
+  const jsonSchema = resolveOpenApiSchema(document, jsonEntry?.schema);
+  if (jsonEntry && jsonSchema) return { mediaType: jsonEntry.mediaType, schema: jsonSchema };
   const formSchema = resolveOpenApiSchema(document, content["application/x-www-form-urlencoded"]?.schema);
-  if (formSchema) return { schema: formSchema, encoding: "form" };
+  if (formSchema) return { mediaType: "application/x-www-form-urlencoded", schema: formSchema, encoding: "form" };
   const multipartSchema = resolveOpenApiSchema(document, content["multipart/form-data"]?.schema);
-  if (multipartSchema) return { schema: multipartSchema, encoding: "multipart" };
+  if (multipartSchema) return { mediaType: "multipart/form-data", schema: multipartSchema, encoding: "multipart" };
   return undefined;
 }
 
-function jsonLikeContentSchema(content: OpenApiRequestBody["content"] | undefined): OpenApiSchema | undefined {
+function contentSchema(
+  document: OpenApiDocument,
+  content: OpenApiRequestBody["content"] | undefined,
+): { mediaType: string; schema: OpenApiSchema | undefined } | undefined {
+  const entry = jsonLikeContentEntry(content)
+    ?? contentEntry(content, "application/x-www-form-urlencoded");
+  return entry ? { mediaType: entry.mediaType, schema: resolveOpenApiSchema(document, entry.schema) } : undefined;
+}
+
+function jsonLikeContentEntry(content: OpenApiRequestBody["content"] | undefined): { mediaType: string; schema?: OpenApiSchema } | undefined {
   if (!content) return undefined;
-  return Object.entries(content)
-    .find(([mediaType]) => isJsonMediaType(mediaType))?.[1]?.schema;
+  const found = Object.entries(content)
+    .find(([mediaType]) => isJsonMediaType(mediaType));
+  return found ? { mediaType: found[0], schema: found[1]?.schema } : undefined;
+}
+
+function contentEntry(content: OpenApiRequestBody["content"] | undefined, mediaType: string): { mediaType: string; schema?: OpenApiSchema } | undefined {
+  const schema = content?.[mediaType]?.schema;
+  return schema ? { mediaType, schema } : undefined;
 }
 
 function isJsonMediaType(mediaType: string): boolean {
