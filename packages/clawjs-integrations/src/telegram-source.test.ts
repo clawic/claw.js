@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { normalizeConnectorCatalog } from "./catalog.ts";
+import {
+  createConnectorRuntimeFixtureFetch,
+  loadConnectorRuntimeFixtures,
+} from "./runtime-fixtures.ts";
 import { runConnectorSource } from "./source-runner.ts";
 import {
   telegramInboundMessageFromUpdate,
@@ -114,6 +118,10 @@ describe("telegram source events", () => {
 
   it("runs supported polling sources through the registered runtime executor", async () => {
     const calls: string[] = [];
+    const fixtureFetch = createConnectorRuntimeFixtureFetch(loadConnectorRuntimeFixtures([{
+      kind: "source_event",
+      path: "packages/clawjs-integrations/fixtures/telegram-get-updates-response.json",
+    }]));
     const catalog = normalizeConnectorCatalog({
       version: 1,
       apps: [{
@@ -162,25 +170,13 @@ describe("telegram source events", () => {
       runtimeExecutorOptions: {
         fetchImpl: async (input) => {
           calls.push(String(input));
-          return new Response(JSON.stringify({
-            ok: true,
-            result: [{
-              update_id: 101,
-              message: {
-                message_id: 202,
-                date: 1_700_000_000,
-                chat: { id: 303 },
-                from: { id: 404, first_name: "Ada" },
-                text: "/start hello",
-              },
-            }],
-          }), { status: 200 });
+          return fixtureFetch(input);
         },
       },
     });
 
     assert.equal(result.status, "source_started");
-    assert.equal(result.output.nextOffset, 102);
+    assert.equal(result.output.nextOffset, 1001);
     assert.equal((result.output.events as unknown[]).length, 1);
     const url = new URL(calls[0] ?? "");
     assert.equal(url.pathname, "/botruntime-token/getUpdates");

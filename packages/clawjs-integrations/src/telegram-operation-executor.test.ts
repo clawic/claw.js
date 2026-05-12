@@ -3,6 +3,10 @@ import { describe, it } from "node:test";
 
 import { normalizeConnectorCatalog } from "./catalog.ts";
 import { runConnectorOperation } from "./operation-runner.ts";
+import {
+  createConnectorRuntimeFixtureFetch,
+  loadConnectorRuntimeFixtures,
+} from "./runtime-fixtures.ts";
 import { telegramAdapter } from "./telegram.ts";
 import {
   buildTelegramOperationRequest,
@@ -242,13 +246,17 @@ describe("telegram operation executor", () => {
 
   it("executes through an injected fetch and resolves the app secret", async () => {
     const calls: Array<{ url: string; body: unknown }> = [];
+    const fixtureFetch = createConnectorRuntimeFixtureFetch(loadConnectorRuntimeFixtures([{
+      kind: "response",
+      path: "packages/clawjs-integrations/fixtures/telegram-send-message-response.json",
+    }]));
     const executor = createTelegramOperationExecutor({
       fetchImpl: async (input, init) => {
         calls.push({
           url: String(input),
           body: JSON.parse(String(init?.body ?? "{}")),
         });
-        return new Response(JSON.stringify({ ok: true, result: { message_id: 42 } }), { status: 200 });
+        return fixtureFetch(input, init);
       },
     });
 
@@ -270,7 +278,17 @@ describe("telegram operation executor", () => {
       },
     });
 
-    assert.deepEqual(output, { ok: true, result: { message_id: 42 } });
+    assert.deepEqual(output, {
+      ok: true,
+      result: {
+        message_id: 42,
+        chat: {
+          id: 123,
+          type: "private",
+        },
+        text: "hello",
+      },
+    });
     assert.deepEqual(calls, [{
       url: "https://api.telegram.org/bottest-token/deleteMessage",
       body: {
@@ -322,6 +340,10 @@ describe("telegram operation executor", () => {
 
   it("runs supported actions through the registered runtime executor", async () => {
     const calls: Array<{ url: string; body: unknown }> = [];
+    const fixtureFetch = createConnectorRuntimeFixtureFetch(loadConnectorRuntimeFixtures([{
+      kind: "response",
+      path: "packages/clawjs-integrations/fixtures/telegram-send-message-response.json",
+    }]));
     const catalog = normalizeConnectorCatalog({
       version: 1,
       apps: [{
@@ -358,7 +380,7 @@ describe("telegram operation executor", () => {
             url: String(input),
             body: JSON.parse(String(init?.body ?? "{}")),
           });
-          return new Response(JSON.stringify({ ok: true, result: { message_id: 43 } }), { status: 200 });
+          return fixtureFetch(input, init);
         },
       },
     });
@@ -367,7 +389,17 @@ describe("telegram operation executor", () => {
       status: "executed",
       operationId: "telegram_bot_api.action.send-text-message-or-reply-send-text-message-or-reply",
       appId: "telegram_bot_api",
-      output: { ok: true, result: { message_id: 43 } },
+      output: {
+        ok: true,
+        result: {
+          message_id: 42,
+          chat: {
+            id: 123,
+            type: "private",
+          },
+          text: "hello",
+        },
+      },
     });
     assert.deepEqual(calls, [{
       url: "https://api.telegram.org/botruntime-token/sendMessage",

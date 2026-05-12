@@ -43,6 +43,11 @@ export {
 export {
   validateConnectorRuntimeOutput,
 } from "./runtime-output.js";
+export {
+  createConnectorRuntimeFixtureFetch,
+  loadConnectorRuntimeFixture,
+  loadConnectorRuntimeFixtures,
+} from "./runtime-fixtures.js";
 export type {
   ConnectorCatalogSearchOptions,
   ConnectorCatalogSearchResult,
@@ -102,6 +107,11 @@ export type {
   ConnectorRuntimeHttpPaginationResult,
   ConnectorRuntimeHttpResponse,
 } from "./runtime-http.js";
+export type {
+  ConnectorRuntimeFixtureFetchOptions,
+  ConnectorRuntimeLoadedFixture,
+  LoadConnectorRuntimeFixturesOptions,
+} from "./runtime-fixtures.js";
 export { telegramAdapter } from "./telegram.js";
 export {
   buildTelegramOperationRequest,
