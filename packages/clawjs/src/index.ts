@@ -55,6 +55,7 @@ import { runStyleCli } from "./styles/index.ts";
 import { runTemplateCli } from "./templates/index.ts";
 import { runReferenceCli } from "./references/index.ts";
 import { runV1DataCli } from "./v1-data.ts";
+import { activeHost, readHostRegistry, registerHost, resolveHostRegistryFile, useHost } from "./host-registry.ts";
 
 export interface CliContext {
   stdout: NodeJS.WritableStream;
@@ -226,6 +227,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} chat [prompt]`,
     `  ${binName} chat list|resume`,
     `  ${binName} provider login|status|models|use`,
+    `  ${binName} host list|register|use|status`,
     `  ${binName} runtime status|install|uninstall|repair|setup-workspace`,
     `  ${binName} workspace init|attach|inspect|discover|validate|reset|repair`,
     `  ${binName} files read|write|inspect|diff|sync|apply-template-pack`,
@@ -1589,6 +1591,104 @@ function formatCliTable(rows: Array<Record<string, string>>): string {
     columns.map((column) => "-".repeat(widths[column])).join("  "),
     ...rows.map((row) => columns.map((column) => (row[column] ?? "").padEnd(widths[column])).join("  ")),
   ].join("\n");
+}
+
+function hostRegistryOptions(flags: Record<string, string>): { clawHome?: string } {
+  return flags["claw-home"] ? { clawHome: path.resolve(flags["claw-home"]) } : {};
+}
+
+async function runHostCli(input: {
+  argv: string[];
+  positionals: string[];
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+}): Promise<number> {
+  const [, command, hostIdArg] = input.positionals;
+  const options = hostRegistryOptions(input.flags);
+
+  if (command === "list" || !command) {
+    const registry = readHostRegistry(options);
+    if (input.wantsJson) {
+      writeJson(input.context.stdout, { ...registry, registryPath: resolveHostRegistryFile(options) });
+    } else {
+      const rows = registry.hosts.map((host) => ({
+        active: registry.activeHostId === host.id ? "*" : "",
+        id: host.id,
+        name: host.displayName,
+        kind: host.kind,
+        transport: host.endpoint?.transport ?? "-",
+      }));
+      input.context.stdout.write(rows.length ? `${formatCliTable(rows)}\n` : "No hosts registered.\n");
+    }
+    return CLI_EXIT_OK;
+  }
+
+  if (command === "register") {
+    const id = input.flags.id ?? hostIdArg;
+    const displayName = input.flags.name ?? input.flags["display-name"];
+    const kind = input.flags.kind ?? "standalone";
+    if (!id || !displayName) {
+      throw new CliHandledError("usage_error", `Usage: ${input.binName} host register <id> --name NAME [--kind standalone|embedded|third_party] [--transport xpc --address NAME] [--use]`, CLI_EXIT_USAGE);
+    }
+    if (kind !== "standalone" && kind !== "embedded" && kind !== "third_party") {
+      throw new CliHandledError("usage_error", "Host kind must be standalone, embedded, or third_party.", CLI_EXIT_USAGE);
+    }
+    const transport = input.flags.transport;
+    const address = input.flags.address;
+    if ((transport && !address) || (!transport && address)) {
+      throw new CliHandledError("usage_error", "--transport and --address must be provided together.", CLI_EXIT_USAGE);
+    }
+    if (transport && transport !== "xpc" && transport !== "unix_socket" && transport !== "http" && transport !== "stdio") {
+      throw new CliHandledError("usage_error", "Host transport must be xpc, unix_socket, http, or stdio.", CLI_EXIT_USAGE);
+    }
+    const registry = registerHost({
+      id,
+      displayName,
+      kind,
+      ...(input.flags["bundle-id"] ? { bundleId: input.flags["bundle-id"] } : {}),
+      ...(input.flags.executable ? { executablePath: path.resolve(input.flags.executable) } : {}),
+      ...(input.flags["app-support-dir"] ? { appSupportDir: path.resolve(input.flags["app-support-dir"]) } : {}),
+      ...(transport && address ? { endpoint: { transport, address } } : {}),
+    }, options, input.argv.includes("--use"));
+    const host = registry.hosts.find((entry) => entry.id === id);
+    if (input.wantsJson) writeJson(input.context.stdout, { ok: true, host, registryPath: resolveHostRegistryFile(options), activeHostId: registry.activeHostId });
+    else input.context.stdout.write(`registered ${id}${registry.activeHostId === id ? " and set active" : ""}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (command === "use") {
+    const hostId = hostIdArg ?? input.flags.id;
+    if (!hostId) throw new CliHandledError("usage_error", `Usage: ${input.binName} host use <id>`, CLI_EXIT_USAGE);
+    const registry = useHost(hostId, options);
+    if (input.wantsJson) writeJson(input.context.stdout, { ok: true, activeHostId: registry.activeHostId, registryPath: resolveHostRegistryFile(options) });
+    else input.context.stdout.write(`active host: ${registry.activeHostId}\n`);
+    return CLI_EXIT_OK;
+  }
+
+  if (command === "status" || command === "doctor") {
+    const registry = readHostRegistry(options);
+    const host = hostIdArg ? registry.hosts.find((entry) => entry.id === hostIdArg) ?? null : activeHost(registry);
+    const ok = !!host;
+    if (input.wantsJson) {
+      writeJson(input.context.stdout, {
+        ok,
+        activeHostId: registry.activeHostId,
+        host,
+        registryPath: resolveHostRegistryFile(options),
+        error: ok ? undefined : { code: "host_unavailable", message: hostIdArg ? `Host not registered: ${hostIdArg}` : "No active host configured." },
+      });
+    } else if (host) {
+      input.context.stdout.write(`host: ${host.id}\nname: ${host.displayName}\nkind: ${host.kind}\ntransport: ${host.endpoint?.transport ?? "not configured"}\n`);
+    } else {
+      input.context.stderr.write(hostIdArg ? `Host not registered: ${hostIdArg}\n` : "No active host configured.\n");
+    }
+    return ok ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  input.context.stderr.write(`Usage: ${input.binName} host list|register|use|status\n`);
+  return CLI_EXIT_USAGE;
 }
 
 function temporalNext(item: TemporalItem): string {
@@ -5828,6 +5928,10 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "domains") {
     return await runDomainsCli({ argv, positionals, flags, context, wantsJson, binName });
+  }
+
+  if (group === "host") {
+    return await runHostCli({ argv, positionals, flags, context, wantsJson, binName });
   }
 
   if (group === "chat") {

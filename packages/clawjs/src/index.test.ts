@@ -66,6 +66,67 @@ function runInstalledClawProcess(binPath: string, cwd: string, args: string[]): 
   };
 }
 
+async function runCliCapture(args: string[], cwd: string): Promise<{ code: number; stdout: string; stderr: string }> {
+  const stdout = captureStream();
+  const stderr = captureStream();
+  const code = await runCli(args, {
+    stdout: stdout.stream,
+    stderr: stderr.stream,
+    cwd,
+    binName: "claw",
+  });
+  return { code, stdout: stdout.getOutput(), stderr: stderr.getOutput() };
+}
+
+test("host registry CLI registers, selects, and reports the active host", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-host-cli-"));
+  const clawHome = path.join(workspaceRoot, "claw-home");
+
+  const registered = await runCliCapture([
+    "host",
+    "register",
+    "claw",
+    "--name",
+    "Claw",
+    "--kind",
+    "standalone",
+    "--transport",
+    "xpc",
+    "--address",
+    "com.example.claw.runtime",
+    "--claw-home",
+    clawHome,
+    "--use",
+    "--json",
+  ], workspaceRoot);
+
+  assert.equal(registered.code, CLI_EXIT_OK, registered.stderr);
+  const registeredPayload = JSON.parse(registered.stdout);
+  assert.equal(registeredPayload.activeHostId, "claw");
+  assert.equal(registeredPayload.host.endpoint.transport, "xpc");
+
+  const status = await runCliCapture(["host", "status", "--claw-home", clawHome, "--json"], workspaceRoot);
+  assert.equal(status.code, CLI_EXIT_OK, status.stderr);
+  const statusPayload = JSON.parse(status.stdout);
+  assert.equal(statusPayload.host.id, "claw");
+
+  const listed = await runCliCapture(["host", "list", "--claw-home", clawHome, "--json"], workspaceRoot);
+  assert.equal(listed.code, CLI_EXIT_OK, listed.stderr);
+  const listPayload = JSON.parse(listed.stdout);
+  assert.equal(listPayload.hosts.length, 1);
+  assert.match(listPayload.registryPath, /hosts\/registry\.json$/);
+});
+
+test("host registry CLI fails clearly when no active host exists", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-host-empty-"));
+  const status = await runCliCapture(["host", "status", "--claw-home", path.join(workspaceRoot, "claw-home"), "--json"], workspaceRoot);
+
+  assert.equal(status.code, CLI_EXIT_DEGRADED);
+  const payload = JSON.parse(status.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "host_unavailable");
+});
+
 async function startDelegationPlaneTestServer(workspaceRoot: string): Promise<{ url: string; stop: () => Promise<void> }> {
   const port = 18_000 + Math.floor(Math.random() * 1_000);
   const url = `http://127.0.0.1:${port}`;
@@ -4710,6 +4771,43 @@ test("runCli exposes secrets-backed secrets commands", async () => {
   } finally {
     await secrets.close();
   }
+});
+
+test("runCli manages the host registry", async () => {
+  const clawHome = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-host-registry-"));
+
+  const registerStdout = captureStream();
+  const registerExitCode = await runCli([
+    "host",
+    "register",
+    "clawix",
+    "--display-name", "Clawix",
+    "--kind", "standalone",
+    "--transport", "xpc",
+    "--address", "com.clawix.host",
+    "--claw-home", clawHome,
+    "--json",
+  ], {
+    stdout: registerStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal(registerExitCode, CLI_EXIT_OK);
+  assert.match(registerStdout.getOutput(), /"activeHostId": "clawix"/);
+
+  const statusStdout = captureStream();
+  const statusExitCode = await runCli([
+    "host",
+    "status",
+    "--claw-home", clawHome,
+    "--json",
+  ], {
+    stdout: statusStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal(statusExitCode, CLI_EXIT_OK);
+  assert.match(statusStdout.getOutput(), /"activeHostId": "clawix"/);
 });
 
 test("runCli can upload, search, read, and download documents", async () => {
