@@ -98,3 +98,9 @@ Runtime coverage can also write a provider-by-provider audit with final-state `i
 ```bash
 npm --workspace @clawjs/integrations run catalog:verify-runtime -- --catalog /tmp/clawjs-catalog.json --report /tmp/clawjs-runtime-audit.json
 ```
+
+Add `--execute-offline` to replay implemented runtimes against their local fixtures with intercepted fetch:
+
+```bash
+npm --workspace @clawjs/integrations run catalog:verify-runtime -- --catalog /tmp/clawjs-catalog.json --report /tmp/clawjs-runtime-audit.json --execute-offline
+```

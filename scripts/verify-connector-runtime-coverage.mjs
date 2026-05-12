@@ -8,15 +8,17 @@ import {
   ConnectorRuntimeCoverageError,
   loadConnectorCatalogFromFile,
   verifyConnectorRuntimeCoverage,
+  verifyConnectorRuntimeOfflineExecutions,
 } from "../packages/clawjs-integrations/dist/index.js";
 
 const args = parseArgs(process.argv.slice(2));
 const rootDir = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const catalogPath = path.resolve(args.catalog ?? process.env.CLAWJS_CONNECTOR_CATALOG_PATH ?? "");
 const allowUnsupportedReasons = args["allow-unsupported-runtime"] === true || args["allow-unsupported-runtime"] === "true";
+const executeOffline = args["execute-offline"] === true || args["execute-offline"] === "true";
 
 if (!catalogPath || !fs.existsSync(catalogPath)) {
-  console.error("Usage: node scripts/verify-connector-runtime-coverage.mjs --catalog <catalog.json> [--report <report.json>]");
+  console.error("Usage: node scripts/verify-connector-runtime-coverage.mjs --catalog <catalog.json> [--report <report.json>] [--execute-offline]");
   process.exit(1);
 }
 
@@ -24,6 +26,14 @@ const catalog = loadConnectorCatalogFromFile(catalogPath);
 
 try {
   const report = verifyConnectorRuntimeCoverage(catalog, { allowUnsupportedReasons, evidenceRoot: rootDir });
+  if (executeOffline) {
+    const offlineReport = await verifyConnectorRuntimeOfflineExecutions(catalog, {
+      allowUnsupportedReasons,
+      evidenceRoot: rootDir,
+    });
+    console.error(`offlineExecutions=${offlineReport.results.length}`);
+    console.error("connector runtime offline executions passed");
+  }
   writeReportIfRequested({ catalog, report });
   console.error(summaryLine(report.summary));
   console.error("connector runtime coverage passed");
