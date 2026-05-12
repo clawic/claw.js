@@ -204,6 +204,7 @@ export function verifyConnectorRuntimeCoverage(
         }
       }
       if (!operation) errors.push(`runtime implementation for ${entry.operationId} requires a catalog operation`);
+      errors.push(...runtimeFixtureKindErrors(entry, implementation, operation));
       if (!implementation?.buildPlan) errors.push(`runtime implementation for ${entry.operationId} requires a runtime plan builder`);
       else if (operation) {
         try {
@@ -455,6 +456,26 @@ function fixturePathErrors(label: string, fixtures: readonly ConnectorRuntimeFix
       errors.push(`${label} fixture has invalid kind: ${String(fixture.kind)}`);
     }
     errors.push(...evidencePathErrors(`${label} fixture`, [fixture.path], evidenceRoot));
+  }
+  return errors;
+}
+
+function runtimeFixtureKindErrors(
+  entry: ConnectorRuntimeCoverageEntry,
+  implementation: ConnectorRuntimeImplementation | null,
+  operation: ConnectorOperationDefinition | null,
+): string[] {
+  if (!implementation) return [];
+  const errors: string[] = [];
+  const fixtureKinds = new Set(entry.fixtures.map((fixture) => fixture.kind));
+  if (implementation.planKinds.includes("request") && !fixtureKinds.has("request")) {
+    errors.push(`runtime implementation for ${entry.operationId} requires offline request fixtures`);
+  }
+  if (operation?.kind === "action" && implementation.planKinds.includes("request") && !fixtureKinds.has("response")) {
+    errors.push(`runtime implementation for ${entry.operationId} requires offline response fixtures`);
+  }
+  if (operation?.kind === "source" && implementation.planKinds.includes("source") && !fixtureKinds.has("source_event")) {
+    errors.push(`runtime implementation for ${entry.operationId} requires offline source event fixtures`);
   }
   return errors;
 }

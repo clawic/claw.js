@@ -15,8 +15,24 @@ import {
   createConnectorOperationExecutor,
   createConnectorSourceExecutor,
   extractConnectorRuntimeSourceEvents,
+  type ConnectorRuntimeFixture,
 } from "./runtime-registry.ts";
 import type { IntegrationJson } from "./types.ts";
+
+const ACTION_REQUEST_FIXTURE: ConnectorRuntimeFixture = {
+  kind: "request",
+  path: "packages/clawjs-integrations/fixtures/fixture-action-request.json",
+};
+
+const ACTION_RESPONSE_FIXTURE: ConnectorRuntimeFixture = {
+  kind: "response",
+  path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
+};
+
+const SOURCE_EVENT_FIXTURE: ConnectorRuntimeFixture = {
+  kind: "source_event",
+  path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
+};
 
 describe("connector runtime coverage", () => {
   it("fails when a catalog operation has no offline-validable runtime implementation", () => {
@@ -433,10 +449,7 @@ describe("connector runtime coverage", () => {
       executorId: "fixture.action.offline",
       offlineValidated: true,
       evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
-      fixtures: [{
-        kind: "response",
-        path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
-      }],
+      fixtures: [ACTION_REQUEST_FIXTURE, ACTION_RESPONSE_FIXTURE],
       planKinds: ["request"],
       supports: (operation) => operation.id === "fixture_service.action.send-message",
       createExecutor: () => ({
@@ -505,10 +518,7 @@ describe("connector runtime coverage", () => {
       baseUrl: "https://api.example.invalid/v1/",
       offlineValidated: true,
       evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
-      fixtures: [{
-        kind: "response",
-        path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
-      }],
+      fixtures: [ACTION_REQUEST_FIXTURE, ACTION_RESPONSE_FIXTURE],
       planKinds: ["request"],
       supports: (operation) => operation.id === "fixture_service.action.send-message",
       buildPlan: (operation, values) => ({
@@ -573,13 +583,10 @@ describe("connector runtime coverage", () => {
       appId: "fixture_service",
       kind: "action",
       executorId: "fixture.action.http",
-      baseUrl: "https://api.example.invalid/v1/",
+      baseUrl: "https://api.example.invalid/",
       offlineValidated: true,
       evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
-      fixtures: [{
-        kind: "response",
-        path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
-      }],
+      fixtures: [ACTION_REQUEST_FIXTURE, ACTION_RESPONSE_FIXTURE],
       planKinds: ["request"],
       supports: (operation) => operation.id === "fixture_service.action.send-message",
       buildPlan: (operation, values) => ({
@@ -613,15 +620,15 @@ describe("connector runtime coverage", () => {
       apps: [{
         id: "fixture_service",
         name: "Fixture Service",
-        authFieldNames: [],
-        fields: [],
+        authFieldNames: ["apiKey"],
+        fields: [{ name: "apiKey", type: "string", optional: false, secret: true }],
         operations: [{
           id: "fixture_service.action.send-message",
           appId: "fixture_service",
           kind: "action",
           name: "Send Message",
           fields: [],
-          authFieldNames: [],
+          authFieldNames: ["apiKey"],
         }],
       }],
     });
@@ -632,18 +639,15 @@ describe("connector runtime coverage", () => {
       baseUrl: "https://api.example.invalid/",
       offlineValidated: true,
       evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
-      fixtures: [{
-        kind: "response",
-        path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
-      }],
+      fixtures: [ACTION_REQUEST_FIXTURE, ACTION_RESPONSE_FIXTURE],
       planKinds: ["request"],
       supports: (operation) => operation.id === "fixture_service.action.send-message",
-      buildPlan: () => ({
+      buildPlan: (operation) => ({
         requestPlan: {
-          method: "GET",
+          method: "POST",
           endpoint: "messages",
-          auth: [],
-          body: {},
+          auth: operation.authFieldNames.map((field) => ({ type: "secret", field, placement: "bearer" })),
+          body: { text: "sample" },
           responseSchema: { type: "object", requiredPaths: ["missing"] },
         },
       }),
@@ -680,10 +684,7 @@ describe("connector runtime coverage", () => {
       baseUrl: "https://api.example.invalid/",
       offlineValidated: true,
       evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
-      fixtures: [{
-        kind: "response",
-        path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
-      }],
+      fixtures: [ACTION_REQUEST_FIXTURE, ACTION_RESPONSE_FIXTURE],
       planKinds: ["request"],
       supports: (operation) => operation.id === "fixture_service.action.send-message",
       buildPlan: (operation) => ({
@@ -743,10 +744,7 @@ describe("connector runtime coverage", () => {
       baseUrl: "https://api.example.invalid/v1/",
       offlineValidated: true,
       evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
-      fixtures: [{
-        kind: "source_event",
-        path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
-      }],
+      fixtures: [ACTION_REQUEST_FIXTURE, SOURCE_EVENT_FIXTURE],
       planKinds: ["request", "source"],
       supports: (operation) => operation.id === "fixture_service.source.new-items",
       buildPlan: (operation, values) => ({
@@ -868,10 +866,7 @@ describe("connector runtime coverage", () => {
       baseUrl: "https://api.example.invalid/",
       offlineValidated: true,
       evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
-      fixtures: [{
-        kind: "source_event",
-        path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
-      }],
+      fixtures: [ACTION_REQUEST_FIXTURE, SOURCE_EVENT_FIXTURE],
       planKinds: ["request", "source"],
       supports: (operation) => operation.id === "fixture_service.source.new-items",
       buildPlan: (operation) => ({
@@ -977,6 +972,173 @@ describe("connector runtime coverage", () => {
     );
   });
 
+  it("rejects request runtimes without offline request fixtures", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [{
+          id: "fixture_service.action.send-message",
+          appId: "fixture_service",
+          kind: "action",
+          name: "Send Message",
+          fields: [],
+          authFieldNames: [],
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "action",
+      executorId: "fixture.action.offline",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [ACTION_RESPONSE_FIXTURE],
+      planKinds: ["request"],
+      supports: (operation) => operation.id === "fixture_service.action.send-message",
+      createExecutor: () => ({
+        async execute() {
+          return { ok: true };
+        },
+      }),
+      buildPlan: () => ({
+        requestPlan: {
+          method: "POST",
+          endpoint: "messages",
+          auth: [],
+          body: {},
+          responseSchema: { type: "object" },
+        },
+      }),
+    }];
+
+    assert.throws(
+      () => verifyConnectorRuntimeCoverage(catalog, { registry }),
+      /requires offline request fixtures/,
+    );
+  });
+
+  it("rejects action request runtimes without offline response fixtures", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [{
+          id: "fixture_service.action.send-message",
+          appId: "fixture_service",
+          kind: "action",
+          name: "Send Message",
+          fields: [],
+          authFieldNames: [],
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "action",
+      executorId: "fixture.action.offline",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [ACTION_REQUEST_FIXTURE],
+      planKinds: ["request"],
+      supports: (operation) => operation.id === "fixture_service.action.send-message",
+      createExecutor: () => ({
+        async execute() {
+          return { ok: true };
+        },
+      }),
+      buildPlan: () => ({
+        requestPlan: {
+          method: "POST",
+          endpoint: "messages",
+          auth: [],
+          body: {},
+          responseSchema: { type: "object" },
+        },
+      }),
+    }];
+
+    assert.throws(
+      () => verifyConnectorRuntimeCoverage(catalog, { registry }),
+      /requires offline response fixtures/,
+    );
+  });
+
+  it("rejects source runtimes without offline source event fixtures", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [{
+          id: "fixture_service.source.poll",
+          appId: "fixture_service",
+          kind: "source",
+          name: "Poll",
+          fields: [],
+          authFieldNames: [],
+          runtime: {
+            hasRun: true,
+            hasHooks: false,
+            hookNames: [],
+            hasAdditionalProps: false,
+            hasMethods: false,
+            methodNames: [],
+            dedupe: "unique",
+          },
+          source: {
+            delivery: "polling",
+            usesTimer: true,
+            usesHttp: false,
+            usesServiceDb: false,
+          },
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "source",
+      executorId: "fixture.source.offline",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [ACTION_REQUEST_FIXTURE],
+      planKinds: ["request", "source"],
+      supports: (operation) => operation.id === "fixture_service.source.poll",
+      createSourceExecutor: () => ({
+        async start() {
+          return { events: [] };
+        },
+      }),
+      buildPlan: (operation) => ({
+        requestPlan: {
+          method: "GET",
+          endpoint: "poll",
+          auth: [],
+          body: {},
+          responseSchema: { type: "object" },
+        },
+        sourcePlan: {
+          delivery: operation.source?.delivery ?? "manual",
+          hooks: operation.runtime?.hookNames ?? [],
+          dedupe: operation.runtime?.dedupe,
+        },
+      }),
+    }];
+
+    assert.throws(
+      () => verifyConnectorRuntimeCoverage(catalog, { registry }),
+      /requires offline source event fixtures/,
+    );
+  });
+
   it("rejects ambiguous registry implementations for the same operation", () => {
     const catalog = normalizeConnectorCatalog({
       version: 1,
@@ -1001,6 +1163,7 @@ describe("connector runtime coverage", () => {
       executorId,
       offlineValidated: true,
       evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [ACTION_REQUEST_FIXTURE, ACTION_RESPONSE_FIXTURE],
       planKinds: ["request"],
       supports: (operation) => operation.id === "fixture_service.action.send-message",
       createExecutor: () => ({
@@ -1139,6 +1302,7 @@ describe("connector runtime coverage", () => {
       executorId: "fixture.action.offline",
       offlineValidated: true,
       evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [ACTION_REQUEST_FIXTURE, ACTION_RESPONSE_FIXTURE],
       planKinds: ["request"],
       supports: (operation) => operation.id === "fixture_service.action.send-message",
       createExecutor: () => ({
@@ -1179,6 +1343,7 @@ describe("connector runtime coverage", () => {
       executorId: "fixture.action.offline",
       offlineValidated: true,
       evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [ACTION_REQUEST_FIXTURE, ACTION_RESPONSE_FIXTURE],
       planKinds: ["request"],
       supports: (operation) => operation.id === "fixture_service.action.send-message",
       createExecutor: () => ({
@@ -1228,6 +1393,7 @@ describe("connector runtime coverage", () => {
       executorId: "fixture.action.offline",
       offlineValidated: true,
       evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [ACTION_REQUEST_FIXTURE, ACTION_RESPONSE_FIXTURE],
       planKinds: ["request"],
       supports: (operation) => operation.id === "fixture_service.action.send-message",
       createExecutor: () => ({
@@ -1275,6 +1441,7 @@ describe("connector runtime coverage", () => {
       executorId: "fixture.action.offline",
       offlineValidated: true,
       evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [ACTION_REQUEST_FIXTURE, ACTION_RESPONSE_FIXTURE],
       planKinds: ["request"],
       supports: (operation) => operation.id === "fixture_service.action.send-message",
       createExecutor: () => ({
@@ -1337,6 +1504,7 @@ describe("connector runtime coverage", () => {
       executorId: "fixture.source.offline",
       offlineValidated: true,
       evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [ACTION_REQUEST_FIXTURE, SOURCE_EVENT_FIXTURE],
       planKinds: ["request", "source"],
       supports: (operation) => operation.id === "fixture_service.source.poll",
       createSourceExecutor: () => ({

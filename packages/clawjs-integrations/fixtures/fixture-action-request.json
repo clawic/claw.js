@@ -2,10 +2,10 @@
   "method": "POST",
   "url": "https://api.example.invalid/messages",
   "headers": {
-    "authorization": "Bearer offline-secret",
+    "authorization": "Bearer offline-apiKey-secret",
     "content-type": "application/json"
   },
   "body": {
-    "text": "hello"
+    "text": "sample"
   }
 }

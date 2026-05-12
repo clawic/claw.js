@@ -82,10 +82,10 @@ describe("connector runtime fixtures", () => {
     const response = await fetchImpl("https://api.example.invalid/messages", {
       method: "POST",
       headers: {
-        authorization: "Bearer offline-secret",
+        authorization: "Bearer offline-apiKey-secret",
         "content-type": "application/json",
       },
-      body: JSON.stringify({ text: "hello" }),
+      body: JSON.stringify({ text: "sample" }),
     });
 
     assert.deepEqual(await response.json(), { ok: true, id: "fixture_result" });
@@ -108,7 +108,7 @@ describe("connector runtime fixtures", () => {
       () => fetchImpl("https://api.example.invalid/messages", {
         method: "POST",
         headers: {
-          authorization: "Bearer offline-secret",
+          authorization: "Bearer offline-apiKey-secret",
           "content-type": "application/json",
         },
         body: JSON.stringify({ text: "wrong" }),
