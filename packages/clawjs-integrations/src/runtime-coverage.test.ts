@@ -250,7 +250,13 @@ describe("connector runtime coverage", () => {
       executorId: "fixture.action.offline",
       offlineValidated: true,
       evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      planKinds: ["request"],
       supports: (operation) => operation.id === "fixture_service.action.send-message",
+      createExecutor: () => ({
+        async execute() {
+          return { ok: true };
+        },
+      }),
       buildPlan: (operation, values) => ({
         requestPlan: {
           method: "POST",
@@ -309,12 +315,53 @@ describe("connector runtime coverage", () => {
       executorId: "fixture.action.offline",
       offlineValidated: false,
       evidence: [],
+      planKinds: [],
       supports: (operation) => operation.id === "fixture_service.action.send-message",
     }];
 
     assert.throws(
       () => verifyConnectorRuntimeCoverage(catalog, { registry }),
       /requires offline validation.*requires concrete evidence/s,
+    );
+  });
+
+  it("rejects registry implementations without executors or plan kinds", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [{
+          id: "fixture_service.source.poll",
+          appId: "fixture_service",
+          kind: "source",
+          name: "Poll",
+          fields: [],
+          authFieldNames: [],
+          source: {
+            delivery: "polling",
+            usesTimer: true,
+            usesHttp: false,
+            usesServiceDb: false,
+          },
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "source",
+      executorId: "fixture.source.offline",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      planKinds: [],
+      supports: (operation) => operation.id === "fixture_service.source.poll",
+    }];
+
+    assert.throws(
+      () => verifyConnectorRuntimeCoverage(catalog, { registry }),
+      /requires a registered source executor.*requires a source plan kind.*requires a request plan kind.*requires a runtime plan builder/s,
     );
   });
 });

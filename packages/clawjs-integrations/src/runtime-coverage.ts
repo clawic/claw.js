@@ -109,6 +109,22 @@ export function verifyConnectorRuntimeCoverage(
     if (entry.status === "implemented" && !entry.evidence.some((item) => item.trim())) {
       errors.push(`runtime implementation for ${entry.operationId} requires concrete evidence`);
     }
+    if (entry.status === "implemented") {
+      const operation = findCatalogOperation(catalog, entry.operationId);
+      const implementation = operation ? findConnectorRuntimeImplementation(operation, options.registry ?? CONNECTOR_RUNTIME_REGISTRY) : null;
+      if (operation?.kind === "action") {
+        if (!implementation?.createExecutor) errors.push(`runtime implementation for ${entry.operationId} requires a registered action executor`);
+        if (!implementation?.planKinds.includes("request")) errors.push(`runtime implementation for ${entry.operationId} requires a request plan kind`);
+      }
+      if (operation?.kind === "source") {
+        if (!implementation?.createSourceExecutor) errors.push(`runtime implementation for ${entry.operationId} requires a registered source executor`);
+        if (!implementation?.planKinds.includes("source")) errors.push(`runtime implementation for ${entry.operationId} requires a source plan kind`);
+        if ((operation.source?.delivery === "polling" || operation.source?.delivery === "hybrid") && !implementation?.planKinds.includes("request")) {
+          errors.push(`runtime implementation for ${entry.operationId} requires a request plan kind for polling delivery`);
+        }
+      }
+      if (!implementation?.buildPlan) errors.push(`runtime implementation for ${entry.operationId} requires a runtime plan builder`);
+    }
     if (entry.status !== "unsupported") continue;
     const reason = entry.unsupported_real_runtime_reason;
     if (!reason?.code?.trim()) errors.push(`unsupported runtime reason for ${entry.operationId} requires code`);
@@ -124,6 +140,17 @@ export function verifyConnectorRuntimeCoverage(
     );
   }
   return report;
+}
+
+function findCatalogOperation(
+  catalog: ConnectorCatalog,
+  operationId: string,
+): ConnectorOperationDefinition | null {
+  for (const app of catalog.apps) {
+    const operation = app.operations.find((candidate) => candidate.id === operationId);
+    if (operation) return operation;
+  }
+  return null;
 }
 
 export function buildConnectorOperationRuntimePlan(

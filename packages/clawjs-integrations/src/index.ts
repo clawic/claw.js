@@ -74,6 +74,7 @@ export type {
 export type {
   ConnectorRuntimeExecutorOptions,
   ConnectorRuntimeImplementation,
+  ConnectorRuntimePlanKind,
   ConnectorRuntimePlanDetails,
   ConnectorRuntimeRequestPlan,
   ConnectorRuntimeSourcePlan,

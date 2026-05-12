@@ -45,12 +45,15 @@ export interface ConnectorRuntimePlanDetails {
   sourcePlan?: ConnectorRuntimeSourcePlan;
 }
 
+export type ConnectorRuntimePlanKind = "request" | "source";
+
 export interface ConnectorRuntimeImplementation {
   appId: string;
   kind: ConnectorOperationDefinition["kind"];
   executorId: string;
   offlineValidated: boolean;
   evidence: string[];
+  planKinds: ConnectorRuntimePlanKind[];
   supports(operation: ConnectorOperationDefinition): boolean;
   createExecutor?(options?: ConnectorRuntimeExecutorOptions): ConnectorExecutor;
   createSourceExecutor?(options?: ConnectorRuntimeExecutorOptions): ConnectorSourceExecutor;
@@ -75,6 +78,7 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     executorId: "telegram-bot-api.action.http",
     offlineValidated: true,
     evidence: TELEGRAM_ACTION_EVIDENCE,
+    planKinds: ["request"],
     supports: (operation) => isTelegramActionOperationSupported(operation.id),
     createExecutor: (options) => createTelegramOperationExecutor(options),
     buildPlan: (operation, values) => {
@@ -95,6 +99,7 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     executorId: "telegram-bot-api.source.polling",
     offlineValidated: true,
     evidence: TELEGRAM_SOURCE_EVIDENCE,
+    planKinds: ["request", "source"],
     supports: (operation) => isTelegramSourceOperationSupported(operation.id),
     createSourceExecutor: (options) => createTelegramSourceExecutor(options),
     buildPlan: (operation, values) => ({
