@@ -82,6 +82,7 @@ export type {
   ConnectorFieldDefinition,
   ConnectorFieldDynamicOptions,
   ConnectorFieldOption,
+  ConnectorFieldPropDefinitionMetadata,
   ConnectorOperationDefinition,
   ConnectorOperationRuntime,
   ConnectorOperationInput,

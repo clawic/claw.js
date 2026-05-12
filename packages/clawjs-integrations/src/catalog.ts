@@ -85,6 +85,8 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       summary.writeAccessFields += app.fields.filter((field) => field.accessMode === "write").length;
       summary.syncedFields += app.fields.filter((field) => field.sync === true).length;
       summary.customResponseFields += app.fields.filter((field) => field.customResponse === true).length;
+      summary.propDefinitionFields += app.fields.filter((field) => field.propDefinition).length;
+      summary.contextualPropFields += app.fields.filter((field) => field.propDefinition?.contextKeys.length).length;
       summary.dynamicOptionFields += app.fields.filter((field) => field.dynamicOptions).length;
       for (const operation of app.operations) {
         if (operation.kind === "action") summary.actions += 1;
@@ -105,6 +107,8 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
         summary.writeAccessFields += operation.fields.filter((field) => field.accessMode === "write").length;
         summary.syncedFields += operation.fields.filter((field) => field.sync === true).length;
         summary.customResponseFields += operation.fields.filter((field) => field.customResponse === true).length;
+        summary.propDefinitionFields += operation.fields.filter((field) => field.propDefinition).length;
+        summary.contextualPropFields += operation.fields.filter((field) => field.propDefinition?.contextKeys.length).length;
         summary.dynamicOptionFields += operation.fields.filter((field) => field.dynamicOptions).length;
         if (operation.annotations) summary.annotatedOperations += 1;
         if (operation.annotations?.destructiveHint === true) summary.destructiveOperations += 1;
@@ -143,6 +147,8 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       writeAccessFields: 0,
       syncedFields: 0,
       customResponseFields: 0,
+      propDefinitionFields: 0,
+      contextualPropFields: 0,
       annotatedOperations: 0,
       destructiveOperations: 0,
       readOnlyOperations: 0,
@@ -257,6 +263,7 @@ function normalizeFields(input: unknown): ConnectorFieldDefinition[] {
         value: option.value as string | number | boolean,
         ...(typeof option.description === "string" ? { description: option.description } : {}),
       })).filter((option) => isOptionValue(option.value)) } : {}),
+      ...optionalPropDefinition(field.propDefinition),
       ...optionalDynamicOptions(field.dynamicOptions),
       ...(field.hidden === true ? { hidden: true } : {}),
       ...(field.disabled === true ? { disabled: true } : {}),
@@ -314,6 +321,19 @@ function optionalDynamicOptions(input: unknown) {
       paginated: input.paginated === true,
       usesPreviousContext: input.usesPreviousContext === true,
       contextKeys: normalizeStringArray(input.contextKeys),
+    },
+  };
+}
+
+function optionalPropDefinition(input: unknown) {
+  if (!isRecord(input)) return {};
+  const fieldName = stringValue(input.fieldName);
+  if (!fieldName) return {};
+  return {
+    propDefinition: {
+      fieldName,
+      contextKeys: normalizeStringArray(input.contextKeys),
+      dependsOn: normalizeStringArray(input.dependsOn),
     },
   };
 }

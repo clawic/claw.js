@@ -127,7 +127,8 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
     const name = scrubIdentifier(entry.name);
     if (!name || ["props", "propDefinitions", "options"].includes(name)) continue;
     const body = entry.body;
-    const propRef = scrubIdentifier(firstMatch(readTopLevelValue(body, "propDefinition") ?? "", /\[\s*[A-Za-z_][A-Za-z0-9_]*\s*,\s*["']([^"']+)["']/s));
+    const propDefinitionValue = readTopLevelValue(body, "propDefinition") ?? "";
+    const propRef = scrubIdentifier(firstMatch(propDefinitionValue, /\[\s*[A-Za-z_][A-Za-z0-9_]*\s*,\s*["']([^"']+)["']/s));
     const inherited = propRef ? appFieldByName.get(propRef) : null;
     const type = readTopLevelString(body, "type") ?? (body.includes("type: \"app\"") ? "app" : "string");
     const dynamicOptions = readDynamicOptions(body);
@@ -142,6 +143,7 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
       optional: inherited?.optional ?? /\boptional:\s*true\b/.test(body),
       ...optionalJson("default", readDefault(body)),
       ...optionalOptions(readOptions(body)),
+      ...optionalPropDefinition(readPropDefinitionMetadata(propDefinitionValue, propRef)),
       ...optionalDynamicOptions(dynamicOptions ?? inherited?.dynamicOptions),
       ...optionalBoolean("hidden", readBoolean(body, "hidden") ?? inherited?.hidden),
       ...optionalBoolean("disabled", readBoolean(body, "disabled") ?? inherited?.disabled),
@@ -332,6 +334,10 @@ function optionalDynamicOptions(options) {
   return options ? { dynamicOptions: options } : {};
 }
 
+function optionalPropDefinition(metadata) {
+  return metadata ? { propDefinition: metadata } : {};
+}
+
 function optionalAnnotations(annotations) {
   return Object.keys(annotations).length ? { annotations } : {};
 }
@@ -466,6 +472,76 @@ function readTopLevelMethod(body, key) {
     };
   }
   return undefined;
+}
+
+function readPropDefinitionMetadata(value, fieldName) {
+  if (!value || !fieldName) return undefined;
+  const items = readArrayItems(value);
+  const contextSource = items.slice(2).join(",");
+  return {
+    fieldName,
+    contextKeys: contextSource ? readObjectKeysFromExpression(contextSource) : [],
+    dependsOn: contextSource ? readDependencyKeys(contextSource) : [],
+  };
+}
+
+function readArrayItems(value) {
+  const openIndex = value.indexOf("[");
+  if (openIndex < 0) return [];
+  const closeIndex = findMatchingDelimiter(value, openIndex, "[", "]");
+  if (closeIndex < 0) return [];
+  const body = value.slice(openIndex + 1, closeIndex);
+  const items = [];
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  let start = 0;
+  for (let index = 0; index < body.length; index += 1) {
+    const char = body[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{" || char === "[" || char === "(") depth += 1;
+    else if (char === "}" || char === "]" || char === ")") depth -= 1;
+    else if (char === "," && depth === 0) {
+      items.push(body.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  items.push(body.slice(start).trim());
+  return items.filter(Boolean);
+}
+
+function readObjectKeysFromExpression(value) {
+  const match = /=>\s*\({/.exec(value) ?? /return\s*{/.exec(value);
+  if (!match) return [];
+  const openIndex = value.indexOf("{", match.index);
+  const closeIndex = findMatchingBrace(value, openIndex);
+  if (closeIndex < 0) return [];
+  return readObjectKeys(value.slice(openIndex + 1, closeIndex));
+}
+
+function readDependencyKeys(value) {
+  const keys = [];
+  for (const match of value.matchAll(/\b([A-Za-z_$][\w$]*)\.([A-Za-z_$][\w$]*)/g)) {
+    if (["this", "app", "Math", "Object", "Array", "JSON", "Date", "String", "Number", "Boolean"].includes(match[1])) continue;
+    keys.push(scrubIdentifier(match[2]));
+  }
+  const destructured = /^\s*\(?\s*{([^}]*)}/.exec(value)?.[1];
+  if (destructured) {
+    for (const part of destructured.split(",")) {
+      const key = part.split(":")[0]?.replace(/[.\s{}[\]=]/g, "").trim();
+      if (key) keys.push(scrubIdentifier(key));
+    }
+  }
+  return keys.filter(unique).sort();
 }
 
 function objectBodyFromValue(value) {

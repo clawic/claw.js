@@ -53,6 +53,8 @@ export async function GET(req: NextRequest) {
         writeAccessFields: 0,
         syncedFields: 0,
         customResponseFields: 0,
+        propDefinitionFields: 0,
+        contextualPropFields: 0,
         annotatedOperations: 0,
         destructiveOperations: 0,
         readOnlyOperations: 0,

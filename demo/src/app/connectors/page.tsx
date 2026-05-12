@@ -25,6 +25,8 @@ interface CatalogSummary {
   writeAccessFields: number;
   syncedFields: number;
   customResponseFields: number;
+  propDefinitionFields: number;
+  contextualPropFields: number;
   annotatedOperations: number;
   destructiveOperations: number;
   readOnlyOperations: number;
@@ -50,6 +52,11 @@ interface CatalogField {
   optional: boolean;
   default?: unknown;
   options?: Array<{ label?: string; value: string | number | boolean; description?: string }>;
+  propDefinition?: {
+    fieldName: string;
+    contextKeys: string[];
+    dependsOn: string[];
+  };
   dynamicOptions?: {
     paginated: boolean;
     usesPreviousContext: boolean;
@@ -352,6 +359,8 @@ export default function ConnectorsPage() {
             <span>{catalog?.summary.writeAccessFields ?? 0} write access</span>
             <span>{catalog?.summary.syncedFields ?? 0} synced</span>
             <span>{catalog?.summary.customResponseFields ?? 0} custom responses</span>
+            <span>{catalog?.summary.propDefinitionFields ?? 0} prop defs</span>
+            <span>{catalog?.summary.contextualPropFields ?? 0} contextual</span>
             <span>{catalog?.summary.annotatedOperations ?? 0} annotated</span>
             <span>{catalog?.summary.destructiveOperations ?? 0} destructive</span>
             <span>{catalog?.summary.runnableOperations ?? 0} runnable</span>
@@ -461,6 +470,8 @@ export default function ConnectorsPage() {
                           <span className="text-foreground">{field.label ?? field.name}</span>
                           <span className="text-muted-foreground font-mono">
                             {field.type}{field.default === undefined ? "" : " = default"}{field.options?.length ? ` · ${field.options.length} opts` : ""}
+                            {field.propDefinition ? ` · prop:${field.propDefinition.fieldName}` : ""}
+                            {field.propDefinition?.dependsOn.length ? ` · depends:${field.propDefinition.dependsOn.join(",")}` : ""}
                             {field.dynamicOptions ? " · dynamic" : ""}
                             {field.reloadProps ? " · reload" : ""}
                             {field.hidden ? " · hidden" : ""}

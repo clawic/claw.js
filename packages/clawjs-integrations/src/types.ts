@@ -27,6 +27,12 @@ export interface ConnectorFieldDynamicOptions {
   contextKeys: string[];
 }
 
+export interface ConnectorFieldPropDefinitionMetadata {
+  fieldName: string;
+  contextKeys: string[];
+  dependsOn: string[];
+}
+
 export interface ConnectorFieldDefinition {
   name: string;
   type: string;
@@ -35,6 +41,7 @@ export interface ConnectorFieldDefinition {
   optional: boolean;
   default?: IntegrationJson;
   options?: ConnectorFieldOption[];
+  propDefinition?: ConnectorFieldPropDefinitionMetadata;
   dynamicOptions?: ConnectorFieldDynamicOptions;
   hidden?: boolean;
   disabled?: boolean;
@@ -138,6 +145,8 @@ export interface ConnectorCatalogSummary {
   writeAccessFields: number;
   syncedFields: number;
   customResponseFields: number;
+  propDefinitionFields: number;
+  contextualPropFields: number;
   annotatedOperations: number;
   destructiveOperations: number;
   readOnlyOperations: number;

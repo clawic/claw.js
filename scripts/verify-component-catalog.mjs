@@ -37,6 +37,8 @@ const countReadAccess = (fields) => Array.isArray(fields) ? fields.filter((field
 const countWriteAccess = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.accessMode === "write").length : 0;
 const countSynced = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.sync === true).length : 0;
 const countCustomResponse = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.customResponse === true).length : 0;
+const countPropDefinitions = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && isRecord(field.propDefinition)).length : 0;
+const countContextualProps = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && isRecord(field.propDefinition) && Array.isArray(field.propDefinition.contextKeys) && field.propDefinition.contextKeys.length > 0).length : 0;
 const expected = readExpected(componentsDir);
 const catalog = JSON.parse(readText(catalogPath));
 const errors = verify(catalog, expected);
@@ -44,7 +46,7 @@ const summary = summarize(catalog.apps ?? []);
 
 for (const error of errors.slice(0, maxErrors)) console.error(`FAIL ${error}`);
 if (errors.length > maxErrors) console.error(`FAIL ... ${errors.length - maxErrors} additional errors hidden`);
-console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} hidden=${summary.hiddenFields} disabled=${summary.disabledFields} reload=${summary.reloadFields} bounded=${summary.boundedFields} placeholders=${summary.placeholderFields} query=${summary.queryFields} labels=${summary.labelFields} readAccess=${summary.readAccessFields} writeAccess=${summary.writeAccessFields} synced=${summary.syncedFields} customResponse=${summary.customResponseFields} dynamicOptions=${summary.dynamicOptionFields} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} dynamicPropFields=${summary.dynamicPropFields} methods=${summary.methodOperations}`);
+console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} hidden=${summary.hiddenFields} disabled=${summary.disabledFields} reload=${summary.reloadFields} bounded=${summary.boundedFields} placeholders=${summary.placeholderFields} query=${summary.queryFields} labels=${summary.labelFields} readAccess=${summary.readAccessFields} writeAccess=${summary.writeAccessFields} synced=${summary.syncedFields} customResponse=${summary.customResponseFields} propDefinitions=${summary.propDefinitionFields} contextualProps=${summary.contextualPropFields} dynamicOptions=${summary.dynamicOptionFields} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} dynamicPropFields=${summary.dynamicPropFields} methods=${summary.methodOperations}`);
 if (errors.length > 0) {
   console.error(`catalog verification failed with ${errors.length} error(s)`);
   process.exit(1);
@@ -119,6 +121,8 @@ function verify(catalog, expectedApps) {
   if (actualSummary.writeAccessFields !== expectedSummary.writeAccessFields) errors.push(`writeAccess ${actualSummary.writeAccessFields} expected ${expectedSummary.writeAccessFields}`);
   if (actualSummary.syncedFields !== expectedSummary.syncedFields) errors.push(`synced ${actualSummary.syncedFields} expected ${expectedSummary.syncedFields}`);
   if (actualSummary.customResponseFields !== expectedSummary.customResponseFields) errors.push(`customResponse ${actualSummary.customResponseFields} expected ${expectedSummary.customResponseFields}`);
+  if (actualSummary.propDefinitionFields !== expectedSummary.propDefinitionFields) errors.push(`propDefinitions ${actualSummary.propDefinitionFields} expected ${expectedSummary.propDefinitionFields}`);
+  if (actualSummary.contextualPropFields !== expectedSummary.contextualPropFields) errors.push(`contextualProps ${actualSummary.contextualPropFields} expected ${expectedSummary.contextualPropFields}`);
   if (actualSummary.dynamicOptionFields !== expectedSummary.dynamicOptionFields) errors.push(`dynamicOptions ${actualSummary.dynamicOptionFields} expected ${expectedSummary.dynamicOptionFields}`);
   if (actualSummary.annotatedOperations !== expectedSummary.annotatedOperations) errors.push(`annotations ${actualSummary.annotatedOperations} expected ${expectedSummary.annotatedOperations}`);
   if (actualSummary.destructiveOperations !== expectedSummary.destructiveOperations) errors.push(`destructive ${actualSummary.destructiveOperations} expected ${expectedSummary.destructiveOperations}`);
@@ -211,7 +215,8 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
     const name = scrub(entry.name);
     if (!name || ["props", "propDefinitions", "options"].includes(name)) continue;
     const body = entry.body;
-    const propRef = scrub(firstMatch(readTopLevelValue(body, "propDefinition") ?? "", /\[\s*[A-Za-z_][A-Za-z0-9_]*\s*,\s*["']([^"']+)["']/s));
+    const propDefinitionValue = readTopLevelValue(body, "propDefinition") ?? "";
+    const propRef = scrub(firstMatch(propDefinitionValue, /\[\s*[A-Za-z_][A-Za-z0-9_]*\s*,\s*["']([^"']+)["']/s));
     const inherited = propRef ? appFieldByName.get(propRef) : null;
     const defaultValue = readDefault(body);
     const options = readOptions(body);
@@ -226,6 +231,7 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
       optional: inherited?.optional ?? /\boptional:\s*true\b/.test(body),
       ...(defaultValue === undefined ? {} : { default: defaultValue }),
       ...(options.length ? { options } : {}),
+      ...optionalPropDefinition(readPropDefinitionMetadata(propDefinitionValue, propRef)),
       ...(dynamicOptions ?? inherited?.dynamicOptions ? { dynamicOptions: dynamicOptions ?? inherited.dynamicOptions } : {}),
       ...optionalBoolean("hidden", readBoolean(body, "hidden") ?? inherited?.hidden),
       ...optionalBoolean("disabled", readBoolean(body, "disabled") ?? inherited?.disabled),
@@ -370,6 +376,8 @@ function summarize(apps) {
     summary.writeAccessFields += countWriteAccess(app.fields);
     summary.syncedFields += countSynced(app.fields);
     summary.customResponseFields += countCustomResponse(app.fields);
+    summary.propDefinitionFields += countPropDefinitions(app.fields);
+    summary.contextualPropFields += countContextualProps(app.fields);
     summary.dynamicOptionFields += countDynamicOptions(app.fields);
     for (const operation of Array.isArray(app.operations) ? app.operations : []) {
       if (!isRecord(operation)) continue;
@@ -391,6 +399,8 @@ function summarize(apps) {
       summary.writeAccessFields += countWriteAccess(operation.fields);
       summary.syncedFields += countSynced(operation.fields);
       summary.customResponseFields += countCustomResponse(operation.fields);
+      summary.propDefinitionFields += countPropDefinitions(operation.fields);
+      summary.contextualPropFields += countContextualProps(operation.fields);
       summary.dynamicOptionFields += countDynamicOptions(operation.fields);
       if (isRecord(operation.annotations)) summary.annotatedOperations += 1;
       if (operation.annotations?.destructiveHint === true) summary.destructiveOperations += 1;
@@ -428,6 +438,8 @@ function summarize(apps) {
     writeAccessFields: 0,
     syncedFields: 0,
     customResponseFields: 0,
+    propDefinitionFields: 0,
+    contextualPropFields: 0,
     annotatedOperations: 0,
     destructiveOperations: 0,
     readOnlyOperations: 0,
@@ -462,6 +474,8 @@ function summarizeExpected(apps) {
     writeAccessFields: 0,
     syncedFields: 0,
     customResponseFields: 0,
+    propDefinitionFields: 0,
+    contextualPropFields: 0,
     annotatedOperations: 0,
     destructiveOperations: 0,
     readOnlyOperations: 0,
@@ -492,6 +506,8 @@ function summarizeExpected(apps) {
     summary.writeAccessFields += app.fieldStats.writeAccess;
     summary.syncedFields += app.fieldStats.synced;
     summary.customResponseFields += app.fieldStats.customResponse;
+    summary.propDefinitionFields += app.fieldStats.propDefinitions;
+    summary.contextualPropFields += app.fieldStats.contextualProps;
     summary.dynamicOptionFields += app.fieldStats.dynamicOptions;
     summary.managedFields += app.fieldStats.managed;
     for (const operation of app.operations.values()) {
@@ -508,6 +524,8 @@ function summarizeExpected(apps) {
       summary.writeAccessFields += operation.fieldStats.writeAccess;
       summary.syncedFields += operation.fieldStats.synced;
       summary.customResponseFields += operation.fieldStats.customResponse;
+      summary.propDefinitionFields += operation.fieldStats.propDefinitions;
+      summary.contextualPropFields += operation.fieldStats.contextualProps;
       summary.dynamicOptionFields += operation.fieldStats.dynamicOptions;
       summary.managedFields += operation.fieldStats.managed;
       if (Object.keys(operation.annotations).length) summary.annotatedOperations += 1;
@@ -597,6 +615,8 @@ function summarizeFields(fields) {
     writeAccess: fields.filter((field) => field.accessMode === "write").length,
     synced: fields.filter((field) => field.sync === true).length,
     customResponse: fields.filter((field) => field.customResponse === true).length,
+    propDefinitions: fields.filter((field) => field.propDefinition).length,
+    contextualProps: fields.filter((field) => field.propDefinition?.contextKeys.length).length,
     managed: fields.filter((field) => field.managed).length,
   };
 }
@@ -685,6 +705,76 @@ function readAdditionalPropsMetadata(source) {
     usesPreviousProps: contextKeysFromParams(params).some((key) => /^(prev|previous|prevContext)$/.test(key)),
     usesThis: thisKeys.length > 0,
   };
+}
+
+function readPropDefinitionMetadata(value, fieldName) {
+  if (!value || !fieldName) return undefined;
+  const items = readArrayItems(value);
+  const contextSource = items.slice(2).join(",");
+  return {
+    fieldName,
+    contextKeys: contextSource ? readObjectKeysFromExpression(contextSource) : [],
+    dependsOn: contextSource ? readDependencyKeys(contextSource) : [],
+  };
+}
+
+function readArrayItems(value) {
+  const openIndex = value.indexOf("[");
+  if (openIndex < 0) return [];
+  const closeIndex = findMatchingDelimiter(value, openIndex, "[", "]");
+  if (closeIndex < 0) return [];
+  const body = value.slice(openIndex + 1, closeIndex);
+  const items = [];
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  let start = 0;
+  for (let index = 0; index < body.length; index += 1) {
+    const char = body[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{" || char === "[" || char === "(") depth += 1;
+    else if (char === "}" || char === "]" || char === ")") depth -= 1;
+    else if (char === "," && depth === 0) {
+      items.push(body.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  items.push(body.slice(start).trim());
+  return items.filter(Boolean);
+}
+
+function readObjectKeysFromExpression(value) {
+  const match = /=>\s*\({/.exec(value) ?? /return\s*{/.exec(value);
+  if (!match) return [];
+  const openIndex = value.indexOf("{", match.index);
+  const closeIndex = findMatchingBrace(value, openIndex);
+  if (closeIndex < 0) return [];
+  return readObjectKeys(value.slice(openIndex + 1, closeIndex));
+}
+
+function readDependencyKeys(value) {
+  const keys = [];
+  for (const match of value.matchAll(/\b([A-Za-z_$][\w$]*)\.([A-Za-z_$][\w$]*)/g)) {
+    if (["this", "app", "Math", "Object", "Array", "JSON", "Date", "String", "Number", "Boolean"].includes(match[1])) continue;
+    keys.push(scrub(match[2]));
+  }
+  const destructured = /^\s*\(?\s*{([^}]*)}/.exec(value)?.[1];
+  if (destructured) {
+    for (const part of destructured.split(",")) {
+      const key = part.split(":")[0]?.replace(/[.\s{}[\]=]/g, "").trim();
+      if (key) keys.push(scrub(key));
+    }
+  }
+  return keys.filter(unique).sort();
 }
 
 function readExportObjectBody(source) {
@@ -867,6 +957,10 @@ function optionalBoolean(key, value) {
 
 function optionalNumber(key, value) {
   return typeof value === "number" && Number.isFinite(value) ? { [key]: value } : {};
+}
+
+function optionalPropDefinition(metadata) {
+  return metadata ? { propDefinition: metadata } : {};
 }
 
 function optionalAccessMode(value) {
