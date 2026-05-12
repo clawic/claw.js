@@ -11,6 +11,7 @@ import type {
   IntegrationInboundMessage,
   IntegrationOutboundMessage,
 } from "./types.js";
+import { sendTelegramRequest } from "./telegram-operation-executor.ts";
 
 interface TelegramUser {
   id: number;
@@ -101,19 +102,14 @@ export const telegramAdapter: IntegrationAdapter = {
   },
 
   async send({ auth, message }) {
-    const params = new URLSearchParams({
-      chat_id: message.channelRef,
-      text: message.text,
+    await sendTelegramRequest({
+      token: auth,
+      endpoint: "sendMessage",
+      body: {
+        chat_id: message.channelRef,
+        text: message.text,
+      },
     });
-    const res = await fetch(`${BASE}${auth}/sendMessage`, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: params.toString(),
-    });
-    if (!res.ok) {
-      const detail = await res.text().catch(() => "");
-      throw new Error(`Telegram sendMessage failed: ${res.status} ${detail}`);
-    }
   },
 };
 

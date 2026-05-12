@@ -122,6 +122,7 @@ run("node", ["--input-type=module", "-e", `
     || typeof integrations.telegramAdapter !== "object"
     || typeof integrations.normalizeConnectorCatalog !== "function"
     || typeof integrations.runConnectorOperation !== "function"
+    || typeof integrations.createTelegramOperationExecutor !== "function"
   ) {
     throw new Error("@clawjs/integrations helpers are missing");
   }

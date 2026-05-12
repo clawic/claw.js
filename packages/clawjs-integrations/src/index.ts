@@ -34,6 +34,16 @@ export type {
   RunConnectorOperationOptions,
 } from "./operation-runner.js";
 export { telegramAdapter } from "./telegram.js";
+export {
+  buildTelegramOperationRequest,
+  createTelegramOperationExecutor,
+  executeTelegramOperation,
+  sendTelegramRequest,
+} from "./telegram-operation-executor.js";
+export type {
+  TelegramOperationExecutorOptions,
+  TelegramRequestPlan,
+} from "./telegram-operation-executor.js";
 export type {
   ConnectorAppDefinition,
   ConnectorCatalog,

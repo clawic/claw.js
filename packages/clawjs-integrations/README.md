@@ -44,6 +44,24 @@ const preview = await runConnectorOperation({
 
 `runConnectorOperation` defaults to dry-run mode. Real execution requires both `dryRun: false` and an explicit executor, so tests and UI previews cannot accidentally connect to a third-party API.
 
+Telegram ships the first native executor for this surface:
+
+```ts
+import { createTelegramOperationExecutor, runConnectorOperation } from "@clawjs/integrations";
+
+await runConnectorOperation({
+  catalog,
+  operationId: "telegram_bot_api.action.send-text-message-or-reply-send-text-message-or-reply",
+  dryRun: false,
+  input: {
+    values: { chatId: "123", text: "hello" },
+    secretRefs: { telegramBotApi: "vault://connections/telegram/bot" },
+  },
+  resolveSecret: async (ref) => secretStore.resolve(ref),
+  executor: createTelegramOperationExecutor(),
+});
+```
+
 To build a catalog from a local component checkout:
 
 ```bash
