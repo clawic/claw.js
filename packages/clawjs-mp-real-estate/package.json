@@ -1,0 +1,24 @@
+{
+  "name": "@clawjs/mp-real-estate",
+  "version": "0.1.0",
+  "description": "Real-estate vertical plugin (sale / rental_long / rental_short) for the Clawix mp/* protocol. Extracted from @clawjs/mp/verticals.",
+  "type": "module",
+  "license": "MIT",
+  "author": { "name": "Iván González Dávila", "url": "https://github.com/ivangdavila" },
+  "homepage": "https://github.com/clawic/clawjs",
+  "repository": { "type": "git", "url": "git+https://github.com/clawic/clawjs.git" },
+  "publishConfig": { "access": "public" },
+  "engines": { "node": ">=20" },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20"
+  },
+  "dependencies": {
+    "@clawjs/mp": "*"
+  }
+}

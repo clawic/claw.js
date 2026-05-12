@@ -26,9 +26,21 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./cbor": {
+      "types": "./dist/cbor.d.ts",
+      "import": "./dist/cbor.js"
+    },
     "./identity": {
       "types": "./dist/identity.d.ts",
       "import": "./dist/identity.js"
+    },
+    "./recovery": {
+      "types": "./dist/recovery.d.ts",
+      "import": "./dist/recovery.js"
+    },
+    "./handles": {
+      "types": "./dist/handles.d.ts",
+      "import": "./dist/handles.js"
     },
     "./wire": {
       "types": "./dist/wire.d.ts",
@@ -49,6 +61,22 @@
     "./verticals": {
       "types": "./dist/verticals/index.d.ts",
       "import": "./dist/verticals/index.js"
+    },
+    "./verticals/core": {
+      "types": "./dist/verticals/core/index.d.ts",
+      "import": "./dist/verticals/core/index.js"
+    },
+    "./verticals/plugin": {
+      "types": "./dist/verticals/plugin.d.ts",
+      "import": "./dist/verticals/plugin.js"
+    },
+    "./ratchet": {
+      "types": "./dist/ratchet/index.d.ts",
+      "import": "./dist/ratchet/index.js"
+    },
+    "./sync": {
+      "types": "./dist/sync/index.d.ts",
+      "import": "./dist/sync/index.js"
     }
   },
   "files": [
@@ -57,7 +85,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/identity.ts src/wire.ts src/mailbox.ts src/match.ts src/discovery/index.ts src/verticals/index.ts --format esm --dts --out-dir dist --clean --target node20",
+    "build": "tsup src/index.ts src/cbor.ts src/identity.ts src/recovery.ts src/handles.ts src/wire.ts src/mailbox.ts src/match.ts src/discovery/index.ts src/verticals/index.ts src/verticals/plugin.ts src/verticals/core/index.ts src/ratchet/index.ts src/sync/index.ts --format esm --dts --out-dir dist --clean --target node20",
     "test": "node --test --import tsx tests/*.test.ts"
   },
   "dependencies": {
