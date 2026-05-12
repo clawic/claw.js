@@ -10,6 +10,11 @@ import {
 import {
   createTelegramSourceExecutor,
 } from "./telegram-source-executor.ts";
+import {
+  executeConnectorRuntimePaginatedRequestPlan,
+  executeConnectorRuntimeRequestPlan,
+  type ConnectorRuntimeHttpOptions,
+} from "./runtime-http.ts";
 import type {
   ConnectorExecutor,
 } from "./operation-runner.js";
@@ -21,9 +26,7 @@ import type {
   IntegrationJson,
 } from "./types.ts";
 
-export interface ConnectorRuntimeExecutorOptions {
-  fetchImpl?: typeof fetch;
-}
+export interface ConnectorRuntimeExecutorOptions extends ConnectorRuntimeHttpOptions {}
 
 export type ConnectorRuntimeAuthPlacement = "bearer" | "header" | "query" | "path";
 
@@ -93,6 +96,7 @@ export interface ConnectorRuntimeImplementation {
   appId: string;
   kind: ConnectorOperationDefinition["kind"];
   executorId: string;
+  baseUrl?: string;
   offlineValidated: boolean;
   evidence: string[];
   fixtures?: ConnectorRuntimeFixture[];
@@ -209,7 +213,10 @@ export function createConnectorOperationExecutor(
   registry: readonly ConnectorRuntimeImplementation[] = CONNECTOR_RUNTIME_REGISTRY,
 ): ConnectorExecutor | null {
   if (operation.kind !== "action") return null;
-  return findConnectorRuntimeImplementation(operation, registry)?.createExecutor?.(options) ?? null;
+  const implementation = findConnectorRuntimeImplementation(operation, registry);
+  if (!implementation) return null;
+  return implementation.createExecutor?.(options)
+    ?? createHttpConnectorOperationExecutor(implementation, options);
 }
 
 export function createConnectorSourceExecutor(
@@ -219,4 +226,54 @@ export function createConnectorSourceExecutor(
 ): ConnectorSourceExecutor | null {
   if (operation.kind !== "source") return null;
   return findConnectorRuntimeImplementation(operation, registry)?.createSourceExecutor?.(options) ?? null;
+}
+
+function createHttpConnectorOperationExecutor(
+  implementation: ConnectorRuntimeImplementation,
+  options: ConnectorRuntimeExecutorOptions,
+): ConnectorExecutor | null {
+  if (!implementation.baseUrl || !implementation.buildPlan || !implementation.planKinds.includes("request")) return null;
+  return {
+    async execute(ctx) {
+      const details = implementation.buildPlan?.(ctx.operation, ctx.values);
+      if (!details?.requestPlan) {
+        throw new Error(`Connector runtime implementation ${implementation.executorId} did not build a request plan.`);
+      }
+      const baseUrl = options.baseUrl ?? implementation.baseUrl;
+      if (details.requestPlan.pagination) {
+        const result = await executeConnectorRuntimePaginatedRequestPlan({
+          ...httpOptions(options),
+          baseUrl,
+          plan: details.requestPlan,
+          secrets: ctx.secrets,
+        });
+        return {
+          items: result.items,
+          responses: result.responses as unknown as IntegrationJson,
+        };
+      }
+      const response = await executeConnectorRuntimeRequestPlan({
+        ...httpOptions(options),
+        baseUrl,
+        plan: details.requestPlan,
+        secrets: ctx.secrets,
+      });
+      return recordFromRuntimeOutput(response.body);
+    },
+  };
+}
+
+function httpOptions(options: ConnectorRuntimeExecutorOptions): ConnectorRuntimeHttpOptions {
+  return {
+    ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
+    ...(typeof options.maxRetries === "number" ? { maxRetries: options.maxRetries } : {}),
+    ...(typeof options.retryDelayMs === "number" ? { retryDelayMs: options.retryDelayMs } : {}),
+    ...(options.sleep ? { sleep: options.sleep } : {}),
+  };
+}
+
+function recordFromRuntimeOutput(output: IntegrationJson): Record<string, IntegrationJson> {
+  return output && typeof output === "object" && !Array.isArray(output)
+    ? output as Record<string, IntegrationJson>
+    : { result: output };
 }

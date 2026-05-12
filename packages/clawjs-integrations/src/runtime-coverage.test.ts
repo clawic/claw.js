@@ -10,6 +10,9 @@ import {
   type ConnectorRuntimeCoverageReport,
 } from "./runtime-coverage.ts";
 import type { ConnectorRuntimeImplementation } from "./runtime-registry.ts";
+import {
+  createConnectorOperationExecutor,
+} from "./runtime-registry.ts";
 import type { IntegrationJson } from "./types.ts";
 
 describe("connector runtime coverage", () => {
@@ -472,6 +475,125 @@ describe("connector runtime coverage", () => {
         responseSchema: { type: "object" },
       },
     });
+  });
+
+  it("executes declarative HTTP action implementations from request plans", async () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: ["apiKey"],
+        fields: [{ name: "apiKey", type: "string", optional: false, secret: true }],
+        operations: [{
+          id: "fixture_service.action.send-message",
+          appId: "fixture_service",
+          kind: "action",
+          name: "Send Message",
+          fields: [{ name: "text", type: "string", optional: false }],
+          authFieldNames: ["apiKey"],
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "action",
+      executorId: "fixture.action.http",
+      baseUrl: "https://api.example.invalid/v1/",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [{
+        kind: "response",
+        path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
+      }],
+      planKinds: ["request"],
+      supports: (operation) => operation.id === "fixture_service.action.send-message",
+      buildPlan: (operation, values) => ({
+        requestPlan: {
+          method: "POST",
+          endpoint: "messages",
+          auth: operation.authFieldNames.map((field) => ({ type: "secret", field, placement: "bearer" })),
+          body: values,
+          responseSchema: { type: "object", requiredPaths: ["ok"] },
+        },
+      }),
+    }];
+
+    assert.equal(verifyConnectorRuntimeCoverage(catalog, { registry }).summary.implemented, 1);
+    const operation = catalog.apps[0]?.operations[0];
+    assert.ok(operation);
+    const calls: Array<{ url: string; authorization: string | null; body: unknown }> = [];
+    const executor = createConnectorOperationExecutor(operation, {
+      fetchImpl: async (input, init) => {
+        calls.push({
+          url: String(input),
+          authorization: new Headers(init?.headers).get("authorization"),
+          body: JSON.parse(String(init?.body ?? "{}")),
+        });
+        return Response.json({ ok: true, id: "msg_123" });
+      },
+    }, registry);
+
+    const output = await executor?.execute({
+      operation,
+      values: { text: "hello" },
+      secrets: { apiKey: "secret-token" },
+    });
+
+    assert.deepEqual(output, { ok: true, id: "msg_123" });
+    assert.deepEqual(calls, [{
+      url: "https://api.example.invalid/v1/messages",
+      authorization: "Bearer secret-token",
+      body: { text: "hello" },
+    }]);
+  });
+
+  it("rejects declarative HTTP auth bindings without transport placement", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: ["apiKey"],
+        fields: [{ name: "apiKey", type: "string", optional: false, secret: true }],
+        operations: [{
+          id: "fixture_service.action.send-message",
+          appId: "fixture_service",
+          kind: "action",
+          name: "Send Message",
+          fields: [],
+          authFieldNames: ["apiKey"],
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "action",
+      executorId: "fixture.action.http",
+      baseUrl: "https://api.example.invalid/",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [{
+        kind: "response",
+        path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
+      }],
+      planKinds: ["request"],
+      supports: (operation) => operation.id === "fixture_service.action.send-message",
+      buildPlan: (operation) => ({
+        requestPlan: {
+          method: "POST",
+          endpoint: "messages",
+          auth: operation.authFieldNames.map((field) => ({ type: "secret", field })),
+          body: {},
+          responseSchema: { type: "object" },
+        },
+      }),
+    }];
+
+    assert.throws(
+      () => verifyConnectorRuntimeCoverage(catalog, { registry }),
+      /generic HTTP request auth apiKey requires a transport placement/,
+    );
   });
 
   it("rejects registry implementations without offline evidence", () => {

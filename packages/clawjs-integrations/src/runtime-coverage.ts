@@ -168,7 +168,7 @@ export function verifyConnectorRuntimeCoverage(
       }
       const implementation = implementations[0] ?? null;
       if (operation?.kind === "action") {
-        if (!implementation?.createExecutor) errors.push(`runtime implementation for ${entry.operationId} requires a registered action executor`);
+        if (!hasActionExecutor(implementation)) errors.push(`runtime implementation for ${entry.operationId} requires a registered action executor`);
         if (!implementation?.planKinds.includes("request")) errors.push(`runtime implementation for ${entry.operationId} requires a request plan kind`);
       }
       if (operation?.kind === "source") {
@@ -189,6 +189,10 @@ export function verifyConnectorRuntimeCoverage(
           if (details.requestPlan) {
             const authErrors = requestPlanAuthErrors(operation, details.requestPlan);
             errors.push(...authErrors.map((error) => `runtime implementation for ${entry.operationId} ${error}`));
+            if (usesGenericHttpActionExecutor(implementation)) {
+              const transportErrors = genericHttpRequestPlanErrors(details.requestPlan);
+              errors.push(...transportErrors.map((error) => `runtime implementation for ${entry.operationId} ${error}`));
+            }
           }
           if (implementation.planKinds.includes("source") && !isSourcePlan(details.sourcePlan)) {
             errors.push(`runtime implementation for ${entry.operationId} must build a source plan`);
@@ -283,6 +287,14 @@ function summarizeAuditOperations(
   );
 }
 
+function hasActionExecutor(implementation: ConnectorRuntimeImplementation | null): boolean {
+  return Boolean(implementation?.createExecutor || usesGenericHttpActionExecutor(implementation));
+}
+
+function usesGenericHttpActionExecutor(implementation: ConnectorRuntimeImplementation | null): boolean {
+  return Boolean(implementation?.baseUrl && implementation.buildPlan && implementation.planKinds.includes("request"));
+}
+
 function evidencePathErrors(label: string, evidence: readonly string[], evidenceRoot: string): string[] {
   const errors: string[] = [];
   for (const item of evidence) {
@@ -341,6 +353,14 @@ function requestPlanAuthErrors(
   }
   for (const field of actual) {
     if (!expected.has(field)) errors.push(`request plan auth includes unknown ${field}`);
+  }
+  return errors;
+}
+
+function genericHttpRequestPlanErrors(requestPlan: ConnectorRuntimeRequestPlan): string[] {
+  const errors: string[] = [];
+  for (const binding of requestPlan.auth) {
+    if (!binding.placement) errors.push(`generic HTTP request auth ${binding.field} requires a transport placement`);
   }
   return errors;
 }
