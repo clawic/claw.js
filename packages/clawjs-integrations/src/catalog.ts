@@ -84,6 +84,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       summary.readAccessFields += app.fields.filter((field) => field.accessMode === "read").length;
       summary.writeAccessFields += app.fields.filter((field) => field.accessMode === "write").length;
       summary.syncedFields += app.fields.filter((field) => field.sync === true).length;
+      summary.customResponseFields += app.fields.filter((field) => field.customResponse === true).length;
       summary.dynamicOptionFields += app.fields.filter((field) => field.dynamicOptions).length;
       for (const operation of app.operations) {
         if (operation.kind === "action") summary.actions += 1;
@@ -103,6 +104,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
         summary.readAccessFields += operation.fields.filter((field) => field.accessMode === "read").length;
         summary.writeAccessFields += operation.fields.filter((field) => field.accessMode === "write").length;
         summary.syncedFields += operation.fields.filter((field) => field.sync === true).length;
+        summary.customResponseFields += operation.fields.filter((field) => field.customResponse === true).length;
         summary.dynamicOptionFields += operation.fields.filter((field) => field.dynamicOptions).length;
         if (operation.annotations) summary.annotatedOperations += 1;
         if (operation.annotations?.destructiveHint === true) summary.destructiveOperations += 1;
@@ -140,6 +142,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       readAccessFields: 0,
       writeAccessFields: 0,
       syncedFields: 0,
+      customResponseFields: 0,
       annotatedOperations: 0,
       destructiveOperations: 0,
       readOnlyOperations: 0,
@@ -265,6 +268,7 @@ function normalizeFields(input: unknown): ConnectorFieldDefinition[] {
       ...(field.withLabel === true ? { withLabel: true } : {}),
       ...(accessMode ? { accessMode } : {}),
       ...(field.sync === true ? { sync: true } : {}),
+      ...(field.customResponse === true ? { customResponse: true } : {}),
       ...(field.secret === true ? { secret: true } : {}),
       ...(field.managed === true || type.startsWith("$.") ? { managed: true } : {}),
     };

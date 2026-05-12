@@ -46,6 +46,7 @@ export interface ConnectorFieldDefinition {
   withLabel?: boolean;
   accessMode?: "read" | "write";
   sync?: boolean;
+  customResponse?: boolean;
   secret?: boolean;
   managed?: boolean;
 }
@@ -136,6 +137,7 @@ export interface ConnectorCatalogSummary {
   readAccessFields: number;
   writeAccessFields: number;
   syncedFields: number;
+  customResponseFields: number;
   annotatedOperations: number;
   destructiveOperations: number;
   readOnlyOperations: number;

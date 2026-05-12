@@ -18,6 +18,7 @@ export interface ConnectorManagedInterface {
   name: string;
   type: string;
   role: ConnectorManagedInterfaceRole;
+  customResponse?: boolean;
 }
 
 export interface ConnectorSourcePlan {
@@ -266,6 +267,7 @@ function managedInterfaces(fields: ConnectorFieldDefinition[]): ConnectorManaged
       name: field.name,
       type: field.type,
       role: managedInterfaceRole(field.type),
+      ...(field.customResponse === true ? { customResponse: true } : {}),
     }));
 }
 

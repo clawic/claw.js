@@ -83,7 +83,7 @@ function fixtureCatalog(): ConnectorCatalog {
               { name: "channel", type: "string", optional: false },
               { name: "limit", type: "integer", optional: true, min: 1, max: 100, useQuery: true, withLabel: true },
               { name: "db", type: "$.service.db", optional: false, managed: true },
-              { name: "http", type: "$.interface.http", optional: false, managed: true },
+              { name: "http", type: "$.interface.http", optional: false, managed: true, customResponse: true },
             ],
             authFieldNames: ["bot"],
             runtime: {
@@ -130,6 +130,7 @@ describe("connector catalog", () => {
       readAccessFields: 1,
       writeAccessFields: 0,
       syncedFields: 1,
+      customResponseFields: 1,
       annotatedOperations: 1,
       destructiveOperations: 0,
       readOnlyOperations: 0,
@@ -205,7 +206,7 @@ describe("connector catalog", () => {
     assert.deepEqual(plan.values, { channel: "general" });
     assert.deepEqual(plan.managedInterfaces, [
       { name: "db", type: "$.service.db", role: "service_db" },
-      { name: "http", type: "$.interface.http", role: "http" },
+      { name: "http", type: "$.interface.http", role: "http", customResponse: true },
     ]);
   });
 

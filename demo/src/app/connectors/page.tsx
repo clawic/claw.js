@@ -24,6 +24,7 @@ interface CatalogSummary {
   readAccessFields: number;
   writeAccessFields: number;
   syncedFields: number;
+  customResponseFields: number;
   annotatedOperations: number;
   destructiveOperations: number;
   readOnlyOperations: number;
@@ -64,6 +65,7 @@ interface CatalogField {
   withLabel?: boolean;
   accessMode?: "read" | "write";
   sync?: boolean;
+  customResponse?: boolean;
   secret?: boolean;
   managed?: boolean;
 }
@@ -349,6 +351,7 @@ export default function ConnectorsPage() {
             <span>{catalog?.summary.readAccessFields ?? 0} read access</span>
             <span>{catalog?.summary.writeAccessFields ?? 0} write access</span>
             <span>{catalog?.summary.syncedFields ?? 0} synced</span>
+            <span>{catalog?.summary.customResponseFields ?? 0} custom responses</span>
             <span>{catalog?.summary.annotatedOperations ?? 0} annotated</span>
             <span>{catalog?.summary.destructiveOperations ?? 0} destructive</span>
             <span>{catalog?.summary.runnableOperations ?? 0} runnable</span>
@@ -444,6 +447,7 @@ export default function ConnectorsPage() {
                       <span>delivery={selected.operation.source.delivery}</span>
                       <span>timer={String(selected.operation.source.usesTimer)}</span>
                       <span>http={String(selected.operation.source.usesHttp)}</span>
+                      <span>customResponse={String(selected.operation.fields.some((field) => field.customResponse))}</span>
                       <span>state={String(selected.operation.source.usesServiceDb)}</span>
                     </div>
                   ) : null}
@@ -467,6 +471,7 @@ export default function ConnectorsPage() {
                             {field.withLabel ? " · label" : ""}
                             {field.accessMode ? ` · ${field.accessMode}` : ""}
                             {field.sync ? " · sync" : ""}
+                            {field.customResponse ? " · custom response" : ""}
                           </span>
                         </div>
                       ))}

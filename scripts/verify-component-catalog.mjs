@@ -36,6 +36,7 @@ const countLabels = (fields) => Array.isArray(fields) ? fields.filter((field) =>
 const countReadAccess = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.accessMode === "read").length : 0;
 const countWriteAccess = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.accessMode === "write").length : 0;
 const countSynced = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.sync === true).length : 0;
+const countCustomResponse = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.customResponse === true).length : 0;
 const expected = readExpected(componentsDir);
 const catalog = JSON.parse(readText(catalogPath));
 const errors = verify(catalog, expected);
@@ -43,7 +44,7 @@ const summary = summarize(catalog.apps ?? []);
 
 for (const error of errors.slice(0, maxErrors)) console.error(`FAIL ${error}`);
 if (errors.length > maxErrors) console.error(`FAIL ... ${errors.length - maxErrors} additional errors hidden`);
-console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} hidden=${summary.hiddenFields} disabled=${summary.disabledFields} reload=${summary.reloadFields} bounded=${summary.boundedFields} placeholders=${summary.placeholderFields} query=${summary.queryFields} labels=${summary.labelFields} readAccess=${summary.readAccessFields} writeAccess=${summary.writeAccessFields} synced=${summary.syncedFields} dynamicOptions=${summary.dynamicOptionFields} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} dynamicPropFields=${summary.dynamicPropFields} methods=${summary.methodOperations}`);
+console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} hidden=${summary.hiddenFields} disabled=${summary.disabledFields} reload=${summary.reloadFields} bounded=${summary.boundedFields} placeholders=${summary.placeholderFields} query=${summary.queryFields} labels=${summary.labelFields} readAccess=${summary.readAccessFields} writeAccess=${summary.writeAccessFields} synced=${summary.syncedFields} customResponse=${summary.customResponseFields} dynamicOptions=${summary.dynamicOptionFields} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} dynamicPropFields=${summary.dynamicPropFields} methods=${summary.methodOperations}`);
 if (errors.length > 0) {
   console.error(`catalog verification failed with ${errors.length} error(s)`);
   process.exit(1);
@@ -117,6 +118,7 @@ function verify(catalog, expectedApps) {
   if (actualSummary.readAccessFields !== expectedSummary.readAccessFields) errors.push(`readAccess ${actualSummary.readAccessFields} expected ${expectedSummary.readAccessFields}`);
   if (actualSummary.writeAccessFields !== expectedSummary.writeAccessFields) errors.push(`writeAccess ${actualSummary.writeAccessFields} expected ${expectedSummary.writeAccessFields}`);
   if (actualSummary.syncedFields !== expectedSummary.syncedFields) errors.push(`synced ${actualSummary.syncedFields} expected ${expectedSummary.syncedFields}`);
+  if (actualSummary.customResponseFields !== expectedSummary.customResponseFields) errors.push(`customResponse ${actualSummary.customResponseFields} expected ${expectedSummary.customResponseFields}`);
   if (actualSummary.dynamicOptionFields !== expectedSummary.dynamicOptionFields) errors.push(`dynamicOptions ${actualSummary.dynamicOptionFields} expected ${expectedSummary.dynamicOptionFields}`);
   if (actualSummary.annotatedOperations !== expectedSummary.annotatedOperations) errors.push(`annotations ${actualSummary.annotatedOperations} expected ${expectedSummary.annotatedOperations}`);
   if (actualSummary.destructiveOperations !== expectedSummary.destructiveOperations) errors.push(`destructive ${actualSummary.destructiveOperations} expected ${expectedSummary.destructiveOperations}`);
@@ -235,6 +237,7 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
       ...optionalBoolean("withLabel", readBoolean(body, "withLabel") ?? inherited?.withLabel),
       ...optionalAccessMode(readTopLevelString(body, "accessMode") ?? inherited?.accessMode),
       ...optionalBoolean("sync", readBoolean(body, "sync") ?? inherited?.sync),
+      ...optionalBoolean("customResponse", readBoolean(body, "customResponse") ?? inherited?.customResponse),
       ...(inherited?.secret || readBoolean(body, "secret") === true || isSecretField(name, body, appId) ? { secret: true } : {}),
       ...(inherited?.managed || type.startsWith("$.") ? { managed: true } : {}),
     });
@@ -366,6 +369,7 @@ function summarize(apps) {
     summary.readAccessFields += countReadAccess(app.fields);
     summary.writeAccessFields += countWriteAccess(app.fields);
     summary.syncedFields += countSynced(app.fields);
+    summary.customResponseFields += countCustomResponse(app.fields);
     summary.dynamicOptionFields += countDynamicOptions(app.fields);
     for (const operation of Array.isArray(app.operations) ? app.operations : []) {
       if (!isRecord(operation)) continue;
@@ -386,6 +390,7 @@ function summarize(apps) {
       summary.readAccessFields += countReadAccess(operation.fields);
       summary.writeAccessFields += countWriteAccess(operation.fields);
       summary.syncedFields += countSynced(operation.fields);
+      summary.customResponseFields += countCustomResponse(operation.fields);
       summary.dynamicOptionFields += countDynamicOptions(operation.fields);
       if (isRecord(operation.annotations)) summary.annotatedOperations += 1;
       if (operation.annotations?.destructiveHint === true) summary.destructiveOperations += 1;
@@ -422,6 +427,7 @@ function summarize(apps) {
     readAccessFields: 0,
     writeAccessFields: 0,
     syncedFields: 0,
+    customResponseFields: 0,
     annotatedOperations: 0,
     destructiveOperations: 0,
     readOnlyOperations: 0,
@@ -455,6 +461,7 @@ function summarizeExpected(apps) {
     readAccessFields: 0,
     writeAccessFields: 0,
     syncedFields: 0,
+    customResponseFields: 0,
     annotatedOperations: 0,
     destructiveOperations: 0,
     readOnlyOperations: 0,
@@ -484,6 +491,7 @@ function summarizeExpected(apps) {
     summary.readAccessFields += app.fieldStats.readAccess;
     summary.writeAccessFields += app.fieldStats.writeAccess;
     summary.syncedFields += app.fieldStats.synced;
+    summary.customResponseFields += app.fieldStats.customResponse;
     summary.dynamicOptionFields += app.fieldStats.dynamicOptions;
     summary.managedFields += app.fieldStats.managed;
     for (const operation of app.operations.values()) {
@@ -499,6 +507,7 @@ function summarizeExpected(apps) {
       summary.readAccessFields += operation.fieldStats.readAccess;
       summary.writeAccessFields += operation.fieldStats.writeAccess;
       summary.syncedFields += operation.fieldStats.synced;
+      summary.customResponseFields += operation.fieldStats.customResponse;
       summary.dynamicOptionFields += operation.fieldStats.dynamicOptions;
       summary.managedFields += operation.fieldStats.managed;
       if (Object.keys(operation.annotations).length) summary.annotatedOperations += 1;
@@ -587,6 +596,7 @@ function summarizeFields(fields) {
     readAccess: fields.filter((field) => field.accessMode === "read").length,
     writeAccess: fields.filter((field) => field.accessMode === "write").length,
     synced: fields.filter((field) => field.sync === true).length,
+    customResponse: fields.filter((field) => field.customResponse === true).length,
     managed: fields.filter((field) => field.managed).length,
   };
 }
