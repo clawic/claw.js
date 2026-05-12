@@ -151,6 +151,8 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
       ...optionalString("placeholder", cleanText(readTopLevelString(body, "placeholder") ?? inherited?.placeholder)),
       ...optionalBoolean("useQuery", readBoolean(body, "useQuery") ?? inherited?.useQuery),
       ...optionalBoolean("withLabel", readBoolean(body, "withLabel") ?? inherited?.withLabel),
+      ...optionalAccessMode(readTopLevelString(body, "accessMode") ?? inherited?.accessMode),
+      ...optionalBoolean("sync", readBoolean(body, "sync") ?? inherited?.sync),
       ...(inherited?.secret || isSecretField(name, body, appId) ? { secret: true } : {}),
       ...(inherited?.managed || type.startsWith("$.") ? { managed: true } : {}),
     };
@@ -592,6 +594,10 @@ function optionalBoolean(key, value) {
 
 function optionalNumber(key, value) {
   return typeof value === "number" && Number.isFinite(value) ? { [key]: value } : {};
+}
+
+function optionalAccessMode(value) {
+  return value === "read" || value === "write" ? { accessMode: value } : {};
 }
 
 function readBoolean(body, key) {

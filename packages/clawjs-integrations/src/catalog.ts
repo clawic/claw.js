@@ -81,6 +81,9 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       summary.placeholderFields += app.fields.filter((field) => field.placeholder).length;
       summary.queryFields += app.fields.filter((field) => field.useQuery === true).length;
       summary.labelFields += app.fields.filter((field) => field.withLabel === true).length;
+      summary.readAccessFields += app.fields.filter((field) => field.accessMode === "read").length;
+      summary.writeAccessFields += app.fields.filter((field) => field.accessMode === "write").length;
+      summary.syncedFields += app.fields.filter((field) => field.sync === true).length;
       summary.dynamicOptionFields += app.fields.filter((field) => field.dynamicOptions).length;
       for (const operation of app.operations) {
         if (operation.kind === "action") summary.actions += 1;
@@ -97,6 +100,9 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
         summary.placeholderFields += operation.fields.filter((field) => field.placeholder).length;
         summary.queryFields += operation.fields.filter((field) => field.useQuery === true).length;
         summary.labelFields += operation.fields.filter((field) => field.withLabel === true).length;
+        summary.readAccessFields += operation.fields.filter((field) => field.accessMode === "read").length;
+        summary.writeAccessFields += operation.fields.filter((field) => field.accessMode === "write").length;
+        summary.syncedFields += operation.fields.filter((field) => field.sync === true).length;
         summary.dynamicOptionFields += operation.fields.filter((field) => field.dynamicOptions).length;
         if (operation.annotations) summary.annotatedOperations += 1;
         if (operation.annotations?.destructiveHint === true) summary.destructiveOperations += 1;
@@ -131,6 +137,9 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       placeholderFields: 0,
       queryFields: 0,
       labelFields: 0,
+      readAccessFields: 0,
+      writeAccessFields: 0,
+      syncedFields: 0,
       annotatedOperations: 0,
       destructiveOperations: 0,
       readOnlyOperations: 0,
@@ -231,6 +240,8 @@ function normalizeFields(input: unknown): ConnectorFieldDefinition[] {
     }
     const name = requiredString(field.name, "field.name");
     const type = stringValue(field.type) ?? "string";
+    const accessMode: ConnectorFieldDefinition["accessMode"] =
+      field.accessMode === "read" || field.accessMode === "write" ? field.accessMode : undefined;
     return {
       name,
       type,
@@ -252,6 +263,8 @@ function normalizeFields(input: unknown): ConnectorFieldDefinition[] {
       ...(typeof field.placeholder === "string" && field.placeholder.trim() ? { placeholder: field.placeholder.trim() } : {}),
       ...(field.useQuery === true ? { useQuery: true } : {}),
       ...(field.withLabel === true ? { withLabel: true } : {}),
+      ...(accessMode ? { accessMode } : {}),
+      ...(field.sync === true ? { sync: true } : {}),
       ...(field.secret === true ? { secret: true } : {}),
       ...(field.managed === true || type.startsWith("$.") ? { managed: true } : {}),
     };

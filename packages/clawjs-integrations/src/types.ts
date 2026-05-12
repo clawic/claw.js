@@ -44,6 +44,8 @@ export interface ConnectorFieldDefinition {
   placeholder?: string;
   useQuery?: boolean;
   withLabel?: boolean;
+  accessMode?: "read" | "write";
+  sync?: boolean;
   secret?: boolean;
   managed?: boolean;
 }
@@ -131,6 +133,9 @@ export interface ConnectorCatalogSummary {
   placeholderFields: number;
   queryFields: number;
   labelFields: number;
+  readAccessFields: number;
+  writeAccessFields: number;
+  syncedFields: number;
   annotatedOperations: number;
   destructiveOperations: number;
   readOnlyOperations: number;

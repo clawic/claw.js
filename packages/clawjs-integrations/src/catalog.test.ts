@@ -34,6 +34,7 @@ function fixtureCatalog(): ConnectorCatalog {
             name: "Send Message",
             fields: [
               { name: "channel", type: "string", optional: false },
+              { name: "syncDir", type: "dir", optional: true, accessMode: "read", sync: true },
               { name: "workspace", type: "$.workspace", optional: false },
               { name: "text", type: "string", optional: false },
               {
@@ -113,7 +114,7 @@ describe("connector catalog", () => {
       apps: 1,
       actions: 1,
       sources: 1,
-      fields: 9,
+      fields: 10,
       authFields: 3,
       managedFields: 3,
       defaults: 1,
@@ -125,6 +126,9 @@ describe("connector catalog", () => {
       placeholderFields: 1,
       queryFields: 1,
       labelFields: 1,
+      readAccessFields: 1,
+      writeAccessFields: 0,
+      syncedFields: 1,
       annotatedOperations: 1,
       destructiveOperations: 0,
       readOnlyOperations: 0,
