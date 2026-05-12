@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { normalizeConnectorCatalog } from "./catalog.ts";
+import { runConnectorOperation } from "./operation-runner.ts";
 import { telegramAdapter } from "./telegram.ts";
 import {
   buildTelegramOperationRequest,
@@ -314,6 +316,64 @@ describe("telegram operation executor", () => {
       body: {
         chat_id: "987",
         text: "hello from adapter",
+      },
+    }]);
+  });
+
+  it("runs supported actions through the registered runtime executor", async () => {
+    const calls: Array<{ url: string; body: unknown }> = [];
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "telegram_bot_api",
+        name: "Telegram Bot",
+        authFieldNames: ["telegramBotApi"],
+        fields: [{ name: "telegramBotApi", type: "app", optional: false, secret: true }],
+        operations: [{
+          id: "telegram_bot_api.action.send-text-message-or-reply-send-text-message-or-reply",
+          appId: "telegram_bot_api",
+          kind: "action",
+          name: "Send Text Message",
+          fields: [
+            { name: "chatId", type: "string", optional: false },
+            { name: "text", type: "string", optional: false },
+          ],
+          authFieldNames: ["telegramBotApi"],
+        }],
+      }],
+    });
+
+    const result = await runConnectorOperation({
+      catalog,
+      operationId: "telegram_bot_api.action.send-text-message-or-reply-send-text-message-or-reply",
+      dryRun: false,
+      input: {
+        values: { chatId: "123", text: "hello" },
+        secretRefs: { telegramBotApi: "secret://telegram" },
+      },
+      resolveSecret: async (ref) => ref === "secret://telegram" ? "runtime-token" : null,
+      runtimeExecutorOptions: {
+        fetchImpl: async (input, init) => {
+          calls.push({
+            url: String(input),
+            body: JSON.parse(String(init?.body ?? "{}")),
+          });
+          return new Response(JSON.stringify({ ok: true, result: { message_id: 43 } }), { status: 200 });
+        },
+      },
+    });
+
+    assert.deepEqual(result, {
+      status: "executed",
+      operationId: "telegram_bot_api.action.send-text-message-or-reply-send-text-message-or-reply",
+      appId: "telegram_bot_api",
+      output: { ok: true, result: { message_id: 43 } },
+    });
+    assert.deepEqual(calls, [{
+      url: "https://api.telegram.org/botruntime-token/sendMessage",
+      body: {
+        chat_id: "123",
+        text: "hello",
       },
     }]);
   });

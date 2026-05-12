@@ -2,6 +2,10 @@ import {
   findConnectorOperation,
   type ConnectorCatalogError,
 } from "./catalog.ts";
+import {
+  createConnectorOperationExecutor,
+  type ConnectorRuntimeExecutorOptions,
+} from "./runtime-registry.ts";
 import type {
   ConnectorCatalog,
   ConnectorFieldDefinition,
@@ -29,6 +33,7 @@ export interface RunConnectorOperationOptions {
   dryRun?: boolean;
   resolveSecret?: ConnectorSecretResolver;
   executor?: ConnectorExecutor;
+  runtimeExecutorOptions?: ConnectorRuntimeExecutorOptions;
 }
 
 export interface ConnectorOperationDryRun {
@@ -84,8 +89,9 @@ export async function runConnectorOperation(
   if (missingFields.length > 0 || missingSecrets.length > 0 || invalidFields.length > 0) {
     throw new Error(`Connector operation is missing or invalid input: ${[...missingFields, ...missingSecrets, ...invalidFields].join(", ")}`);
   }
-  if (!options.executor) {
-    throw new Error("Connector operation execution requires an explicit executor.");
+  const executor = options.executor ?? createConnectorOperationExecutor(found.operation, options.runtimeExecutorOptions);
+  if (!executor) {
+    throw new Error("Connector operation execution requires an explicit executor or registered runtime executor.");
   }
 
   const secrets: Record<string, string> = {};
@@ -99,7 +105,7 @@ export async function runConnectorOperation(
     secrets[fieldName] = value;
   }
 
-  const output = await options.executor.execute({
+  const output = await executor.execute({
     operation: found.operation,
     values,
     secrets,

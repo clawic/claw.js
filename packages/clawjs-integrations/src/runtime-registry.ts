@@ -1,14 +1,22 @@
 import {
   buildTelegramOperationRequest,
+  createTelegramOperationExecutor,
   isTelegramActionOperationSupported,
 } from "./telegram-operation-executor.ts";
 import {
   isTelegramSourceOperationSupported,
 } from "./telegram-source.ts";
 import type {
+  ConnectorExecutor,
+} from "./operation-runner.js";
+import type {
   ConnectorOperationDefinition,
   IntegrationJson,
 } from "./types.ts";
+
+export interface ConnectorRuntimeExecutorOptions {
+  fetchImpl?: typeof fetch;
+}
 
 export interface ConnectorRuntimeRequestPlan {
   method: string;
@@ -35,6 +43,7 @@ export interface ConnectorRuntimeImplementation {
   offlineValidated: boolean;
   evidence: string[];
   supports(operation: ConnectorOperationDefinition): boolean;
+  createExecutor?(options?: ConnectorRuntimeExecutorOptions): ConnectorExecutor;
   buildPlan?(
     operation: ConnectorOperationDefinition,
     values: Record<string, IntegrationJson>,
@@ -57,6 +66,7 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     offlineValidated: true,
     evidence: TELEGRAM_ACTION_EVIDENCE,
     supports: (operation) => isTelegramActionOperationSupported(operation.id),
+    createExecutor: (options) => createTelegramOperationExecutor(options),
     buildPlan: (operation, values) => {
       const request = buildTelegramOperationRequest(operation.id, values);
       return {
@@ -95,4 +105,13 @@ export function findConnectorRuntimeImplementation(
     && implementation.kind === operation.kind
     && implementation.supports(operation)
   )) ?? null;
+}
+
+export function createConnectorOperationExecutor(
+  operation: ConnectorOperationDefinition,
+  options: ConnectorRuntimeExecutorOptions = {},
+  registry: readonly ConnectorRuntimeImplementation[] = CONNECTOR_RUNTIME_REGISTRY,
+): ConnectorExecutor | null {
+  if (operation.kind !== "action") return null;
+  return findConnectorRuntimeImplementation(operation, registry)?.createExecutor?.(options) ?? null;
 }

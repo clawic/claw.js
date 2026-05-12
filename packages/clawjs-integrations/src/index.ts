@@ -30,6 +30,7 @@ export {
 } from "./runtime-coverage.js";
 export {
   CONNECTOR_RUNTIME_REGISTRY,
+  createConnectorOperationExecutor,
   findConnectorRuntimeImplementation,
 } from "./runtime-registry.js";
 export type {
@@ -70,6 +71,7 @@ export type {
   VerifyConnectorRuntimeCoverageOptions,
 } from "./runtime-coverage.js";
 export type {
+  ConnectorRuntimeExecutorOptions,
   ConnectorRuntimeImplementation,
   ConnectorRuntimePlanDetails,
   ConnectorRuntimeRequestPlan,
