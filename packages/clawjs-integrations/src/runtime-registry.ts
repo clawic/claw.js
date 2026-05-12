@@ -45,6 +45,14 @@ export interface ConnectorRuntimeRequestPlan {
   body: Record<string, IntegrationJson>;
   bodyEncoding?: "json" | "form" | "none";
   pagination?: ConnectorRuntimePaginationPlan;
+  responseSchema?: ConnectorRuntimeOutputSchema;
+}
+
+export type ConnectorRuntimeJsonType = "object" | "array" | "string" | "number" | "boolean" | "null";
+
+export interface ConnectorRuntimeOutputSchema {
+  type: ConnectorRuntimeJsonType;
+  requiredPaths?: string[];
 }
 
 export type ConnectorRuntimePaginationMode = "cursor" | "offset" | "next_url";
@@ -116,6 +124,10 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
           endpoint: request.endpoint,
           auth: operation.authFieldNames.map((field) => ({ type: "secret", field })),
           body: request.body,
+          responseSchema: {
+            type: "object",
+            requiredPaths: ["ok"],
+          },
         },
       };
     },
@@ -142,6 +154,10 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
           ...(values.limit == null || values.limit === "" ? {} : { limit: values.limit }),
         },
         body: {},
+        responseSchema: {
+          type: "object",
+          requiredPaths: ["ok"],
+        },
       },
       sourcePlan: {
         delivery: operation.source?.delivery ?? "manual",

@@ -88,6 +88,10 @@ describe("connector runtime coverage", () => {
           chat_id: "123",
           text: "hello",
         },
+        responseSchema: {
+          type: "object",
+          requiredPaths: ["ok"],
+        },
       },
     });
   });
@@ -151,6 +155,10 @@ describe("connector runtime coverage", () => {
           offset: 10,
         },
         body: {},
+        responseSchema: {
+          type: "object",
+          requiredPaths: ["ok"],
+        },
       },
       sourcePlan: {
         delivery: "polling",
@@ -294,6 +302,7 @@ describe("connector runtime coverage", () => {
           endpoint: "messages",
           auth: operation.authFieldNames.map((field) => ({ type: "secret", field })),
           body: values,
+          responseSchema: { type: "object" },
         },
       }),
     }];
@@ -318,6 +327,7 @@ describe("connector runtime coverage", () => {
         body: {
           text: "hello",
         },
+        responseSchema: { type: "object" },
       },
     });
   });

@@ -84,6 +84,31 @@ describe("connector runtime http transport", () => {
     assert.deepEqual(response.body, { ok: true });
   });
 
+  it("rejects successful responses that fail the response schema", async () => {
+    await assert.rejects(
+      () => executeConnectorRuntimeRequestPlan({
+        baseUrl: "https://api.example.invalid/",
+        secrets: {},
+        plan: {
+          method: "GET",
+          endpoint: "items",
+          auth: [],
+          body: {},
+          responseSchema: {
+            type: "object",
+            requiredPaths: ["id"],
+          },
+        },
+        fetchImpl: async () => Response.json({ ok: true }),
+      }),
+      (error) => {
+        assert.ok(error instanceof ConnectorRuntimeHttpError);
+        assert.match(error.message, /output missing required path id/);
+        return true;
+      },
+    );
+  });
+
   it("raises structured errors for non-2xx responses", async () => {
     await assert.rejects(
       () => executeConnectorRuntimeRequestPlan({

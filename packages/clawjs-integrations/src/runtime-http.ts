@@ -2,6 +2,7 @@ import type {
   ConnectorRuntimeAuthBinding,
   ConnectorRuntimeRequestPlan,
 } from "./runtime-registry.ts";
+import { validateConnectorRuntimeOutput } from "./runtime-output.ts";
 import type { IntegrationJson } from "./types.ts";
 
 export interface ConnectorRuntimeHttpOptions {
@@ -48,7 +49,10 @@ export async function executeConnectorRuntimeRequestPlan(
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
     const response = await fetcher(request.url, request.init);
     const parsed = await parseRuntimeHttpResponse(response);
-    if (response.ok) return parsed;
+    if (response.ok) {
+      assertRuntimeOutput(input.plan, parsed);
+      return parsed;
+    }
     if (attempt < maxRetries && isRetryableStatus(response.status)) {
       await (input.sleep ?? defaultSleep)(retryDelayMs(response, input.retryDelayMs));
       continue;
@@ -59,6 +63,20 @@ export async function executeConnectorRuntimeRequestPlan(
     );
   }
   throw new Error("Connector request retry loop exited unexpectedly.");
+}
+
+function assertRuntimeOutput(
+  plan: ConnectorRuntimeRequestPlan,
+  response: ConnectorRuntimeHttpResponse,
+): void {
+  if (!plan.responseSchema) return;
+  const errors = validateConnectorRuntimeOutput(response.body, plan.responseSchema);
+  if (errors.length > 0) {
+    throw new ConnectorRuntimeHttpError(
+      `Connector response validation failed: ${errors.join("; ")}`,
+      response,
+    );
+  }
 }
 
 export async function executeConnectorRuntimePaginatedRequestPlan(

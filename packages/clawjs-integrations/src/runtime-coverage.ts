@@ -6,6 +6,7 @@ import {
   CONNECTOR_RUNTIME_REGISTRY,
   findConnectorRuntimeImplementation,
   type ConnectorRuntimeImplementation,
+  type ConnectorRuntimeOutputSchema,
   type ConnectorRuntimeRequestPlan,
   type ConnectorRuntimeSourcePlan,
 } from "./runtime-registry.ts";
@@ -270,7 +271,19 @@ function isRequestPlan(value: ConnectorRuntimeRequestPlan | undefined): boolean 
     && value.auth.every(isAuthBinding)
     && isStringRecord(value.headers)
     && isOptionalJsonRecord(value.query)
-    && isRequiredJsonRecord(value.body),
+    && isRequiredJsonRecord(value.body)
+    && isOutputSchema(value.responseSchema)
+  );
+}
+
+function isOutputSchema(value: ConnectorRuntimeOutputSchema | undefined): boolean {
+  return Boolean(
+    value
+    && ["object", "array", "string", "number", "boolean", "null"].includes(value.type)
+    && (value.requiredPaths === undefined || (
+      Array.isArray(value.requiredPaths)
+      && value.requiredPaths.every((path) => typeof path === "string" && path.trim())
+    )),
   );
 }
 

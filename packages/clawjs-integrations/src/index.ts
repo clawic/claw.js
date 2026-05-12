@@ -40,6 +40,9 @@ export {
   executeConnectorRuntimePaginatedRequestPlan,
   executeConnectorRuntimeRequestPlan,
 } from "./runtime-http.js";
+export {
+  validateConnectorRuntimeOutput,
+} from "./runtime-output.js";
 export type {
   ConnectorCatalogSearchOptions,
   ConnectorCatalogSearchResult,
@@ -82,6 +85,8 @@ export type {
   ConnectorRuntimeAuthPlacement,
   ConnectorRuntimeExecutorOptions,
   ConnectorRuntimeImplementation,
+  ConnectorRuntimeJsonType,
+  ConnectorRuntimeOutputSchema,
   ConnectorRuntimePlanKind,
   ConnectorRuntimePlanDetails,
   ConnectorRuntimePaginationMode,
