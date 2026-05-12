@@ -103,6 +103,10 @@ function fixtureCatalog(): ConnectorCatalog {
               usesHttp: true,
               usesServiceDb: true,
             },
+            sampleEvent: {
+              shape: "object",
+              keys: ["message"],
+            },
           },
         ],
       },
@@ -147,6 +151,7 @@ describe("connector catalog", () => {
       webhookSources: 1,
       hybridSources: 0,
       statefulSources: 1,
+      sampleEventSources: 1,
       dynamicPropOperations: 1,
       dynamicPropFields: 1,
       dynamicOptionFields: 1,

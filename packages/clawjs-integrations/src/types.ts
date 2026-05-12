@@ -94,6 +94,11 @@ export interface ConnectorSourceCapabilities {
   usesServiceDb: boolean;
 }
 
+export interface ConnectorSampleEventMetadata {
+  shape: "object" | "array" | "string" | "unknown";
+  keys: string[];
+}
+
 export interface ConnectorOperationDefinition {
   id: string;
   appId: string;
@@ -107,6 +112,7 @@ export interface ConnectorOperationDefinition {
   annotations?: ConnectorOperationAnnotations;
   runtime?: ConnectorOperationRuntime;
   source?: ConnectorSourceCapabilities;
+  sampleEvent?: ConnectorSampleEventMetadata;
   sourcePath?: string;
 }
 
@@ -161,6 +167,7 @@ export interface ConnectorCatalogSummary {
   webhookSources: number;
   hybridSources: number;
   statefulSources: number;
+  sampleEventSources: number;
   dynamicPropOperations: number;
   dynamicPropFields: number;
   dynamicOptionFields: number;

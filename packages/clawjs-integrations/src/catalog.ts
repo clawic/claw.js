@@ -123,6 +123,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
         if (operation.source?.delivery === "webhook") summary.webhookSources += 1;
         if (operation.source?.delivery === "hybrid") summary.hybridSources += 1;
         if (operation.source?.usesServiceDb === true) summary.statefulSources += 1;
+        if (operation.kind === "source" && operation.sampleEvent) summary.sampleEventSources += 1;
         if (operation.runtime?.hasAdditionalProps === true) summary.dynamicPropOperations += 1;
         summary.dynamicPropFields += operation.runtime?.additionalProps?.fieldNames.length ?? 0;
         if (operation.runtime?.hasMethods === true) summary.methodOperations += 1;
@@ -163,6 +164,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       webhookSources: 0,
       hybridSources: 0,
       statefulSources: 0,
+      sampleEventSources: 0,
       dynamicPropOperations: 0,
       dynamicPropFields: 0,
       dynamicOptionFields: 0,
@@ -240,6 +242,7 @@ function normalizeOperation(input: unknown, appId: string): ConnectorOperationDe
     ...optionalAnnotations(input.annotations),
     ...optionalRuntime(input.runtime),
     ...optionalSource(input.source),
+    ...optionalSampleEvent(input.sampleEvent),
     ...(typeof input.sourcePath === "string" ? { sourcePath: input.sourcePath } : {}),
   };
 }
@@ -388,6 +391,19 @@ function optionalSource(input: unknown) {
       usesTimer: input.usesTimer === true,
       usesHttp: input.usesHttp === true,
       usesServiceDb: input.usesServiceDb === true,
+    },
+  };
+}
+
+function optionalSampleEvent(input: unknown) {
+  if (!isRecord(input)) return {};
+  const shape = ["object", "array", "string", "unknown"].includes(String(input.shape))
+    ? input.shape as "object" | "array" | "string" | "unknown"
+    : "unknown";
+  return {
+    sampleEvent: {
+      shape,
+      keys: normalizeStringArray(input.keys),
     },
   };
 }
