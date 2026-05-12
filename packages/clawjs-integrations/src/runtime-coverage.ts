@@ -114,6 +114,15 @@ export function verifyConnectorRuntimeCoverage(
       }
     }
   }
+  for (const entry of report.entries) {
+    if (entry.status !== "unsupported") continue;
+    const reason = entry.unsupported_real_runtime_reason;
+    if (!reason?.code?.trim()) errors.push(`unsupported runtime reason for ${entry.operationId} requires code`);
+    if (!reason?.message?.trim()) errors.push(`unsupported runtime reason for ${entry.operationId} requires message`);
+    if (!reason?.evidence?.some((item) => item.trim())) {
+      errors.push(`unsupported runtime reason for ${entry.operationId} requires concrete evidence`);
+    }
+  }
   if (errors.length > 0) {
     throw new ConnectorRuntimeCoverageError(
       `Connector runtime coverage failed with ${errors.length} error(s): ${errors.join("; ")}`,

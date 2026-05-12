@@ -126,4 +126,34 @@ describe("connector runtime coverage", () => {
     );
     assert.equal(verifyConnectorRuntimeCoverage(catalog, { allowUnsupportedReasons: true }).summary.unsupported, 1);
   });
+
+  it("rejects unsupported reasons without concrete evidence", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "manual_service",
+        name: "Manual Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [{
+          id: "manual_service.source.external-only",
+          appId: "manual_service",
+          kind: "source",
+          name: "External Only",
+          fields: [],
+          authFieldNames: [],
+          unsupported_real_runtime_reason: {
+            code: "missing_reference_contract",
+            message: "The available component metadata does not include a request contract.",
+            evidence: [],
+          },
+        }],
+      }],
+    });
+
+    assert.throws(
+      () => verifyConnectorRuntimeCoverage(catalog, { allowUnsupportedReasons: true }),
+      /requires concrete evidence/,
+    );
+  });
 });
