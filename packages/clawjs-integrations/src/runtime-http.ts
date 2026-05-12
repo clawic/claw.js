@@ -237,6 +237,11 @@ function requestBody(plan: ConnectorRuntimeRequestPlan, headers: Headers): BodyI
     for (const [key, value] of Object.entries(plan.body)) appendQueryValue(form, key, value);
     return form.toString();
   }
+  if (plan.bodyEncoding === "multipart") {
+    const form = new FormData();
+    for (const [key, value] of Object.entries(plan.body)) appendFormValue(form, key, value);
+    return form;
+  }
   if (Object.keys(plan.body).length === 0) return undefined;
   headers.set("content-type", headers.get("content-type") ?? "application/json");
   return JSON.stringify(plan.body);
@@ -253,6 +258,19 @@ function appendQueryValue(params: URLSearchParams, key: string, value: Integrati
     return;
   }
   params.append(key, String(value));
+}
+
+function appendFormValue(form: FormData, key: string, value: IntegrationJson): void {
+  if (value == null) return;
+  if (Array.isArray(value)) {
+    for (const item of value) appendFormValue(form, key, item);
+    return;
+  }
+  if (typeof value === "object") {
+    form.append(key, JSON.stringify(value));
+    return;
+  }
+  form.append(key, String(value));
 }
 
 async function parseRuntimeHttpResponse(response: Response): Promise<ConnectorRuntimeHttpResponse> {

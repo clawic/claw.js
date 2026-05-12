@@ -325,6 +325,85 @@ describe("OpenAPI connector runtime", () => {
     });
   });
 
+  it("preserves multipart body encoding from OpenAPI request bodies", () => {
+    const document = {
+      ...FIXTURE_OPENAPI,
+      paths: {
+        "/files": {
+          post: {
+            operationId: "uploadFile",
+            summary: "Upload file",
+            requestBody: {
+              content: {
+                "multipart/form-data": {
+                  schema: {
+                    type: "object",
+                    required: ["file_url"],
+                    properties: {
+                      file_url: {
+                        type: "string",
+                        description: "File URL.",
+                      },
+                      title: { type: "string" },
+                    },
+                  },
+                },
+              },
+            },
+            responses: {
+              "200": {
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      required: ["id"],
+                      properties: {
+                        id: { type: "string" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const options = {
+      appId: "fixture_multipart",
+      authFieldName: "apiKey",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(document, options)];
+    const operation = catalog.apps[0]?.operations[0];
+    assert.ok(operation);
+
+    assert.deepEqual(operation.fields.map((field) => [field.name, field.description ?? null, field.optional]), [
+      ["file_url", "File URL.", false],
+      ["title", null, true],
+    ]);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, {
+      file_url: "https://example.invalid/file.txt",
+      title: "demo",
+    }, { registry }).requestPlan, {
+      method: "POST",
+      endpoint: "/files",
+      auth: [{ type: "secret", field: "apiKey", placement: "bearer" }],
+      headers: { accept: "application/json" },
+      body: {
+        file_url: "https://example.invalid/file.txt",
+        title: "demo",
+      },
+      bodyEncoding: "multipart",
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id"],
+      },
+    });
+  });
+
   it("uses default values for OpenAPI server variables", () => {
     const document = {
       ...FIXTURE_OPENAPI,

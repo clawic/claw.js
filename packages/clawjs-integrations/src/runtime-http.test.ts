@@ -76,6 +76,32 @@ describe("connector runtime http transport", () => {
     assert.equal(new Headers(request.init.headers).get("cookie"), "existing=true; session_id=session%20123");
   });
 
+  it("builds multipart encoded requests", () => {
+    const request = buildConnectorRuntimeFetchRequest({
+      baseUrl: "https://api.example.invalid/",
+      secrets: {},
+      plan: {
+        method: "POST",
+        endpoint: "/uploads",
+        auth: [],
+        bodyEncoding: "multipart",
+        body: {
+          title: "demo",
+          tags: ["a", "b"],
+          metadata: { source: "fixture" },
+        },
+      },
+    });
+    const body = request.init.body;
+
+    assert.equal(request.url, "https://api.example.invalid/uploads");
+    assert.equal(new Headers(request.init.headers).get("content-type"), null);
+    assert.ok(body instanceof FormData);
+    assert.equal(body.get("title"), "demo");
+    assert.deepEqual(body.getAll("tags"), ["a", "b"]);
+    assert.equal(body.get("metadata"), "{\"source\":\"fixture\"}");
+  });
+
   it("executes plans through an injected fetch and parses JSON", async () => {
     const calls: { input: string | URL | Request; init?: RequestInit }[] = [];
     const response = await executeConnectorRuntimeRequestPlan({

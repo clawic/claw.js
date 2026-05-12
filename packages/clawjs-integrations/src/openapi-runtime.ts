@@ -108,7 +108,7 @@ interface OpenApiConnectorOperationMetadata {
   path: string;
   parameters: OpenApiConnectorParameterBinding[];
   bodyFields: OpenApiConnectorBodyBinding[];
-  bodyEncoding?: "form";
+  bodyEncoding?: "form" | "multipart";
   auth: OpenApiConnectorAuthBinding[];
   pagination?: ConnectorRuntimePaginationPlan;
   responseSchema: ConnectorRuntimeOutputSchema;
@@ -585,7 +585,7 @@ function optionalPagination(value: ConnectorRuntimePaginationPlan | undefined): 
   return value ? { pagination: value } : {};
 }
 
-function optionalBodyEncoding(value: "form" | undefined): Pick<OpenApiConnectorOperationMetadata, "bodyEncoding"> | Record<string, never> {
+function optionalBodyEncoding(value: OpenApiConnectorOperationMetadata["bodyEncoding"] | undefined): Pick<OpenApiConnectorOperationMetadata, "bodyEncoding"> | Record<string, never> {
   return value ? { bodyEncoding: value } : {};
 }
 
@@ -738,20 +738,22 @@ function jsonContentSchema(document: OpenApiDocument, content: OpenApiRequestBod
   return resolveOpenApiSchema(document, content?.["application/json"]?.schema ?? content?.["application/x-www-form-urlencoded"]?.schema);
 }
 
-function requestBodyEncoding(document: OpenApiDocument, requestBody: OpenApiRequestBody | undefined): "form" | undefined {
+function requestBodyEncoding(document: OpenApiDocument, requestBody: OpenApiRequestBody | undefined): OpenApiConnectorOperationMetadata["bodyEncoding"] | undefined {
   return requestBodyContent(document, requestBody)?.encoding;
 }
 
 function requestBodyContent(
   document: OpenApiDocument,
   requestBody: OpenApiRequestBody | undefined,
-): { schema: OpenApiSchema | undefined; encoding?: "form" } | undefined {
+): { schema: OpenApiSchema | undefined; encoding?: OpenApiConnectorOperationMetadata["bodyEncoding"] } | undefined {
   const content = resolveOpenApiRequestBody(document, requestBody)?.content;
   if (!content) return undefined;
   const jsonSchema = resolveOpenApiSchema(document, content["application/json"]?.schema);
   if (jsonSchema) return { schema: jsonSchema };
   const formSchema = resolveOpenApiSchema(document, content["application/x-www-form-urlencoded"]?.schema);
   if (formSchema) return { schema: formSchema, encoding: "form" };
+  const multipartSchema = resolveOpenApiSchema(document, content["multipart/form-data"]?.schema);
+  if (multipartSchema) return { schema: multipartSchema, encoding: "multipart" };
   return undefined;
 }
 

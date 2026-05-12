@@ -46,7 +46,7 @@ export interface ConnectorRuntimeRequestPlan {
   headers?: Record<string, string>;
   query?: Record<string, IntegrationJson>;
   body: Record<string, IntegrationJson>;
-  bodyEncoding?: "json" | "form" | "none";
+  bodyEncoding?: "json" | "form" | "multipart" | "none";
   pagination?: ConnectorRuntimePaginationPlan;
   responseSchema?: ConnectorRuntimeOutputSchema;
 }

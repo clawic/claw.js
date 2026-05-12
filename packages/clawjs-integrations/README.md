@@ -113,6 +113,7 @@ OpenAPI `oneOf` and `anyOf` schemas are flattened conservatively: alternative pr
 OpenAPI response schemas derive nested required output paths for required object properties, so offline validation can catch missing nested objects without real provider calls.
 OpenAPI server URLs may use server variables with defaults; the runtime resolves those defaults before constructing request plans.
 OpenAPI request bodies declared as `application/x-www-form-urlencoded` are converted into form-encoded runtime request plans when no JSON body schema is present.
+OpenAPI request bodies declared as `multipart/form-data` are converted into multipart runtime request plans when no JSON or URL-encoded body schema is present.
 When a spec declares standard bearer, basic auth, OAuth/OpenID bearer, or API key security schemes in headers, query params, or cookies, the OpenAPI runtime can derive secret fields and auth transport bindings automatically; explicit auth options still override the spec.
 The OpenAPI runtime infers conservative offset, cursor, and next-URL pagination plans from common query parameters and response schemas, then replays them through the same offline fixture executor used by hand-written runtimes.
 OpenAPI webhook definitions are exposed as webhook `source` operations and validate through operation-scoped `source_event` fixtures plus `handleConnectorRuntimeWebhook`.
