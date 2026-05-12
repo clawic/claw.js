@@ -1,0 +1,196 @@
+# ClawJS tracking modules
+
+This document is the canonical guide to the `tracking-*` family of
+packages: how they are laid out, how to add a new vertical, what the
+HTTP surface looks like, and how clients (Clawix Mac/iOS) talk to it.
+
+## What is a "tracking module"?
+
+A tracking module is an isolated, daemon-hosted vertical that stores
+**observations** about a single domain of user data (sleep, mood,
+workouts, finance, etc.). Each module exposes the same uniform
+HTTP/JSON surface so that any client (Clawix Mac, Clawix iOS, an
+agent, the CLI) can read and write to it without learning a new API per
+vertical.
+
+The canonical list of verticals lives at the repo root in
+[`tracking-registry.json`](../tracking-registry.json). It currently
+declares 80 verticals across 10 categories (Body & Health, Mind &
+Emotions, Time & Productivity, Creative output, Consumption & Leisure,
+Relations & Social, World & Places, Possessions & Identity, Career &
+Money, Meta / Reflection).
+
+## Repository layout
+
+For each vertical with id `<id>`:
+
+```
+packages/clawjs-<id>/       # publishable npm package (@clawjs/<id>)
+├── package.json
+├── tsconfig.json
+└── src/
+    ├── index.ts            # re-exports app/client/config
+    ├── app.ts              # buildXApp() factory using @clawjs/tracking-runtime
+    ├── client.ts           # typed HTTP client (extends TrackingApiClient)
+    ├── config.ts           # loadXConfig() — env + overrides
+    └── catalog.json        # curated system variables
+
+<id>/                       # top-level service directory
+├── package.json            # deps: file:../packages/clawjs-<id>
+├── tsconfig.json
+├── src/
+│   └── bin/
+│       ├── server.ts       # Fastify bootstrap
+│       └── cli.ts          # CLI surface
+└── tests/
+    └── e2e/<id>.e2e.test.ts
+```
+
+Two shared packages do the heavy lifting so the per-vertical packages
+stay thin:
+
+- `packages/clawjs-tracking-core/`: shared types
+  (`Observation`, `CatalogEntry`, `Session`, `Source`, `Unit`,
+  `RegistryEntry`, `StatsResult`, …). No runtime dependencies.
+- `packages/clawjs-tracking-runtime/`: reusable SQLite store,
+  Fastify route builder, typed HTTP client, catalog JSON loader,
+  HealthKit anchor handlers.
+
+## Adding a new vertical
+
+1. Declare it in `tracking-registry.json` with a unique `id`, the
+   category it belongs to, an unused `servicePort`, the
+   `packageName` (`@clawjs/<id>`), and an initial `status` of
+   `planned` (graduate to `alpha` / `stable` later).
+
+2. Run the scaffolder:
+
+   ```bash
+   node scripts/scaffold-tracking-verticals.mjs
+   ```
+
+   It generates the package + service skeleton for every registry entry
+   that does not already have one. Pass `--force` to overwrite the
+   scaffolded files (it never overwrites a hand-curated `catalog.json`
+   that already exists).
+
+3. Curate `packages/clawjs-<id>/src/catalog.json`. The default catalog
+   ships a single free-form text variable so the UI has something to
+   render; replace it with the real variables for the domain (with
+   HealthKit type identifiers when available).
+
+4. Write the e2e test in `<id>/tests/e2e/<id>.e2e.test.ts` using the
+   skeleton produced by the scaffolder. It exercises CRUD against an
+   in-memory Fastify instance.
+
+5. Update Clawix Mac/iOS Life UI: nothing needs to change for verticals
+   that fit the generic 3-pane explorer. Verticals that need a custom
+   UX add a Swift screen file under `clawix/macos/Sources/Clawix/Life/`
+   and `clawix/ios/Sources/Clawix/Life/`.
+
+## HTTP surface
+
+Every vertical exposes the same routes under `/v1/<id>/...`:
+
+```
+GET    /v1/<id>/catalog
+GET    /v1/<id>/variables/:variableId
+POST   /v1/<id>/variables                 # create user variable
+DELETE /v1/<id>/variables/:variableId     # hide if system, delete if user
+POST   /v1/<id>/variables/:variableId/unhide
+
+GET    /v1/<id>/observations              # ?variableId&from&to&source&limit
+POST   /v1/<id>/observations
+POST   /v1/<id>/observations/bulk
+GET    /v1/<id>/observations/:id
+PATCH  /v1/<id>/observations/:id
+DELETE /v1/<id>/observations/:id
+
+GET    /v1/<id>/stats/:variableId         # ?from&to&period=day|week|month
+```
+
+Verticals with `hasSessions: true` in the registry also expose:
+
+```
+GET    /v1/<id>/sessions
+POST   /v1/<id>/sessions
+GET    /v1/<id>/sessions/:id
+PATCH  /v1/<id>/sessions/:id
+DELETE /v1/<id>/sessions/:id
+POST   /v1/<id>/sessions/:sessionId/observations
+```
+
+HealthKit anchor handlers (used by the Clawix iOS bridge to remember
+where each variable left off in the last incremental sync):
+
+```
+GET    /v1/<id>/healthkit/anchor/:variableId
+PUT    /v1/<id>/healthkit/anchor/:variableId   # body: { anchorBlob, lastSyncedAt }
+```
+
+All routes (except `/v1/health`) require an `Authorization: Bearer
+<sharedSecret>` header. The shared secret is sourced from
+`<PREFIX>_SHARED_SECRET` (e.g. `HEALTH_SHARED_SECRET`,
+`TIME_TRACKING_SHARED_SECRET`) or falls back to a dev default.
+
+## Authentication and discovery
+
+Each vertical binds to its own port (see the `servicePort` column of
+`tracking-registry.json`). Clients negotiate the bearer token through
+the Clawix bridge, the same way the existing `user-model` service is
+discovered. iOS uses the QR-encoded host + port from pairing.
+
+## Catalog: system vs user variables
+
+A `CatalogEntry` has an `origin` field that is either `system` (curated
+by ClawJS, ships with each release) or `user` (created by the user at
+runtime). Deleting a system variable hides it (`hidden_system_variables`
+table); deleting a user variable removes it from the SQLite. System
+variables are seeded into the store every time the service boots, so
+the curated catalog stays in sync with the package version.
+
+## Observation values
+
+Observations carry a heterogeneous `value` field. The store records the
+JSON-encoded value plus a `value_numeric` shadow column for fast
+aggregation. Supported value shapes:
+
+- `numeric` → `42`, `36.6`, …
+- `boolean` → `true`, `false`
+- `enum` → string from the variable's `enumValues`
+- `duration` → `numeric` in the unit the variable declares (typically
+  `min`)
+- `text` → string
+- `geo` → `{ lat, lng }`
+- `photo` → `{ photoRef }`
+
+The Clawix Swift clients mirror these shapes in
+`LifeObservationValue`.
+
+## Migration: legacy `iot.sqlite` goals
+
+The legacy `iot.sqlite` collection `goals` is **deprecated** by the new
+`@clawjs/goals` vertical. See
+[`docs/migrations/goals-to-tracking.md`](migrations/goals-to-tracking.md)
+for the one-time migration script and rollback procedure.
+
+## Release flow
+
+Per the existing RELEASING.md rules:
+
+1. Curate the catalog for the verticals graduating to `alpha`.
+2. Run `npm test -w <id>` for each vertical you touched.
+3. `npm run publish:dry-run` from the repo root.
+4. Real publish requires explicit user authorization (see the
+   workspace-private `CLAUDE.md` for the approval gate). The user
+   then bumps `clawix/macos/CLAWJS_VERSION` to the new tag.
+
+## See also
+
+- `packages/clawjs-tracking-core/src/types.ts` for the canonical
+  TypeScript types.
+- `packages/clawjs-tracking-runtime/src/store.ts` for the SQLite
+  schema and CRUD helpers.
+- `packages/clawjs-tracking-runtime/src/routes.ts` for the Fastify
+  route builder shared by every vertical.
+- `packages/clawjs-user-model/` for the pattern this family follows.

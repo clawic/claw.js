@@ -2,17 +2,11 @@
   "domain": "journal",
   "version": "0.1.0",
   "entries": [
-    {
-      "id": "journal.note",
-      "label": "Journal — free-form note",
-      "unit": {
-        "id": "text",
-        "label": "text",
-        "group": "abstract"
-      },
-      "valueType": "text",
-      "category": "general",
-      "description": "Free-form text observation for Journal."
-    }
+    { "id": "journal.morning_pages", "label": "Morning pages", "unit": { "id": "text", "label": "text", "group": "abstract" }, "valueType": "text", "category": "freeform" },
+    { "id": "journal.evening_reflection", "label": "Evening reflection", "unit": { "id": "text", "label": "text", "group": "abstract" }, "valueType": "text", "category": "freeform" },
+    { "id": "journal.three_good_things", "label": "Three good things", "unit": { "id": "text", "label": "text", "group": "abstract" }, "valueType": "text", "category": "prompt" },
+    { "id": "journal.intention", "label": "Daily intention", "unit": { "id": "text", "label": "text", "group": "abstract" }, "valueType": "text", "category": "prompt" },
+    { "id": "journal.lesson", "label": "Lesson of the day", "unit": { "id": "text", "label": "text", "group": "abstract" }, "valueType": "text", "category": "prompt" },
+    { "id": "journal.note", "label": "Free journal note", "unit": { "id": "text", "label": "text", "group": "abstract" }, "valueType": "text", "category": "freeform" }
   ]
 }

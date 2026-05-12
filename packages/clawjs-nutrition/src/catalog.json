@@ -2,17 +2,16 @@
   "domain": "nutrition",
   "version": "0.1.0",
   "entries": [
-    {
-      "id": "nutrition.note",
-      "label": "Nutrition — free-form note",
-      "unit": {
-        "id": "text",
-        "label": "text",
-        "group": "abstract"
-      },
-      "valueType": "text",
-      "category": "general",
-      "description": "Free-form text observation for Nutrition."
-    }
+    { "id": "nutrition.energy", "label": "Energy intake", "unit": { "id": "kcal", "label": "kcal", "group": "energy" }, "valueType": "numeric", "validRange": { "min": 0 }, "category": "macros", "healthkitTypeId": "HKQuantityTypeIdentifierDietaryEnergyConsumed" },
+    { "id": "nutrition.protein", "label": "Protein", "unit": { "id": "g", "label": "g", "group": "mass" }, "valueType": "numeric", "validRange": { "min": 0 }, "category": "macros", "healthkitTypeId": "HKQuantityTypeIdentifierDietaryProtein" },
+    { "id": "nutrition.carbs", "label": "Carbohydrates", "unit": { "id": "g", "label": "g", "group": "mass" }, "valueType": "numeric", "validRange": { "min": 0 }, "category": "macros", "healthkitTypeId": "HKQuantityTypeIdentifierDietaryCarbohydrates" },
+    { "id": "nutrition.fat", "label": "Total fat", "unit": { "id": "g", "label": "g", "group": "mass" }, "valueType": "numeric", "validRange": { "min": 0 }, "category": "macros", "healthkitTypeId": "HKQuantityTypeIdentifierDietaryFatTotal" },
+    { "id": "nutrition.fiber", "label": "Fiber", "unit": { "id": "g", "label": "g", "group": "mass" }, "valueType": "numeric", "validRange": { "min": 0 }, "category": "macros", "healthkitTypeId": "HKQuantityTypeIdentifierDietaryFiber" },
+    { "id": "nutrition.sugar", "label": "Sugar", "unit": { "id": "g", "label": "g", "group": "mass" }, "valueType": "numeric", "validRange": { "min": 0 }, "category": "macros", "healthkitTypeId": "HKQuantityTypeIdentifierDietarySugar" },
+    { "id": "nutrition.sodium", "label": "Sodium", "unit": { "id": "mg", "label": "mg", "group": "mass" }, "valueType": "numeric", "validRange": { "min": 0 }, "category": "minerals", "healthkitTypeId": "HKQuantityTypeIdentifierDietarySodium" },
+    { "id": "nutrition.caffeine", "label": "Caffeine", "unit": { "id": "mg", "label": "mg", "group": "mass" }, "valueType": "numeric", "validRange": { "min": 0 }, "category": "stimulants", "healthkitTypeId": "HKQuantityTypeIdentifierDietaryCaffeine" },
+    { "id": "nutrition.meal_name", "label": "Meal name", "unit": { "id": "text", "label": "name", "group": "abstract" }, "valueType": "text", "category": "meal" },
+    { "id": "nutrition.meal_type", "label": "Meal type", "unit": { "id": "text", "label": "type", "group": "abstract" }, "valueType": "enum", "enumValues": ["breakfast", "lunch", "dinner", "snack", "drink"], "category": "meal" },
+    { "id": "nutrition.note", "label": "Nutrition note", "unit": { "id": "text", "label": "text", "group": "abstract" }, "valueType": "text", "category": "general" }
   ]
 }

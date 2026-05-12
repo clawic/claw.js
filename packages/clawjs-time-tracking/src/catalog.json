@@ -2,17 +2,10 @@
   "domain": "time-tracking",
   "version": "0.1.0",
   "entries": [
-    {
-      "id": "time-tracking.note",
-      "label": "Time tracking — free-form note",
-      "unit": {
-        "id": "text",
-        "label": "text",
-        "group": "abstract"
-      },
-      "valueType": "text",
-      "category": "general",
-      "description": "Free-form text observation for Time tracking."
-    }
+    { "id": "time-tracking.category", "label": "Activity category", "unit": { "id": "text", "label": "category", "group": "abstract" }, "valueType": "enum", "enumValues": ["code", "read", "write", "design", "study", "deep_work", "shallow_work", "meeting", "email", "admin", "gym", "cook", "walk", "errand", "play", "rest", "other"], "category": "block" },
+    { "id": "time-tracking.duration", "label": "Block duration", "unit": { "id": "min", "label": "min", "group": "time" }, "valueType": "duration", "validRange": { "min": 0 }, "category": "block" },
+    { "id": "time-tracking.tags", "label": "Tags", "unit": { "id": "text", "label": "tags", "group": "abstract" }, "valueType": "text", "category": "block" },
+    { "id": "time-tracking.focus_rating", "label": "Focus rating", "unit": { "id": "score:1-5", "label": "score 1-5", "group": "score" }, "valueType": "numeric", "validRange": { "min": 1, "max": 5 }, "category": "subjective" },
+    { "id": "time-tracking.note", "label": "Block note", "unit": { "id": "text", "label": "text", "group": "abstract" }, "valueType": "text", "category": "general" }
   ]
 }
