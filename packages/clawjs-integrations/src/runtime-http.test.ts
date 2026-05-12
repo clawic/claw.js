@@ -130,6 +130,25 @@ describe("connector runtime http transport", () => {
     assert.equal(body.get("metadata"), "{\"source\":\"fixture\"}");
   });
 
+  it("builds requests with whole JSON body values", () => {
+    const request = buildConnectorRuntimeFetchRequest({
+      baseUrl: "https://api.example.invalid/",
+      secrets: {},
+      plan: {
+        method: "POST",
+        endpoint: "/batches",
+        auth: [],
+        headers: { accept: "application/json" },
+        body: {},
+        bodyValue: [{ name: "one" }, { name: "two" }],
+      },
+    });
+
+    assert.equal(request.url, "https://api.example.invalid/batches");
+    assert.equal(new Headers(request.init.headers).get("content-type"), "application/json");
+    assert.equal(request.init.body, "[{\"name\":\"one\"},{\"name\":\"two\"}]");
+  });
+
   it("executes plans through an injected fetch and parses JSON", async () => {
     const calls: { input: string | URL | Request; init?: RequestInit }[] = [];
     const response = await executeConnectorRuntimeRequestPlan({

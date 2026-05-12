@@ -616,6 +616,7 @@ function isRequestPlan(value: ConnectorRuntimeRequestPlan | undefined): boolean 
     && isStringRecord(value.headers)
     && isOptionalJsonRecord(value.query)
     && isRequiredJsonRecord(value.body)
+    && (value.bodyValue === undefined || isIntegrationJson(value.bodyValue))
     && isOutputSchema(value.responseSchema)
   );
 }

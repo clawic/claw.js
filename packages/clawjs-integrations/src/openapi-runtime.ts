@@ -145,6 +145,7 @@ interface OpenApiConnectorParameterBinding {
 interface OpenApiConnectorBodyBinding {
   fieldName: string;
   sourceName: string;
+  wholeBody?: boolean;
 }
 
 export interface OpenApiConnectorRuntimeOptions {
@@ -277,6 +278,7 @@ function buildOpenApiRequestPlan(
   const query: Record<string, IntegrationJson> = {};
   const querySerialization: NonNullable<ConnectorRuntimeRequestPlan["querySerialization"]> = {};
   const body: Record<string, IntegrationJson> = {};
+  let bodyValue: IntegrationJson | undefined;
   let endpoint = metadata.path;
   for (const parameter of metadata.parameters) {
     const value = values[parameter.fieldName];
@@ -293,6 +295,10 @@ function buildOpenApiRequestPlan(
   for (const field of metadata.bodyFields) {
     const value = values[field.fieldName];
     if (value == null || value === "") continue;
+    if (field.wholeBody) {
+      bodyValue = value;
+      continue;
+    }
     body[field.sourceName] = value;
   }
   return {
@@ -310,6 +316,7 @@ function buildOpenApiRequestPlan(
     ...(Object.keys(query).length > 0 ? { query } : {}),
     ...(Object.keys(querySerialization).length > 0 ? { querySerialization } : {}),
     body,
+    ...(bodyValue === undefined ? {} : { bodyValue }),
     ...(metadata.bodyEncoding ? { bodyEncoding: metadata.bodyEncoding } : {}),
     ...(metadata.pagination ? { pagination: metadata.pagination } : {}),
     responseSchema: metadata.responseSchema,
@@ -715,7 +722,20 @@ function openApiBodyBindings(
 ): Array<OpenApiConnectorBodyBinding & { field: ConnectorFieldDefinition }> {
   const schema = requestBodySchema(document, requestBody);
   if (!schema) return [];
+  const resolvedRequestBody = resolveOpenApiRequestBody(document, requestBody);
   const properties = schema.properties ?? {};
+  if (Object.keys(properties).length === 0) {
+    const fieldName = uniqueFieldName("body", "body", usedFieldNames);
+    return [{
+      fieldName,
+      sourceName: fieldName,
+      wholeBody: true,
+      field: {
+        ...fieldFromSchema(document, fieldName, schema),
+        optional: resolvedRequestBody?.required !== true,
+      },
+    }];
+  }
   const required = new Set(Array.isArray(schema.required) ? schema.required.filter((item): item is string => typeof item === "string") : []);
   return Object.entries(properties).flatMap(([sourceName, propertySchema]) => {
     if (!propertySchema) return [];

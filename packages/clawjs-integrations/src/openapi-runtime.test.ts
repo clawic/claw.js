@@ -482,6 +482,82 @@ describe("OpenAPI connector runtime", () => {
     });
   });
 
+  it("maps whole OpenAPI request bodies when the schema has no object properties", () => {
+    const document = {
+      ...FIXTURE_OPENAPI,
+      paths: {
+        "/batches": {
+          post: {
+            operationId: "createBatch",
+            summary: "Create batch",
+            requestBody: {
+              required: true,
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: { type: "string" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            responses: {
+              "200": {
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      required: ["ok"],
+                      properties: {
+                        ok: { type: "boolean" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const options = {
+      appId: "fixture_whole_body",
+      authFieldName: "apiKey",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(document, options)];
+    const operation = catalog.apps[0]?.operations[0];
+    assert.ok(operation);
+
+    assert.deepEqual(operation.fields.map((field) => [field.name, field.type, field.optional]), [
+      ["body", "array", false],
+    ]);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, {
+      body: [{ name: "one" }, { name: "two" }],
+    }, { registry }).requestPlan, {
+      method: "POST",
+      endpoint: "/batches",
+      auth: [{ type: "secret", field: "apiKey", placement: "bearer" }],
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+      },
+      body: {},
+      bodyValue: [{ name: "one" }, { name: "two" }],
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["ok"],
+      },
+    });
+  });
+
   it("preserves OpenAPI query serialization hints", () => {
     const document = {
       ...FIXTURE_OPENAPI,
