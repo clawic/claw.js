@@ -26,6 +26,7 @@ interface CatalogSummary {
   hybridSources: number;
   statefulSources: number;
   dynamicPropOperations: number;
+  dynamicPropFields: number;
   dynamicOptionFields: number;
   methodOperations: number;
 }
@@ -64,6 +65,13 @@ interface CatalogOperation {
     hasRun: boolean;
     hasHooks: boolean;
     hasAdditionalProps: boolean;
+    additionalProps?: {
+      mode: "object" | "function";
+      fieldNames: string[];
+      contextKeys: string[];
+      usesPreviousProps: boolean;
+      usesThis: boolean;
+    };
     hasMethods: boolean;
     methodNames?: string[];
     dedupe?: string;
@@ -318,6 +326,7 @@ export default function ConnectorsPage() {
             <span>{catalog?.summary.webhookSources ?? 0} webhooks</span>
             <span>{catalog?.summary.statefulSources ?? 0} stateful</span>
             <span>{catalog?.summary.dynamicPropOperations ?? 0} dynamic props</span>
+            <span>{catalog?.summary.dynamicPropFields ?? 0} dynamic fields</span>
             <span>{catalog?.summary.dynamicOptionFields ?? 0} dynamic options</span>
           </div>
           {catalog && !catalog.configured ? (
@@ -394,7 +403,7 @@ export default function ConnectorsPage() {
                     <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-mono text-muted-foreground">
                       <span>run={String(selected.operation.runtime.hasRun)}</span>
                       <span>hooks={String(selected.operation.runtime.hasHooks)}</span>
-                      <span>dynamicProps={String(selected.operation.runtime.hasAdditionalProps)}</span>
+                      <span>dynamicProps={selected.operation.runtime.additionalProps?.fieldNames.length || String(selected.operation.runtime.hasAdditionalProps)}</span>
                       <span>methods={selected.operation.runtime.methodNames?.length || String(selected.operation.runtime.hasMethods)}</span>
                       {selected.operation.runtime.dedupe ? <span>dedupe={selected.operation.runtime.dedupe}</span> : null}
                     </div>
