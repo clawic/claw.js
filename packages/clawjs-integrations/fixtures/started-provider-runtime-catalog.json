@@ -2,6 +2,54 @@
   "version": 1,
   "apps": [
     {
+      "id": "discord",
+      "name": "Discord",
+      "authFieldNames": ["discordBotToken"],
+      "fields": [
+        {
+          "name": "discordBotToken",
+          "type": "app",
+          "optional": false,
+          "secret": true
+        }
+      ],
+      "operations": [
+        {
+          "id": "discord.action.get-channel",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Channel",
+          "fields": [
+            { "name": "channelId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["discordBotToken"]
+        },
+        {
+          "id": "discord.action.list-guild-channels",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Guild Channels",
+          "fields": [
+            { "name": "guildId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["discordBotToken"]
+        },
+        {
+          "id": "discord.action.send-message",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Send Message",
+          "fields": [
+            { "name": "channelId", "type": "string", "optional": false },
+            { "name": "content", "type": "string", "optional": false },
+            { "name": "guildId", "type": "string", "optional": true },
+            { "name": "messageId", "type": "string", "optional": true }
+          ],
+          "authFieldNames": ["discordBotToken"]
+        }
+      ]
+    },
+    {
       "id": "github",
       "name": "GitHub",
       "authFieldNames": ["githubToken"],
