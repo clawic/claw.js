@@ -57,6 +57,7 @@ function readApp(appDir, fallbackId) {
     id,
     name,
     ...optionalString("description", cleanText(firstMatch(source, /\bdescription:\s*["'`]([^"'`]+)["'`]/))),
+    ...optionalString("packageVersion", packageJson?.version),
     ...optionalString("authType", firstMatch(source, /\bauth:\s*{[^}]*\btype:\s*["']([^"']+)["']/s)),
     authFieldNames: appAuthFields,
     fields,

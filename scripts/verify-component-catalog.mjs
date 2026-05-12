@@ -23,6 +23,14 @@ const scrubPath = (value) => value.split("/").map(scrub).join("/");
 const scrubBrand = (value) => value.replace(new RegExp(String.fromCharCode(80, 105, 112, 101, 100, 114, 101, 97, 109), "gi"), "component");
 const firstMatch = (source, regex) => regex.exec(source)?.[1];
 const readText = (filePath) => fs.readFileSync(filePath, "utf8");
+const readPackageJson = (filePath) => {
+  if (!fs.existsSync(filePath)) return null;
+  try {
+    return JSON.parse(readText(filePath));
+  } catch {
+    return null;
+  }
+};
 const countDefaults = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.default !== undefined).length : 0;
 const countOptions = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && Array.isArray(field.options) && field.options.length > 0).length : 0;
 const countDynamicOptions = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && isRecord(field.dynamicOptions)).length : 0;
@@ -47,7 +55,7 @@ const summary = summarize(catalog.apps ?? []);
 
 for (const error of errors.slice(0, maxErrors)) console.error(`FAIL ${error}`);
 if (errors.length > maxErrors) console.error(`FAIL ... ${errors.length - maxErrors} additional errors hidden`);
-console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} hidden=${summary.hiddenFields} disabled=${summary.disabledFields} reload=${summary.reloadFields} bounded=${summary.boundedFields} placeholders=${summary.placeholderFields} query=${summary.queryFields} labels=${summary.labelFields} alerts=${summary.alertFields} readAccess=${summary.readAccessFields} writeAccess=${summary.writeAccessFields} synced=${summary.syncedFields} customResponse=${summary.customResponseFields} propDefinitions=${summary.propDefinitionFields} contextualProps=${summary.contextualPropFields} dynamicOptions=${summary.dynamicOptionFields} sampleEvents=${summary.sampleEventSources} eventSummarySources=${summary.eventSummarySources} eventSummaryTemplates=${summary.eventSummaryTemplates} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} dynamicPropFields=${summary.dynamicPropFields} methods=${summary.methodOperations}`);
+console.error(`apps=${summary.apps} versionedApps=${summary.versionedApps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} hidden=${summary.hiddenFields} disabled=${summary.disabledFields} reload=${summary.reloadFields} bounded=${summary.boundedFields} placeholders=${summary.placeholderFields} query=${summary.queryFields} labels=${summary.labelFields} alerts=${summary.alertFields} readAccess=${summary.readAccessFields} writeAccess=${summary.writeAccessFields} synced=${summary.syncedFields} customResponse=${summary.customResponseFields} propDefinitions=${summary.propDefinitionFields} contextualProps=${summary.contextualPropFields} dynamicOptions=${summary.dynamicOptionFields} sampleEvents=${summary.sampleEventSources} eventSummarySources=${summary.eventSummarySources} eventSummaryTemplates=${summary.eventSummaryTemplates} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} dynamicPropFields=${summary.dynamicPropFields} methods=${summary.methodOperations}`);
 if (errors.length > 0) {
   console.error(`catalog verification failed with ${errors.length} error(s)`);
   process.exit(1);
@@ -63,10 +71,17 @@ function readExpected(root) {
     if (!appFile) continue;
     const appPath = appFile;
     const source = readText(appPath);
+    const packageJson = readPackageJson(path.join(appDir, "package.json"));
     const id = scrub(firstMatch(source, /\bapp:\s*["']([^"']+)["']/) ?? entry.name);
     const fields = readFields(source, id, [], appPath);
     const auth = fields.filter((field) => field.secret).map((field) => field.name);
-    const app = { fields: names(fields), fieldStats: summarizeFields(fields), auth: new Set(auth), operations: new Map() };
+    const app = {
+      packageVersion: scrub(packageJson?.version),
+      fields: names(fields),
+      fieldStats: summarizeFields(fields),
+      auth: new Set(auth),
+      operations: new Map(),
+    };
     for (const kind of ["action", "source"]) {
       for (const operation of readExpectedOperations(appDir, id, kind, auth, fields)) app.operations.set(operation.id, operation);
     }
@@ -112,6 +127,7 @@ function verify(catalog, expectedApps) {
   const expectedSummary = summarizeExpected(expectedApps);
   const forbidden = new RegExp(String.fromCharCode(80, 105, 112, 101, 100, 114, 101, 97, 109), "i");
   if (forbidden.test(JSON.stringify(catalog))) errors.push("catalog contains forbidden upstream brand text");
+  if (actualSummary.versionedApps !== expectedSummary.versionedApps) errors.push(`versionedApps ${actualSummary.versionedApps} expected ${expectedSummary.versionedApps}`);
   if (actualSummary.defaults !== expectedSummary.defaults) errors.push(`defaults ${actualSummary.defaults} expected ${expectedSummary.defaults}`);
   if (actualSummary.managedFields !== expectedSummary.managedFields) errors.push(`managedFields ${actualSummary.managedFields} expected ${expectedSummary.managedFields}`);
   if (actualSummary.options !== expectedSummary.options) errors.push(`options ${actualSummary.options} expected ${expectedSummary.options}`);
@@ -176,6 +192,10 @@ function verify(catalog, expectedApps) {
     if (!app) {
       errors.push(`missing app ${id}`);
       continue;
+    }
+    const actualVersion = typeof app.packageVersion === "string" ? app.packageVersion : undefined;
+    if (actualVersion !== expectedApp.packageVersion) {
+      errors.push(`app ${id} packageVersion ${actualVersion ?? "<missing>"} expected ${expectedApp.packageVersion ?? "<missing>"}`);
     }
     compareSets(`app ${id} fields`, expectedApp.fields, new Set(fieldNames(app.fields)), errors);
     compareSets(`app ${id} auth fields`, expectedApp.auth, new Set(strings(app.authFieldNames)), errors);
@@ -371,6 +391,7 @@ function summarize(apps) {
   return apps.reduce((summary, app) => {
     if (!isRecord(app)) return summary;
     summary.apps += 1;
+    if (typeof app.packageVersion === "string" && app.packageVersion.trim()) summary.versionedApps += 1;
     summary.fields += Array.isArray(app.fields) ? app.fields.length : 0;
     summary.authFields += Array.isArray(app.authFieldNames) ? app.authFieldNames.length : 0;
     summary.managedFields += Array.isArray(app.fields) ? app.fields.filter((field) => field.managed).length : 0;
@@ -438,6 +459,7 @@ function summarize(apps) {
     return summary;
   }, {
     apps: 0,
+    versionedApps: 0,
     actions: 0,
     sources: 0,
     fields: 0,
@@ -482,6 +504,7 @@ function summarize(apps) {
 
 function summarizeExpected(apps) {
   const summary = {
+    versionedApps: 0,
     defaults: 0,
     options: 0,
     managedFields: 0,
@@ -519,6 +542,7 @@ function summarizeExpected(apps) {
     methodOperations: 0,
   };
   for (const app of apps.values()) {
+    if (app.packageVersion) summary.versionedApps += 1;
     summary.defaults += app.fieldStats.defaults;
     summary.options += app.fieldStats.options;
     summary.hiddenFields += app.fieldStats.hidden;
