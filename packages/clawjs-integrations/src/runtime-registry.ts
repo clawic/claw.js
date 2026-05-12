@@ -16,6 +16,10 @@ import {
   isGitHubActionOperationSupported,
 } from "./github-operation-executor.ts";
 import {
+  buildDiscordOperationRequest,
+  isDiscordActionOperationSupported,
+} from "./discord-operation-executor.ts";
+import {
   buildWhatsAppOperationRequest,
   isWhatsAppActionOperationSupported,
 } from "./whatsapp-operation-executor.ts";
@@ -255,6 +259,43 @@ const GITHUB_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
   },
 ];
 
+const DISCORD_ACTION_EVIDENCE = [
+  "packages/clawjs-integrations/src/discord-operation-executor.test.ts",
+];
+
+const DISCORD_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
+  {
+    kind: "request",
+    operationId: "discord.action.get-channel",
+    path: "packages/clawjs-integrations/fixtures/discord-get-channel-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "discord.action.get-channel",
+    path: "packages/clawjs-integrations/fixtures/discord-get-channel-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "discord.action.list-guild-channels",
+    path: "packages/clawjs-integrations/fixtures/discord-list-guild-channels-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "discord.action.list-guild-channels",
+    path: "packages/clawjs-integrations/fixtures/discord-list-guild-channels-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "discord.action.send-message",
+    path: "packages/clawjs-integrations/fixtures/discord-send-message-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "discord.action.send-message",
+    path: "packages/clawjs-integrations/fixtures/discord-send-message-response.json",
+  },
+];
+
 const WHATSAPP_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/whatsapp-operation-executor.test.ts",
 ];
@@ -300,6 +341,20 @@ const WHATSAPP_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = [
 ];
 
 export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation[] = [
+  {
+    appId: "discord",
+    kind: "action",
+    executorId: "discord.channel-api.http",
+    baseUrl: "https://discord.com/api/v10/",
+    offlineValidated: true,
+    evidence: DISCORD_ACTION_EVIDENCE,
+    fixtures: DISCORD_ACTION_FIXTURES,
+    planKinds: ["request"],
+    supports: (operation) => isDiscordActionOperationSupported(operation.id),
+    buildPlan: (operation, values) => ({
+      requestPlan: buildDiscordOperationRequest(operation, values),
+    }),
+  },
   {
     appId: "github",
     kind: "action",

@@ -3,6 +3,10 @@ import { describe, it } from "node:test";
 
 import { normalizeConnectorCatalog } from "./catalog.ts";
 import {
+  verifyConnectorRuntimeCoverage,
+  verifyConnectorRuntimeOfflineExecutions,
+} from "./runtime-coverage.ts";
+import {
   buildDiscordOperationRequest,
 } from "./discord-operation-executor.ts";
 
@@ -112,6 +116,19 @@ describe("discord operation runtime", () => {
         requiredPaths: ["id", "channel_id"],
       },
     });
+  });
+
+  it("covers Discord channel operations with operation-scoped offline fixtures", async () => {
+    const coverage = verifyConnectorRuntimeCoverage(DISCORD_CATALOG);
+    assert.equal(coverage.summary.missing, 0);
+    assert.equal(coverage.summary.implemented, 3);
+
+    const offline = await verifyConnectorRuntimeOfflineExecutions(DISCORD_CATALOG);
+    assert.deepEqual(offline.results.map((result) => result.operationId).sort(), [
+      "discord.action.get-channel",
+      "discord.action.list-guild-channels",
+      "discord.action.send-message",
+    ]);
   });
 });
 
