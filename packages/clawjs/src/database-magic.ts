@@ -13,6 +13,7 @@ import {
   BUILTIN_COLLECTIONS_BY_ALIAS,
   BUILTIN_COLLECTIONS_BY_NAME,
 } from "@clawjs/core";
+import { openMainDataStore } from "./v1-data.ts";
 
 export const DB_EXIT_OK = 0;
 export const DB_EXIT_FAILURE = 1;
@@ -92,11 +93,7 @@ class LocalDbRuntime implements DbRuntime {
 
   constructor(workspaceRoot: string) {
     this.workspaceRoot = workspaceRoot;
-    const dataRoot = path.join(workspaceRoot, ".clawjs", "data");
-    this.store = new DatabaseServiceStore(
-      path.join(dataRoot, "database.sqlite"),
-      path.join(dataRoot, "database-files"),
-    );
+    this.store = openMainDataStore();
   }
 
   async ensureNamespace(namespaceId: string): Promise<void> {

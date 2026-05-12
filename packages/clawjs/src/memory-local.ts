@@ -1,5 +1,3 @@
-import path from "path";
-
 import {
   DatabaseServiceStore,
   type FieldDefinition,
@@ -7,6 +5,7 @@ import {
   type RecordEnvelope,
 } from "@clawjs/database";
 import { redactSecrets } from "@clawjs/claw";
+import { openMainDataStore } from "./v1-data.ts";
 
 export const MEMORY_EXIT_OK = 0;
 export const MEMORY_EXIT_FAILURE = 1;
@@ -169,8 +168,8 @@ export async function runMemoryCli(input: MemoryCliInput): Promise<number> {
 }
 
 function openStore(workspaceRoot: string): DatabaseServiceStore {
-  const dataRoot = path.join(workspaceRoot, ".clawjs", "data");
-  return new DatabaseServiceStore(path.join(dataRoot, "database.sqlite"), path.join(dataRoot, "database-files"));
+  void workspaceRoot;
+  return openMainDataStore();
 }
 
 function ensureMemoryStore(input: MemoryCliInput): DatabaseServiceStore {

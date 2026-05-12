@@ -54,6 +54,7 @@ import { runSlidesCli } from "./slides.ts";
 import { runStyleCli } from "./styles/index.ts";
 import { runTemplateCli } from "./templates/index.ts";
 import { runReferenceCli } from "./references/index.ts";
+import { runV1DataCli } from "./v1-data.ts";
 
 export interface CliContext {
   stdout: NodeJS.WritableStream;
@@ -238,6 +239,11 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} reminders after`,
     `  ${binName} watch list|get|enable|disable|delete`,
     `  ${binName} memory save|list|get|update|delete|search|context|status|capabilities`,
+    `  ${binName} data doctor|backup|restore|reset`,
+    `  ${binName} app-state get|set|snapshot`,
+    `  ${binName} life catalog|seed-catalog|observe|list|delete`,
+    `  ${binName} agents|skills|connections list|upsert`,
+    `  ${binName} apps|design list|upsert`,
     `  ${binName} context prepare|list|show|archive`,
     `  ${binName} outcomes add|capture|list|show|link|archive`,
     `  ${binName} commitments capture|add|list|show|fulfill|miss|cancel|link`,
@@ -265,7 +271,7 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} preview share --url http://127.0.0.1:PORT [--mode lan|tailscale|cloudflare]`,
     `  ${binName} browser status|ensure|share --relay-url URL --access-token TOKEN --tenant-id ID --agent-id ID --workspace-id ID`,
     `  ${binName} telegram connect|status|webhook set|clear|polling start|stop|commands set|get|chats list|inspect|send`,
-    `  ${binName} sessions create|list|search|read|stream|generate-title`,
+    `  ${binName} sessions create|list|search|read|stream|generate-title|index|get`,
     `  ${binName} documents list|read|search|upload|register|download`,
     `  ${binName} media list|search|read|download|share create|revoke|list`,
     `  ${binName} slides create|add|validate|render|share|themes|layouts`,
@@ -5887,6 +5893,20 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "code") {
     return await runCodeCli({ positionals, flags, argv, context, wantsJson, binName });
+  }
+
+  {
+    const v1DataExitCode = await runV1DataCli({
+      argv,
+      positionals,
+      flags,
+      stdout: context.stdout,
+      stderr: context.stderr,
+      wantsJson,
+      binName,
+      cwd: context.cwd,
+    });
+    if (v1DataExitCode !== null) return v1DataExitCode;
   }
 
   if (wantsHelp || group === "help") {

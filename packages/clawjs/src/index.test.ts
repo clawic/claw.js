@@ -555,6 +555,114 @@ test("runCli prints help and exits successfully", async () => {
   assert.equal(stdout.getOutput().trim(), CLI_USAGE);
   assert.match(stdout.getOutput(), /Primary workflow:/);
   assert.match(stdout.getOutput(), /db <collection> <title>/);
+  assert.match(stdout.getOutput(), /data doctor\|backup\|restore\|reset/);
+});
+
+test("runCli manages V1 main data app-state and Life domains in the canonical sqlite", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v1-data-"));
+  await withPatchedEnv({
+    CLAWJS_MAIN_DATA_DIR: tempRoot,
+    CLAWIX_CLAWJS_DATA_DIR: undefined,
+    CLAWJS_MAIN_DB_PATH: undefined,
+    CLAWJS_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    DATABASE_FILES_DIR: undefined,
+  }, async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v1-data-cwd-"));
+    const doctorStdout = captureStream();
+    assert.equal(await runCli(["data", "doctor", "--json"], {
+      stdout: doctorStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const doctor = JSON.parse(doctorStdout.getOutput()) as { dbPath: string; policy: { writer: string }; tables: string[] };
+    assert.equal(doctor.dbPath, path.join(tempRoot, "clawjs.sqlite"));
+    assert.equal(doctor.policy.writer, "clawjs-core");
+    assert.ok(doctor.tables.includes("app_state"));
+    assert.ok(doctor.tables.includes("life_observations"));
+
+    const setStdout = captureStream();
+    assert.equal(await runCli(["app-state", "set", "composer.lastMode", "--value", "voice", "--json"], {
+      stdout: setStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.equal(JSON.parse(setStdout.getOutput()).value, "voice");
+
+    const catalogPath = path.join(cwd, "life-catalog.json");
+    fs.writeFileSync(catalogPath, JSON.stringify({
+      vertical: { label: "Health", category: "life", version: "1" },
+      variables: [{ id: "health.steps", label: "Steps", valueType: "number", unit: { id: "count" } }],
+    }));
+    assert.equal(await runCli(["life", "seed-catalog", "--vertical", "health", "--file", catalogPath, "--json"], {
+      stdout: captureStream().stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+
+    const observeStdout = captureStream();
+    assert.equal(await runCli(["life", "observe", "--variable", "health.steps", "--value", "1200", "--json"], {
+      stdout: observeStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const observation = JSON.parse(observeStdout.getOutput()) as { variableId: string; value: number };
+    assert.equal(observation.variableId, "health.steps");
+    assert.equal(observation.value, 1200);
+
+    const listStdout = captureStream();
+    assert.equal(await runCli(["life", "list", "--variable", "health.steps", "--json"], {
+      stdout: listStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const list = JSON.parse(listStdout.getOutput()) as { items: Array<{ variableId: string; value: number }> };
+    assert.equal(list.items.length, 1);
+    assert.equal(list.items[0]?.variableId, "health.steps");
+  });
+});
+
+test("runCli indexes external Codex session artifacts without owning their raw bodies", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v1-sessions-"));
+  await withPatchedEnv({
+    CLAWJS_MAIN_DATA_DIR: path.join(tempRoot, "data"),
+    CLAWIX_CLAWJS_DATA_DIR: undefined,
+    CLAWJS_MAIN_DB_PATH: undefined,
+    CLAWJS_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    DATABASE_FILES_DIR: undefined,
+  }, async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v1-sessions-cwd-"));
+    const sessionsRoot = path.join(tempRoot, "codex-sessions");
+    fs.mkdirSync(sessionsRoot, { recursive: true });
+    const sessionId = "11111111-2222-4333-8444-555555555555";
+    const artifactPath = path.join(sessionsRoot, `rollout-${sessionId}.jsonl`);
+    fs.writeFileSync(artifactPath, [
+      JSON.stringify({ type: "session_meta", payload: { id: sessionId, cwd, timestamp: "2026-05-12T10:00:00.000Z" } }),
+      JSON.stringify({ type: "event_msg", payload: { type: "user_message", message: "Index the large rollout and preserve raw JSONL outside sqlite" } }),
+      "",
+    ].join("\n"));
+
+    const indexStdout = captureStream();
+    assert.equal(await runCli(["sessions", "index", "--root", sessionsRoot, "--json"], {
+      stdout: indexStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.equal(JSON.parse(indexStdout.getOutput()).indexed, 1);
+
+    const getStdout = captureStream();
+    assert.equal(await runCli(["sessions", "get", sessionId, "--json"], {
+      stdout: getStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const row = JSON.parse(getStdout.getOutput()) as { artifactPath: string; source: string; snippet: string; metadata: { artifactKind: string } };
+    assert.equal(row.artifactPath, artifactPath);
+    assert.equal(row.source, "codex");
+    assert.match(row.snippet, /preserve raw JSONL outside sqlite/);
+    assert.equal(row.metadata.artifactKind, "codex-rollout");
+  });
 });
 
 test("runCli prints db-specific help and database admin help", async () => {
