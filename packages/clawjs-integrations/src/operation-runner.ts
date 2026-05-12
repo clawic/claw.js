@@ -3,8 +3,13 @@ import {
   type ConnectorCatalogError,
 } from "./catalog.ts";
 import {
+  buildConnectorOperationRuntimePlan,
+  type ConnectorOperationRuntimePlan,
+} from "./runtime-coverage.ts";
+import {
   createConnectorOperationExecutor,
   type ConnectorRuntimeExecutorOptions,
+  type ConnectorRuntimeImplementation,
 } from "./runtime-registry.ts";
 import type {
   ConnectorCatalog,
@@ -34,6 +39,7 @@ export interface RunConnectorOperationOptions {
   resolveSecret?: ConnectorSecretResolver;
   executor?: ConnectorExecutor;
   runtimeExecutorOptions?: ConnectorRuntimeExecutorOptions;
+  runtimeRegistry?: readonly ConnectorRuntimeImplementation[];
 }
 
 export interface ConnectorOperationDryRun {
@@ -46,6 +52,7 @@ export interface ConnectorOperationDryRun {
   invalidFields: string[];
   values: Record<string, IntegrationJson>;
   secretRefs: Record<string, string>;
+  runtime?: ConnectorOperationRuntimePlan;
 }
 
 export interface ConnectorOperationRunResult {
@@ -83,13 +90,14 @@ export async function runConnectorOperation(
       invalidFields,
       values: redactSecretValues(found.operation.fields, values),
       secretRefs,
+      runtime: buildConnectorOperationRuntimePlan(found.operation, values, { registry: options.runtimeRegistry }),
     };
   }
 
   if (missingFields.length > 0 || missingSecrets.length > 0 || invalidFields.length > 0) {
     throw new Error(`Connector operation is missing or invalid input: ${[...missingFields, ...missingSecrets, ...invalidFields].join(", ")}`);
   }
-  const executor = options.executor ?? createConnectorOperationExecutor(found.operation, options.runtimeExecutorOptions);
+  const executor = options.executor ?? createConnectorOperationExecutor(found.operation, options.runtimeExecutorOptions, options.runtimeRegistry);
   if (!executor) {
     throw new Error("Connector operation execution requires an explicit executor or registered runtime executor.");
   }

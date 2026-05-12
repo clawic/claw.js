@@ -13,6 +13,7 @@ import {
   runConnectorSource,
   sourceSubscriptionFromPlan,
 } from "./source-runner.ts";
+import type { ConnectorRuntimeImplementation } from "./runtime-registry.ts";
 import type { ConnectorCatalog } from "./types.ts";
 
 function fixtureCatalog(): ConnectorCatalog {
@@ -214,6 +215,58 @@ describe("connector catalog", () => {
     assert.deepEqual(dryRun.values, { channel: "general", silent: false });
   });
 
+  it("includes registered runtime request plans in operation dry-runs", async () => {
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "chat_service",
+      kind: "action",
+      executorId: "chat.action.http",
+      baseUrl: "https://api.example.invalid/",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/catalog.test.ts"],
+      fixtures: [
+        { kind: "request", path: "packages/clawjs-integrations/fixtures/fixture-action-request.json" },
+        { kind: "response", path: "packages/clawjs-integrations/fixtures/fixture-action-response.json" },
+      ],
+      planKinds: ["request"],
+      supports: (operation) => operation.id === "chat_service.action.send-message",
+      buildPlan: (operation, values) => ({
+        requestPlan: {
+          method: "POST",
+          endpoint: "messages",
+          auth: operation.authFieldNames.map((field) => ({ type: "secret", field, placement: "bearer" })),
+          body: { channel: values.channel ?? null, text: values.text ?? null },
+          responseSchema: { type: "object" },
+        },
+      }),
+    }];
+
+    const dryRun = await runConnectorOperation({
+      catalog: fixtureCatalog(),
+      operationId: "chat_service.action.send-message",
+      input: {
+        values: { channel: "general", workspace: { id: "workspace_1" }, text: "hello" },
+        secretRefs: { bot: "secret://bot", license: "secret://license" },
+      },
+      runtimeRegistry: registry,
+      resolveSecret: () => {
+        throw new Error("dry-run must not resolve secrets");
+      },
+    });
+
+    assert.equal(dryRun.status, "dry_run");
+    assert.deepEqual(dryRun.missingSecrets, []);
+    assert.deepEqual(dryRun.runtime?.requestPlan, {
+      method: "POST",
+      endpoint: "messages",
+      auth: [
+        { type: "secret", field: "bot", placement: "bearer" },
+        { type: "secret", field: "license", placement: "bearer" },
+      ],
+      body: { channel: "general", text: "hello" },
+      responseSchema: { type: "object" },
+    });
+  });
+
   it("reports invalid option and range values without executing", async () => {
     const dryRun = await runConnectorOperation({
       catalog: fixtureCatalog(),
@@ -280,6 +333,68 @@ describe("connector catalog", () => {
       { name: "db", type: "$.service.db", role: "service_db" },
       { name: "http", type: "$.interface.http", role: "http", customResponse: true },
     ]);
+  });
+
+  it("includes registered runtime source plans in source dry-runs", async () => {
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "chat_service",
+      kind: "source",
+      executorId: "chat.source.http",
+      baseUrl: "https://api.example.invalid/",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/catalog.test.ts"],
+      fixtures: [
+        { kind: "request", path: "packages/clawjs-integrations/fixtures/fixture-action-request.json" },
+        { kind: "source_event", path: "packages/clawjs-integrations/fixtures/fixture-action-response.json" },
+      ],
+      planKinds: ["request", "source"],
+      supports: (operation) => operation.id === "chat_service.source.new-message",
+      buildPlan: (operation, values) => ({
+        requestPlan: {
+          method: "GET",
+          endpoint: "messages",
+          auth: operation.authFieldNames.map((field) => ({ type: "secret", field, placement: "bearer" })),
+          query: { channel: values.channel ?? null },
+          body: {},
+          responseSchema: { type: "object" },
+        },
+        sourcePlan: {
+          delivery: operation.source?.delivery ?? "manual",
+          hooks: operation.runtime?.hookNames ?? [],
+          dedupe: operation.runtime?.dedupe,
+          eventsPath: "messages",
+        },
+      }),
+    }];
+
+    const plan = await runConnectorSource({
+      catalog: fixtureCatalog(),
+      operationId: "chat_service.source.new-message",
+      input: {
+        values: { channel: "general" },
+        secretRefs: { bot: "secret://bot" },
+      },
+      runtimeRegistry: registry,
+      resolveSecret: () => {
+        throw new Error("dry-run must not resolve secrets");
+      },
+    });
+
+    assert.equal(plan.status, "source_plan");
+    assert.deepEqual(plan.runtime?.requestPlan, {
+      method: "GET",
+      endpoint: "messages",
+      auth: [{ type: "secret", field: "bot", placement: "bearer" }],
+      query: { channel: "general" },
+      body: {},
+      responseSchema: { type: "object" },
+    });
+    assert.deepEqual(plan.runtime?.sourcePlan, {
+      delivery: "webhook",
+      hooks: ["activate", "deactivate"],
+      dedupe: "unique",
+      eventsPath: "messages",
+    });
   });
 
   it("starts sources only with an explicit executor", async () => {

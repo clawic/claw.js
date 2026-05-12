@@ -3,8 +3,13 @@ import {
   type ConnectorCatalogError,
 } from "./catalog.ts";
 import {
+  buildConnectorOperationRuntimePlan,
+  type ConnectorOperationRuntimePlan,
+} from "./runtime-coverage.ts";
+import {
   createConnectorSourceExecutor,
   type ConnectorRuntimeExecutorOptions,
+  type ConnectorRuntimeImplementation,
 } from "./runtime-registry.ts";
 import type {
   ConnectorCatalog,
@@ -36,6 +41,7 @@ export interface ConnectorSourcePlan {
   values: Record<string, IntegrationJson>;
   secretRefs: Record<string, string>;
   managedInterfaces: ConnectorManagedInterface[];
+  runtime?: ConnectorOperationRuntimePlan;
   dedupe?: string;
   hasHooks: boolean;
   stateful: boolean;
@@ -96,6 +102,7 @@ export interface RunConnectorSourceOptions {
   resolveSecret?: ConnectorSecretResolver;
   executor?: ConnectorSourceExecutor;
   runtimeExecutorOptions?: ConnectorRuntimeExecutorOptions;
+  runtimeRegistry?: readonly ConnectorRuntimeImplementation[];
 }
 
 export class ConnectorSourceScheduler {
@@ -184,6 +191,7 @@ export async function runConnectorSource(
     invalidFields,
     values,
     secretRefs,
+    runtime: buildConnectorOperationRuntimePlan(found.operation, values, { registry: options.runtimeRegistry }),
   });
 
   if (options.dryRun !== false) return plan;
@@ -191,7 +199,7 @@ export async function runConnectorSource(
   if (missingFields.length > 0 || missingSecrets.length > 0 || invalidFields.length > 0) {
     throw new Error(`Connector source is missing or invalid input: ${[...missingFields, ...missingSecrets, ...invalidFields].join(", ")}`);
   }
-  const executor = options.executor ?? createConnectorSourceExecutor(found.operation, options.runtimeExecutorOptions);
+  const executor = options.executor ?? createConnectorSourceExecutor(found.operation, options.runtimeExecutorOptions, options.runtimeRegistry);
   if (!executor) {
     throw new Error("Connector source execution requires an explicit executor or registered runtime executor.");
   }
@@ -229,6 +237,7 @@ function buildSourcePlan(options: {
   invalidFields: string[];
   values: Record<string, IntegrationJson>;
   secretRefs: Record<string, string>;
+  runtime?: ConnectorOperationRuntimePlan;
 }): ConnectorSourcePlan {
   const source = options.operation.source ?? {
     delivery: "manual" as const,
@@ -247,6 +256,7 @@ function buildSourcePlan(options: {
     values: redactSecretValues(options.operation.fields, options.values),
     secretRefs: options.secretRefs,
     managedInterfaces: managedInterfaces(options.operation.fields),
+    ...(options.runtime ? { runtime: options.runtime } : {}),
     ...(options.operation.runtime?.dedupe ? { dedupe: options.operation.runtime.dedupe } : {}),
     hasHooks: options.operation.runtime?.hasHooks === true,
     stateful: source.usesServiceDb,
