@@ -56,6 +56,50 @@ const fixtureCatalog = {
         },
       ],
     },
+    {
+      id: "telegram_bot_api",
+      name: "Telegram Bot",
+      authFieldNames: ["telegramBotApi"],
+      fields: [
+        {
+          name: "telegramBotApi",
+          type: "app",
+          label: "Bot token",
+          optional: false,
+          secret: true,
+        },
+      ],
+      operations: [
+        {
+          id: "telegram_bot_api.action.send-text-message-or-reply-send-text-message-or-reply",
+          appId: "telegram_bot_api",
+          kind: "action",
+          name: "Send Text Message",
+          fields: [
+            {
+              name: "chatId",
+              type: "string",
+              label: "Chat ID",
+              optional: false,
+            },
+            {
+              name: "text",
+              type: "string",
+              label: "Text",
+              optional: false,
+            },
+          ],
+          authFieldNames: ["telegramBotApi"],
+          runtime: {
+            hasRun: true,
+            hasHooks: false,
+            hasAdditionalProps: false,
+            hasMethods: true,
+            methodNames: ["request"],
+          },
+        },
+      ],
+    },
   ],
 };
 
@@ -86,4 +130,20 @@ test("connectors show invalid source subscription fields", async ({ page }) => {
   await expect(page.getByText("invalid: channel")).toBeVisible();
 
   await saveArtifactScreenshot(page, "connectors-invalid-subscription.png");
+});
+
+test("connectors show offline execution plans for supported actions", async ({ page }) => {
+  await page.goto("/connectors");
+  await expect(page.getByTestId("connectors-page")).toBeVisible({ timeout: 20_000 });
+
+  await page.getByTestId("connector-operation").filter({ hasText: "Send Text Message" }).click();
+  await page.getByTestId("connector-values-json").fill(JSON.stringify({ chatId: "123", text: "hello" }, null, 2));
+  await page.getByTestId("connector-secret-refs-json").fill(JSON.stringify({ telegramBotApi: "vault://connections/test/bot" }, null, 2));
+  await page.getByTestId("connector-dry-run").click();
+
+  await expect(page.getByText('"runtimePlan"')).toBeVisible();
+  await expect(page.getByText('"executorId": "telegram-bot-api.action.http"')).toBeVisible();
+  await expect(page.getByText('"endpoint": "sendMessage"')).toBeVisible();
+  await expect(page.getByText('"chat_id": "123"')).toBeVisible();
+  await expect(page.getByText('"field": "telegramBotApi"')).toBeVisible();
 });
