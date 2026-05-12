@@ -210,7 +210,29 @@ describe("connector catalog", () => {
     assert.equal(dryRun.status, "dry_run");
     assert.deepEqual(dryRun.missingFields, ["text"]);
     assert.deepEqual(dryRun.missingSecrets, ["bot", "license"]);
+    assert.deepEqual(dryRun.invalidFields, []);
     assert.deepEqual(dryRun.values, { channel: "general", silent: false });
+  });
+
+  it("reports invalid option and range values without executing", async () => {
+    const dryRun = await runConnectorOperation({
+      catalog: fixtureCatalog(),
+      operationId: "chat_service.action.send-message",
+      input: { values: { channel: "general", text: "hello", silent: "loud" } },
+    });
+    assert.equal(dryRun.status, "dry_run");
+    assert.deepEqual(dryRun.invalidFields, ["silent"]);
+
+    const plan = await runConnectorSource({
+      catalog: fixtureCatalog(),
+      operationId: "chat_service.source.new-message",
+      input: {
+        values: { channel: "general", limit: 200 },
+        secretRefs: { bot: "secret://bot" },
+      },
+    });
+    assert.equal(plan.status, "source_plan");
+    assert.deepEqual(plan.invalidFields, ["limit"]);
   });
 
   it("resolves secrets only when execution is explicitly enabled", async () => {
@@ -249,6 +271,7 @@ describe("connector catalog", () => {
     assert.equal(plan.delivery, "webhook");
     assert.deepEqual(plan.missingFields, []);
     assert.deepEqual(plan.missingSecrets, ["bot"]);
+    assert.deepEqual(plan.invalidFields, []);
     assert.equal(plan.dedupe, "unique");
     assert.equal(plan.hasHooks, true);
     assert.equal(plan.stateful, true);

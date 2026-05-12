@@ -38,6 +38,7 @@ export interface ConnectorOperationDryRun {
   kind: "action" | "source";
   missingFields: string[];
   missingSecrets: string[];
+  invalidFields: string[];
   values: Record<string, IntegrationJson>;
   secretRefs: Record<string, string>;
 }
@@ -64,6 +65,7 @@ export async function runConnectorOperation(
     .filter((fieldName) => values[fieldName] == null || values[fieldName] === "");
   const missingSecrets = found.operation.authFieldNames
     .filter((fieldName) => !secretRefs[fieldName]);
+  const invalidFields = invalidFieldNames(found.operation.fields, values, input.values ?? {});
 
   if (options.dryRun !== false) {
     return {
@@ -73,13 +75,14 @@ export async function runConnectorOperation(
       kind: found.operation.kind,
       missingFields,
       missingSecrets,
+      invalidFields,
       values: redactSecretValues(found.operation.fields, values),
       secretRefs,
     };
   }
 
-  if (missingFields.length > 0 || missingSecrets.length > 0) {
-    throw new Error(`Connector operation is missing required input: ${[...missingFields, ...missingSecrets].join(", ")}`);
+  if (missingFields.length > 0 || missingSecrets.length > 0 || invalidFields.length > 0) {
+    throw new Error(`Connector operation is missing or invalid input: ${[...missingFields, ...missingSecrets, ...invalidFields].join(", ")}`);
   }
   if (!options.executor) {
     throw new Error("Connector operation execution requires an explicit executor.");
@@ -126,6 +129,31 @@ function buildValues(
 
 function requiredFieldNames(fields: ConnectorFieldDefinition[]): string[] {
   return fields.filter((field) => !field.optional && !field.secret && !field.managed).map((field) => field.name);
+}
+
+function invalidFieldNames(
+  fields: ConnectorFieldDefinition[],
+  values: Record<string, IntegrationJson>,
+  input: Record<string, IntegrationJson>,
+): string[] {
+  return fields
+    .filter((field) => Object.prototype.hasOwnProperty.call(input, field.name))
+    .filter((field) => Object.prototype.hasOwnProperty.call(values, field.name))
+    .filter((field) => !isValidFieldValue(field, values[field.name]))
+    .map((field) => field.name);
+}
+
+function isValidFieldValue(field: ConnectorFieldDefinition, value: IntegrationJson): boolean {
+  if (value == null || value === "") return true;
+  if (field.options?.length) {
+    const allowed = new Set(field.options.map((option) => JSON.stringify(option.value)));
+    if (!allowed.has(JSON.stringify(value))) return false;
+  }
+  if (typeof value === "number") {
+    if (typeof field.min === "number" && value < field.min) return false;
+    if (typeof field.max === "number" && value > field.max) return false;
+  }
+  return true;
 }
 
 function redactSecretValues(

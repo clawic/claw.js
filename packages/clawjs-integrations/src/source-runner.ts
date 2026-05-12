@@ -28,6 +28,7 @@ export interface ConnectorSourcePlan {
   delivery: ConnectorSourceCapabilities["delivery"];
   missingFields: string[];
   missingSecrets: string[];
+  invalidFields: string[];
   values: Record<string, IntegrationJson>;
   secretRefs: Record<string, string>;
   managedInterfaces: ConnectorManagedInterface[];
@@ -55,7 +56,7 @@ export interface ConnectorSourceRunResult {
 }
 
 export type ConnectorSourceSubscriptionStatus = "ready" | "blocked" | "disabled";
-export type ConnectorSourceSubscriptionBlockReason = "missing_fields" | "missing_secrets" | "disabled";
+export type ConnectorSourceSubscriptionBlockReason = "missing_fields" | "missing_secrets" | "invalid_fields" | "disabled";
 
 export interface ConnectorSourceSubscription {
   id: string;
@@ -69,6 +70,7 @@ export interface ConnectorSourceSubscription {
   blockReasons: ConnectorSourceSubscriptionBlockReason[];
   missingFields: string[];
   missingSecrets: string[];
+  invalidFields: string[];
   stateful: boolean;
   hasHooks: boolean;
   createdAt: string;
@@ -141,6 +143,7 @@ export function sourceSubscriptionFromPlan(
     blockReasons,
     missingFields: plan.missingFields,
     missingSecrets: plan.missingSecrets,
+    invalidFields: plan.invalidFields,
     stateful: plan.stateful,
     hasHooks: plan.hasHooks,
     createdAt: options.existing?.createdAt ?? now,
@@ -167,19 +170,21 @@ export async function runConnectorSource(
     .filter((fieldName) => values[fieldName] == null || values[fieldName] === "");
   const missingSecrets = found.operation.authFieldNames
     .filter((fieldName) => !secretRefs[fieldName]);
+  const invalidFields = invalidFieldNames(found.operation.fields, values, input.values ?? {});
   const plan = buildSourcePlan({
     appId: found.app.id,
     operation: found.operation,
     missingFields,
     missingSecrets,
+    invalidFields,
     values,
     secretRefs,
   });
 
   if (options.dryRun !== false) return plan;
 
-  if (missingFields.length > 0 || missingSecrets.length > 0) {
-    throw new Error(`Connector source is missing required input: ${[...missingFields, ...missingSecrets].join(", ")}`);
+  if (missingFields.length > 0 || missingSecrets.length > 0 || invalidFields.length > 0) {
+    throw new Error(`Connector source is missing or invalid input: ${[...missingFields, ...missingSecrets, ...invalidFields].join(", ")}`);
   }
   if (!options.executor) {
     throw new Error("Connector source execution requires an explicit executor.");
@@ -215,6 +220,7 @@ function buildSourcePlan(options: {
   operation: ConnectorOperationDefinition;
   missingFields: string[];
   missingSecrets: string[];
+  invalidFields: string[];
   values: Record<string, IntegrationJson>;
   secretRefs: Record<string, string>;
 }): ConnectorSourcePlan {
@@ -231,6 +237,7 @@ function buildSourcePlan(options: {
     delivery: source.delivery,
     missingFields: options.missingFields,
     missingSecrets: options.missingSecrets,
+    invalidFields: options.invalidFields,
     values: redactSecretValues(options.operation.fields, options.values),
     secretRefs: options.secretRefs,
     managedInterfaces: managedInterfaces(options.operation.fields),
@@ -258,6 +265,31 @@ function buildValues(
 
 function requiredFieldNames(fields: ConnectorFieldDefinition[]): string[] {
   return fields.filter((field) => !field.optional && !field.secret && !field.managed).map((field) => field.name);
+}
+
+function invalidFieldNames(
+  fields: ConnectorFieldDefinition[],
+  values: Record<string, IntegrationJson>,
+  input: Record<string, IntegrationJson>,
+): string[] {
+  return fields
+    .filter((field) => Object.prototype.hasOwnProperty.call(input, field.name))
+    .filter((field) => Object.prototype.hasOwnProperty.call(values, field.name))
+    .filter((field) => !isValidFieldValue(field, values[field.name]))
+    .map((field) => field.name);
+}
+
+function isValidFieldValue(field: ConnectorFieldDefinition, value: IntegrationJson): boolean {
+  if (value == null || value === "") return true;
+  if (field.options?.length) {
+    const allowed = new Set(field.options.map((option) => JSON.stringify(option.value)));
+    if (!allowed.has(JSON.stringify(value))) return false;
+  }
+  if (typeof value === "number") {
+    if (typeof field.min === "number" && value < field.min) return false;
+    if (typeof field.max === "number" && value > field.max) return false;
+  }
+  return true;
 }
 
 function managedInterfaces(fields: ConnectorFieldDefinition[]): ConnectorManagedInterface[] {
@@ -300,6 +332,7 @@ function blockReasonsForPlan(
   const reasons: ConnectorSourceSubscriptionBlockReason[] = [];
   if (plan.missingFields.length) reasons.push("missing_fields");
   if (plan.missingSecrets.length) reasons.push("missing_secrets");
+  if (plan.invalidFields.length) reasons.push("invalid_fields");
   return reasons;
 }
 
