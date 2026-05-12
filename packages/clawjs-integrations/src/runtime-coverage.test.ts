@@ -7,6 +7,7 @@ import {
   evaluateConnectorRuntimeCoverage,
   verifyConnectorRuntimeCoverage,
 } from "./runtime-coverage.ts";
+import type { ConnectorRuntimeImplementation } from "./runtime-registry.ts";
 
 describe("connector runtime coverage", () => {
   it("fails when a catalog operation has no offline-validable runtime implementation", () => {
@@ -155,5 +156,64 @@ describe("connector runtime coverage", () => {
       () => verifyConnectorRuntimeCoverage(catalog, { allowUnsupportedReasons: true }),
       /requires concrete evidence/,
     );
+  });
+
+  it("accepts operation implementations from an explicit runtime registry", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: ["apiKey"],
+        fields: [{ name: "apiKey", type: "string", optional: false, secret: true }],
+        operations: [{
+          id: "fixture_service.action.send-message",
+          appId: "fixture_service",
+          kind: "action",
+          name: "Send Message",
+          fields: [{ name: "text", type: "string", optional: false }],
+          authFieldNames: ["apiKey"],
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "action",
+      executorId: "fixture.action.offline",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      supports: (operation) => operation.id === "fixture_service.action.send-message",
+      buildPlan: (operation, values) => ({
+        requestPlan: {
+          method: "POST",
+          endpoint: "messages",
+          auth: operation.authFieldNames.map((field) => ({ type: "secret", field })),
+          body: values,
+        },
+      }),
+    }];
+
+    const report = verifyConnectorRuntimeCoverage(catalog, { registry });
+    assert.equal(report.summary.implemented, 1);
+
+    const operation = catalog.apps[0]?.operations[0];
+    assert.ok(operation);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, { text: "hello" }, { registry }), {
+      status: "implemented",
+      operationId: "fixture_service.action.send-message",
+      appId: "fixture_service",
+      kind: "action",
+      executorId: "fixture.action.offline",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      requestPlan: {
+        method: "POST",
+        endpoint: "messages",
+        auth: [{ type: "secret", field: "apiKey" }],
+        body: {
+          text: "hello",
+        },
+      },
+    });
   });
 });

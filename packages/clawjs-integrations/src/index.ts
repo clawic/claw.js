@@ -28,6 +28,10 @@ export {
   evaluateConnectorRuntimeCoverage,
   verifyConnectorRuntimeCoverage,
 } from "./runtime-coverage.js";
+export {
+  CONNECTOR_RUNTIME_REGISTRY,
+  findConnectorRuntimeImplementation,
+} from "./runtime-registry.js";
 export type {
   ConnectorCatalogSearchOptions,
   ConnectorCatalogSearchResult,
@@ -65,6 +69,12 @@ export type {
   ConnectorRuntimeCoverageSummary,
   VerifyConnectorRuntimeCoverageOptions,
 } from "./runtime-coverage.js";
+export type {
+  ConnectorRuntimeImplementation,
+  ConnectorRuntimePlanDetails,
+  ConnectorRuntimeRequestPlan,
+  ConnectorRuntimeSourcePlan,
+} from "./runtime-registry.js";
 export { telegramAdapter } from "./telegram.js";
 export {
   buildTelegramOperationRequest,

@@ -1,11 +1,11 @@
 import { ConnectorCatalogError } from "./catalog.ts";
 import {
-  buildTelegramOperationRequest,
-  isTelegramActionOperationSupported,
-} from "./telegram-operation-executor.ts";
-import {
-  isTelegramSourceOperationSupported,
-} from "./telegram-source.ts";
+  CONNECTOR_RUNTIME_REGISTRY,
+  findConnectorRuntimeImplementation,
+  type ConnectorRuntimeImplementation,
+  type ConnectorRuntimeRequestPlan,
+  type ConnectorRuntimeSourcePlan,
+} from "./runtime-registry.ts";
 import type {
   ConnectorCatalog,
   ConnectorOperationDefinition,
@@ -42,6 +42,7 @@ export interface ConnectorRuntimeCoverageReport {
 
 export interface VerifyConnectorRuntimeCoverageOptions {
   allowUnsupportedReasons?: boolean;
+  registry?: readonly ConnectorRuntimeImplementation[];
 }
 
 export interface ConnectorOperationRuntimePlan {
@@ -52,17 +53,8 @@ export interface ConnectorOperationRuntimePlan {
   executorId?: string;
   offlineValidated: boolean;
   evidence: string[];
-  requestPlan?: {
-    method: string;
-    endpoint: string;
-    auth: { type: "secret"; field: string }[];
-    body: Record<string, IntegrationJson>;
-  };
-  sourcePlan?: {
-    delivery: string;
-    dedupe?: string;
-    hooks: string[];
-  };
+  requestPlan?: ConnectorRuntimeRequestPlan;
+  sourcePlan?: ConnectorRuntimeSourcePlan;
   unsupported_real_runtime_reason?: ConnectorUnsupportedRealRuntimeReason;
 }
 
@@ -76,16 +68,12 @@ export class ConnectorRuntimeCoverageError extends ConnectorCatalogError {
   }
 }
 
-const TELEGRAM_ACTION_EVIDENCE = [
-  "packages/clawjs-integrations/src/telegram-operation-executor.test.ts",
-];
-
-const TELEGRAM_SOURCE_EVIDENCE = [
-  "packages/clawjs-integrations/src/telegram-source.test.ts",
-];
-
-export function evaluateConnectorRuntimeCoverage(catalog: ConnectorCatalog): ConnectorRuntimeCoverageReport {
-  const entries = catalog.apps.flatMap((app) => app.operations.map((operation) => coverageEntry(operation)));
+export function evaluateConnectorRuntimeCoverage(
+  catalog: ConnectorCatalog,
+  options: { registry?: readonly ConnectorRuntimeImplementation[] } = {},
+): ConnectorRuntimeCoverageReport {
+  const registry = options.registry ?? CONNECTOR_RUNTIME_REGISTRY;
+  const entries = catalog.apps.flatMap((app) => app.operations.map((operation) => coverageEntry(operation, registry)));
   const summary = entries.reduce<ConnectorRuntimeCoverageSummary>(
     (acc, entry) => {
       acc.total += 1;
@@ -105,7 +93,7 @@ export function verifyConnectorRuntimeCoverage(
   catalog: ConnectorCatalog,
   options: VerifyConnectorRuntimeCoverageOptions = {},
 ): ConnectorRuntimeCoverageReport {
-  const report = evaluateConnectorRuntimeCoverage(catalog);
+  const report = evaluateConnectorRuntimeCoverage(catalog, { registry: options.registry });
   const errors = [...report.errors];
   if (!options.allowUnsupportedReasons) {
     for (const entry of report.entries) {
@@ -135,8 +123,10 @@ export function verifyConnectorRuntimeCoverage(
 export function buildConnectorOperationRuntimePlan(
   operation: ConnectorOperationDefinition,
   values: Record<string, IntegrationJson> = {},
+  options: { registry?: readonly ConnectorRuntimeImplementation[] } = {},
 ): ConnectorOperationRuntimePlan {
-  const entry = coverageEntry(operation);
+  const registry = options.registry ?? CONNECTOR_RUNTIME_REGISTRY;
+  const entry = coverageEntry(operation, registry);
   const base = {
     status: entry.status,
     operationId: entry.operationId,
@@ -147,32 +137,20 @@ export function buildConnectorOperationRuntimePlan(
     evidence: entry.evidence,
     ...(entry.unsupported_real_runtime_reason ? { unsupported_real_runtime_reason: entry.unsupported_real_runtime_reason } : {}),
   };
-  if (entry.status === "implemented" && operation.appId === "telegram_bot_api" && operation.kind === "action") {
-    const request = buildTelegramOperationRequest(operation.id, values);
+  if (entry.status === "implemented") {
+    const implementation = findConnectorRuntimeImplementation(operation, registry);
     return {
       ...base,
-      requestPlan: {
-        method: request.method,
-        endpoint: request.endpoint,
-        auth: operation.authFieldNames.map((field) => ({ type: "secret" as const, field })),
-        body: request.body,
-      },
-    };
-  }
-  if (entry.status === "implemented" && operation.appId === "telegram_bot_api" && operation.kind === "source") {
-    return {
-      ...base,
-      sourcePlan: {
-        delivery: operation.source?.delivery ?? "manual",
-        ...(operation.runtime?.dedupe ? { dedupe: operation.runtime.dedupe } : {}),
-        hooks: operation.runtime?.hookNames ?? [],
-      },
+      ...implementation?.buildPlan?.(operation, values),
     };
   }
   return base;
 }
 
-function coverageEntry(operation: ConnectorOperationDefinition): ConnectorRuntimeCoverageEntry {
+function coverageEntry(
+  operation: ConnectorOperationDefinition,
+  registry: readonly ConnectorRuntimeImplementation[],
+): ConnectorRuntimeCoverageEntry {
   const unsupported = operation.unsupported_real_runtime_reason;
   if (unsupported) {
     return {
@@ -185,26 +163,16 @@ function coverageEntry(operation: ConnectorOperationDefinition): ConnectorRuntim
       unsupported_real_runtime_reason: unsupported,
     };
   }
-  if (operation.appId === "telegram_bot_api" && operation.kind === "action" && isTelegramActionOperationSupported(operation.id)) {
+  const implementation = findConnectorRuntimeImplementation(operation, registry);
+  if (implementation) {
     return {
       operationId: operation.id,
       appId: operation.appId,
       kind: operation.kind,
       status: "implemented",
-      executorId: "telegram-bot-api.action.http",
-      offlineValidated: true,
-      evidence: TELEGRAM_ACTION_EVIDENCE,
-    };
-  }
-  if (operation.appId === "telegram_bot_api" && operation.kind === "source" && isTelegramSourceOperationSupported(operation.id)) {
-    return {
-      operationId: operation.id,
-      appId: operation.appId,
-      kind: operation.kind,
-      status: "implemented",
-      executorId: "telegram-bot-api.source.polling",
-      offlineValidated: true,
-      evidence: TELEGRAM_SOURCE_EVIDENCE,
+      executorId: implementation.executorId,
+      offlineValidated: implementation.offlineValidated,
+      evidence: implementation.evidence,
     };
   }
   return {
