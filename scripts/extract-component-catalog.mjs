@@ -131,6 +131,8 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
     const inherited = propRef ? appFieldByName.get(propRef) : null;
     const type = readTopLevelString(body, "type") ?? (body.includes("type: \"app\"") ? "app" : "string");
     const dynamicOptions = readDynamicOptions(body);
+    const min = readNumber(body, "min");
+    const max = readNumber(body, "max");
     const field = {
       ...(inherited ?? {}),
       name,
@@ -141,6 +143,11 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
       ...optionalJson("default", readDefault(body)),
       ...optionalOptions(readOptions(body)),
       ...optionalDynamicOptions(dynamicOptions ?? inherited?.dynamicOptions),
+      ...optionalBoolean("hidden", readBoolean(body, "hidden") ?? inherited?.hidden),
+      ...optionalBoolean("disabled", readBoolean(body, "disabled") ?? inherited?.disabled),
+      ...optionalBoolean("reloadProps", readBoolean(body, "reloadProps") ?? inherited?.reloadProps),
+      ...optionalNumber("min", min ?? inherited?.min),
+      ...optionalNumber("max", max ?? inherited?.max),
       ...(inherited?.secret || isSecretField(name, body, appId) ? { secret: true } : {}),
       ...(inherited?.managed || type.startsWith("$.") ? { managed: true } : {}),
     };
@@ -580,11 +587,21 @@ function optionalBoolean(key, value) {
   return typeof value === "boolean" ? { [key]: value } : {};
 }
 
+function optionalNumber(key, value) {
+  return typeof value === "number" && Number.isFinite(value) ? { [key]: value } : {};
+}
+
 function readBoolean(body, key) {
   const raw = readTopLevelValue(body, key);
   if (raw === "true") return true;
   if (raw === "false") return false;
   return undefined;
+}
+
+function readNumber(body, key) {
+  const raw = readTopLevelValue(body, key);
+  const value = raw ? parseLiteral(raw.trim()) : undefined;
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function readDefault(body) {
