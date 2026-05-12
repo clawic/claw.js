@@ -665,9 +665,27 @@ function compareStringValue(label, expected, actual, errors) {
 }
 
 function compareOptionValues(label, expected, actual, errors) {
-  const expectedValues = new Set((Array.isArray(expected) ? expected : []).map((option) => stableJson(option?.value)));
-  const actualValues = new Set((Array.isArray(actual) ? actual : []).map((option) => stableJson(option?.value)));
+  const expectedOptions = optionMap(expected);
+  const actualOptions = optionMap(actual);
+  const expectedValues = new Set(expectedOptions.keys());
+  const actualValues = new Set(actualOptions.keys());
   compareSets(label, expectedValues, actualValues, errors);
+  for (const value of expectedValues) {
+    const expectedOption = expectedOptions.get(value);
+    const actualOption = actualOptions.get(value);
+    if (!expectedOption || !actualOption) continue;
+    for (const key of ["label", "description"]) {
+      if (normalizePublicValue(actualOption[key]) !== normalizePublicValue(expectedOption[key])) {
+        errors.push(`${label} ${value} ${key} ${formatValue(actualOption[key])} expected ${formatValue(expectedOption[key])}`);
+      }
+    }
+  }
+}
+
+function optionMap(options) {
+  return new Map((Array.isArray(options) ? options : [])
+    .filter(isRecord)
+    .map((option) => [stableJson(option.value), option]));
 }
 
 function comparePropDefinition(label, expected, actual, errors) {
@@ -1341,7 +1359,11 @@ function parseOptionItem(value) {
     if (!body) return undefined;
     const literal = parseLiteral(readTopLevelValue(body, "value")?.trim() ?? "");
     if (!["string", "number", "boolean"].includes(typeof literal)) return undefined;
-    return { value: literal };
+    return {
+      ...optionalString("label", cleanText(readTopLevelString(body, "label"))),
+      value: literal,
+      ...optionalString("description", cleanText(readTopLevelString(body, "description"))),
+    };
   }
   const literal = parseLiteral(trimmed);
   if (!["string", "number", "boolean"].includes(typeof literal)) return undefined;
