@@ -21,6 +21,9 @@ interface CatalogSummary {
   placeholderFields: number;
   queryFields: number;
   labelFields: number;
+  readAccessFields: number;
+  writeAccessFields: number;
+  syncedFields: number;
   annotatedOperations: number;
   destructiveOperations: number;
   readOnlyOperations: number;
@@ -59,6 +62,8 @@ interface CatalogField {
   placeholder?: string;
   useQuery?: boolean;
   withLabel?: boolean;
+  accessMode?: "read" | "write";
+  sync?: boolean;
   secret?: boolean;
   managed?: boolean;
 }
@@ -341,6 +346,9 @@ export default function ConnectorsPage() {
             <span>{catalog?.summary.placeholderFields ?? 0} placeholders</span>
             <span>{catalog?.summary.queryFields ?? 0} query</span>
             <span>{catalog?.summary.labelFields ?? 0} labels</span>
+            <span>{catalog?.summary.readAccessFields ?? 0} read access</span>
+            <span>{catalog?.summary.writeAccessFields ?? 0} write access</span>
+            <span>{catalog?.summary.syncedFields ?? 0} synced</span>
             <span>{catalog?.summary.annotatedOperations ?? 0} annotated</span>
             <span>{catalog?.summary.destructiveOperations ?? 0} destructive</span>
             <span>{catalog?.summary.runnableOperations ?? 0} runnable</span>
@@ -457,6 +465,8 @@ export default function ConnectorsPage() {
                             {field.placeholder ? " · placeholder" : ""}
                             {field.useQuery ? " · query" : ""}
                             {field.withLabel ? " · label" : ""}
+                            {field.accessMode ? ` · ${field.accessMode}` : ""}
+                            {field.sync ? " · sync" : ""}
                           </span>
                         </div>
                       ))}
