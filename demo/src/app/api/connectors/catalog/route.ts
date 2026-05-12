@@ -1,8 +1,8 @@
 import path from "node:path";
 
 import {
+  buildConnectorOperationRuntimePlan,
   findConnectorOperation,
-  buildTelegramOperationRequest,
   loadConnectorCatalogFromFile,
   runConnectorOperation,
   runConnectorSource,
@@ -131,10 +131,10 @@ export async function POST(req: NextRequest) {
     const preview = found.operation.kind === "source"
       ? await runConnectorSource({ catalog, operationId: body.operationId, input })
       : await runConnectorOperation({ catalog, operationId: body.operationId, input });
-    const requestPlan = found.operation.appId === "telegram_bot_api" && found.operation.kind === "action" && "missingFields" in preview && preview.missingFields.length === 0 && preview.invalidFields.length === 0
-      ? buildTelegramOperationRequest(found.operation.id, preview.values)
-      : undefined;
-    return Response.json({ ok: true, preview: { ...preview, ...(requestPlan ? { requestPlan } : {}) } });
+    const runtimePlan = "values" in preview
+      ? buildConnectorOperationRuntimePlan(found.operation, preview.values)
+      : buildConnectorOperationRuntimePlan(found.operation);
+    return Response.json({ ok: true, preview: { ...preview, runtimePlan } });
   } catch (err) {
     return Response.json({
       ok: false,

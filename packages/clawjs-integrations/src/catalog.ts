@@ -258,6 +258,7 @@ function normalizeOperation(input: unknown, appId: string): ConnectorOperationDe
     ...optionalSource(input.source),
     ...optionalSampleEvent(input.sampleEvent),
     ...optionalEventSummary(input.eventSummary),
+    ...optionalUnsupportedRealRuntimeReason(input.unsupported_real_runtime_reason),
     ...(typeof input.sourcePath === "string" ? { sourcePath: input.sourcePath } : {}),
   };
 }
@@ -434,6 +435,20 @@ function optionalEventSummary(input: unknown) {
       count,
       templates: normalizeStringArray(input.templates),
       dynamic: input.dynamic === true,
+    },
+  };
+}
+
+function optionalUnsupportedRealRuntimeReason(input: unknown) {
+  if (!isRecord(input)) return {};
+  const code = stringValue(input.code);
+  const message = stringValue(input.message);
+  if (!code || !message) return {};
+  return {
+    unsupported_real_runtime_reason: {
+      code,
+      message,
+      evidence: normalizeStringArray(input.evidence),
     },
   };
 }

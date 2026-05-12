@@ -70,10 +70,12 @@ export {
   buildTelegramOperationRequest,
   createTelegramOperationExecutor,
   executeTelegramOperation,
+  isTelegramActionOperationSupported,
   sendTelegramRequest,
 } from "./telegram-operation-executor.js";
 export {
   TELEGRAM_POLL_UPDATE_TYPES,
+  isTelegramSourceOperationSupported,
   telegramInboundMessageFromUpdate,
   telegramSourceEventsForUpdate,
 } from "./telegram-source.js";

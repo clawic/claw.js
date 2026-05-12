@@ -116,7 +116,7 @@ export function verifyConnectorRuntimeCoverage(
   }
   if (errors.length > 0) {
     throw new ConnectorRuntimeCoverageError(
-      `Connector runtime coverage failed with ${errors.length} error(s).`,
+      `Connector runtime coverage failed with ${errors.length} error(s): ${errors.join("; ")}`,
       { ...report, errors },
     );
   }
