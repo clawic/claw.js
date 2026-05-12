@@ -40,6 +40,7 @@
     "catalog:extract": "node ../../scripts/extract-component-catalog.mjs",
     "catalog:verify": "npm run build && node ../../scripts/verify-component-catalog.mjs",
     "catalog:verify-runtime": "npm run build && node ../../scripts/verify-connector-runtime-coverage.mjs",
+    "openapi:verify-runtime": "npm run build && node ../../scripts/verify-openapi-runtime-coverage.mjs",
     "test": "node --test src/**/*.test.ts"
   },
   "dependencies": {

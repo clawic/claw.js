@@ -132,3 +132,9 @@ Add `--execute-offline` to replay implemented runtimes against their local fixtu
 ```bash
 npm --workspace @clawjs/integrations run catalog:verify-runtime -- --catalog /tmp/clawjs-catalog.json --report /tmp/clawjs-runtime-audit.json --execute-offline
 ```
+
+For OpenAPI-backed providers, build and verify a runtime catalog directly from a local spec file:
+
+```bash
+npm --workspace @clawjs/integrations run openapi:verify-runtime -- --spec /tmp/provider-openapi.json --app-id provider --evidence packages/clawjs-integrations/src/openapi-runtime.test.ts --fixtures /tmp/provider-fixtures.json --report /tmp/provider-runtime-audit.json --execute-offline
+```
