@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   ConnectorRuntimeCoverageError,
@@ -9,6 +10,7 @@ import {
 } from "../packages/clawjs-integrations/dist/index.js";
 
 const args = parseArgs(process.argv.slice(2));
+const rootDir = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const catalogPath = path.resolve(args.catalog ?? process.env.CLAWJS_CONNECTOR_CATALOG_PATH ?? "");
 const allowUnsupportedReasons = args["allow-unsupported-runtime"] === true || args["allow-unsupported-runtime"] === "true";
 
@@ -19,7 +21,7 @@ if (!catalogPath || !fs.existsSync(catalogPath)) {
 
 try {
   const catalog = loadConnectorCatalogFromFile(catalogPath);
-  const report = verifyConnectorRuntimeCoverage(catalog, { allowUnsupportedReasons });
+  const report = verifyConnectorRuntimeCoverage(catalog, { allowUnsupportedReasons, evidenceRoot: rootDir });
   console.error(summaryLine(report.summary));
   console.error("connector runtime coverage passed");
 } catch (error) {
