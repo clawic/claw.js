@@ -97,6 +97,7 @@ export type ConnectorRuntimeFixtureKind = "request" | "response" | "source_event
 export interface ConnectorRuntimeFixture {
   kind: ConnectorRuntimeFixtureKind;
   path: string;
+  operationId?: string;
 }
 
 export interface ConnectorRuntimeImplementation {

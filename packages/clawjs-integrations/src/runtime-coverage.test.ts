@@ -614,6 +614,130 @@ describe("connector runtime coverage", () => {
     });
   });
 
+  it("requires operation-scoped fixtures when one runtime supports multiple operations", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: ["apiKey"],
+        fields: [{ name: "apiKey", type: "string", optional: false, secret: true }],
+        operations: [
+          {
+            id: "fixture_service.action.create-message",
+            appId: "fixture_service",
+            kind: "action",
+            name: "Create Message",
+            fields: [{ name: "text", type: "string", optional: false }],
+            authFieldNames: ["apiKey"],
+          },
+          {
+            id: "fixture_service.action.update-message",
+            appId: "fixture_service",
+            kind: "action",
+            name: "Update Message",
+            fields: [{ name: "text", type: "string", optional: false }],
+            authFieldNames: ["apiKey"],
+          },
+        ],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "action",
+      executorId: "fixture.action.http",
+      baseUrl: "https://api.example.invalid/",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [ACTION_REQUEST_FIXTURE, ACTION_RESPONSE_FIXTURE],
+      planKinds: ["request"],
+      supports: (operation) => operation.id.startsWith("fixture_service.action."),
+      buildPlan: (operation, values) => ({
+        requestPlan: {
+          method: "POST",
+          endpoint: "messages",
+          auth: operation.authFieldNames.map((field) => ({ type: "secret", field, placement: "bearer" })),
+          body: values,
+          responseSchema: { type: "object", requiredPaths: ["ok"] },
+        },
+      }),
+    }];
+
+    assert.throws(
+      () => verifyConnectorRuntimeCoverage(catalog, { registry }),
+      /requires operation-scoped offline fixtures/,
+    );
+  });
+
+  it("replays operation-scoped fixtures for multi-operation runtimes", async () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: ["apiKey"],
+        fields: [{ name: "apiKey", type: "string", optional: false, secret: true }],
+        operations: [
+          {
+            id: "fixture_service.action.create-message",
+            appId: "fixture_service",
+            kind: "action",
+            name: "Create Message",
+            fields: [{ name: "text", type: "string", optional: false }],
+            authFieldNames: ["apiKey"],
+          },
+          {
+            id: "fixture_service.action.update-message",
+            appId: "fixture_service",
+            kind: "action",
+            name: "Update Message",
+            fields: [{ name: "text", type: "string", optional: false }],
+            authFieldNames: ["apiKey"],
+          },
+        ],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "action",
+      executorId: "fixture.action.http",
+      baseUrl: "https://api.example.invalid/",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [
+        { ...ACTION_REQUEST_FIXTURE, operationId: "fixture_service.action.create-message" },
+        { ...ACTION_RESPONSE_FIXTURE, operationId: "fixture_service.action.create-message" },
+        { ...ACTION_REQUEST_FIXTURE, operationId: "fixture_service.action.update-message" },
+        { ...ACTION_RESPONSE_FIXTURE, operationId: "fixture_service.action.update-message" },
+      ],
+      planKinds: ["request"],
+      supports: (operation) => operation.id.startsWith("fixture_service.action."),
+      buildPlan: (operation, values) => ({
+        requestPlan: {
+          method: "POST",
+          endpoint: "messages",
+          auth: operation.authFieldNames.map((field) => ({ type: "secret", field, placement: "bearer" })),
+          body: values,
+          responseSchema: { type: "object", requiredPaths: ["ok"] },
+        },
+      }),
+    }];
+
+    const report = verifyConnectorRuntimeCoverage(catalog, { registry });
+    assert.equal(report.summary.implemented, 2);
+    assert.deepEqual(report.entries.map((entry) => entry.fixtures.map((fixture) => fixture.operationId)), [
+      ["fixture_service.action.create-message", "fixture_service.action.create-message"],
+      ["fixture_service.action.update-message", "fixture_service.action.update-message"],
+    ]);
+
+    const offlineReport = await verifyConnectorRuntimeOfflineExecutions(catalog, { registry });
+    assert.deepEqual(offlineReport.results.map((result) => result.operationId), [
+      "fixture_service.action.create-message",
+      "fixture_service.action.update-message",
+    ]);
+    assert.deepEqual(offlineReport.errors, []);
+  });
+
   it("reports runtime fixture execution failures", async () => {
     const catalog = normalizeConnectorCatalog({
       version: 1,

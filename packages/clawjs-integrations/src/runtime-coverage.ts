@@ -192,6 +192,11 @@ export function verifyConnectorRuntimeCoverage(
         errors.push(`runtime implementation for ${entry.operationId} is ambiguous: ${implementations.map((item) => item.executorId).join(", ")}`);
       }
       const implementation = implementations[0] ?? null;
+      if (implementation && operation && operationsSupportedByImplementation(catalog, implementation).length > 1) {
+        if (!hasOperationScopedFixtures(implementation.fixtures ?? [], operation.id)) {
+          errors.push(`runtime implementation for ${entry.operationId} requires operation-scoped offline fixtures`);
+        }
+      }
       if (operation?.kind === "action") {
         if (!hasActionExecutor(implementation)) errors.push(`runtime implementation for ${entry.operationId} requires a registered action executor`);
         if (!implementation?.planKinds.includes("request")) errors.push(`runtime implementation for ${entry.operationId} requires a request plan kind`);
@@ -295,7 +300,10 @@ async function executeRuntimeImplementationOffline(input: {
   runtimeExecutorOptions?: Omit<ConnectorRuntimeExecutorOptions, "fetchImpl">;
 }): Promise<ConnectorRuntimeOfflineExecutionResult> {
   try {
-    const fixtures = loadConnectorRuntimeFixtures(input.implementation.fixtures ?? [], { evidenceRoot: input.evidenceRoot });
+    const fixtures = loadConnectorRuntimeFixtures(
+      runtimeFixturesForOperation(input.implementation.fixtures ?? [], input.operation.id),
+      { evidenceRoot: input.evidenceRoot },
+    );
     const runtimeExecutorOptions = {
       ...input.runtimeExecutorOptions,
       fetchImpl: createConnectorRuntimeFixtureFetch(fixtures),
@@ -452,6 +460,9 @@ function evidencePathErrors(label: string, evidence: readonly string[], evidence
 function fixturePathErrors(label: string, fixtures: readonly ConnectorRuntimeFixture[], evidenceRoot: string): string[] {
   const errors: string[] = [];
   for (const fixture of fixtures) {
+    if (fixture.operationId !== undefined && (typeof fixture.operationId !== "string" || !fixture.operationId.trim())) {
+      errors.push(`${label} fixture has invalid operationId`);
+    }
     if (!["request", "response", "source_event"].includes(fixture.kind)) {
       errors.push(`${label} fixture has invalid kind: ${String(fixture.kind)}`);
     }
@@ -467,7 +478,9 @@ function runtimeFixtureKindErrors(
 ): string[] {
   if (!implementation) return [];
   const errors: string[] = [];
-  const fixtureKinds = new Set(entry.fixtures.map((fixture) => fixture.kind));
+  const fixtureKinds = new Set(
+    runtimeFixturesForOperation(entry.fixtures, entry.operationId).map((fixture) => fixture.kind),
+  );
   if (implementation.planKinds.includes("request") && !fixtureKinds.has("request")) {
     errors.push(`runtime implementation for ${entry.operationId} requires offline request fixtures`);
   }
@@ -687,6 +700,35 @@ function findCatalogOperation(
   return null;
 }
 
+function operationsSupportedByImplementation(
+  catalog: ConnectorCatalog,
+  implementation: ConnectorRuntimeImplementation,
+): ConnectorOperationDefinition[] {
+  return catalog.apps
+    .flatMap((app) => app.operations)
+    .filter((operation) => (
+      operation.appId === implementation.appId
+      && operation.kind === implementation.kind
+      && implementation.supports(operation)
+    ));
+}
+
+function hasOperationScopedFixtures(
+  fixtures: readonly ConnectorRuntimeFixture[],
+  operationId: string,
+): boolean {
+  return fixtures.some((fixture) => fixture.operationId === operationId);
+}
+
+function runtimeFixturesForOperation(
+  fixtures: readonly ConnectorRuntimeFixture[],
+  operationId: string,
+): ConnectorRuntimeFixture[] {
+  const scoped = fixtures.filter((fixture) => fixture.operationId === operationId);
+  if (scoped.length > 0) return scoped;
+  return fixtures.filter((fixture) => fixture.operationId === undefined);
+}
+
 function findConnectorRuntimeImplementations(
   operation: ConnectorOperationDefinition,
   registry: readonly ConnectorRuntimeImplementation[],
@@ -752,7 +794,7 @@ function coverageEntry(
       executorId: implementation.executorId,
       offlineValidated: implementation.offlineValidated,
       evidence: implementation.evidence,
-      fixtures: implementation.fixtures ?? [],
+      fixtures: runtimeFixturesForOperation(implementation.fixtures ?? [], operation.id),
     };
   }
   return {
