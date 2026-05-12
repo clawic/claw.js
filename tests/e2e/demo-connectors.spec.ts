@@ -98,6 +98,43 @@ const fixtureCatalog = {
             methodNames: ["request"],
           },
         },
+        {
+          id: "telegram_bot_api.source.new-bot-command-received-new-bot-command-received",
+          appId: "telegram_bot_api",
+          kind: "source",
+          name: "New Bot Command",
+          fields: [
+            {
+              name: "commands",
+              type: "string",
+              label: "Commands",
+              optional: true,
+            },
+            {
+              name: "timer",
+              type: "$.interface.timer",
+              label: "Timer",
+              optional: false,
+              managed: true,
+            },
+          ],
+          authFieldNames: ["telegramBotApi"],
+          runtime: {
+            hasRun: false,
+            hasHooks: true,
+            hookNames: ["deploy"],
+            hasAdditionalProps: false,
+            hasMethods: false,
+            methodNames: [],
+            dedupe: "unique",
+          },
+          source: {
+            delivery: "polling",
+            usesTimer: true,
+            usesHttp: false,
+            usesServiceDb: false,
+          },
+        },
       ],
     },
   ],
@@ -146,4 +183,21 @@ test("connectors show offline execution plans for supported actions", async ({ p
   await expect(page.getByText('"endpoint": "sendMessage"')).toBeVisible();
   await expect(page.getByText('"chat_id": "123"')).toBeVisible();
   await expect(page.getByText('"field": "telegramBotApi"')).toBeVisible();
+});
+
+test("connectors show offline execution plans for supported sources", async ({ page }) => {
+  await page.goto("/connectors");
+  await expect(page.getByTestId("connectors-page")).toBeVisible({ timeout: 20_000 });
+
+  await page.getByTestId("connector-operation").filter({ hasText: "New Bot Command" }).click();
+  await page.getByTestId("connector-values-json").fill(JSON.stringify({ commands: "[\"/start\"]" }, null, 2));
+  await page.getByTestId("connector-secret-refs-json").fill(JSON.stringify({ telegramBotApi: "vault://connections/test/bot" }, null, 2));
+  await page.getByTestId("connector-dry-run").click();
+
+  await expect(page.getByText('"runtimePlan"')).toBeVisible();
+  await expect(page.getByText('"executorId": "telegram-bot-api.source.polling"')).toBeVisible();
+  await expect(page.getByText('"sourcePlan"')).toBeVisible();
+  await expect(page.getByText('"delivery": "polling"')).toBeVisible();
+  await expect(page.getByText('"dedupe": "unique"')).toBeVisible();
+  await expect(page.getByText('"deploy"')).toBeVisible();
 });
