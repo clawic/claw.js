@@ -400,8 +400,11 @@ export class SessionsServiceStore {
     const id = input.id ?? randomUUID();
     const createdAt = input.createdAt ?? Date.now();
     const title = input.title?.trim() || `${input.agent} session ${new Date(createdAt).toISOString().slice(0, 16)}`;
-    const projectPath = input.projectPath ? normalizeProjectPath(input.projectPath) : null;
-    const projectId = input.projectId ?? (projectPath ? this.getProjectByPath(projectPath)?.id ?? null : null);
+    const inputProject = input.projectId ? this.getProject(input.projectId) : null;
+    const projectPath = input.projectPath
+      ? normalizeProjectPath(input.projectPath)
+      : inputProject?.path ?? null;
+    const projectId = inputProject?.id ?? (projectPath ? this.getProjectByPath(projectPath)?.id ?? null : null);
     this.db.prepare(`
       INSERT INTO sessions (
         id, agent, runtime, runtime_adapter, runtime_session_id, machine, workspace_id, project_id, project_path, title,
@@ -628,7 +631,21 @@ export class SessionsServiceStore {
     const extra = conditions.length ? `AND ${conditions.join(" AND ")}` : "";
 
     const rows = this.db.prepare(
-      `SELECT m.*, s.*,
+      `SELECT
+              m.id AS message_id,
+              m.session_id AS message_session_id,
+              m.role AS message_role,
+              m.content_text AS message_content_text,
+              m.content_blocks AS message_content_blocks,
+              m.timestamp AS message_timestamp,
+              m.tool_calls AS message_tool_calls,
+              m.timeline AS message_timeline,
+              m.work_summary AS message_work_summary,
+              m.streaming_state AS message_streaming_state,
+              m.audio_ref AS message_audio_ref,
+              m.attachments AS message_attachments,
+              m.source_native_id AS message_source_native_id,
+              s.*,
               snippet(fts_messages, 0, '<<', '>>', '...', 32) AS snippet,
               bm25(fts_messages) AS rank
        FROM fts_messages
@@ -638,11 +655,41 @@ export class SessionsServiceStore {
        ${extra}
        ORDER BY rank ASC
        LIMIT @limit`,
-    ).all(params) as Array<MessageRow & SessionRow & { snippet: string; rank: number }>;
+    ).all(params) as Array<SessionRow & {
+      message_id: string;
+      message_session_id: string;
+      message_role: MessageRole;
+      message_content_text: string;
+      message_content_blocks: string | null;
+      message_timestamp: number;
+      message_tool_calls: string | null;
+      message_timeline: string | null;
+      message_work_summary: string | null;
+      message_streaming_state: import("./types.ts").MessageStreamingState | null;
+      message_audio_ref: string | null;
+      message_attachments: string | null;
+      message_source_native_id: string | null;
+      snippet: string;
+      rank: number;
+    }>;
 
     return rows.map((row) => ({
       session: rowToSession(row),
-      message: rowToMessage(row),
+      message: rowToMessage({
+        id: row.message_id,
+        session_id: row.message_session_id,
+        role: row.message_role,
+        content_text: row.message_content_text,
+        content_blocks: row.message_content_blocks,
+        timestamp: row.message_timestamp,
+        tool_calls: row.message_tool_calls,
+        timeline: row.message_timeline,
+        work_summary: row.message_work_summary,
+        streaming_state: row.message_streaming_state,
+        audio_ref: row.message_audio_ref,
+        attachments: row.message_attachments,
+        source_native_id: row.message_source_native_id,
+      }),
       snippet: row.snippet,
       rank: row.rank,
     }));

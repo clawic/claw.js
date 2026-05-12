@@ -181,7 +181,7 @@ export class SessionsApiClient {
   }
 
   interrupt(sessionId: string): Promise<{ interrupted: boolean; session: SessionRecord }> {
-    return this.call("POST", `/v1/sessions/${encodeURIComponent(sessionId)}/interrupt`);
+    return this.call("POST", `/v1/sessions/${encodeURIComponent(sessionId)}/interrupt`, {});
   }
 
   async *events(signal?: AbortSignal): AsyncGenerator<SessionEvent> {
