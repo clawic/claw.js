@@ -32,7 +32,7 @@ const summary = summarize(catalog.apps ?? []);
 
 for (const error of errors.slice(0, maxErrors)) console.error(`FAIL ${error}`);
 if (errors.length > maxErrors) console.error(`FAIL ... ${errors.length - maxErrors} additional errors hidden`);
-console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} defaults=${summary.defaults} options=${summary.options} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} dynamicProps=${summary.dynamicPropOperations} methods=${summary.methodOperations}`);
+console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} dynamicProps=${summary.dynamicPropOperations} methods=${summary.methodOperations}`);
 if (errors.length > 0) {
   console.error(`catalog verification failed with ${errors.length} error(s)`);
   process.exit(1);
@@ -92,6 +92,7 @@ function verify(catalog, expectedApps) {
   const forbidden = new RegExp(String.fromCharCode(80, 105, 112, 101, 100, 114, 101, 97, 109), "i");
   if (forbidden.test(JSON.stringify(catalog))) errors.push("catalog contains forbidden upstream brand text");
   if (actualSummary.defaults !== expectedSummary.defaults) errors.push(`defaults ${actualSummary.defaults} expected ${expectedSummary.defaults}`);
+  if (actualSummary.managedFields !== expectedSummary.managedFields) errors.push(`managedFields ${actualSummary.managedFields} expected ${expectedSummary.managedFields}`);
   if (actualSummary.options !== expectedSummary.options) errors.push(`options ${actualSummary.options} expected ${expectedSummary.options}`);
   if (actualSummary.annotatedOperations !== expectedSummary.annotatedOperations) errors.push(`annotations ${actualSummary.annotatedOperations} expected ${expectedSummary.annotatedOperations}`);
   if (actualSummary.destructiveOperations !== expectedSummary.destructiveOperations) errors.push(`destructive ${actualSummary.destructiveOperations} expected ${expectedSummary.destructiveOperations}`);
@@ -182,14 +183,16 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
     const inherited = propRef ? appFieldByName.get(propRef) : null;
     const defaultValue = readDefault(body);
     const options = readOptions(body);
+    const type = inherited?.type ?? readTopLevelString(body, "type") ?? "string";
     fields.set(name, {
       ...(inherited ?? {}),
       name,
-      type: inherited?.type ?? readTopLevelString(body, "type") ?? "string",
+      type,
       optional: inherited?.optional ?? /\boptional:\s*true\b/.test(body),
       ...(defaultValue === undefined ? {} : { default: defaultValue }),
       ...(options.length ? { options } : {}),
       ...(inherited?.secret || isSecretField(name, body, appId) ? { secret: true } : {}),
+      ...(inherited?.managed || type.startsWith("$.") ? { managed: true } : {}),
     });
   }
   return [...fields.values()].sort((left, right) => left.name.localeCompare(right.name));
@@ -261,6 +264,7 @@ function summarize(apps) {
     summary.apps += 1;
     summary.fields += Array.isArray(app.fields) ? app.fields.length : 0;
     summary.authFields += Array.isArray(app.authFieldNames) ? app.authFieldNames.length : 0;
+    summary.managedFields += Array.isArray(app.fields) ? app.fields.filter((field) => field.managed).length : 0;
     summary.defaults += countDefaults(app.fields);
     summary.options += countOptions(app.fields);
     for (const operation of Array.isArray(app.operations) ? app.operations : []) {
@@ -269,6 +273,7 @@ function summarize(apps) {
       else summary.actions += 1;
       summary.fields += Array.isArray(operation.fields) ? operation.fields.length : 0;
       summary.authFields += Array.isArray(operation.authFieldNames) ? operation.authFieldNames.length : 0;
+      summary.managedFields += Array.isArray(operation.fields) ? operation.fields.filter((field) => field.managed).length : 0;
       summary.defaults += countDefaults(operation.fields);
       summary.options += countOptions(operation.fields);
       if (isRecord(operation.annotations)) summary.annotatedOperations += 1;
@@ -288,6 +293,7 @@ function summarize(apps) {
     sources: 0,
     fields: 0,
     authFields: 0,
+    managedFields: 0,
     defaults: 0,
     options: 0,
     annotatedOperations: 0,
@@ -306,6 +312,7 @@ function summarizeExpected(apps) {
   const summary = {
     defaults: 0,
     options: 0,
+    managedFields: 0,
     annotatedOperations: 0,
     destructiveOperations: 0,
     readOnlyOperations: 0,
@@ -319,9 +326,11 @@ function summarizeExpected(apps) {
   for (const app of apps.values()) {
     summary.defaults += app.fieldStats.defaults;
     summary.options += app.fieldStats.options;
+    summary.managedFields += app.fieldStats.managed;
     for (const operation of app.operations.values()) {
       summary.defaults += operation.fieldStats.defaults;
       summary.options += operation.fieldStats.options;
+      summary.managedFields += operation.fieldStats.managed;
       if (Object.keys(operation.annotations).length) summary.annotatedOperations += 1;
       if (operation.annotations.destructiveHint === true) summary.destructiveOperations += 1;
       if (operation.annotations.readOnlyHint === true) summary.readOnlyOperations += 1;
@@ -365,6 +374,7 @@ function summarizeFields(fields) {
   return {
     defaults: fields.filter((field) => field.default !== undefined).length,
     options: fields.filter((field) => field.options?.length > 0).length,
+    managed: fields.filter((field) => field.managed).length,
   };
 }
 

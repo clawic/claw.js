@@ -138,6 +138,7 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
       ...optionalJson("default", readDefault(body)),
       ...optionalOptions(readOptions(body)),
       ...(inherited?.secret || isSecretField(name, body, appId) ? { secret: true } : {}),
+      ...(inherited?.managed || type.startsWith("$.") ? { managed: true } : {}),
     };
     fields.set(name, field);
   }

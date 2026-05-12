@@ -29,6 +29,7 @@ function fixtureCatalog(): ConnectorCatalog {
             name: "Send Message",
             fields: [
               { name: "channel", type: "string", optional: false },
+              { name: "workspace", type: "$.workspace", optional: false },
               { name: "text", type: "string", optional: false },
               {
                 name: "silent",
@@ -81,8 +82,9 @@ describe("connector catalog", () => {
       apps: 1,
       actions: 1,
       sources: 1,
-      fields: 5,
+      fields: 6,
       authFields: 3,
+      managedFields: 1,
       defaults: 1,
       options: 1,
       annotatedOperations: 1,

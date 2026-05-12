@@ -71,6 +71,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       summary.apps += 1;
       summary.fields += app.fields.length;
       summary.authFields += app.authFieldNames.length;
+      summary.managedFields += app.fields.filter((field) => field.managed).length;
       summary.defaults += app.fields.filter((field) => Object.prototype.hasOwnProperty.call(field, "default")).length;
       summary.options += app.fields.filter((field) => field.options?.length).length;
       for (const operation of app.operations) {
@@ -78,6 +79,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
         else summary.sources += 1;
         summary.fields += operation.fields.length;
         summary.authFields += operation.authFieldNames.length;
+        summary.managedFields += operation.fields.filter((field) => field.managed).length;
         summary.defaults += operation.fields.filter((field) => Object.prototype.hasOwnProperty.call(field, "default")).length;
         summary.options += operation.fields.filter((field) => field.options?.length).length;
         if (operation.annotations) summary.annotatedOperations += 1;
@@ -98,6 +100,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       sources: 0,
       fields: 0,
       authFields: 0,
+      managedFields: 0,
       defaults: 0,
       options: 0,
       annotatedOperations: 0,
@@ -192,9 +195,10 @@ function normalizeFields(input: unknown): ConnectorFieldDefinition[] {
       throw new ConnectorCatalogError("Field entry must be an object.");
     }
     const name = requiredString(field.name, "field.name");
+    const type = stringValue(field.type) ?? "string";
     return {
       name,
-      type: stringValue(field.type) ?? "string",
+      type,
       ...(typeof field.label === "string" ? { label: field.label } : {}),
       ...(typeof field.description === "string" ? { description: field.description } : {}),
       optional: field.optional === true,
@@ -205,6 +209,7 @@ function normalizeFields(input: unknown): ConnectorFieldDefinition[] {
         ...(typeof option.description === "string" ? { description: option.description } : {}),
       })).filter((option) => isOptionValue(option.value)) } : {}),
       ...(field.secret === true ? { secret: true } : {}),
+      ...(field.managed === true || type.startsWith("$.") ? { managed: true } : {}),
     };
   }).sort((left, right) => left.name.localeCompare(right.name));
 }

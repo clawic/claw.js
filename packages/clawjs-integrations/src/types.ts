@@ -30,6 +30,7 @@ export interface ConnectorFieldDefinition {
   default?: IntegrationJson;
   options?: ConnectorFieldOption[];
   secret?: boolean;
+  managed?: boolean;
 }
 
 export interface ConnectorOperationAnnotations {
@@ -84,6 +85,7 @@ export interface ConnectorCatalogSummary {
   sources: number;
   fields: number;
   authFields: number;
+  managedFields: number;
   defaults: number;
   options: number;
   annotatedOperations: number;

@@ -125,7 +125,7 @@ function buildValues(
 }
 
 function requiredFieldNames(fields: ConnectorFieldDefinition[]): string[] {
-  return fields.filter((field) => !field.optional && !field.secret).map((field) => field.name);
+  return fields.filter((field) => !field.optional && !field.secret && !field.managed).map((field) => field.name);
 }
 
 function redactSecretValues(
