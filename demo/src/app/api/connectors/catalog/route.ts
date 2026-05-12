@@ -1,8 +1,10 @@
 import path from "node:path";
 
 import {
+  findConnectorOperation,
   loadConnectorCatalogFromFile,
   runConnectorOperation,
+  runConnectorSource,
   searchConnectorCatalog,
   summarizeConnectorCatalog,
 } from "@clawjs/integrations";
@@ -97,14 +99,17 @@ export async function POST(req: NextRequest) {
     return Response.json({ ok: false, error: "Missing operationId" }, { status: 400 });
   }
   try {
-    const preview = await runConnectorOperation({
-      catalog,
-      operationId: body.operationId,
-      input: {
-        values: body.values,
-        secretRefs: body.secretRefs,
-      },
-    });
+    const found = findConnectorOperation(catalog, body.operationId);
+    if (!found) {
+      return Response.json({ ok: false, error: `Unknown connector operation: ${body.operationId}` }, { status: 400 });
+    }
+    const input = {
+      values: body.values,
+      secretRefs: body.secretRefs,
+    };
+    const preview = found.operation.kind === "source"
+      ? await runConnectorSource({ catalog, operationId: body.operationId, input })
+      : await runConnectorOperation({ catalog, operationId: body.operationId, input });
     return Response.json({ ok: true, preview });
   } catch (err) {
     return Response.json({
