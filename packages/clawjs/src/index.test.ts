@@ -662,6 +662,24 @@ test("runCli indexes external Codex session artifacts without owning their raw b
     assert.equal(row.source, "codex");
     assert.match(row.snippet, /preserve raw JSONL outside sqlite/);
     assert.equal(row.metadata.artifactKind, "codex-rollout");
+
+    const listStdout = captureStream();
+    assert.equal(await runCli(["sessions", "list", "--json"], {
+      stdout: listStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const listed = JSON.parse(listStdout.getOutput()) as { items: Array<{ sessionId: string }> };
+    assert.deepEqual(listed.items.map((item) => item.sessionId), [sessionId]);
+
+    const searchStdout = captureStream();
+    assert.equal(await runCli(["sessions", "search", "--query", "large rollout", "--json"], {
+      stdout: searchStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const searched = JSON.parse(searchStdout.getOutput()) as { items: Array<{ sessionId: string }> };
+    assert.deepEqual(searched.items.map((item) => item.sessionId), [sessionId]);
   });
 });
 

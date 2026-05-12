@@ -347,6 +347,9 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
     input.stdout.write(`${usage(input.binName, group)}\n`);
     return V1_DATA_EXIT_OK;
   }
+  if (group === "sessions" && (command === "list" || command === "search") && input.flags.workspace) {
+    return null;
+  }
   if (group === "data" && command === "restore") {
     const from = input.flags.from || input.flags.input;
     if (!from) return usageError(input, "Usage: claw data restore --from DIR [--json]");
@@ -403,7 +406,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     agents: new Set(["list", "upsert", "help"]),
     skills: new Set(["upsert", "help"]),
     connections: new Set(["list", "upsert", "help"]),
-    sessions: new Set(["index", "get", "help"]),
+    sessions: new Set(["index", "list", "get", "search", "help"]),
   };
   if (!group || !(group in commandsByGroup)) return false;
   if (wantsHelp || !command) return true;
@@ -743,12 +746,24 @@ function runConnectionsCommand(input: V1DataCliInput, store: DatabaseServiceStor
   return usageError(input, usage(input.binName, "connections"));
 }
 
-function runSessionsIndexCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
+function runSessionsIndexCommand(input: V1DataCliInput, store: DatabaseServiceStore): number | null {
   const command = input.positionals[1];
+  if ((command === "list" || command === "search") && input.flags.workspace) {
+    return null;
+  }
   if (command === "index") {
     const roots = sessionRoots(input);
     const indexed = indexSessionRoots(store.sqlite, roots, input.flags.source || "codex");
     writeSuccess(input, { indexed, roots });
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "list") {
+    const limit = Math.max(1, Number(input.flags.limit ?? 100));
+    const source = input.flags.source;
+    const rows = source
+      ? store.sqlite.prepare("SELECT * FROM session_index WHERE source = ? ORDER BY updated_at DESC LIMIT ?").all(source, limit)
+      : store.sqlite.prepare("SELECT * FROM session_index ORDER BY updated_at DESC LIMIT ?").all(limit);
+    writeSuccess(input, { items: rows.map(normalizeDbRow) });
     return V1_DATA_EXIT_OK;
   }
   if (command === "get") {
@@ -757,6 +772,21 @@ function runSessionsIndexCommand(input: V1DataCliInput, store: DatabaseServiceSt
     const row = store.sqlite.prepare("SELECT * FROM session_index WHERE session_id = ?").get(id) as JsonRecord | undefined;
     writeSuccess(input, row ? normalizeDbRow(row) : null);
     return row ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
+  }
+  if (command === "search") {
+    const query = input.flags.query || input.flags.q || input.positionals.slice(2).join(" ");
+    if (!query) return usageError(input, "Usage: claw sessions search --query TEXT [--json]");
+    const limit = Math.max(1, Number(input.flags.limit ?? 50));
+    const rows = store.sqlite.prepare(`
+      SELECT session_index.*
+      FROM session_index_fts
+      JOIN session_index ON session_index.session_id = session_index_fts.session_id
+      WHERE session_index_fts MATCH ?
+      ORDER BY rank
+      LIMIT ?
+    `).all(ftsPhrase(query), limit);
+    writeSuccess(input, { items: rows.map(normalizeDbRow) });
+    return V1_DATA_EXIT_OK;
   }
   return usageError(input, usage(input.binName, "sessions"));
 }
@@ -1047,7 +1077,7 @@ function usage(binName: string, group: string): string {
     case "connections":
       return `Usage: ${binName} connections list|upsert [--json]`;
     case "sessions":
-      return `Usage: ${binName} sessions index|get [--json]`;
+      return `Usage: ${binName} sessions index|list|get|search [--json]`;
     default:
       return `Usage: ${binName} data doctor [--json]`;
   }
@@ -1129,6 +1159,10 @@ function expandHome(value: string): string {
 }
 
 function quoteIdent(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
+function ftsPhrase(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
