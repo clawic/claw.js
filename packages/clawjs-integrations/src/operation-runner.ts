@@ -3,6 +3,12 @@ import {
   type ConnectorCatalogError,
 } from "./catalog.ts";
 import {
+  buildConnectorValues,
+  invalidConnectorFieldNames,
+  redactConnectorSecretValues,
+  requiredConnectorFieldNames,
+} from "./connector-input.ts";
+import {
   buildConnectorOperationRuntimePlan,
   type ConnectorOperationRuntimePlan,
 } from "./runtime-coverage.ts";
@@ -13,7 +19,6 @@ import {
 } from "./runtime-registry.ts";
 import type {
   ConnectorCatalog,
-  ConnectorFieldDefinition,
   ConnectorOperationDefinition,
   ConnectorOperationInput,
   IntegrationJson,
@@ -71,13 +76,13 @@ export async function runConnectorOperation(
   }
 
   const input = options.input ?? {};
-  const values = buildValues(found.operation.fields, input.values ?? {});
+  const values = buildConnectorValues(found.operation.fields, input.values ?? {}, { includeManaged: true });
   const secretRefs = input.secretRefs ?? {};
-  const missingFields = requiredFieldNames(found.operation.fields)
+  const missingFields = requiredConnectorFieldNames(found.operation.fields)
     .filter((fieldName) => values[fieldName] == null || values[fieldName] === "");
   const missingSecrets = found.operation.authFieldNames
     .filter((fieldName) => !secretRefs[fieldName]);
-  const invalidFields = invalidFieldNames(found.operation.fields, values, input.values ?? {});
+  const invalidFields = invalidConnectorFieldNames(found.operation.fields, values, input.values ?? {});
 
   if (options.dryRun !== false) {
     return {
@@ -88,7 +93,7 @@ export async function runConnectorOperation(
       missingFields,
       missingSecrets,
       invalidFields,
-      values: redactSecretValues(found.operation.fields, values),
+      values: redactConnectorSecretValues(found.operation.fields, values),
       secretRefs,
       runtime: buildConnectorOperationRuntimePlan(found.operation, values, { registry: options.runtimeRegistry }),
     };
@@ -124,60 +129,6 @@ export async function runConnectorOperation(
     appId: found.app.id,
     output,
   };
-}
-
-function buildValues(
-  fields: ConnectorFieldDefinition[],
-  input: Record<string, IntegrationJson>,
-): Record<string, IntegrationJson> {
-  const values: Record<string, IntegrationJson> = {};
-  for (const field of fields) {
-    if (Object.prototype.hasOwnProperty.call(input, field.name)) {
-      values[field.name] = input[field.name] ?? null;
-    } else if (Object.prototype.hasOwnProperty.call(field, "default")) {
-      values[field.name] = field.default ?? null;
-    }
-  }
-  return values;
-}
-
-function requiredFieldNames(fields: ConnectorFieldDefinition[]): string[] {
-  return fields.filter((field) => !field.optional && !field.secret && !field.managed).map((field) => field.name);
-}
-
-function invalidFieldNames(
-  fields: ConnectorFieldDefinition[],
-  values: Record<string, IntegrationJson>,
-  input: Record<string, IntegrationJson>,
-): string[] {
-  return fields
-    .filter((field) => Object.prototype.hasOwnProperty.call(input, field.name))
-    .filter((field) => Object.prototype.hasOwnProperty.call(values, field.name))
-    .filter((field) => !isValidFieldValue(field, values[field.name]))
-    .map((field) => field.name);
-}
-
-function isValidFieldValue(field: ConnectorFieldDefinition, value: IntegrationJson): boolean {
-  if (value == null || value === "") return true;
-  if (field.options?.length) {
-    const allowed = new Set(field.options.map((option) => JSON.stringify(option.value)));
-    if (!allowed.has(JSON.stringify(value))) return false;
-  }
-  if (typeof value === "number") {
-    if (typeof field.min === "number" && value < field.min) return false;
-    if (typeof field.max === "number" && value > field.max) return false;
-  }
-  return true;
-}
-
-function redactSecretValues(
-  fields: ConnectorFieldDefinition[],
-  values: Record<string, IntegrationJson>,
-): Record<string, IntegrationJson> {
-  const secretFields = new Set(fields.filter((field) => field.secret).map((field) => field.name));
-  return Object.fromEntries(
-    Object.entries(values).map(([key, value]) => [key, secretFields.has(key) ? "[secret]" : value]),
-  );
 }
 
 export type { ConnectorCatalogError };

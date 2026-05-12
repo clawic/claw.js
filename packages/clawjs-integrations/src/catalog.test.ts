@@ -288,6 +288,37 @@ describe("connector catalog", () => {
     assert.deepEqual(plan.invalidFields, ["limit"]);
   });
 
+  it("reports invalid field types without executing", async () => {
+    const dryRun = await runConnectorOperation({
+      catalog: fixtureCatalog(),
+      operationId: "chat_service.action.send-message",
+      input: {
+        values: {
+          channel: ["general"],
+          syncDir: { path: "/tmp" },
+          workspace: { id: "workspace_1" },
+          text: false,
+          silent: true,
+        },
+      },
+    });
+
+    assert.equal(dryRun.status, "dry_run");
+    assert.deepEqual(dryRun.invalidFields, ["channel", "syncDir", "text"]);
+
+    const plan = await runConnectorSource({
+      catalog: fixtureCatalog(),
+      operationId: "chat_service.source.new-message",
+      input: {
+        values: { channel: "general", limit: 1.5 },
+        secretRefs: { bot: "secret://bot" },
+      },
+    });
+
+    assert.equal(plan.status, "source_plan");
+    assert.deepEqual(plan.invalidFields, ["limit"]);
+  });
+
   it("resolves secrets only when execution is explicitly enabled", async () => {
     const result = await runConnectorOperation({
       catalog: fixtureCatalog(),
