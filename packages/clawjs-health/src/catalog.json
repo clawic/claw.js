@@ -1,0 +1,150 @@
+{
+  "domain": "health",
+  "version": "0.1.0",
+  "entries": [
+    {
+      "id": "health.heart_rate",
+      "label": "Heart rate",
+      "unit": { "id": "bpm", "label": "bpm", "group": "frequency" },
+      "valueType": "numeric",
+      "validRange": { "min": 20, "max": 250 },
+      "category": "cardiovascular",
+      "healthkitTypeId": "HKQuantityTypeIdentifierHeartRate",
+      "description": "Instantaneous heart rate in beats per minute."
+    },
+    {
+      "id": "health.resting_heart_rate",
+      "label": "Resting heart rate",
+      "unit": { "id": "bpm", "label": "bpm", "group": "frequency" },
+      "valueType": "numeric",
+      "validRange": { "min": 20, "max": 130 },
+      "category": "cardiovascular",
+      "healthkitTypeId": "HKQuantityTypeIdentifierRestingHeartRate"
+    },
+    {
+      "id": "health.heart_rate_variability",
+      "label": "Heart rate variability (SDNN)",
+      "unit": { "id": "ms", "label": "ms", "group": "duration" },
+      "valueType": "numeric",
+      "validRange": { "min": 0, "max": 500 },
+      "category": "cardiovascular",
+      "healthkitTypeId": "HKQuantityTypeIdentifierHeartRateVariabilitySDNN"
+    },
+    {
+      "id": "health.blood_pressure_systolic",
+      "label": "Blood pressure (systolic)",
+      "unit": { "id": "mmHg", "label": "mmHg", "group": "pressure" },
+      "valueType": "numeric",
+      "validRange": { "min": 50, "max": 260 },
+      "category": "cardiovascular",
+      "healthkitTypeId": "HKQuantityTypeIdentifierBloodPressureSystolic"
+    },
+    {
+      "id": "health.blood_pressure_diastolic",
+      "label": "Blood pressure (diastolic)",
+      "unit": { "id": "mmHg", "label": "mmHg", "group": "pressure" },
+      "valueType": "numeric",
+      "validRange": { "min": 30, "max": 180 },
+      "category": "cardiovascular",
+      "healthkitTypeId": "HKQuantityTypeIdentifierBloodPressureDiastolic"
+    },
+    {
+      "id": "health.respiratory_rate",
+      "label": "Respiratory rate",
+      "unit": { "id": "bpm", "label": "br/min", "group": "frequency" },
+      "valueType": "numeric",
+      "validRange": { "min": 4, "max": 60 },
+      "category": "respiratory",
+      "healthkitTypeId": "HKQuantityTypeIdentifierRespiratoryRate"
+    },
+    {
+      "id": "health.oxygen_saturation",
+      "label": "Oxygen saturation (SpO2)",
+      "unit": { "id": "percent", "label": "%", "group": "ratio" },
+      "valueType": "numeric",
+      "validRange": { "min": 50, "max": 100 },
+      "category": "respiratory",
+      "healthkitTypeId": "HKQuantityTypeIdentifierOxygenSaturation"
+    },
+    {
+      "id": "health.body_temperature",
+      "label": "Body temperature",
+      "unit": { "id": "C", "label": "°C", "group": "temperature" },
+      "valueType": "numeric",
+      "validRange": { "min": 30, "max": 45 },
+      "category": "general",
+      "healthkitTypeId": "HKQuantityTypeIdentifierBodyTemperature"
+    },
+    {
+      "id": "health.blood_glucose",
+      "label": "Blood glucose",
+      "unit": { "id": "mg/dL", "label": "mg/dL", "group": "concentration" },
+      "valueType": "numeric",
+      "validRange": { "min": 20, "max": 600 },
+      "category": "metabolism",
+      "healthkitTypeId": "HKQuantityTypeIdentifierBloodGlucose"
+    },
+    {
+      "id": "health.steps",
+      "label": "Steps",
+      "unit": { "id": "steps", "label": "steps", "group": "count" },
+      "valueType": "numeric",
+      "validRange": { "min": 0 },
+      "category": "activity",
+      "healthkitTypeId": "HKQuantityTypeIdentifierStepCount"
+    },
+    {
+      "id": "health.distance_walking_running",
+      "label": "Distance walking & running",
+      "unit": { "id": "km", "label": "km", "group": "length" },
+      "valueType": "numeric",
+      "validRange": { "min": 0 },
+      "category": "activity",
+      "healthkitTypeId": "HKQuantityTypeIdentifierDistanceWalkingRunning"
+    },
+    {
+      "id": "health.flights_climbed",
+      "label": "Flights climbed",
+      "unit": { "id": "count", "label": "flights", "group": "count" },
+      "valueType": "numeric",
+      "validRange": { "min": 0 },
+      "category": "activity",
+      "healthkitTypeId": "HKQuantityTypeIdentifierFlightsClimbed"
+    },
+    {
+      "id": "health.active_energy_burned",
+      "label": "Active energy burned",
+      "unit": { "id": "kcal", "label": "kcal", "group": "energy" },
+      "valueType": "numeric",
+      "validRange": { "min": 0 },
+      "category": "activity",
+      "healthkitTypeId": "HKQuantityTypeIdentifierActiveEnergyBurned"
+    },
+    {
+      "id": "health.basal_energy_burned",
+      "label": "Resting energy burned",
+      "unit": { "id": "kcal", "label": "kcal", "group": "energy" },
+      "valueType": "numeric",
+      "validRange": { "min": 0 },
+      "category": "activity",
+      "healthkitTypeId": "HKQuantityTypeIdentifierBasalEnergyBurned"
+    },
+    {
+      "id": "health.vo2_max",
+      "label": "VO2 max",
+      "unit": { "id": "mL/(kg·min)", "label": "mL/(kg·min)", "group": "rate" },
+      "valueType": "numeric",
+      "validRange": { "min": 10, "max": 90 },
+      "category": "cardiovascular",
+      "healthkitTypeId": "HKQuantityTypeIdentifierVO2Max"
+    },
+    {
+      "id": "health.note",
+      "label": "Health note",
+      "unit": { "id": "text", "label": "text", "group": "abstract" },
+      "valueType": "text",
+      "category": "general",
+      "description": "Free-form health note"
+    }
+  ]
+}

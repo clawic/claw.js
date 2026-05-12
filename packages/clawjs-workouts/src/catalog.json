@@ -1,0 +1,18 @@
+{
+  "domain": "workouts",
+  "version": "0.1.0",
+  "entries": [
+    { "id": "workouts.session_type", "label": "Session type", "unit": { "id": "text", "label": "type", "group": "abstract" }, "valueType": "enum", "category": "session", "enumValues": ["running", "cycling", "swimming", "strength", "hiit", "yoga", "pilates", "walk", "hike", "rowing", "elliptical", "stairs", "boxing", "martial_arts", "climbing", "skiing", "snowboard", "surfing", "tennis", "basketball", "football", "padel", "skating", "dance", "stretching", "mobility", "other"] },
+    { "id": "workouts.duration", "label": "Duration", "unit": { "id": "min", "label": "min", "group": "time" }, "valueType": "duration", "validRange": { "min": 0, "max": 1440 }, "category": "session", "healthkitTypeId": "HKWorkoutTypeIdentifier" },
+    { "id": "workouts.active_energy", "label": "Active energy", "unit": { "id": "kcal", "label": "kcal", "group": "energy" }, "valueType": "numeric", "validRange": { "min": 0 }, "category": "session", "healthkitTypeId": "HKQuantityTypeIdentifierActiveEnergyBurned" },
+    { "id": "workouts.distance", "label": "Distance", "unit": { "id": "km", "label": "km", "group": "length" }, "valueType": "numeric", "validRange": { "min": 0 }, "category": "session" },
+    { "id": "workouts.avg_heart_rate", "label": "Avg heart rate", "unit": { "id": "bpm", "label": "bpm", "group": "frequency" }, "valueType": "numeric", "validRange": { "min": 30, "max": 230 }, "category": "session" },
+    { "id": "workouts.max_heart_rate", "label": "Max heart rate", "unit": { "id": "bpm", "label": "bpm", "group": "frequency" }, "valueType": "numeric", "validRange": { "min": 30, "max": 230 }, "category": "session" },
+    { "id": "workouts.perceived_exertion", "label": "Perceived exertion (RPE)", "unit": { "id": "score:0-10", "label": "score 0-10", "group": "score" }, "valueType": "numeric", "validRange": { "min": 0, "max": 10 }, "category": "session" },
+    { "id": "workouts.exercise_reps", "label": "Reps", "unit": { "id": "reps", "label": "reps", "group": "count" }, "valueType": "numeric", "validRange": { "min": 0 }, "category": "strength" },
+    { "id": "workouts.exercise_sets", "label": "Sets", "unit": { "id": "sets", "label": "sets", "group": "count" }, "valueType": "numeric", "validRange": { "min": 0 }, "category": "strength" },
+    { "id": "workouts.exercise_weight", "label": "Weight per rep", "unit": { "id": "kg", "label": "kg", "group": "mass" }, "valueType": "numeric", "validRange": { "min": 0 }, "category": "strength" },
+    { "id": "workouts.exercise_name", "label": "Exercise", "unit": { "id": "text", "label": "name", "group": "abstract" }, "valueType": "text", "category": "strength" },
+    { "id": "workouts.note", "label": "Workout note", "unit": { "id": "text", "label": "text", "group": "abstract" }, "valueType": "text", "category": "general" }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "domain": "sleep",
+  "version": "0.1.0",
+  "entries": [
+    { "id": "sleep.duration", "label": "Sleep duration", "unit": { "id": "min", "label": "min", "group": "time" }, "valueType": "duration", "validRange": { "min": 0, "max": 1440 }, "category": "summary", "healthkitTypeId": "HKCategoryTypeIdentifierSleepAnalysis" },
+    { "id": "sleep.in_bed", "label": "In bed", "unit": { "id": "min", "label": "min", "group": "time" }, "valueType": "duration", "validRange": { "min": 0, "max": 1440 }, "category": "summary", "healthkitTypeId": "HKCategoryTypeIdentifierSleepAnalysis" },
+    { "id": "sleep.stage_awake", "label": "Awake (stage)", "unit": { "id": "min", "label": "min", "group": "time" }, "valueType": "duration", "category": "stages", "healthkitTypeId": "HKCategoryTypeIdentifierSleepAnalysis" },
+    { "id": "sleep.stage_rem", "label": "REM (stage)", "unit": { "id": "min", "label": "min", "group": "time" }, "valueType": "duration", "category": "stages", "healthkitTypeId": "HKCategoryTypeIdentifierSleepAnalysis" },
+    { "id": "sleep.stage_core", "label": "Core / light (stage)", "unit": { "id": "min", "label": "min", "group": "time" }, "valueType": "duration", "category": "stages", "healthkitTypeId": "HKCategoryTypeIdentifierSleepAnalysis" },
+    { "id": "sleep.stage_deep", "label": "Deep (stage)", "unit": { "id": "min", "label": "min", "group": "time" }, "valueType": "duration", "category": "stages", "healthkitTypeId": "HKCategoryTypeIdentifierSleepAnalysis" },
+    { "id": "sleep.quality", "label": "Subjective quality", "unit": { "id": "score:1-5", "label": "score 1-5", "group": "score" }, "valueType": "numeric", "validRange": { "min": 1, "max": 5 }, "category": "subjective" },
+    { "id": "sleep.nap", "label": "Nap", "unit": { "id": "min", "label": "min", "group": "time" }, "valueType": "duration", "category": "summary" },
+    { "id": "sleep.note", "label": "Sleep note", "unit": { "id": "text", "label": "text", "group": "abstract" }, "valueType": "text", "category": "general" }
+  ]
+}

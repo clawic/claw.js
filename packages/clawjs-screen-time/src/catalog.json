@@ -1,0 +1,18 @@
+{
+  "domain": "screen-time",
+  "version": "0.1.0",
+  "entries": [
+    {
+      "id": "screen-time.note",
+      "label": "Screen time — free-form note",
+      "unit": {
+        "id": "text",
+        "label": "text",
+        "group": "abstract"
+      },
+      "valueType": "text",
+      "category": "general",
+      "description": "Free-form text observation for Screen time."
+    }
+  ]
+}
