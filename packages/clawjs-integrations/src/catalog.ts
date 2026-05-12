@@ -84,6 +84,11 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
         if (operation.annotations?.destructiveHint === true) summary.destructiveOperations += 1;
         if (operation.annotations?.readOnlyHint === true) summary.readOnlyOperations += 1;
         if (operation.annotations?.openWorldHint === true) summary.openWorldOperations += 1;
+        if (operation.runtime?.hasRun === true) summary.runnableOperations += 1;
+        if (operation.kind === "source" && operation.runtime?.hasHooks === true) summary.hookSources += 1;
+        if (operation.kind === "source" && operation.runtime?.dedupe) summary.dedupedSources += 1;
+        if (operation.runtime?.hasAdditionalProps === true) summary.dynamicPropOperations += 1;
+        if (operation.runtime?.hasMethods === true) summary.methodOperations += 1;
       }
       return summary;
     },
@@ -99,6 +104,11 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       destructiveOperations: 0,
       readOnlyOperations: 0,
       openWorldOperations: 0,
+      runnableOperations: 0,
+      hookSources: 0,
+      dedupedSources: 0,
+      dynamicPropOperations: 0,
+      methodOperations: 0,
     },
   );
 }
@@ -170,6 +180,7 @@ function normalizeOperation(input: unknown, appId: string): ConnectorOperationDe
     fields: normalizeFields(input.fields),
     authFieldNames: normalizeStringArray(input.authFieldNames),
     ...optionalAnnotations(input.annotations),
+    ...optionalRuntime(input.runtime),
     ...(typeof input.sourcePath === "string" ? { sourcePath: input.sourcePath } : {}),
   };
 }
@@ -228,6 +239,19 @@ function optionalAnnotations(input: unknown) {
     ...(typeof input.openWorldHint === "boolean" ? { openWorldHint: input.openWorldHint } : {}),
   };
   return Object.keys(annotations).length ? { annotations } : {};
+}
+
+function optionalRuntime(input: unknown) {
+  if (!isRecord(input)) return {};
+  return {
+    runtime: {
+      hasRun: input.hasRun === true,
+      hasHooks: input.hasHooks === true,
+      hasAdditionalProps: input.hasAdditionalProps === true,
+      hasMethods: input.hasMethods === true,
+      ...(typeof input.dedupe === "string" && input.dedupe.trim() ? { dedupe: input.dedupe.trim() } : {}),
+    },
+  };
 }
 
 function stringValue(input: unknown): string | null {

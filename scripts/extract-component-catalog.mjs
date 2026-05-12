@@ -93,6 +93,7 @@ function readOperations(appDir, appId, kind, appAuthFields, appFields) {
         fields,
         authFieldNames,
         ...optionalAnnotations(readAnnotations(source)),
+        runtime: readRuntime(source),
         sourcePath: scrubPath(path.relative(path.dirname(appDir), file).replaceAll(path.sep, "/")),
       };
     });
@@ -250,6 +251,21 @@ function readAnnotations(source) {
     ...optionalBoolean("readOnlyHint", readBoolean(body, "readOnlyHint")),
     ...optionalBoolean("openWorldHint", readBoolean(body, "openWorldHint")),
   };
+}
+
+function readRuntime(source) {
+  return {
+    hasRun: hasComponentMember(source, "run"),
+    hasHooks: hasComponentMember(source, "hooks"),
+    hasAdditionalProps: /\badditionalProps\s*[:(]/.test(source),
+    hasMethods: hasComponentMember(source, "methods"),
+    ...optionalString("dedupe", firstMatch(source, /\bdedupe\s*:\s*["'`]([^"'`]+)["'`]/)),
+  };
+}
+
+function hasComponentMember(source, name) {
+  const member = new RegExp(`(?:^|[\\n,{])\\s*(?:async\\s+)?${name}\\s*(?:[:(])`, "m");
+  return member.test(source);
 }
 
 function optionalBoolean(key, value) {

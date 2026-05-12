@@ -44,6 +44,12 @@ function fixtureCatalog(): ConnectorCatalog {
               readOnlyHint: false,
               openWorldHint: true,
             },
+            runtime: {
+              hasRun: true,
+              hasHooks: false,
+              hasAdditionalProps: true,
+              hasMethods: true,
+            },
           },
           {
             id: "chat_service.source.new-message",
@@ -54,6 +60,13 @@ function fixtureCatalog(): ConnectorCatalog {
               { name: "channel", type: "string", optional: false },
             ],
             authFieldNames: ["bot"],
+            runtime: {
+              hasRun: true,
+              hasHooks: true,
+              hasAdditionalProps: false,
+              hasMethods: true,
+              dedupe: "unique",
+            },
           },
         ],
       },
@@ -76,6 +89,11 @@ describe("connector catalog", () => {
       destructiveOperations: 0,
       readOnlyOperations: 0,
       openWorldOperations: 1,
+      runnableOperations: 2,
+      hookSources: 1,
+      dedupedSources: 1,
+      dynamicPropOperations: 1,
+      methodOperations: 2,
     });
     assert.equal(searchConnectorCatalog(catalog, { query: "send", kind: "action" }).length, 1);
     assert.equal(searchConnectorCatalog(catalog, { query: "send", kind: "source" }).length, 0);

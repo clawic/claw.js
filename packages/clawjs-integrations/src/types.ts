@@ -38,6 +38,14 @@ export interface ConnectorOperationAnnotations {
   openWorldHint?: boolean;
 }
 
+export interface ConnectorOperationRuntime {
+  hasRun: boolean;
+  hasHooks: boolean;
+  hasAdditionalProps: boolean;
+  hasMethods: boolean;
+  dedupe?: string;
+}
+
 export interface ConnectorOperationDefinition {
   id: string;
   appId: string;
@@ -49,6 +57,7 @@ export interface ConnectorOperationDefinition {
   fields: ConnectorFieldDefinition[];
   authFieldNames: string[];
   annotations?: ConnectorOperationAnnotations;
+  runtime?: ConnectorOperationRuntime;
   sourcePath?: string;
 }
 
@@ -81,6 +90,11 @@ export interface ConnectorCatalogSummary {
   destructiveOperations: number;
   readOnlyOperations: number;
   openWorldOperations: number;
+  runnableOperations: number;
+  hookSources: number;
+  dedupedSources: number;
+  dynamicPropOperations: number;
+  methodOperations: number;
 }
 
 export interface ConnectorOperationInput {
