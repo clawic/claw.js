@@ -13,6 +13,7 @@ import type { ConnectorRuntimeImplementation } from "./runtime-registry.ts";
 import {
   createConnectorOperationExecutor,
   createConnectorSourceExecutor,
+  extractConnectorRuntimeSourceEvents,
 } from "./runtime-registry.ts";
 import type { IntegrationJson } from "./types.ts";
 
@@ -710,6 +711,25 @@ describe("connector runtime coverage", () => {
       url: "https://api.example.invalid/v1/items?cursor=cursor_1",
       apiKey: "secret-token",
     }]);
+  });
+
+  it("extracts webhook source events from fixture payload paths", () => {
+    assert.deepEqual(extractConnectorRuntimeSourceEvents({
+      payload: {
+        records: [{ id: "evt_1" }, { id: "evt_2" }],
+      },
+      paging: {
+        nextOffset: 20,
+      },
+    }, {
+      delivery: "webhook",
+      hooks: ["activate"],
+      eventsPath: "payload.records",
+      nextOffsetPath: "paging.nextOffset",
+    }), {
+      events: [{ id: "evt_1" }, { id: "evt_2" }],
+      nextOffset: 20,
+    });
   });
 
   it("rejects declarative HTTP sources without event extraction", () => {

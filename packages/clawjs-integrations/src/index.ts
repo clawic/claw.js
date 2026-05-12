@@ -33,6 +33,7 @@ export {
   CONNECTOR_RUNTIME_REGISTRY,
   createConnectorOperationExecutor,
   createConnectorSourceExecutor,
+  extractConnectorRuntimeSourceEvents,
   findConnectorRuntimeImplementation,
 } from "./runtime-registry.js";
 export {
@@ -105,6 +106,7 @@ export type {
   ConnectorRuntimePaginationMode,
   ConnectorRuntimePaginationPlan,
   ConnectorRuntimeRequestPlan,
+  ConnectorRuntimeSourceEventExtraction,
   ConnectorRuntimeSourcePlan,
 } from "./runtime-registry.js";
 export type {

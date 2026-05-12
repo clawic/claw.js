@@ -81,6 +81,10 @@ export interface ConnectorRuntimeSourcePlan {
   nextOffsetPath?: string;
 }
 
+export type ConnectorRuntimeSourceEventExtraction = Record<string, IntegrationJson> & {
+  events: IntegrationJson[];
+};
+
 export interface ConnectorRuntimePlanDetails {
   requestPlan?: ConnectorRuntimeRequestPlan;
   sourcePlan?: ConnectorRuntimeSourcePlan;
@@ -301,12 +305,18 @@ function createHttpConnectorSourceExecutor(
         plan: details.requestPlan,
         secrets: ctx.secrets,
       });
-      const output: Record<string, IntegrationJson> = {
-        events: eventsFromRuntimeSourceResponse(response.body, details.sourcePlan.eventsPath),
-        ...cursorOutputsFromRuntimeSourceResponse(response.body, details.sourcePlan),
-      };
-      return output;
+      return extractConnectorRuntimeSourceEvents(response.body, details.sourcePlan);
     },
+  };
+}
+
+export function extractConnectorRuntimeSourceEvents(
+  body: IntegrationJson,
+  sourcePlan: ConnectorRuntimeSourcePlan,
+): ConnectorRuntimeSourceEventExtraction {
+  return {
+    events: eventsFromRuntimeSourceResponse(body, sourcePlan.eventsPath),
+    ...cursorOutputsFromRuntimeSourceResponse(body, sourcePlan),
   };
 }
 
