@@ -33,7 +33,7 @@ const summary = summarize(catalog.apps ?? []);
 
 for (const error of errors.slice(0, maxErrors)) console.error(`FAIL ${error}`);
 if (errors.length > maxErrors) console.error(`FAIL ... ${errors.length - maxErrors} additional errors hidden`);
-console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} defaults=${summary.defaults} options=${summary.options}`);
+console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} defaults=${summary.defaults} options=${summary.options} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations}`);
 if (errors.length > 0) {
   console.error(`catalog verification failed with ${errors.length} error(s)`);
   process.exit(1);
@@ -74,6 +74,7 @@ function readExpectedOperations(appDir, appId, kind, appAuth, appFields) {
         kind,
         fields: names(fields),
         fieldStats: summarizeFields(fields),
+        annotations: readAnnotations(readText(file)),
         auth: new Set([...appAuth, ...fields.filter((field) => field.secret).map((field) => field.name)]),
         sourcePath: scrubPath(path.relative(path.dirname(appDir), file).replaceAll(path.sep, "/")),
       };
@@ -91,6 +92,10 @@ function verify(catalog, expectedApps) {
   if (forbidden.test(JSON.stringify(catalog))) errors.push("catalog contains forbidden upstream brand text");
   if (actualSummary.defaults !== expectedSummary.defaults) errors.push(`defaults ${actualSummary.defaults} expected ${expectedSummary.defaults}`);
   if (actualSummary.options !== expectedSummary.options) errors.push(`options ${actualSummary.options} expected ${expectedSummary.options}`);
+  if (actualSummary.annotatedOperations !== expectedSummary.annotatedOperations) errors.push(`annotations ${actualSummary.annotatedOperations} expected ${expectedSummary.annotatedOperations}`);
+  if (actualSummary.destructiveOperations !== expectedSummary.destructiveOperations) errors.push(`destructive ${actualSummary.destructiveOperations} expected ${expectedSummary.destructiveOperations}`);
+  if (actualSummary.readOnlyOperations !== expectedSummary.readOnlyOperations) errors.push(`readOnly ${actualSummary.readOnlyOperations} expected ${expectedSummary.readOnlyOperations}`);
+  if (actualSummary.openWorldOperations !== expectedSummary.openWorldOperations) errors.push(`openWorld ${actualSummary.openWorldOperations} expected ${expectedSummary.openWorldOperations}`);
 
   for (const app of Array.isArray(catalog.apps) ? catalog.apps : []) {
     if (!isRecord(app) || typeof app.id !== "string" || !app.id.trim()) {
@@ -134,6 +139,7 @@ function verify(catalog, expectedApps) {
       if (operation.sourcePath !== expectedOperation.sourcePath) {
         errors.push(`operation ${operationId} sourcePath ${operation.sourcePath ?? "<missing>"} expected ${expectedOperation.sourcePath}`);
       }
+      compareAnnotations(operationId, expectedOperation.annotations, operation.annotations, errors);
     }
   }
 
@@ -234,19 +240,39 @@ function summarize(apps) {
       summary.authFields += Array.isArray(operation.authFieldNames) ? operation.authFieldNames.length : 0;
       summary.defaults += countDefaults(operation.fields);
       summary.options += countOptions(operation.fields);
+      if (isRecord(operation.annotations)) summary.annotatedOperations += 1;
+      if (operation.annotations?.destructiveHint === true) summary.destructiveOperations += 1;
+      if (operation.annotations?.readOnlyHint === true) summary.readOnlyOperations += 1;
+      if (operation.annotations?.openWorldHint === true) summary.openWorldOperations += 1;
     }
     return summary;
-  }, { apps: 0, actions: 0, sources: 0, fields: 0, authFields: 0, defaults: 0, options: 0 });
+  }, {
+    apps: 0,
+    actions: 0,
+    sources: 0,
+    fields: 0,
+    authFields: 0,
+    defaults: 0,
+    options: 0,
+    annotatedOperations: 0,
+    destructiveOperations: 0,
+    readOnlyOperations: 0,
+    openWorldOperations: 0,
+  });
 }
 
 function summarizeExpected(apps) {
-  const summary = { defaults: 0, options: 0 };
+  const summary = { defaults: 0, options: 0, annotatedOperations: 0, destructiveOperations: 0, readOnlyOperations: 0, openWorldOperations: 0 };
   for (const app of apps.values()) {
     summary.defaults += app.fieldStats.defaults;
     summary.options += app.fieldStats.options;
     for (const operation of app.operations.values()) {
       summary.defaults += operation.fieldStats.defaults;
       summary.options += operation.fieldStats.options;
+      if (Object.keys(operation.annotations).length) summary.annotatedOperations += 1;
+      if (operation.annotations.destructiveHint === true) summary.destructiveOperations += 1;
+      if (operation.annotations.readOnlyHint === true) summary.readOnlyOperations += 1;
+      if (operation.annotations.openWorldHint === true) summary.openWorldOperations += 1;
     }
   }
   return summary;
@@ -255,6 +281,12 @@ function summarizeExpected(apps) {
 function compareSets(label, expected, actual, errors) {
   for (const value of expected) if (!actual.has(value)) errors.push(`${label} missing ${value}`);
   for (const value of actual) if (!expected.has(value)) errors.push(`${label} extra ${value}`);
+}
+
+function compareAnnotations(operationId, expected, actual, errors) {
+  for (const key of ["destructiveHint", "readOnlyHint", "openWorldHint"]) {
+    if (expected[key] !== actual?.[key]) errors.push(`operation ${operationId} annotation ${key} ${actual?.[key] ?? "<missing>"} expected ${expected[key]}`);
+  }
 }
 
 function findDuplicates(label, values, errors) {
@@ -275,6 +307,31 @@ function summarizeFields(fields) {
 function readDefault(body) {
   const raw = readTopLevelValue(body, "default");
   return raw ? parseLiteral(raw.trim()) : undefined;
+}
+
+function readAnnotations(source) {
+  const match = /\bannotations\s*:\s*{/.exec(source);
+  if (!match) return {};
+  const bodyStart = match.index + match[0].length;
+  const bodyEnd = findMatchingBrace(source, bodyStart - 1);
+  if (bodyEnd < 0) return {};
+  const body = source.slice(bodyStart, bodyEnd);
+  return {
+    ...optionalBoolean("destructiveHint", readBoolean(body, "destructiveHint")),
+    ...optionalBoolean("readOnlyHint", readBoolean(body, "readOnlyHint")),
+    ...optionalBoolean("openWorldHint", readBoolean(body, "openWorldHint")),
+  };
+}
+
+function optionalBoolean(key, value) {
+  return typeof value === "boolean" ? { [key]: value } : {};
+}
+
+function readBoolean(body, key) {
+  const raw = readTopLevelValue(body, key);
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  return undefined;
 }
 
 function readOptions(body) {

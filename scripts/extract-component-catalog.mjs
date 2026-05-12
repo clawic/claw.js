@@ -92,6 +92,7 @@ function readOperations(appDir, appId, kind, appAuthFields, appFields) {
         ...optionalString("version", firstMatch(source, /\bversion:\s*["']([^"']+)["']/)),
         fields,
         authFieldNames,
+        ...optionalAnnotations(readAnnotations(source)),
         sourcePath: scrubPath(path.relative(path.dirname(appDir), file).replaceAll(path.sep, "/")),
       };
     });
@@ -231,6 +232,35 @@ function optionalJson(key, value) {
 
 function optionalOptions(options) {
   return options.length ? { options } : {};
+}
+
+function optionalAnnotations(annotations) {
+  return Object.keys(annotations).length ? { annotations } : {};
+}
+
+function readAnnotations(source) {
+  const match = /\bannotations\s*:\s*{/.exec(source);
+  if (!match) return {};
+  const bodyStart = match.index + match[0].length;
+  const bodyEnd = findMatchingBrace(source, bodyStart - 1);
+  if (bodyEnd < 0) return {};
+  const body = source.slice(bodyStart, bodyEnd);
+  return {
+    ...optionalBoolean("destructiveHint", readBoolean(body, "destructiveHint")),
+    ...optionalBoolean("readOnlyHint", readBoolean(body, "readOnlyHint")),
+    ...optionalBoolean("openWorldHint", readBoolean(body, "openWorldHint")),
+  };
+}
+
+function optionalBoolean(key, value) {
+  return typeof value === "boolean" ? { [key]: value } : {};
+}
+
+function readBoolean(body, key) {
+  const raw = readTopLevelValue(body, key);
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  return undefined;
 }
 
 function readDefault(body) {
