@@ -51,7 +51,7 @@ function readApp(appDir, fallbackId) {
     ?? packageJson?.displayName
     ?? id,
   );
-  const fields = readFields(source, id);
+  const fields = readFields(source, id, [], appPath);
   const appAuthFields = fields.filter((field) => field.secret).map((field) => field.name);
   return {
     id,
@@ -77,7 +77,7 @@ function readOperations(appDir, appId, kind, appAuthFields, appFields) {
       const source = readText(file);
       const slug = operationSlug(dir, file);
       const key = scrubIdentifier(firstMatch(source, /\bkey:\s*["']([^"']+)["']/) ?? `${appId}-${slug}`);
-      const fields = readFields(source, appId, appFields);
+      const fields = readFields(source, appId, appFields, file);
       const authFieldNames = [
         ...appAuthFields,
         ...fields.filter((field) => field.secret).map((field) => field.name),
@@ -99,7 +99,7 @@ function readOperations(appDir, appId, kind, appAuthFields, appFields) {
     });
 }
 
-function readFields(source, appId, appFields = []) {
+function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
   const fields = new Map();
   for (const match of source.matchAll(/import\s+([A-Za-z_][A-Za-z0-9_]*)\s+from\s+["'][^"']+\.app\.mjs["']/g)) {
     const name = scrubIdentifier(match[1]);
@@ -110,6 +110,15 @@ function readFields(source, appId, appFields = []) {
         optional: false,
         secret: true,
       });
+    }
+  }
+  if (filePath && !seen.has(filePath)) {
+    seen.add(filePath);
+    for (const imported of readPropImports(source, filePath)) {
+      if (!fs.existsSync(imported.file)) continue;
+      for (const field of readFields(readText(imported.file), appId, appFields, imported.file, seen)) {
+        fields.set(field.name, field);
+      }
     }
   }
   const appFieldByName = new Map(appFields.map((field) => [field.name, field]));
@@ -134,6 +143,21 @@ function readFields(source, appId, appFields = []) {
     fields.set(name, field);
   }
   return [...fields.values()].sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function readPropImports(source, filePath) {
+  const imported = [];
+  const hasOwnProps = hasComponentMember(source, "props");
+  for (const match of source.matchAll(/import\s+([A-Za-z_$][\w$]*)\s+from\s+["']([^"']+)["']/g)) {
+    const binding = match[1];
+    const specifier = match[2];
+    const spreadsProps = source.includes(`...${binding}.props`);
+    const spreadsComponent = !hasOwnProps && source.includes(`...${binding}`);
+    if (!spreadsProps && !spreadsComponent) continue;
+    const resolved = resolveLocalImport(filePath, specifier);
+    if (resolved) imported.push({ binding, file: resolved });
+  }
+  return imported;
 }
 
 function readFieldEntries(source) {

@@ -46,9 +46,10 @@ function readExpected(root) {
     const appDir = path.join(root, entry.name);
     const appFile = fs.readdirSync(appDir).find((name) => name.endsWith(".app.mjs") || name.endsWith(".app.js"));
     if (!appFile) continue;
-    const source = readText(path.join(appDir, appFile));
+    const appPath = path.join(appDir, appFile);
+    const source = readText(appPath);
     const id = scrub(firstMatch(source, /\bapp:\s*["']([^"']+)["']/) ?? entry.name);
-    const fields = readFields(source, id);
+    const fields = readFields(source, id, [], appPath);
     const auth = fields.filter((field) => field.secret).map((field) => field.name);
     const app = { fields: names(fields), fieldStats: summarizeFields(fields), auth: new Set(auth), operations: new Map() };
     for (const kind of ["action", "source"]) {
@@ -67,7 +68,7 @@ function readExpectedOperations(appDir, appId, kind, appAuth, appFields) {
     .filter((file) => !file.endsWith("test-event.mjs") && !file.includes(`${path.sep}common${path.sep}`))
     .map((file) => {
       const source = readText(file);
-      const fields = readFields(source, appId, appFields);
+      const fields = readFields(source, appId, appFields, file);
       const slug = scrub(operationSlug(root, file));
       return {
         id: `${appId}.${kind}.${slug}`,
@@ -158,11 +159,20 @@ function verify(catalog, expectedApps) {
   return errors;
 }
 
-function readFields(source, appId, appFields = []) {
+function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
   const fields = new Map();
   for (const match of source.matchAll(/import\s+([A-Za-z_][A-Za-z0-9_]*)\s+from\s+["'][^"']+\.app\.mjs["']/g)) {
     const name = scrub(match[1]);
     if (name) fields.set(name, { name, type: "app", optional: false, secret: true });
+  }
+  if (filePath && !seen.has(filePath)) {
+    seen.add(filePath);
+    for (const imported of readPropImports(source, filePath)) {
+      if (!fs.existsSync(imported.file)) continue;
+      for (const field of readFields(readText(imported.file), appId, appFields, imported.file, seen)) {
+        fields.set(field.name, field);
+      }
+    }
   }
   const appFieldByName = new Map(appFields.map((field) => [field.name, field]));
   for (const entry of readFieldEntries(source)) {
@@ -184,6 +194,21 @@ function readFields(source, appId, appFields = []) {
     });
   }
   return [...fields.values()].sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function readPropImports(source, filePath) {
+  const imported = [];
+  const hasOwnProps = hasComponentMember(source, "props");
+  for (const match of source.matchAll(/import\s+([A-Za-z_$][\w$]*)\s+from\s+["']([^"']+)["']/g)) {
+    const binding = match[1];
+    const specifier = match[2];
+    const spreadsProps = source.includes(`...${binding}.props`);
+    const spreadsComponent = !hasOwnProps && source.includes(`...${binding}`);
+    if (!spreadsProps && !spreadsComponent) continue;
+    const resolved = resolveLocalImport(filePath, specifier);
+    if (resolved) imported.push({ binding, file: resolved });
+  }
+  return imported;
 }
 
 function readFieldEntries(source) {
