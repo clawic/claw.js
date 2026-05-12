@@ -1,0 +1,73 @@
+{
+  "name": "@clawjs/profile",
+  "version": "0.1.0",
+  "description": "Clawix Profile: namespace per person with typed blocks, owner-driven groups, capability tokens, and visibility-aware ACL resolution on top of the mp/* peer-to-peer protocol.",
+  "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "Iván González Dávila",
+    "url": "https://github.com/ivangdavila"
+  },
+  "homepage": "https://github.com/clawic/clawjs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clawic/clawjs.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    },
+    "./blocks": {
+      "types": "./dist/blocks.d.ts",
+      "import": "./dist/blocks.js"
+    },
+    "./groups": {
+      "types": "./dist/groups.d.ts",
+      "import": "./dist/groups.js"
+    },
+    "./acl": {
+      "types": "./dist/acl.d.ts",
+      "import": "./dist/acl.js"
+    },
+    "./capabilities": {
+      "types": "./dist/capabilities.d.ts",
+      "import": "./dist/capabilities.js"
+    },
+    "./storage": {
+      "types": "./dist/storage.d.ts",
+      "import": "./dist/storage.js"
+    },
+    "./custom-verticals": {
+      "types": "./dist/custom-verticals.d.ts",
+      "import": "./dist/custom-verticals.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts src/types.ts src/blocks.ts src/groups.ts src/acl.ts src/capabilities.ts src/storage.ts src/custom-verticals.ts --format esm --dts --out-dir dist --clean --target node20",
+    "test": "node --test --import tsx tests/*.test.ts"
+  },
+  "dependencies": {
+    "@clawjs/mp": "*",
+    "@noble/curves": "^1.9.0",
+    "@noble/hashes": "^1.8.0",
+    "better-sqlite3": "^12.9.0"
+  }
+}
