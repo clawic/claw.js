@@ -75,7 +75,7 @@ function readExpectedOperations(appDir, appId, kind, appAuth, appFields) {
         fields: names(fields),
         fieldStats: summarizeFields(fields),
         annotations: readAnnotations(source),
-        runtime: readRuntime(source),
+        runtime: readRuntime(source, file),
         auth: new Set([...appAuth, ...fields.filter((field) => field.secret).map((field) => field.name)]),
         sourcePath: scrubPath(path.relative(path.dirname(appDir), file).replaceAll(path.sep, "/")),
       };
@@ -363,19 +363,53 @@ function readAnnotations(source) {
   };
 }
 
-function readRuntime(source) {
-  return {
+function readRuntime(source, filePath, seen = new Set()) {
+  const runtime = {
     hasRun: hasComponentMember(source, "run"),
     hasHooks: hasComponentMember(source, "hooks"),
     hasAdditionalProps: /\badditionalProps\s*[:(]/.test(source),
     hasMethods: hasComponentMember(source, "methods"),
     ...optionalString("dedupe", firstMatch(source, /\bdedupe\s*:\s*["'`]([^"'`]+)["'`]/)),
   };
+  if (!filePath) return runtime;
+  if (seen.has(filePath)) return runtime;
+  seen.add(filePath);
+  for (const imported of readSpreadImports(source, filePath)) {
+    if (!fs.existsSync(imported.file)) continue;
+    const inherited = readRuntime(readText(imported.file), imported.file, seen);
+    runtime.hasRun ||= inherited.hasRun;
+    runtime.hasHooks ||= inherited.hasHooks;
+    runtime.hasAdditionalProps ||= inherited.hasAdditionalProps;
+    runtime.hasMethods ||= inherited.hasMethods;
+    if (!runtime.dedupe && inherited.dedupe) runtime.dedupe = inherited.dedupe;
+  }
+  return runtime;
 }
 
 function hasComponentMember(source, name) {
   const member = new RegExp(`(?:^|[\\n,{])\\s*(?:async\\s+)?${name}\\s*(?:[:(])`, "m");
   return member.test(source);
+}
+
+function readSpreadImports(source, filePath) {
+  const imported = [];
+  for (const match of source.matchAll(/import\s+([A-Za-z_$][\w$]*)\s+from\s+["']([^"']+)["']/g)) {
+    const binding = match[1];
+    const specifier = match[2];
+    if (!source.includes(`...${binding}`)) continue;
+    const resolved = resolveLocalImport(filePath, specifier);
+    if (resolved) imported.push({ binding, file: resolved });
+  }
+  return imported;
+}
+
+function resolveLocalImport(filePath, specifier) {
+  if (!specifier.startsWith(".")) return null;
+  const base = path.resolve(path.dirname(filePath), specifier);
+  for (const candidate of [base, `${base}.mjs`, `${base}.js`, `${base}.ts`, path.join(base, "index.mjs"), path.join(base, "index.js")]) {
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+  }
+  return null;
 }
 
 function optionalString(key, value) {
