@@ -1,0 +1,11 @@
+{
+  "method": "POST",
+  "url": "https://api.example.invalid/v1/customers/sample/items",
+  "headers": {
+    "authorization": "Bearer offline-apiKey-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "name": "sample"
+  }
+}
