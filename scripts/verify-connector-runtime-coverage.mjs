@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  buildConnectorRuntimeAudit,
   ConnectorRuntimeCoverageError,
   loadConnectorCatalogFromFile,
   verifyConnectorRuntimeCoverage,
@@ -45,41 +46,7 @@ function writeReportIfRequested({ catalog, report }) {
   if (typeof args.report !== "string" || !args.report.trim()) return;
   const reportPath = path.resolve(args.report);
   fs.mkdirSync(path.dirname(reportPath), { recursive: true });
-  fs.writeFileSync(reportPath, `${JSON.stringify(runtimeAuditReport(catalog, report), null, 2)}\n`);
-}
-
-function runtimeAuditReport(catalog, report) {
-  return {
-    summary: report.summary,
-    errors: report.errors,
-    providers: (catalog.apps ?? []).map((app) => {
-      const entries = report.entries.filter((entry) => entry.appId === app.id);
-      return {
-        appId: app.id,
-        name: app.name,
-        summary: summarizeEntries(entries),
-        operations: entries.map((entry) => ({
-          operationId: entry.operationId,
-          kind: entry.kind,
-          status: entry.status,
-          executorId: entry.executorId ?? null,
-          offlineValidated: entry.offlineValidated,
-          evidence: entry.evidence,
-          fixtures: entry.fixtures,
-          errors: report.errors.filter((error) => error.includes(entry.operationId)),
-        })),
-      };
-    }),
-  };
-}
-
-function summarizeEntries(entries) {
-  return entries.reduce((summary, entry) => {
-    summary.total += 1;
-    summary[entry.status] += 1;
-    if (entry.offlineValidated) summary.offlineValidated += 1;
-    return summary;
-  }, { total: 0, implemented: 0, unsupported: 0, missing: 0, offlineValidated: 0 });
+  fs.writeFileSync(reportPath, `${JSON.stringify(buildConnectorRuntimeAudit(catalog, report), null, 2)}\n`);
 }
 
 function parseArgs(argv) {

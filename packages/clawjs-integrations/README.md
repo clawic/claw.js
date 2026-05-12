@@ -92,3 +92,9 @@ To verify that the generated catalog still covers every local component file:
 ```bash
 npm --workspace @clawjs/integrations run catalog:verify -- --source /path/to/checkout --catalog /tmp/clawjs-catalog.json
 ```
+
+Runtime coverage can also write a provider-by-provider audit with final-state `implemented`, `missing`, `partial`, and `impossible` counts:
+
+```bash
+npm --workspace @clawjs/integrations run catalog:verify-runtime -- --catalog /tmp/clawjs-catalog.json --report /tmp/clawjs-runtime-audit.json
+```
