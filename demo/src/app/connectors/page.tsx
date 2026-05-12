@@ -21,6 +21,10 @@ interface CatalogSummary {
   runnableOperations: number;
   hookSources: number;
   dedupedSources: number;
+  pollingSources: number;
+  webhookSources: number;
+  hybridSources: number;
+  statefulSources: number;
   dynamicPropOperations: number;
   methodOperations: number;
 }
@@ -56,6 +60,12 @@ interface CatalogOperation {
     hasAdditionalProps: boolean;
     hasMethods: boolean;
     dedupe?: string;
+  };
+  source?: {
+    delivery: "polling" | "webhook" | "hybrid" | "manual";
+    usesTimer: boolean;
+    usesHttp: boolean;
+    usesServiceDb: boolean;
   };
 }
 
@@ -204,6 +214,9 @@ export default function ConnectorsPage() {
             <span>{catalog?.summary.destructiveOperations ?? 0} destructive</span>
             <span>{catalog?.summary.runnableOperations ?? 0} runnable</span>
             <span>{catalog?.summary.hookSources ?? 0} hooks</span>
+            <span>{catalog?.summary.pollingSources ?? 0} polling</span>
+            <span>{catalog?.summary.webhookSources ?? 0} webhooks</span>
+            <span>{catalog?.summary.statefulSources ?? 0} stateful</span>
             <span>{catalog?.summary.dynamicPropOperations ?? 0} dynamic props</span>
           </div>
           {catalog && !catalog.configured ? (
@@ -244,6 +257,9 @@ export default function ConnectorsPage() {
                       {entry.operation.runtime?.hasHooks ? (
                         <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground font-mono">hooks</span>
                       ) : null}
+                      {entry.operation.source ? (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground font-mono">{entry.operation.source.delivery}</span>
+                      ) : null}
                     </div>
                     <div className="text-[11px] text-muted-foreground mt-0.5 truncate">{entry.app.name}</div>
                     {entry.operation.description ? (
@@ -280,6 +296,14 @@ export default function ConnectorsPage() {
                       <span>dynamicProps={String(selected.operation.runtime.hasAdditionalProps)}</span>
                       <span>methods={String(selected.operation.runtime.hasMethods)}</span>
                       {selected.operation.runtime.dedupe ? <span>dedupe={selected.operation.runtime.dedupe}</span> : null}
+                    </div>
+                  ) : null}
+                  {selected.operation.source ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-mono text-muted-foreground">
+                      <span>delivery={selected.operation.source.delivery}</span>
+                      <span>timer={String(selected.operation.source.usesTimer)}</span>
+                      <span>http={String(selected.operation.source.usesHttp)}</span>
+                      <span>state={String(selected.operation.source.usesServiceDb)}</span>
                     </div>
                   ) : null}
                 </div>
