@@ -142,7 +142,7 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
       ...optionalString("description", cleanText(readTopLevelString(body, "description"))),
       optional: inherited?.optional ?? /\boptional:\s*true\b/.test(body),
       ...optionalJson("default", readDefault(body)),
-      ...optionalOptions(readOptions(body)),
+      ...optionalOptions(readOptions(body, source, filePath)),
       ...optionalPropDefinition(readPropDefinitionMetadata(propDefinitionValue, propRef)),
       ...optionalDynamicOptions(dynamicOptions ?? inherited?.dynamicOptions),
       ...optionalBoolean("hidden", readBoolean(body, "hidden") ?? inherited?.hidden),
@@ -696,26 +696,221 @@ function readDefault(body) {
   return parseLiteral(raw.trim());
 }
 
-function readOptions(body) {
+function readOptions(body, source, filePath) {
   const raw = readTopLevelValue(body, "options");
   if (!raw) return [];
-  const entries = [];
-  for (const match of raw.matchAll(/{([^{}]+)}/g)) {
-    const optionBody = match[1] ?? "";
-    const value = parseLiteral(firstMatch(optionBody, /\bvalue:\s*([^,\n}]+)/)?.trim() ?? "");
-    if (!["string", "number", "boolean"].includes(typeof value)) continue;
-    entries.push({
-      ...optionalString("label", cleanText(firstMatch(optionBody, /\blabel:\s*["'`]([^"'`]+)["'`]/))),
-      value,
-      ...optionalString("description", cleanText(firstMatch(optionBody, /\bdescription:\s*["'`]([^"'`]+)["'`]/))),
-    });
+  const entries = [
+    ...parseStaticOptionsValue(raw),
+    ...parseStaticOptionsValue(resolveStaticValueFromExpression(raw, source, filePath)),
+  ];
+  return entries.filter((entry, index, array) => array.findIndex((candidate) => candidate.value === entry.value) === index);
+}
+
+function parseStaticOptionsValue(value) {
+  if (typeof value !== "string") return [];
+  const trimmed = stripOptionExpression(value.trim());
+  if (!trimmed) return [];
+  if (trimmed.startsWith("[")) return parseOptionsArray(trimmed);
+  if (trimmed.startsWith("{")) return parseObjectValuesAsOptions(trimmed);
+  const objectValues = /^Object\.values\s*\((.+)\)(?:\s*\.map\s*\(.+)?$/s.exec(trimmed);
+  if (objectValues) {
+    return parseStaticOptionsValue(resolveStaticValueFromExpression(objectValues[1]));
   }
-  if (!entries.length) {
-    for (const match of raw.matchAll(/["']([^"']+)["']/g)) {
-      entries.push({ value: cleanText(match[1]) ?? match[1] });
+  return [];
+}
+
+function parseOptionsArray(value) {
+  const items = readArrayItems(value);
+  const entries = [];
+  for (const item of items) {
+    const option = parseOptionItem(item);
+    if (option) entries.push(option);
+  }
+  return entries;
+}
+
+function parseObjectValuesAsOptions(value) {
+  const body = objectBodyFromValue(value);
+  if (!body) return [];
+  const entries = [];
+  for (const key of readObjectKeys(body)) {
+    const raw = readTopLevelValue(body, key);
+    const option = parseOptionItem(raw);
+    if (option) entries.push(option);
+  }
+  return entries;
+}
+
+function parseOptionItem(value) {
+  if (typeof value !== "string") return undefined;
+  const trimmed = stripOptionExpression(value.trim());
+  if (trimmed.startsWith("{")) {
+    const body = objectBodyFromValue(trimmed);
+    if (!body) return undefined;
+    const literal = parseLiteral(readTopLevelValue(body, "value")?.trim() ?? "");
+    if (!["string", "number", "boolean"].includes(typeof literal)) return undefined;
+    return {
+      ...optionalString("label", cleanText(readTopLevelString(body, "label"))),
+      value: literal,
+      ...optionalString("description", cleanText(readTopLevelString(body, "description"))),
+    };
+  }
+  const literal = parseLiteral(trimmed);
+  if (!["string", "number", "boolean"].includes(typeof literal)) return undefined;
+  return { value: literal };
+}
+
+function stripOptionExpression(value) {
+  const objectValues = /^Object\.values\s*\((.+)\)(?:\s*\.map\s*\(.+)?$/s.exec(value);
+  if (objectValues) return `Object.values(${objectValues[1]})`;
+  return value;
+}
+
+function resolveStaticValueFromExpression(value, source, filePath, seen = new Set()) {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  const objectValues = /^Object\.values\s*\((.+)\)(?:\s*\.map\s*\(.+)?$/s.exec(trimmed);
+  if (objectValues) return resolveStaticValueFromExpression(objectValues[1], source, filePath, seen);
+  const ref = /^([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)$/.exec(trimmed)?.[1];
+  if (!ref || !source || !filePath) return undefined;
+  return resolveStaticRef(ref.split("."), source, filePath, seen);
+}
+
+function resolveStaticRef(parts, source, filePath, seen = new Set()) {
+  const [head, ...tail] = parts;
+  if (!head) return undefined;
+  const key = `${filePath}:${parts.join(".")}`;
+  if (seen.has(key)) return undefined;
+  seen.add(key);
+
+  const imports = readImportBindings(source, filePath);
+  const imported = imports.get(head);
+  if (imported && fs.existsSync(imported.file)) {
+    const importedSource = readText(imported.file);
+    if (imported.kind === "namespace") {
+      return resolveStaticRef(tail, importedSource, imported.file, seen);
+    }
+    const base = imported.kind === "default"
+      ? readDefaultExportValue(importedSource, imported.file, seen)
+      : readStaticBindingValue(importedSource, imported.imported, imported.file, seen);
+    return resolveStaticMember(base, tail, importedSource, imported.file, seen);
+  }
+
+  const local = readStaticBindingValue(source, head, filePath, seen);
+  return resolveStaticMember(local, tail, source, filePath, seen);
+}
+
+function resolveStaticMember(value, parts, source, filePath, seen) {
+  let current = value;
+  for (const part of parts) {
+    const body = objectBodyFromValue(current ?? "");
+    if (!body) return undefined;
+    const raw = readObjectPropertyValue(body, part, source, filePath, seen);
+    if (!raw) return undefined;
+    current = raw;
+  }
+  return current;
+}
+
+function readStaticBindingValue(source, name, filePath, seen) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = new RegExp(`(?:export\\s+)?(?:const|let|var)\\s+${escaped}\\s*=`, "m").exec(source);
+  if (!match) return undefined;
+  const start = match.index + match[0].length;
+  const raw = readInitializerValue(source, start);
+  if (/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(raw)) {
+    return resolveStaticValueFromExpression(raw, source, filePath, seen);
+  }
+  return raw;
+}
+
+function readDefaultExportValue(source, filePath, seen) {
+  const match = /export\s+default\s+/.exec(source);
+  if (!match) return undefined;
+  const start = match.index + match[0].length;
+  const raw = readInitializerValue(source, start);
+  if (/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(raw)) {
+    return resolveStaticValueFromExpression(raw, source, filePath, seen);
+  }
+  return raw;
+}
+
+function readObjectPropertyValue(body, key, source, filePath, seen) {
+  const raw = readTopLevelValue(body, key);
+  if (raw) return raw;
+  return objectHasShorthandKey(body, key) ? resolveStaticValueFromExpression(key, source, filePath, seen) : undefined;
+}
+
+function readImportBindings(source, filePath) {
+  const imports = new Map();
+  for (const match of source.matchAll(/import\s+([A-Za-z_$][\w$]*)\s*,?\s*(?:{([^}]+)})?\s+from\s+["']([^"']+)["']/g)) {
+    const resolved = resolveLocalImport(filePath, match[3]);
+    if (!resolved) continue;
+    imports.set(match[1], { kind: "default", imported: "default", file: resolved });
+    if (match[2]) readNamedImportBindings(match[2], resolved, imports);
+  }
+  for (const match of source.matchAll(/import\s+{([^}]+)}\s+from\s+["']([^"']+)["']/g)) {
+    const resolved = resolveLocalImport(filePath, match[2]);
+    if (resolved) readNamedImportBindings(match[1], resolved, imports);
+  }
+  for (const match of source.matchAll(/import\s+\*\s+as\s+([A-Za-z_$][\w$]*)\s+from\s+["']([^"']+)["']/g)) {
+    const resolved = resolveLocalImport(filePath, match[2]);
+    if (resolved) imports.set(match[1], { kind: "namespace", imported: "*", file: resolved });
+  }
+  return imports;
+}
+
+function readNamedImportBindings(body, file, imports) {
+  for (const part of body.split(",")) {
+    const [imported, local = imported] = part.split(/\s+as\s+/).map((value) => value.trim()).filter(Boolean);
+    if (imported && local) imports.set(local, { kind: "named", imported, file });
+  }
+}
+
+function readInitializerValue(source, start) {
+  let index = start;
+  while (/\s/.test(source[index] ?? "")) index += 1;
+  const opener = source[index];
+  if (opener === "{" || opener === "[") {
+    const closer = opener === "{" ? "}" : "]";
+    const end = findMatchingDelimiter(source, index, opener, closer);
+    return end < 0 ? "" : source.slice(index, end + 1).trim();
+  }
+  for (let cursor = index; cursor < source.length; cursor += 1) {
+    if (source[cursor] === ";" || source[cursor] === "\n") {
+      return source.slice(index, cursor).trim();
     }
   }
-  return entries.filter((entry, index, array) => array.findIndex((candidate) => candidate.value === entry.value) === index);
+  return source.slice(index).trim();
+}
+
+function objectHasShorthandKey(body, key) {
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  for (let index = 0; index < body.length; index += 1) {
+    const char = body[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{" || char === "[" || char === "(") depth += 1;
+    else if (char === "}" || char === "]" || char === ")") depth -= 1;
+    if (depth !== 0 || !/[A-Za-z_$]/.test(char)) continue;
+    const match = /^([A-Za-z_$][\w$]*)/.exec(body.slice(index));
+    if (!match) continue;
+    const name = match[1];
+    const rest = body.slice(index + name.length).trimStart();
+    if (name === key && (rest.startsWith(",") || rest === "")) return true;
+    index += name.length - 1;
+  }
+  return false;
 }
 
 function readDynamicOptions(body) {
