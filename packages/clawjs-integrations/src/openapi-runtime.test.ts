@@ -34,7 +34,12 @@ const FIXTURE_OPENAPI = {
           {
             name: "limit",
             in: "query",
-            schema: { type: "integer", minimum: 1, maximum: 100 },
+            schema: { type: "integer", minimum: 1, maximum: 100, default: 2 },
+          },
+          {
+            name: "offset",
+            in: "query",
+            schema: { type: "integer", minimum: 0, default: 0 },
           },
         ],
         responses: {
@@ -126,6 +131,7 @@ describe("OpenAPI connector runtime", () => {
     assert.deepEqual(catalog.apps[0]?.operations.find((operation) => operation.id.endsWith("list-customer-items"))?.fields.map((field) => field.name), [
       "customerId",
       "limit",
+      "offset",
     ]);
     assert.deepEqual(catalog.apps[0]?.operations.find((operation) => operation.id.endsWith("create-customer-item"))?.fields.map((field) => field.name), [
       "customerId",
@@ -176,6 +182,12 @@ describe("OpenAPI connector runtime", () => {
       headers: { accept: "application/json" },
       query: { limit: 10 },
       body: {},
+      pagination: {
+        mode: "offset",
+        itemsPath: "data",
+        limitParam: "limit",
+        offsetParam: "offset",
+      },
       responseSchema: {
         type: "object",
         requiredPaths: ["data"],

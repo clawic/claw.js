@@ -1,6 +1,6 @@
 {
   "method": "GET",
-  "url": "https://api.example.invalid/v1/customers/sample/items?limit=1",
+  "url": "https://api.example.invalid/v1/customers/sample/items?limit=2&offset=0",
   "headers": {
     "authorization": "Bearer offline-apiKey-secret"
   }

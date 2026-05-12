@@ -3,6 +3,7 @@ import type {
   ConnectorRuntimeAuthPlacement,
   ConnectorRuntimeFixture,
   ConnectorRuntimeImplementation,
+  ConnectorRuntimePaginationPlan,
   ConnectorRuntimeRequestPlan,
   ConnectorRuntimeOutputSchema,
 } from "./runtime-registry.ts";
@@ -75,6 +76,7 @@ interface OpenApiConnectorOperationMetadata {
   path: string;
   parameters: OpenApiConnectorParameterBinding[];
   bodyFields: OpenApiConnectorBodyBinding[];
+  pagination?: ConnectorRuntimePaginationPlan;
   responseSchema: ConnectorRuntimeOutputSchema;
 }
 
@@ -193,6 +195,7 @@ function buildOpenApiRequestPlan(
     headers,
     ...(Object.keys(query).length > 0 ? { query } : {}),
     body,
+    ...(metadata.pagination ? { pagination: metadata.pagination } : {}),
     responseSchema: metadata.responseSchema,
   };
 }
@@ -222,6 +225,7 @@ function collectOpenApiOperations(
         path,
         parameters: parameters.map(({ field: _field, ...parameter }) => parameter),
         bodyFields: bodyFields.map(({ field: _field, ...field }) => field),
+        ...optionalPagination(inferOpenApiPagination(method, operation, parameters)),
         responseSchema: responseSchemaForOperation(operation),
       };
       return [{
@@ -249,6 +253,104 @@ function collectOpenApiOperations(
       }];
     });
   });
+}
+
+function inferOpenApiPagination(
+  method: OpenApiHttpMethod,
+  operation: OpenApiOperation,
+  parameters: Array<OpenApiConnectorParameterBinding & { field: ConnectorFieldDefinition }>,
+): ConnectorRuntimePaginationPlan | undefined {
+  if (method !== "get") return undefined;
+  const queryParameters = parameters.filter((parameter) => parameter.location === "query");
+  const parameterBySourceName = new Map(queryParameters.map((parameter) => [parameter.sourceName, parameter]));
+  const itemsPath = responseItemsPath(operation);
+  if (!itemsPath) return undefined;
+
+  const limit = firstParameter(parameterBySourceName, ["limit", "page_size", "per_page"]);
+  const offset = firstParameter(parameterBySourceName, ["offset", "skip"]);
+  if (limit && offset) {
+    return {
+      mode: "offset",
+      itemsPath,
+      limitParam: limit.sourceName,
+      offsetParam: offset.sourceName,
+    };
+  }
+
+  const cursor = firstParameter(parameterBySourceName, ["cursor", "starting_after", "page_token"]);
+  const nextCursorPath = responseCursorPath(operation);
+  if (cursor && nextCursorPath) {
+    return {
+      mode: "cursor",
+      itemsPath,
+      cursorParam: cursor.sourceName,
+      nextCursorPath,
+      ...(limit ? { limitParam: limit.sourceName } : {}),
+    };
+  }
+
+  const nextUrlPath = responseNextUrlPath(operation);
+  if (nextUrlPath) {
+    return {
+      mode: "next_url",
+      itemsPath,
+      nextUrlPath,
+    };
+  }
+
+  return undefined;
+}
+
+function optionalPagination(value: ConnectorRuntimePaginationPlan | undefined): {
+  pagination: ConnectorRuntimePaginationPlan;
+} | Record<string, never> {
+  return value ? { pagination: value } : {};
+}
+
+function responseItemsPath(operation: OpenApiOperation): string | undefined {
+  const schema = jsonContentSchema(Object.entries(operation.responses ?? {})
+    .find(([status]) => status.startsWith("2"))?.[1]?.content);
+  if (!schema) return undefined;
+  if (stringValue(schema.type) === "array") return undefined;
+  const properties = schema.properties ?? {};
+  for (const name of ["data", "items", "results", "records"]) {
+    if (stringValue(properties[name]?.type) === "array") return name;
+  }
+  return Object.entries(properties).find(([, property]) => stringValue(property?.type) === "array")?.[0];
+}
+
+function responseCursorPath(operation: OpenApiOperation): string | undefined {
+  const schema = jsonContentSchema(Object.entries(operation.responses ?? {})
+    .find(([status]) => status.startsWith("2"))?.[1]?.content);
+  const properties = schema?.properties ?? {};
+  for (const name of ["next_cursor", "nextCursor", "next_page_token", "nextPageToken"]) {
+    if (properties[name]) return name;
+  }
+  if (properties.paging?.properties?.next) return "paging.next";
+  if (properties.page_info?.properties?.end_cursor) return "page_info.end_cursor";
+  return undefined;
+}
+
+function responseNextUrlPath(operation: OpenApiOperation): string | undefined {
+  const schema = jsonContentSchema(Object.entries(operation.responses ?? {})
+    .find(([status]) => status.startsWith("2"))?.[1]?.content);
+  const properties = schema?.properties ?? {};
+  for (const name of ["next_url", "nextUrl", "next"]) {
+    if (properties[name]) return name;
+  }
+  if (properties.links?.properties?.next) return "links.next";
+  return undefined;
+}
+
+function firstParameter(
+  parameters: Map<string, OpenApiConnectorParameterBinding & { field: ConnectorFieldDefinition }>,
+  names: readonly string[],
+): OpenApiConnectorParameterBinding | undefined {
+  for (const name of names) {
+    const parameter = parameters.get(name);
+    if (parameter) return parameter;
+  }
+  return undefined;
 }
 
 function openApiParameterBinding(
