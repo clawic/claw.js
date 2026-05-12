@@ -26,6 +26,10 @@ const readText = (filePath) => fs.readFileSync(filePath, "utf8");
 const countDefaults = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.default !== undefined).length : 0;
 const countOptions = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && Array.isArray(field.options) && field.options.length > 0).length : 0;
 const countDynamicOptions = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && isRecord(field.dynamicOptions)).length : 0;
+const countHidden = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.hidden === true).length : 0;
+const countDisabled = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.disabled === true).length : 0;
+const countReload = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.reloadProps === true).length : 0;
+const countBounded = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && (typeof field.min === "number" || typeof field.max === "number")).length : 0;
 const expected = readExpected(componentsDir);
 const catalog = JSON.parse(readText(catalogPath));
 const errors = verify(catalog, expected);
@@ -33,7 +37,7 @@ const summary = summarize(catalog.apps ?? []);
 
 for (const error of errors.slice(0, maxErrors)) console.error(`FAIL ${error}`);
 if (errors.length > maxErrors) console.error(`FAIL ... ${errors.length - maxErrors} additional errors hidden`);
-console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} dynamicOptions=${summary.dynamicOptionFields} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} dynamicPropFields=${summary.dynamicPropFields} methods=${summary.methodOperations}`);
+console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} hidden=${summary.hiddenFields} disabled=${summary.disabledFields} reload=${summary.reloadFields} bounded=${summary.boundedFields} dynamicOptions=${summary.dynamicOptionFields} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} dynamicPropFields=${summary.dynamicPropFields} methods=${summary.methodOperations}`);
 if (errors.length > 0) {
   console.error(`catalog verification failed with ${errors.length} error(s)`);
   process.exit(1);
@@ -97,6 +101,10 @@ function verify(catalog, expectedApps) {
   if (actualSummary.defaults !== expectedSummary.defaults) errors.push(`defaults ${actualSummary.defaults} expected ${expectedSummary.defaults}`);
   if (actualSummary.managedFields !== expectedSummary.managedFields) errors.push(`managedFields ${actualSummary.managedFields} expected ${expectedSummary.managedFields}`);
   if (actualSummary.options !== expectedSummary.options) errors.push(`options ${actualSummary.options} expected ${expectedSummary.options}`);
+  if (actualSummary.hiddenFields !== expectedSummary.hiddenFields) errors.push(`hiddenFields ${actualSummary.hiddenFields} expected ${expectedSummary.hiddenFields}`);
+  if (actualSummary.disabledFields !== expectedSummary.disabledFields) errors.push(`disabledFields ${actualSummary.disabledFields} expected ${expectedSummary.disabledFields}`);
+  if (actualSummary.reloadFields !== expectedSummary.reloadFields) errors.push(`reloadFields ${actualSummary.reloadFields} expected ${expectedSummary.reloadFields}`);
+  if (actualSummary.boundedFields !== expectedSummary.boundedFields) errors.push(`boundedFields ${actualSummary.boundedFields} expected ${expectedSummary.boundedFields}`);
   if (actualSummary.dynamicOptionFields !== expectedSummary.dynamicOptionFields) errors.push(`dynamicOptions ${actualSummary.dynamicOptionFields} expected ${expectedSummary.dynamicOptionFields}`);
   if (actualSummary.annotatedOperations !== expectedSummary.annotatedOperations) errors.push(`annotations ${actualSummary.annotatedOperations} expected ${expectedSummary.annotatedOperations}`);
   if (actualSummary.destructiveOperations !== expectedSummary.destructiveOperations) errors.push(`destructive ${actualSummary.destructiveOperations} expected ${expectedSummary.destructiveOperations}`);
@@ -194,6 +202,8 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
     const defaultValue = readDefault(body);
     const options = readOptions(body);
     const dynamicOptions = readDynamicOptions(body);
+    const min = readNumber(body, "min");
+    const max = readNumber(body, "max");
     const type = inherited?.type ?? readTopLevelString(body, "type") ?? "string";
     fields.set(name, {
       ...(inherited ?? {}),
@@ -203,6 +213,11 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
       ...(defaultValue === undefined ? {} : { default: defaultValue }),
       ...(options.length ? { options } : {}),
       ...(dynamicOptions ?? inherited?.dynamicOptions ? { dynamicOptions: dynamicOptions ?? inherited.dynamicOptions } : {}),
+      ...optionalBoolean("hidden", readBoolean(body, "hidden") ?? inherited?.hidden),
+      ...optionalBoolean("disabled", readBoolean(body, "disabled") ?? inherited?.disabled),
+      ...optionalBoolean("reloadProps", readBoolean(body, "reloadProps") ?? inherited?.reloadProps),
+      ...optionalNumber("min", min ?? inherited?.min),
+      ...optionalNumber("max", max ?? inherited?.max),
       ...(inherited?.secret || isSecretField(name, body, appId) ? { secret: true } : {}),
       ...(inherited?.managed || type.startsWith("$.") ? { managed: true } : {}),
     });
@@ -324,6 +339,10 @@ function summarize(apps) {
     summary.managedFields += Array.isArray(app.fields) ? app.fields.filter((field) => field.managed).length : 0;
     summary.defaults += countDefaults(app.fields);
     summary.options += countOptions(app.fields);
+    summary.hiddenFields += countHidden(app.fields);
+    summary.disabledFields += countDisabled(app.fields);
+    summary.reloadFields += countReload(app.fields);
+    summary.boundedFields += countBounded(app.fields);
     summary.dynamicOptionFields += countDynamicOptions(app.fields);
     for (const operation of Array.isArray(app.operations) ? app.operations : []) {
       if (!isRecord(operation)) continue;
@@ -334,6 +353,10 @@ function summarize(apps) {
       summary.managedFields += Array.isArray(operation.fields) ? operation.fields.filter((field) => field.managed).length : 0;
       summary.defaults += countDefaults(operation.fields);
       summary.options += countOptions(operation.fields);
+      summary.hiddenFields += countHidden(operation.fields);
+      summary.disabledFields += countDisabled(operation.fields);
+      summary.reloadFields += countReload(operation.fields);
+      summary.boundedFields += countBounded(operation.fields);
       summary.dynamicOptionFields += countDynamicOptions(operation.fields);
       if (isRecord(operation.annotations)) summary.annotatedOperations += 1;
       if (operation.annotations?.destructiveHint === true) summary.destructiveOperations += 1;
@@ -360,6 +383,10 @@ function summarize(apps) {
     managedFields: 0,
     defaults: 0,
     options: 0,
+    hiddenFields: 0,
+    disabledFields: 0,
+    reloadFields: 0,
+    boundedFields: 0,
     annotatedOperations: 0,
     destructiveOperations: 0,
     readOnlyOperations: 0,
@@ -383,6 +410,10 @@ function summarizeExpected(apps) {
     defaults: 0,
     options: 0,
     managedFields: 0,
+    hiddenFields: 0,
+    disabledFields: 0,
+    reloadFields: 0,
+    boundedFields: 0,
     annotatedOperations: 0,
     destructiveOperations: 0,
     readOnlyOperations: 0,
@@ -402,11 +433,19 @@ function summarizeExpected(apps) {
   for (const app of apps.values()) {
     summary.defaults += app.fieldStats.defaults;
     summary.options += app.fieldStats.options;
+    summary.hiddenFields += app.fieldStats.hidden;
+    summary.disabledFields += app.fieldStats.disabled;
+    summary.reloadFields += app.fieldStats.reload;
+    summary.boundedFields += app.fieldStats.bounded;
     summary.dynamicOptionFields += app.fieldStats.dynamicOptions;
     summary.managedFields += app.fieldStats.managed;
     for (const operation of app.operations.values()) {
       summary.defaults += operation.fieldStats.defaults;
       summary.options += operation.fieldStats.options;
+      summary.hiddenFields += operation.fieldStats.hidden;
+      summary.disabledFields += operation.fieldStats.disabled;
+      summary.reloadFields += operation.fieldStats.reload;
+      summary.boundedFields += operation.fieldStats.bounded;
       summary.dynamicOptionFields += operation.fieldStats.dynamicOptions;
       summary.managedFields += operation.fieldStats.managed;
       if (Object.keys(operation.annotations).length) summary.annotatedOperations += 1;
@@ -485,6 +524,10 @@ function summarizeFields(fields) {
     defaults: fields.filter((field) => field.default !== undefined).length,
     options: fields.filter((field) => field.options?.length > 0).length,
     dynamicOptions: fields.filter((field) => field.dynamicOptions).length,
+    hidden: fields.filter((field) => field.hidden === true).length,
+    disabled: fields.filter((field) => field.disabled === true).length,
+    reload: fields.filter((field) => field.reloadProps === true).length,
+    bounded: fields.filter((field) => field.min !== undefined || field.max !== undefined).length,
     managed: fields.filter((field) => field.managed).length,
   };
 }
@@ -753,11 +796,21 @@ function optionalBoolean(key, value) {
   return typeof value === "boolean" ? { [key]: value } : {};
 }
 
+function optionalNumber(key, value) {
+  return typeof value === "number" && Number.isFinite(value) ? { [key]: value } : {};
+}
+
 function readBoolean(body, key) {
   const raw = readTopLevelValue(body, key);
   if (raw === "true") return true;
   if (raw === "false") return false;
   return undefined;
+}
+
+function readNumber(body, key) {
+  const raw = readTopLevelValue(body, key);
+  const value = raw ? parseLiteral(raw.trim()) : undefined;
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function readOptions(body) {
