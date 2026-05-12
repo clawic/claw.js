@@ -30,6 +30,150 @@ describe("telegram operation executor", () => {
     });
   });
 
+  it("maps media URL operations by upstream media type", () => {
+    const plan = buildTelegramOperationRequest(
+      "telegram_bot_api.action.send-media-by-url-or-id-send-media-by-url-or-id",
+      {
+        chatId: "123",
+        mediaType: "Document/Image",
+        media: "https://example.com/report.pdf",
+        caption: "report",
+        reply_markup: "{\"force_reply\":true}",
+      },
+    );
+    assert.deepEqual(plan, {
+      method: "POST",
+      endpoint: "sendDocument",
+      body: {
+        chat_id: "123",
+        caption: "report",
+        reply_markup: { force_reply: true },
+        document: "https://example.com/report.pdf",
+      },
+    });
+  });
+
+  it("maps chat permissions into the REST permissions object", () => {
+    const plan = buildTelegramOperationRequest(
+      "telegram_bot_api.action.set-chat-permissions-set-chat-permissions",
+      {
+        chatId: "123",
+        canSendMessages: true,
+        canSendMediaMessages: false,
+        canInviteUsers: true,
+      },
+    );
+    assert.deepEqual(plan, {
+      method: "POST",
+      endpoint: "setChatPermissions",
+      body: {
+        chat_id: "123",
+        permissions: {
+          can_send_messages: true,
+          can_send_media_messages: false,
+          can_invite_users: true,
+        },
+      },
+    });
+  });
+
+  it("maps edited media into the nested media payload", () => {
+    const plan = buildTelegramOperationRequest(
+      "telegram_bot_api.action.edit-media-message-edit-media-message",
+      {
+        chatId: "123",
+        messageId: "456",
+        type: "photo",
+        media: "abc",
+        caption: "updated",
+        parse_mode: "HTML",
+        reply_markup: "{\"inline_keyboard\":[]}",
+      },
+    );
+    assert.deepEqual(plan, {
+      method: "POST",
+      endpoint: "editMessageMedia",
+      body: {
+        chat_id: "123",
+        message_id: "456",
+        reply_markup: { inline_keyboard: [] },
+        media: {
+          type: "photo",
+          media: "abc",
+          caption: "updated",
+          parse_mode: "HTML",
+        },
+      },
+    });
+  });
+
+  it("maps document and video note media field names", () => {
+    assert.deepEqual(buildTelegramOperationRequest(
+      "telegram_bot_api.action.send-document-or-image-send-document-or-image",
+      {
+        chatId: "123",
+        doc: "https://example.com/file.pdf",
+      },
+    ), {
+      method: "POST",
+      endpoint: "sendDocument",
+      body: {
+        chat_id: "123",
+        document: "https://example.com/file.pdf",
+      },
+    });
+    assert.deepEqual(buildTelegramOperationRequest(
+      "telegram_bot_api.action.send-video-note-send-video-note",
+      {
+        chatId: "123",
+        videoNote: "https://example.com/note.mp4",
+        length: 120,
+      },
+    ), {
+      method: "POST",
+      endpoint: "sendVideoNote",
+      body: {
+        chat_id: "123",
+        video_note: "https://example.com/note.mp4",
+        length: 120,
+      },
+    });
+  });
+
+  it("omits wrapper-only file and paging fields from REST payloads", () => {
+    assert.deepEqual(buildTelegramOperationRequest(
+      "telegram_bot_api.action.send-photo-send-photo",
+      {
+        chatId: "123",
+        photo: "https://example.com/photo.jpg",
+        filename: "photo.jpg",
+        contentType: "image/jpeg",
+      },
+    ), {
+      method: "POST",
+      endpoint: "sendPhoto",
+      body: {
+        chat_id: "123",
+        photo: "https://example.com/photo.jpg",
+      },
+    });
+    assert.deepEqual(buildTelegramOperationRequest(
+      "telegram_bot_api.action.list-updates-list-updates",
+      {
+        offset: 10,
+        limit: 50,
+        autoPaging: true,
+      },
+    ), {
+      method: "POST",
+      endpoint: "getUpdates",
+      body: {
+        offset: 10,
+        limit: 50,
+      },
+    });
+  });
+
   it("executes through an injected fetch and resolves the app secret", async () => {
     const calls: Array<{ url: string; body: unknown }> = [];
     const executor = createTelegramOperationExecutor({
