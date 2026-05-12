@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import yaml from "js-yaml";
 
 import {
   buildConnectorRuntimeAudit,
@@ -21,11 +22,11 @@ const fixtures = readFixtures(args.fixtures);
 const executeOffline = args["execute-offline"] === true || args["execute-offline"] === "true";
 
 if (!specPath || !fs.existsSync(specPath) || !appId || evidence.length === 0) {
-  console.error("Usage: node scripts/verify-openapi-runtime-coverage.mjs --spec <openapi.json> --app-id <id> --evidence <path[,path]> [--fixtures <fixtures.json>] [--catalog-out <catalog.json>] [--report <report.json>] [--execute-offline]");
+  console.error("Usage: node scripts/verify-openapi-runtime-coverage.mjs --spec <openapi.json|yaml> --app-id <id> --evidence <path[,path]> [--fixtures <fixtures.json|yaml>] [--catalog-out <catalog.json>] [--report <report.json>] [--execute-offline]");
   process.exit(1);
 }
 
-const spec = JSON.parse(fs.readFileSync(specPath, "utf8"));
+const spec = readStructuredFile(specPath);
 const options = {
   appId,
   ...optionalString("appName", stringArg(args["app-name"])),
@@ -91,9 +92,18 @@ function writeJson(filePath, value) {
 function readFixtures(filePath) {
   if (typeof filePath !== "string" || !filePath.trim()) return [];
   const resolved = path.resolve(filePath);
-  const value = JSON.parse(fs.readFileSync(resolved, "utf8"));
+  const value = readStructuredFile(resolved);
   if (!Array.isArray(value)) throw new Error("--fixtures must point to a JSON array.");
   return value;
+}
+
+function readStructuredFile(filePath) {
+  const text = fs.readFileSync(filePath, "utf8");
+  return isYamlPath(filePath) ? yaml.load(text) : JSON.parse(text);
+}
+
+function isYamlPath(filePath) {
+  return /\.ya?ml$/i.test(filePath);
 }
 
 function stringArg(value) {

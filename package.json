@@ -122,6 +122,7 @@
     "@changesets/cli": "^2.29.7",
     "@playwright/test": "^1.56.1",
     "@types/node": "^22.19.15",
+    "js-yaml": "^4.1.1",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitepress": "^1.6.4",
