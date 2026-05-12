@@ -50,6 +50,83 @@
       ]
     },
     {
+      "id": "gitlab",
+      "name": "GitLab",
+      "authFieldNames": ["gitlabToken"],
+      "fields": [
+        {
+          "name": "gitlabToken",
+          "type": "app",
+          "optional": false,
+          "secret": true
+        }
+      ],
+      "operations": [
+        {
+          "id": "gitlab.action.create-issue",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Create Issue",
+          "fields": [
+            { "name": "description", "type": "string", "optional": true },
+            { "name": "projectId", "type": "string", "optional": false },
+            { "name": "title", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["gitlabToken"]
+        },
+        {
+          "id": "gitlab.action.create-issue-note",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Create Issue Note",
+          "fields": [
+            { "name": "body", "type": "string", "optional": false },
+            { "name": "internal", "type": "boolean", "optional": true },
+            { "name": "issueIid", "type": "integer", "optional": false, "min": 1 },
+            { "name": "projectId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["gitlabToken"]
+        },
+        {
+          "id": "gitlab.action.get-project-issue",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Get Project Issue",
+          "fields": [
+            { "name": "issueIid", "type": "integer", "optional": false, "min": 1 },
+            { "name": "projectId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["gitlabToken"]
+        },
+        {
+          "id": "gitlab.action.list-project-issues",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "List Project Issues",
+          "fields": [
+            { "name": "page", "type": "integer", "optional": true, "default": 1, "min": 1 },
+            { "name": "perPage", "type": "integer", "optional": true, "default": 20, "min": 1 },
+            { "name": "projectId", "type": "string", "optional": false },
+            { "name": "state", "type": "string", "optional": true, "default": "opened" }
+          ],
+          "authFieldNames": ["gitlabToken"]
+        },
+        {
+          "id": "gitlab.action.update-issue",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Update Issue",
+          "fields": [
+            { "name": "issueIid", "type": "integer", "optional": false, "min": 1 },
+            { "name": "projectId", "type": "string", "optional": false },
+            { "name": "stateEvent", "type": "string", "optional": true },
+            { "name": "title", "type": "string", "optional": true }
+          ],
+          "authFieldNames": ["gitlabToken"]
+        }
+      ]
+    },
+    {
       "id": "github",
       "name": "GitHub",
       "authFieldNames": ["githubToken"],
