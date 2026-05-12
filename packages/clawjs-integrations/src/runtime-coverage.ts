@@ -132,6 +132,10 @@ export function verifyConnectorRuntimeCoverage(
           if (implementation.planKinds.includes("request") && !isRequestPlan(details.requestPlan)) {
             errors.push(`runtime implementation for ${entry.operationId} must build a request plan`);
           }
+          if (details.requestPlan) {
+            const authErrors = requestPlanAuthErrors(operation, details.requestPlan);
+            errors.push(...authErrors.map((error) => `runtime implementation for ${entry.operationId} ${error}`));
+          }
           if (implementation.planKinds.includes("source") && !isSourcePlan(details.sourcePlan)) {
             errors.push(`runtime implementation for ${entry.operationId} must build a source plan`);
           }
@@ -155,6 +159,22 @@ export function verifyConnectorRuntimeCoverage(
     );
   }
   return report;
+}
+
+function requestPlanAuthErrors(
+  operation: ConnectorOperationDefinition,
+  requestPlan: ConnectorRuntimeRequestPlan,
+): string[] {
+  const errors: string[] = [];
+  const expected = new Set(operation.authFieldNames);
+  const actual = new Set(requestPlan.auth.map((entry) => entry.field));
+  for (const field of expected) {
+    if (!actual.has(field)) errors.push(`request plan auth missing ${field}`);
+  }
+  for (const field of actual) {
+    if (!expected.has(field)) errors.push(`request plan auth includes unknown ${field}`);
+  }
+  return errors;
 }
 
 function isRequestPlan(value: ConnectorRuntimeRequestPlan | undefined): boolean {

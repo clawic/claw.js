@@ -404,4 +404,51 @@ describe("connector runtime coverage", () => {
       /must build a request plan/,
     );
   });
+
+  it("rejects request plans with mismatched auth bindings", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: ["apiKey"],
+        fields: [{ name: "apiKey", type: "string", optional: false, secret: true }],
+        operations: [{
+          id: "fixture_service.action.send-message",
+          appId: "fixture_service",
+          kind: "action",
+          name: "Send Message",
+          fields: [{ name: "text", type: "string", optional: false }],
+          authFieldNames: ["apiKey"],
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "action",
+      executorId: "fixture.action.offline",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      planKinds: ["request"],
+      supports: (operation) => operation.id === "fixture_service.action.send-message",
+      createExecutor: () => ({
+        async execute() {
+          return { ok: true };
+        },
+      }),
+      buildPlan: () => ({
+        requestPlan: {
+          method: "POST",
+          endpoint: "messages",
+          auth: [{ type: "secret", field: "wrongKey" }],
+          body: {},
+        },
+      }),
+    }];
+
+    assert.throws(
+      () => verifyConnectorRuntimeCoverage(catalog, { registry }),
+      /request plan auth missing apiKey.*request plan auth includes unknown wrongKey/s,
+    );
+  });
 });
