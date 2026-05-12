@@ -37,7 +37,7 @@ const preview = await runConnectorOperation({
   operationId: matches[0].operation.id,
   input: {
     values: { text: "hello" },
-    secretRefs: { bot: "vault://connections/chat/bot" },
+    secretRefs: { bot: "secrets://connections/chat/bot" },
   },
 });
 ```
@@ -57,7 +57,7 @@ await runConnectorOperation({
   dryRun: false,
   input: {
     values: { chatId: "123", text: "hello" },
-    secretRefs: { telegramBotApi: "vault://connections/telegram/bot" },
+    secretRefs: { telegramBotApi: "secrets://connections/telegram/bot" },
   },
   resolveSecret: async (ref) => secretStore.resolve(ref),
 });
@@ -74,7 +74,7 @@ await runConnectorSource({
   dryRun: false,
   input: {
     values: { commands: "[\"/start\"]" },
-    secretRefs: { telegramBotApi: "vault://connections/telegram/bot" },
+    secretRefs: { telegramBotApi: "secrets://connections/telegram/bot" },
   },
   resolveSecret: async (ref) => secretStore.resolve(ref),
   runtimeExecutorOptions: {

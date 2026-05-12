@@ -188,7 +188,7 @@ Rules:
 
 - Do not point it at production by default.
 - Do not store plaintext credentials in repo-local env files.
-- Use `Secrets Vault` plus the `secrets-proxy` binary exposed through `CLAWJS_SECRETS_PROXY_PATH` for any real secret access.
+- Use `Secrets` plus the `secrets-proxy` binary exposed through `CLAWJS_SECRETS_PROXY_PATH` for any real secret access.
 - Require explicit user confirmation before running anything with real side effects or paid calls.
 
 If a real smoke test cannot be safely isolated, it must remain manual and advisory.
