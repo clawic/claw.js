@@ -40,9 +40,9 @@ fs.writeFileSync(outPath, `${JSON.stringify(catalog, null, 2)}\n`);
 console.error(`wrote ${apps.length} apps, ${apps.reduce((sum, app) => sum + app.operations.length, 0)} operations`);
 
 function readApp(appDir, fallbackId) {
-  const appFile = fs.readdirSync(appDir).find((name) => name.endsWith(".app.mjs") || name.endsWith(".app.js"));
+  const appFile = findAppFile(appDir);
   if (!appFile) return null;
-  const appPath = path.join(appDir, appFile);
+  const appPath = appFile;
   const source = readText(appPath);
   const packageJson = readJson(path.join(appDir, "package.json"));
   const id = scrubIdentifier(firstMatch(source, /\bapp:\s*["']([^"']+)["']/) ?? fallbackId);
@@ -657,12 +657,36 @@ function readSpreadImports(source, filePath) {
 }
 
 function resolveLocalImport(filePath, specifier) {
-  if (!specifier.startsWith(".")) return null;
+  if (!specifier.startsWith(".")) return resolveExternalComponentImport(specifier);
   const base = path.resolve(path.dirname(filePath), specifier);
   for (const candidate of [base, `${base}.mjs`, `${base}.js`, `${base}.ts`, path.join(base, "index.mjs"), path.join(base, "index.js")]) {
     if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
   }
   return null;
+}
+
+function resolveExternalComponentImport(specifier) {
+  const scope = `@${String.fromCharCode(80, 105, 112, 101, 100, 114, 101, 97, 109).toLowerCase()}/`;
+  if (!specifier.startsWith(scope)) return null;
+  const [componentId, ...subpath] = specifier.slice(scope.length).split("/");
+  if (!componentId || componentId === "platform" || componentId === "types") return null;
+  const componentDir = path.join(componentsDir, componentId);
+  if (!fs.existsSync(componentDir)) return null;
+  if (!subpath.length) return findAppFile(componentDir);
+  const base = path.join(componentDir, ...subpath);
+  for (const candidate of [base, `${base}.mjs`, `${base}.js`, `${base}.ts`, path.join(base, "index.mjs"), path.join(base, "index.js")]) {
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+  }
+  return null;
+}
+
+function findAppFile(appDir) {
+  const rootFile = fs.readdirSync(appDir).find((name) => name.endsWith(".app.mjs") || name.endsWith(".app.js") || name.endsWith(".app.ts"));
+  if (rootFile) return path.join(appDir, rootFile);
+  const nestedDir = path.join(appDir, "app");
+  if (!fs.existsSync(nestedDir)) return null;
+  const nestedFile = fs.readdirSync(nestedDir).find((name) => name.endsWith(".app.mjs") || name.endsWith(".app.js") || name.endsWith(".app.ts"));
+  return nestedFile ? path.join(nestedDir, nestedFile) : null;
 }
 
 function optionalBoolean(key, value) {
