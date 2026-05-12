@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
         hybridSources: 0,
         statefulSources: 0,
         dynamicPropOperations: 0,
+        dynamicOptionFields: 0,
         methodOperations: 0,
       },
       apps: [],

@@ -26,6 +26,7 @@ interface CatalogSummary {
   hybridSources: number;
   statefulSources: number;
   dynamicPropOperations: number;
+  dynamicOptionFields: number;
   methodOperations: number;
 }
 
@@ -37,6 +38,11 @@ interface CatalogField {
   optional: boolean;
   default?: unknown;
   options?: Array<{ label?: string; value: string | number | boolean; description?: string }>;
+  dynamicOptions?: {
+    paginated: boolean;
+    usesPreviousContext: boolean;
+    contextKeys: string[];
+  };
   secret?: boolean;
   managed?: boolean;
 }
@@ -311,6 +317,7 @@ export default function ConnectorsPage() {
             <span>{catalog?.summary.webhookSources ?? 0} webhooks</span>
             <span>{catalog?.summary.statefulSources ?? 0} stateful</span>
             <span>{catalog?.summary.dynamicPropOperations ?? 0} dynamic props</span>
+            <span>{catalog?.summary.dynamicOptionFields ?? 0} dynamic options</span>
           </div>
           {catalog && !catalog.configured ? (
             <p className="text-[11px] text-muted-foreground mt-2 font-mono">Catalog not found at {catalog.path}</p>
@@ -409,6 +416,7 @@ export default function ConnectorsPage() {
                           <span className="text-foreground">{field.label ?? field.name}</span>
                           <span className="text-muted-foreground font-mono">
                             {field.type}{field.default === undefined ? "" : " = default"}{field.options?.length ? ` · ${field.options.length} opts` : ""}
+                            {field.dynamicOptions ? " · dynamic" : ""}
                           </span>
                         </div>
                       ))}
