@@ -82,6 +82,7 @@ function readOperations(appDir, appId, kind, appAuthFields, appFields) {
         ...appAuthFields,
         ...fields.filter((field) => field.secret).map((field) => field.name),
       ].filter(unique);
+      const sampleEvent = kind === "source" ? readSampleEventMetadata(file) : undefined;
       return {
         id: `${appId}.${kind}.${scrubIdentifier(slug)}`,
         appId,
@@ -95,6 +96,7 @@ function readOperations(appDir, appId, kind, appAuthFields, appFields) {
         ...optionalAnnotations(readAnnotations(source)),
         runtime,
         ...optionalSourceCapabilities(kind, fields, runtime),
+        ...optionalSampleEvent(sampleEvent),
         sourcePath: scrubPath(path.relative(path.dirname(appDir), file).replaceAll(path.sep, "/")),
       };
     });
@@ -631,6 +633,66 @@ function optionalSourceCapabilities(kind, fields, runtime) {
       usesServiceDb,
     },
   };
+}
+
+function optionalSampleEvent(metadata) {
+  return metadata ? { sampleEvent: metadata } : {};
+}
+
+function readSampleEventMetadata(sourceFile) {
+  const samplePath = path.join(path.dirname(sourceFile), "test-event.mjs");
+  if (!fs.existsSync(samplePath)) return undefined;
+  const source = readText(samplePath);
+  const value = readDefaultExportExpression(source);
+  if (!value) return { shape: "unknown", keys: [] };
+  const trimmed = value.trim();
+  if (trimmed.startsWith("{")) {
+    const body = objectBodyFromValue(trimmed);
+    return {
+      shape: "object",
+      keys: body ? readObjectKeys(body) : [],
+    };
+  }
+  if (trimmed.startsWith("[")) {
+    const items = readArrayItems(trimmed);
+    const firstObject = items.find((item) => item.trim().startsWith("{"));
+    const body = firstObject ? objectBodyFromValue(firstObject.trim()) : undefined;
+    return {
+      shape: "array",
+      keys: body ? readObjectKeys(body) : [],
+    };
+  }
+  if (/^JSON\.parse\s*\(/.test(trimmed)) {
+    const jsonText = parseStringContent(trimmed.slice(trimmed.indexOf("(") + 1, trimmed.lastIndexOf(")")).trim());
+    if (jsonText) {
+      try {
+        const parsed = JSON.parse(scrubBrandedText(jsonText));
+        return sampleEventMetadataFromValue(parsed);
+      } catch {
+        return { shape: "unknown", keys: [] };
+      }
+    }
+  }
+  if (/^["'`]/.test(trimmed)) return { shape: "string", keys: [] };
+  return { shape: "unknown", keys: [] };
+}
+
+function sampleEventMetadataFromValue(value) {
+  if (Array.isArray(value)) {
+    const first = value.find((item) => item && typeof item === "object" && !Array.isArray(item));
+    return { shape: "array", keys: first ? Object.keys(first).map(scrubIdentifier).sort() : [] };
+  }
+  if (value && typeof value === "object") {
+    return { shape: "object", keys: Object.keys(value).map(scrubIdentifier).sort() };
+  }
+  if (typeof value === "string") return { shape: "string", keys: [] };
+  return { shape: "unknown", keys: [] };
+}
+
+function readDefaultExportExpression(source) {
+  const match = /export\s+default\s+/.exec(source);
+  if (!match) return undefined;
+  return source.slice(match.index + match[0].length).trim().replace(/;?\s*$/, "");
 }
 
 function sourceDeliveryMode({ usesTimer, usesHttp, runtime }) {
