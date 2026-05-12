@@ -98,7 +98,8 @@ export function verifyConnectorRuntimeCoverage(
   catalog: ConnectorCatalog,
   options: VerifyConnectorRuntimeCoverageOptions = {},
 ): ConnectorRuntimeCoverageReport {
-  const report = evaluateConnectorRuntimeCoverage(catalog, { registry: options.registry });
+  const registry = options.registry ?? CONNECTOR_RUNTIME_REGISTRY;
+  const report = evaluateConnectorRuntimeCoverage(catalog, { registry });
   const errors = [...report.errors];
   const evidenceRoot = path.resolve(options.evidenceRoot ?? process.cwd());
   if (!options.allowUnsupportedReasons) {
@@ -118,7 +119,11 @@ export function verifyConnectorRuntimeCoverage(
     errors.push(...evidencePathErrors(`runtime implementation for ${entry.operationId}`, entry.evidence, evidenceRoot));
     if (entry.status === "implemented") {
       const operation = findCatalogOperation(catalog, entry.operationId);
-      const implementation = operation ? findConnectorRuntimeImplementation(operation, options.registry ?? CONNECTOR_RUNTIME_REGISTRY) : null;
+      const implementations = operation ? findConnectorRuntimeImplementations(operation, registry) : [];
+      if (implementations.length > 1) {
+        errors.push(`runtime implementation for ${entry.operationId} is ambiguous: ${implementations.map((item) => item.executorId).join(", ")}`);
+      }
+      const implementation = implementations[0] ?? null;
       if (operation?.kind === "action") {
         if (!implementation?.createExecutor) errors.push(`runtime implementation for ${entry.operationId} requires a registered action executor`);
         if (!implementation?.planKinds.includes("request")) errors.push(`runtime implementation for ${entry.operationId} requires a request plan kind`);
@@ -338,6 +343,17 @@ function findCatalogOperation(
     if (operation) return operation;
   }
   return null;
+}
+
+function findConnectorRuntimeImplementations(
+  operation: ConnectorOperationDefinition,
+  registry: readonly ConnectorRuntimeImplementation[],
+): ConnectorRuntimeImplementation[] {
+  return registry.filter((implementation) => (
+    implementation.appId === operation.appId
+    && implementation.kind === operation.kind
+    && implementation.supports(operation)
+  ));
 }
 
 export function buildConnectorOperationRuntimePlan(

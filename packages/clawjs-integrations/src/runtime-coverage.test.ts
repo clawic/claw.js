@@ -356,6 +356,57 @@ describe("connector runtime coverage", () => {
     );
   });
 
+  it("rejects ambiguous registry implementations for the same operation", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [{
+          id: "fixture_service.action.send-message",
+          appId: "fixture_service",
+          kind: "action",
+          name: "Send Message",
+          fields: [],
+          authFieldNames: [],
+        }],
+      }],
+    });
+    const implementation = (executorId: string): ConnectorRuntimeImplementation => ({
+      appId: "fixture_service",
+      kind: "action",
+      executorId,
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      planKinds: ["request"],
+      supports: (operation) => operation.id === "fixture_service.action.send-message",
+      createExecutor: () => ({
+        async execute() {
+          return { ok: true };
+        },
+      }),
+      buildPlan: () => ({
+        requestPlan: {
+          method: "POST",
+          endpoint: "messages",
+          auth: [],
+          body: {},
+        },
+      }),
+    });
+    const registry = [
+      implementation("fixture.action.primary"),
+      implementation("fixture.action.duplicate"),
+    ];
+
+    assert.throws(
+      () => verifyConnectorRuntimeCoverage(catalog, { registry }),
+      /is ambiguous: fixture\.action\.primary, fixture\.action\.duplicate/,
+    );
+  });
+
   it("rejects registry implementations without local evidence files", () => {
     const catalog = normalizeConnectorCatalog({
       version: 1,
