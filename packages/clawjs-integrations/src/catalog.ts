@@ -124,6 +124,10 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
         if (operation.source?.delivery === "hybrid") summary.hybridSources += 1;
         if (operation.source?.usesServiceDb === true) summary.statefulSources += 1;
         if (operation.kind === "source" && operation.sampleEvent) summary.sampleEventSources += 1;
+        if (operation.kind === "source" && operation.eventSummary) {
+          summary.eventSummarySources += 1;
+          summary.eventSummaryTemplates += operation.eventSummary.templates.length;
+        }
         if (operation.runtime?.hasAdditionalProps === true) summary.dynamicPropOperations += 1;
         summary.dynamicPropFields += operation.runtime?.additionalProps?.fieldNames.length ?? 0;
         if (operation.runtime?.hasMethods === true) summary.methodOperations += 1;
@@ -165,6 +169,8 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       hybridSources: 0,
       statefulSources: 0,
       sampleEventSources: 0,
+      eventSummarySources: 0,
+      eventSummaryTemplates: 0,
       dynamicPropOperations: 0,
       dynamicPropFields: 0,
       dynamicOptionFields: 0,
@@ -243,6 +249,7 @@ function normalizeOperation(input: unknown, appId: string): ConnectorOperationDe
     ...optionalRuntime(input.runtime),
     ...optionalSource(input.source),
     ...optionalSampleEvent(input.sampleEvent),
+    ...optionalEventSummary(input.eventSummary),
     ...(typeof input.sourcePath === "string" ? { sourcePath: input.sourcePath } : {}),
   };
 }
@@ -404,6 +411,21 @@ function optionalSampleEvent(input: unknown) {
     sampleEvent: {
       shape,
       keys: normalizeStringArray(input.keys),
+    },
+  };
+}
+
+function optionalEventSummary(input: unknown) {
+  if (!isRecord(input)) return {};
+  const count = typeof input.count === "number" && Number.isFinite(input.count) && input.count > 0
+    ? Math.floor(input.count)
+    : 0;
+  if (!count) return {};
+  return {
+    eventSummary: {
+      count,
+      templates: normalizeStringArray(input.templates),
+      dynamic: input.dynamic === true,
     },
   };
 }

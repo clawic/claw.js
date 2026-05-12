@@ -99,6 +99,12 @@ export interface ConnectorSampleEventMetadata {
   keys: string[];
 }
 
+export interface ConnectorEventSummaryMetadata {
+  count: number;
+  templates: string[];
+  dynamic: boolean;
+}
+
 export interface ConnectorOperationDefinition {
   id: string;
   appId: string;
@@ -113,6 +119,7 @@ export interface ConnectorOperationDefinition {
   runtime?: ConnectorOperationRuntime;
   source?: ConnectorSourceCapabilities;
   sampleEvent?: ConnectorSampleEventMetadata;
+  eventSummary?: ConnectorEventSummaryMetadata;
   sourcePath?: string;
 }
 
@@ -168,6 +175,8 @@ export interface ConnectorCatalogSummary {
   hybridSources: number;
   statefulSources: number;
   sampleEventSources: number;
+  eventSummarySources: number;
+  eventSummaryTemplates: number;
   dynamicPropOperations: number;
   dynamicPropFields: number;
   dynamicOptionFields: number;
