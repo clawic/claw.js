@@ -443,6 +443,9 @@ function compareRuntime(operationId, expected, actual, errors) {
   for (const key of ["hasRun", "hasHooks", "hasAdditionalProps", "hasMethods", "dedupe"]) {
     if (expected[key] !== actual?.[key]) errors.push(`operation ${operationId} runtime ${key} ${actual?.[key] ?? "<missing>"} expected ${expected[key]}`);
   }
+  const expectedHooks = new Set(expected.hookNames ?? []);
+  const actualHooks = new Set(Array.isArray(actual?.hookNames) ? actual.hookNames : []);
+  compareSets(`operation ${operationId} hooks`, expectedHooks, actualHooks, errors);
   const expectedMethods = new Set(expected.methodNames ?? []);
   const actualMethods = new Set(Array.isArray(actual?.methodNames) ? actual.methodNames : []);
   compareSets(`operation ${operationId} methods`, expectedMethods, actualMethods, errors);
@@ -510,6 +513,7 @@ function readRuntime(source, filePath, seen = new Set()) {
   const runtime = {
     hasRun: hasComponentMember(source, "run"),
     hasHooks: hasComponentMember(source, "hooks"),
+    hookNames: readHookNames(source),
     hasAdditionalProps: Boolean(additionalProps),
     ...optionalAdditionalProps(additionalProps),
     hasMethods: hasComponentMember(source, "methods"),
@@ -524,6 +528,7 @@ function readRuntime(source, filePath, seen = new Set()) {
     const inherited = readRuntime(readText(imported.file), imported.file, seen);
     runtime.hasRun ||= inherited.hasRun;
     runtime.hasHooks ||= inherited.hasHooks;
+    runtime.hookNames = [...runtime.hookNames, ...inherited.hookNames].filter(unique).sort();
     runtime.hasAdditionalProps ||= inherited.hasAdditionalProps;
     runtime.additionalProps = mergeAdditionalProps(runtime.additionalProps, inherited.additionalProps);
     runtime.hasMethods ||= inherited.hasMethods;
@@ -644,6 +649,15 @@ function readThisKeys(body) {
     .map((match) => scrub(match[1]))
     .filter(unique)
     .sort();
+}
+
+function readHookNames(source) {
+  const match = /\bhooks\s*:\s*{/.exec(source);
+  if (!match) return [];
+  const bodyStart = match.index + match[0].length;
+  const bodyEnd = findMatchingBrace(source, bodyStart - 1);
+  if (bodyEnd < 0) return [];
+  return readObjectKeys(source.slice(bodyStart, bodyEnd));
 }
 
 function readMethodNames(source) {
