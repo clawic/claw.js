@@ -249,6 +249,82 @@ describe("OpenAPI connector runtime", () => {
     assert.deepEqual(offline.errors, []);
   });
 
+  it("preserves form body encoding from OpenAPI request bodies", () => {
+    const document = {
+      ...FIXTURE_OPENAPI,
+      paths: {
+        "/oauth/token": {
+          post: {
+            operationId: "createToken",
+            summary: "Create token",
+            requestBody: {
+              content: {
+                "application/x-www-form-urlencoded": {
+                  schema: {
+                    type: "object",
+                    required: ["grant_type"],
+                    properties: {
+                      grant_type: { type: "string" },
+                      scope: { type: "string" },
+                    },
+                  },
+                },
+              },
+            },
+            responses: {
+              "200": {
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      required: ["access_token"],
+                      properties: {
+                        access_token: { type: "string" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const options = {
+      appId: "fixture_forms",
+      authFieldName: "clientSecret",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(document, options)];
+    const operation = catalog.apps[0]?.operations[0];
+    assert.ok(operation);
+
+    assert.deepEqual(operation.fields.map((field) => [field.name, field.optional]), [
+      ["grant_type", false],
+      ["scope", true],
+    ]);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, {
+      grant_type: "client_credentials",
+      scope: "items:read",
+    }, { registry }).requestPlan, {
+      method: "POST",
+      endpoint: "/oauth/token",
+      auth: [{ type: "secret", field: "clientSecret", placement: "bearer" }],
+      headers: { accept: "application/json" },
+      body: {
+        grant_type: "client_credentials",
+        scope: "items:read",
+      },
+      bodyEncoding: "form",
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["access_token"],
+      },
+    });
+  });
+
   it("infers api key auth bindings from OpenAPI security schemes", () => {
     const document = {
       ...FIXTURE_OPENAPI,

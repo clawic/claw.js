@@ -98,6 +98,7 @@ interface OpenApiConnectorOperationMetadata {
   path: string;
   parameters: OpenApiConnectorParameterBinding[];
   bodyFields: OpenApiConnectorBodyBinding[];
+  bodyEncoding?: "form";
   auth: OpenApiConnectorAuthBinding[];
   pagination?: ConnectorRuntimePaginationPlan;
   responseSchema: ConnectorRuntimeOutputSchema;
@@ -280,6 +281,7 @@ function buildOpenApiRequestPlan(
     headers,
     ...(Object.keys(query).length > 0 ? { query } : {}),
     body,
+    ...(metadata.bodyEncoding ? { bodyEncoding: metadata.bodyEncoding } : {}),
     ...(metadata.pagination ? { pagination: metadata.pagination } : {}),
     responseSchema: metadata.responseSchema,
   };
@@ -311,6 +313,7 @@ function collectOpenApiOperations(
         path,
         parameters: parameters.map(({ field: _field, ...parameter }) => parameter),
         bodyFields: bodyFields.map(({ field: _field, ...field }) => field),
+        ...optionalBodyEncoding(requestBodyEncoding(document, operation.requestBody)),
         auth,
         ...optionalPagination(inferOpenApiPagination(document, method, operation, parameters)),
         responseSchema: responseSchemaForOperation(document, operation),
@@ -397,7 +400,7 @@ function requestBodyEventsPath(document: OpenApiDocument, requestBody: OpenApiRe
 }
 
 function requestBodySchema(document: OpenApiDocument, requestBody: OpenApiRequestBody | undefined): OpenApiSchema | undefined {
-  return jsonContentSchema(document, resolveOpenApiRequestBody(document, requestBody)?.content);
+  return requestBodyContent(document, requestBody)?.schema;
 }
 
 function optionalSampleEventMetadata(schema: OpenApiSchema | undefined): Pick<ConnectorOperationDefinition, "sampleEvent"> | Record<string, never> {
@@ -553,6 +556,10 @@ function optionalPagination(value: ConnectorRuntimePaginationPlan | undefined): 
   return value ? { pagination: value } : {};
 }
 
+function optionalBodyEncoding(value: "form" | undefined): Pick<OpenApiConnectorOperationMetadata, "bodyEncoding"> | Record<string, never> {
+  return value ? { bodyEncoding: value } : {};
+}
+
 function responseItemsPath(document: OpenApiDocument, operation: OpenApiOperation): string | undefined {
   const schema = responseBodySchema(document, operation);
   if (!schema) return undefined;
@@ -685,6 +692,23 @@ function connectorFieldType(schema: OpenApiSchema | undefined): string {
 
 function jsonContentSchema(document: OpenApiDocument, content: OpenApiRequestBody["content"] | undefined): OpenApiSchema | undefined {
   return resolveOpenApiSchema(document, content?.["application/json"]?.schema ?? content?.["application/x-www-form-urlencoded"]?.schema);
+}
+
+function requestBodyEncoding(document: OpenApiDocument, requestBody: OpenApiRequestBody | undefined): "form" | undefined {
+  return requestBodyContent(document, requestBody)?.encoding;
+}
+
+function requestBodyContent(
+  document: OpenApiDocument,
+  requestBody: OpenApiRequestBody | undefined,
+): { schema: OpenApiSchema | undefined; encoding?: "form" } | undefined {
+  const content = resolveOpenApiRequestBody(document, requestBody)?.content;
+  if (!content) return undefined;
+  const jsonSchema = resolveOpenApiSchema(document, content["application/json"]?.schema);
+  if (jsonSchema) return { schema: jsonSchema };
+  const formSchema = resolveOpenApiSchema(document, content["application/x-www-form-urlencoded"]?.schema);
+  if (formSchema) return { schema: formSchema, encoding: "form" };
+  return undefined;
 }
 
 function schemaProperty(document: OpenApiDocument, schema: OpenApiSchema | undefined, name: string): OpenApiSchema | undefined {
