@@ -216,4 +216,37 @@ describe("connector runtime coverage", () => {
       },
     });
   });
+
+  it("rejects registry implementations without offline evidence", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [{
+          id: "fixture_service.action.send-message",
+          appId: "fixture_service",
+          kind: "action",
+          name: "Send Message",
+          fields: [],
+          authFieldNames: [],
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "action",
+      executorId: "fixture.action.offline",
+      offlineValidated: false,
+      evidence: [],
+      supports: (operation) => operation.id === "fixture_service.action.send-message",
+    }];
+
+    assert.throws(
+      () => verifyConnectorRuntimeCoverage(catalog, { registry }),
+      /requires offline validation.*requires concrete evidence/s,
+    );
+  });
 });

@@ -103,6 +103,12 @@ export function verifyConnectorRuntimeCoverage(
     }
   }
   for (const entry of report.entries) {
+    if (entry.status === "implemented" && !entry.offlineValidated) {
+      errors.push(`runtime implementation for ${entry.operationId} requires offline validation`);
+    }
+    if (entry.status === "implemented" && !entry.evidence.some((item) => item.trim())) {
+      errors.push(`runtime implementation for ${entry.operationId} requires concrete evidence`);
+    }
     if (entry.status !== "unsupported") continue;
     const reason = entry.unsupported_real_runtime_reason;
     if (!reason?.code?.trim()) errors.push(`unsupported runtime reason for ${entry.operationId} requires code`);
