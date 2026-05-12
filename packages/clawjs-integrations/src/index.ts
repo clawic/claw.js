@@ -63,6 +63,7 @@ export type {
   ConnectorFieldDefinition,
   ConnectorFieldOption,
   ConnectorOperationDefinition,
+  ConnectorOperationRuntime,
   ConnectorOperationInput,
   IntegrationAdapter,
   IntegrationInboundMessage,
