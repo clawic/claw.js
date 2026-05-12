@@ -102,6 +102,8 @@ npm --workspace @clawjs/integrations run catalog:verify-runtime -- --catalog /tm
 
 Runtime HTTP responses and `ConnectorRuntimeHttpError` instances expose normalized `rateLimit` metadata from common provider headers, including retry delay, remaining quota, reset timing, and policy text when present.
 
+Webhook sources can reuse `handleConnectorRuntimeWebhook` to extract events from an incoming payload with the same registered source plan used by dry-runs and audits. This keeps webhook validation offline-friendly: tests can pass fixture payloads directly, without opening a real HTTP endpoint or contacting the provider.
+
 Add `--execute-offline` to replay implemented runtimes against their local fixtures with intercepted fetch:
 
 ```bash
