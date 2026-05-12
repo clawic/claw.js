@@ -83,6 +83,7 @@ function readOperations(appDir, appId, kind, appAuthFields, appFields) {
         ...fields.filter((field) => field.secret).map((field) => field.name),
       ].filter(unique);
       const sampleEvent = kind === "source" ? readSampleEventMetadata(file) : undefined;
+      const eventSummary = kind === "source" ? readEventSummaryMetadata(source) : undefined;
       return {
         id: `${appId}.${kind}.${scrubIdentifier(slug)}`,
         appId,
@@ -97,6 +98,7 @@ function readOperations(appDir, appId, kind, appAuthFields, appFields) {
         runtime,
         ...optionalSourceCapabilities(kind, fields, runtime),
         ...optionalSampleEvent(sampleEvent),
+        ...optionalEventSummary(eventSummary),
         sourcePath: scrubPath(path.relative(path.dirname(appDir), file).replaceAll(path.sep, "/")),
       };
     });
@@ -639,6 +641,10 @@ function optionalSampleEvent(metadata) {
   return metadata ? { sampleEvent: metadata } : {};
 }
 
+function optionalEventSummary(metadata) {
+  return metadata ? { eventSummary: metadata } : {};
+}
+
 function readSampleEventMetadata(sourceFile) {
   const samplePath = path.join(path.dirname(sourceFile), "test-event.mjs");
   if (!fs.existsSync(samplePath)) return undefined;
@@ -675,6 +681,24 @@ function readSampleEventMetadata(sourceFile) {
   }
   if (/^["'`]/.test(trimmed)) return { shape: "string", keys: [] };
   return { shape: "unknown", keys: [] };
+}
+
+function readEventSummaryMetadata(source) {
+  const templates = [];
+  let count = 0;
+  for (const match of source.matchAll(/\bsummary\s*:/g)) {
+    const raw = source.slice(match.index + match[0].length, findExpressionValueEnd(source, match.index + match[0].length)).trim();
+    if (!raw) continue;
+    count += 1;
+    const text = cleanText(parseStringContent(raw));
+    if (text) templates.push(text);
+  }
+  if (!count) return undefined;
+  return {
+    count,
+    templates: templates.filter(unique).sort(),
+    dynamic: count > templates.length,
+  };
 }
 
 function sampleEventMetadataFromValue(value) {
@@ -1132,6 +1156,32 @@ function findTopLevelValueEnd(body, start) {
     }
     if (char === "{" || char === "[") depth += 1;
     else if (char === "}" || char === "]") depth -= 1;
+    else if (char === "," && depth === 0) return index;
+  }
+  return body.length;
+}
+
+function findExpressionValueEnd(body, start) {
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  for (let index = start; index < body.length; index += 1) {
+    const char = body[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{" || char === "[" || char === "(") depth += 1;
+    else if (char === "}" || char === "]" || char === ")") {
+      if (depth === 0) return index;
+      depth -= 1;
+    }
     else if (char === "," && depth === 0) return index;
   }
   return body.length;

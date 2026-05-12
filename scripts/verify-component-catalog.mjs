@@ -47,7 +47,7 @@ const summary = summarize(catalog.apps ?? []);
 
 for (const error of errors.slice(0, maxErrors)) console.error(`FAIL ${error}`);
 if (errors.length > maxErrors) console.error(`FAIL ... ${errors.length - maxErrors} additional errors hidden`);
-console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} hidden=${summary.hiddenFields} disabled=${summary.disabledFields} reload=${summary.reloadFields} bounded=${summary.boundedFields} placeholders=${summary.placeholderFields} query=${summary.queryFields} labels=${summary.labelFields} alerts=${summary.alertFields} readAccess=${summary.readAccessFields} writeAccess=${summary.writeAccessFields} synced=${summary.syncedFields} customResponse=${summary.customResponseFields} propDefinitions=${summary.propDefinitionFields} contextualProps=${summary.contextualPropFields} dynamicOptions=${summary.dynamicOptionFields} sampleEvents=${summary.sampleEventSources} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} dynamicPropFields=${summary.dynamicPropFields} methods=${summary.methodOperations}`);
+console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} hidden=${summary.hiddenFields} disabled=${summary.disabledFields} reload=${summary.reloadFields} bounded=${summary.boundedFields} placeholders=${summary.placeholderFields} query=${summary.queryFields} labels=${summary.labelFields} alerts=${summary.alertFields} readAccess=${summary.readAccessFields} writeAccess=${summary.writeAccessFields} synced=${summary.syncedFields} customResponse=${summary.customResponseFields} propDefinitions=${summary.propDefinitionFields} contextualProps=${summary.contextualPropFields} dynamicOptions=${summary.dynamicOptionFields} sampleEvents=${summary.sampleEventSources} eventSummarySources=${summary.eventSummarySources} eventSummaryTemplates=${summary.eventSummaryTemplates} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} dynamicPropFields=${summary.dynamicPropFields} methods=${summary.methodOperations}`);
 if (errors.length > 0) {
   console.error(`catalog verification failed with ${errors.length} error(s)`);
   process.exit(1);
@@ -85,6 +85,7 @@ function readExpectedOperations(appDir, appId, kind, appAuth, appFields) {
       const fields = readFields(source, appId, appFields, file);
       const runtime = readRuntime(source, file);
       const sampleEvent = kind === "source" ? readSampleEventMetadata(file) : undefined;
+      const eventSummary = kind === "source" ? readEventSummaryMetadata(source) : undefined;
       const slug = scrub(operationSlug(root, file));
       return {
         id: `${appId}.${kind}.${slug}`,
@@ -95,6 +96,7 @@ function readExpectedOperations(appDir, appId, kind, appAuth, appFields) {
         runtime,
         sourceCapabilities: readSourceCapabilities(kind, fields, runtime),
         sampleEvent,
+        eventSummary,
         auth: new Set([...appAuth, ...fields.filter((field) => field.secret).map((field) => field.name)]),
         sourcePath: scrubPath(path.relative(path.dirname(appDir), file).replaceAll(path.sep, "/")),
       };
@@ -129,6 +131,8 @@ function verify(catalog, expectedApps) {
   if (actualSummary.contextualPropFields !== expectedSummary.contextualPropFields) errors.push(`contextualProps ${actualSummary.contextualPropFields} expected ${expectedSummary.contextualPropFields}`);
   if (actualSummary.dynamicOptionFields !== expectedSummary.dynamicOptionFields) errors.push(`dynamicOptions ${actualSummary.dynamicOptionFields} expected ${expectedSummary.dynamicOptionFields}`);
   if (actualSummary.sampleEventSources !== expectedSummary.sampleEventSources) errors.push(`sampleEvents ${actualSummary.sampleEventSources} expected ${expectedSummary.sampleEventSources}`);
+  if (actualSummary.eventSummarySources !== expectedSummary.eventSummarySources) errors.push(`eventSummarySources ${actualSummary.eventSummarySources} expected ${expectedSummary.eventSummarySources}`);
+  if (actualSummary.eventSummaryTemplates !== expectedSummary.eventSummaryTemplates) errors.push(`eventSummaryTemplates ${actualSummary.eventSummaryTemplates} expected ${expectedSummary.eventSummaryTemplates}`);
   if (actualSummary.annotatedOperations !== expectedSummary.annotatedOperations) errors.push(`annotations ${actualSummary.annotatedOperations} expected ${expectedSummary.annotatedOperations}`);
   if (actualSummary.destructiveOperations !== expectedSummary.destructiveOperations) errors.push(`destructive ${actualSummary.destructiveOperations} expected ${expectedSummary.destructiveOperations}`);
   if (actualSummary.readOnlyOperations !== expectedSummary.readOnlyOperations) errors.push(`readOnly ${actualSummary.readOnlyOperations} expected ${expectedSummary.readOnlyOperations}`);
@@ -423,6 +427,10 @@ function summarize(apps) {
       if (operation.source?.delivery === "hybrid") summary.hybridSources += 1;
       if (operation.source?.usesServiceDb === true) summary.statefulSources += 1;
       if (operation.kind === "source" && isRecord(operation.sampleEvent)) summary.sampleEventSources += 1;
+      if (operation.kind === "source" && isRecord(operation.eventSummary)) {
+        summary.eventSummarySources += 1;
+        summary.eventSummaryTemplates += Array.isArray(operation.eventSummary.templates) ? operation.eventSummary.templates.length : 0;
+      }
       if (operation.runtime?.hasAdditionalProps === true) summary.dynamicPropOperations += 1;
       summary.dynamicPropFields += operation.runtime?.additionalProps?.fieldNames?.length ?? 0;
       if (operation.runtime?.hasMethods === true) summary.methodOperations += 1;
@@ -463,6 +471,8 @@ function summarize(apps) {
     hybridSources: 0,
     statefulSources: 0,
     sampleEventSources: 0,
+    eventSummarySources: 0,
+    eventSummaryTemplates: 0,
     dynamicPropOperations: 0,
     dynamicPropFields: 0,
     dynamicOptionFields: 0,
@@ -501,6 +511,8 @@ function summarizeExpected(apps) {
     hybridSources: 0,
     statefulSources: 0,
     sampleEventSources: 0,
+    eventSummarySources: 0,
+    eventSummaryTemplates: 0,
     dynamicPropOperations: 0,
     dynamicPropFields: 0,
     dynamicOptionFields: 0,
@@ -556,6 +568,10 @@ function summarizeExpected(apps) {
       if (operation.sourceCapabilities?.delivery === "hybrid") summary.hybridSources += 1;
       if (operation.sourceCapabilities?.usesServiceDb === true) summary.statefulSources += 1;
       if (operation.kind === "source" && operation.sampleEvent) summary.sampleEventSources += 1;
+      if (operation.kind === "source" && operation.eventSummary) {
+        summary.eventSummarySources += 1;
+        summary.eventSummaryTemplates += operation.eventSummary.templates.length;
+      }
       if (operation.runtime.hasAdditionalProps === true) summary.dynamicPropOperations += 1;
       summary.dynamicPropFields += operation.runtime.additionalProps?.fieldNames?.length ?? 0;
       if (operation.runtime.hasMethods === true) summary.methodOperations += 1;
@@ -983,6 +999,24 @@ function sampleEventMetadataFromValue(value) {
   }
   if (typeof value === "string") return { shape: "string", keys: [] };
   return { shape: "unknown", keys: [] };
+}
+
+function readEventSummaryMetadata(source) {
+  const templates = [];
+  let count = 0;
+  for (const match of source.matchAll(/\bsummary\s*:/g)) {
+    const raw = source.slice(match.index + match[0].length, findExpressionValueEnd(source, match.index + match[0].length)).trim();
+    if (!raw) continue;
+    count += 1;
+    const text = scrub(parseStringContent(raw));
+    if (text) templates.push(text);
+  }
+  if (!count) return undefined;
+  return {
+    count,
+    templates: templates.filter(unique).sort(),
+    dynamic: count > templates.length,
+  };
 }
 
 function readDefaultExportExpression(source) {
@@ -1427,6 +1461,32 @@ function findTopLevelValueEnd(body, start) {
     }
     if (char === "{" || char === "[") depth += 1;
     else if (char === "}" || char === "]") depth -= 1;
+    else if (char === "," && depth === 0) return index;
+  }
+  return body.length;
+}
+
+function findExpressionValueEnd(body, start) {
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  for (let index = start; index < body.length; index += 1) {
+    const char = body[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{" || char === "[" || char === "(") depth += 1;
+    else if (char === "}" || char === "]" || char === ")") {
+      if (depth === 0) return index;
+      depth -= 1;
+    }
     else if (char === "," && depth === 0) return index;
   }
   return body.length;
