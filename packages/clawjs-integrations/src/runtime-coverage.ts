@@ -267,11 +267,25 @@ function isRequestPlan(value: ConnectorRuntimeRequestPlan | undefined): boolean 
     && typeof value.endpoint === "string"
     && value.endpoint.trim()
     && Array.isArray(value.auth)
-    && value.auth.every((entry) => entry.type === "secret" && typeof entry.field === "string" && entry.field.trim())
+    && value.auth.every(isAuthBinding)
     && isStringRecord(value.headers)
     && isOptionalJsonRecord(value.query)
     && isRequiredJsonRecord(value.body),
   );
+}
+
+function isAuthBinding(value: ConnectorRuntimeRequestPlan["auth"][number]): boolean {
+  if (value.type !== "secret") return false;
+  if (typeof value.field !== "string" || !value.field.trim()) return false;
+  if (value.placement && !["bearer", "header", "query", "path"].includes(value.placement)) return false;
+  if (
+    (value.placement === "header" || value.placement === "query" || value.placement === "path")
+    && (typeof value.name !== "string" || !value.name.trim())
+  ) {
+    return false;
+  }
+  if (value.prefix !== undefined && typeof value.prefix !== "string") return false;
+  return true;
 }
 
 function isStringRecord(value: Record<string, string> | undefined): boolean {
