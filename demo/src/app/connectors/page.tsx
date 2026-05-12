@@ -542,6 +542,7 @@ export default function ConnectorsPage() {
                 <label className="block mb-3">
                   <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Values JSON</span>
                   <textarea
+                    data-testid="connector-values-json"
                     value={valuesJson}
                     onChange={(event) => setValuesJson(event.target.value)}
                     rows={9}
@@ -551,6 +552,7 @@ export default function ConnectorsPage() {
                 <label className="block mb-4">
                   <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Secret refs JSON</span>
                   <textarea
+                    data-testid="connector-secret-refs-json"
                     value={secretRefsJson}
                     onChange={(event) => setSecretRefsJson(event.target.value)}
                     rows={4}
