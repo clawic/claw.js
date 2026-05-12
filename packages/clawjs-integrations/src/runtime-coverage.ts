@@ -228,10 +228,41 @@ function isRequestPlan(value: ConnectorRuntimeRequestPlan | undefined): boolean 
     && value.endpoint.trim()
     && Array.isArray(value.auth)
     && value.auth.every((entry) => entry.type === "secret" && typeof entry.field === "string" && entry.field.trim())
-    && value.body
-    && typeof value.body === "object"
-    && !Array.isArray(value.body),
+    && isStringRecord(value.headers)
+    && isOptionalJsonRecord(value.query)
+    && isRequiredJsonRecord(value.body),
   );
+}
+
+function isStringRecord(value: Record<string, string> | undefined): boolean {
+  return value === undefined || (
+    isPlainRecord(value)
+    && Object.values(value).every((entry) => typeof entry === "string")
+  );
+}
+
+function isOptionalJsonRecord(value: Record<string, IntegrationJson> | undefined): boolean {
+  return value === undefined || isRequiredJsonRecord(value);
+}
+
+function isRequiredJsonRecord(value: Record<string, IntegrationJson> | undefined): boolean {
+  return Boolean(
+    value
+    && isPlainRecord(value)
+    && Object.values(value).every(isIntegrationJson),
+  );
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function isIntegrationJson(value: unknown): value is IntegrationJson {
+  if (value === null) return true;
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return true;
+  if (Array.isArray(value)) return value.every(isIntegrationJson);
+  if (isPlainRecord(value)) return Object.values(value).every(isIntegrationJson);
+  return false;
 }
 
 function isSourcePlan(value: ConnectorRuntimeSourcePlan | undefined): boolean {

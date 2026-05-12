@@ -8,6 +8,7 @@ import {
   verifyConnectorRuntimeCoverage,
 } from "./runtime-coverage.ts";
 import type { ConnectorRuntimeImplementation } from "./runtime-registry.ts";
+import type { IntegrationJson } from "./types.ts";
 
 describe("connector runtime coverage", () => {
   it("fails when a catalog operation has no offline-validable runtime implementation", () => {
@@ -474,6 +475,55 @@ describe("connector runtime coverage", () => {
         },
       }),
       buildPlan: () => ({}),
+    }];
+
+    assert.throws(
+      () => verifyConnectorRuntimeCoverage(catalog, { registry }),
+      /must build a request plan/,
+    );
+  });
+
+  it("rejects request plans with non-serializable request details", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [{
+          id: "fixture_service.action.send-message",
+          appId: "fixture_service",
+          kind: "action",
+          name: "Send Message",
+          fields: [],
+          authFieldNames: [],
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "action",
+      executorId: "fixture.action.offline",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      planKinds: ["request"],
+      supports: (operation) => operation.id === "fixture_service.action.send-message",
+      createExecutor: () => ({
+        async execute() {
+          return { ok: true };
+        },
+      }),
+      buildPlan: () => ({
+        requestPlan: {
+          method: "POST",
+          endpoint: "messages",
+          auth: [],
+          headers: { accept: 1 } as unknown as Record<string, string>,
+          query: { cursor: undefined } as unknown as Record<string, IntegrationJson>,
+          body: { text: () => "hello" } as unknown as Record<string, IntegrationJson>,
+        },
+      }),
     }];
 
     assert.throws(
