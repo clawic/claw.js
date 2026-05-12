@@ -501,9 +501,23 @@ function openApiAuthBindings(
       ...(options.authPrefix ? { prefix: options.authPrefix } : {}),
     }];
   }
-  const requirements = operation.security ?? document.security ?? [];
-  const referenced = requirements.flatMap((requirement) => Object.keys(requirement));
-  const schemeNames = referenced.length > 0 ? referenced : Object.keys(document.components?.securitySchemes ?? {});
+  const explicitRequirements = operation.security ?? document.security;
+  if (explicitRequirements) {
+    for (const requirement of explicitRequirements) {
+      const schemeNames = Object.keys(requirement);
+      if (schemeNames.length === 0) return [];
+      const bindings = authBindingsForSecuritySchemes(document, schemeNames);
+      if (bindings.length === schemeNames.length) return bindings;
+    }
+    return [];
+  }
+  return authBindingsForSecuritySchemes(document, Object.keys(document.components?.securitySchemes ?? {}));
+}
+
+function authBindingsForSecuritySchemes(
+  document: OpenApiDocument,
+  schemeNames: string[],
+): OpenApiConnectorAuthBinding[] {
   return schemeNames.flatMap((schemeName) => {
     const scheme = resolveOpenApiSecurityScheme(document, document.components?.securitySchemes?.[schemeName]);
     if (!scheme) return [];

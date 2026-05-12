@@ -1129,6 +1129,80 @@ describe("OpenAPI connector runtime", () => {
     }]);
   });
 
+  it("uses one OpenAPI security requirement alternative instead of merging all alternatives", () => {
+    const document = {
+      ...FIXTURE_OPENAPI,
+      components: {
+        securitySchemes: {
+          apiKey: {
+            type: "apiKey",
+            in: "header",
+            name: "x-api-key",
+          },
+          oauthToken: {
+            type: "oauth2",
+            flows: {
+              clientCredentials: {
+                tokenUrl: "https://api.example.invalid/oauth/token",
+                scopes: {},
+              },
+            },
+          },
+        },
+      },
+      security: [{ apiKey: [] }, { oauthToken: [] }],
+    };
+    const options = {
+      appId: "fixture_auth_alternatives",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(document, options)];
+    const operation = catalog.apps[0]?.operations.find((candidate) => candidate.id.endsWith("list-customer-items"));
+    assert.ok(operation);
+
+    assert.deepEqual(catalog.apps[0]?.authFieldNames, ["apiKey"]);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, {
+      customerId: "cus_123",
+    }, { registry }).requestPlan?.auth, [{
+      type: "secret",
+      field: "apiKey",
+      placement: "header",
+      name: "x-api-key",
+    }]);
+  });
+
+  it("honors anonymous OpenAPI security alternatives", () => {
+    const document = {
+      ...FIXTURE_OPENAPI,
+      components: {
+        securitySchemes: {
+          apiKey: {
+            type: "apiKey",
+            in: "header",
+            name: "x-api-key",
+          },
+        },
+      },
+      security: [{}, { apiKey: [] }],
+    };
+    const options = {
+      appId: "fixture_anonymous_auth",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(document, options)];
+    const operation = catalog.apps[0]?.operations.find((candidate) => candidate.id.endsWith("list-customer-items"));
+    assert.ok(operation);
+
+    assert.deepEqual(catalog.apps[0]?.authFieldNames, []);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, {
+      customerId: "cus_123",
+    }, { registry }).requestPlan?.auth, []);
+  });
+
   it("infers cookie api key bindings from OpenAPI security schemes", () => {
     const document = {
       ...FIXTURE_OPENAPI,

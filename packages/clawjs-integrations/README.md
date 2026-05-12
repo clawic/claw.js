@@ -121,6 +121,7 @@ OpenAPI request bodies declared as `multipart/form-data` are converted into mult
 OpenAPI query parameters preserve supported serialization hints (`form`, `spaceDelimited`, `pipeDelimited`, and `deepObject`) so generated runtime plans can encode arrays and structured filters without provider-specific code.
 OpenAPI parameters declared in `cookie` are converted into `Cookie` request headers alongside path, query, and header parameters.
 When a spec declares standard bearer, basic auth, OAuth/OpenID bearer, or API key security schemes in headers, query params, or cookies, the OpenAPI runtime can derive secret fields and auth transport bindings automatically; explicit auth options still override the spec.
+When a spec declares alternative OpenAPI security requirements, the runtime chooses one supported requirement instead of merging mutually exclusive auth schemes into one plan.
 The OpenAPI runtime infers conservative offset, cursor, and next-URL pagination plans from common query parameters and response schemas, then replays them through the same offline fixture executor used by hand-written runtimes.
 OpenAPI webhook definitions are exposed as webhook `source` operations and validate through operation-scoped `source_event` fixtures plus `handleConnectorRuntimeWebhook`.
 
