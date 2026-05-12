@@ -43,6 +43,7 @@ function fixtureCatalog(): ConnectorCatalog {
                 default: false,
                 options: [{ label: "Silent", value: true }],
                 reloadProps: true,
+                placeholder: "false",
                 dynamicOptions: {
                   paginated: true,
                   usesPreviousContext: false,
@@ -78,7 +79,7 @@ function fixtureCatalog(): ConnectorCatalog {
             name: "New Message",
             fields: [
               { name: "channel", type: "string", optional: false },
-              { name: "limit", type: "integer", optional: true, min: 1, max: 100 },
+              { name: "limit", type: "integer", optional: true, min: 1, max: 100, useQuery: true, withLabel: true },
               { name: "db", type: "$.service.db", optional: false, managed: true },
               { name: "http", type: "$.interface.http", optional: false, managed: true },
             ],
@@ -121,6 +122,9 @@ describe("connector catalog", () => {
       disabledFields: 0,
       reloadFields: 1,
       boundedFields: 1,
+      placeholderFields: 1,
+      queryFields: 1,
+      labelFields: 1,
       annotatedOperations: 1,
       destructiveOperations: 0,
       readOnlyOperations: 0,

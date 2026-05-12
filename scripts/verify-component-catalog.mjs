@@ -30,6 +30,9 @@ const countHidden = (fields) => Array.isArray(fields) ? fields.filter((field) =>
 const countDisabled = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.disabled === true).length : 0;
 const countReload = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.reloadProps === true).length : 0;
 const countBounded = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && (typeof field.min === "number" || typeof field.max === "number")).length : 0;
+const countPlaceholders = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && typeof field.placeholder === "string" && field.placeholder.length > 0).length : 0;
+const countQuery = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.useQuery === true).length : 0;
+const countLabels = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.withLabel === true).length : 0;
 const expected = readExpected(componentsDir);
 const catalog = JSON.parse(readText(catalogPath));
 const errors = verify(catalog, expected);
@@ -37,7 +40,7 @@ const summary = summarize(catalog.apps ?? []);
 
 for (const error of errors.slice(0, maxErrors)) console.error(`FAIL ${error}`);
 if (errors.length > maxErrors) console.error(`FAIL ... ${errors.length - maxErrors} additional errors hidden`);
-console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} hidden=${summary.hiddenFields} disabled=${summary.disabledFields} reload=${summary.reloadFields} bounded=${summary.boundedFields} dynamicOptions=${summary.dynamicOptionFields} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} dynamicPropFields=${summary.dynamicPropFields} methods=${summary.methodOperations}`);
+console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} hidden=${summary.hiddenFields} disabled=${summary.disabledFields} reload=${summary.reloadFields} bounded=${summary.boundedFields} placeholders=${summary.placeholderFields} query=${summary.queryFields} labels=${summary.labelFields} dynamicOptions=${summary.dynamicOptionFields} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} dynamicPropFields=${summary.dynamicPropFields} methods=${summary.methodOperations}`);
 if (errors.length > 0) {
   console.error(`catalog verification failed with ${errors.length} error(s)`);
   process.exit(1);
@@ -105,6 +108,9 @@ function verify(catalog, expectedApps) {
   if (actualSummary.disabledFields !== expectedSummary.disabledFields) errors.push(`disabledFields ${actualSummary.disabledFields} expected ${expectedSummary.disabledFields}`);
   if (actualSummary.reloadFields !== expectedSummary.reloadFields) errors.push(`reloadFields ${actualSummary.reloadFields} expected ${expectedSummary.reloadFields}`);
   if (actualSummary.boundedFields !== expectedSummary.boundedFields) errors.push(`boundedFields ${actualSummary.boundedFields} expected ${expectedSummary.boundedFields}`);
+  if (actualSummary.placeholderFields !== expectedSummary.placeholderFields) errors.push(`placeholderFields ${actualSummary.placeholderFields} expected ${expectedSummary.placeholderFields}`);
+  if (actualSummary.queryFields !== expectedSummary.queryFields) errors.push(`queryFields ${actualSummary.queryFields} expected ${expectedSummary.queryFields}`);
+  if (actualSummary.labelFields !== expectedSummary.labelFields) errors.push(`labelFields ${actualSummary.labelFields} expected ${expectedSummary.labelFields}`);
   if (actualSummary.dynamicOptionFields !== expectedSummary.dynamicOptionFields) errors.push(`dynamicOptions ${actualSummary.dynamicOptionFields} expected ${expectedSummary.dynamicOptionFields}`);
   if (actualSummary.annotatedOperations !== expectedSummary.annotatedOperations) errors.push(`annotations ${actualSummary.annotatedOperations} expected ${expectedSummary.annotatedOperations}`);
   if (actualSummary.destructiveOperations !== expectedSummary.destructiveOperations) errors.push(`destructive ${actualSummary.destructiveOperations} expected ${expectedSummary.destructiveOperations}`);
@@ -218,6 +224,9 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
       ...optionalBoolean("reloadProps", readBoolean(body, "reloadProps") ?? inherited?.reloadProps),
       ...optionalNumber("min", min ?? inherited?.min),
       ...optionalNumber("max", max ?? inherited?.max),
+      ...optionalString("placeholder", scrub(readTopLevelString(body, "placeholder") ?? inherited?.placeholder)),
+      ...optionalBoolean("useQuery", readBoolean(body, "useQuery") ?? inherited?.useQuery),
+      ...optionalBoolean("withLabel", readBoolean(body, "withLabel") ?? inherited?.withLabel),
       ...(inherited?.secret || isSecretField(name, body, appId) ? { secret: true } : {}),
       ...(inherited?.managed || type.startsWith("$.") ? { managed: true } : {}),
     });
@@ -343,6 +352,9 @@ function summarize(apps) {
     summary.disabledFields += countDisabled(app.fields);
     summary.reloadFields += countReload(app.fields);
     summary.boundedFields += countBounded(app.fields);
+    summary.placeholderFields += countPlaceholders(app.fields);
+    summary.queryFields += countQuery(app.fields);
+    summary.labelFields += countLabels(app.fields);
     summary.dynamicOptionFields += countDynamicOptions(app.fields);
     for (const operation of Array.isArray(app.operations) ? app.operations : []) {
       if (!isRecord(operation)) continue;
@@ -357,6 +369,9 @@ function summarize(apps) {
       summary.disabledFields += countDisabled(operation.fields);
       summary.reloadFields += countReload(operation.fields);
       summary.boundedFields += countBounded(operation.fields);
+      summary.placeholderFields += countPlaceholders(operation.fields);
+      summary.queryFields += countQuery(operation.fields);
+      summary.labelFields += countLabels(operation.fields);
       summary.dynamicOptionFields += countDynamicOptions(operation.fields);
       if (isRecord(operation.annotations)) summary.annotatedOperations += 1;
       if (operation.annotations?.destructiveHint === true) summary.destructiveOperations += 1;
@@ -387,6 +402,9 @@ function summarize(apps) {
     disabledFields: 0,
     reloadFields: 0,
     boundedFields: 0,
+    placeholderFields: 0,
+    queryFields: 0,
+    labelFields: 0,
     annotatedOperations: 0,
     destructiveOperations: 0,
     readOnlyOperations: 0,
@@ -414,6 +432,9 @@ function summarizeExpected(apps) {
     disabledFields: 0,
     reloadFields: 0,
     boundedFields: 0,
+    placeholderFields: 0,
+    queryFields: 0,
+    labelFields: 0,
     annotatedOperations: 0,
     destructiveOperations: 0,
     readOnlyOperations: 0,
@@ -437,6 +458,9 @@ function summarizeExpected(apps) {
     summary.disabledFields += app.fieldStats.disabled;
     summary.reloadFields += app.fieldStats.reload;
     summary.boundedFields += app.fieldStats.bounded;
+    summary.placeholderFields += app.fieldStats.placeholders;
+    summary.queryFields += app.fieldStats.query;
+    summary.labelFields += app.fieldStats.labels;
     summary.dynamicOptionFields += app.fieldStats.dynamicOptions;
     summary.managedFields += app.fieldStats.managed;
     for (const operation of app.operations.values()) {
@@ -446,6 +470,9 @@ function summarizeExpected(apps) {
       summary.disabledFields += operation.fieldStats.disabled;
       summary.reloadFields += operation.fieldStats.reload;
       summary.boundedFields += operation.fieldStats.bounded;
+      summary.placeholderFields += operation.fieldStats.placeholders;
+      summary.queryFields += operation.fieldStats.query;
+      summary.labelFields += operation.fieldStats.labels;
       summary.dynamicOptionFields += operation.fieldStats.dynamicOptions;
       summary.managedFields += operation.fieldStats.managed;
       if (Object.keys(operation.annotations).length) summary.annotatedOperations += 1;
@@ -528,6 +555,9 @@ function summarizeFields(fields) {
     disabled: fields.filter((field) => field.disabled === true).length,
     reload: fields.filter((field) => field.reloadProps === true).length,
     bounded: fields.filter((field) => field.min !== undefined || field.max !== undefined).length,
+    placeholders: fields.filter((field) => field.placeholder).length,
+    query: fields.filter((field) => field.useQuery === true).length,
+    labels: fields.filter((field) => field.withLabel === true).length,
     managed: fields.filter((field) => field.managed).length,
   };
 }
