@@ -96,6 +96,7 @@ interface OpenApiSchema {
   anyOf?: OpenApiSchema[];
   oneOf?: OpenApiSchema[];
   type?: unknown;
+  nullable?: unknown;
   format?: unknown;
   description?: unknown;
   default?: unknown;
@@ -443,11 +444,11 @@ function collectOpenApiWebhookSources(
 function requestBodyEventsPath(document: OpenApiDocument, requestBody: OpenApiRequestBody | undefined): string | undefined {
   const schema = requestBodySchema(document, requestBody);
   if (!schema) return undefined;
-  if (stringValue(schema.type) === "array") return undefined;
+  if (openApiSchemaType(schema) === "array") return undefined;
   for (const name of ["data", "events", "items", "records"]) {
-    if (stringValue(schemaProperty(document, schema, name)?.type) === "array") return name;
+    if (openApiSchemaType(schemaProperty(document, schema, name)) === "array") return name;
   }
-  return schemaProperties(document, schema).find(([, property]) => stringValue(property?.type) === "array")?.[0];
+  return schemaProperties(document, schema).find(([, property]) => openApiSchemaType(property) === "array")?.[0];
 }
 
 function requestBodySchema(document: OpenApiDocument, requestBody: OpenApiRequestBody | undefined): OpenApiSchema | undefined {
@@ -465,7 +466,7 @@ function optionalSampleEventMetadata(schema: OpenApiSchema | undefined): Pick<Co
 }
 
 function sampleEventShape(schema: OpenApiSchema): "object" | "array" | "string" | "unknown" {
-  const type = stringValue(schema.type);
+  const type = openApiSchemaType(schema);
   if (type === "object" || type === "array" || type === "string") return type;
   return "unknown";
 }
@@ -645,11 +646,11 @@ function optionalBodyEncoding(value: OpenApiConnectorOperationMetadata["bodyEnco
 function responseItemsPath(document: OpenApiDocument, operation: OpenApiOperation): string | undefined {
   const schema = responseBodySchema(document, operation);
   if (!schema) return undefined;
-  if (stringValue(schema.type) === "array") return undefined;
+  if (openApiSchemaType(schema) === "array") return undefined;
   for (const name of ["data", "items", "results", "records"]) {
-    if (stringValue(schemaProperty(document, schema, name)?.type) === "array") return name;
+    if (openApiSchemaType(schemaProperty(document, schema, name)) === "array") return name;
   }
-  return schemaProperties(document, schema).find(([, property]) => stringValue(property?.type) === "array")?.[0];
+  return schemaProperties(document, schema).find(([, property]) => openApiSchemaType(property) === "array")?.[0];
 }
 
 function responseCursorPath(document: OpenApiDocument, operation: OpenApiOperation): string | undefined {
@@ -820,13 +821,13 @@ function requiredPathsForSchema(
 }
 
 function connectorRuntimeType(schema: OpenApiSchema | undefined): ConnectorRuntimeOutputSchema["type"] {
-  const type = stringValue(schema?.type);
+  const type = openApiSchemaType(schema);
   if (type === "array" || type === "string" || type === "number" || type === "boolean" || type === "null") return type;
   return "object";
 }
 
 function connectorFieldType(schema: OpenApiSchema | undefined): string {
-  const type = stringValue(schema?.type);
+  const type = openApiSchemaType(schema);
   if (type === "integer" || type === "number" || type === "boolean" || type === "array" || type === "object") return type;
   return "string";
 }
@@ -976,7 +977,7 @@ function mergeOpenApiAlternatives(document: OpenApiDocument, schema: OpenApiSche
   const required = intersectRequiredProperties(parts, stringArray(schema.required));
   const merged: OpenApiSchema = {
     ...schema,
-    ...(Object.keys(properties).length > 0 ? { properties, type: stringValue(schema.type) ?? "object" } : {}),
+    ...(Object.keys(properties).length > 0 ? { properties, type: openApiSchemaType(schema) ?? "object" } : {}),
     ...(required.length > 0 ? { required } : {}),
   };
   delete merged.oneOf;
@@ -1051,6 +1052,14 @@ function titleize(value: string): string {
 
 function firstServerUrl(input: { servers?: OpenApiServer[] }): string | undefined {
   return input.servers?.map(serverUrl).find((url): url is string => Boolean(url));
+}
+
+function openApiSchemaType(schema: OpenApiSchema | undefined): string | undefined {
+  if (!schema) return undefined;
+  if (Array.isArray(schema.type)) {
+    return schema.type.find((type): type is string => typeof type === "string" && type !== "null");
+  }
+  return stringValue(schema.type);
 }
 
 function serverUrl(server: OpenApiServer): string | undefined {

@@ -987,6 +987,138 @@ describe("OpenAPI connector runtime", () => {
     });
   });
 
+  it("normalizes nullable and union OpenAPI schema types", () => {
+    const document = {
+      openapi: "3.1.0",
+      info: {
+        title: "Fixture Nullable Schemas",
+        version: "2026-05-12",
+      },
+      servers: [{ url: "https://api.example.invalid/v1/" }],
+      paths: {
+        "/items": {
+          get: {
+            operationId: "listNullableItems",
+            summary: "List nullable items",
+            parameters: [
+              {
+                name: "cursor",
+                in: "query",
+                schema: { type: ["string", "null"] },
+              },
+              {
+                name: "limit",
+                in: "query",
+                schema: { type: ["integer", "null"] },
+              },
+            ],
+            responses: {
+              "200": {
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      required: ["data"],
+                      properties: {
+                        data: {
+                          type: ["array", "null"],
+                          items: { type: "object" },
+                        },
+                        next_cursor: {
+                          type: ["string", "null"],
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          post: {
+            operationId: "createNullableItem",
+            summary: "Create nullable item",
+            requestBody: {
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["name", "active"],
+                    properties: {
+                      name: {
+                        type: ["string", "null"],
+                        description: "Display name.",
+                      },
+                      active: {
+                        type: "boolean",
+                        nullable: true,
+                      },
+                      metadata: {
+                        type: ["object", "null"],
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            responses: {
+              "200": {
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: ["object", "null"],
+                      required: ["id"],
+                      properties: {
+                        id: { type: ["string", "null"] },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const options = {
+      appId: "fixture_nullable",
+      authFieldName: "apiKey",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(document, options)];
+    const listOperation = catalog.apps[0]?.operations.find((operation) => operation.id.endsWith("list-nullable-items"));
+    const createOperation = catalog.apps[0]?.operations.find((operation) => operation.id.endsWith("create-nullable-item"));
+    assert.ok(listOperation);
+    assert.ok(createOperation);
+
+    assert.deepEqual(listOperation.fields.map((field) => [field.name, field.type, field.optional]), [
+      ["cursor", "string", true],
+      ["limit", "integer", true],
+    ]);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(listOperation, {
+      limit: 10,
+    }, { registry }).requestPlan?.pagination, {
+      mode: "cursor",
+      itemsPath: "data",
+      cursorParam: "cursor",
+      nextCursorPath: "next_cursor",
+      limitParam: "limit",
+    });
+    assert.deepEqual(createOperation.fields.map((field) => [field.name, field.type, field.description ?? null, field.optional]), [
+      ["active", "boolean", null, false],
+      ["metadata", "object", null, true],
+      ["name", "string", "Display name.", false],
+    ]);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(createOperation, {
+      active: true,
+      name: "example",
+    }, { registry }).requestPlan?.responseSchema, {
+      type: "object",
+      requiredPaths: ["id"],
+    });
+  });
+
   it("merges OpenAPI oneOf schema fields conservatively", () => {
     const document = {
       openapi: "3.0.0",
