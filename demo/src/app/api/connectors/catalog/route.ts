@@ -101,7 +101,7 @@ export async function GET(req: NextRequest) {
     configured: true,
     path: catalogPath(),
     summary: summarizeConnectorCatalog(catalog),
-    apps: catalog.apps.map((app) => ({ id: app.id, name: app.name, operations: app.operations.length })).slice(0, 500),
+    apps: catalog.apps.map((app) => ({ id: app.id, name: app.name, operations: app.operations.length })),
     entries,
   });
 }

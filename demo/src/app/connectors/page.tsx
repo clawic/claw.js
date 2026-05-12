@@ -135,11 +135,18 @@ interface CatalogEntry {
   operation: CatalogOperation;
 }
 
+interface CatalogApp {
+  id: string;
+  name: string;
+  operations: number;
+}
+
 interface CatalogResponse {
   configured: boolean;
   path: string;
   error?: string;
   summary: CatalogSummary;
+  apps: CatalogApp[];
   entries: CatalogEntry[];
 }
 
