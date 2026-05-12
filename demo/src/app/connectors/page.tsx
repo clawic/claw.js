@@ -621,6 +621,21 @@ export default function ConnectorsPage() {
                                   {subscription.blockReasons.join(", ")}
                                 </div>
                               ) : null}
+                              {subscription.missingFields.length ? (
+                                <div className="text-[10px] text-muted-foreground mt-2 font-mono">
+                                  missing: {subscription.missingFields.join(", ")}
+                                </div>
+                              ) : null}
+                              {subscription.missingSecrets.length ? (
+                                <div className="text-[10px] text-muted-foreground mt-2 font-mono">
+                                  secrets: {subscription.missingSecrets.join(", ")}
+                                </div>
+                              ) : null}
+                              {subscription.invalidFields.length ? (
+                                <div className="text-[10px] text-muted-foreground mt-2 font-mono">
+                                  invalid: {subscription.invalidFields.join(", ")}
+                                </div>
+                              ) : null}
                             </div>
                           );
                         })}
