@@ -1,0 +1,194 @@
+{
+  "version": 1,
+  "apps": [
+    {
+      "id": "slack",
+      "name": "Slack",
+      "authFieldNames": ["slackBotToken"],
+      "fields": [
+        {
+          "name": "slackBotToken",
+          "type": "app",
+          "optional": false,
+          "secret": true
+        }
+      ],
+      "operations": [
+        {
+          "id": "slack.action.get-channel",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Get Channel",
+          "fields": [
+            { "name": "channelId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["slackBotToken"]
+        },
+        {
+          "id": "slack.action.list-channels",
+          "appId": "slack",
+          "kind": "action",
+          "name": "List Channels",
+          "fields": [
+            { "name": "cursor", "type": "string", "optional": true },
+            { "name": "limit", "type": "integer", "optional": true, "default": 1, "min": 1 }
+          ],
+          "authFieldNames": ["slackBotToken"]
+        },
+        {
+          "id": "slack.action.send-message",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Send Message",
+          "fields": [
+            { "name": "channelId", "type": "string", "optional": false },
+            { "name": "text", "type": "string", "optional": false },
+            { "name": "threadTs", "type": "string", "optional": true }
+          ],
+          "authFieldNames": ["slackBotToken"]
+        }
+      ]
+    },
+    {
+      "id": "telegram_bot_api",
+      "name": "Telegram Bot",
+      "authFieldNames": ["telegramBotApi"],
+      "fields": [
+        {
+          "name": "telegramBotApi",
+          "type": "app",
+          "label": "Telegram Bot API",
+          "optional": false,
+          "secret": true
+        }
+      ],
+      "operations": [
+        {
+          "id": "telegram_bot_api.action.send-text-message-or-reply",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Send Text Message",
+          "fields": [
+            { "name": "chatId", "type": "string", "optional": false },
+            { "name": "text", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["telegramBotApi"],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.source.new-bot-command-received",
+          "appId": "telegram_bot_api",
+          "kind": "source",
+          "name": "New Bot Command Received",
+          "fields": [
+            { "name": "commands", "type": "string", "optional": true },
+            { "name": "timer", "type": "$.interface.timer", "optional": false, "managed": true }
+          ],
+          "authFieldNames": ["telegramBotApi"],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": true,
+            "hookNames": ["deploy"],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": [],
+            "dedupe": "unique"
+          },
+          "source": {
+            "delivery": "polling",
+            "usesTimer": true,
+            "usesHttp": false,
+            "usesServiceDb": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "whatsapp",
+      "name": "WhatsApp",
+      "authFieldNames": ["whatsAppAccessToken"],
+      "fields": [
+        {
+          "name": "whatsAppAccessToken",
+          "type": "app",
+          "optional": false,
+          "secret": true
+        }
+      ],
+      "operations": [
+        {
+          "id": "whatsapp.action.send-message",
+          "appId": "whatsapp",
+          "kind": "action",
+          "name": "Send Message",
+          "fields": [
+            { "name": "phoneNumberId", "type": "string", "optional": false },
+            { "name": "quotedMessageId", "type": "string", "optional": true },
+            { "name": "text", "type": "string", "optional": false },
+            { "name": "to", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["whatsAppAccessToken"]
+        },
+        {
+          "id": "whatsapp.action.verify-phone-number",
+          "appId": "whatsapp",
+          "kind": "action",
+          "name": "Verify Phone Number",
+          "fields": [
+            { "name": "phoneNumberId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["whatsAppAccessToken"]
+        },
+        {
+          "id": "whatsapp.source.message-status",
+          "appId": "whatsapp",
+          "kind": "source",
+          "name": "Message Status",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "whatsapp.source.new-message",
+          "appId": "whatsapp",
+          "kind": "source",
+          "name": "New Message",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        }
+      ]
+    }
+  ]
+}

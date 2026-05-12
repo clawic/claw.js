@@ -101,6 +101,12 @@ Runtime coverage can also write a provider-by-provider audit with final-state `i
 npm --workspace @clawjs/integrations run catalog:verify-runtime -- --catalog /tmp/clawjs-catalog.json --report /tmp/clawjs-runtime-audit.json
 ```
 
+The started-provider runtime baseline is checked offline with:
+
+```bash
+npm --workspace @clawjs/integrations run providers:verify-runtime
+```
+
 Runtime HTTP responses and `ConnectorRuntimeHttpError` instances expose normalized `rateLimit` metadata from common provider headers, including retry delay, remaining quota, reset timing, and policy text when present.
 Runtime HTTP parsing treats `application/*+json` responses as JSON, so provider problem-detail and vendor media types stay structured in success and error paths.
 Runtime implementations that cover multiple operations must attach offline fixtures to each `operationId`, so the audit cannot treat one generic fixture as proof for an entire provider.
