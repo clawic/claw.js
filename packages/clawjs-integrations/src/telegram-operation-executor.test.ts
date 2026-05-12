@@ -140,6 +140,48 @@ describe("telegram operation executor", () => {
     });
   });
 
+  it("maps album media and invite link options", () => {
+    assert.deepEqual(buildTelegramOperationRequest(
+      "telegram_bot_api.action.send-album-send-album",
+      {
+        chatId: "123",
+        media: "[{\"type\":\"photo\",\"media\":\"https://example.com/a.jpg\"},{\"type\":\"video\",\"media\":\"https://example.com/b.mp4\"}]",
+        disable_notification: true,
+      },
+    ), {
+      method: "POST",
+      endpoint: "sendMediaGroup",
+      body: {
+        chat_id: "123",
+        media: [
+          { type: "photo", media: "https://example.com/a.jpg" },
+          { type: "video", media: "https://example.com/b.mp4" },
+        ],
+        disable_notification: true,
+      },
+    });
+    assert.deepEqual(buildTelegramOperationRequest(
+      "telegram_bot_api.action.create-chat-invite-link-create-chat-invite-link",
+      {
+        chatId: "123",
+        name: "launch",
+        expire_date: 1_700_000_000,
+        member_limit: 25,
+        creates_join_request: false,
+      },
+    ), {
+      method: "POST",
+      endpoint: "createChatInviteLink",
+      body: {
+        chat_id: "123",
+        name: "launch",
+        expire_date: 1_700_000_000,
+        member_limit: 25,
+        creates_join_request: false,
+      },
+    });
+  });
+
   it("omits wrapper-only file and paging fields from REST payloads", () => {
     assert.deepEqual(buildTelegramOperationRequest(
       "telegram_bot_api.action.send-photo-send-photo",
