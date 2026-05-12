@@ -347,6 +347,107 @@ describe("OpenAPI connector runtime", () => {
     assert.equal(implementation.baseUrl, "https://sandbox.api.example.invalid/v2/");
   });
 
+  it("merges OpenAPI allOf schema fields", () => {
+    const document = {
+      openapi: "3.0.0",
+      info: {
+        title: "Fixture Composed Schemas",
+        version: "2026-05-12",
+      },
+      servers: [{ url: "https://api.example.invalid/v1/" }],
+      components: {
+        schemas: {
+          createBase: {
+            type: "object",
+            required: ["name"],
+            properties: {
+              name: {
+                type: "string",
+                description: "Display name.",
+              },
+            },
+          },
+          createExtra: {
+            type: "object",
+            required: ["external_id"],
+            properties: {
+              external_id: { type: "string" },
+            },
+          },
+          itemBase: {
+            type: "object",
+            required: ["id"],
+            properties: {
+              id: { type: "string" },
+            },
+          },
+        },
+      },
+      paths: {
+        "/items": {
+          post: {
+            operationId: "createItem",
+            summary: "Create item",
+            requestBody: {
+              content: {
+                "application/json": {
+                  schema: {
+                    allOf: [
+                      { $ref: "#/components/schemas/createBase" },
+                      { $ref: "#/components/schemas/createExtra" },
+                    ],
+                  },
+                },
+              },
+            },
+            responses: {
+              "200": {
+                content: {
+                  "application/json": {
+                    schema: {
+                      allOf: [
+                        { $ref: "#/components/schemas/itemBase" },
+                        {
+                          type: "object",
+                          required: ["name"],
+                          properties: {
+                            name: { type: "string" },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const options = {
+      appId: "fixture_composed",
+      authFieldName: "apiKey",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(document, options)];
+    const operation = catalog.apps[0]?.operations[0];
+    assert.ok(operation);
+
+    assert.deepEqual(operation.fields.map((field) => [field.name, field.description ?? null, field.optional]), [
+      ["external_id", null, false],
+      ["name", "Display name.", false],
+    ]);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, {
+      external_id: "ext_123",
+      name: "example",
+    }, { registry }).requestPlan?.responseSchema, {
+      type: "object",
+      requiredPaths: ["id", "name"],
+    });
+  });
+
   it("infers api key auth bindings from OpenAPI security schemes", () => {
     const document = {
       ...FIXTURE_OPENAPI,

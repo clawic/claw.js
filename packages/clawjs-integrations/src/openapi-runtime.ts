@@ -85,6 +85,7 @@ interface OpenApiResponse {
 
 interface OpenApiSchema {
   $ref?: unknown;
+  allOf?: OpenApiSchema[];
   type?: unknown;
   format?: unknown;
   description?: unknown;
@@ -745,7 +746,7 @@ function resolveOpenApiResponse(document: OpenApiDocument, value: OpenApiRespons
 }
 
 function resolveOpenApiSchema(document: OpenApiDocument, value: OpenApiSchema | undefined): OpenApiSchema | undefined {
-  return resolveOpenApiRef(document, value) as OpenApiSchema | undefined;
+  return mergeOpenApiAllOf(document, resolveOpenApiRef(document, value) as OpenApiSchema | undefined);
 }
 
 function resolveOpenApiSecurityScheme(
@@ -769,6 +770,26 @@ function resolveOpenApiRef(document: OpenApiDocument, value: unknown, seen = new
   return resolveOpenApiRef(document, valueAtJsonPointer(document, ref), seen);
 }
 
+function mergeOpenApiAllOf(document: OpenApiDocument, schema: OpenApiSchema | undefined): OpenApiSchema | undefined {
+  if (!schema?.allOf?.length) return schema;
+  const parts = schema.allOf
+    .map((part) => resolveOpenApiSchema(document, part))
+    .filter((part): part is OpenApiSchema => Boolean(part));
+  const properties = Object.assign({}, ...parts.map((part) => part.properties ?? {}), schema.properties ?? {});
+  const required = uniqueStrings([
+    ...parts.flatMap((part) => stringArray(part.required)),
+    ...stringArray(schema.required),
+  ]);
+  const merged: OpenApiSchema = {
+    ...Object.assign({}, ...parts),
+    ...schema,
+    ...(Object.keys(properties).length > 0 ? { properties } : {}),
+    ...(required.length > 0 ? { required } : {}),
+  };
+  delete merged.allOf;
+  return merged;
+}
+
 function valueAtJsonPointer(value: unknown, pointer: string): unknown {
   return pointer
     .slice(2)
@@ -778,6 +799,14 @@ function valueAtJsonPointer(value: unknown, pointer: string): unknown {
       if (!current || typeof current !== "object") return undefined;
       return (current as Record<string, unknown>)[segment];
     }, value);
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return [...new Set(values)];
 }
 
 function uniqueFieldName(
