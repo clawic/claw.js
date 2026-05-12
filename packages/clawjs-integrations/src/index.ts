@@ -22,6 +22,12 @@ export {
   runConnectorSource,
   sourceSubscriptionFromPlan,
 } from "./source-runner.js";
+export {
+  ConnectorRuntimeCoverageError,
+  buildConnectorOperationRuntimePlan,
+  evaluateConnectorRuntimeCoverage,
+  verifyConnectorRuntimeCoverage,
+} from "./runtime-coverage.js";
 export type {
   ConnectorCatalogSearchOptions,
   ConnectorCatalogSearchResult,
@@ -51,6 +57,14 @@ export type {
   RunConnectorSourceOptions,
   RegisterConnectorSourceOptions,
 } from "./source-runner.js";
+export type {
+  ConnectorOperationRuntimePlan,
+  ConnectorRuntimeCoverageEntry,
+  ConnectorRuntimeCoverageReport,
+  ConnectorRuntimeCoverageStatus,
+  ConnectorRuntimeCoverageSummary,
+  VerifyConnectorRuntimeCoverageOptions,
+} from "./runtime-coverage.js";
 export { telegramAdapter } from "./telegram.js";
 export {
   buildTelegramOperationRequest,
@@ -85,6 +99,7 @@ export type {
   ConnectorFieldPropDefinitionMetadata,
   ConnectorOperationDefinition,
   ConnectorOperationRuntime,
+  ConnectorUnsupportedRealRuntimeReason,
   ConnectorOperationInput,
   ConnectorSourceCapabilities,
   ConnectorSourceDeliveryMode,

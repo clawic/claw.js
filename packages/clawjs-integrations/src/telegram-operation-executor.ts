@@ -132,6 +132,11 @@ export function buildTelegramOperationRequest(
   };
 }
 
+export function isTelegramActionOperationSupported(operationId: string): boolean {
+  const slug = telegramOperationSlug(operationId);
+  return slug === "send-media-by-url-or-id" || Object.prototype.hasOwnProperty.call(OPERATION_ENDPOINTS, slug);
+}
+
 export async function sendTelegramRequest(input: {
   token: string;
   endpoint: string;

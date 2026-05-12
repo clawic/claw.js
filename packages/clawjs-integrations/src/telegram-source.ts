@@ -55,6 +55,23 @@ export const TELEGRAM_POLL_UPDATE_TYPES = [
   "edited_channel_post",
 ] as const;
 
+const TELEGRAM_SOURCE_KINDS = new Set<TelegramSourceKind>([
+  "new-updates",
+  "message-updates",
+  "channel-updates",
+  "new-bot-command-received",
+]);
+
+export function isTelegramSourceOperationSupported(operationId: string): boolean {
+  const raw = operationId.includes(".source.")
+    ? operationId.slice(operationId.indexOf(".source.") + ".source.".length)
+    : operationId;
+  for (const kind of TELEGRAM_SOURCE_KINDS) {
+    if (raw === kind || raw.startsWith(`${kind}-`)) return true;
+  }
+  return false;
+}
+
 export function telegramSourceEventsForUpdate(
   update: TelegramUpdate,
   options: {

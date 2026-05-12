@@ -85,6 +85,12 @@ export interface ConnectorOperationRuntime {
   dedupe?: string;
 }
 
+export interface ConnectorUnsupportedRealRuntimeReason {
+  code: string;
+  message: string;
+  evidence: string[];
+}
+
 export type ConnectorSourceDeliveryMode = "polling" | "webhook" | "hybrid" | "manual";
 
 export interface ConnectorSourceCapabilities {
@@ -120,6 +126,7 @@ export interface ConnectorOperationDefinition {
   source?: ConnectorSourceCapabilities;
   sampleEvent?: ConnectorSampleEventMetadata;
   eventSummary?: ConnectorEventSummaryMetadata;
+  unsupported_real_runtime_reason?: ConnectorUnsupportedRealRuntimeReason;
   sourcePath?: string;
 }
 
