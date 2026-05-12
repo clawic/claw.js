@@ -1,13 +1,20 @@
 import type {
   AppendMessageInput,
+  CreateProjectInput,
   CreateSessionInput,
+  ListProjectsFilter,
+  ListProjectsResult,
   ListSessionsFilter,
   ListSessionsResult,
+  ProjectRecord,
   SearchSessionsInput,
+  SessionEvent,
   SessionMessageRecord,
   SessionRecord,
   SessionSearchHit,
   SessionWithMessages,
+  StartTurnInput,
+  UpdateProjectInput,
 } from "./types.ts";
 
 export interface SessionsApiClientOptions {
@@ -67,6 +74,31 @@ export class SessionsApiClient {
     return this.call("GET", "/v1/health");
   }
 
+  createProject(input: CreateProjectInput): Promise<ProjectRecord> {
+    return this.call("POST", "/v1/projects", input);
+  }
+
+  getProject(id: string): Promise<ProjectRecord> {
+    return this.call("GET", `/v1/projects/${encodeURIComponent(id)}`);
+  }
+
+  listProjects(filter: ListProjectsFilter = {}): Promise<ListProjectsResult> {
+    return this.call("GET", `/v1/projects${buildQuery({
+      hidden: filter.hidden,
+      archived: filter.archived,
+      limit: filter.limit,
+      offset: filter.offset,
+    })}`);
+  }
+
+  updateProject(id: string, patch: UpdateProjectInput): Promise<ProjectRecord> {
+    return this.call("PATCH", `/v1/projects/${encodeURIComponent(id)}`, patch);
+  }
+
+  deleteProject(id: string): Promise<{ deleted: boolean }> {
+    return this.call("DELETE", `/v1/projects/${encodeURIComponent(id)}`);
+  }
+
   createSession(input: CreateSessionInput): Promise<SessionRecord> {
     return this.call("POST", "/v1/sessions", input);
   }
@@ -85,6 +117,7 @@ export class SessionsApiClient {
       runtime: filter.runtime,
       machine: filter.machine,
       workspaceId: filter.workspaceId,
+      projectId: filter.projectId,
       projectPath: filter.projectPath,
       pinned: filter.pinned,
       archived: filter.archived,
@@ -101,6 +134,7 @@ export class SessionsApiClient {
     return this.call("GET", `/v1/sessions/search${buildQuery({
       q: input.query,
       agent: input.agent,
+      projectId: input.projectId,
       projectPath: input.projectPath,
       limit: input.limit,
     })}`);
@@ -111,6 +145,7 @@ export class SessionsApiClient {
     pinned?: boolean;
     archived?: boolean;
     sidebarVisible?: boolean;
+    projectId?: string | null;
     projectPath?: string | null;
     status?: string;
   }): Promise<SessionRecord> {
@@ -125,12 +160,56 @@ export class SessionsApiClient {
     return this.call("POST", `/v1/sessions/${encodeURIComponent(sessionId)}/messages`, input);
   }
 
+  updateMessage(sessionId: string, messageId: string, patch: Partial<Omit<AppendMessageInput, "id" | "sessionId" | "role" | "timestamp" | "sourceNativeId">>): Promise<SessionMessageRecord> {
+    return this.call("PATCH", `/v1/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}`, patch);
+  }
+
   listMessages(sessionId: string, opts: { limit?: number; offset?: number } = {}): Promise<{ items: SessionMessageRecord[] }> {
     return this.call("GET", `/v1/sessions/${encodeURIComponent(sessionId)}/messages${buildQuery(opts)}`);
   }
 
   importCodex(input: { dir?: string; forceReimport?: boolean; machine?: string } = {}): Promise<ImportCodexResult> {
     return this.call("POST", "/v1/sessions/import/codex", input);
+  }
+
+  startTurn(sessionId: string, input: Omit<StartTurnInput, "sessionId">): Promise<{
+    session: SessionRecord | null;
+    userMessage: SessionMessageRecord;
+    assistantMessage: SessionMessageRecord | null;
+  }> {
+    return this.call("POST", `/v1/sessions/${encodeURIComponent(sessionId)}/turns`, input);
+  }
+
+  interrupt(sessionId: string): Promise<{ interrupted: boolean; session: SessionRecord }> {
+    return this.call("POST", `/v1/sessions/${encodeURIComponent(sessionId)}/interrupt`);
+  }
+
+  async *events(signal?: AbortSignal): AsyncGenerator<SessionEvent> {
+    const response = await this.fetchImpl(`${this.baseUrl}/v1/events`, {
+      method: "GET",
+      headers: { authorization: `Bearer ${this.token}` },
+      signal,
+    });
+    if (!response.ok || !response.body) {
+      const text = await response.text();
+      throw new Error(`sessions api GET /v1/events -> ${response.status}: ${text}`);
+    }
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let boundary = buffer.indexOf("\n\n");
+      while (boundary >= 0) {
+        const frame = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        const dataLine = frame.split("\n").find((line) => line.startsWith("data: "));
+        if (dataLine) yield JSON.parse(dataLine.slice(6)) as SessionEvent;
+        boundary = buffer.indexOf("\n\n");
+      }
+    }
   }
 
   async exportTrajectories(options: { agent?: string; since?: number; includeFailed?: boolean; tag?: string; format?: "json" | "jsonl" } = {}): Promise<unknown> {
