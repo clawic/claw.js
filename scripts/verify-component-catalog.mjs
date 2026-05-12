@@ -23,6 +23,8 @@ const scrubPath = (value) => value.split("/").map(scrub).join("/");
 const scrubBrand = (value) => value.replace(new RegExp(String.fromCharCode(80, 105, 112, 101, 100, 114, 101, 97, 109), "gi"), "component");
 const firstMatch = (source, regex) => regex.exec(source)?.[1];
 const readText = (filePath) => fs.readFileSync(filePath, "utf8");
+const countDefaults = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.default !== undefined).length : 0;
+const countOptions = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && Array.isArray(field.options) && field.options.length > 0).length : 0;
 
 const expected = readExpected(componentsDir);
 const catalog = JSON.parse(readText(catalogPath));
@@ -31,7 +33,7 @@ const summary = summarize(catalog.apps ?? []);
 
 for (const error of errors.slice(0, maxErrors)) console.error(`FAIL ${error}`);
 if (errors.length > maxErrors) console.error(`FAIL ... ${errors.length - maxErrors} additional errors hidden`);
-console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields}`);
+console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} defaults=${summary.defaults} options=${summary.options}`);
 if (errors.length > 0) {
   console.error(`catalog verification failed with ${errors.length} error(s)`);
   process.exit(1);
@@ -49,7 +51,7 @@ function readExpected(root) {
     const id = scrub(firstMatch(source, /\bapp:\s*["']([^"']+)["']/) ?? entry.name);
     const fields = readFields(source, id);
     const auth = fields.filter((field) => field.secret).map((field) => field.name);
-    const app = { fields: names(fields), auth: new Set(auth), operations: new Map() };
+    const app = { fields: names(fields), fieldStats: summarizeFields(fields), auth: new Set(auth), operations: new Map() };
     for (const kind of ["action", "source"]) {
       for (const operation of readExpectedOperations(appDir, id, kind, auth, fields)) app.operations.set(operation.id, operation);
     }
@@ -71,6 +73,7 @@ function readExpectedOperations(appDir, appId, kind, appAuth, appFields) {
         id: `${appId}.${kind}.${slug}`,
         kind,
         fields: names(fields),
+        fieldStats: summarizeFields(fields),
         auth: new Set([...appAuth, ...fields.filter((field) => field.secret).map((field) => field.name)]),
         sourcePath: scrubPath(path.relative(path.dirname(appDir), file).replaceAll(path.sep, "/")),
       };
@@ -82,8 +85,12 @@ function verify(catalog, expectedApps) {
   const actualApps = new Map();
   const actualOps = new Map();
   const actualPaths = new Set();
+  const actualSummary = summarize(catalog.apps ?? []);
+  const expectedSummary = summarizeExpected(expectedApps);
   const forbidden = new RegExp(String.fromCharCode(80, 105, 112, 101, 100, 114, 101, 97, 109), "i");
   if (forbidden.test(JSON.stringify(catalog))) errors.push("catalog contains forbidden upstream brand text");
+  if (actualSummary.defaults !== expectedSummary.defaults) errors.push(`defaults ${actualSummary.defaults} expected ${expectedSummary.defaults}`);
+  if (actualSummary.options !== expectedSummary.options) errors.push(`options ${actualSummary.options} expected ${expectedSummary.options}`);
 
   for (const app of Array.isArray(catalog.apps) ? catalog.apps : []) {
     if (!isRecord(app) || typeof app.id !== "string" || !app.id.trim()) {
@@ -145,21 +152,63 @@ function readFields(source, appId, appFields = []) {
     if (name) fields.set(name, { name, type: "app", optional: false, secret: true });
   }
   const appFieldByName = new Map(appFields.map((field) => [field.name, field]));
-  for (const match of source.matchAll(/(?:^|[\n,{])\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*{([^{}]*(?:\btype\b|\blabel\b|\bpropDefinition\b)[^{}]*)}/gs)) {
-    const name = scrub(match[1]);
+  for (const entry of readFieldEntries(source)) {
+    const name = scrub(entry.name);
     if (!name || ["props", "propDefinitions", "options"].includes(name)) continue;
-    const body = match[2] ?? "";
-    const propRef = scrub(firstMatch(body, /\bpropDefinition:\s*\[\s*[A-Za-z_][A-Za-z0-9_]*\s*,\s*["']([^"']+)["']/s));
+    const body = entry.body;
+    const propRef = scrub(firstMatch(readTopLevelValue(body, "propDefinition") ?? "", /\[\s*[A-Za-z_][A-Za-z0-9_]*\s*,\s*["']([^"']+)["']/s));
     const inherited = propRef ? appFieldByName.get(propRef) : null;
+    const defaultValue = readDefault(body);
+    const options = readOptions(body);
     fields.set(name, {
       ...(inherited ?? {}),
       name,
-      type: inherited?.type ?? firstMatch(body, /\btype:\s*["']([^"']+)["']/) ?? "string",
+      type: inherited?.type ?? readTopLevelString(body, "type") ?? "string",
       optional: inherited?.optional ?? /\boptional:\s*true\b/.test(body),
+      ...(defaultValue === undefined ? {} : { default: defaultValue }),
+      ...(options.length ? { options } : {}),
       ...(inherited?.secret || isSecretField(name, body, appId) ? { secret: true } : {}),
     });
   }
   return [...fields.values()].sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function readFieldEntries(source) {
+  const entries = [];
+  for (const match of source.matchAll(/(?:^|[\n,{])\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*{/g)) {
+    const bodyStart = match.index + match[0].length;
+    const bodyEnd = findMatchingBrace(source, bodyStart - 1);
+    if (bodyEnd < 0) continue;
+    const body = source.slice(bodyStart, bodyEnd);
+    if (!/\b(type|label|propDefinition)\b/.test(body)) continue;
+    entries.push({ name: match[1], body });
+  }
+  return entries;
+}
+
+function findMatchingBrace(source, openIndex) {
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  for (let index = openIndex; index < source.length; index += 1) {
+    const char = source[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{") depth += 1;
+    else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return -1;
 }
 
 function isSecretField(name, body, appId) {
@@ -175,15 +224,32 @@ function summarize(apps) {
     summary.apps += 1;
     summary.fields += Array.isArray(app.fields) ? app.fields.length : 0;
     summary.authFields += Array.isArray(app.authFieldNames) ? app.authFieldNames.length : 0;
+    summary.defaults += countDefaults(app.fields);
+    summary.options += countOptions(app.fields);
     for (const operation of Array.isArray(app.operations) ? app.operations : []) {
       if (!isRecord(operation)) continue;
       if (operation.kind === "source") summary.sources += 1;
       else summary.actions += 1;
       summary.fields += Array.isArray(operation.fields) ? operation.fields.length : 0;
       summary.authFields += Array.isArray(operation.authFieldNames) ? operation.authFieldNames.length : 0;
+      summary.defaults += countDefaults(operation.fields);
+      summary.options += countOptions(operation.fields);
     }
     return summary;
-  }, { apps: 0, actions: 0, sources: 0, fields: 0, authFields: 0 });
+  }, { apps: 0, actions: 0, sources: 0, fields: 0, authFields: 0, defaults: 0, options: 0 });
+}
+
+function summarizeExpected(apps) {
+  const summary = { defaults: 0, options: 0 };
+  for (const app of apps.values()) {
+    summary.defaults += app.fieldStats.defaults;
+    summary.options += app.fieldStats.options;
+    for (const operation of app.operations.values()) {
+      summary.defaults += operation.fieldStats.defaults;
+      summary.options += operation.fieldStats.options;
+    }
+  }
+  return summary;
 }
 
 function compareSets(label, expected, actual, errors) {
@@ -197,6 +263,101 @@ function findDuplicates(label, values, errors) {
     if (seen.has(value)) errors.push(`${label} duplicates ${value}`);
     seen.add(value);
   }
+}
+
+function summarizeFields(fields) {
+  return {
+    defaults: fields.filter((field) => field.default !== undefined).length,
+    options: fields.filter((field) => field.options?.length > 0).length,
+  };
+}
+
+function readDefault(body) {
+  const raw = readTopLevelValue(body, "default");
+  return raw ? parseLiteral(raw.trim()) : undefined;
+}
+
+function readOptions(body) {
+  const raw = readTopLevelValue(body, "options");
+  if (!raw) return [];
+  const entries = [];
+  for (const match of raw.matchAll(/{([^{}]+)}/g)) {
+    const value = parseLiteral(firstMatch(match[1] ?? "", /\bvalue:\s*([^,\n}]+)/)?.trim() ?? "");
+    if (["string", "number", "boolean"].includes(typeof value)) entries.push({ value });
+  }
+  if (!entries.length) {
+    for (const match of raw.matchAll(/["']([^"']+)["']/g)) entries.push({ value: scrub(match[1]) });
+  }
+  return entries.filter((entry, index, array) => array.findIndex((candidate) => candidate.value === entry.value) === index);
+}
+
+function parseLiteral(raw) {
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  if (raw === "null") return null;
+  if (/^-?\d+(?:\.\d+)?$/.test(raw)) return Number(raw);
+  return /^["'`]([^"'`]*)["'`]$/.exec(raw)?.[1];
+}
+
+function readTopLevelString(body, key) {
+  const raw = readTopLevelValue(body, key);
+  return raw ? /^["'`]([^"'`]*)["'`]$/.exec(raw.trim())?.[1] : undefined;
+}
+
+function readTopLevelValue(body, key) {
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  for (let index = 0; index < body.length; index += 1) {
+    const char = body[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{" || char === "[") depth += 1;
+    else if (char === "}" || char === "]") depth -= 1;
+    if (depth !== 0 || !isPropertyAt(body, index, key)) continue;
+    const colon = body.indexOf(":", index + key.length);
+    if (colon < 0) return undefined;
+    return body.slice(colon + 1, findTopLevelValueEnd(body, colon + 1)).trim();
+  }
+  return undefined;
+}
+
+function isPropertyAt(body, index, key) {
+  if (body.slice(index, index + key.length) !== key) return false;
+  const before = body[index - 1];
+  const after = body[index + key.length];
+  return (!before || !/[A-Za-z0-9_$]/.test(before)) && /\s*:/.test(body.slice(index + key.length, index + key.length + 3)) && (!after || !/[A-Za-z0-9_$]/.test(after));
+}
+
+function findTopLevelValueEnd(body, start) {
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  for (let index = start; index < body.length; index += 1) {
+    const char = body[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{" || char === "[") depth += 1;
+    else if (char === "}" || char === "]") depth -= 1;
+    else if (char === "," && depth === 0) return index;
+  }
+  return body.length;
 }
 
 function listFiles(dir) {

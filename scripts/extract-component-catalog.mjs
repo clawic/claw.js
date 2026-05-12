@@ -111,25 +111,65 @@ function readFields(source, appId, appFields = []) {
     }
   }
   const appFieldByName = new Map(appFields.map((field) => [field.name, field]));
-  for (const match of source.matchAll(/(?:^|[\n,{])\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*{([^{}]*(?:\btype\b|\blabel\b|\bpropDefinition\b)[^{}]*)}/gs)) {
-    const name = scrubIdentifier(match[1]);
+  for (const entry of readFieldEntries(source)) {
+    const name = scrubIdentifier(entry.name);
     if (!name || ["props", "propDefinitions", "options"].includes(name)) continue;
-    const body = match[2] ?? "";
-    const propRef = scrubIdentifier(firstMatch(body, /\bpropDefinition:\s*\[\s*[A-Za-z_][A-Za-z0-9_]*\s*,\s*["']([^"']+)["']/s));
+    const body = entry.body;
+    const propRef = scrubIdentifier(firstMatch(readTopLevelValue(body, "propDefinition") ?? "", /\[\s*[A-Za-z_][A-Za-z0-9_]*\s*,\s*["']([^"']+)["']/s));
     const inherited = propRef ? appFieldByName.get(propRef) : null;
-    const type = firstMatch(body, /\btype:\s*["']([^"']+)["']/) ?? (body.includes("type: \"app\"") ? "app" : "string");
+    const type = readTopLevelString(body, "type") ?? (body.includes("type: \"app\"") ? "app" : "string");
     const field = {
       ...(inherited ?? {}),
       name,
       type: inherited?.type ?? type,
-      ...optionalString("label", cleanText(firstMatch(body, /\blabel:\s*["'`]([^"'`]+)["'`]/))),
-      ...optionalString("description", cleanText(firstMatch(body, /\bdescription:\s*["'`]([^"'`]+)["'`]/))),
+      ...optionalString("label", cleanText(readTopLevelString(body, "label"))),
+      ...optionalString("description", cleanText(readTopLevelString(body, "description"))),
       optional: inherited?.optional ?? /\boptional:\s*true\b/.test(body),
+      ...optionalJson("default", readDefault(body)),
+      ...optionalOptions(readOptions(body)),
       ...(inherited?.secret || isSecretField(name, body, appId) ? { secret: true } : {}),
     };
     fields.set(name, field);
   }
   return [...fields.values()].sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function readFieldEntries(source) {
+  const entries = [];
+  for (const match of source.matchAll(/(?:^|[\n,{])\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*{/g)) {
+    const bodyStart = match.index + match[0].length;
+    const bodyEnd = findMatchingBrace(source, bodyStart - 1);
+    if (bodyEnd < 0) continue;
+    const body = source.slice(bodyStart, bodyEnd);
+    if (!/\b(type|label|propDefinition)\b/.test(body)) continue;
+    entries.push({ name: match[1], body });
+  }
+  return entries;
+}
+
+function findMatchingBrace(source, openIndex) {
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  for (let index = openIndex; index < source.length; index += 1) {
+    const char = source[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{") depth += 1;
+    else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return -1;
 }
 
 function isSecretField(name, body, appId) {
@@ -183,6 +223,112 @@ function operationSlug(root, file) {
 
 function optionalString(key, value) {
   return typeof value === "string" && value.trim() ? { [key]: value.trim() } : {};
+}
+
+function optionalJson(key, value) {
+  return value === undefined ? {} : { [key]: value };
+}
+
+function optionalOptions(options) {
+  return options.length ? { options } : {};
+}
+
+function readDefault(body) {
+  const raw = readTopLevelValue(body, "default");
+  if (!raw) return undefined;
+  return parseLiteral(raw.trim());
+}
+
+function readOptions(body) {
+  const raw = readTopLevelValue(body, "options");
+  if (!raw) return [];
+  const entries = [];
+  for (const match of raw.matchAll(/{([^{}]+)}/g)) {
+    const optionBody = match[1] ?? "";
+    const value = parseLiteral(firstMatch(optionBody, /\bvalue:\s*([^,\n}]+)/)?.trim() ?? "");
+    if (!["string", "number", "boolean"].includes(typeof value)) continue;
+    entries.push({
+      ...optionalString("label", cleanText(firstMatch(optionBody, /\blabel:\s*["'`]([^"'`]+)["'`]/))),
+      value,
+      ...optionalString("description", cleanText(firstMatch(optionBody, /\bdescription:\s*["'`]([^"'`]+)["'`]/))),
+    });
+  }
+  if (!entries.length) {
+    for (const match of raw.matchAll(/["']([^"']+)["']/g)) {
+      entries.push({ value: cleanText(match[1]) ?? match[1] });
+    }
+  }
+  return entries.filter((entry, index, array) => array.findIndex((candidate) => candidate.value === entry.value) === index);
+}
+
+function parseLiteral(raw) {
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  if (raw === "null") return null;
+  if (/^-?\d+(?:\.\d+)?$/.test(raw)) return Number(raw);
+  const stringValue = /^["'`]([^"'`]*)["'`]$/.exec(raw)?.[1];
+  return stringValue === undefined ? undefined : (cleanText(stringValue) ?? "");
+}
+
+function readTopLevelString(body, key) {
+  const raw = readTopLevelValue(body, key);
+  return raw ? /^["'`]([^"'`]*)["'`]$/.exec(raw.trim())?.[1] : undefined;
+}
+
+function readTopLevelValue(body, key) {
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  for (let index = 0; index < body.length; index += 1) {
+    const char = body[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{" || char === "[") depth += 1;
+    else if (char === "}" || char === "]") depth -= 1;
+    if (depth !== 0 || !isPropertyAt(body, index, key)) continue;
+    const colon = body.indexOf(":", index + key.length);
+    if (colon < 0) return undefined;
+    return body.slice(colon + 1, findTopLevelValueEnd(body, colon + 1)).trim();
+  }
+  return undefined;
+}
+
+function isPropertyAt(body, index, key) {
+  if (body.slice(index, index + key.length) !== key) return false;
+  const before = body[index - 1];
+  const after = body[index + key.length];
+  return (!before || !/[A-Za-z0-9_$]/.test(before)) && /\s*:/.test(body.slice(index + key.length, index + key.length + 3)) && (!after || !/[A-Za-z0-9_$]/.test(after));
+}
+
+function findTopLevelValueEnd(body, start) {
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  for (let index = start; index < body.length; index += 1) {
+    const char = body[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{" || char === "[") depth += 1;
+    else if (char === "}" || char === "]") depth -= 1;
+    else if (char === "," && depth === 0) return index;
+  }
+  return body.length;
 }
 
 function unique(value, index, array) {
