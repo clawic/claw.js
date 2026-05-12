@@ -159,6 +159,7 @@ interface SourceSubscription {
   blockReasons: string[];
   missingFields: string[];
   missingSecrets: string[];
+  invalidFields: string[];
   updatedAt: string;
 }
 

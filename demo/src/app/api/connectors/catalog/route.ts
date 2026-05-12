@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
     const preview = found.operation.kind === "source"
       ? await runConnectorSource({ catalog, operationId: body.operationId, input })
       : await runConnectorOperation({ catalog, operationId: body.operationId, input });
-    const requestPlan = found.operation.appId === "telegram_bot_api" && found.operation.kind === "action" && "missingFields" in preview && preview.missingFields.length === 0
+    const requestPlan = found.operation.appId === "telegram_bot_api" && found.operation.kind === "action" && "missingFields" in preview && preview.missingFields.length === 0 && preview.invalidFields.length === 0
       ? buildTelegramOperationRequest(found.operation.id, preview.values)
       : undefined;
     return Response.json({ ok: true, preview: { ...preview, ...(requestPlan ? { requestPlan } : {}) } });
