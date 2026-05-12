@@ -91,13 +91,20 @@ export async function POST(req: NextRequest) {
   if (!body.operationId) {
     return Response.json({ ok: false, error: "Missing operationId" }, { status: 400 });
   }
-  const preview = await runConnectorOperation({
-    catalog,
-    operationId: body.operationId,
-    input: {
-      values: body.values,
-      secretRefs: body.secretRefs,
-    },
-  });
-  return Response.json({ ok: true, preview });
+  try {
+    const preview = await runConnectorOperation({
+      catalog,
+      operationId: body.operationId,
+      input: {
+        values: body.values,
+        secretRefs: body.secretRefs,
+      },
+    });
+    return Response.json({ ok: true, preview });
+  } catch (err) {
+    return Response.json({
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    }, { status: 400 });
+  }
 }
