@@ -293,6 +293,122 @@ describe("OpenAPI connector runtime", () => {
     }]);
   });
 
+  it("resolves local OpenAPI component refs", () => {
+    const document = {
+      openapi: "3.0.0",
+      info: {
+        title: "Fixture Ref Commerce",
+        version: "2026-05-12",
+      },
+      servers: [{ url: "https://api.example.invalid/v1/" }],
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            $ref: "#/components/securitySchemes/bearerToken",
+          },
+          bearerToken: {
+            type: "http",
+            scheme: "bearer",
+          },
+        },
+        parameters: {
+          customerId: {
+            name: "customerId",
+            in: "path",
+            required: true,
+            schema: { $ref: "#/components/schemas/customerId" },
+          },
+        },
+        requestBodies: {
+          createItem: {
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/createItem" },
+              },
+            },
+          },
+        },
+        responses: {
+          item: {
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/item" },
+              },
+            },
+          },
+        },
+        schemas: {
+          customerId: {
+            type: "string",
+          },
+          createItem: {
+            type: "object",
+            required: ["name"],
+            properties: {
+              name: {
+                $ref: "#/components/schemas/itemName",
+              },
+            },
+          },
+          itemName: {
+            type: "string",
+            description: "Display name.",
+          },
+          item: {
+            type: "object",
+            required: ["id"],
+            properties: {
+              id: { type: "string" },
+            },
+          },
+        },
+      },
+      security: [{ bearerAuth: [] }],
+      paths: {
+        "/customers/{customerId}/items": {
+          post: {
+            operationId: "createCustomerItem",
+            summary: "Create customer item",
+            parameters: [{ $ref: "#/components/parameters/customerId" }],
+            requestBody: { $ref: "#/components/requestBodies/createItem" },
+            responses: {
+              "200": { $ref: "#/components/responses/item" },
+            },
+          },
+        },
+      },
+    };
+    const options = {
+      appId: "fixture_refs",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = createOpenApiConnectorRuntimeImplementations(document, options);
+    const operation = catalog.apps[0]?.operations[0];
+    assert.ok(operation);
+
+    assert.deepEqual(catalog.apps[0]?.authFieldNames, ["bearerAuth"]);
+    assert.deepEqual(operation.fields.map((field) => [field.name, field.type, field.description ?? null, field.optional]), [
+      ["customerId", "string", null, false],
+      ["name", "string", "Display name.", false],
+    ]);
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, {
+      customerId: "cus_123",
+      name: "example",
+    }, { registry }).requestPlan, {
+      method: "POST",
+      endpoint: "/customers/cus_123/items",
+      auth: [{ type: "secret", field: "bearerAuth", placement: "bearer" }],
+      headers: { accept: "application/json" },
+      body: { name: "example" },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id"],
+      },
+    });
+  });
+
   it("builds webhook sources from OpenAPI webhook operations", async () => {
     const options = {
       appId: "fixture_commerce",

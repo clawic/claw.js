@@ -35,6 +35,7 @@ interface OpenApiDocument {
 type OpenApiSecurityRequirement = Record<string, unknown[]>;
 
 interface OpenApiSecurityScheme {
+  $ref?: unknown;
   type?: unknown;
   in?: unknown;
   name?: unknown;
@@ -47,6 +48,7 @@ type OpenApiPathItem = Partial<Record<OpenApiHttpMethod, OpenApiOperation>> & {
 };
 
 interface OpenApiOperation {
+  $ref?: unknown;
   operationId?: unknown;
   summary?: unknown;
   description?: unknown;
@@ -57,6 +59,7 @@ interface OpenApiOperation {
 }
 
 interface OpenApiParameter {
+  $ref?: unknown;
   name?: unknown;
   in?: unknown;
   required?: unknown;
@@ -65,15 +68,18 @@ interface OpenApiParameter {
 }
 
 interface OpenApiRequestBody {
+  $ref?: unknown;
   required?: unknown;
   content?: Record<string, { schema?: OpenApiSchema } | undefined>;
 }
 
 interface OpenApiResponse {
+  $ref?: unknown;
   content?: Record<string, { schema?: OpenApiSchema } | undefined>;
 }
 
 interface OpenApiSchema {
+  $ref?: unknown;
   type?: unknown;
   format?: unknown;
   description?: unknown;
@@ -290,13 +296,13 @@ function collectOpenApiOperations(
   return Object.entries(document.paths ?? {}).flatMap(([path, pathItem]) => {
     if (!pathItem) return [];
     return HTTP_METHODS.flatMap((method) => {
-      const operation = pathItem[method];
+      const operation = resolveOpenApiOperation(document, pathItem[method]);
       if (!operation) return [];
       const usedFieldNames = new Set<string>();
       const parameters = [...(pathItem.parameters ?? []), ...(operation.parameters ?? [])]
-        .map((parameter) => openApiParameterBinding(parameter, usedFieldNames))
+        .map((parameter) => openApiParameterBinding(document, parameter, usedFieldNames))
         .filter((parameter): parameter is OpenApiConnectorParameterBinding & { field: ConnectorFieldDefinition } => Boolean(parameter));
-      const bodyFields = openApiBodyBindings(operation.requestBody, usedFieldNames);
+      const bodyFields = openApiBodyBindings(document, operation.requestBody, usedFieldNames);
       const id = `${options.appId}.action.${operationSlug(method, path, stringValue(operation.operationId))}`;
       const auth = openApiAuthBindings(document, operation, options);
       const metadata: OpenApiConnectorOperationMetadata = {
@@ -306,8 +312,8 @@ function collectOpenApiOperations(
         parameters: parameters.map(({ field: _field, ...parameter }) => parameter),
         bodyFields: bodyFields.map(({ field: _field, ...field }) => field),
         auth,
-        ...optionalPagination(inferOpenApiPagination(method, operation, parameters)),
-        responseSchema: responseSchemaForOperation(operation),
+        ...optionalPagination(inferOpenApiPagination(document, method, operation, parameters)),
+        responseSchema: responseSchemaForOperation(document, operation),
       };
       return [{
         metadata,
@@ -341,11 +347,11 @@ function collectOpenApiWebhookSources(
   options: OpenApiConnectorRuntimeOptions,
 ): Array<{ definition: ConnectorOperationDefinition; metadata: OpenApiConnectorSourceMetadata }> {
   return Object.entries(document.webhooks ?? {}).flatMap(([name, pathItem]) => {
-    const operation = pathItem?.post ?? pathItem?.put ?? pathItem?.patch;
+    const operation = resolveOpenApiOperation(document, pathItem?.post ?? pathItem?.put ?? pathItem?.patch);
     if (!operation) return [];
     const slug = operationSlug("webhook", name, stringValue(operation.operationId) ?? name);
     const id = `${options.appId}.source.${slug}`;
-    const eventsPath = requestBodyEventsPath(operation.requestBody);
+    const eventsPath = requestBodyEventsPath(document, operation.requestBody);
     return [{
       metadata: {
         id,
@@ -374,25 +380,24 @@ function collectOpenApiWebhookSources(
           usesHttp: true,
           usesServiceDb: false,
         },
-        ...optionalSampleEventMetadata(requestBodySchema(operation.requestBody)),
+        ...optionalSampleEventMetadata(requestBodySchema(document, operation.requestBody)),
       },
     }];
   });
 }
 
-function requestBodyEventsPath(requestBody: OpenApiRequestBody | undefined): string | undefined {
-  const schema = requestBodySchema(requestBody);
+function requestBodyEventsPath(document: OpenApiDocument, requestBody: OpenApiRequestBody | undefined): string | undefined {
+  const schema = requestBodySchema(document, requestBody);
   if (!schema) return undefined;
   if (stringValue(schema.type) === "array") return undefined;
-  const properties = schema.properties ?? {};
   for (const name of ["data", "events", "items", "records"]) {
-    if (stringValue(properties[name]?.type) === "array") return name;
+    if (stringValue(schemaProperty(document, schema, name)?.type) === "array") return name;
   }
-  return Object.entries(properties).find(([, property]) => stringValue(property?.type) === "array")?.[0];
+  return schemaProperties(document, schema).find(([, property]) => stringValue(property?.type) === "array")?.[0];
 }
 
-function requestBodySchema(requestBody: OpenApiRequestBody | undefined): OpenApiSchema | undefined {
-  return jsonContentSchema(requestBody?.content);
+function requestBodySchema(document: OpenApiDocument, requestBody: OpenApiRequestBody | undefined): OpenApiSchema | undefined {
+  return jsonContentSchema(document, resolveOpenApiRequestBody(document, requestBody)?.content);
 }
 
 function optionalSampleEventMetadata(schema: OpenApiSchema | undefined): Pick<ConnectorOperationDefinition, "sampleEvent"> | Record<string, never> {
@@ -446,7 +451,7 @@ function openApiAuthBindings(
   const referenced = requirements.flatMap((requirement) => Object.keys(requirement));
   const schemeNames = referenced.length > 0 ? referenced : Object.keys(document.components?.securitySchemes ?? {});
   return schemeNames.flatMap((schemeName) => {
-    const scheme = document.components?.securitySchemes?.[schemeName];
+    const scheme = resolveOpenApiSecurityScheme(document, document.components?.securitySchemes?.[schemeName]);
     if (!scheme) return [];
     const binding = authBindingForSecurityScheme(schemeName, scheme);
     return binding ? [binding] : [];
@@ -489,6 +494,7 @@ function authBindingForSecurityScheme(
 }
 
 function inferOpenApiPagination(
+  document: OpenApiDocument,
   method: OpenApiHttpMethod,
   operation: OpenApiOperation,
   parameters: Array<OpenApiConnectorParameterBinding & { field: ConnectorFieldDefinition }>,
@@ -496,7 +502,7 @@ function inferOpenApiPagination(
   if (method !== "get") return undefined;
   const queryParameters = parameters.filter((parameter) => parameter.location === "query");
   const parameterBySourceName = new Map(queryParameters.map((parameter) => [parameter.sourceName, parameter]));
-  const itemsPath = responseItemsPath(operation);
+  const itemsPath = responseItemsPath(document, operation);
   if (!itemsPath) return undefined;
 
   const limit = firstParameter(parameterBySourceName, ["limit", "page_size", "per_page"]);
@@ -511,7 +517,7 @@ function inferOpenApiPagination(
   }
 
   const cursor = firstParameter(parameterBySourceName, ["cursor", "starting_after", "page_token"]);
-  const nextCursorPath = responseCursorPath(operation);
+  const nextCursorPath = responseCursorPath(document, operation);
   if (cursor && nextCursorPath) {
     return {
       mode: "cursor",
@@ -522,7 +528,7 @@ function inferOpenApiPagination(
     };
   }
 
-  const nextUrlPath = responseNextUrlPath(operation);
+  const nextUrlPath = responseNextUrlPath(document, operation);
   if (nextUrlPath) {
     return {
       mode: "next_url",
@@ -540,38 +546,32 @@ function optionalPagination(value: ConnectorRuntimePaginationPlan | undefined): 
   return value ? { pagination: value } : {};
 }
 
-function responseItemsPath(operation: OpenApiOperation): string | undefined {
-  const schema = jsonContentSchema(Object.entries(operation.responses ?? {})
-    .find(([status]) => status.startsWith("2"))?.[1]?.content);
+function responseItemsPath(document: OpenApiDocument, operation: OpenApiOperation): string | undefined {
+  const schema = responseBodySchema(document, operation);
   if (!schema) return undefined;
   if (stringValue(schema.type) === "array") return undefined;
-  const properties = schema.properties ?? {};
   for (const name of ["data", "items", "results", "records"]) {
-    if (stringValue(properties[name]?.type) === "array") return name;
+    if (stringValue(schemaProperty(document, schema, name)?.type) === "array") return name;
   }
-  return Object.entries(properties).find(([, property]) => stringValue(property?.type) === "array")?.[0];
+  return schemaProperties(document, schema).find(([, property]) => stringValue(property?.type) === "array")?.[0];
 }
 
-function responseCursorPath(operation: OpenApiOperation): string | undefined {
-  const schema = jsonContentSchema(Object.entries(operation.responses ?? {})
-    .find(([status]) => status.startsWith("2"))?.[1]?.content);
-  const properties = schema?.properties ?? {};
+function responseCursorPath(document: OpenApiDocument, operation: OpenApiOperation): string | undefined {
+  const schema = responseBodySchema(document, operation);
   for (const name of ["next_cursor", "nextCursor", "next_page_token", "nextPageToken"]) {
-    if (properties[name]) return name;
+    if (schemaProperty(document, schema, name)) return name;
   }
-  if (properties.paging?.properties?.next) return "paging.next";
-  if (properties.page_info?.properties?.end_cursor) return "page_info.end_cursor";
+  if (schemaProperty(document, schemaProperty(document, schema, "paging"), "next")) return "paging.next";
+  if (schemaProperty(document, schemaProperty(document, schema, "page_info"), "end_cursor")) return "page_info.end_cursor";
   return undefined;
 }
 
-function responseNextUrlPath(operation: OpenApiOperation): string | undefined {
-  const schema = jsonContentSchema(Object.entries(operation.responses ?? {})
-    .find(([status]) => status.startsWith("2"))?.[1]?.content);
-  const properties = schema?.properties ?? {};
+function responseNextUrlPath(document: OpenApiDocument, operation: OpenApiOperation): string | undefined {
+  const schema = responseBodySchema(document, operation);
   for (const name of ["next_url", "nextUrl", "next"]) {
-    if (properties[name]) return name;
+    if (schemaProperty(document, schema, name)) return name;
   }
-  if (properties.links?.properties?.next) return "links.next";
+  if (schemaProperty(document, schemaProperty(document, schema, "links"), "next")) return "links.next";
   return undefined;
 }
 
@@ -587,11 +587,14 @@ function firstParameter(
 }
 
 function openApiParameterBinding(
+  document: OpenApiDocument,
   parameter: OpenApiParameter,
   usedFieldNames: Set<string>,
 ): (OpenApiConnectorParameterBinding & { field: ConnectorFieldDefinition }) | null {
-  const sourceName = stringValue(parameter.name);
-  const location = parameterLocation(parameter.in);
+  const resolved = resolveOpenApiParameter(document, parameter);
+  if (!resolved) return null;
+  const sourceName = stringValue(resolved.name);
+  const location = parameterLocation(resolved.in);
   if (!sourceName || !location) return null;
   const fieldName = uniqueFieldName(sourceName, location, usedFieldNames);
   return {
@@ -599,18 +602,19 @@ function openApiParameterBinding(
     sourceName,
     location,
     field: {
-      ...fieldFromSchema(fieldName, parameter.schema),
-      ...optionalString("description", stringValue(parameter.description)),
-      optional: location === "path" ? false : parameter.required !== true,
+      ...fieldFromSchema(document, fieldName, resolved.schema),
+      ...optionalString("description", stringValue(resolved.description)),
+      optional: location === "path" ? false : resolved.required !== true,
     },
   };
 }
 
 function openApiBodyBindings(
+  document: OpenApiDocument,
   requestBody: OpenApiRequestBody | undefined,
   usedFieldNames: Set<string>,
 ): Array<OpenApiConnectorBodyBinding & { field: ConnectorFieldDefinition }> {
-  const schema = jsonContentSchema(requestBody?.content);
+  const schema = requestBodySchema(document, requestBody);
   if (!schema) return [];
   const properties = schema.properties ?? {};
   const required = new Set(Array.isArray(schema.required) ? schema.required.filter((item): item is string => typeof item === "string") : []);
@@ -621,33 +625,38 @@ function openApiBodyBindings(
       fieldName,
       sourceName,
       field: {
-        ...fieldFromSchema(fieldName, propertySchema),
+        ...fieldFromSchema(document, fieldName, propertySchema),
         optional: !required.has(sourceName),
       },
     }];
   });
 }
 
-function fieldFromSchema(name: string, schema: OpenApiSchema | undefined): Omit<ConnectorFieldDefinition, "optional"> {
+function fieldFromSchema(document: OpenApiDocument, name: string, schema: OpenApiSchema | undefined): Omit<ConnectorFieldDefinition, "optional"> {
+  const resolved = resolveOpenApiSchema(document, schema);
   return {
     name,
-    type: connectorFieldType(schema),
-    ...optionalString("description", stringValue(schema?.description)),
-    ...optionalJson("default", integrationJsonValue(schema?.default)),
-    ...enumOptions(schema?.enum),
-    ...optionalNumber("min", numberValue(schema?.minimum)),
-    ...optionalNumber("max", numberValue(schema?.maximum)),
+    type: connectorFieldType(resolved),
+    ...optionalString("description", stringValue(resolved?.description)),
+    ...optionalJson("default", integrationJsonValue(resolved?.default)),
+    ...enumOptions(resolved?.enum),
+    ...optionalNumber("min", numberValue(resolved?.minimum)),
+    ...optionalNumber("max", numberValue(resolved?.maximum)),
   };
 }
 
-function responseSchemaForOperation(operation: OpenApiOperation): ConnectorRuntimeOutputSchema {
-  const response = Object.entries(operation.responses ?? {})
-    .find(([status]) => status.startsWith("2"))?.[1];
-  const schema = jsonContentSchema(response?.content);
+function responseSchemaForOperation(document: OpenApiDocument, operation: OpenApiOperation): ConnectorRuntimeOutputSchema {
+  const schema = responseBodySchema(document, operation);
   return {
     type: connectorRuntimeType(schema),
     requiredPaths: requiredPathsForSchema(schema),
   };
+}
+
+function responseBodySchema(document: OpenApiDocument, operation: OpenApiOperation): OpenApiSchema | undefined {
+  const response = resolveOpenApiResponse(document, Object.entries(operation.responses ?? {})
+    .find(([status]) => status.startsWith("2"))?.[1]);
+  return jsonContentSchema(document, response?.content);
 }
 
 function requiredPathsForSchema(schema: OpenApiSchema | undefined): string[] {
@@ -667,12 +676,72 @@ function connectorFieldType(schema: OpenApiSchema | undefined): string {
   return "string";
 }
 
-function jsonContentSchema(content: OpenApiRequestBody["content"] | undefined): OpenApiSchema | undefined {
-  return content?.["application/json"]?.schema ?? content?.["application/x-www-form-urlencoded"]?.schema;
+function jsonContentSchema(document: OpenApiDocument, content: OpenApiRequestBody["content"] | undefined): OpenApiSchema | undefined {
+  return resolveOpenApiSchema(document, content?.["application/json"]?.schema ?? content?.["application/x-www-form-urlencoded"]?.schema);
+}
+
+function schemaProperty(document: OpenApiDocument, schema: OpenApiSchema | undefined, name: string): OpenApiSchema | undefined {
+  return resolveOpenApiSchema(document, schema?.properties?.[name]);
+}
+
+function schemaProperties(document: OpenApiDocument, schema: OpenApiSchema): Array<[string, OpenApiSchema | undefined]> {
+  return Object.entries(schema.properties ?? {}).map(([name, property]) => [name, resolveOpenApiSchema(document, property)]);
 }
 
 function parameterLocation(value: unknown): OpenApiParameterLocation | null {
   return value === "path" || value === "query" || value === "header" ? value : null;
+}
+
+function resolveOpenApiOperation(document: OpenApiDocument, value: OpenApiOperation | undefined): OpenApiOperation | undefined {
+  return resolveOpenApiRef(document, value) as OpenApiOperation | undefined;
+}
+
+function resolveOpenApiParameter(document: OpenApiDocument, value: OpenApiParameter | undefined): OpenApiParameter | undefined {
+  return resolveOpenApiRef(document, value) as OpenApiParameter | undefined;
+}
+
+function resolveOpenApiRequestBody(document: OpenApiDocument, value: OpenApiRequestBody | undefined): OpenApiRequestBody | undefined {
+  return resolveOpenApiRef(document, value) as OpenApiRequestBody | undefined;
+}
+
+function resolveOpenApiResponse(document: OpenApiDocument, value: OpenApiResponse | undefined): OpenApiResponse | undefined {
+  return resolveOpenApiRef(document, value) as OpenApiResponse | undefined;
+}
+
+function resolveOpenApiSchema(document: OpenApiDocument, value: OpenApiSchema | undefined): OpenApiSchema | undefined {
+  return resolveOpenApiRef(document, value) as OpenApiSchema | undefined;
+}
+
+function resolveOpenApiSecurityScheme(
+  document: OpenApiDocument,
+  value: OpenApiSecurityScheme | undefined,
+): OpenApiSecurityScheme | undefined {
+  return resolveOpenApiRef(document, value) as OpenApiSecurityScheme | undefined;
+}
+
+function resolveOpenApiRef(document: OpenApiDocument, value: unknown, seen = new Set<string>()): unknown {
+  if (!value || typeof value !== "object") return value;
+  const ref = stringValue((value as { $ref?: unknown }).$ref);
+  if (!ref) return value;
+  if (!ref.startsWith("#/")) {
+    throw new Error(`OpenAPI runtime only supports local refs: ${ref}`);
+  }
+  if (seen.has(ref)) {
+    throw new Error(`OpenAPI runtime detected a circular ref: ${ref}`);
+  }
+  seen.add(ref);
+  return resolveOpenApiRef(document, valueAtJsonPointer(document, ref), seen);
+}
+
+function valueAtJsonPointer(value: unknown, pointer: string): unknown {
+  return pointer
+    .slice(2)
+    .split("/")
+    .map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"))
+    .reduce<unknown>((current, segment) => {
+      if (!current || typeof current !== "object") return undefined;
+      return (current as Record<string, unknown>)[segment];
+    }, value);
 }
 
 function uniqueFieldName(
