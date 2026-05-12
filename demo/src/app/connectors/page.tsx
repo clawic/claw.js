@@ -7,6 +7,7 @@ type ConnectorKind = "action" | "source" | "all";
 
 interface CatalogSummary {
   apps: number;
+  versionedApps: number;
   actions: number;
   sources: number;
   fields: number;

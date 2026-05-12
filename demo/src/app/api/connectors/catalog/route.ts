@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
       error,
       summary: {
         apps: 0,
+        versionedApps: 0,
         actions: 0,
         sources: 0,
         fields: 0,
