@@ -52,6 +52,7 @@ import { redactString } from "../plugins/redaction.ts";
 import type { PluginRegistry } from "../plugins/registry.ts";
 import type { ExecutorContext } from "../plugins/types.ts";
 import { LockableSecret } from "./lockable-secret.ts";
+import { decryptBackup, encryptBackup, restoreLogicalBackup, SECRETS_BACKUP_FORMAT } from "./backup.ts";
 
 const DEFAULT_TENANT_ID = "clawix-local";
 
@@ -403,6 +404,41 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
         macosVpn: { supported: process.platform === "darwin", status: process.platform === "darwin" ? "ready" : "unsupported", strategy: "scutil" },
       },
     };
+  });
+
+  // ---------- Encrypted backup / restore ----------
+
+  app.post("/v1/secrets/backup/export", async (req, reply) => {
+    await requirePrincipalOrUser(req, reply);
+    session.requireKeys();
+    const body = (req.body ?? {}) as { passphrase?: string };
+    if (!body.passphrase) return reply.code(400).send({ error: "passphrase required" });
+    try {
+      const backup = encryptBackup(db, body.passphrase);
+      return {
+        ok: true,
+        format: SECRETS_BACKUP_FORMAT,
+        exportedAt: backup.exportedAt,
+        backup,
+      };
+    } catch (err) {
+      return reply.code(500).send({ error: (err as Error).message });
+    }
+  });
+
+  app.post("/v1/secrets/backup/import", async (req, reply) => {
+    await requirePrincipalOrUser(req, reply);
+    session.requireKeys();
+    const body = (req.body ?? {}) as { passphrase?: string; backup?: unknown };
+    if (!body.passphrase || !body.backup) return reply.code(400).send({ error: "passphrase, backup required" });
+    try {
+      const logical = decryptBackup(body.backup, body.passphrase);
+      const result = restoreLogicalBackup(db, logical);
+      session.lock();
+      return { ok: true, format: SECRETS_BACKUP_FORMAT, imported: result, state: { unlocked: false } };
+    } catch (err) {
+      return reply.code(400).send({ error: (err as Error).message });
+    }
   });
 
   // ---------- Containers (secrets folders) ----------

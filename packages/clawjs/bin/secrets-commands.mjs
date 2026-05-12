@@ -17,10 +17,15 @@ function parseFlags(args) {
     }
     const key = a.slice(2);
     const next = args[i + 1];
+    const assign = (value) => {
+      if (out.flags[key] === undefined) out.flags[key] = value;
+      else if (Array.isArray(out.flags[key])) out.flags[key].push(value);
+      else out.flags[key] = [out.flags[key], value];
+    };
     if (next === undefined || next.startsWith("--")) {
-      out.flags[key] = true;
+      assign(true);
     } else {
-      out.flags[key] = next;
+      assign(next);
       i++;
     }
   }
@@ -85,6 +90,10 @@ const HELP = `claw secrets <command>
   secrets state                              show locked/unlocked state
 
   secrets list [--search <q>] [--folder <id>]
+  secrets folders list
+  secrets folders create --name <name> [--icon <icon>] [--color <hex>]
+  secrets folders rename <id> --name <name>
+  secrets folders trash <id>
   secrets describe <name>
   secrets create --file <draft.json>       payload as JSON file
   secrets reveal <name> --field <f> [--purpose uiCopy|uiReveal]
@@ -93,9 +102,12 @@ const HELP = `claw secrets <command>
   secrets trash <name>
   secrets restore <name>
   secrets execute <name> --executor <id> --args <args.json>
+  secrets broker-http --method <m> --url <url> [--header <k:v>] [--body <file>] [--timeout-ms <n>]
   secrets sync <name>                      trigger brand sync
   secrets types                            list registered typeIds
   secrets plugins                          list registered plugins
+  secrets backup export --file <path>
+  secrets backup import --file <path>
 
   secrets grants issue --secret <name> --agent <id> --capability <kind> [--scope <json>] [--secrets-caps <list>] [--reason <r>] [--minutes <n>]
   secrets grants list
@@ -188,6 +200,48 @@ async function secretsList(flags) {
   return 0;
 }
 
+async function foldersList() {
+  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/folders`);
+  if (!res.ok) { console.error(fmt(res.body)); return 1; }
+  for (const f of res.body.folders ?? []) {
+    console.log(`${f.id}  ${f.name}`);
+  }
+  return 0;
+}
+
+async function foldersCreate(args) {
+  const name = args.flags.name;
+  if (!name) { console.error("--name required"); return 1; }
+  const body = {
+    name: String(name),
+    ...(args.flags.icon ? { icon: String(args.flags.icon) } : {}),
+    ...(args.flags.color ? { color: String(args.flags.color) } : {}),
+  };
+  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/folders`, { method: "POST", body: JSON.stringify(body) });
+  console.log(fmt(res.body));
+  return res.ok ? 0 : 1;
+}
+
+async function foldersRename(args) {
+  const id = args._[2];
+  const name = args.flags.name;
+  if (!id || !name) { console.error("id and --name required"); return 1; }
+  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/folders/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name: String(name) }),
+  });
+  console.log(fmt(res.body));
+  return res.ok ? 0 : 1;
+}
+
+async function foldersTrash(args) {
+  const id = args._[2];
+  if (!id) { console.error("id required"); return 1; }
+  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/folders/${encodeURIComponent(id)}`, { method: "DELETE" });
+  console.log(fmt(res.body));
+  return res.ok ? 0 : 1;
+}
+
 async function secretsDescribe(args) {
   const name = args._[1];
   if (!name) { console.error("name required"); return 1; }
@@ -275,6 +329,35 @@ async function secretsExecute(args) {
     `/v1/tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}/execute/${encodeURIComponent(String(executor))}`,
     { method: "POST", body: JSON.stringify(body) },
   );
+  console.log(fmt(res.body));
+  return res.ok ? 0 : 1;
+}
+
+async function secretsBrokerHttp(args) {
+  const method = args.flags.method;
+  const url = args.flags.url;
+  if (!method || !url) { console.error("--method and --url required"); return 1; }
+  const fs = await import("node:fs");
+  const headers = {};
+  const headerFlags = args.flags.header === undefined
+    ? []
+    : Array.isArray(args.flags.header) ? args.flags.header : [args.flags.header];
+  for (const entry of headerFlags) {
+    const idx = String(entry).indexOf(":");
+    if (idx <= 0) { console.error("--header must be key:value"); return 1; }
+    headers[String(entry).slice(0, idx).trim()] = String(entry).slice(idx + 1).trim();
+  }
+  const body = args.flags.body ? fs.readFileSync(String(args.flags.body), "utf8") : undefined;
+  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/broker/http`, {
+    method: "POST",
+    body: JSON.stringify({
+      method: String(method),
+      url: String(url),
+      headers,
+      ...(body !== undefined ? { body } : {}),
+      ...(args.flags["timeout-ms"] ? { timeoutMs: Number(args.flags["timeout-ms"]) } : {}),
+    }),
+  });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
@@ -398,6 +481,37 @@ async function auditVerify() {
   return res.ok ? 0 : 1;
 }
 
+async function backupExport(args) {
+  const file = args.flags.file;
+  if (!file) { console.error("--file required"); return 1; }
+  const passphrase = await prompt("Backup passphrase: ", true);
+  const confirm = await prompt("Confirm backup passphrase: ", true);
+  if (passphrase !== confirm) { console.error("Passphrases do not match."); return 1; }
+  const res = await fetchJson("/v1/secrets/backup/export", {
+    method: "POST",
+    body: JSON.stringify({ passphrase }),
+  });
+  if (!res.ok) { console.error(fmt(res.body)); return 1; }
+  const fs = await import("node:fs");
+  fs.writeFileSync(String(file), JSON.stringify(res.body.backup, null, 2));
+  console.log(`Secrets backup exported to ${file}`);
+  return 0;
+}
+
+async function backupImport(args) {
+  const file = args.flags.file;
+  if (!file) { console.error("--file required"); return 1; }
+  const passphrase = await prompt("Backup passphrase: ", true);
+  const fs = await import("node:fs");
+  const backup = JSON.parse(fs.readFileSync(String(file), "utf8"));
+  const res = await fetchJson("/v1/secrets/backup/import", {
+    method: "POST",
+    body: JSON.stringify({ passphrase, backup }),
+  });
+  console.log(fmt(res.body));
+  return res.ok ? 0 : 1;
+}
+
 export async function runSecretsCli(rawArgs) {
   if (rawArgs.length === 0 || rawArgs[0] === "--help" || rawArgs[0] === "-h") {
     console.log(HELP);
@@ -420,6 +534,14 @@ export async function runSecretsCli(rawArgs) {
       case "doctor": return await secretsDoctor();
       case "state": return await secretsState();
       case "list": return await secretsList(args.flags);
+      case "folders":
+        switch (nested) {
+          case "list": return await foldersList();
+          case "create": return await foldersCreate(args);
+          case "rename": return await foldersRename(args);
+          case "trash": return await foldersTrash(args);
+          default: console.log(HELP); return 1;
+        }
       case "describe": return await secretsDescribe(args);
       case "create": return await secretsCreate(args);
       case "reveal": return await secretsReveal(args);
@@ -428,9 +550,16 @@ export async function runSecretsCli(rawArgs) {
       case "trash": return await secretsTrash(args);
       case "restore": return await secretsRestore(args);
       case "execute": return await secretsExecute(args);
+      case "broker-http": return await secretsBrokerHttp(args);
       case "sync": return await secretsSync(args);
       case "types": return await secretsTypes();
       case "plugins": return await secretsPlugins();
+      case "backup":
+        switch (nested) {
+          case "export": return await backupExport(args);
+          case "import": return await backupImport(args);
+          default: console.log(HELP); return 1;
+        }
       case "grants":
         switch (nested) {
           case "issue": return await grantsIssue(args);

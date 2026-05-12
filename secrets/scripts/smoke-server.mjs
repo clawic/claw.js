@@ -10,6 +10,7 @@ process.env.SECRETS_DATA_DIR = tmpDir;
 process.env.SECRETS_DB_PATH = path.join(tmpDir, "secrets.sqlite");
 process.env.SECRETS_PORT = "0"; // ephemeral
 process.env.SECRETS_HOST = "127.0.0.1";
+process.env.SECRETS_ADMIN_TOKEN = "smoke-admin-token";
 
 const { startSecretsServer } = await import("../src/server/app.ts");
 
@@ -17,6 +18,7 @@ const { app, config } = await startSecretsServer({});
 const addr = app.server.address();
 const port = typeof addr === "object" && addr ? addr.port : config.port;
 const base = `http://127.0.0.1:${port}`;
+const authHeaders = { Authorization: "Bearer smoke-admin-token" };
 
 let pass = 0; let fail = 0;
 function ok(name) { console.log(`  ✓ ${name}`); pass++; }
@@ -59,12 +61,52 @@ if (types.body.types?.length >= 20) ok(`catalog has ${types.body.types.length} t
 // Create secrets container.
 const cont = await fetchJson(`${base}/v1/tenants/clawix-local/folders`, {
   method: "POST",
-  headers: { Authorization: "Bearer admin" }, // any token works; auth is best-effort here
+  headers: authHeaders,
   body: JSON.stringify({ name: "Personal", icon: "key", color: "#FF0000" }),
 });
-// We didn't set up real users; the auth helper rejects. Let's allow with a tenant_admin token.
-// For the smoke test, skip auth path and check the unauth response instead.
-if (cont.status === 401) ok("auth required for secrets create"); else ko("expected 401", cont.status);
+if (cont.ok && cont.body.folder?.name === "Personal") ok("folder create with admin token"); else ko("folder create", cont.body);
+
+const draft = {
+  folderId: cont.body.folder.id,
+  typeId: "github.pat",
+  internalName: "github_main",
+  title: "GitHub Main",
+  fields: [
+    { fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, isConcealed: true, secretValue: "ghp_smoke_secret" },
+  ],
+  governance: { allowedHosts: ["127.0.0.1"], allowedHeaders: ["Authorization"], allowLocalNetwork: true },
+};
+const created = await fetchJson(`${base}/v1/tenants/clawix-local/secrets`, {
+  method: "POST",
+  headers: authHeaders,
+  body: JSON.stringify({ draft }),
+});
+if (created.ok && created.body.secret?.internalName === "github_main") ok("secret create with admin token"); else ko("secret create", created.body);
+
+const backupExport = await fetchJson(`${base}/v1/secrets/backup/export`, {
+  method: "POST",
+  headers: authHeaders,
+  body: JSON.stringify({ passphrase: "backup-passphrase" }),
+});
+if (backupExport.ok && backupExport.body.format === "clawix-secrets-backup-v1" && backupExport.body.backup?.aead?.ciphertext) {
+  ok("backup export encrypted");
+} else {
+  ko("backup export", backupExport.body);
+}
+
+const backupImport = await fetchJson(`${base}/v1/secrets/backup/import`, {
+  method: "POST",
+  headers: authHeaders,
+  body: JSON.stringify({ passphrase: "backup-passphrase", backup: backupExport.body.backup }),
+});
+if (backupImport.ok && backupImport.body.imported?.secrets === 1 && backupImport.body.state?.unlocked === false) {
+  ok("backup import restores and locks");
+} else {
+  ko("backup import", backupImport.body);
+}
+
+const unlockAfterImport = await fetchJson(`${base}/v1/secrets/unlock`, { method: "POST", body: JSON.stringify({ password: "master-pw" }) });
+if (unlockAfterImport.ok) ok("unlock after backup import"); else ko("unlock after import", unlockAfterImport.body);
 
 // Lock.
 const lockRes = await fetchJson(`${base}/v1/secrets/lock`, { method: "POST" });
