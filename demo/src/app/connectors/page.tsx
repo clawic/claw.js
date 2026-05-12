@@ -64,6 +64,7 @@ interface CatalogOperation {
   runtime?: {
     hasRun: boolean;
     hasHooks: boolean;
+    hookNames?: string[];
     hasAdditionalProps: boolean;
     additionalProps?: {
       mode: "object" | "function";
@@ -402,7 +403,7 @@ export default function ConnectorsPage() {
                   {selected.operation.runtime ? (
                     <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-mono text-muted-foreground">
                       <span>run={String(selected.operation.runtime.hasRun)}</span>
-                      <span>hooks={String(selected.operation.runtime.hasHooks)}</span>
+                      <span>hooks={selected.operation.runtime.hookNames?.length || String(selected.operation.runtime.hasHooks)}</span>
                       <span>dynamicProps={selected.operation.runtime.additionalProps?.fieldNames.length || String(selected.operation.runtime.hasAdditionalProps)}</span>
                       <span>methods={selected.operation.runtime.methodNames?.length || String(selected.operation.runtime.hasMethods)}</span>
                       {selected.operation.runtime.dedupe ? <span>dedupe={selected.operation.runtime.dedupe}</span> : null}
