@@ -23,6 +23,17 @@ export interface ConnectorRuntimeHttpResponse {
   ok: boolean;
   headers: Record<string, string>;
   body: IntegrationJson;
+  rateLimit?: ConnectorRuntimeRateLimitInfo;
+}
+
+export interface ConnectorRuntimeRateLimitInfo {
+  limited: boolean;
+  retryAfterMs?: number;
+  limit?: number;
+  remaining?: number;
+  resetAfterMs?: number;
+  resetAt?: string;
+  policy?: string;
 }
 
 export interface ConnectorRuntimeHttpPaginationResult {
@@ -54,7 +65,7 @@ export async function executeConnectorRuntimeRequestPlan(
       return parsed;
     }
     if (attempt < maxRetries && isRetryableStatus(response.status)) {
-      await (input.sleep ?? defaultSleep)(retryDelayMs(response, input.retryDelayMs));
+      await (input.sleep ?? defaultSleep)(retryDelayMs(parsed, input.retryDelayMs));
       continue;
     }
     throw new ConnectorRuntimeHttpError(
@@ -251,6 +262,7 @@ async function parseRuntimeHttpResponse(response: Response): Promise<ConnectorRu
     ok: response.ok,
     headers,
     body,
+    ...optionalRateLimitInfo(response),
   };
 }
 
@@ -266,14 +278,90 @@ function isRetryableStatus(status: number): boolean {
   return status === 429 || (status >= 500 && status <= 599);
 }
 
-function retryDelayMs(response: Response, fallbackMs: number | undefined): number {
-  const retryAfter = response.headers.get("retry-after");
-  if (!retryAfter) return fallbackMs ?? 1_000;
-  const seconds = Number(retryAfter);
-  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1_000);
-  const timestamp = Date.parse(retryAfter);
-  if (Number.isFinite(timestamp)) return Math.max(0, timestamp - Date.now());
+function retryDelayMs(response: ConnectorRuntimeHttpResponse, fallbackMs: number | undefined): number {
+  if (typeof response.rateLimit?.retryAfterMs === "number") {
+    return response.rateLimit.retryAfterMs;
+  }
   return fallbackMs ?? 1_000;
+}
+
+function optionalRateLimitInfo(response: Response): { rateLimit: ConnectorRuntimeRateLimitInfo } | Record<string, never> {
+  const info = rateLimitInfo(response);
+  return info ? { rateLimit: info } : {};
+}
+
+function rateLimitInfo(response: Response): ConnectorRuntimeRateLimitInfo | null {
+  const retryAfter = retryAfterMs(response.headers.get("retry-after"));
+  const resetAfter = resetAfterMs(response.headers);
+  const resetAt = resetAtIso(response.headers, resetAfter);
+  const remaining = headerNumber(response.headers, ["x-ratelimit-remaining", "ratelimit-remaining"]);
+  const limit = headerNumber(response.headers, ["x-ratelimit-limit", "ratelimit-limit"]);
+  const policy = headerValue(response.headers, ["ratelimit-policy"]);
+  if (
+    retryAfter === undefined
+    && resetAfter === undefined
+    && resetAt === undefined
+    && remaining === undefined
+    && limit === undefined
+    && policy === undefined
+    && response.status !== 429
+  ) {
+    return null;
+  }
+  return {
+    limited: response.status === 429 || retryAfter !== undefined || remaining === 0,
+    ...(retryAfter !== undefined ? { retryAfterMs: retryAfter } : {}),
+    ...(limit !== undefined ? { limit } : {}),
+    ...(remaining !== undefined ? { remaining } : {}),
+    ...(resetAfter !== undefined ? { resetAfterMs: resetAfter } : {}),
+    ...(resetAt !== undefined ? { resetAt } : {}),
+    ...(policy !== undefined ? { policy } : {}),
+  };
+}
+
+function retryAfterMs(value: string | null): number | undefined {
+  if (!value?.trim()) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1_000);
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? Math.max(0, timestamp - Date.now()) : undefined;
+}
+
+function resetAfterMs(headers: Headers): number | undefined {
+  const value = headerValue(headers, ["ratelimit-reset"]);
+  if (!value) return undefined;
+  const seconds = Number(value);
+  return Number.isFinite(seconds) ? Math.max(0, seconds * 1_000) : undefined;
+}
+
+function resetAtIso(headers: Headers, resetAfter: number | undefined): string | undefined {
+  const absolute = headerValue(headers, ["x-ratelimit-reset"]);
+  if (absolute) {
+    const numeric = Number(absolute);
+    if (Number.isFinite(numeric)) {
+      const timestamp = numeric < 10_000_000_000 ? numeric * 1_000 : numeric;
+      return new Date(timestamp).toISOString();
+    }
+    const timestamp = Date.parse(absolute);
+    if (Number.isFinite(timestamp)) return new Date(timestamp).toISOString();
+  }
+  return resetAfter === undefined ? undefined : new Date(Date.now() + resetAfter).toISOString();
+}
+
+function headerNumber(headers: Headers, names: readonly string[]): number | undefined {
+  const value = headerValue(headers, names);
+  if (!value) return undefined;
+  const first = value.split(",")[0]?.trim() ?? "";
+  const number = Number(first);
+  return Number.isFinite(number) ? number : undefined;
+}
+
+function headerValue(headers: Headers, names: readonly string[]): string | undefined {
+  for (const name of names) {
+    const value = headers.get(name);
+    if (value?.trim()) return value.trim();
+  }
+  return undefined;
 }
 
 function defaultSleep(ms: number): Promise<void> {

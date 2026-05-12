@@ -120,15 +120,59 @@ describe("connector runtime http transport", () => {
           auth: [],
           body: {},
         },
-        fetchImpl: async () => new Response("rate limited", { status: 429, statusText: "Too Many Requests" }),
+        fetchImpl: async () => new Response("rate limited", {
+          status: 429,
+          statusText: "Too Many Requests",
+          headers: {
+            "retry-after": "3",
+            "x-ratelimit-limit": "100",
+            "x-ratelimit-remaining": "0",
+            "x-ratelimit-reset": "1893456000",
+            "ratelimit-policy": "100;w=60",
+          },
+        }),
       }),
       (error) => {
         assert.ok(error instanceof ConnectorRuntimeHttpError);
         assert.equal(error.response.status, 429);
         assert.equal(error.response.body, "rate limited");
+        assert.deepEqual(error.response.rateLimit, {
+          limited: true,
+          retryAfterMs: 3_000,
+          limit: 100,
+          remaining: 0,
+          resetAt: "2030-01-01T00:00:00.000Z",
+          policy: "100;w=60",
+        });
         return true;
       },
     );
+  });
+
+  it("preserves rate limit headers on successful responses", async () => {
+    const response = await executeConnectorRuntimeRequestPlan({
+      baseUrl: "https://api.example.invalid/",
+      secrets: {},
+      plan: {
+        method: "GET",
+        endpoint: "items",
+        auth: [],
+        body: {},
+      },
+      fetchImpl: async () => Response.json({ ok: true }, {
+        headers: {
+          "ratelimit-limit": "50, 50;w=60",
+          "ratelimit-remaining": "42",
+          "ratelimit-reset": "10",
+        },
+      }),
+    });
+
+    assert.equal(response.rateLimit?.limited, false);
+    assert.equal(response.rateLimit?.limit, 50);
+    assert.equal(response.rateLimit?.remaining, 42);
+    assert.equal(response.rateLimit?.resetAfterMs, 10_000);
+    assert.equal(typeof response.rateLimit?.resetAt, "string");
   });
 
   it("retries retryable responses with retry-after delays", async () => {
