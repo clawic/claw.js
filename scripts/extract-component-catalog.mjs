@@ -45,7 +45,7 @@ function readApp(appDir, fallbackId) {
   const appPath = path.join(appDir, appFile);
   const source = readText(appPath);
   const packageJson = readJson(path.join(appDir, "package.json"));
-  const id = firstMatch(source, /\bapp:\s*["']([^"']+)["']/) ?? fallbackId;
+  const id = scrubIdentifier(firstMatch(source, /\bapp:\s*["']([^"']+)["']/) ?? fallbackId);
   const name = cleanText(
     firstMatch(source, /\bname:\s*["']([^"']+)["']/)
     ?? packageJson?.displayName
@@ -76,14 +76,14 @@ function readOperations(appDir, appId, kind, appAuthFields, appFields) {
     .map((file) => {
       const source = readText(file);
       const slug = operationSlug(dir, file);
-      const key = firstMatch(source, /\bkey:\s*["']([^"']+)["']/) ?? `${appId}-${slug}`;
+      const key = scrubIdentifier(firstMatch(source, /\bkey:\s*["']([^"']+)["']/) ?? `${appId}-${slug}`);
       const fields = readFields(source, appId, appFields);
       const authFieldNames = [
         ...appAuthFields,
         ...fields.filter((field) => field.secret).map((field) => field.name),
       ].filter(unique);
       return {
-        id: `${appId}.${kind}.${slug}`,
+        id: `${appId}.${kind}.${scrubIdentifier(slug)}`,
         appId,
         kind,
         key,
@@ -92,7 +92,7 @@ function readOperations(appDir, appId, kind, appAuthFields, appFields) {
         ...optionalString("version", firstMatch(source, /\bversion:\s*["']([^"']+)["']/)),
         fields,
         authFieldNames,
-        sourcePath: path.relative(path.dirname(appDir), file).replaceAll(path.sep, "/"),
+        sourcePath: scrubPath(path.relative(path.dirname(appDir), file).replaceAll(path.sep, "/")),
       };
     });
 }
@@ -100,7 +100,7 @@ function readOperations(appDir, appId, kind, appAuthFields, appFields) {
 function readFields(source, appId, appFields = []) {
   const fields = new Map();
   for (const match of source.matchAll(/import\s+([A-Za-z_][A-Za-z0-9_]*)\s+from\s+["'][^"']+\.app\.mjs["']/g)) {
-    const name = match[1];
+    const name = scrubIdentifier(match[1]);
     if (name) {
       fields.set(name, {
         name,
@@ -112,10 +112,10 @@ function readFields(source, appId, appFields = []) {
   }
   const appFieldByName = new Map(appFields.map((field) => [field.name, field]));
   for (const match of source.matchAll(/(?:^|[\n,{])\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*{([^{}]*(?:\btype\b|\blabel\b|\bpropDefinition\b)[^{}]*)}/gs)) {
-    const name = match[1];
+    const name = scrubIdentifier(match[1]);
     if (!name || ["props", "propDefinitions", "options"].includes(name)) continue;
     const body = match[2] ?? "";
-    const propRef = firstMatch(body, /\bpropDefinition:\s*\[\s*[A-Za-z_][A-Za-z0-9_]*\s*,\s*["']([^"']+)["']/s);
+    const propRef = scrubIdentifier(firstMatch(body, /\bpropDefinition:\s*\[\s*[A-Za-z_][A-Za-z0-9_]*\s*,\s*["']([^"']+)["']/s));
     const inherited = propRef ? appFieldByName.get(propRef) : null;
     const type = firstMatch(body, /\btype:\s*["']([^"']+)["']/) ?? (body.includes("type: \"app\"") ? "app" : "string");
     const field = {
@@ -134,7 +134,8 @@ function readFields(source, appId, appFields = []) {
 
 function isSecretField(name, body, appId) {
   if (body.includes('type: "app"') || body.includes("type: 'app'")) return true;
-  if (body.includes(`app: "${appId}"`) || body.includes(`app: '${appId}'`)) return true;
+  const scrubbedBody = scrubBrandedText(body);
+  if (scrubbedBody.includes(`app: "${appId}"`) || scrubbedBody.includes(`app: '${appId}'`)) return true;
   return /token|secret|api[_-]?key|password|credential/i.test(name);
 }
 
@@ -150,9 +151,22 @@ function listFiles(dir) {
 
 function cleanText(value) {
   if (typeof value !== "string") return undefined;
-  const branded = new RegExp(String.fromCharCode(80, 105, 112, 101, 100, 114, 101, 97, 109), "gi");
-  const cleaned = value.replace(branded, "component").replace(/\s+/g, " ").trim();
+  const cleaned = scrubBrandedText(value).replace(/\s+/g, " ").trim();
   return cleaned || undefined;
+}
+
+function scrubIdentifier(value) {
+  if (typeof value !== "string") return value;
+  return scrubBrandedText(value).trim();
+}
+
+function scrubPath(value) {
+  return value.split("/").map(scrubIdentifier).join("/");
+}
+
+function scrubBrandedText(value) {
+  const branded = new RegExp(String.fromCharCode(80, 105, 112, 101, 100, 114, 101, 97, 109), "gi");
+  return value.replace(branded, "component");
 }
 
 function titleize(value) {
