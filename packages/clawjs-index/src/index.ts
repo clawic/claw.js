@@ -24,3 +24,4 @@ export * from "./scheduler.ts";
 export * from "./store.ts";
 export * from "./types.ts";
 export { canonicalTypes, getCanonicalByName } from "./schema/registry.ts";
+export * from "./routes/index.ts";
