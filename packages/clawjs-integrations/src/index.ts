@@ -79,6 +79,7 @@ export type {
   ConnectorCatalogSummary,
   ConnectorComponentKind,
   ConnectorFieldDefinition,
+  ConnectorFieldDynamicOptions,
   ConnectorFieldOption,
   ConnectorOperationDefinition,
   ConnectorOperationRuntime,

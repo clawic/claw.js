@@ -25,6 +25,7 @@ const firstMatch = (source, regex) => regex.exec(source)?.[1];
 const readText = (filePath) => fs.readFileSync(filePath, "utf8");
 const countDefaults = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.default !== undefined).length : 0;
 const countOptions = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && Array.isArray(field.options) && field.options.length > 0).length : 0;
+const countDynamicOptions = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && isRecord(field.dynamicOptions)).length : 0;
 const expected = readExpected(componentsDir);
 const catalog = JSON.parse(readText(catalogPath));
 const errors = verify(catalog, expected);
@@ -32,7 +33,7 @@ const summary = summarize(catalog.apps ?? []);
 
 for (const error of errors.slice(0, maxErrors)) console.error(`FAIL ${error}`);
 if (errors.length > maxErrors) console.error(`FAIL ... ${errors.length - maxErrors} additional errors hidden`);
-console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} methods=${summary.methodOperations}`);
+console.error(`apps=${summary.apps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} dynamicOptions=${summary.dynamicOptionFields} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} methods=${summary.methodOperations}`);
 if (errors.length > 0) {
   console.error(`catalog verification failed with ${errors.length} error(s)`);
   process.exit(1);
@@ -96,6 +97,7 @@ function verify(catalog, expectedApps) {
   if (actualSummary.defaults !== expectedSummary.defaults) errors.push(`defaults ${actualSummary.defaults} expected ${expectedSummary.defaults}`);
   if (actualSummary.managedFields !== expectedSummary.managedFields) errors.push(`managedFields ${actualSummary.managedFields} expected ${expectedSummary.managedFields}`);
   if (actualSummary.options !== expectedSummary.options) errors.push(`options ${actualSummary.options} expected ${expectedSummary.options}`);
+  if (actualSummary.dynamicOptionFields !== expectedSummary.dynamicOptionFields) errors.push(`dynamicOptions ${actualSummary.dynamicOptionFields} expected ${expectedSummary.dynamicOptionFields}`);
   if (actualSummary.annotatedOperations !== expectedSummary.annotatedOperations) errors.push(`annotations ${actualSummary.annotatedOperations} expected ${expectedSummary.annotatedOperations}`);
   if (actualSummary.destructiveOperations !== expectedSummary.destructiveOperations) errors.push(`destructive ${actualSummary.destructiveOperations} expected ${expectedSummary.destructiveOperations}`);
   if (actualSummary.readOnlyOperations !== expectedSummary.readOnlyOperations) errors.push(`readOnly ${actualSummary.readOnlyOperations} expected ${expectedSummary.readOnlyOperations}`);
@@ -190,6 +192,7 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
     const inherited = propRef ? appFieldByName.get(propRef) : null;
     const defaultValue = readDefault(body);
     const options = readOptions(body);
+    const dynamicOptions = readDynamicOptions(body);
     const type = inherited?.type ?? readTopLevelString(body, "type") ?? "string";
     fields.set(name, {
       ...(inherited ?? {}),
@@ -198,6 +201,7 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
       optional: inherited?.optional ?? /\boptional:\s*true\b/.test(body),
       ...(defaultValue === undefined ? {} : { default: defaultValue }),
       ...(options.length ? { options } : {}),
+      ...(dynamicOptions ?? inherited?.dynamicOptions ? { dynamicOptions: dynamicOptions ?? inherited.dynamicOptions } : {}),
       ...(inherited?.secret || isSecretField(name, body, appId) ? { secret: true } : {}),
       ...(inherited?.managed || type.startsWith("$.") ? { managed: true } : {}),
     });
@@ -294,6 +298,7 @@ function summarize(apps) {
     summary.managedFields += Array.isArray(app.fields) ? app.fields.filter((field) => field.managed).length : 0;
     summary.defaults += countDefaults(app.fields);
     summary.options += countOptions(app.fields);
+    summary.dynamicOptionFields += countDynamicOptions(app.fields);
     for (const operation of Array.isArray(app.operations) ? app.operations : []) {
       if (!isRecord(operation)) continue;
       if (operation.kind === "source") summary.sources += 1;
@@ -303,6 +308,7 @@ function summarize(apps) {
       summary.managedFields += Array.isArray(operation.fields) ? operation.fields.filter((field) => field.managed).length : 0;
       summary.defaults += countDefaults(operation.fields);
       summary.options += countOptions(operation.fields);
+      summary.dynamicOptionFields += countDynamicOptions(operation.fields);
       if (isRecord(operation.annotations)) summary.annotatedOperations += 1;
       if (operation.annotations?.destructiveHint === true) summary.destructiveOperations += 1;
       if (operation.annotations?.readOnlyHint === true) summary.readOnlyOperations += 1;
@@ -339,6 +345,7 @@ function summarize(apps) {
     hybridSources: 0,
     statefulSources: 0,
     dynamicPropOperations: 0,
+    dynamicOptionFields: 0,
     methodOperations: 0,
   });
 }
@@ -360,15 +367,18 @@ function summarizeExpected(apps) {
     hybridSources: 0,
     statefulSources: 0,
     dynamicPropOperations: 0,
+    dynamicOptionFields: 0,
     methodOperations: 0,
   };
   for (const app of apps.values()) {
     summary.defaults += app.fieldStats.defaults;
     summary.options += app.fieldStats.options;
+    summary.dynamicOptionFields += app.fieldStats.dynamicOptions;
     summary.managedFields += app.fieldStats.managed;
     for (const operation of app.operations.values()) {
       summary.defaults += operation.fieldStats.defaults;
       summary.options += operation.fieldStats.options;
+      summary.dynamicOptionFields += operation.fieldStats.dynamicOptions;
       summary.managedFields += operation.fieldStats.managed;
       if (Object.keys(operation.annotations).length) summary.annotatedOperations += 1;
       if (operation.annotations.destructiveHint === true) summary.destructiveOperations += 1;
@@ -424,6 +434,7 @@ function summarizeFields(fields) {
   return {
     defaults: fields.filter((field) => field.default !== undefined).length,
     options: fields.filter((field) => field.options?.length > 0).length,
+    dynamicOptions: fields.filter((field) => field.dynamicOptions).length,
     managed: fields.filter((field) => field.managed).length,
   };
 }
@@ -544,6 +555,48 @@ function readOptions(body) {
     for (const match of raw.matchAll(/["']([^"']+)["']/g)) entries.push({ value: scrub(match[1]) });
   }
   return entries.filter((entry, index, array) => array.findIndex((candidate) => candidate.value === entry.value) === index);
+}
+
+function readDynamicOptions(body) {
+  const methodParams = firstMatch(body, /(?:^|[\n,{])\s*(?:async\s+)?options\s*\(([^)]*)\)/);
+  const raw = readTopLevelValue(body, "options");
+  const arrowParams = raw ? readFunctionParams(raw.trim()) : undefined;
+  const params = methodParams ?? arrowParams;
+  const hasDynamic = Boolean(methodParams)
+    || Boolean(raw && /^(?:async\s*)?(?:function\b|\([^)]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>)/.test(raw.trim()));
+  if (!hasDynamic) return undefined;
+  const contextKeys = contextKeysFromParams(params ?? "");
+  const haystack = `${params ?? ""}\n${raw ?? ""}`;
+  return {
+    paginated: /\bpage\b/.test(haystack),
+    usesPreviousContext: /\bprevContext\b/.test(haystack),
+    contextKeys,
+  };
+}
+
+function readFunctionParams(value) {
+  const match = /^(?:async\s*)?(?:\(([^)]*)\)|([A-Za-z_$][\w$]*))\s*=>/.exec(value);
+  return match?.[1] ?? match?.[2];
+}
+
+function contextKeysFromParams(params) {
+  const trimmed = params.trim();
+  if (!trimmed) return [];
+  const destructured = /^\s*{([^}]*)}/.exec(trimmed)?.[1];
+  if (destructured) {
+    return destructured
+      .split(",")
+      .map((part) => part.split(":")[0]?.replace(/[.\s{}[\]=]/g, "").trim())
+      .filter(Boolean)
+      .filter(unique)
+      .sort();
+  }
+  const first = /^[A-Za-z_$][\w$]*/.exec(trimmed)?.[0];
+  return first ? [first] : [];
+}
+
+function unique(value, index, array) {
+  return array.indexOf(value) === index;
 }
 
 function parseLiteral(raw) {

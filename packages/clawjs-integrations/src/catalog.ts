@@ -74,6 +74,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       summary.managedFields += app.fields.filter((field) => field.managed).length;
       summary.defaults += app.fields.filter((field) => Object.prototype.hasOwnProperty.call(field, "default")).length;
       summary.options += app.fields.filter((field) => field.options?.length).length;
+      summary.dynamicOptionFields += app.fields.filter((field) => field.dynamicOptions).length;
       for (const operation of app.operations) {
         if (operation.kind === "action") summary.actions += 1;
         else summary.sources += 1;
@@ -82,6 +83,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
         summary.managedFields += operation.fields.filter((field) => field.managed).length;
         summary.defaults += operation.fields.filter((field) => Object.prototype.hasOwnProperty.call(field, "default")).length;
         summary.options += operation.fields.filter((field) => field.options?.length).length;
+        summary.dynamicOptionFields += operation.fields.filter((field) => field.dynamicOptions).length;
         if (operation.annotations) summary.annotatedOperations += 1;
         if (operation.annotations?.destructiveHint === true) summary.destructiveOperations += 1;
         if (operation.annotations?.readOnlyHint === true) summary.readOnlyOperations += 1;
@@ -119,6 +121,7 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       hybridSources: 0,
       statefulSources: 0,
       dynamicPropOperations: 0,
+      dynamicOptionFields: 0,
       methodOperations: 0,
     },
   );
@@ -217,6 +220,7 @@ function normalizeFields(input: unknown): ConnectorFieldDefinition[] {
         value: option.value as string | number | boolean,
         ...(typeof option.description === "string" ? { description: option.description } : {}),
       })).filter((option) => isOptionValue(option.value)) } : {}),
+      ...optionalDynamicOptions(field.dynamicOptions),
       ...(field.secret === true ? { secret: true } : {}),
       ...(field.managed === true || type.startsWith("$.") ? { managed: true } : {}),
     };
@@ -253,6 +257,17 @@ function optionalAnnotations(input: unknown) {
     ...(typeof input.openWorldHint === "boolean" ? { openWorldHint: input.openWorldHint } : {}),
   };
   return Object.keys(annotations).length ? { annotations } : {};
+}
+
+function optionalDynamicOptions(input: unknown) {
+  if (!isRecord(input)) return {};
+  return {
+    dynamicOptions: {
+      paginated: input.paginated === true,
+      usesPreviousContext: input.usesPreviousContext === true,
+      contextKeys: normalizeStringArray(input.contextKeys),
+    },
+  };
 }
 
 function optionalRuntime(input: unknown) {

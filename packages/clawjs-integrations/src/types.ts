@@ -21,6 +21,12 @@ export interface ConnectorFieldOption {
   description?: string;
 }
 
+export interface ConnectorFieldDynamicOptions {
+  paginated: boolean;
+  usesPreviousContext: boolean;
+  contextKeys: string[];
+}
+
 export interface ConnectorFieldDefinition {
   name: string;
   type: string;
@@ -29,6 +35,7 @@ export interface ConnectorFieldDefinition {
   optional: boolean;
   default?: IntegrationJson;
   options?: ConnectorFieldOption[];
+  dynamicOptions?: ConnectorFieldDynamicOptions;
   secret?: boolean;
   managed?: boolean;
 }
@@ -110,6 +117,7 @@ export interface ConnectorCatalogSummary {
   hybridSources: number;
   statefulSources: number;
   dynamicPropOperations: number;
+  dynamicOptionFields: number;
   methodOperations: number;
 }
 

@@ -130,6 +130,7 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
     const propRef = scrubIdentifier(firstMatch(readTopLevelValue(body, "propDefinition") ?? "", /\[\s*[A-Za-z_][A-Za-z0-9_]*\s*,\s*["']([^"']+)["']/s));
     const inherited = propRef ? appFieldByName.get(propRef) : null;
     const type = readTopLevelString(body, "type") ?? (body.includes("type: \"app\"") ? "app" : "string");
+    const dynamicOptions = readDynamicOptions(body);
     const field = {
       ...(inherited ?? {}),
       name,
@@ -139,6 +140,7 @@ function readFields(source, appId, appFields = [], filePath, seen = new Set()) {
       optional: inherited?.optional ?? /\boptional:\s*true\b/.test(body),
       ...optionalJson("default", readDefault(body)),
       ...optionalOptions(readOptions(body)),
+      ...optionalDynamicOptions(dynamicOptions ?? inherited?.dynamicOptions),
       ...(inherited?.secret || isSecretField(name, body, appId) ? { secret: true } : {}),
       ...(inherited?.managed || type.startsWith("$.") ? { managed: true } : {}),
     };
@@ -288,6 +290,10 @@ function optionalOptions(options) {
   return options.length ? { options } : {};
 }
 
+function optionalDynamicOptions(options) {
+  return options ? { dynamicOptions: options } : {};
+}
+
 function optionalAnnotations(annotations) {
   return Object.keys(annotations).length ? { annotations } : {};
 }
@@ -415,6 +421,44 @@ function readOptions(body) {
     }
   }
   return entries.filter((entry, index, array) => array.findIndex((candidate) => candidate.value === entry.value) === index);
+}
+
+function readDynamicOptions(body) {
+  const methodParams = firstMatch(body, /(?:^|[\n,{])\s*(?:async\s+)?options\s*\(([^)]*)\)/);
+  const raw = readTopLevelValue(body, "options");
+  const arrowParams = raw ? readFunctionParams(raw.trim()) : undefined;
+  const params = methodParams ?? arrowParams;
+  const hasDynamic = Boolean(methodParams)
+    || Boolean(raw && /^(?:async\s*)?(?:function\b|\([^)]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>)/.test(raw.trim()));
+  if (!hasDynamic) return undefined;
+  const contextKeys = contextKeysFromParams(params ?? "");
+  const haystack = `${params ?? ""}\n${raw ?? ""}`;
+  return {
+    paginated: /\bpage\b/.test(haystack),
+    usesPreviousContext: /\bprevContext\b/.test(haystack),
+    contextKeys,
+  };
+}
+
+function readFunctionParams(value) {
+  const match = /^(?:async\s*)?(?:\(([^)]*)\)|([A-Za-z_$][\w$]*))\s*=>/.exec(value);
+  return match?.[1] ?? match?.[2];
+}
+
+function contextKeysFromParams(params) {
+  const trimmed = params.trim();
+  if (!trimmed) return [];
+  const destructured = /^\s*{([^}]*)}/.exec(trimmed)?.[1];
+  if (destructured) {
+    return destructured
+      .split(",")
+      .map((part) => part.split(":")[0]?.replace(/[.\s{}[\]=]/g, "").trim())
+      .filter(Boolean)
+      .filter(unique)
+      .sort();
+  }
+  const first = /^[A-Za-z_$][\w$]*/.exec(trimmed)?.[0];
+  return first ? [first] : [];
 }
 
 function parseLiteral(raw) {

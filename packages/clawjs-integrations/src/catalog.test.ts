@@ -42,6 +42,11 @@ function fixtureCatalog(): ConnectorCatalog {
                 optional: true,
                 default: false,
                 options: [{ label: "Silent", value: true }],
+                dynamicOptions: {
+                  paginated: true,
+                  usesPreviousContext: false,
+                  contextKeys: ["page"],
+                },
               },
             ],
             authFieldNames: ["bot"],
@@ -112,6 +117,7 @@ describe("connector catalog", () => {
       hybridSources: 0,
       statefulSources: 1,
       dynamicPropOperations: 1,
+      dynamicOptionFields: 1,
       methodOperations: 2,
     });
     assert.equal(searchConnectorCatalog(catalog, { query: "send", kind: "action" }).length, 1);
