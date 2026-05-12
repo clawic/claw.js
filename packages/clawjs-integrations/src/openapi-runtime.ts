@@ -690,7 +690,7 @@ function responseSchemaForOperation(document: OpenApiDocument, operation: OpenAp
   const schema = responseBodySchema(document, operation);
   return {
     type: connectorRuntimeType(schema),
-    requiredPaths: requiredPathsForSchema(schema),
+    requiredPaths: requiredPathsForSchema(document, schema),
   };
 }
 
@@ -700,9 +700,24 @@ function responseBodySchema(document: OpenApiDocument, operation: OpenApiOperati
   return jsonContentSchema(document, response?.content);
 }
 
-function requiredPathsForSchema(schema: OpenApiSchema | undefined): string[] {
-  if (!schema || !Array.isArray(schema.required)) return [];
-  return schema.required.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+function requiredPathsForSchema(
+  document: OpenApiDocument,
+  schema: OpenApiSchema | undefined,
+  prefix = "",
+  seen = new Set<OpenApiSchema>(),
+): string[] {
+  const resolved = resolveOpenApiSchema(document, schema);
+  if (!resolved || seen.has(resolved)) return [];
+  seen.add(resolved);
+  return stringArray(resolved.required).flatMap((name) => {
+    if (!name.trim()) return [];
+    const path = prefix ? `${prefix}.${name}` : name;
+    const child = schemaProperty(document, resolved, name);
+    return [
+      path,
+      ...requiredPathsForSchema(document, child, path, seen),
+    ];
+  });
 }
 
 function connectorRuntimeType(schema: OpenApiSchema | undefined): ConnectorRuntimeOutputSchema["type"] {

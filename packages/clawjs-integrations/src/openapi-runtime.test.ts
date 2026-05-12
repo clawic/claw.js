@@ -448,6 +448,75 @@ describe("OpenAPI connector runtime", () => {
     });
   });
 
+  it("derives nested OpenAPI response required paths", () => {
+    const document = {
+      openapi: "3.0.0",
+      info: {
+        title: "Fixture Nested Outputs",
+        version: "2026-05-12",
+      },
+      servers: [{ url: "https://api.example.invalid/v1/" }],
+      components: {
+        schemas: {
+          owner: {
+            type: "object",
+            required: ["id"],
+            properties: {
+              id: { type: "string" },
+            },
+          },
+        },
+      },
+      paths: {
+        "/items/{itemId}": {
+          get: {
+            operationId: "getItem",
+            summary: "Get item",
+            parameters: [{
+              name: "itemId",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            }],
+            responses: {
+              "200": {
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      required: ["id", "owner"],
+                      properties: {
+                        id: { type: "string" },
+                        owner: { $ref: "#/components/schemas/owner" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const options = {
+      appId: "fixture_nested_outputs",
+      authFieldName: "apiKey",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(document, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(document, options)];
+    const operation = catalog.apps[0]?.operations[0];
+    assert.ok(operation);
+
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, {
+      itemId: "item_123",
+    }, { registry }).requestPlan?.responseSchema, {
+      type: "object",
+      requiredPaths: ["id", "owner", "owner.id"],
+    });
+  });
+
   it("infers api key auth bindings from OpenAPI security schemes", () => {
     const document = {
       ...FIXTURE_OPENAPI,
