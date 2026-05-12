@@ -66,6 +66,57 @@ describe("connector runtime fixtures", () => {
     });
   });
 
+  it("validates outgoing requests against request fixtures", async () => {
+    const fixtures = loadConnectorRuntimeFixtures([
+      {
+        kind: "request",
+        path: "packages/clawjs-integrations/fixtures/fixture-action-request.json",
+      },
+      {
+        kind: "response",
+        path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
+      },
+    ]);
+    const fetchImpl = createConnectorRuntimeFixtureFetch(fixtures);
+
+    const response = await fetchImpl("https://api.example.invalid/messages", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer offline-secret",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ text: "hello" }),
+    });
+
+    assert.deepEqual(await response.json(), { ok: true, id: "fixture_result" });
+  });
+
+  it("rejects outgoing request fixture mismatches", async () => {
+    const fixtures = loadConnectorRuntimeFixtures([
+      {
+        kind: "request",
+        path: "packages/clawjs-integrations/fixtures/fixture-action-request.json",
+      },
+      {
+        kind: "response",
+        path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
+      },
+    ]);
+    const fetchImpl = createConnectorRuntimeFixtureFetch(fixtures);
+
+    await assert.rejects(
+      () => fetchImpl("https://api.example.invalid/messages", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer offline-secret",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ text: "wrong" }),
+      }),
+      /request fixture body mismatch/,
+    );
+  });
+
   it("rejects fixture fetch mocks without response bodies", async () => {
     const fetchImpl = createConnectorRuntimeFixtureFetch([]);
 

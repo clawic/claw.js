@@ -123,6 +123,10 @@ const TELEGRAM_ACTION_EVIDENCE = [
 
 const TELEGRAM_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
   {
+    kind: "request",
+    path: "packages/clawjs-integrations/fixtures/telegram-send-message-request.json",
+  },
+  {
     kind: "response",
     path: "packages/clawjs-integrations/fixtures/telegram-send-message-response.json",
   },
@@ -133,6 +137,10 @@ const TELEGRAM_SOURCE_EVIDENCE = [
 ];
 
 const TELEGRAM_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = [
+  {
+    kind: "request",
+    path: "packages/clawjs-integrations/fixtures/telegram-get-updates-request.json",
+  },
   {
     kind: "source_event",
     path: "packages/clawjs-integrations/fixtures/telegram-get-updates-response.json",
