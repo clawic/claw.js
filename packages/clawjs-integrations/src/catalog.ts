@@ -240,11 +240,13 @@ function normalizeOperation(input: unknown, appId: string): ConnectorOperationDe
     throw new ConnectorCatalogError(`Operation for ${appId} must be an object.`);
   }
   const id = requiredString(input.id, "operation.id");
-  const kind = input.kind === "source" ? "source" : "action";
+  if (input.kind !== "action" && input.kind !== "source") {
+    throw new ConnectorCatalogError(`Unsupported operation kind for ${id}: ${String(input.kind ?? "<missing>")}`);
+  }
   return {
     id,
     appId: stringValue(input.appId) ?? appId,
-    kind,
+    kind: input.kind,
     ...(typeof input.key === "string" ? { key: input.key } : {}),
     name: stringValue(input.name) ?? id,
     ...(typeof input.description === "string" ? { description: input.description } : {}),

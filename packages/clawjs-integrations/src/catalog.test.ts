@@ -128,6 +128,29 @@ describe("connector catalog", () => {
     );
   });
 
+  it("rejects unknown operation kinds", () => {
+    assert.throws(
+      () => normalizeConnectorCatalog({
+        version: 1,
+        apps: [{
+          id: "chat_service",
+          name: "Chat Service",
+          authFieldNames: [],
+          fields: [],
+          operations: [{
+            id: "chat_service.trigger.new-message",
+            appId: "chat_service",
+            kind: "trigger",
+            name: "New Message",
+            fields: [],
+            authFieldNames: [],
+          }],
+        }],
+      }),
+      /Unsupported operation kind for chat_service\.trigger\.new-message: trigger/,
+    );
+  });
+
   it("normalizes, searches, and summarizes apps and operations", () => {
     const catalog = fixtureCatalog();
     assert.deepEqual(summarizeConnectorCatalog(catalog), {
