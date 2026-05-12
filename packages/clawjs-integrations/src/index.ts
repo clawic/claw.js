@@ -37,6 +37,7 @@ export {
 export {
   ConnectorRuntimeHttpError,
   buildConnectorRuntimeFetchRequest,
+  executeConnectorRuntimePaginatedRequestPlan,
   executeConnectorRuntimeRequestPlan,
 } from "./runtime-http.js";
 export type {
@@ -83,12 +84,15 @@ export type {
   ConnectorRuntimeImplementation,
   ConnectorRuntimePlanKind,
   ConnectorRuntimePlanDetails,
+  ConnectorRuntimePaginationMode,
+  ConnectorRuntimePaginationPlan,
   ConnectorRuntimeRequestPlan,
   ConnectorRuntimeSourcePlan,
 } from "./runtime-registry.js";
 export type {
   ConnectorRuntimeHttpInput,
   ConnectorRuntimeHttpOptions,
+  ConnectorRuntimeHttpPaginationResult,
   ConnectorRuntimeHttpResponse,
 } from "./runtime-http.js";
 export { telegramAdapter } from "./telegram.js";

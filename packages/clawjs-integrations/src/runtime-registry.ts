@@ -44,6 +44,21 @@ export interface ConnectorRuntimeRequestPlan {
   query?: Record<string, IntegrationJson>;
   body: Record<string, IntegrationJson>;
   bodyEncoding?: "json" | "form" | "none";
+  pagination?: ConnectorRuntimePaginationPlan;
+}
+
+export type ConnectorRuntimePaginationMode = "cursor" | "offset" | "next_url";
+
+export interface ConnectorRuntimePaginationPlan {
+  mode: ConnectorRuntimePaginationMode;
+  itemsPath?: string;
+  nextCursorPath?: string;
+  nextUrlPath?: string;
+  cursorParam?: string;
+  offsetParam?: string;
+  limitParam?: string;
+  pageSize?: number;
+  maxPages?: number;
 }
 
 export interface ConnectorRuntimeSourcePlan {

@@ -21,6 +21,11 @@ export interface ConnectorRuntimeHttpResponse {
   body: IntegrationJson;
 }
 
+export interface ConnectorRuntimeHttpPaginationResult {
+  responses: ConnectorRuntimeHttpResponse[];
+  items: IntegrationJson[];
+}
+
 export class ConnectorRuntimeHttpError extends Error {
   readonly response: ConnectorRuntimeHttpResponse;
 
@@ -47,6 +52,46 @@ export async function executeConnectorRuntimeRequestPlan(
   return parsed;
 }
 
+export async function executeConnectorRuntimePaginatedRequestPlan(
+  input: ConnectorRuntimeHttpInput,
+): Promise<ConnectorRuntimeHttpPaginationResult> {
+  const pagination = input.plan.pagination;
+  if (!pagination) {
+    const response = await executeConnectorRuntimeRequestPlan(input);
+    return { responses: [response], items: itemsFromResponse(response.body, undefined) };
+  }
+  const maxPages = pagination.maxPages ?? 100;
+  const responses: ConnectorRuntimeHttpResponse[] = [];
+  const items: IntegrationJson[] = [];
+  let nextCursor: IntegrationJson | undefined;
+  let nextUrl: string | undefined;
+  let offset = numberFromJson(input.plan.query?.[pagination.offsetParam ?? "offset"] ?? 0);
+
+  for (let page = 0; page < maxPages; page += 1) {
+    const plan = requestPlanForPage(input.plan, { nextCursor, nextUrl, offset });
+    const response = await executeConnectorRuntimeRequestPlan({ ...input, plan });
+    responses.push(response);
+    const pageItems = itemsFromResponse(response.body, pagination.itemsPath);
+    items.push(...pageItems);
+
+    if (pagination.mode === "next_url") {
+      nextUrl = stringFromJson(valueAtPath(response.body, pagination.nextUrlPath ?? "next"));
+      if (!nextUrl) break;
+      continue;
+    }
+    if (pagination.mode === "cursor") {
+      nextCursor = valueAtPath(response.body, pagination.nextCursorPath ?? "next_cursor");
+      if (nextCursor == null || nextCursor === "") break;
+      continue;
+    }
+    const pageSize = pagination.pageSize ?? numberFromJson(input.plan.query?.[pagination.limitParam ?? "limit"]);
+    if (!pageSize || pageItems.length < pageSize) break;
+    offset += pageSize;
+  }
+
+  return { responses, items };
+}
+
 export function buildConnectorRuntimeFetchRequest(input: ConnectorRuntimeHttpInput): {
   url: string;
   init: RequestInit;
@@ -70,6 +115,25 @@ export function buildConnectorRuntimeFetchRequest(input: ConnectorRuntimeHttpInp
   const body = requestBody(input.plan, headers);
   if (body !== undefined && method !== "GET" && method !== "HEAD") init.body = body;
   return { url: url.toString(), init };
+}
+
+function requestPlanForPage(
+  plan: ConnectorRuntimeRequestPlan,
+  page: { nextCursor: IntegrationJson | undefined; nextUrl: string | undefined; offset: number },
+): ConnectorRuntimeRequestPlan {
+  const pagination = plan.pagination;
+  if (!pagination) return plan;
+  if (pagination.mode === "next_url" && page.nextUrl) {
+    return { ...plan, url: page.nextUrl, query: {} };
+  }
+  const query = { ...(plan.query ?? {}) };
+  if (pagination.mode === "cursor" && page.nextCursor != null && pagination.cursorParam) {
+    query[pagination.cursorParam] = page.nextCursor;
+  }
+  if (pagination.mode === "offset" && pagination.offsetParam) {
+    query[pagination.offsetParam] = page.offset;
+  }
+  return { ...plan, query };
 }
 
 function applyAuthBinding(input: {
@@ -169,4 +233,27 @@ function parseRuntimeHttpBody(text: string, contentType: string): IntegrationJso
     return JSON.parse(text) as IntegrationJson;
   }
   return text;
+}
+
+function valueAtPath(value: IntegrationJson, path: string | undefined): IntegrationJson | undefined {
+  if (!path) return value;
+  let current: IntegrationJson | undefined = value;
+  for (const segment of path.split(".").filter(Boolean)) {
+    if (!current || typeof current !== "object" || Array.isArray(current)) return undefined;
+    current = current[segment];
+  }
+  return current;
+}
+
+function itemsFromResponse(body: IntegrationJson, path: string | undefined): IntegrationJson[] {
+  const value = valueAtPath(body, path);
+  return Array.isArray(value) ? value : [];
+}
+
+function stringFromJson(value: IntegrationJson | undefined): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function numberFromJson(value: IntegrationJson | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
