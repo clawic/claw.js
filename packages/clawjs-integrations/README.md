@@ -107,6 +107,7 @@ Runtime implementations that cover multiple operations must attach offline fixtu
 Webhook sources can reuse `handleConnectorRuntimeWebhook` to extract events from an incoming payload with the same registered source plan used by dry-runs and audits. This keeps webhook validation offline-friendly: tests can pass fixture payloads directly, without opening a real HTTP endpoint or contacting the provider.
 
 REST providers that publish OpenAPI 3 documents can use `buildOpenApiConnectorCatalog` and `createOpenApiConnectorRuntimeImplementation` to produce action catalogs and HTTP request plans from a supplied spec. The spec remains external input; the package does not vendor provider specifications.
+The OpenAPI runtime infers conservative offset, cursor, and next-URL pagination plans from common query parameters and response schemas, then replays them through the same offline fixture executor used by hand-written runtimes.
 
 Add `--execute-offline` to replay implemented runtimes against their local fixtures with intercepted fetch:
 
