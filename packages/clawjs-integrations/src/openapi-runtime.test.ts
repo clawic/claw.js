@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   buildOpenApiConnectorCatalog,
+  createOpenApiConnectorRuntimeImplementations,
   createOpenApiConnectorRuntimeImplementation,
 } from "./openapi-runtime.ts";
 import {
@@ -10,6 +11,7 @@ import {
   verifyConnectorRuntimeCoverage,
   verifyConnectorRuntimeOfflineExecutions,
 } from "./runtime-coverage.ts";
+import { handleConnectorRuntimeWebhook } from "./runtime-webhook.ts";
 
 const FIXTURE_OPENAPI = {
   openapi: "3.0.0",
@@ -102,6 +104,47 @@ const FIXTURE_OPENAPI = {
                     id: { type: "string" },
                     name: { type: "string" },
                   },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+const FIXTURE_OPENAPI_WITH_WEBHOOK = {
+  ...FIXTURE_OPENAPI,
+  webhooks: {
+    itemEvents: {
+      post: {
+        operationId: "itemEvents",
+        summary: "Item events",
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["events"],
+                properties: {
+                  events: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
                 },
               },
             },
@@ -248,5 +291,75 @@ describe("OpenAPI connector runtime", () => {
       placement: "header",
       name: "x-api-key",
     }]);
+  });
+
+  it("builds webhook sources from OpenAPI webhook operations", async () => {
+    const options = {
+      appId: "fixture_commerce",
+      authFieldName: "apiKey",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [
+        {
+          kind: "request" as const,
+          operationId: "fixture_commerce.action.list-customer-items",
+          path: "packages/clawjs-integrations/fixtures/openapi-list-items-request.json",
+        },
+        {
+          kind: "response" as const,
+          operationId: "fixture_commerce.action.list-customer-items",
+          path: "packages/clawjs-integrations/fixtures/openapi-list-items-response.json",
+        },
+        {
+          kind: "request" as const,
+          operationId: "fixture_commerce.action.create-customer-item",
+          path: "packages/clawjs-integrations/fixtures/openapi-create-item-request.json",
+        },
+        {
+          kind: "response" as const,
+          operationId: "fixture_commerce.action.create-customer-item",
+          path: "packages/clawjs-integrations/fixtures/openapi-create-item-response.json",
+        },
+        {
+          kind: "source_event" as const,
+          operationId: "fixture_commerce.source.item-events",
+          path: "packages/clawjs-integrations/fixtures/openapi-webhook-event.json",
+        },
+      ],
+    };
+    const catalog = buildOpenApiConnectorCatalog(FIXTURE_OPENAPI_WITH_WEBHOOK, options);
+    const registry = createOpenApiConnectorRuntimeImplementations(FIXTURE_OPENAPI_WITH_WEBHOOK, options);
+    const operation = catalog.apps[0]?.operations.find((candidate) => candidate.id === "fixture_commerce.source.item-events");
+    assert.ok(operation);
+
+    assert.equal(operation.kind, "source");
+    assert.deepEqual(operation.source, {
+      delivery: "webhook",
+      usesTimer: false,
+      usesHttp: true,
+      usesServiceDb: false,
+    });
+    assert.deepEqual(buildConnectorOperationRuntimePlan(operation, {}, { registry }).sourcePlan, {
+      delivery: "webhook",
+      hooks: [],
+      eventsPath: "events",
+    });
+
+    const coverage = verifyConnectorRuntimeCoverage(catalog, { registry });
+    assert.equal(coverage.summary.implemented, 3);
+    assert.equal(coverage.summary.missing, 0);
+
+    const offline = await verifyConnectorRuntimeOfflineExecutions(catalog, { registry });
+    assert.deepEqual(offline.results.map((result) => result.operationId), [
+      "fixture_commerce.action.create-customer-item",
+      "fixture_commerce.source.item-events",
+      "fixture_commerce.action.list-customer-items",
+    ]);
+    assert.deepEqual(handleConnectorRuntimeWebhook({
+      operation,
+      registry,
+      payload: {
+        events: [{ id: "evt_1" }],
+      },
+    }).events, [{ id: "evt_1" }]);
   });
 });

@@ -6,6 +6,7 @@ import {
   CONNECTOR_RUNTIME_REGISTRY,
   createConnectorOperationExecutor,
   createConnectorSourceExecutor,
+  extractConnectorRuntimeSourceEvents,
   findConnectorRuntimeImplementation,
   type ConnectorRuntimeFixture,
   type ConnectorRuntimeExecutorOptions,
@@ -202,7 +203,7 @@ export function verifyConnectorRuntimeCoverage(
         if (!implementation?.planKinds.includes("request")) errors.push(`runtime implementation for ${entry.operationId} requires a request plan kind`);
       }
       if (operation?.kind === "source") {
-        if (!hasSourceExecutor(implementation)) errors.push(`runtime implementation for ${entry.operationId} requires a registered source executor`);
+        if (!hasSourceExecutor(implementation, operation)) errors.push(`runtime implementation for ${entry.operationId} requires a registered source executor`);
         if (!implementation?.planKinds.includes("source")) errors.push(`runtime implementation for ${entry.operationId} requires a source plan kind`);
         if ((operation.source?.delivery === "polling" || operation.source?.delivery === "hybrid") && !implementation?.planKinds.includes("request")) {
           errors.push(`runtime implementation for ${entry.operationId} requires a request plan kind for polling delivery`);
@@ -314,6 +315,12 @@ async function executeRuntimeImplementationOffline(input: {
       const executor = createConnectorOperationExecutor(input.operation, runtimeExecutorOptions, [input.implementation]);
       if (!executor) throw new Error("missing action executor");
       await executor.execute({ operation: input.operation, values, secrets });
+    } else if (usesWebhookSourceHandler(input.implementation, input.operation)) {
+      const details = input.implementation.buildPlan?.(input.operation, values);
+      if (!details?.sourcePlan) throw new Error("missing webhook source plan");
+      const fixture = fixtures.find((item) => item.kind === "source_event");
+      if (!fixture) throw new Error("missing webhook source event fixture");
+      extractConnectorRuntimeSourceEvents(fixture.body, details.sourcePlan);
     } else {
       const executor = createConnectorSourceExecutor(input.operation, runtimeExecutorOptions, [input.implementation]);
       if (!executor) throw new Error("missing source executor");
@@ -424,8 +431,15 @@ function hasActionExecutor(implementation: ConnectorRuntimeImplementation | null
   return Boolean(implementation?.createExecutor || usesGenericHttpActionExecutor(implementation));
 }
 
-function hasSourceExecutor(implementation: ConnectorRuntimeImplementation | null): boolean {
-  return Boolean(implementation?.createSourceExecutor || usesGenericHttpSourceExecutor(implementation));
+function hasSourceExecutor(
+  implementation: ConnectorRuntimeImplementation | null,
+  operation: ConnectorOperationDefinition | null,
+): boolean {
+  return Boolean(
+    implementation?.createSourceExecutor
+    || usesGenericHttpSourceExecutor(implementation)
+    || usesWebhookSourceHandler(implementation, operation),
+  );
 }
 
 function usesGenericHttpActionExecutor(implementation: ConnectorRuntimeImplementation | null): boolean {
@@ -438,6 +452,19 @@ function usesGenericHttpSourceExecutor(implementation: ConnectorRuntimeImplement
     && implementation.buildPlan
     && implementation.planKinds.includes("request")
     && implementation.planKinds.includes("source"),
+  );
+}
+
+function usesWebhookSourceHandler(
+  implementation: ConnectorRuntimeImplementation | null,
+  operation: ConnectorOperationDefinition | null,
+): boolean {
+  return Boolean(
+    operation?.kind === "source"
+    && operation.source?.delivery === "webhook"
+    && implementation?.buildPlan
+    && implementation.planKinds.includes("source")
+    && !implementation.planKinds.includes("request"),
   );
 }
 

@@ -738,6 +738,63 @@ describe("connector runtime coverage", () => {
     assert.deepEqual(offlineReport.errors, []);
   });
 
+  it("verifies webhook source runtimes through source event fixtures", async () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [{
+          id: "fixture_service.source.new-records",
+          appId: "fixture_service",
+          kind: "source",
+          name: "New Records",
+          fields: [],
+          authFieldNames: [],
+          source: {
+            delivery: "webhook",
+            usesTimer: false,
+            usesHttp: true,
+            usesServiceDb: false,
+          },
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "source",
+      executorId: "fixture.source.webhook",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [SOURCE_EVENT_FIXTURE],
+      planKinds: ["source"],
+      supports: (operation) => operation.id === "fixture_service.source.new-records",
+      buildPlan: (operation) => ({
+        sourcePlan: {
+          delivery: operation.source?.delivery ?? "manual",
+          hooks: [],
+        },
+      }),
+    }];
+
+    const coverage = verifyConnectorRuntimeCoverage(catalog, { registry });
+    assert.equal(coverage.summary.implemented, 1);
+
+    const offlineReport = await verifyConnectorRuntimeOfflineExecutions(catalog, { registry });
+    assert.deepEqual(offlineReport, {
+      results: [{
+        operationId: "fixture_service.source.new-records",
+        appId: "fixture_service",
+        kind: "source",
+        executorId: "fixture.source.webhook",
+        ok: true,
+      }],
+      errors: [],
+    });
+  });
+
   it("reports runtime fixture execution failures", async () => {
     const catalog = normalizeConnectorCatalog({
       version: 1,

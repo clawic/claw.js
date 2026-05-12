@@ -48,6 +48,7 @@ export {
 } from "./runtime-webhook.js";
 export {
   buildOpenApiConnectorCatalog,
+  createOpenApiConnectorRuntimeImplementations,
   createOpenApiConnectorRuntimeImplementation,
 } from "./openapi-runtime.js";
 export {

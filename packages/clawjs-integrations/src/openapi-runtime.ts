@@ -29,6 +29,7 @@ interface OpenApiDocument {
   security?: OpenApiSecurityRequirement[];
   servers?: Array<{ url?: unknown }>;
   paths?: Record<string, OpenApiPathItem | undefined>;
+  webhooks?: Record<string, OpenApiPathItem | undefined>;
 }
 
 type OpenApiSecurityRequirement = Record<string, unknown[]>;
@@ -104,6 +105,11 @@ interface OpenApiConnectorAuthBinding {
   description?: string;
 }
 
+interface OpenApiConnectorSourceMetadata {
+  id: string;
+  eventsPath?: string;
+}
+
 interface OpenApiConnectorParameterBinding {
   fieldName: string;
   sourceName: string;
@@ -137,8 +143,9 @@ export function buildOpenApiConnectorCatalog(
   options: OpenApiConnectorRuntimeOptions,
 ): ConnectorCatalog {
   const openapi = asOpenApiDocument(document);
-  const operations = collectOpenApiOperations(openapi, options);
-  const fields = authFieldsForOperations(operations);
+  const actions = collectOpenApiOperations(openapi, options);
+  const sources = collectOpenApiWebhookSources(openapi, options);
+  const fields = authFieldsForOperations(actions);
   return normalizeConnectorCatalog({
     version: 1,
     apps: [{
@@ -148,9 +155,29 @@ export function buildOpenApiConnectorCatalog(
       ...optionalString("packageVersion", stringValue(openapi.info?.version)),
       authFieldNames: fields.map((field) => field.name),
       fields,
-      operations: operations.map((operation) => operation.definition),
+      operations: [
+        ...actions.map((operation) => operation.definition),
+        ...sources.map((source) => source.definition),
+      ],
     }],
   });
+}
+
+export function createOpenApiConnectorRuntimeImplementations(
+  document: unknown,
+  options: OpenApiConnectorRuntimeOptions,
+): ConnectorRuntimeImplementation[] {
+  const openapi = asOpenApiDocument(document);
+  const implementations: ConnectorRuntimeImplementation[] = [];
+  const actions = collectOpenApiOperations(openapi, options);
+  if (actions.length > 0) {
+    implementations.push(createOpenApiConnectorRuntimeImplementation(document, options));
+  }
+  const sources = collectOpenApiWebhookSources(openapi, options);
+  if (sources.length > 0) {
+    implementations.push(createOpenApiWebhookRuntimeImplementation(options, sources));
+  }
+  return implementations;
 }
 
 export function createOpenApiConnectorRuntimeImplementation(
@@ -177,6 +204,36 @@ export function createOpenApiConnectorRuntimeImplementation(
       }
       return {
         requestPlan: buildOpenApiRequestPlan(metadata, values, options),
+      };
+    },
+  };
+}
+
+function createOpenApiWebhookRuntimeImplementation(
+  options: OpenApiConnectorRuntimeOptions,
+  sources: Array<{ definition: ConnectorOperationDefinition; metadata: OpenApiConnectorSourceMetadata }>,
+): ConnectorRuntimeImplementation {
+  const metadataById = new Map(sources.map((source) => [source.definition.id, source.metadata]));
+  return {
+    appId: options.appId,
+    kind: "source",
+    executorId: `${options.executorId ?? `${options.appId}.openapi`}.webhook`,
+    offlineValidated: options.offlineValidated ?? true,
+    evidence: options.evidence,
+    fixtures: options.fixtures,
+    planKinds: ["source"],
+    supports: (operation) => operation.appId === options.appId && metadataById.has(operation.id),
+    buildPlan: (operation) => {
+      const metadata = metadataById.get(operation.id);
+      if (!metadata) {
+        throw new Error(`OpenAPI webhook runtime does not support operation: ${operation.id}`);
+      }
+      return {
+        sourcePlan: {
+          delivery: "webhook",
+          hooks: [],
+          ...(metadata.eventsPath ? { eventsPath: metadata.eventsPath } : {}),
+        },
       };
     },
   };
@@ -277,6 +334,81 @@ function collectOpenApiOperations(
       }];
     });
   });
+}
+
+function collectOpenApiWebhookSources(
+  document: OpenApiDocument,
+  options: OpenApiConnectorRuntimeOptions,
+): Array<{ definition: ConnectorOperationDefinition; metadata: OpenApiConnectorSourceMetadata }> {
+  return Object.entries(document.webhooks ?? {}).flatMap(([name, pathItem]) => {
+    const operation = pathItem?.post ?? pathItem?.put ?? pathItem?.patch;
+    if (!operation) return [];
+    const slug = operationSlug("webhook", name, stringValue(operation.operationId) ?? name);
+    const id = `${options.appId}.source.${slug}`;
+    const eventsPath = requestBodyEventsPath(operation.requestBody);
+    return [{
+      metadata: {
+        id,
+        ...(eventsPath ? { eventsPath } : {}),
+      },
+      definition: {
+        id,
+        appId: options.appId,
+        kind: "source",
+        key: slug,
+        name: stringValue(operation.summary) ?? titleize(stringValue(operation.operationId) ?? name),
+        ...optionalString("description", stringValue(operation.description)),
+        fields: [],
+        authFieldNames: [],
+        runtime: {
+          hasRun: true,
+          hasHooks: false,
+          hookNames: [],
+          hasAdditionalProps: false,
+          hasMethods: false,
+          methodNames: [],
+        },
+        source: {
+          delivery: "webhook",
+          usesTimer: false,
+          usesHttp: true,
+          usesServiceDb: false,
+        },
+        ...optionalSampleEventMetadata(requestBodySchema(operation.requestBody)),
+      },
+    }];
+  });
+}
+
+function requestBodyEventsPath(requestBody: OpenApiRequestBody | undefined): string | undefined {
+  const schema = requestBodySchema(requestBody);
+  if (!schema) return undefined;
+  if (stringValue(schema.type) === "array") return undefined;
+  const properties = schema.properties ?? {};
+  for (const name of ["data", "events", "items", "records"]) {
+    if (stringValue(properties[name]?.type) === "array") return name;
+  }
+  return Object.entries(properties).find(([, property]) => stringValue(property?.type) === "array")?.[0];
+}
+
+function requestBodySchema(requestBody: OpenApiRequestBody | undefined): OpenApiSchema | undefined {
+  return jsonContentSchema(requestBody?.content);
+}
+
+function optionalSampleEventMetadata(schema: OpenApiSchema | undefined): Pick<ConnectorOperationDefinition, "sampleEvent"> | Record<string, never> {
+  if (!schema) return {};
+  return {
+    sampleEvent: {
+      shape: sampleEventShape(schema),
+      keys: Object.keys(schema.properties ?? {}).sort((left, right) => left.localeCompare(right)),
+    },
+  };
+}
+
+function sampleEventShape(schema: OpenApiSchema): "object" | "array" | "string" | "unknown" {
+  const type = stringValue(schema.type);
+  if (type === "object" || type === "array" || type === "string") return type;
+  return "unknown";
 }
 
 function authFieldsForOperations(
