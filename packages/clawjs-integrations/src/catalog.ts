@@ -71,15 +71,19 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       summary.apps += 1;
       summary.fields += app.fields.length;
       summary.authFields += app.authFieldNames.length;
+      summary.defaults += app.fields.filter((field) => Object.prototype.hasOwnProperty.call(field, "default")).length;
+      summary.options += app.fields.filter((field) => field.options?.length).length;
       for (const operation of app.operations) {
         if (operation.kind === "action") summary.actions += 1;
         else summary.sources += 1;
         summary.fields += operation.fields.length;
         summary.authFields += operation.authFieldNames.length;
+        summary.defaults += operation.fields.filter((field) => Object.prototype.hasOwnProperty.call(field, "default")).length;
+        summary.options += operation.fields.filter((field) => field.options?.length).length;
       }
       return summary;
     },
-    { apps: 0, actions: 0, sources: 0, fields: 0, authFields: 0 },
+    { apps: 0, actions: 0, sources: 0, fields: 0, authFields: 0, defaults: 0, options: 0 },
   );
 }
 

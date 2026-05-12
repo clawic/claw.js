@@ -68,6 +68,8 @@ export interface ConnectorCatalogSummary {
   sources: number;
   fields: number;
   authFields: number;
+  defaults: number;
+  options: number;
 }
 
 export interface ConnectorOperationInput {

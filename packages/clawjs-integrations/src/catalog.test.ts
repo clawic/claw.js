@@ -30,7 +30,13 @@ function fixtureCatalog(): ConnectorCatalog {
             fields: [
               { name: "channel", type: "string", optional: false },
               { name: "text", type: "string", optional: false },
-              { name: "silent", type: "boolean", optional: true, default: false },
+              {
+                name: "silent",
+                type: "boolean",
+                optional: true,
+                default: false,
+                options: [{ label: "Silent", value: true }],
+              },
             ],
             authFieldNames: ["bot"],
           },
@@ -59,6 +65,8 @@ describe("connector catalog", () => {
       sources: 1,
       fields: 5,
       authFields: 3,
+      defaults: 1,
+      options: 1,
     });
     assert.equal(searchConnectorCatalog(catalog, { query: "send", kind: "action" }).length, 1);
     assert.equal(searchConnectorCatalog(catalog, { query: "send", kind: "source" }).length, 0);

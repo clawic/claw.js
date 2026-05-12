@@ -11,6 +11,8 @@ interface CatalogSummary {
   sources: number;
   fields: number;
   authFields: number;
+  defaults: number;
+  options: number;
 }
 
 interface CatalogField {
@@ -19,6 +21,8 @@ interface CatalogField {
   label?: string;
   description?: string;
   optional: boolean;
+  default?: unknown;
+  options?: Array<{ label?: string; value: string | number | boolean; description?: string }>;
   secret?: boolean;
 }
 
@@ -158,6 +162,8 @@ export default function ConnectorsPage() {
             <span>{catalog?.summary.actions ?? 0} actions</span>
             <span>{catalog?.summary.sources ?? 0} sources</span>
             <span>{catalog?.summary.fields ?? 0} fields</span>
+            <span>{catalog?.summary.defaults ?? 0} defaults</span>
+            <span>{catalog?.summary.options ?? 0} option sets</span>
           </div>
           {catalog && !catalog.configured ? (
             <p className="text-[11px] text-muted-foreground mt-2 font-mono">Catalog not found at {catalog.path}</p>
@@ -215,7 +221,9 @@ export default function ConnectorsPage() {
                       {requiredFields.map((field) => (
                         <div key={field.name} className="flex items-center justify-between text-[12px]">
                           <span className="text-foreground">{field.label ?? field.name}</span>
-                          <span className="text-muted-foreground font-mono">{field.type}</span>
+                          <span className="text-muted-foreground font-mono">
+                            {field.type}{field.default === undefined ? "" : " = default"}{field.options?.length ? ` · ${field.options.length} opts` : ""}
+                          </span>
                         </div>
                       ))}
                     </div>
