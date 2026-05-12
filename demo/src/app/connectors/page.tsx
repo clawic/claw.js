@@ -11,6 +11,7 @@ interface CatalogSummary {
   sources: number;
   fields: number;
   authFields: number;
+  managedFields: number;
   defaults: number;
   options: number;
   annotatedOperations: number;
@@ -33,6 +34,7 @@ interface CatalogField {
   default?: unknown;
   options?: Array<{ label?: string; value: string | number | boolean; description?: string }>;
   secret?: boolean;
+  managed?: boolean;
 }
 
 interface CatalogOperation {
@@ -108,7 +110,7 @@ export default function ConnectorsPage() {
   }, [loadCatalog]);
 
   const requiredFields = useMemo(() => (
-    selected?.operation.fields.filter((field) => !field.optional && !field.secret) ?? []
+    selected?.operation.fields.filter((field) => !field.optional && !field.secret && !field.managed) ?? []
   ), [selected]);
 
   useEffect(() => {
@@ -195,6 +197,7 @@ export default function ConnectorsPage() {
             <span>{catalog?.summary.actions ?? 0} actions</span>
             <span>{catalog?.summary.sources ?? 0} sources</span>
             <span>{catalog?.summary.fields ?? 0} fields</span>
+            <span>{catalog?.summary.managedFields ?? 0} managed</span>
             <span>{catalog?.summary.defaults ?? 0} defaults</span>
             <span>{catalog?.summary.options ?? 0} option sets</span>
             <span>{catalog?.summary.annotatedOperations ?? 0} annotated</span>
@@ -342,6 +345,7 @@ function buildValuesTemplate(operation: CatalogOperation): Record<string, unknow
   return Object.fromEntries(
     operation.fields
       .filter((field) => !field.secret && (!field.optional || field.default !== undefined || field.options?.length))
+      .filter((field) => !field.managed)
       .map((field) => [field.name, sampleValue(field)]),
   );
 }

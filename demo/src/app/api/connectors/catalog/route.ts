@@ -37,6 +37,7 @@ export async function GET(req: NextRequest) {
         sources: 0,
         fields: 0,
         authFields: 0,
+        managedFields: 0,
         defaults: 0,
         options: 0,
         annotatedOperations: 0,
