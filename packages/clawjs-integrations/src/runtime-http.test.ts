@@ -155,6 +155,24 @@ describe("connector runtime http transport", () => {
     assert.deepEqual(response.body, { ok: true });
   });
 
+  it("parses structured JSON suffix responses", async () => {
+    const response = await executeConnectorRuntimeRequestPlan({
+      baseUrl: "https://api.example.invalid/",
+      secrets: {},
+      plan: {
+        method: "GET",
+        endpoint: "items",
+        auth: [],
+        body: {},
+      },
+      fetchImpl: async () => new Response("{\"detail\":\"accepted\"}", {
+        headers: { "content-type": "application/problem+json; charset=utf-8" },
+      }),
+    });
+
+    assert.deepEqual(response.body, { detail: "accepted" });
+  });
+
   it("rejects successful responses that fail the response schema", async () => {
     await assert.rejects(
       () => executeConnectorRuntimeRequestPlan({

@@ -320,10 +320,15 @@ async function parseRuntimeHttpResponse(response: Response): Promise<ConnectorRu
 
 function parseRuntimeHttpBody(text: string, contentType: string): IntegrationJson {
   if (!text) return null;
-  if (contentType.includes("application/json")) {
+  if (isJsonContentType(contentType)) {
     return JSON.parse(text) as IntegrationJson;
   }
   return text;
+}
+
+function isJsonContentType(contentType: string): boolean {
+  const mediaType = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
+  return mediaType === "application/json" || mediaType.endsWith("+json");
 }
 
 function isRetryableStatus(status: number): boolean {
