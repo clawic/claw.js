@@ -87,6 +87,76 @@ describe("connector runtime webhooks", () => {
     });
   });
 
+  it("flattens source events through nested array path segments", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: [],
+        fields: [],
+        operations: [{
+          id: "fixture_service.source.nested-records",
+          appId: "fixture_service",
+          kind: "source",
+          name: "Nested Records",
+          fields: [],
+          authFieldNames: [],
+          source: {
+            delivery: "webhook",
+            usesTimer: false,
+            usesHttp: true,
+            usesServiceDb: false,
+          },
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "source",
+      executorId: "fixture.source.webhook",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-webhook.test.ts"],
+      fixtures: [{
+        kind: "source_event",
+        path: "packages/clawjs-integrations/fixtures/fixture-action-response.json",
+      }],
+      planKinds: ["source"],
+      supports: (operation) => operation.id === "fixture_service.source.nested-records",
+      buildPlan: (operation) => ({
+        sourcePlan: {
+          delivery: operation.source?.delivery ?? "manual",
+          hooks: [],
+          eventsPath: "entry.changes.value.records",
+        },
+      }),
+    }];
+    const operation = catalog.apps[0]?.operations[0];
+    assert.ok(operation);
+
+    const result = handleConnectorRuntimeWebhook({
+      operation,
+      registry,
+      payload: {
+        entry: [{
+          changes: [{
+            value: {
+              records: [{ id: "evt_1" }],
+            },
+          }],
+        }, {
+          changes: [{
+            value: {
+              records: [{ id: "evt_2" }],
+            },
+          }],
+        }],
+      },
+    });
+
+    assert.deepEqual(result.events, [{ id: "evt_1" }, { id: "evt_2" }]);
+  });
+
   it("rejects non-webhook source deliveries", () => {
     const catalog = normalizeConnectorCatalog({
       version: 1,

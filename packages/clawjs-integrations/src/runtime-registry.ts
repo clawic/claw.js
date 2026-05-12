@@ -452,10 +452,11 @@ function recordFromRuntimeOutput(output: IntegrationJson): Record<string, Integr
 }
 
 function eventsFromRuntimeSourceResponse(body: IntegrationJson, eventsPath: string | undefined): IntegrationJson[] {
-  const value = valueAtRuntimePath(body, eventsPath);
-  if (Array.isArray(value)) return value;
-  if (value == null) return [];
-  return [value];
+  return valuesAtRuntimePath(body, eventsPath).flatMap((value) => {
+    if (Array.isArray(value)) return value;
+    if (value == null) return [];
+    return [value];
+  });
 }
 
 function cursorOutputsFromRuntimeSourceResponse(
@@ -480,4 +481,20 @@ function valueAtRuntimePath(value: IntegrationJson, path: string | undefined): I
     current = current[segment];
   }
   return current;
+}
+
+function valuesAtRuntimePath(value: IntegrationJson, path: string | undefined): IntegrationJson[] {
+  if (!path) return [value];
+  return valuesAtRuntimePathSegments(value, path.split(".").filter(Boolean));
+}
+
+function valuesAtRuntimePathSegments(value: IntegrationJson | undefined, segments: string[]): IntegrationJson[] {
+  if (value == null) return [];
+  if (segments.length === 0) return [value];
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => valuesAtRuntimePathSegments(entry, segments));
+  }
+  if (typeof value !== "object") return [];
+  const [segment, ...rest] = segments;
+  return valuesAtRuntimePathSegments(value[segment], rest);
 }
