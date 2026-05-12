@@ -223,6 +223,8 @@ function verify(catalog, expectedApps) {
       compareAnnotations(operationId, expectedOperation.annotations, operation.annotations, errors);
       compareRuntime(operationId, expectedOperation.runtime, operation.runtime, errors);
       compareSourceCapabilities(operationId, expectedOperation.sourceCapabilities, operation.source, errors);
+      compareSampleEvent(operationId, expectedOperation.sampleEvent, operation.sampleEvent, errors);
+      compareEventSummary(operationId, expectedOperation.eventSummary, operation.eventSummary, errors);
     }
   }
 
@@ -658,6 +660,27 @@ function compareSourceCapabilities(operationId, expected, actual, errors) {
   }
 }
 
+function compareSampleEvent(operationId, expected, actual, errors) {
+  if (!expected && !actual) return;
+  if (!expected || !actual) {
+    errors.push(`operation ${operationId} sampleEvent ${actual ? "present" : "<missing>"} expected ${expected ? "present" : "<missing>"}`);
+    return;
+  }
+  if (actual.shape !== expected.shape) errors.push(`operation ${operationId} sampleEvent shape ${actual.shape} expected ${expected.shape}`);
+  compareSets(`operation ${operationId} sampleEvent keys`, new Set(expected.keys ?? []), new Set(strings(actual.keys)), errors);
+}
+
+function compareEventSummary(operationId, expected, actual, errors) {
+  if (!expected && !actual) return;
+  if (!expected || !actual) {
+    errors.push(`operation ${operationId} eventSummary ${actual ? "present" : "<missing>"} expected ${expected ? "present" : "<missing>"}`);
+    return;
+  }
+  if (actual.count !== expected.count) errors.push(`operation ${operationId} eventSummary count ${actual.count} expected ${expected.count}`);
+  if (actual.dynamic !== expected.dynamic) errors.push(`operation ${operationId} eventSummary dynamic ${actual.dynamic} expected ${expected.dynamic}`);
+  compareSets(`operation ${operationId} eventSummary templates`, new Set(expected.templates ?? []), new Set(strings(actual.templates)), errors);
+}
+
 function findDuplicates(label, values, errors) {
   const seen = new Set();
   for (const value of values) {
@@ -1042,7 +1065,7 @@ function readEventSummaryMetadata(source) {
     const raw = source.slice(match.index + match[0].length, findExpressionValueEnd(source, match.index + match[0].length)).trim();
     if (!raw) continue;
     count += 1;
-    const text = scrub(parseStringContent(raw));
+    const text = compactText(scrub(parseStringContent(raw)));
     if (text) templates.push(text);
   }
   if (!count) return undefined;
@@ -1057,6 +1080,10 @@ function readDefaultExportExpression(source) {
   const match = /export\s+default\s+/.exec(source);
   if (!match) return undefined;
   return source.slice(match.index + match[0].length).trim().replace(/;?\s*$/, "");
+}
+
+function compactText(value) {
+  return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : value;
 }
 
 function sourceDeliveryMode({ usesTimer, usesHttp, runtime }) {
