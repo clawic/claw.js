@@ -14,6 +14,10 @@ interface CatalogSummary {
   managedFields: number;
   defaults: number;
   options: number;
+  hiddenFields: number;
+  disabledFields: number;
+  reloadFields: number;
+  boundedFields: number;
   annotatedOperations: number;
   destructiveOperations: number;
   readOnlyOperations: number;
@@ -44,6 +48,11 @@ interface CatalogField {
     usesPreviousContext: boolean;
     contextKeys: string[];
   };
+  hidden?: boolean;
+  disabled?: boolean;
+  reloadProps?: boolean;
+  min?: number;
+  max?: number;
   secret?: boolean;
   managed?: boolean;
 }
@@ -319,6 +328,10 @@ export default function ConnectorsPage() {
             <span>{catalog?.summary.managedFields ?? 0} managed</span>
             <span>{catalog?.summary.defaults ?? 0} defaults</span>
             <span>{catalog?.summary.options ?? 0} option sets</span>
+            <span>{catalog?.summary.hiddenFields ?? 0} hidden</span>
+            <span>{catalog?.summary.disabledFields ?? 0} disabled</span>
+            <span>{catalog?.summary.reloadFields ?? 0} reload</span>
+            <span>{catalog?.summary.boundedFields ?? 0} bounded</span>
             <span>{catalog?.summary.annotatedOperations ?? 0} annotated</span>
             <span>{catalog?.summary.destructiveOperations ?? 0} destructive</span>
             <span>{catalog?.summary.runnableOperations ?? 0} runnable</span>
@@ -428,6 +441,10 @@ export default function ConnectorsPage() {
                           <span className="text-muted-foreground font-mono">
                             {field.type}{field.default === undefined ? "" : " = default"}{field.options?.length ? ` · ${field.options.length} opts` : ""}
                             {field.dynamicOptions ? " · dynamic" : ""}
+                            {field.reloadProps ? " · reload" : ""}
+                            {field.hidden ? " · hidden" : ""}
+                            {field.disabled ? " · disabled" : ""}
+                            {field.min !== undefined || field.max !== undefined ? ` · ${field.min ?? ""}..${field.max ?? ""}` : ""}
                           </span>
                         </div>
                       ))}
