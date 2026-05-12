@@ -1,0 +1,18 @@
+{
+  "domain": "comm-stats",
+  "version": "0.1.0",
+  "entries": [
+    {
+      "id": "comm-stats.note",
+      "label": "Communications — free-form note",
+      "unit": {
+        "id": "text",
+        "label": "text",
+        "group": "abstract"
+      },
+      "valueType": "text",
+      "category": "general",
+      "description": "Free-form text observation for Communications."
+    }
+  ]
+}
