@@ -165,6 +165,7 @@ interface SourceSubscription {
 export default function ConnectorsPage() {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<ConnectorKind>("all");
+  const [appId, setAppId] = useState("all");
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
   const [selected, setSelected] = useState<CatalogEntry | null>(null);
   const [valuesJson, setValuesJson] = useState("{}");
@@ -184,6 +185,7 @@ export default function ConnectorsPage() {
       const params = new URLSearchParams({ limit: "80" });
       if (query.trim()) params.set("q", query.trim());
       if (kind !== "all") params.set("kind", kind);
+      if (appId !== "all") params.set("appId", appId);
       const res = await fetch(`/api/connectors/catalog?${params.toString()}`, { cache: "no-store" });
       const data = await res.json() as CatalogResponse;
       setCatalog(data);
@@ -195,7 +197,7 @@ export default function ConnectorsPage() {
       setError(err instanceof Error ? err.message : String(err));
     }
     setLoading(false);
-  }, [kind, query]);
+  }, [appId, kind, query]);
 
   const loadSubscriptions = useCallback(async () => {
     try {
@@ -361,6 +363,16 @@ export default function ConnectorsPage() {
               <option value="all">All</option>
               <option value="action">Actions</option>
               <option value="source">Sources</option>
+            </select>
+            <select
+              value={appId}
+              onChange={(event) => setAppId(event.target.value)}
+              className="bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-muted-foreground"
+            >
+              <option value="all">All apps</option>
+              {(catalog?.apps ?? []).map((app) => (
+                <option key={app.id} value={app.id}>{app.name} ({app.operations})</option>
+              ))}
             </select>
           </div>
           <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
