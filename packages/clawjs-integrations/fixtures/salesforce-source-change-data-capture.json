@@ -1,0 +1,19 @@
+{
+  "events": [
+    {
+      "replayId": "offline-change-data-capture-replay",
+      "event": {
+        "type": "Change Data Capture"
+      },
+      "payload": {
+        "ChangeEventHeader": {
+          "entityName": "PlatformEvent",
+          "changeType": "CREATE",
+          "recordIds": [
+            "001xx000000001"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "events": [
+    {
+      "replayId": "offline-platform-event-replay",
+      "event": {
+        "type": "Platform Event"
+      },
+      "payload": {
+        "ChangeEventHeader": {
+          "entityName": "PlatformEvent",
+          "changeType": "CREATE",
+          "recordIds": [
+            "001xx000000001"
+          ]
+        }
+      }
+    }
+  ]
+}

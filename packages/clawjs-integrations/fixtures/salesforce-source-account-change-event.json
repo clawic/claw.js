@@ -1,0 +1,19 @@
+{
+  "events": [
+    {
+      "replayId": "offline-account-change-event-replay",
+      "event": {
+        "type": "Account Change Event"
+      },
+      "payload": {
+        "ChangeEventHeader": {
+          "entityName": "Account",
+          "changeType": "CREATE",
+          "recordIds": [
+            "001xx000000001"
+          ]
+        }
+      }
+    }
+  ]
+}

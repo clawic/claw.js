@@ -1,0 +1,19 @@
+{
+  "events": [
+    {
+      "replayId": "offline-opportunity-change-event-replay",
+      "event": {
+        "type": "Opportunity Change Event"
+      },
+      "payload": {
+        "ChangeEventHeader": {
+          "entityName": "Opportunity",
+          "changeType": "CREATE",
+          "recordIds": [
+            "001xx000000001"
+          ]
+        }
+      }
+    }
+  ]
+}

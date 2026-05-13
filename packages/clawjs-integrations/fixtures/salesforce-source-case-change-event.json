@@ -1,0 +1,19 @@
+{
+  "events": [
+    {
+      "replayId": "offline-case-change-event-replay",
+      "event": {
+        "type": "Case Change Event"
+      },
+      "payload": {
+        "ChangeEventHeader": {
+          "entityName": "Case",
+          "changeType": "CREATE",
+          "recordIds": [
+            "001xx000000001"
+          ]
+        }
+      }
+    }
+  ]
+}

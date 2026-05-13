@@ -1,0 +1,19 @@
+{
+  "events": [
+    {
+      "replayId": "offline-user-change-event-replay",
+      "event": {
+        "type": "User Change Event"
+      },
+      "payload": {
+        "ChangeEventHeader": {
+          "entityName": "User",
+          "changeType": "CREATE",
+          "recordIds": [
+            "001xx000000001"
+          ]
+        }
+      }
+    }
+  ]
+}

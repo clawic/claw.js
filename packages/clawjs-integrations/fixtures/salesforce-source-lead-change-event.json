@@ -1,0 +1,19 @@
+{
+  "events": [
+    {
+      "replayId": "offline-lead-change-event-replay",
+      "event": {
+        "type": "Lead Change Event"
+      },
+      "payload": {
+        "ChangeEventHeader": {
+          "entityName": "Lead",
+          "changeType": "CREATE",
+          "recordIds": [
+            "001xx000000001"
+          ]
+        }
+      }
+    }
+  ]
+}

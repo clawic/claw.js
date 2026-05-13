@@ -1,0 +1,19 @@
+{
+  "events": [
+    {
+      "replayId": "offline-contact-change-event-replay",
+      "event": {
+        "type": "Contact Change Event"
+      },
+      "payload": {
+        "ChangeEventHeader": {
+          "entityName": "Contact",
+          "changeType": "CREATE",
+          "recordIds": [
+            "001xx000000001"
+          ]
+        }
+      }
+    }
+  ]
+}
