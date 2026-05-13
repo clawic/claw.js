@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/billing/alerts",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "alert_type=usage_threshold&title=Sample+usage+alert&usage_threshold=%7B%22gte%22%3A100%2C%22meter%22%3A%22mtr_sample%22%7D"
+}

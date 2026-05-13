@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.stripe.com/v1/billing/alerts?limit=10&alert_type=usage_threshold&meter=mtr_sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  },
+  "body": null
+}

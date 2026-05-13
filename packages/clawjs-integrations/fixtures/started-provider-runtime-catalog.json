@@ -41125,6 +41125,149 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.list-billing-alerts",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Billing Alerts",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "alert_type",
+              "type": "string",
+              "optional": true,
+              "default": "usage_threshold"
+            },
+            {
+              "name": "meter",
+              "type": "string",
+              "optional": true,
+              "default": "mtr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-billing-alert",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Billing Alert",
+          "fields": [
+            {
+              "name": "alert_type",
+              "type": "string",
+              "optional": false,
+              "default": "usage_threshold"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false,
+              "default": "Sample usage alert"
+            },
+            {
+              "name": "usage_threshold",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "gte": 100,
+                "meter": "mtr_sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-billing-alert",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Billing Alert",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "ba_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.activate-billing-alert",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Activate Billing Alert",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "ba_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.archive-billing-alert",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Archive Billing Alert",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "ba_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.deactivate-billing-alert",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Deactivate Billing Alert",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "ba_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

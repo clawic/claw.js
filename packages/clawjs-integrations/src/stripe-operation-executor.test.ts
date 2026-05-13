@@ -918,6 +918,28 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-billing-alert"), {
+      alert_type: "usage_threshold",
+      title: "Sample usage alert",
+      usage_threshold: { gte: 100, meter: "mtr_sample" },
+    }), {
+      method: "POST",
+      endpoint: "billing/alerts",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        alert_type: "usage_threshold",
+        title: "Sample usage alert",
+        usage_threshold: { gte: 100, meter: "mtr_sample" },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.process-terminal-reader-setup-intent"), {
       reader: "tmr_sample",
       setup_intent: "seti_sample",
