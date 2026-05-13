@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 
 const allowed = [
   "secrets/scripts/naming-gate.mjs",
-  "commander/Sources/CommanderAdapters/ObsidianAdapter.swift",
-  "commander/Tests/CommanderE2ETests/CommanderE2ETests.swift",
+  "apps/commander/Sources/CommanderAdapters/ObsidianAdapter.swift",
+  "apps/commander/Tests/CommanderE2ETests/CommanderE2ETests.swift",
 ];
 
 const pattern = "vault|Vault|VAULT|claw vault|claw open vault|/v1/vault|VAULT_|clawixvault|CLAWIX_VAULT_DIR";

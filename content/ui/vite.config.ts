@@ -7,7 +7,7 @@ function copyFontsPlugin() {
   return {
     name: "copy-fonts",
     buildStart() {
-      const repoFonts = path.resolve(__dirname, "../../public/fonts");
+      const repoFonts = path.resolve(__dirname, "../../assets/fonts");
       const outFonts = path.resolve(__dirname, "public/fonts");
       for (const family of ["source-sans-3", "ubuntu-mono"]) {
         const src = path.join(repoFonts, family);
