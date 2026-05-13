@@ -526,6 +526,51 @@
           ]
         },
         {
+          "id": "discord.action.get-guild-audit-log",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Audit Log",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "actionType",
+              "type": "integer",
+              "optional": true,
+              "default": 1
+            },
+            {
+              "name": "before",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.list-guild-emojis",
           "appId": "discord",
           "kind": "action",
@@ -3069,6 +3114,27 @@
           "appId": "discord",
           "kind": "source",
           "name": "Message Delete",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.guild-audit-log-entry-create",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Guild Audit Log Entry Create",
           "fields": [],
           "authFieldNames": [],
           "runtime": {
