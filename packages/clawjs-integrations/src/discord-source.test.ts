@@ -18,6 +18,7 @@ const DISCORD_SOURCE_OPERATIONS = [
   source("discord.source.message-create", "Message Create"),
   source("discord.source.message-update", "Message Update"),
   source("discord.source.message-delete", "Message Delete"),
+  source("discord.source.guild-emojis-update", "Guild Emojis Update"),
   source("discord.source.guild-member-add", "Guild Member Add"),
   source("discord.source.guild-member-remove", "Guild Member Remove"),
   source("discord.source.guild-scheduled-event-create", "Guild Scheduled Event Create"),

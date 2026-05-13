@@ -28,6 +28,11 @@ const DISCORD_ACTIONS = [
   action("get-guild-preview", "Get Guild Preview", [GUILD_FIELD]),
   action("list-guild-channels", "List Guild Channels", [GUILD_FIELD]),
   action("create-guild-channel", "Create Guild Channel", [GUILD_FIELD, field("name", "string"), field("type", "integer", true, { default: 0 })]),
+  action("list-guild-emojis", "List Guild Emojis", [GUILD_FIELD]),
+  action("get-guild-emoji", "Get Guild Emoji", [GUILD_FIELD, field("emojiId", "string")]),
+  action("create-guild-emoji", "Create Guild Emoji", [GUILD_FIELD, field("name", "string"), field("image", "string", false, { default: "data:image/png;base64,c2FtcGxl" }), field("roles", "array", true, { default: ["sample"] })]),
+  action("update-guild-emoji", "Update Guild Emoji", [GUILD_FIELD, field("emojiId", "string"), field("name", "string", true, { default: "sample" }), field("roles", "array", true, { default: ["sample"] })]),
+  action("delete-guild-emoji", "Delete Guild Emoji", [GUILD_FIELD, field("emojiId", "string")]),
   action("get-channel", "Get Channel", [CHANNEL_FIELD]),
   action("update-channel", "Update Channel", [CHANNEL_FIELD, field("name", "string", true, { default: "sample" })]),
   action("delete-channel", "Delete Channel", [CHANNEL_FIELD]),
@@ -113,6 +118,11 @@ const DISCORD_ACTIONS = [
   action("get-global-application-command", "Get Global Application Command", [APPLICATION_FIELD, COMMAND_FIELD]),
   action("update-global-application-command", "Update Global Application Command", [APPLICATION_FIELD, COMMAND_FIELD, field("name", "string"), field("description", "string", true, { default: "sample" })]),
   action("delete-global-application-command", "Delete Global Application Command", [APPLICATION_FIELD, COMMAND_FIELD]),
+  action("list-application-emojis", "List Application Emojis", [APPLICATION_FIELD]),
+  action("get-application-emoji", "Get Application Emoji", [APPLICATION_FIELD, field("emojiId", "string")]),
+  action("create-application-emoji", "Create Application Emoji", [APPLICATION_FIELD, field("name", "string"), field("image", "string", false, { default: "data:image/png;base64,c2FtcGxl" })]),
+  action("update-application-emoji", "Update Application Emoji", [APPLICATION_FIELD, field("emojiId", "string"), field("name", "string", true, { default: "sample" })]),
+  action("delete-application-emoji", "Delete Application Emoji", [APPLICATION_FIELD, field("emojiId", "string")]),
   action("list-guild-application-commands", "List Guild Application Commands", [APPLICATION_FIELD, GUILD_FIELD]),
   action("create-guild-application-command", "Create Guild Application Command", [APPLICATION_FIELD, GUILD_FIELD, field("name", "string"), field("description", "string", true, { default: "sample" })]),
   action("get-guild-application-command", "Get Guild Application Command", [APPLICATION_FIELD, GUILD_FIELD, COMMAND_FIELD]),
@@ -198,6 +208,42 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-guild-emoji"), {
+      guildId: "456",
+      name: "wave",
+      image: "data:image/png;base64,c2FtcGxl",
+      roles: ["123"],
+    }), {
+      method: "POST",
+      endpoint: "guilds/456/emojis",
+      auth,
+      headers,
+      body: {
+        name: "wave",
+        image: "data:image/png;base64,c2FtcGxl",
+        roles: ["123"],
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.list-application-emojis"), {
+      applicationId: "app-123",
+    }), {
+      method: "GET",
+      endpoint: "applications/app-123/emojis",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["items"],
       },
     });
 
