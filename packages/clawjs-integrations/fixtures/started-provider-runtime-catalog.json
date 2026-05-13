@@ -786,17 +786,19 @@
               "name": "volume",
               "type": "number",
               "optional": true,
-              "default": 1
+              "default": null
             },
             {
               "name": "emojiId",
               "type": "string",
-              "optional": true
+              "optional": true,
+              "default": null
             },
             {
               "name": "emojiName",
               "type": "string",
-              "optional": true
+              "optional": true,
+              "default": null
             },
             {
               "name": "auditLogReason",
