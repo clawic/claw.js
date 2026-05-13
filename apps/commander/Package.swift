@@ -9,8 +9,8 @@ let package = Package(
     products: [
         .library(name: "ClawHostKit", targets: ["ClawHostKit"]),
         .library(name: "ClawHostAdapters", targets: ["ClawHostAdapters"]),
-        .executable(name: "claw-host", targets: ["commander"]),
-        .executable(name: "claw-hostd", targets: ["commanderd"]),
+        .executable(name: "claw-host", targets: ["ClawHostCLI"]),
+        .executable(name: "claw-hostd", targets: ["ClawHostDaemon"]),
         .executable(name: "ClawApp", targets: ["CommanderApp"]),
     ],
     targets: [
@@ -30,11 +30,13 @@ let package = Package(
             dependencies: ["CommanderCore"]
         ),
         .executableTarget(
-            name: "commander",
+            name: "ClawHostCLI",
+            path: "Sources/commander",
             dependencies: ["ClawHostKit", "ClawHostAdapters"]
         ),
         .executableTarget(
-            name: "commanderd",
+            name: "ClawHostDaemon",
+            path: "Sources/commanderd",
             dependencies: ["ClawHostKit", "ClawHostAdapters"]
         ),
         .executableTarget(
