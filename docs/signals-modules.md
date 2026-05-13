@@ -1,8 +1,8 @@
 # ClawJS signals modules
 
-This document is the canonical guide to the `tracking-*` family of
-packages: how they are laid out, how to add a new vertical, what the
-HTTP surface looks like, and how clients (Clawix Mac/iOS) talk to it.
+This document is the canonical guide to the `signals` catalog: how
+verticals are laid out, how to add a new vertical, what the HTTP surface
+looks like, and how clients (Clawix Mac/iOS) talk to it.
 
 ## What is a "signals module"?
 
@@ -22,32 +22,18 @@ Money, Meta / Reflection).
 
 ## Repository layout
 
-For each vertical with id `signal-id`:
+The 80 personal domains are not public npm packages. Each vertical with
+id `signal-id` is a catalog JSON exported by `@clawjs/signals`:
 
 ```text
-packages/clawjs-signal-id/  # publishable npm package (@clawjs/signal-id)
-├── package.json
-├── tsconfig.json
+packages/signals/
 └── src/
-    ├── index.ts            # re-exports app/client/config
-    ├── app.ts              # buildXApp() factory using @clawjs/signals
-    ├── client.ts           # typed HTTP client (extends SignalsApiClient)
-    ├── config.ts           # loadXConfig() — env + overrides
-    └── catalog.json        # curated system variables
-
-signal-id/                  # top-level service directory
-├── package.json            # deps: file:../packages/clawjs-signal-id
-├── tsconfig.json
-├── src/
-│   └── bin/
-│       ├── server.ts       # Fastify bootstrap
-│       └── cli.ts          # CLI surface
-└── tests/
-    └── e2e/signal-id.e2e.test.ts
+    └── catalogs/
+        └── signal-id.json  # curated system variables
 ```
 
-Two shared packages do the heavy lifting so the per-vertical packages
-stay thin:
+Two shared packages do the heavy lifting so the verticals stay inside
+one approved public surface:
 
 - `packages/signals-core/`: shared types
   (`Observation`, `CatalogEntry`, `Session`, `Source`, `Unit`,
@@ -59,8 +45,8 @@ stay thin:
 ## Adding a new vertical
 
 1. Declare it in `tracking-registry.json` with a unique `id`, the
-   category it belongs to, an unused `servicePort`, the
-   `packageName` (`@clawjs/signal-id`), and an initial `status` of
+   category it belongs to, `catalogPackage: "@clawjs/signals"`,
+   `catalogPath: "catalogs/signal-id.json"`, and an initial `status` of
    `planned` (graduate to `alpha` / `stable` later).
 
 2. Run the scaffolder:
@@ -69,19 +55,17 @@ stay thin:
    node scripts/scaffold-signals-verticals.mjs
    ```
 
-   It generates the package + service skeleton for every registry entry
-   that does not already have one. Pass `--force` to overwrite the
-   scaffolded files (it never overwrites a hand-curated `catalog.json`
-   that already exists).
+   It generates a catalog JSON for every registry entry that does not
+   already have one. Pass `--force` to overwrite scaffolded defaults
+   (it never overwrites a hand-curated catalog that already exists).
 
-3. Curate `packages/clawjs-signal-id/src/catalog.json`. The default catalog
+3. Curate `packages/signals/src/catalogs/signal-id.json`. The default catalog
    ships a single free-form text variable so the UI has something to
    render; replace it with the real variables for the domain (with
    HealthKit type identifiers when available).
 
-4. Write the e2e test in `signal-id/tests/e2e/signal-id.e2e.test.ts` using the
-   skeleton produced by the scaffolder. It exercises CRUD against an
-   in-memory Fastify instance.
+4. Add or update shared `@clawjs/signals` tests when a catalog needs
+   behavior beyond static catalog loading.
 
 5. Update Clawix Mac/iOS Life UI: nothing needs to change for verticals
    that fit the generic 3-pane explorer. Verticals that need a custom
@@ -129,16 +113,15 @@ PUT    /v1/signal-id/healthkit/anchor/variable-id   # body: { anchorBlob, lastSy
 ```
 
 All routes (except `/v1/health`) require an `Authorization: Bearer
-shared-secret` header. The shared secret is sourced from
-`SIGNAL_PREFIX_SHARED_SECRET` (e.g. `HEALTH_SHARED_SECRET`,
-`TIME_TRACKING_SHARED_SECRET`) or falls back to a dev default.
+shared-secret` header. The shared secret is sourced from the host-owned
+signals service configuration; individual verticals do not define their
+own public env prefixes.
 
 ## Authentication and discovery
 
-Each vertical binds to its own port (see the `servicePort` column of
-`tracking-registry.json`). Clients negotiate the bearer token through
-the Clawix bridge, the same way the existing `user-model` service is
-discovered. iOS uses the QR-encoded host + port from pairing.
+Signals is a single approved public domain. Hosts may expose selected
+catalogs through one signals service; vertical ids are path components,
+not independent npm packages or public service identities.
 
 ## Catalog: system vs user variables
 

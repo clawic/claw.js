@@ -147,8 +147,8 @@ export interface RegistryEntry {
   healthkitMapping: boolean;
   sensitive: boolean;
   status: RegistryStatus;
-  packageName: string;
-  servicePort?: number;
+  catalogPackage: "@clawjs/signals";
+  catalogPath: string;
   iconHint?: string;
 }
 

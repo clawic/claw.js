@@ -28,10 +28,12 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./catalogs/*.json": "./src/catalogs/*.json"
   },
   "files": [
     "dist",
+    "src/catalogs",
     "README.md",
     "LICENSE"
   ],
