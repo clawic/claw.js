@@ -34,6 +34,16 @@ function makeRuntime(opts: FakeOptions = {}): CodexRuntime {
   });
 }
 
+async function waitFor(predicate: () => boolean, timeoutMs = 1_500): Promise<void> {
+  const startedAt = Date.now();
+  while (!predicate()) {
+    if (Date.now() - startedAt > timeoutMs) {
+      return;
+    }
+    await delay(25);
+  }
+}
+
 test("starts, becomes ready, and stops cleanly", async () => {
   const rt = makeRuntime();
   await rt.start();
@@ -139,7 +149,7 @@ test("auto-restart spawns a new process after unexpected exit", async () => {
   });
   await rt.start();
   assert.equal(readys, 1);
-  await delay(300);
+  await waitFor(() => exits >= 1 && readys >= 2);
   assert.equal(exits >= 1, true);
   assert.equal(readys >= 2, true);
   await rt.stop();
