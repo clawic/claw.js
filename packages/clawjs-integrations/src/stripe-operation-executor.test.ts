@@ -1097,6 +1097,28 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.list-payment-attempt-records"), {
+      payment_record: "pr_sample",
+      limit: 3,
+      startingAfter: "par_prev",
+    }), {
+      method: "GET",
+      endpoint: "payment_attempt_records",
+      auth,
+      headers,
+      query: {
+        payment_record: "pr_sample",
+        limit: 3,
+        starting_after: "par_prev",
+      },
+      bodyEncoding: undefined,
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["object", "data"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-identity-verification-session"), {
       type: "document",
       client_reference_id: "identity_ref_sample",

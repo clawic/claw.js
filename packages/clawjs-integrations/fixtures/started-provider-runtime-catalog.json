@@ -39291,6 +39291,54 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.list-payment-attempt-records",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Payment Attempt Records",
+          "fields": [
+            {
+              "name": "payment_record",
+              "type": "string",
+              "optional": false,
+              "default": "pr_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-payment-attempt-record",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Payment Attempt Record",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "par_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },
