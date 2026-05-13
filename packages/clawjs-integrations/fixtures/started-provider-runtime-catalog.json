@@ -2301,6 +2301,168 @@
           ]
         },
         {
+          "id": "discord.action.search-guild-messages",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Search Guild Messages",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "content",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 25
+            },
+            {
+              "name": "offset",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "maxId",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "minId",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "slop",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "channelIds",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "authorTypes",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "authorIds",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "mentions",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "mentionRoleIds",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "mentionEveryone",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "repliedToUserIds",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "repliedToMessageIds",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "pinned",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "has",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "embedTypes",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "embedProviders",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "linkHostnames",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "attachmentFilenames",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "attachmentExtensions",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "sortBy",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "sortOrder",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "includeNsfw",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.get-message",
           "appId": "discord",
           "kind": "action",
