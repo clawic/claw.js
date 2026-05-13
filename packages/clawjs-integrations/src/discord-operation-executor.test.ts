@@ -142,7 +142,10 @@ const DISCORD_ACTIONS = [
   action("modify-current-user-nick", "Modify Current User Nick", [GUILD_FIELD, field("nick", "string"), field("auditLogReason", "string", true)]),
   action("remove-guild-member", "Remove Guild Member", [GUILD_FIELD, USER_FIELD]),
   action("list-guild-roles", "List Guild Roles", [GUILD_FIELD]),
+  action("get-guild-role", "Get Guild Role", [GUILD_FIELD, ROLE_FIELD]),
+  action("get-guild-role-member-counts", "Get Guild Role Member Counts", [GUILD_FIELD]),
   action("create-guild-role", "Create Guild Role", [GUILD_FIELD, field("name", "string", true, { default: "sample" })]),
+  action("modify-guild-role-positions", "Modify Guild Role Positions", [GUILD_FIELD, field("positions", "array", false, { default: [{ id: "sample", position: 1 }] }), field("auditLogReason", "string", true)]),
   action("update-guild-role", "Update Guild Role", [GUILD_FIELD, ROLE_FIELD, field("name", "string", true, { default: "sample" })]),
   action("delete-guild-role", "Delete Guild Role", [GUILD_FIELD, ROLE_FIELD]),
   action("add-guild-member-role", "Add Guild Member Role", [GUILD_FIELD, USER_FIELD, ROLE_FIELD]),
@@ -904,6 +907,55 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["pruned"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-guild-role"), {
+      guildId: "456",
+      roleId: "123",
+    }), {
+      method: "GET",
+      endpoint: "guilds/456/roles/123",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-guild-role-member-counts"), {
+      guildId: "456",
+    }), {
+      method: "GET",
+      endpoint: "guilds/456/roles/member-counts",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.modify-guild-role-positions"), {
+      guildId: "456",
+      positions: [{ id: "123", position: 2 }],
+      auditLogReason: "role ordering",
+    }), {
+      method: "PATCH",
+      endpoint: "guilds/456/roles",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "role ordering",
+      },
+      body: {},
+      bodyValue: [{ id: "123", position: 2 }],
+      responseSchema: {
+        type: "array",
       },
     });
 
