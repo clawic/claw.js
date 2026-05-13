@@ -1,0 +1,18 @@
+{
+  "application_commands": [],
+  "audit_log_entries": [
+    {
+      "target_id": "sample",
+      "user_id": "sample",
+      "id": "sample",
+      "action_type": 1,
+      "reason": "sample"
+    }
+  ],
+  "auto_moderation_rules": [],
+  "guild_scheduled_events": [],
+  "integrations": [],
+  "threads": [],
+  "users": [],
+  "webhooks": []
+}
