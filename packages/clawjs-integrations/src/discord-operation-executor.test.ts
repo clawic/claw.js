@@ -14,6 +14,7 @@ const GUILD_FIELD = field("guildId", "string");
 const CHANNEL_FIELD = field("channelId", "string");
 const OVERWRITE_FIELD = field("overwriteId", "string");
 const MESSAGE_FIELD = field("messageId", "string");
+const ANSWER_FIELD = field("answerId", "string");
 const USER_FIELD = field("userId", "string");
 const ROLE_FIELD = field("roleId", "string");
 const WEBHOOK_FIELD = field("webhookId", "string");
@@ -87,6 +88,8 @@ const DISCORD_ACTIONS = [
   action("delete-own-reaction", "Delete Own Reaction", [CHANNEL_FIELD, MESSAGE_FIELD, field("emoji", "string", false, { default: "thumbsup" })]),
   action("delete-user-reaction", "Delete User Reaction", [CHANNEL_FIELD, MESSAGE_FIELD, USER_FIELD, field("emoji", "string", false, { default: "thumbsup" })]),
   action("list-reactions", "List Reactions", [CHANNEL_FIELD, MESSAGE_FIELD, field("emoji", "string", false, { default: "thumbsup" }), field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
+  action("get-answer-voters", "Get Answer Voters", [CHANNEL_FIELD, MESSAGE_FIELD, ANSWER_FIELD, field("after", "string", true), field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
+  action("end-poll", "End Poll", [CHANNEL_FIELD, MESSAGE_FIELD]),
   action("start-thread-from-message", "Start Thread From Message", [CHANNEL_FIELD, MESSAGE_FIELD, field("name", "string")]),
   action("start-thread-without-message", "Start Thread Without Message", [CHANNEL_FIELD, field("name", "string"), field("type", "integer", true, { default: 11 })]),
   action("start-thread-in-forum-or-media-channel", "Start Thread In Forum Or Media Channel", [CHANNEL_FIELD, field("name", "string"), field("autoArchiveDuration", "integer", true, { default: 60 }), field("rateLimitPerUser", "integer", true, { default: 0 }), field("message", "object", false, { default: { content: "sample" } }), field("appliedTags", "array", true, { default: ["sample"] }), field("auditLogReason", "string", true)]),
@@ -236,6 +239,43 @@ describe("discord operation runtime", () => {
           fail_if_not_exists: false,
         },
       },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "channel_id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-answer-voters"), {
+      channelId: "123",
+      messageId: "456",
+      answerId: "789",
+      after: "user-after",
+      limit: 25,
+    }), {
+      method: "GET",
+      endpoint: "channels/123/polls/456/answers/789",
+      auth,
+      headers,
+      query: {
+        after: "user-after",
+        limit: 25,
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["users"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.end-poll"), {
+      channelId: "123",
+      messageId: "456",
+    }), {
+      method: "POST",
+      endpoint: "channels/123/polls/456/expire",
+      auth,
+      headers,
+      body: {},
       responseSchema: {
         type: "object",
         requiredPaths: ["id", "channel_id"],
