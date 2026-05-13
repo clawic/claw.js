@@ -6563,6 +6563,3148 @@
       ]
     },
     {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "authFieldNames": [
+        "hubspotAccessToken"
+      ],
+      "fields": [
+        {
+          "name": "hubspotAccessToken",
+          "type": "app",
+          "optional": false,
+          "secret": true
+        }
+      ],
+      "operations": [
+        {
+          "id": "hubspot.action.list-contacts",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Contacts",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-contacts",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Contacts",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.search-contacts",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Search Contacts",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-contacts",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Contacts",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.update-contacts",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Update Contacts",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-contacts",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive Contacts",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-companies",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Companies",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-companies",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Companies",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.search-companies",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Search Companies",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-companies",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Companies",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.update-companies",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Update Companies",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-companies",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive Companies",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-deals",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Deals",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-deals",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Deals",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.search-deals",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Search Deals",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-deals",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Deals",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.update-deals",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Update Deals",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-deals",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive Deals",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-tickets",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Tickets",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-tickets",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Tickets",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.search-tickets",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Search Tickets",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-tickets",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Tickets",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.update-tickets",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Update Tickets",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-tickets",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive Tickets",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-products",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Products",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-products",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Products",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.search-products",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Search Products",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-products",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Products",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.update-products",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Update Products",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-products",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive Products",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-line-items",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Line Items",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-line-items",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Line Items",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.search-line-items",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Search Line Items",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-line-items",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Line Items",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.update-line-items",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Update Line Items",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-line-items",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive Line Items",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-quotes",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Quotes",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-quotes",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Quotes",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.search-quotes",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Search Quotes",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-quotes",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Quotes",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.update-quotes",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Update Quotes",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-quotes",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive Quotes",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-calls",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Calls",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-calls",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Calls",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.search-calls",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Search Calls",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-calls",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Calls",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.update-calls",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Update Calls",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-calls",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive Calls",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-meetings",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Meetings",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-meetings",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Meetings",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.search-meetings",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Search Meetings",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-meetings",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Meetings",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.update-meetings",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Update Meetings",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-meetings",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive Meetings",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-notes",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Notes",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-notes",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Notes",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.search-notes",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Search Notes",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-notes",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Notes",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.update-notes",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Update Notes",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-notes",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive Notes",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-emails",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Emails",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-emails",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Emails",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.search-emails",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Search Emails",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-emails",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Emails",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.update-emails",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Update Emails",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-emails",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive Emails",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-tasks",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Tasks",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-tasks",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Tasks",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.search-tasks",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Search Tasks",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "properties",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "email"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-tasks",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Tasks",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.update-tasks",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Update Tasks",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "name": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-tasks",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive Tasks",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.batch-read-records",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Batch Read Records",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "inputs",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "id": "101"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.batch-create-records",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Batch Create Records",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "inputs",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "id": "101"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.batch-update-records",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Batch Update Records",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "inputs",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "id": "101"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.batch-archive-records",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Batch Archive Records",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "inputs",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "id": "101"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-association-labels",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Association Labels",
+          "fields": [
+            {
+              "name": "fromObjectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "toObjectType",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.associate-records",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Associate Records",
+          "fields": [
+            {
+              "name": "fromObjectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "fromRecordId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "toObjectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "toRecordId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "associationTypeId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.remove-association",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Remove Association",
+          "fields": [
+            {
+              "name": "fromObjectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "fromRecordId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "toObjectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "toRecordId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "associationTypeId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.batch-read-associations",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Batch Read Associations",
+          "fields": [
+            {
+              "name": "fromObjectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "toObjectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "inputs",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "from": {
+                    "id": "101"
+                  },
+                  "to": {
+                    "id": "202"
+                  },
+                  "type": "contact_to_company"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.batch-create-associations",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Batch Create Associations",
+          "fields": [
+            {
+              "name": "fromObjectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "toObjectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "inputs",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "from": {
+                    "id": "101"
+                  },
+                  "to": {
+                    "id": "202"
+                  },
+                  "type": "contact_to_company"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.batch-archive-associations",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Batch Archive Associations",
+          "fields": [
+            {
+              "name": "fromObjectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "toObjectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "inputs",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "from": {
+                    "id": "101"
+                  },
+                  "to": {
+                    "id": "202"
+                  },
+                  "type": "contact_to_company"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-properties",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Properties",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-property",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Property",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "propertyName",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-property",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Property",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "label",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "fieldType",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.update-property",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Update Property",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "propertyName",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "label",
+              "type": "string",
+              "optional": true,
+              "default": "Sample"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-property",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive Property",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "propertyName",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-owners",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Owners",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-owner",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Owner",
+          "fields": [
+            {
+              "name": "ownerId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-pipelines",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Pipelines",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-pipeline",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Pipeline",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "pipelineId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-pipeline",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Pipeline",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "label",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.update-pipeline",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Update Pipeline",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "pipelineId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "label",
+              "type": "string",
+              "optional": true,
+              "default": "Sample"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-pipeline",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive Pipeline",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "pipelineId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-pipeline-stage",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Pipeline Stage",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "pipelineId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "label",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.update-pipeline-stage",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Update Pipeline Stage",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "pipelineId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "stageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "label",
+              "type": "string",
+              "optional": true,
+              "default": "Sample"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-pipeline-stage",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive Pipeline Stage",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "pipelineId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "stageId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-files",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Files",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-file",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get File",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.upload-file",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Upload File",
+          "fields": [
+            {
+              "name": "file",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "fileName",
+              "type": "string",
+              "optional": true,
+              "default": "sample.txt"
+            },
+            {
+              "name": "options",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "access": "PRIVATE"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-file",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive File",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-folders",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Folders",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-folder",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Folder",
+          "fields": [
+            {
+              "name": "folderId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-folder",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Folder",
+          "fields": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-folder",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive Folder",
+          "fields": [
+            {
+              "name": "folderId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-forms",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Forms",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-form",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Form",
+          "fields": [
+            {
+              "name": "formId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-form-submissions",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Form Submissions",
+          "fields": [
+            {
+              "name": "formId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-marketing-emails",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Marketing Emails",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.get-marketing-email",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Get Marketing Email",
+          "fields": [
+            {
+              "name": "emailId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-marketing-email",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Marketing Email",
+          "fields": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.update-marketing-email",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Update Marketing Email",
+          "fields": [
+            {
+              "name": "emailId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Sample"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.archive-marketing-email",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Archive Marketing Email",
+          "fields": [
+            {
+              "name": "emailId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.publish-marketing-email",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Publish Marketing Email",
+          "fields": [
+            {
+              "name": "emailId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.unpublish-marketing-email",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Unpublish Marketing Email",
+          "fields": [
+            {
+              "name": "emailId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-event-types",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Event Types",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-event-occurrences",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Event Occurrences",
+          "fields": [
+            {
+              "name": "eventType",
+              "type": "string",
+              "optional": true,
+              "default": "sample.event"
+            },
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": true,
+              "default": "contacts"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "min": 100,
+              "default": 100,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": "100"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.list-webhook-subscriptions",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "List Webhook Subscriptions",
+          "fields": [
+            {
+              "name": "appId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.create-webhook-subscription",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Create Webhook Subscription",
+          "fields": [
+            {
+              "name": "appId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "subscriptionType",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.update-webhook-subscription",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Update Webhook Subscription",
+          "fields": [
+            {
+              "name": "appId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "subscriptionId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "subscriptionType",
+              "type": "string",
+              "optional": true,
+              "default": "contact.creation"
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.action.delete-webhook-subscription",
+          "appId": "hubspot",
+          "kind": "action",
+          "name": "Delete Webhook Subscription",
+          "fields": [
+            {
+              "name": "appId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "subscriptionId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "hubspotAccessToken"
+          ]
+        },
+        {
+          "id": "hubspot.source.event",
+          "appId": "hubspot",
+          "kind": "source",
+          "name": "Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "hubspot.source.contact-event",
+          "appId": "hubspot",
+          "kind": "source",
+          "name": "Contact Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "hubspot.source.company-event",
+          "appId": "hubspot",
+          "kind": "source",
+          "name": "Company Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "hubspot.source.deal-event",
+          "appId": "hubspot",
+          "kind": "source",
+          "name": "Deal Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "hubspot.source.ticket-event",
+          "appId": "hubspot",
+          "kind": "source",
+          "name": "Ticket Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "hubspot.source.product-event",
+          "appId": "hubspot",
+          "kind": "source",
+          "name": "Product Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "hubspot.source.line-item-event",
+          "appId": "hubspot",
+          "kind": "source",
+          "name": "Line Item Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "hubspot.source.conversation-event",
+          "appId": "hubspot",
+          "kind": "source",
+          "name": "Conversation Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        }
+      ]
+    },
+    {
       "id": "stripe",
       "name": "Stripe",
       "authFieldNames": [
