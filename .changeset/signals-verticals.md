@@ -1,6 +1,6 @@
 ---
-"@clawjs/tracking-core": minor
-"@clawjs/tracking-runtime": minor
+"@clawjs/signals-core": minor
+"@clawjs/signals": minor
 "@clawjs/health": minor
 "@clawjs/sleep": minor
 "@clawjs/nutrition": minor
@@ -83,4 +83,4 @@
 "@clawjs/compliments": minor
 ---
 
-Add shared tracking foundations plus generated tracking vertical packages.
+Add shared signals foundations plus generated signals vertical packages.

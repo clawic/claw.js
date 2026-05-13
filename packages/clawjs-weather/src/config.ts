@@ -1,7 +1,7 @@
-import { loadTrackingServiceConfig, type TrackingServiceConfig } from "@clawjs/tracking-runtime";
+import { loadSignalsServiceConfig, type SignalsServiceConfig } from "@clawjs/signals";
 
-export function loadWeatherConfig(overrides: Partial<TrackingServiceConfig> = {}) {
-  return loadTrackingServiceConfig({
+export function loadWeatherConfig(overrides: Partial<SignalsServiceConfig> = {}) {
+  return loadSignalsServiceConfig({
     domain: "weather",
     defaultPort: 4747,
     hasSessions: false,

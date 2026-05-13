@@ -1,7 +1,7 @@
-import { loadTrackingServiceConfig, type TrackingServiceConfig } from "@clawjs/tracking-runtime";
+import { loadSignalsServiceConfig, type SignalsServiceConfig } from "@clawjs/signals";
 
-export function loadPhotographyConfig(overrides: Partial<TrackingServiceConfig> = {}) {
-  return loadTrackingServiceConfig({
+export function loadPhotographyConfig(overrides: Partial<SignalsServiceConfig> = {}) {
+  return loadSignalsServiceConfig({
     domain: "photography",
     defaultPort: 4727,
     hasSessions: false,

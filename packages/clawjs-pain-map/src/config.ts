@@ -1,7 +1,7 @@
-import { loadTrackingServiceConfig, type TrackingServiceConfig } from "@clawjs/tracking-runtime";
+import { loadSignalsServiceConfig, type SignalsServiceConfig } from "@clawjs/signals";
 
-export function loadPainMapConfig(overrides: Partial<TrackingServiceConfig> = {}) {
-  return loadTrackingServiceConfig({
+export function loadPainMapConfig(overrides: Partial<SignalsServiceConfig> = {}) {
+  return loadSignalsServiceConfig({
     domain: "pain-map",
     defaultPort: 4706,
     hasSessions: false,

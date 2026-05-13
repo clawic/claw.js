@@ -1,7 +1,7 @@
-import { loadTrackingServiceConfig, type TrackingServiceConfig } from "@clawjs/tracking-runtime";
+import { loadSignalsServiceConfig, type SignalsServiceConfig } from "@clawjs/signals";
 
-export function loadSymptomsConfig(overrides: Partial<TrackingServiceConfig> = {}) {
-  return loadTrackingServiceConfig({
+export function loadSymptomsConfig(overrides: Partial<SignalsServiceConfig> = {}) {
+  return loadSignalsServiceConfig({
     domain: "symptoms",
     defaultPort: 4712,
     hasSessions: false,

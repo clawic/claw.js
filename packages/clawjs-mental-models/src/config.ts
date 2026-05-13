@@ -1,7 +1,7 @@
-import { loadTrackingServiceConfig, type TrackingServiceConfig } from "@clawjs/tracking-runtime";
+import { loadSignalsServiceConfig, type SignalsServiceConfig } from "@clawjs/signals";
 
-export function loadMentalModelsConfig(overrides: Partial<TrackingServiceConfig> = {}) {
-  return loadTrackingServiceConfig({
+export function loadMentalModelsConfig(overrides: Partial<SignalsServiceConfig> = {}) {
+  return loadSignalsServiceConfig({
     domain: "mental-models",
     defaultPort: 4766,
     hasSessions: false,

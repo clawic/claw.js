@@ -1,8 +1,8 @@
-import { TrackingApiClient, type TrackingClientOptions } from "@clawjs/tracking-runtime";
+import { SignalsApiClient, type SignalsClientOptions } from "@clawjs/signals";
 
-export type GpsLogClientOptions = Omit<TrackingClientOptions, "domain">;
+export type GpsLogClientOptions = Omit<SignalsClientOptions, "domain">;
 
-export class GpsLogClient extends TrackingApiClient {
+export class GpsLogClient extends SignalsApiClient {
   constructor(options: GpsLogClientOptions) {
     super({ ...options, domain: "gps-log" });
   }

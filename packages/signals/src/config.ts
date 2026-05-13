@@ -1,7 +1,7 @@
 import path from "node:path";
 import os from "node:os";
 
-export interface TrackingServiceConfig {
+export interface SignalsServiceConfig {
   domain: string;
   host: string;
   port: number;
@@ -11,21 +11,21 @@ export interface TrackingServiceConfig {
   hasSessions: boolean;
 }
 
-export interface TrackingServiceConfigInput {
+export interface SignalsServiceConfigInput {
   domain: string;
   defaultPort: number;
   hasSessions?: boolean;
   envPrefix?: string;
-  overrides?: Partial<TrackingServiceConfig>;
+  overrides?: Partial<SignalsServiceConfig>;
 }
 
 function envName(prefix: string, key: string): string {
   return `${prefix}_${key}`;
 }
 
-export function loadTrackingServiceConfig(
-  input: TrackingServiceConfigInput,
-): TrackingServiceConfig {
+export function loadSignalsServiceConfig(
+  input: SignalsServiceConfigInput,
+): SignalsServiceConfig {
   const { domain, defaultPort, hasSessions = false } = input;
   const prefix = (input.envPrefix ?? domain.toUpperCase().replace(/-/g, "_"));
   const overrides = input.overrides ?? {};

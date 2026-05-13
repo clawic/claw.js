@@ -1,6 +1,6 @@
 import fs from "node:fs";
 
-import type { CatalogEntry, ValueType } from "@clawjs/tracking-core";
+import type { CatalogEntry, ValueType } from "@clawjs/signals-core";
 
 export interface CatalogJsonEntry {
   id: string;

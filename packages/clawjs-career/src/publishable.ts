@@ -1,4 +1,4 @@
-// Publishable mapping for the `career` tracking module.
+// Publishable mapping for the `career` signals module.
 //
 // Career records hold roles, skills, certifications. Publishing them as
 // blocks lets a Profile back a `service-offer/v1` block (a freelance ad), a
@@ -6,7 +6,7 @@
 
 import type {
   PublishableField, PublishableProvider, PublishableSnapshot, PublishableUpdateListener,
-} from "@clawjs/tracking-runtime";
+} from "@clawjs/signals";
 
 export const CAREER_MODULE = "career" as const;
 

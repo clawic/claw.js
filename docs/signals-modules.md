@@ -1,12 +1,12 @@
-# ClawJS tracking modules
+# ClawJS signals modules
 
 This document is the canonical guide to the `tracking-*` family of
 packages: how they are laid out, how to add a new vertical, what the
 HTTP surface looks like, and how clients (Clawix Mac/iOS) talk to it.
 
-## What is a "tracking module"?
+## What is a "signals module"?
 
-A tracking module is an isolated, daemon-hosted vertical that stores
+A signals module is an isolated, daemon-hosted vertical that stores
 **observations** about a single domain of user data (sleep, mood,
 workouts, finance, etc.). Each module exposes the same uniform
 HTTP/JSON surface so that any client (Clawix Mac, Clawix iOS, an
@@ -30,8 +30,8 @@ packages/clawjs-<id>/       # publishable npm package (@clawjs/<id>)
 ├── tsconfig.json
 └── src/
     ├── index.ts            # re-exports app/client/config
-    ├── app.ts              # buildXApp() factory using @clawjs/tracking-runtime
-    ├── client.ts           # typed HTTP client (extends TrackingApiClient)
+    ├── app.ts              # buildXApp() factory using @clawjs/signals
+    ├── client.ts           # typed HTTP client (extends SignalsApiClient)
     ├── config.ts           # loadXConfig() — env + overrides
     └── catalog.json        # curated system variables
 
@@ -49,10 +49,10 @@ packages/clawjs-<id>/       # publishable npm package (@clawjs/<id>)
 Two shared packages do the heavy lifting so the per-vertical packages
 stay thin:
 
-- `packages/clawjs-tracking-core/`: shared types
+- `packages/signals-core/`: shared types
   (`Observation`, `CatalogEntry`, `Session`, `Source`, `Unit`,
   `RegistryEntry`, `StatsResult`, …). No runtime dependencies.
-- `packages/clawjs-tracking-runtime/`: reusable SQLite store,
+- `packages/signals/`: reusable SQLite store,
   Fastify route builder, typed HTTP client, catalog JSON loader,
   HealthKit anchor handlers.
 
@@ -66,7 +66,7 @@ stay thin:
 2. Run the scaffolder:
 
    ```bash
-   node scripts/scaffold-tracking-verticals.mjs
+   node scripts/scaffold-signals-verticals.mjs
    ```
 
    It generates the package + service skeleton for every registry entry
@@ -171,7 +171,7 @@ The Clawix Swift clients mirror these shapes in
 
 The legacy `iot.sqlite` collection `goals` is **deprecated** by the new
 `@clawjs/goals` vertical. See
-[`docs/migrations/goals-to-tracking.md`](migrations/goals-to-tracking.md)
+[`docs/migrations/goals-to-signals.md`](migrations/goals-to-signals.md)
 for the one-time migration script and rollback procedure.
 
 ## Release flow
@@ -187,10 +187,10 @@ Per the existing RELEASING.md rules:
 
 ## See also
 
-- `packages/clawjs-tracking-core/src/types.ts` for the canonical
+- `packages/signals-core/src/types.ts` for the canonical
   TypeScript types.
-- `packages/clawjs-tracking-runtime/src/store.ts` for the SQLite
+- `packages/signals/src/store.ts` for the SQLite
   schema and CRUD helpers.
-- `packages/clawjs-tracking-runtime/src/routes.ts` for the Fastify
+- `packages/signals/src/routes.ts` for the Fastify
   route builder shared by every vertical.
 - `packages/clawjs-user-model/` for the pattern this family follows.

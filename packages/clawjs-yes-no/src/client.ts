@@ -1,8 +1,8 @@
-import { TrackingApiClient, type TrackingClientOptions } from "@clawjs/tracking-runtime";
+import { SignalsApiClient, type SignalsClientOptions } from "@clawjs/signals";
 
-export type YesNoClientOptions = Omit<TrackingClientOptions, "domain">;
+export type YesNoClientOptions = Omit<SignalsClientOptions, "domain">;
 
-export class YesNoClient extends TrackingApiClient {
+export class YesNoClient extends SignalsApiClient {
   constructor(options: YesNoClientOptions) {
     super({ ...options, domain: "yes-no" });
   }

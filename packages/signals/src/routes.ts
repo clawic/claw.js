@@ -10,10 +10,10 @@ import type {
   UpsertCatalogInput,
   UpsertObservationInput,
   UpsertSessionInput,
-} from "@clawjs/tracking-core";
-import { SOURCES, VALUE_TYPES } from "@clawjs/tracking-core";
+} from "@clawjs/signals-core";
+import { SOURCES, VALUE_TYPES } from "@clawjs/signals-core";
 
-import { loadTrackingServiceConfig, type TrackingServiceConfig } from "./config.ts";
+import { loadSignalsServiceConfig, type SignalsServiceConfig } from "./config.ts";
 import { TrackingStore } from "./store.ts";
 
 export interface BuildTrackingAppOptions {
@@ -21,7 +21,7 @@ export interface BuildTrackingAppOptions {
   defaultPort: number;
   hasSessions?: boolean;
   envPrefix?: string;
-  configOverrides?: Partial<TrackingServiceConfig>;
+  configOverrides?: Partial<SignalsServiceConfig>;
   seedCatalog?: readonly CatalogEntry[];
 }
 
@@ -78,12 +78,12 @@ function asPeriod(value: unknown): StatsResult["period"] {
 
 export interface BuiltTrackingApp {
   app: FastifyInstance;
-  config: TrackingServiceConfig;
+  config: SignalsServiceConfig;
   store: TrackingStore;
 }
 
 export function buildTrackingApp(options: BuildTrackingAppOptions): BuiltTrackingApp {
-  const config = loadTrackingServiceConfig({
+  const config = loadSignalsServiceConfig({
     domain: options.domain,
     defaultPort: options.defaultPort,
     hasSessions: options.hasSessions ?? false,

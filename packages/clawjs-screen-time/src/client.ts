@@ -1,8 +1,8 @@
-import { TrackingApiClient, type TrackingClientOptions } from "@clawjs/tracking-runtime";
+import { SignalsApiClient, type SignalsClientOptions } from "@clawjs/signals";
 
-export type ScreenTimeClientOptions = Omit<TrackingClientOptions, "domain">;
+export type ScreenTimeClientOptions = Omit<SignalsClientOptions, "domain">;
 
-export class ScreenTimeClient extends TrackingApiClient {
+export class ScreenTimeClient extends SignalsApiClient {
   constructor(options: ScreenTimeClientOptions) {
     super({ ...options, domain: "screen-time" });
   }

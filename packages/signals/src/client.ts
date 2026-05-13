@@ -8,9 +8,9 @@ import type {
   UpsertCatalogInput,
   UpsertObservationInput,
   UpsertSessionInput,
-} from "@clawjs/tracking-core";
+} from "@clawjs/signals-core";
 
-export interface TrackingClientOptions {
+export interface SignalsClientOptions {
   baseUrl: string;
   domain: string;
   token: string;
@@ -26,13 +26,13 @@ function buildQuery(params: Record<string, string | number | boolean | undefined
   return entries.length ? `?${entries.join("&")}` : "";
 }
 
-export class TrackingApiClient {
+export class SignalsApiClient {
   private readonly baseUrl: string;
   private readonly domain: string;
   private readonly token: string;
   private readonly fetchImpl: typeof fetch;
 
-  constructor(options: TrackingClientOptions) {
+  constructor(options: SignalsClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
     this.domain = options.domain;
     this.token = options.token;
@@ -54,7 +54,7 @@ export class TrackingApiClient {
     });
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`tracking-api ${method} ${url} -> ${response.status}: ${text}`);
+      throw new Error(`signals-api ${method} ${url} -> ${response.status}: ${text}`);
     }
     return (await response.json()) as T;
   }

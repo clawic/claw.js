@@ -3,7 +3,7 @@
 The IoT mini-app at `iot/` shipped a `goals` collection (one table in
 `iot.sqlite`) consumed by Clawix Mac through `SidebarRoute.databaseCollection("goals")`.
 The new `@clawjs/goals` vertical replaces that collection with a
-first-class tracking module under the Life surface.
+first-class signals module under the Life surface.
 
 ## Why migrate
 
@@ -19,14 +19,14 @@ first-class tracking module under the Life surface.
 ## What stays
 
 The legacy collection stays readable. The migration is one-way (legacy
-→ tracking), the legacy `goals` collection is **not** deleted, so a
+→ signals), the legacy `goals` collection is **not** deleted, so a
 user who downgrades their Clawix Mac to a version without
 `@clawjs/goals` can still see their old data.
 
 ## Plan
 
 1. **Daemon-side script** at `clawjs/scripts/migrate-iot-goals.mjs`
-   reads from `iot.sqlite::goals` and writes to the goals tracking
+   reads from `iot.sqlite::goals` and writes to the goals signals
    service:
 
    ```bash
@@ -57,7 +57,7 @@ user who downgrades their Clawix Mac to a version without
 ## Rollback
 
 Until `goals.status` reaches `stable`, the migration is reversible:
-the legacy collection is untouched, so removing the new tracking SQLite
+the legacy collection is untouched, so removing the new signals SQLite
 restores the old behavior. After `stable`, the legacy collection is
 declared read-only and the IoT mini-app stops surfacing it in its UI.
 
@@ -65,7 +65,7 @@ declared read-only and the IoT mini-app stops surfacing it in its UI.
 
 - Should we extend the legacy schema in-place instead of moving? No
   — the legacy schema cannot represent observations over time without
-  schema changes, and we want to consolidate every tracking domain into
+  schema changes, and we want to consolidate every signals domain into
   the unified Life family.
 - Should we mirror writes for one release cycle to make rollback
   trivial? Optional; current plan keeps writes one-way (new module

@@ -1,5 +1,5 @@
 ---
-"@clawjs/tracking-runtime": minor
+"@clawjs/signals": minor
 "@clawjs/career": patch
 "@clawjs/home": patch
 "@clawjs/possessions": patch

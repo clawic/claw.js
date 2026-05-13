@@ -1,4 +1,4 @@
-// Publishable mapping for the `possessions` tracking module.
+// Publishable mapping for the `possessions` signals module.
 //
 // A possession (book, kitchen mixer, drone, ...) maps naturally to the
 // `item/v1` vertical when the owner wants to sell, lend or swap it. The
@@ -7,7 +7,7 @@
 
 import type {
   PublishableField, PublishableProvider, PublishableSnapshot, PublishableUpdateListener,
-} from "@clawjs/tracking-runtime";
+} from "@clawjs/signals";
 
 export const POSSESSIONS_MODULE = "possessions" as const;
 

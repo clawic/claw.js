@@ -1,15 +1,15 @@
-// Publishable record bridge between tracking modules and the Profile namespace.
+// Publishable record bridge between signals modules and the Profile namespace.
 //
-// Any tracking module (vehicle, home, possessions, career, ...) can implement
+// Any signals module (vehicle, home, possessions, career, ...) can implement
 // the `PublishableProvider` interface so the Clawix Profile layer can mint a
 // `tracked-block` that points back at a specific record + the public subset of
 // its fields. The Profile daemon then watches for record updates and bumps the
 // block's version so subscribers see fresh state.
 //
-// This interface lives in `tracking-runtime` so any module can ship its own
+// This interface lives in `signals` so any module can ship its own
 // `publishable.ts` without taking a hard dependency on `@clawjs/profile`.
 
-import type { Observation } from "@clawjs/tracking-core";
+import type { Observation } from "@clawjs/signals-core";
 
 export interface PublishableField {
   /** Stable id, e.g. "vehicle.make", "home.surface_m2". */
@@ -34,7 +34,7 @@ export interface PublishableSnapshot {
 export type PublishableUpdateListener = (snapshot: PublishableSnapshot) => void;
 
 /**
- * The contract a tracking module exposes to the Profile daemon.
+ * The contract a signals module exposes to the Profile daemon.
  *
  * `getPublishableSnapshot` is called when a Block is created/refreshed.
  * `onRecordUpdated` lets the Profile daemon subscribe to live record updates
@@ -78,14 +78,14 @@ export class PublishableRegistry {
   modules(): string[] { return [...this.providers.keys()]; }
 }
 
-// ---- helpers for tracking modules ----
+// ---- helpers for signals modules ----
 
 /**
  * Build a `PublishableSnapshot` from the most recent observation per variable
  * the module declared as publishable.
  *
- * Most tracking modules store typed observations through the shared
- * `tracking-runtime` store. This helper turns a list of latest-per-variable
+ * Most signals modules store typed observations through the shared
+ * `signals` store. This helper turns a list of latest-per-variable
  * observations into the simple key/value shape Profile needs.
  */
 export function snapshotFromObservations(input: {

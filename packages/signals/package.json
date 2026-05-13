@@ -1,7 +1,7 @@
 {
-  "name": "@clawjs/tracking-core",
+  "name": "@clawjs/signals",
   "version": "0.1.0",
-  "description": "Shared types and constants for ClawJS tracking modules (observations, variables, units, catalog, sessions, registry).",
+  "description": "Reusable SQLite store, Fastify route builder, and HTTP client factory for ClawJS signals modules (Health, Sleep, Workouts, Emotions, etc.).",
   "type": "module",
   "license": "MIT",
   "author": {
@@ -37,5 +37,10 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20"
+  },
+  "dependencies": {
+    "@clawjs/signals-core": "*",
+    "better-sqlite3": "^12.9.0",
+    "fastify": "^5.6.1"
   }
 }

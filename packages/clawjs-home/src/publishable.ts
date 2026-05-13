@@ -1,8 +1,8 @@
-// Publishable mapping for the `home` tracking module.
+// Publishable mapping for the `home` signals module.
 
 import type {
   PublishableField, PublishableProvider, PublishableSnapshot, PublishableUpdateListener,
-} from "@clawjs/tracking-runtime";
+} from "@clawjs/signals";
 
 export const HOME_MODULE = "home" as const;
 

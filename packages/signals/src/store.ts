@@ -18,7 +18,7 @@ import type {
   UpsertObservationInput,
   UpsertSessionInput,
   ValueType,
-} from "@clawjs/tracking-core";
+} from "@clawjs/signals-core";
 
 const SCHEMA_DDL = `
   CREATE TABLE IF NOT EXISTS system_variables (

@@ -1,4 +1,4 @@
-// Publishable mapping for the `vehicle` tracking module.
+// Publishable mapping for the `vehicle` signals module.
 //
 // A `tracked-block` of vertical `modules/vehicle/v1` (and/or `real-estate/v1` for
 // vehicle-as-asset listings) can reference a vehicle record by its id and
@@ -6,7 +6,7 @@
 
 import type {
   PublishableField, PublishableProvider, PublishableSnapshot, PublishableUpdateListener,
-} from "@clawjs/tracking-runtime";
+} from "@clawjs/signals";
 
 export const VEHICLE_MODULE = "vehicle" as const;
 

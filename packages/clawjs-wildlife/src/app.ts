@@ -7,7 +7,7 @@ import {
   catalogJsonToEntries,
   loadCatalogJson,
   type BuildTrackingAppOptions,
-} from "@clawjs/tracking-runtime";
+} from "@clawjs/signals";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

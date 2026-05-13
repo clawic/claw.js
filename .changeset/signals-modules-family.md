@@ -1,6 +1,6 @@
 ---
-"@clawjs/tracking-core": minor
-"@clawjs/tracking-runtime": minor
+"@clawjs/signals-core": minor
+"@clawjs/signals": minor
 "@clawjs/health": minor
 "@clawjs/sleep": minor
 "@clawjs/workouts": minor
@@ -13,8 +13,8 @@
 "@clawjs/time-tracking": minor
 ---
 
-Add the ClawJS tracking-modules family: shared `tracking-core` types,
-shared `tracking-runtime` Fastify route builder, SQLite store and typed
+Add the ClawJS signals modules family: shared `signals-core` types,
+shared `signals` Fastify route builder, SQLite store and typed
 HTTP client, plus 80 vertical packages declared in
 `tracking-registry.json` (Body & Health, Mind & Emotions,
 Time & Productivity, Creative output, Consumption & Leisure,

@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "@clawjs/mental-models": "file:../packages/clawjs-mental-models",
-    "@clawjs/tracking-core": "file:../packages/clawjs-tracking-core",
-    "@clawjs/tracking-runtime": "file:../packages/clawjs-tracking-runtime",
+    "@clawjs/signals-core": "file:../packages/signals-core",
+    "@clawjs/signals": "file:../packages/signals",
     "better-sqlite3": "^12.9.0",
     "fastify": "^5.6.1"
   },
