@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://slack.com/api/chat.getPermalink?channel=C123&message_ts=1710000000.000000",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret"
+  }
+}

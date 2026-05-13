@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://slack.com/api/chat.scheduledMessages.list?channel=C123&limit=100&cursor=cursor_sample&latest=1710003600.000000&oldest=1710000000.000000",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret"
+  }
+}
