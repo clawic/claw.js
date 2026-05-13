@@ -391,6 +391,8 @@ const DISCORD_ACTION_FIXTURE_NAMES = [
   "update-current-user-application-role-connection",
   "get-gateway",
   "get-gateway-bot",
+  "get-current-bot-application-information",
+  "get-current-authorization-information",
   "get-guild",
   "get-guild-preview",
   "modify-guild",

@@ -1,0 +1,15 @@
+{
+  "application": {
+    "id": "sample",
+    "name": "sample",
+    "description": "sample"
+  },
+  "scopes": [
+    "identify"
+  ],
+  "expires": "2026-05-13T17:00:00.000Z",
+  "user": {
+    "id": "sample",
+    "username": "sample"
+  }
+}

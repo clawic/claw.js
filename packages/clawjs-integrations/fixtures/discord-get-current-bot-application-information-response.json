@@ -1,0 +1,8 @@
+{
+  "id": "sample",
+  "name": "sample",
+  "description": "sample",
+  "verify_key": "sample",
+  "bot_public": true,
+  "bot_require_code_grant": false
+}
