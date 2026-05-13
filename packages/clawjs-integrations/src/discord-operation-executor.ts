@@ -30,6 +30,9 @@ export type DiscordRuntimeOperation =
   | "create-guild-soundboard-sound"
   | "update-guild-soundboard-sound"
   | "delete-guild-soundboard-sound"
+  | "get-current-application"
+  | "edit-current-application"
+  | "get-application-activity-instance"
   | "get-application-role-connection-metadata"
   | "update-application-role-connection-metadata"
   | "list-entitlements"
@@ -272,6 +275,12 @@ export function buildDiscordOperationRequest(
       return bodyPlan("PATCH", `guilds/${guildId(values)}/soundboard-sounds/${soundboardSoundId(values)}`, auth, auditHeaders(headers, values), soundboardSoundBody(values, false), { type: "object", requiredPaths: ["sound_id", "name"] });
     case "delete-guild-soundboard-sound":
       return deletePlan(`guilds/${guildId(values)}/soundboard-sounds/${soundboardSoundId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+    case "get-current-application":
+      return getPlan("applications/@me", auth, headers, { type: "object", requiredPaths: ["id", "name", "description", "verify_key"] });
+    case "edit-current-application":
+      return bodyPlan("PATCH", "applications/@me", auth, headers, currentApplicationBody(values), { type: "object", requiredPaths: ["id", "name", "description", "verify_key"] });
+    case "get-application-activity-instance":
+      return getPlan(`applications/${applicationId(values)}/activity-instances/${instanceId(values)}`, auth, headers, { type: "object", requiredPaths: ["application_id", "instance_id", "launch_id", "location", "users"] });
     case "get-application-role-connection-metadata":
       return getPlan(`applications/${applicationId(values)}/role-connections/metadata`, auth, headers, { type: "array" });
     case "update-application-role-connection-metadata":
@@ -715,6 +724,9 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "create-guild-soundboard-sound",
   "update-guild-soundboard-sound",
   "delete-guild-soundboard-sound",
+  "get-current-application",
+  "edit-current-application",
+  "get-application-activity-instance",
   "get-application-role-connection-metadata",
   "update-application-role-connection-metadata",
   "list-entitlements",
@@ -1290,6 +1302,24 @@ function applicationCommandBody(values: Record<string, IntegrationJson>): Record
   });
 }
 
+function currentApplicationBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    custom_install_url: optionalString(values.customInstallUrl),
+    description: optionalString(values.description),
+    role_connections_verification_url: optionalString(values.roleConnectionsVerificationUrl),
+    install_params: optionalJsonObject(values.installParams),
+    integration_types_config: optionalJsonObject(values.integrationTypesConfig),
+    flags: optionalNumber(values.flags),
+    icon: optionalString(values.icon),
+    cover_image: optionalString(values.coverImage),
+    interactions_endpoint_url: optionalString(values.interactionsEndpointUrl),
+    tags: optionalJsonArray(values.tags),
+    event_webhooks_url: optionalString(values.eventWebhooksUrl),
+    event_webhooks_status: optionalNumber(values.eventWebhooksStatus),
+    event_webhooks_types: optionalJsonArray(values.eventWebhooksTypes),
+  });
+}
+
 function testEntitlementBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
   return {
     sku_id: requiredString(firstValue(values.skuId, values.sku), "skuId"),
@@ -1377,6 +1407,10 @@ function webhookId(values: Record<string, IntegrationJson>): string {
 
 function applicationId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.applicationId, values.application), "applicationId"));
+}
+
+function instanceId(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.instanceId, values.instance), "instanceId"));
 }
 
 function commandId(values: Record<string, IntegrationJson>): string {
