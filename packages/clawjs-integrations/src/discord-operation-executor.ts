@@ -1318,10 +1318,12 @@ function groupDmRecipientBody(values: Record<string, IntegrationJson>): Record<s
 }
 
 function guildTemplateBody(values: Record<string, IntegrationJson>, requireCreateFields: boolean): Record<string, IntegrationJson> {
-  return removeEmptyValues({
+  const body = removeEmptyValues({
     name: requireCreateFields ? requiredString(values.name, "name") : optionalString(values.name),
-    description: optionalString(values.description),
   });
+  const description = optionalNullableStringField(values, "description");
+  if (description !== undefined) body.description = description;
+  return body;
 }
 
 function sendSoundboardSoundBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
