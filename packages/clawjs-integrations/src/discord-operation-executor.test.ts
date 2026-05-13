@@ -50,6 +50,7 @@ const DISCORD_ACTIONS = [
   action("delete-guild-soundboard-sound", "Delete Guild Soundboard Sound", [GUILD_FIELD, SOUNDBOARD_SOUND_FIELD, field("auditLogReason", "string", true)]),
   action("get-application-role-connection-metadata", "Get Application Role Connection Metadata", [APPLICATION_FIELD]),
   action("update-application-role-connection-metadata", "Update Application Role Connection Metadata", [APPLICATION_FIELD, field("records", "array", false, { default: [{ type: 2, key: "score", name: "Score", description: "Sample score" }] })]),
+  action("get-guild-audit-log", "Get Guild Audit Log", [GUILD_FIELD, USER_FIELD, field("actionType", "integer", true, { default: 1 }), field("before", "string", true), field("after", "string", true), field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
   action("list-guild-emojis", "List Guild Emojis", [GUILD_FIELD]),
   action("get-guild-emoji", "Get Guild Emoji", [GUILD_FIELD, field("emojiId", "string")]),
   action("create-guild-emoji", "Create Guild Emoji", [GUILD_FIELD, field("name", "string"), field("image", "string", false, { default: "data:image/png;base64,c2FtcGxl" }), field("roles", "array", true, { default: ["sample"] })]),
@@ -351,6 +352,32 @@ describe("discord operation runtime", () => {
       }],
       responseSchema: {
         type: "array",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-guild-audit-log"), {
+      guildId: "456",
+      userId: "123",
+      actionType: 1,
+      before: "audit-before",
+      after: "audit-after",
+      limit: 25,
+    }), {
+      method: "GET",
+      endpoint: "guilds/456/audit-logs",
+      auth,
+      headers,
+      query: {
+        user_id: "123",
+        action_type: 1,
+        before: "audit-before",
+        after: "audit-after",
+        limit: 25,
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["audit_log_entries"],
       },
     });
 

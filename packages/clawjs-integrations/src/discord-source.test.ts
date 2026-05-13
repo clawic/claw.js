@@ -18,6 +18,7 @@ const DISCORD_SOURCE_OPERATIONS = [
   source("discord.source.message-create", "Message Create"),
   source("discord.source.message-update", "Message Update"),
   source("discord.source.message-delete", "Message Delete"),
+  source("discord.source.guild-audit-log-entry-create", "Guild Audit Log Entry Create"),
   source("discord.source.auto-moderation-rule-create", "Auto Moderation Rule Create"),
   source("discord.source.auto-moderation-rule-update", "Auto Moderation Rule Update"),
   source("discord.source.auto-moderation-rule-delete", "Auto Moderation Rule Delete"),
