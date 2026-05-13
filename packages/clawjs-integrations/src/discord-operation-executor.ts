@@ -189,6 +189,9 @@ export type DiscordRuntimeOperation =
   | "get-webhook"
   | "update-webhook"
   | "delete-webhook"
+  | "get-webhook-with-token"
+  | "update-webhook-with-token"
+  | "delete-webhook-with-token"
   | "execute-webhook"
   | "get-webhook-message"
   | "edit-webhook-message"
@@ -737,6 +740,12 @@ export function buildDiscordOperationRequest(
       return bodyPlan("PATCH", `webhooks/${webhookId(values)}`, auth, headers, webhookBody(values), { type: "object", requiredPaths: ["id"] });
     case "delete-webhook":
       return deletePlan(`webhooks/${webhookId(values)}`, auth, headers, { type: "object" });
+    case "get-webhook-with-token":
+      return getPlan(`webhooks/${webhookId(values)}/${webhookToken(values)}`, [], headers, { type: "object", requiredPaths: ["id"] });
+    case "update-webhook-with-token":
+      return bodyPlan("PATCH", `webhooks/${webhookId(values)}/${webhookToken(values)}`, [], headers, webhookTokenBody(values), { type: "object", requiredPaths: ["id"] });
+    case "delete-webhook-with-token":
+      return deletePlan(`webhooks/${webhookId(values)}/${webhookToken(values)}`, [], headers, { type: "null" });
     case "execute-webhook":
       return bodyPlan("POST", `webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}`, [], headers, messageBody(values, true), { type: "object" }, removeEmptyValues({ wait: values.wait, thread_id: optionalString(values.threadId) }));
     case "get-webhook-message":
@@ -1012,6 +1021,9 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "get-webhook",
   "update-webhook",
   "delete-webhook",
+  "get-webhook-with-token",
+  "update-webhook-with-token",
+  "delete-webhook-with-token",
   "execute-webhook",
   "get-webhook-message",
   "edit-webhook-message",
@@ -1478,6 +1490,13 @@ function webhookBody(values: Record<string, IntegrationJson>): Record<string, In
   });
 }
 
+function webhookTokenBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    name: optionalString(values.name),
+    avatar: optionalString(values.avatar),
+  });
+}
+
 function channelInviteBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
   return removeEmptyValues({
     max_age: optionalNumber(values.maxAge),
@@ -1613,6 +1632,10 @@ function integrationId(values: Record<string, IntegrationJson>): string {
 
 function webhookId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.webhookId, values.webhook), "webhookId"));
+}
+
+function webhookToken(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.webhookToken, values.token), "webhookToken"));
 }
 
 function inviteCode(values: Record<string, IntegrationJson>): string {
