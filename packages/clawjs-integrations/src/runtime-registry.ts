@@ -42,6 +42,16 @@ import {
   isHubSpotSourceOperationSupported,
 } from "./hubspot-source.ts";
 import {
+  buildSalesforceOperationRequest,
+  isSalesforceActionOperationSupported,
+  SALESFORCE_ACTION_SLUGS,
+} from "./salesforce-operation-executor.ts";
+import {
+  buildSalesforceSourcePlan,
+  isSalesforceSourceOperationSupported,
+  SALESFORCE_SOURCE_SLUGS,
+} from "./salesforce-source.ts";
+import {
   buildStripeOperationRequest,
   isStripeActionOperationSupported,
 } from "./stripe-operation-executor.ts";
@@ -689,6 +699,33 @@ const HUBSPOT_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = HUBSPOT_SOURCE_SLUGS.
   path: `packages/clawjs-integrations/fixtures/hubspot-source-${name}.json`,
 }));
 
+const SALESFORCE_ACTION_EVIDENCE = [
+  "packages/clawjs-integrations/src/salesforce-operation-executor.test.ts",
+];
+
+const SALESFORCE_ACTION_FIXTURES: ConnectorRuntimeFixture[] = SALESFORCE_ACTION_SLUGS.flatMap((name) => [
+  {
+    kind: "request" as const,
+    operationId: `salesforce.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/salesforce-${name}-request.json`,
+  },
+  {
+    kind: "response" as const,
+    operationId: `salesforce.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/salesforce-${name}-response.json`,
+  },
+]);
+
+const SALESFORCE_SOURCE_EVIDENCE = [
+  "packages/clawjs-integrations/src/salesforce-source.test.ts",
+];
+
+const SALESFORCE_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = SALESFORCE_SOURCE_SLUGS.map((name) => ({
+  kind: "source_event" as const,
+  operationId: `salesforce.source.${name}`,
+  path: `packages/clawjs-integrations/fixtures/salesforce-source-${name}.json`,
+}));
+
 const STRIPE_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/stripe-operation-executor.test.ts",
 ];
@@ -959,6 +996,33 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     supports: (operation) => isHubSpotSourceOperationSupported(operation.id),
     buildPlan: (operation) => ({
       sourcePlan: buildHubSpotSourcePlan(operation),
+    }),
+  },
+  {
+    appId: "salesforce",
+    kind: "action",
+    executorId: "salesforce.platform-api.http",
+    baseUrl: "https://example.my.salesforce.com/",
+    offlineValidated: true,
+    evidence: SALESFORCE_ACTION_EVIDENCE,
+    fixtures: SALESFORCE_ACTION_FIXTURES,
+    planKinds: ["request"],
+    supports: (operation) => isSalesforceActionOperationSupported(operation.id),
+    buildPlan: (operation, values) => ({
+      requestPlan: buildSalesforceOperationRequest(operation, values),
+    }),
+  },
+  {
+    appId: "salesforce",
+    kind: "source",
+    executorId: "salesforce.event-relay",
+    offlineValidated: true,
+    evidence: SALESFORCE_SOURCE_EVIDENCE,
+    fixtures: SALESFORCE_SOURCE_FIXTURES,
+    planKinds: ["source"],
+    supports: (operation) => isSalesforceSourceOperationSupported(operation.id),
+    buildPlan: (operation) => ({
+      sourcePlan: buildSalesforceSourcePlan(operation),
     }),
   },
   {
