@@ -161,6 +161,12 @@ const DISCORD_ACTIONS = [
   action("begin-guild-prune", "Begin Guild Prune", [GUILD_FIELD, field("days", "integer", true, { default: 7, min: 1 }), field("computePruneCount", "boolean", true, { default: true }), field("includeRoles", "array", true, { default: ["sample"] }), field("auditLogReason", "string", true)]),
   action("get-guild-integrations", "Get Guild Integrations", [GUILD_FIELD]),
   action("delete-guild-integration", "Delete Guild Integration", [GUILD_FIELD, INTEGRATION_FIELD, field("auditLogReason", "string", true)]),
+  action("get-guild-widget-settings", "Get Guild Widget Settings", [GUILD_FIELD]),
+  action("modify-guild-widget", "Modify Guild Widget", [GUILD_FIELD, field("enabled", "boolean", true, { default: true }), field("channelId", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
+  action("get-guild-widget", "Get Guild Widget", [GUILD_FIELD]),
+  action("get-guild-vanity-url", "Get Guild Vanity URL", [GUILD_FIELD]),
+  action("get-guild-welcome-screen", "Get Guild Welcome Screen", [GUILD_FIELD]),
+  action("modify-guild-welcome-screen", "Modify Guild Welcome Screen", [GUILD_FIELD, field("enabled", "boolean", true, { default: true }), field("welcomeChannels", "array", true, { default: [{ channel_id: "sample", description: "sample" }] }), field("description", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
   action("list-auto-moderation-rules", "List Auto Moderation Rules", [GUILD_FIELD]),
   action("get-auto-moderation-rule", "Get Auto Moderation Rule", [GUILD_FIELD, AUTO_MODERATION_RULE_FIELD]),
   action("create-auto-moderation-rule", "Create Auto Moderation Rule", [GUILD_FIELD, field("name", "string"), field("eventType", "integer", false, { default: 1 }), field("triggerType", "integer", false, { default: 1 }), AUTO_MODERATION_TRIGGER_METADATA_FIELD, AUTO_MODERATION_ACTIONS_FIELD, field("enabled", "boolean", true), field("exemptRoles", "array", true, { default: ["sample"] }), field("exemptChannels", "array", true, { default: ["sample"] }), field("auditLogReason", "string", true)]),
@@ -957,6 +963,114 @@ describe("discord operation runtime", () => {
       body: {},
       responseSchema: {
         type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-guild-widget-settings"), {
+      guildId: "456",
+    }), {
+      method: "GET",
+      endpoint: "guilds/456/widget",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["enabled", "channel_id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.modify-guild-widget"), {
+      guildId: "456",
+      enabled: true,
+      channelId: "123",
+      auditLogReason: "enable widget",
+    }), {
+      method: "PATCH",
+      endpoint: "guilds/456/widget",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "enable widget",
+      },
+      body: {
+        enabled: true,
+        channel_id: "123",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["enabled", "channel_id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-guild-widget"), {
+      guildId: "456",
+    }), {
+      method: "GET",
+      endpoint: "guilds/456/widget.json",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "name", "channels", "members", "presence_count"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-guild-vanity-url"), {
+      guildId: "456",
+    }), {
+      method: "GET",
+      endpoint: "guilds/456/vanity-url",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["code", "uses"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-guild-welcome-screen"), {
+      guildId: "456",
+    }), {
+      method: "GET",
+      endpoint: "guilds/456/welcome-screen",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["welcome_channels", "description"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.modify-guild-welcome-screen"), {
+      guildId: "456",
+      enabled: true,
+      welcomeChannels: [{ channel_id: "123", description: "Start here" }],
+      description: "Welcome",
+      auditLogReason: "refresh welcome screen",
+    }), {
+      method: "PATCH",
+      endpoint: "guilds/456/welcome-screen",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "refresh welcome screen",
+      },
+      body: {
+        enabled: true,
+        welcome_channels: [{ channel_id: "123", description: "Start here" }],
+        description: "Welcome",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["welcome_channels", "description"],
       },
     });
 
