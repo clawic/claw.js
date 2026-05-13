@@ -2,11 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  PublishableRegistry, snapshotFromObservations, type PublishableProvider,
+  PublishableRegistry, snapshotFromObservations, type PublishableProvider, type PublishableSnapshot,
 } from "../src/publishable.ts";
 
 function stubProvider(module: string): PublishableProvider {
-  const updates = new Map<string, ((s: ReturnType<PublishableProvider["getPublishableSnapshot"]>) => void)[]>();
+  const updates = new Map<string, ((s: PublishableSnapshot) => void)[]>();
   return {
     module,
     publishableFields: () => [
@@ -51,12 +51,12 @@ test("snapshotFromObservations: maps observations to publishable fields", () => 
     observations: [
       {
         id: "obs-1", variableId: "vehicle.make", value: "Toyota",
-        unitId: "text", recordedAt: 1, source: { kind: "manual", id: "x" },
+        unitId: "text", recordedAt: 1, source: "manual",
         createdAt: 1, updatedAt: 1,
       },
       {
         id: "obs-2", variableId: "vehicle.km", value: 120000,
-        unitId: "km", recordedAt: 2, source: { kind: "manual", id: "x" },
+        unitId: "km", recordedAt: 2, source: "manual",
         createdAt: 2, updatedAt: 2,
       },
     ],
