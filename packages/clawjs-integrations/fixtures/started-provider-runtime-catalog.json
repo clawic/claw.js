@@ -2223,6 +2223,60 @@
           ]
         },
         {
+          "id": "discord.action.group-dm-add-recipient",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Group DM Add Recipient",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "accessToken",
+              "type": "string",
+              "optional": false,
+              "default": "sample-access-token"
+            },
+            {
+              "name": "nick",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.group-dm-remove-recipient",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Group DM Remove Recipient",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.list-messages",
           "appId": "discord",
           "kind": "action",
