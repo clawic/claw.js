@@ -51,6 +51,11 @@ export type DiscordRuntimeOperation =
   | "create-guild-sticker"
   | "update-guild-sticker"
   | "delete-guild-sticker"
+  | "list-voice-regions"
+  | "get-current-user-voice-state"
+  | "get-user-voice-state"
+  | "modify-current-user-voice-state"
+  | "modify-user-voice-state"
   | "get-channel"
   | "update-channel"
   | "set-voice-channel-status"
@@ -298,6 +303,16 @@ export function buildDiscordOperationRequest(
       return bodyPlan("PATCH", `guilds/${guildId(values)}/stickers/${stickerId(values)}`, auth, auditHeaders(headers, values), stickerBody(values, false), { type: "object", requiredPaths: ["id", "name"] });
     case "delete-guild-sticker":
       return deletePlan(`guilds/${guildId(values)}/stickers/${stickerId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+    case "list-voice-regions":
+      return getPlan("voice/regions", auth, headers, { type: "array" });
+    case "get-current-user-voice-state":
+      return getPlan(`guilds/${guildId(values)}/voice-states/@me`, auth, headers, { type: "object", requiredPaths: ["user_id", "session_id"] });
+    case "get-user-voice-state":
+      return getPlan(`guilds/${guildId(values)}/voice-states/${userId(values)}`, auth, headers, { type: "object", requiredPaths: ["user_id", "session_id"] });
+    case "modify-current-user-voice-state":
+      return bodyPlan("PATCH", `guilds/${guildId(values)}/voice-states/@me`, auth, headers, voiceStateBody(values, true), { type: "object" });
+    case "modify-user-voice-state":
+      return bodyPlan("PATCH", `guilds/${guildId(values)}/voice-states/${userId(values)}`, auth, headers, voiceStateBody(values, false), { type: "object" });
     case "update-channel":
       return bodyPlan("PATCH", `channels/${channelId(values)}`, auth, headers, channelBody(values), { type: "object", requiredPaths: ["id", "type"] });
     case "set-voice-channel-status":
@@ -590,6 +605,11 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "create-guild-sticker",
   "update-guild-sticker",
   "delete-guild-sticker",
+  "list-voice-regions",
+  "get-current-user-voice-state",
+  "get-user-voice-state",
+  "modify-current-user-voice-state",
+  "modify-user-voice-state",
   "get-channel",
   "update-channel",
   "set-voice-channel-status",
@@ -794,6 +814,14 @@ function voiceChannelStatusBody(values: Record<string, IntegrationJson>): Record
   if (Object.prototype.hasOwnProperty.call(values, "status") && values.status === null) return { status: null };
   return removeEmptyValues({
     status: optionalString(values.status),
+  });
+}
+
+function voiceStateBody(values: Record<string, IntegrationJson>, includeRequestToSpeak: boolean): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    channel_id: optionalString(values.channelId),
+    suppress: values.suppress,
+    ...(includeRequestToSpeak ? { request_to_speak_timestamp: optionalString(values.requestToSpeakTimestamp) } : {}),
   });
 }
 
