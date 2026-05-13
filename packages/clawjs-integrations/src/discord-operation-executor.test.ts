@@ -20,6 +20,7 @@ const WEBHOOK_TOKEN_FIELD = field("webhookToken", "string");
 const APPLICATION_FIELD = field("applicationId", "string");
 const COMMAND_FIELD = field("commandId", "string");
 const TEMPLATE_CODE_FIELD = field("templateCode", "string");
+const SOUNDBOARD_SOUND_FIELD = field("soundboardSoundId", "string");
 const STICKER_FIELD = field("stickerId", "string");
 const STICKER_PACK_FIELD = field("stickerPackId", "string");
 const AUTO_MODERATION_RULE_FIELD = field("autoModerationRuleId", "string");
@@ -40,6 +41,13 @@ const DISCORD_ACTIONS = [
   action("sync-guild-template", "Sync Guild Template", [GUILD_FIELD, TEMPLATE_CODE_FIELD]),
   action("update-guild-template", "Update Guild Template", [GUILD_FIELD, TEMPLATE_CODE_FIELD, field("name", "string", true, { default: "sample" }), field("description", "string", true, { default: "sample" })]),
   action("delete-guild-template", "Delete Guild Template", [GUILD_FIELD, TEMPLATE_CODE_FIELD]),
+  action("send-soundboard-sound", "Send Soundboard Sound", [CHANNEL_FIELD, SOUNDBOARD_SOUND_FIELD, field("sourceGuildId", "string", true)]),
+  action("list-default-soundboard-sounds", "List Default Soundboard Sounds", []),
+  action("list-guild-soundboard-sounds", "List Guild Soundboard Sounds", [GUILD_FIELD]),
+  action("get-guild-soundboard-sound", "Get Guild Soundboard Sound", [GUILD_FIELD, SOUNDBOARD_SOUND_FIELD]),
+  action("create-guild-soundboard-sound", "Create Guild Soundboard Sound", [GUILD_FIELD, field("name", "string"), field("sound", "string", false, { default: "data:audio/mpeg;base64,c2FtcGxl" }), field("volume", "number", true, { default: 1 }), field("emojiId", "string", true), field("emojiName", "string", true), field("auditLogReason", "string", true)]),
+  action("update-guild-soundboard-sound", "Update Guild Soundboard Sound", [GUILD_FIELD, SOUNDBOARD_SOUND_FIELD, field("name", "string", true, { default: "sample" }), field("volume", "number", true, { default: 1 }), field("emojiId", "string", true), field("emojiName", "string", true), field("auditLogReason", "string", true)]),
+  action("delete-guild-soundboard-sound", "Delete Guild Soundboard Sound", [GUILD_FIELD, SOUNDBOARD_SOUND_FIELD, field("auditLogReason", "string", true)]),
   action("list-guild-emojis", "List Guild Emojis", [GUILD_FIELD]),
   action("get-guild-emoji", "Get Guild Emoji", [GUILD_FIELD, field("emojiId", "string")]),
   action("create-guild-emoji", "Create Guild Emoji", [GUILD_FIELD, field("name", "string"), field("image", "string", false, { default: "data:image/png;base64,c2FtcGxl" }), field("roles", "array", true, { default: ["sample"] })]),
@@ -271,6 +279,51 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["code", "name", "source_guild_id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.send-soundboard-sound"), {
+      channelId: "123",
+      soundboardSoundId: "sound-123",
+      sourceGuildId: "456",
+    }), {
+      method: "POST",
+      endpoint: "channels/123/send-soundboard-sound",
+      auth,
+      headers,
+      body: {
+        sound_id: "sound-123",
+        source_guild_id: "456",
+      },
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-guild-soundboard-sound"), {
+      guildId: "456",
+      name: "Doorbell",
+      sound: "data:audio/mpeg;base64,c2FtcGxl",
+      volume: 0.75,
+      emojiName: "bell",
+      auditLogReason: "sound update",
+    }), {
+      method: "POST",
+      endpoint: "guilds/456/soundboard-sounds",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "sound update",
+      },
+      body: {
+        name: "Doorbell",
+        sound: "data:audio/mpeg;base64,c2FtcGxl",
+        volume: 0.75,
+        emoji_name: "bell",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["sound_id", "name"],
       },
     });
 
