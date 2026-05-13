@@ -968,8 +968,31 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     const mcpConfig = path.join(cwd, "config.toml");
     fs.writeFileSync(mcpConfig, "model = \"gpt\"\n\n[mcp_servers.old]\ncommand = \"old\"\n");
     const mcpUpsertStdout = captureStream();
-    assert.equal(await runCli(["mcp", "upsert", "browser", "--command", "npx", "--args", "@modelcontextprotocol/server-browser", "--config", mcpConfig, "--json"], {
+    assert.equal(await runCli([
+      "mcp", "upsert", "browser",
+      "--command", "npx",
+      "--args", "@modelcontextprotocol/server-browser",
+      "--cwd", "/tmp/browser",
+      "--env-passthrough", "PATH,HOME",
+      "--config", mcpConfig,
+      "--json",
+    ], {
       stdout: mcpUpsertStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const mcpHttpStdout = captureStream();
+    assert.equal(await runCli([
+      "mcp", "upsert", "api",
+      "--url", "https://example.invalid/mcp",
+      "--bearer-token-env-var", "API_TOKEN",
+      "--headers", "{\"X-Test\":\"1\"}",
+      "--headers-from-env", "{\"Authorization\":\"API_AUTH_HEADER\"}",
+      "--enabled", "false",
+      "--config", mcpConfig,
+      "--json",
+    ], {
+      stdout: mcpHttpStdout.stream,
       stderr: captureStream().stream,
       cwd,
     }), CLI_EXIT_OK);
@@ -979,12 +1002,21 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
       stderr: captureStream().stream,
       cwd,
     }), CLI_EXIT_OK);
-    const mcpList = JSON.parse(mcpListStdout.getOutput()) as { items: Array<{ id: string; command: string; args: string[] }> };
-    assert.deepEqual(mcpList.items.map((server) => server.id), ["old", "browser"]);
+    const mcpList = JSON.parse(mcpListStdout.getOutput()) as { items: Array<{ id: string; command?: string; url?: string; args?: string[]; cwd?: string; env_passthrough?: string[]; bearer_token_env_var?: string; headers?: Record<string, string>; headers_from_env?: Record<string, string>; enabled?: boolean }> };
+    assert.deepEqual(mcpList.items.map((server) => server.id), ["old", "browser", "api"]);
     const browserServer = mcpList.items.find((server) => server.id === "browser");
     assert.equal(browserServer?.command, "npx");
     assert.deepEqual(browserServer?.args, ["@modelcontextprotocol/server-browser"]);
+    assert.equal(browserServer?.cwd, "/tmp/browser");
+    assert.deepEqual(browserServer?.env_passthrough, ["PATH", "HOME"]);
+    const apiServer = mcpList.items.find((server) => server.id === "api");
+    assert.equal(apiServer?.url, "https://example.invalid/mcp");
+    assert.equal(apiServer?.bearer_token_env_var, "API_TOKEN");
+    assert.deepEqual(apiServer?.headers, { "X-Test": "1" });
+    assert.deepEqual(apiServer?.headers_from_env, { Authorization: "API_AUTH_HEADER" });
+    assert.equal(apiServer?.enabled, false);
     assert.match(fs.readFileSync(mcpConfig, "utf8"), /^model = "gpt"/);
+    assert.match(fs.readFileSync(mcpConfig, "utf8"), /enabled = false/);
 
     const main = new Database(path.join(tempRoot, "clawjs.sqlite"), { readonly: true });
     try {

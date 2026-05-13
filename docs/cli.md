@@ -257,7 +257,8 @@ claw marketplace choice upsert --target default-ai-provider --choice openai --ki
 claw agents upsert agent-ops --name Ops --secret-ref vault://agents/ops --json
 claw skills upsert deploy --name Deploy --secret-refs vault://skills/deploy-token --json
 claw connections upsert github --provider github --label GitHub --secret-ref vault://connections/github --json
-claw mcp upsert browser --command npx --args "@modelcontextprotocol/server-browser" --json
+claw mcp upsert browser --command npx --args "@modelcontextprotocol/server-browser" --cwd /tmp/browser --env-passthrough PATH,HOME --json
+claw mcp upsert api --url https://example.invalid/mcp --bearer-token-env-var API_TOKEN --headers '{"X-Test":"1"}' --headers-from-env '{"Authorization":"API_AUTH_HEADER"}' --enabled false --json
 claw mcp list --json
 ```
 

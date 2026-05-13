@@ -1856,10 +1856,10 @@ function runMcpCommand(input: V1DataCliInput): number {
     if (command === "get") {
       const id = input.flags.id || input.positionals[2];
       if (!id) return usageError(input, "Usage: claw mcp get SERVER_ID [--json]");
-      writeSuccess(input, servers.find((server) => server.id === id) ?? null);
+      writeUnredactedSuccess(input, servers.find((server) => server.id === id) ?? null);
       return servers.some((server) => server.id === id) ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
     }
-    writeSuccess(input, { source: "codex-config", configPath, items: servers });
+    writeUnredactedSuccess(input, { source: "codex-config", configPath, items: servers });
     return V1_DATA_EXIT_OK;
   }
   if (command === "upsert") {
@@ -1874,12 +1874,18 @@ function runMcpCommand(input: V1DataCliInput): number {
       ...(input.flags.command ? { command: input.flags.command } : {}),
       ...(input.flags.url ? { url: input.flags.url } : {}),
       ...(input.flags.args ? { args: parseCsvOrJson(input.flags.args) ?? [] } : {}),
+      ...(input.flags.cwd ? { cwd: input.flags.cwd } : {}),
+      ...(input.flags["env-passthrough"] ? { env_passthrough: parseCsvOrJson(input.flags["env-passthrough"]) ?? [] } : {}),
       ...(input.flags.env ? { env: parseMaybeJson(input.flags.env) } : {}),
+      ...(input.flags["bearer-token-env-var"] ? { bearer_token_env_var: input.flags["bearer-token-env-var"] } : {}),
+      ...(input.flags.headers ? { headers: parseMaybeJson(input.flags.headers) } : {}),
+      ...(input.flags["headers-from-env"] ? { headers_from_env: parseMaybeJson(input.flags["headers-from-env"]) } : {}),
       ...(input.flags.disabled !== undefined ? { disabled: truthy(input.flags.disabled) } : {}),
+      ...(input.flags.enabled !== undefined ? { enabled: truthy(input.flags.enabled) } : {}),
     };
     const items = [...current.filter((server) => server.id !== id), next];
     writeMcpServers(configPath, items);
-    writeSuccess(input, { id, configPath, server: next });
+    writeUnredactedSuccess(input, { id, configPath, server: next });
     return V1_DATA_EXIT_OK;
   }
   if (command === "delete") {
@@ -3186,11 +3192,25 @@ function renderMcpServer(server: JsonRecord & { id: string }): string {
   if (typeof server.command === "string") root.push(`command = ${tomlString(server.command)}`);
   if (typeof server.url === "string") root.push(`url = ${tomlString(server.url)}`);
   if (Array.isArray(server.args)) root.push(`args = [${server.args.map((entry) => tomlString(String(entry))).join(", ")}]`);
-  if (typeof server.disabled === "boolean") root.push(`disabled = ${server.disabled ? "true" : "false"}`);
+  if (Array.isArray(server.env_passthrough)) root.push(`env_passthrough = [${server.env_passthrough.map((entry) => tomlString(String(entry))).join(", ")}]`);
+  if (typeof server.cwd === "string") root.push(`cwd = ${tomlString(server.cwd)}`);
+  if (typeof server.bearer_token_env_var === "string") root.push(`bearer_token_env_var = ${tomlString(server.bearer_token_env_var)}`);
+  const enabled = typeof server.enabled === "boolean" ? server.enabled : (typeof server.disabled === "boolean" ? !server.disabled : true);
+  if (!enabled) root.push("enabled = false");
   const env = isRecord(server.env) ? server.env : {};
   const envLines = Object.entries(env).map(([key, value]) => `${key} = ${tomlString(String(value))}`);
   if (envLines.length > 0) {
     root.push("", `[mcp_servers.${id}.env]`, ...envLines);
+  }
+  const headers = isRecord(server.headers) ? server.headers : {};
+  const headerLines = Object.entries(headers).map(([key, value]) => `${key} = ${tomlString(String(value))}`);
+  if (headerLines.length > 0) {
+    root.push("", `[mcp_servers.${id}.headers]`, ...headerLines);
+  }
+  const headersFromEnv = isRecord(server.headers_from_env) ? server.headers_from_env : {};
+  const headersFromEnvLines = Object.entries(headersFromEnv).map(([key, value]) => `${key} = ${tomlString(String(value))}`);
+  if (headersFromEnvLines.length > 0) {
+    root.push("", `[mcp_servers.${id}.headers_from_env]`, ...headersFromEnvLines);
   }
   return root.join("\n");
 }
@@ -3326,6 +3346,14 @@ function writeSuccess(input: V1DataCliInput, payload: unknown): void {
     return;
   }
   input.stdout.write(`${typeof payload === "string" ? payload : JSON.stringify(redactSecrets(payload), null, 2)}\n`);
+}
+
+function writeUnredactedSuccess(input: V1DataCliInput, payload: unknown): void {
+  if (input.wantsJson) {
+    input.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+    return;
+  }
+  input.stdout.write(`${typeof payload === "string" ? payload : JSON.stringify(payload, null, 2)}\n`);
 }
 
 function writeError(input: V1DataCliInput, code: string, message: string): void {
