@@ -8,6 +8,7 @@ import {
 } from "./runtime-coverage.ts";
 import {
   buildStripeOperationRequest,
+  STRIPE_EXTRA_ACTION_SPECS,
 } from "./stripe-operation-executor.ts";
 
 const STRIPE_CATALOG = normalizeConnectorCatalog({
@@ -188,6 +189,7 @@ const STRIPE_CATALOG = normalizeConnectorCatalog({
         { name: "chargeId", type: "string", optional: false },
         { name: "amount", type: "integer", optional: true },
       ]),
+      ...STRIPE_EXTRA_ACTION_SPECS.map((spec) => action(`stripe.action.${spec.slug}`, titleize(spec.slug), spec.fields)),
     ],
   }],
 });
@@ -294,52 +296,82 @@ describe("stripe operation runtime", () => {
         requiredPaths: ["id", "object", "status"],
       },
     });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.confirm-payment-intent"), {
+      paymentIntentId: "pi_sample",
+      payment_method: "pm_sample",
+      return_url: "https://example.invalid/return",
+    }), {
+      method: "POST",
+      endpoint: "payment_intents/pi_sample/confirm",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        payment_method: "pm_sample",
+        return_url: "https://example.invalid/return",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object", "status"],
+      },
+    });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-setup-intent"), {
+      customer: "cus_sample",
+      payment_method: "pm_sample",
+      usage: "off_session",
+      confirm: false,
+    }), {
+      method: "POST",
+      endpoint: "setup_intents",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        customer: "cus_sample",
+        payment_method: "pm_sample",
+        usage: "off_session",
+        confirm: false,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object", "status"],
+      },
+    });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.pay-invoice"), {
+      invoiceId: "in_sample",
+      payment_method: "pm_sample",
+    }), {
+      method: "POST",
+      endpoint: "invoices/in_sample/pay",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        payment_method: "pm_sample",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
   });
 
   it("covers Stripe payment operations with operation-scoped offline fixtures", async () => {
     const coverage = verifyConnectorRuntimeCoverage(STRIPE_CATALOG);
     assert.equal(coverage.summary.missing, 0);
-    assert.equal(coverage.summary.implemented, 36);
+    assert.equal(coverage.summary.implemented, STRIPE_CATALOG.apps[0]?.operations.length);
 
     const offline = await verifyConnectorRuntimeOfflineExecutions(STRIPE_CATALOG);
-    assert.deepEqual(offline.results.map((result) => result.operationId).sort(), [
-      "stripe.action.cancel-subscription",
-      "stripe.action.capture-charge",
-      "stripe.action.create-checkout-session",
-      "stripe.action.create-customer",
-      "stripe.action.create-payment-intent",
-      "stripe.action.create-price",
-      "stripe.action.create-product",
-      "stripe.action.create-refund",
-      "stripe.action.create-subscription",
-      "stripe.action.delete-product",
-      "stripe.action.expire-checkout-session",
-      "stripe.action.get-charge",
-      "stripe.action.get-checkout-session",
-      "stripe.action.get-customer",
-      "stripe.action.get-payment-intent",
-      "stripe.action.get-price",
-      "stripe.action.get-product",
-      "stripe.action.get-refund",
-      "stripe.action.get-subscription",
-      "stripe.action.list-charges",
-      "stripe.action.list-checkout-session-line-items",
-      "stripe.action.list-checkout-sessions",
-      "stripe.action.list-customers",
-      "stripe.action.list-payment-intents",
-      "stripe.action.list-prices",
-      "stripe.action.list-products",
-      "stripe.action.list-refunds",
-      "stripe.action.list-subscriptions",
-      "stripe.action.resume-subscription",
-      "stripe.action.search-prices",
-      "stripe.action.search-products",
-      "stripe.action.search-subscriptions",
-      "stripe.action.update-price",
-      "stripe.action.update-product",
-      "stripe.action.update-refund",
-      "stripe.action.update-subscription",
-    ]);
+    assert.deepEqual(
+      offline.results.map((result) => result.operationId).sort(),
+      STRIPE_CATALOG.apps[0]?.operations.map((item) => item.id).sort(),
+    );
   });
 });
 
@@ -355,6 +387,7 @@ function action(id: string, name: string, fields: Array<{
   optional: boolean;
   default?: unknown;
   min?: number;
+  max?: number;
 }>) {
   return {
     id,
@@ -364,4 +397,8 @@ function action(id: string, name: string, fields: Array<{
     fields,
     authFieldNames: ["stripeSecretKey"],
   };
+}
+
+function titleize(slug: string): string {
+  return slug.split("-").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
 }
