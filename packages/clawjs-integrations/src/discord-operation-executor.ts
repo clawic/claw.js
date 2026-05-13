@@ -109,6 +109,8 @@ export type DiscordRuntimeOperation =
   | "delete-own-reaction"
   | "delete-user-reaction"
   | "list-reactions"
+  | "delete-all-reactions"
+  | "delete-all-reactions-for-emoji"
   | "get-answer-voters"
   | "end-poll"
   | "start-thread-from-message"
@@ -505,11 +507,14 @@ export function buildDiscordOperationRequest(
     case "crosspost-message":
       return bodyPlan("POST", `channels/${channelId(values)}/messages/${messageId(values)}/crosspost`, auth, headers, {}, { type: "object", requiredPaths: ["id", "channel_id"] });
     case "list-pinned-messages":
-      return getPlan(`channels/${channelId(values)}/pins`, auth, headers, { type: "array" });
+      return getPlan(`channels/${channelId(values)}/messages/pins`, auth, headers, { type: "object", requiredPaths: ["items", "has_more"] }, removeEmptyValues({
+        before: optionalString(values.before),
+        limit: optionalNumber(values.limit),
+      }));
     case "pin-message":
-      return putPlan(`channels/${channelId(values)}/pins/${messageId(values)}`, auth, headers, { type: "object" });
+      return putPlan(`channels/${channelId(values)}/messages/pins/${messageId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "unpin-message":
-      return deletePlan(`channels/${channelId(values)}/pins/${messageId(values)}`, auth, headers, { type: "object" });
+      return deletePlan(`channels/${channelId(values)}/messages/pins/${messageId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "create-reaction":
       return putPlan(`channels/${channelId(values)}/messages/${messageId(values)}/reactions/${pathSegment(requiredString(values.emoji, "emoji"))}/@me`, auth, headers, { type: "object" });
     case "delete-own-reaction":
@@ -522,6 +527,10 @@ export function buildDiscordOperationRequest(
         limit: optionalNumber(values.limit),
         type: optionalNumber(values.type),
       }));
+    case "delete-all-reactions":
+      return deletePlan(`channels/${channelId(values)}/messages/${messageId(values)}/reactions`, auth, headers, { type: "object" });
+    case "delete-all-reactions-for-emoji":
+      return deletePlan(`channels/${channelId(values)}/messages/${messageId(values)}/reactions/${pathSegment(requiredString(values.emoji, "emoji"))}`, auth, headers, { type: "object" });
     case "get-answer-voters":
       return getPlan(`channels/${channelId(values)}/polls/${messageId(values)}/answers/${answerId(values)}`, auth, headers, { type: "object", requiredPaths: ["users"] }, removeEmptyValues({
         after: optionalString(values.after),
@@ -947,6 +956,8 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "delete-own-reaction",
   "delete-user-reaction",
   "list-reactions",
+  "delete-all-reactions",
+  "delete-all-reactions-for-emoji",
   "get-answer-voters",
   "end-poll",
   "start-thread-from-message",
