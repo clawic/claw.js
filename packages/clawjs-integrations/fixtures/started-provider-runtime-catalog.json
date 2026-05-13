@@ -23938,6 +23938,1359 @@
             "usesHttp": true,
             "usesServiceDb": false
           }
+        },
+        {
+          "id": "slack.action.get-message-permalink",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Get Message Permalink",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false,
+              "default": "C123"
+            },
+            {
+              "name": "messageTs",
+              "type": "string",
+              "optional": false,
+              "default": "1710000000.000000"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.send-me-message",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Send Me Message",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false,
+              "default": "C123"
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "optional": false,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.list-scheduled-messages",
+          "appId": "slack",
+          "kind": "action",
+          "name": "List Scheduled Messages",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false,
+              "default": "C123"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 1000
+            },
+            {
+              "name": "cursor",
+              "type": "string",
+              "optional": true,
+              "default": "cursor_sample"
+            },
+            {
+              "name": "latest",
+              "type": "string",
+              "optional": true,
+              "default": "1710003600.000000"
+            },
+            {
+              "name": "oldest",
+              "type": "string",
+              "optional": true,
+              "default": "1710000000.000000"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.unfurl-message",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Unfurl Message",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false,
+              "default": "C123"
+            },
+            {
+              "name": "messageTs",
+              "type": "string",
+              "optional": false,
+              "default": "1710000000.000000"
+            },
+            {
+              "name": "unfurls",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "https://example.invalid": {
+                  "title": "Example"
+                }
+              }
+            },
+            {
+              "name": "userAuthMessage",
+              "type": "string",
+              "optional": true,
+              "default": "Authorize"
+            },
+            {
+              "name": "userAuthUrl",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/auth"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.close-conversation",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Close Conversation",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false,
+              "default": "C123"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.mark-conversation",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Mark Conversation",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false,
+              "default": "C123"
+            },
+            {
+              "name": "messageTs",
+              "type": "string",
+              "optional": false,
+              "default": "1710000000.000000"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.set-conversation-purpose",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Set Conversation Purpose",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false,
+              "default": "C123"
+            },
+            {
+              "name": "purpose",
+              "type": "string",
+              "optional": false,
+              "default": "Sample purpose"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.set-conversation-topic",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Set Conversation Topic",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false,
+              "default": "C123"
+            },
+            {
+              "name": "topic",
+              "type": "string",
+              "optional": false,
+              "default": "Sample topic"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.lookup-user-by-email",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Lookup User By Email",
+          "fields": [
+            {
+              "name": "email",
+              "type": "string",
+              "optional": false,
+              "default": "person@example.invalid"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.get-user-profile",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Get User Profile",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "U123"
+            },
+            {
+              "name": "includeLabels",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.set-user-profile",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Set User Profile",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "U123"
+            },
+            {
+              "name": "profile",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "status_text": "Working",
+                "status_emoji": ":computer:"
+              }
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "status_text"
+            },
+            {
+              "name": "value",
+              "type": "string",
+              "optional": true,
+              "default": "Working"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.list-emoji",
+          "appId": "slack",
+          "kind": "action",
+          "name": "List Emoji",
+          "fields": [],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.get-team-info",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Get Team Info",
+          "fields": [
+            {
+              "name": "teamId",
+              "type": "string",
+              "optional": true,
+              "default": "T123"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.get-team-profile",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Get Team Profile",
+          "fields": [
+            {
+              "name": "visibility",
+              "type": "string",
+              "optional": true,
+              "default": "all"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.get-bot-info",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Get Bot Info",
+          "fields": [
+            {
+              "name": "botId",
+              "type": "string",
+              "optional": true,
+              "default": "B123"
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "U123"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.add-bookmark",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Add Bookmark",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false,
+              "default": "C123"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false,
+              "default": "Sample bookmark"
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false,
+              "default": "link"
+            },
+            {
+              "name": "link",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid"
+            },
+            {
+              "name": "emoji",
+              "type": "string",
+              "optional": true,
+              "default": ":bookmark:"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.edit-bookmark",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Edit Bookmark",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false,
+              "default": "C123"
+            },
+            {
+              "name": "bookmarkId",
+              "type": "string",
+              "optional": false,
+              "default": "Bk123"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false,
+              "default": "Updated bookmark"
+            },
+            {
+              "name": "link",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/updated"
+            },
+            {
+              "name": "emoji",
+              "type": "string",
+              "optional": true,
+              "default": ":bookmark:"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.list-bookmarks",
+          "appId": "slack",
+          "kind": "action",
+          "name": "List Bookmarks",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false,
+              "default": "C123"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.remove-bookmark",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Remove Bookmark",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false,
+              "default": "C123"
+            },
+            {
+              "name": "bookmarkId",
+              "type": "string",
+              "optional": false,
+              "default": "Bk123"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.add-star",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Add Star",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false,
+              "default": "C123"
+            },
+            {
+              "name": "messageTs",
+              "type": "string",
+              "optional": false,
+              "default": "1710000000.000000"
+            },
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": true,
+              "default": "F123"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.list-stars",
+          "appId": "slack",
+          "kind": "action",
+          "name": "List Stars",
+          "fields": [
+            {
+              "name": "count",
+              "type": "integer",
+              "optional": true,
+              "default": 20,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 1000
+            },
+            {
+              "name": "cursor",
+              "type": "string",
+              "optional": true,
+              "default": "cursor_sample"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.remove-star",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Remove Star",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false,
+              "default": "C123"
+            },
+            {
+              "name": "messageTs",
+              "type": "string",
+              "optional": false,
+              "default": "1710000000.000000"
+            },
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": true,
+              "default": "F123"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.get-dnd-info",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Get Dnd Info",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "U123"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.set-dnd-snooze",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Set Dnd Snooze",
+          "fields": [
+            {
+              "name": "numMinutes",
+              "type": "integer",
+              "optional": false,
+              "default": 30,
+              "min": 1,
+              "max": 1440
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.end-dnd-snooze",
+          "appId": "slack",
+          "kind": "action",
+          "name": "End Dnd Snooze",
+          "fields": [],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.get-team-dnd-info",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Get Team Dnd Info",
+          "fields": [
+            {
+              "name": "users",
+              "type": "string",
+              "optional": false,
+              "default": "U123,U456"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.add-remote-file",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Add Remote File",
+          "fields": [
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": false,
+              "default": "external-123"
+            },
+            {
+              "name": "externalUrl",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/file"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false,
+              "default": "Sample file"
+            },
+            {
+              "name": "filetype",
+              "type": "string",
+              "optional": true,
+              "default": "text"
+            },
+            {
+              "name": "indexableFileContents",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.get-remote-file",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Get Remote File",
+          "fields": [
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": true,
+              "default": "external-123"
+            },
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": true,
+              "default": "F123"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.list-remote-files",
+          "appId": "slack",
+          "kind": "action",
+          "name": "List Remote Files",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false,
+              "default": "C123"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 1000
+            },
+            {
+              "name": "cursor",
+              "type": "string",
+              "optional": true,
+              "default": "cursor_sample"
+            },
+            {
+              "name": "tsFrom",
+              "type": "string",
+              "optional": true,
+              "default": "1710000000.000000"
+            },
+            {
+              "name": "tsTo",
+              "type": "string",
+              "optional": true,
+              "default": "1710003600.000000"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.remove-remote-file",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Remove Remote File",
+          "fields": [
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": true,
+              "default": "external-123"
+            },
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": true,
+              "default": "F123"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.share-remote-file",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Share Remote File",
+          "fields": [
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": true,
+              "default": "external-123"
+            },
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": true,
+              "default": "F123"
+            },
+            {
+              "name": "channels",
+              "type": "string",
+              "optional": false,
+              "default": "C123"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.update-remote-file",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Update Remote File",
+          "fields": [
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": true,
+              "default": "external-123"
+            },
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": true,
+              "default": "F123"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": true,
+              "default": "Updated file"
+            },
+            {
+              "name": "externalUrl",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/file-updated"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.create-usergroup",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Create Usergroup",
+          "fields": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "Sample Group"
+            },
+            {
+              "name": "handle",
+              "type": "string",
+              "optional": false,
+              "default": "sample-group"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Sample group"
+            },
+            {
+              "name": "channels",
+              "type": "string",
+              "optional": true,
+              "default": "C123"
+            },
+            {
+              "name": "includeCount",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.update-usergroup",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Update Usergroup",
+          "fields": [
+            {
+              "name": "usergroupId",
+              "type": "string",
+              "optional": false,
+              "default": "S123"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Updated Group"
+            },
+            {
+              "name": "handle",
+              "type": "string",
+              "optional": true,
+              "default": "updated-group"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Updated group"
+            },
+            {
+              "name": "channels",
+              "type": "string",
+              "optional": true,
+              "default": "C123"
+            },
+            {
+              "name": "includeCount",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.list-auth-teams",
+          "appId": "slack",
+          "kind": "action",
+          "name": "List Auth Teams",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 1000
+            },
+            {
+              "name": "cursor",
+              "type": "string",
+              "optional": true,
+              "default": "cursor_sample"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.revoke-auth",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Revoke Auth",
+          "fields": [
+            {
+              "name": "test",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.add-call",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Add Call",
+          "fields": [
+            {
+              "name": "externalUniqueId",
+              "type": "string",
+              "optional": false,
+              "default": "call-123"
+            },
+            {
+              "name": "joinUrl",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/call"
+            },
+            {
+              "name": "createdBy",
+              "type": "string",
+              "optional": false,
+              "default": "U123"
+            },
+            {
+              "name": "dateStart",
+              "type": "string",
+              "optional": true,
+              "default": "1710000000"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.get-call",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Get Call",
+          "fields": [
+            {
+              "name": "callId",
+              "type": "string",
+              "optional": false,
+              "default": "R123"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.update-call",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Update Call",
+          "fields": [
+            {
+              "name": "callId",
+              "type": "string",
+              "optional": false,
+              "default": "R123"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": true,
+              "default": "Updated call"
+            },
+            {
+              "name": "joinUrl",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/call-updated"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.end-call",
+          "appId": "slack",
+          "kind": "action",
+          "name": "End Call",
+          "fields": [
+            {
+              "name": "callId",
+              "type": "string",
+              "optional": false,
+              "default": "R123"
+            },
+            {
+              "name": "duration",
+              "type": "integer",
+              "optional": true,
+              "default": 300
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.add-call-participants",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Add Call Participants",
+          "fields": [
+            {
+              "name": "callId",
+              "type": "string",
+              "optional": false,
+              "default": "R123"
+            },
+            {
+              "name": "users",
+              "type": "string",
+              "optional": false,
+              "default": "U123,U456"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.action.remove-call-participants",
+          "appId": "slack",
+          "kind": "action",
+          "name": "Remove Call Participants",
+          "fields": [
+            {
+              "name": "callId",
+              "type": "string",
+              "optional": false,
+              "default": "R123"
+            },
+            {
+              "name": "users",
+              "type": "string",
+              "optional": false,
+              "default": "U123"
+            }
+          ],
+          "authFieldNames": [
+            "slackBotToken"
+          ]
+        },
+        {
+          "id": "slack.source.reaction-removed",
+          "appId": "slack",
+          "kind": "source",
+          "name": "Reaction Removed",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "event_id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "slack.source.file-created",
+          "appId": "slack",
+          "kind": "source",
+          "name": "File Created",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "event_id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "slack.source.file-deleted",
+          "appId": "slack",
+          "kind": "source",
+          "name": "File Deleted",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "event_id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "slack.source.member-joined-channel",
+          "appId": "slack",
+          "kind": "source",
+          "name": "Member Joined Channel",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "event_id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "slack.source.member-left-channel",
+          "appId": "slack",
+          "kind": "source",
+          "name": "Member Left Channel",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "event_id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "slack.source.channel-created",
+          "appId": "slack",
+          "kind": "source",
+          "name": "Channel Created",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "event_id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "slack.source.channel-archive",
+          "appId": "slack",
+          "kind": "source",
+          "name": "Channel Archive",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "event_id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "slack.source.channel-unarchive",
+          "appId": "slack",
+          "kind": "source",
+          "name": "Channel Unarchive",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "event_id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "slack.source.app-home-opened",
+          "appId": "slack",
+          "kind": "source",
+          "name": "App Home Opened",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "event_id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "slack.source.team-join",
+          "appId": "slack",
+          "kind": "source",
+          "name": "Team Join",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "event_id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "slack.source.tokens-revoked",
+          "appId": "slack",
+          "kind": "source",
+          "name": "Tokens Revoked",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "event_id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
         }
       ]
     },
