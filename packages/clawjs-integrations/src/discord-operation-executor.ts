@@ -20,6 +20,8 @@ export type DiscordRuntimeOperation =
   | "update-current-user-application-role-connection"
   | "get-gateway"
   | "get-gateway-bot"
+  | "get-current-bot-application-information"
+  | "get-current-authorization-information"
   | "get-guild"
   | "get-guild-preview"
   | "modify-guild"
@@ -266,6 +268,10 @@ export function buildDiscordOperationRequest(
       return getPlan("gateway", [], headers, { type: "object", requiredPaths: ["url"] });
     case "get-gateway-bot":
       return getPlan("gateway/bot", auth, headers, { type: "object", requiredPaths: ["url", "shards", "session_start_limit"] });
+    case "get-current-bot-application-information":
+      return getPlan("oauth2/applications/@me", auth, headers, { type: "object", requiredPaths: ["id", "name", "description", "verify_key"] });
+    case "get-current-authorization-information":
+      return getPlan("oauth2/@me", bearerAuth, headers, { type: "object", requiredPaths: ["application", "scopes", "expires"] });
     case "get-guild":
       return getPlan(`guilds/${guildId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "name"] }, removeEmptyValues({
         with_counts: values.withCounts,
@@ -799,6 +805,8 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "update-current-user-application-role-connection",
   "get-gateway",
   "get-gateway-bot",
+  "get-current-bot-application-information",
+  "get-current-authorization-information",
   "get-guild",
   "get-guild-preview",
   "modify-guild",
