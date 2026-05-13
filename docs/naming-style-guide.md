@@ -43,6 +43,11 @@ If a public or persistent name is not covered here, stop and update
 | HTTP paths | plural resources, `kebab-case` | `/v1/signal-observations` |
 | File extensions | lowercase, semantic | `.sqlite`, `.clawbackup` |
 
+JSON, API, YAML, and TypeScript framework fields use `camelCase`.
+CLI commands and flags use `kebab-case`.
+SQL tables, SQL columns, and collection names use `snake_case`.
+Events use `domain.action`.
+
 ## Prefixes and namespaces
 
 - Public framework env vars use `CLAW_*`.
@@ -74,6 +79,8 @@ Use these exact words:
 - `workspace`, `project`, `app`, `host`, and `runtime`.
 - `module`, `integration`, `plugin`, `skill`, and `connector`.
 - `drive`, `storage`, `secrets`, and `vault` only with their ADR meanings.
+
+Use `sessionId`, not stable `chatId`, in protocol contracts.
 
 ## Statuses, timestamps, and deletion
 

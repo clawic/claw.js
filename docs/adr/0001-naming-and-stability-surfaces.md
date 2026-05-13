@@ -17,6 +17,19 @@ ports, protocol fields, database names, event names, docs, examples, templates,
 and agent instructions. Do not add a new public name in these areas without
 updating this ADR or adding a successor ADR.
 
+## Frozen values summary
+
+- Framework/product name: `ClawJS`.
+- CLI/workspace brand: `claw`.
+- Global ClawJS home: `~/.claw`.
+- Clawix host/bridge home: `~/.clawix`.
+- SQL tables and columns: `snake_case`.
+- JSON/API/YAML/framework fields: `camelCase`.
+- CLI commands and flags: `kebab-case`.
+- Events use `domain.action`.
+- `schemaVersion` versions persisted data.
+- `protocolVersion` versions wire protocols.
+
 ## Product, roots, and workspace layout
 
 - The framework/product name is `ClawJS`.
