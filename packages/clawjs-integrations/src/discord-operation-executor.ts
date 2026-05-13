@@ -133,6 +133,12 @@ export type DiscordRuntimeOperation =
   | "begin-guild-prune"
   | "get-guild-integrations"
   | "delete-guild-integration"
+  | "get-guild-widget-settings"
+  | "modify-guild-widget"
+  | "get-guild-widget"
+  | "get-guild-vanity-url"
+  | "get-guild-welcome-screen"
+  | "modify-guild-welcome-screen"
   | "list-auto-moderation-rules"
   | "get-auto-moderation-rule"
   | "create-auto-moderation-rule"
@@ -549,6 +555,18 @@ export function buildDiscordOperationRequest(
       return getPlan(`guilds/${guildId(values)}/integrations`, auth, headers, { type: "array" });
     case "delete-guild-integration":
       return deletePlan(`guilds/${guildId(values)}/integrations/${integrationId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+    case "get-guild-widget-settings":
+      return getPlan(`guilds/${guildId(values)}/widget`, auth, headers, { type: "object", requiredPaths: ["enabled", "channel_id"] });
+    case "modify-guild-widget":
+      return bodyPlan("PATCH", `guilds/${guildId(values)}/widget`, auth, auditHeaders(headers, values), guildWidgetBody(values), { type: "object", requiredPaths: ["enabled", "channel_id"] });
+    case "get-guild-widget":
+      return getPlan(`guilds/${guildId(values)}/widget.json`, auth, headers, { type: "object", requiredPaths: ["id", "name", "channels", "members", "presence_count"] });
+    case "get-guild-vanity-url":
+      return getPlan(`guilds/${guildId(values)}/vanity-url`, auth, headers, { type: "object", requiredPaths: ["code", "uses"] });
+    case "get-guild-welcome-screen":
+      return getPlan(`guilds/${guildId(values)}/welcome-screen`, auth, headers, { type: "object", requiredPaths: ["welcome_channels", "description"] });
+    case "modify-guild-welcome-screen":
+      return bodyPlan("PATCH", `guilds/${guildId(values)}/welcome-screen`, auth, auditHeaders(headers, values), welcomeScreenBody(values), { type: "object", requiredPaths: ["welcome_channels", "description"] });
     case "list-auto-moderation-rules":
       return getPlan(`guilds/${guildId(values)}/auto-moderation/rules`, auth, headers, { type: "array" });
     case "get-auto-moderation-rule":
@@ -791,6 +809,12 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "begin-guild-prune",
   "get-guild-integrations",
   "delete-guild-integration",
+  "get-guild-widget-settings",
+  "modify-guild-widget",
+  "get-guild-widget",
+  "get-guild-vanity-url",
+  "get-guild-welcome-screen",
+  "modify-guild-welcome-screen",
   "list-auto-moderation-rules",
   "get-auto-moderation-rule",
   "create-auto-moderation-rule",
@@ -1171,6 +1195,21 @@ function beginGuildPruneBody(values: Record<string, IntegrationJson>): Record<st
     days: optionalNumber(values.days),
     compute_prune_count: values.computePruneCount,
     include_roles: optionalJsonArray(values.includeRoles),
+  });
+}
+
+function guildWidgetBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    enabled: values.enabled,
+    channel_id: optionalString(values.channelId),
+  });
+}
+
+function welcomeScreenBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    enabled: values.enabled,
+    welcome_channels: optionalJsonArray(values.welcomeChannels),
+    description: optionalString(values.description),
   });
 }
 
