@@ -23,6 +23,7 @@ const APPLICATION_FIELD = field("applicationId", "string");
 const COMMAND_FIELD = field("commandId", "string");
 const ENTITLEMENT_FIELD = field("entitlementId", "string");
 const SKU_FIELD = field("skuId", "string");
+const SUBSCRIPTION_FIELD = field("subscriptionId", "string");
 const TEMPLATE_CODE_FIELD = field("templateCode", "string");
 const SOUNDBOARD_SOUND_FIELD = field("soundboardSoundId", "string");
 const STICKER_FIELD = field("stickerId", "string");
@@ -59,6 +60,9 @@ const DISCORD_ACTIONS = [
   action("consume-entitlement", "Consume Entitlement", [APPLICATION_FIELD, ENTITLEMENT_FIELD]),
   action("create-test-entitlement", "Create Test Entitlement", [APPLICATION_FIELD, SKU_FIELD, field("ownerId", "string"), field("ownerType", "integer", false, { default: 1, min: 1, max: 2 })]),
   action("delete-test-entitlement", "Delete Test Entitlement", [APPLICATION_FIELD, ENTITLEMENT_FIELD]),
+  action("list-skus", "List SKUs", [APPLICATION_FIELD]),
+  action("list-sku-subscriptions", "List SKU Subscriptions", [SKU_FIELD, USER_FIELD, field("before", "string", true), field("after", "string", true), field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
+  action("get-sku-subscription", "Get SKU Subscription", [SKU_FIELD, SUBSCRIPTION_FIELD]),
   action("get-guild-audit-log", "Get Guild Audit Log", [GUILD_FIELD, USER_FIELD, field("actionType", "integer", true, { default: 1 }), field("before", "string", true), field("after", "string", true), field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
   action("list-guild-emojis", "List Guild Emojis", [GUILD_FIELD]),
   action("get-guild-emoji", "Get Guild Emoji", [GUILD_FIELD, field("emojiId", "string")]),
@@ -604,6 +608,59 @@ describe("discord operation runtime", () => {
       body: {},
       responseSchema: {
         type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.list-skus"), {
+      applicationId: "app-123",
+    }), {
+      method: "GET",
+      endpoint: "applications/app-123/skus",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "array",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.list-sku-subscriptions"), {
+      skuId: "sku-123",
+      userId: "user-123",
+      before: "sub-before",
+      after: "sub-after",
+      limit: 50,
+    }), {
+      method: "GET",
+      endpoint: "skus/sku-123/subscriptions",
+      auth,
+      headers,
+      query: {
+        before: "sub-before",
+        after: "sub-after",
+        limit: 50,
+        user_id: "user-123",
+      },
+      body: {},
+      responseSchema: {
+        type: "array",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-sku-subscription"), {
+      skuId: "sku-123",
+      subscriptionId: "sub-123",
+    }), {
+      method: "GET",
+      endpoint: "skus/sku-123/subscriptions/sub-123",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "user_id", "sku_ids"],
       },
     });
 
