@@ -4624,6 +4624,209 @@
           "authFieldNames": []
         },
         {
+          "id": "discord.action.create-interaction-response",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Interaction Response",
+          "fields": [
+            {
+              "name": "interactionId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "interactionToken",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "responseType",
+              "type": "integer",
+              "optional": false,
+              "default": 4
+            },
+            {
+              "name": "responseData",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "content": "sample"
+              }
+            },
+            {
+              "name": "withResponse",
+              "type": "boolean",
+              "optional": true
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
+          "id": "discord.action.get-original-interaction-response",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Original Interaction Response",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "interactionToken",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
+          "id": "discord.action.edit-original-interaction-response",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Edit Original Interaction Response",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "interactionToken",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "content",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
+          "id": "discord.action.delete-original-interaction-response",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Original Interaction Response",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "interactionToken",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
+          "id": "discord.action.create-followup-message",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Followup Message",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "interactionToken",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "content",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
+          "id": "discord.action.get-followup-message",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Followup Message",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "interactionToken",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
+          "id": "discord.action.edit-followup-message",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Edit Followup Message",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "interactionToken",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "content",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
+          "id": "discord.action.delete-followup-message",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Followup Message",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "interactionToken",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
           "id": "discord.action.list-global-application-commands",
           "appId": "discord",
           "kind": "action",
