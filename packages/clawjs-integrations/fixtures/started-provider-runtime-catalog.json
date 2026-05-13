@@ -129,7 +129,9 @@
     {
       "id": "github",
       "name": "GitHub",
-      "authFieldNames": ["githubToken"],
+      "authFieldNames": [
+        "githubToken"
+      ],
       "fields": [
         {
           "name": "githubToken",
@@ -140,30 +142,353 @@
       ],
       "operations": [
         {
-          "id": "github.action.create-issue",
+          "id": "github.action.get-authenticated-user",
           "appId": "github",
           "kind": "action",
-          "name": "Create Issue",
-          "fields": [
-            { "name": "body", "type": "string", "optional": true },
-            { "name": "owner", "type": "string", "optional": false },
-            { "name": "repo", "type": "string", "optional": false },
-            { "name": "title", "type": "string", "optional": false }
-          ],
-          "authFieldNames": ["githubToken"]
+          "name": "Get Authenticated User",
+          "fields": [],
+          "authFieldNames": [
+            "githubToken"
+          ]
         },
         {
-          "id": "github.action.create-issue-comment",
+          "id": "github.action.get-user",
           "appId": "github",
           "kind": "action",
-          "name": "Create Issue Comment",
+          "name": "Get User",
           "fields": [
-            { "name": "body", "type": "string", "optional": false },
-            { "name": "issueNumber", "type": "integer", "optional": false, "min": 1 },
-            { "name": "owner", "type": "string", "optional": false },
-            { "name": "repo", "type": "string", "optional": false }
+            {
+              "name": "username",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["githubToken"]
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-user-repositories",
+          "appId": "github",
+          "kind": "action",
+          "name": "List User Repositories",
+          "fields": [
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-org-repositories",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Organization Repositories",
+          "fields": [
+            {
+              "name": "org",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-user-repository",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create User Repository",
+          "fields": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-org-repository",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Organization Repository",
+          "fields": [
+            {
+              "name": "org",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.get-repository",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Repository",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.update-repository",
+          "appId": "github",
+          "kind": "action",
+          "name": "Update Repository",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.delete-repository",
+          "appId": "github",
+          "kind": "action",
+          "name": "Delete Repository",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-branches",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Branches",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.get-branch",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Branch",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "branch",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.get-repository-content",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Repository Content",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-or-update-file",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Or Update File",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "message",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "content",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.delete-file",
+          "appId": "github",
+          "kind": "action",
+          "name": "Delete File",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "message",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "sha",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
         },
         {
           "id": "github.action.get-issue",
@@ -171,11 +496,26 @@
           "kind": "action",
           "name": "Get Issue",
           "fields": [
-            { "name": "issueNumber", "type": "integer", "optional": false, "min": 1 },
-            { "name": "owner", "type": "string", "optional": false },
-            { "name": "repo", "type": "string", "optional": false }
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "issueNumber",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["githubToken"]
+          "authFieldNames": [
+            "githubToken"
+          ]
         },
         {
           "id": "github.action.list-repository-issues",
@@ -183,13 +523,1527 @@
           "kind": "action",
           "name": "List Repository Issues",
           "fields": [
-            { "name": "owner", "type": "string", "optional": false },
-            { "name": "page", "type": "integer", "optional": true, "default": 1, "min": 1 },
-            { "name": "perPage", "type": "integer", "optional": true, "default": 30, "min": 1, "max": 100 },
-            { "name": "repo", "type": "string", "optional": false },
-            { "name": "state", "type": "string", "optional": true, "default": "open" }
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "state",
+              "type": "string",
+              "optional": true,
+              "default": "open"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["githubToken"]
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-issue",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Issue",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "body",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.update-issue",
+          "appId": "github",
+          "kind": "action",
+          "name": "Update Issue",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "issueNumber",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.lock-issue",
+          "appId": "github",
+          "kind": "action",
+          "name": "Lock Issue",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "issueNumber",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.unlock-issue",
+          "appId": "github",
+          "kind": "action",
+          "name": "Unlock Issue",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "issueNumber",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-issue-comments",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Issue Comments",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "issueNumber",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-issue-comment",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Issue Comment",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "issueNumber",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            },
+            {
+              "name": "body",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.update-issue-comment",
+          "appId": "github",
+          "kind": "action",
+          "name": "Update Issue Comment",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "commentId",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            },
+            {
+              "name": "body",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.delete-issue-comment",
+          "appId": "github",
+          "kind": "action",
+          "name": "Delete Issue Comment",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "commentId",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-labels",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Labels",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-label",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Label",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "color",
+              "type": "string",
+              "optional": false,
+              "default": "0e8a16"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.update-label",
+          "appId": "github",
+          "kind": "action",
+          "name": "Update Label",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "newName",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.delete-label",
+          "appId": "github",
+          "kind": "action",
+          "name": "Delete Label",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-milestones",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Milestones",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-milestone",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Milestone",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.update-milestone",
+          "appId": "github",
+          "kind": "action",
+          "name": "Update Milestone",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "milestoneNumber",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.delete-milestone",
+          "appId": "github",
+          "kind": "action",
+          "name": "Delete Milestone",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "milestoneNumber",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-pull-requests",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Pull Requests",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "state",
+              "type": "string",
+              "optional": true,
+              "default": "open"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.get-pull-request",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Pull Request",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "pullNumber",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-pull-request",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Pull Request",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "head",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "base",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.update-pull-request",
+          "appId": "github",
+          "kind": "action",
+          "name": "Update Pull Request",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "pullNumber",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.merge-pull-request",
+          "appId": "github",
+          "kind": "action",
+          "name": "Merge Pull Request",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "pullNumber",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-pull-request-files",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Pull Request Files",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "pullNumber",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-pull-request-commits",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Pull Request Commits",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "pullNumber",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-releases",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Releases",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.get-release",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Release",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "releaseId",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-release",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Release",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "tagName",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.update-release",
+          "appId": "github",
+          "kind": "action",
+          "name": "Update Release",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "releaseId",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.delete-release",
+          "appId": "github",
+          "kind": "action",
+          "name": "Delete Release",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "releaseId",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-workflows",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Workflows",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.get-workflow",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Workflow",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "workflowId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.dispatch-workflow",
+          "appId": "github",
+          "kind": "action",
+          "name": "Dispatch Workflow",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "workflowId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "ref",
+              "type": "string",
+              "optional": false,
+              "default": "main"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-workflow-runs",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Workflow Runs",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.get-workflow-run",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Workflow Run",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "runId",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.rerun-workflow-run",
+          "appId": "github",
+          "kind": "action",
+          "name": "Rerun Workflow Run",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "runId",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.cancel-workflow-run",
+          "appId": "github",
+          "kind": "action",
+          "name": "Cancel Workflow Run",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "runId",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-repository-webhooks",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Repository Webhooks",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.get-repository-webhook",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Repository Webhook",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "hookId",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-repository-webhook",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Repository Webhook",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "config",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "url": "https://example.invalid/webhook",
+                "content_type": "json"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.delete-repository-webhook",
+          "appId": "github",
+          "kind": "action",
+          "name": "Delete Repository Webhook",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "hookId",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.ping-repository-webhook",
+          "appId": "github",
+          "kind": "action",
+          "name": "Ping Repository Webhook",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "hookId",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-gists",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Gists",
+          "fields": [
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.get-gist",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Gist",
+          "fields": [
+            {
+              "name": "gistId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-gist",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Gist",
+          "fields": [
+            {
+              "name": "files",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "sample.txt": {
+                  "content": "sample"
+                }
+              }
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.update-gist",
+          "appId": "github",
+          "kind": "action",
+          "name": "Update Gist",
+          "fields": [
+            {
+              "name": "gistId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "files",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "sample.txt": {
+                  "content": "sample"
+                }
+              }
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.delete-gist",
+          "appId": "github",
+          "kind": "action",
+          "name": "Delete Gist",
+          "fields": [
+            {
+              "name": "gistId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.source.webhook-event",
+          "appId": "github",
+          "kind": "source",
+          "name": "Webhook Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.push",
+          "appId": "github",
+          "kind": "source",
+          "name": "Push",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.issues",
+          "appId": "github",
+          "kind": "source",
+          "name": "Issues",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.pull-request",
+          "appId": "github",
+          "kind": "source",
+          "name": "Pull Request",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.workflow-run",
+          "appId": "github",
+          "kind": "source",
+          "name": "Workflow Run",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.release",
+          "appId": "github",
+          "kind": "source",
+          "name": "Release",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
         }
       ]
     },
