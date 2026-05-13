@@ -114,7 +114,7 @@ export interface ConnectorRuntimeRequestPlan {
   querySerialization?: Record<string, ConnectorRuntimeQuerySerialization>;
   body: Record<string, IntegrationJson>;
   bodyValue?: IntegrationJson;
-  bodyEncoding?: "json" | "form" | "multipart" | "none";
+  bodyEncoding?: "json" | "form" | "multipart" | "text" | "none";
   pagination?: ConnectorRuntimePaginationPlan;
   responseSchema?: ConnectorRuntimeOutputSchema;
 }

@@ -130,6 +130,26 @@ describe("connector runtime http transport", () => {
     assert.equal(body.get("metadata"), "{\"source\":\"fixture\"}");
   });
 
+  it("builds text encoded requests", () => {
+    const request = buildConnectorRuntimeFetchRequest({
+      baseUrl: "https://api.example.invalid/",
+      secrets: {},
+      plan: {
+        method: "PUT",
+        endpoint: "/bulk/upload",
+        auth: [],
+        headers: { "content-type": "text/csv" },
+        body: {},
+        bodyValue: "Id,Name\n001,Sample",
+        bodyEncoding: "text",
+      },
+    });
+
+    assert.equal(request.url, "https://api.example.invalid/bulk/upload");
+    assert.equal(new Headers(request.init.headers).get("content-type"), "text/csv");
+    assert.equal(request.init.body, "Id,Name\n001,Sample");
+  });
+
   it("builds requests with whole JSON body values", () => {
     const request = buildConnectorRuntimeFetchRequest({
       baseUrl: "https://api.example.invalid/",

@@ -243,6 +243,11 @@ function requestBody(plan: ConnectorRuntimeRequestPlan, headers: Headers): BodyI
     for (const [key, value] of Object.entries(plan.body)) appendFormValue(form, key, value);
     return form;
   }
+  if (plan.bodyEncoding === "text") {
+    headers.set("content-type", headers.get("content-type") ?? "text/plain");
+    if (plan.bodyValue !== undefined) return String(plan.bodyValue);
+    return String(plan.body.content ?? "");
+  }
   if (plan.bodyValue !== undefined) {
     headers.set("content-type", headers.get("content-type") ?? "application/json");
     return JSON.stringify(plan.bodyValue);
