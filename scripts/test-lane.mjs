@@ -56,6 +56,7 @@ function changed() {
   if (testFiles.length > 0) {
     npmRun("privacy:check");
     npmRun("privacy:test");
+    npmRun("test:policy");
     vitest(testFiles);
     npmRun("test:types");
     return;
