@@ -140,6 +140,10 @@ class FakePluginRunner implements CommandRunner {
       return { stdout: "ok\n", stderr: "", exitCode: 0 };
     }
 
+    if (args[0] === "gateway" && args[1] === "call") {
+      return { stdout: JSON.stringify({ ok: true }), stderr: "", exitCode: 0 };
+    }
+
     throw new Error(`unsupported command: ${key}`);
   }
 }
