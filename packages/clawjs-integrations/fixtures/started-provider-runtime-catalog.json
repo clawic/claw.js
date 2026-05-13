@@ -34485,6 +34485,370 @@
           ]
         },
         {
+          "id": "stripe.action.list-early-fraud-warnings",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Early Fraud Warnings",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "charge",
+              "type": "string",
+              "optional": true,
+              "default": "ch_sample"
+            },
+            {
+              "name": "payment_intent",
+              "type": "string",
+              "optional": true,
+              "default": "pi_sample"
+            },
+            {
+              "name": "created",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "gte": 1700000000
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-early-fraud-warning",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Early Fraud Warning",
+          "fields": [
+            {
+              "name": "earlyFraudWarning",
+              "type": "string",
+              "optional": false,
+              "default": "issfr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-payment-evaluation",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Payment Evaluation",
+          "fields": [
+            {
+              "name": "customer_details",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "email": "person@example.invalid",
+                "ip_address": "203.0.113.1"
+              }
+            },
+            {
+              "name": "payment_details",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "amount": 1200,
+                "currency": "usd"
+              }
+            },
+            {
+              "name": "client_device_metadata_details",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "user_agent": "Sample"
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-radar-value-lists",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Radar Value Lists",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "alias",
+              "type": "string",
+              "optional": true,
+              "default": "blocked_cards"
+            },
+            {
+              "name": "contains",
+              "type": "string",
+              "optional": true,
+              "default": "4242"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-radar-value-list",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Radar Value List",
+          "fields": [
+            {
+              "name": "alias",
+              "type": "string",
+              "optional": false,
+              "default": "blocked_cards"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "Blocked cards"
+            },
+            {
+              "name": "item_type",
+              "type": "string",
+              "optional": true,
+              "default": "card_fingerprint"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-radar-value-list",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Radar Value List",
+          "fields": [
+            {
+              "name": "valueList",
+              "type": "string",
+              "optional": false,
+              "default": "rsl_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-radar-value-list",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Radar Value List",
+          "fields": [
+            {
+              "name": "valueList",
+              "type": "string",
+              "optional": false,
+              "default": "rsl_sample"
+            },
+            {
+              "name": "alias",
+              "type": "string",
+              "optional": true,
+              "default": "blocked_cards"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Updated blocked cards"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-radar-value-list",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Radar Value List",
+          "fields": [
+            {
+              "name": "valueList",
+              "type": "string",
+              "optional": false,
+              "default": "rsl_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-radar-value-list-items",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Radar Value List Items",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "value_list",
+              "type": "string",
+              "optional": false,
+              "default": "rsl_sample"
+            },
+            {
+              "name": "value",
+              "type": "string",
+              "optional": true,
+              "default": "424242"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-radar-value-list-item",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Radar Value List Item",
+          "fields": [
+            {
+              "name": "value_list",
+              "type": "string",
+              "optional": false,
+              "default": "rsl_sample"
+            },
+            {
+              "name": "value",
+              "type": "string",
+              "optional": false,
+              "default": "424242"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-radar-value-list-item",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Radar Value List Item",
+          "fields": [
+            {
+              "name": "item",
+              "type": "string",
+              "optional": false,
+              "default": "rsli_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-radar-value-list-item",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Radar Value List Item",
+          "fields": [
+            {
+              "name": "item",
+              "type": "string",
+              "optional": false,
+              "default": "rsli_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-apple-pay-domains",
           "appId": "stripe",
           "kind": "action",

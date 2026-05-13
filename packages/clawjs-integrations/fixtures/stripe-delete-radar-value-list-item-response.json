@@ -1,0 +1,12 @@
+{
+  "id": "stripe_sample",
+  "object": "stripe_object",
+  "data": [
+    {
+      "id": "stripe_sample",
+      "object": "stripe_object"
+    }
+  ],
+  "has_more": false,
+  "deleted": true
+}

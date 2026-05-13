@@ -1,0 +1,8 @@
+{
+  "method": "DELETE",
+  "url": "https://api.stripe.com/v1/radar/value_list_items/rsli_sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  }
+}

@@ -828,6 +828,30 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-payment-evaluation"), {
+      customer_details: { email: "person@example.invalid", ip_address: "203.0.113.1" },
+      payment_details: { amount: 1200, currency: "usd" },
+      client_device_metadata_details: { user_agent: "Sample" },
+      metadata: { order_id: "sample" },
+    }), {
+      method: "POST",
+      endpoint: "radar/payment_evaluations",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        customer_details: { email: "person@example.invalid", ip_address: "203.0.113.1" },
+        payment_details: { amount: 1200, currency: "usd" },
+        client_device_metadata_details: { user_agent: "Sample" },
+        metadata: { order_id: "sample" },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.list-setup-attempts"), {
       limit: 10,
       setup_intent: "seti_sample",

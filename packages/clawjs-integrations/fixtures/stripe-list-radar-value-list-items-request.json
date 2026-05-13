@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://api.stripe.com/v1/radar/value_list_items?limit=10&value_list=rsl_sample&value=424242",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  }
+}

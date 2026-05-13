@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/radar/value_lists",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "alias=blocked_cards&name=Blocked+cards&item_type=card_fingerprint&metadata=%7B%22order_id%22%3A%22sample%22%7D"
+}

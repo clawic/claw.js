@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://api.stripe.com/v1/radar/value_lists?limit=10&alias=blocked_cards&contains=4242",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  }
+}

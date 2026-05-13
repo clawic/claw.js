@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://api.stripe.com/v1/radar/early_fraud_warnings?limit=10&charge=ch_sample&payment_intent=pi_sample&created=%7B%22gte%22%3A1700000000%7D",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  }
+}
