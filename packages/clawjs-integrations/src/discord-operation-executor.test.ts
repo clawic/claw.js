@@ -48,6 +48,31 @@ const APPLICATION_COMMAND_METADATA_FIELDS = [
   field("nsfw", "boolean", true, { default: null }),
   field("handler", "integer", true, { default: null }),
 ];
+const WEBHOOK_CREATE_MESSAGE_FIELDS = [
+  field("content", "string"),
+  field("username", "string", true, { default: null }),
+  field("avatarUrl", "string", true, { default: null }),
+  field("tts", "boolean", true, { default: null }),
+  field("embeds", "array", true, { default: null }),
+  field("allowedMentions", "object", true, { default: null }),
+  field("components", "array", true, { default: null }),
+  field("attachments", "array", true, { default: null }),
+  field("files", "array", true, { default: null }),
+  field("flags", "integer", true, { default: null }),
+  field("threadName", "string", true, { default: null }),
+  field("appliedTags", "array", true, { default: null }),
+  field("poll", "object", true, { default: null }),
+];
+const WEBHOOK_EDIT_MESSAGE_FIELDS = [
+  field("content", "string", true, { default: "sample" }),
+  field("embeds", "array", true, { default: null }),
+  field("allowedMentions", "object", true, { default: null }),
+  field("components", "array", true, { default: null }),
+  field("attachments", "array", true, { default: null }),
+  field("files", "array", true, { default: null }),
+  field("flags", "integer", true, { default: null }),
+  field("poll", "object", true, { default: null }),
+];
 
 const DISCORD_ACTIONS = [
   action("get-current-user", "Get Current User", []),
@@ -310,19 +335,19 @@ const DISCORD_ACTIONS = [
   action("get-webhook-with-token", "Get Webhook With Token", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD], []),
   action("update-webhook-with-token", "Update Webhook With Token", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, field("name", "string", true, { default: "sample" })], []),
   action("delete-webhook-with-token", "Delete Webhook With Token", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD], []),
-  action("execute-webhook", "Execute Webhook", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, field("content", "string"), field("wait", "boolean", true), field("withComponents", "boolean", true)], []),
+  action("execute-webhook", "Execute Webhook", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, ...WEBHOOK_CREATE_MESSAGE_FIELDS, field("wait", "boolean", true), field("threadId", "string", true, { default: null }), field("withComponents", "boolean", true)], []),
   action("execute-slack-compatible-webhook", "Execute Slack-Compatible Webhook", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, field("payload", "object", false, { default: { text: "sample" } }), field("wait", "boolean", true), field("threadId", "string", true)], []),
   action("execute-github-compatible-webhook", "Execute GitHub-Compatible Webhook", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, field("payload", "object", false, { default: { ref: "refs/heads/main" } }), field("wait", "boolean", true), field("threadId", "string", true)], []),
   action("get-webhook-message", "Get Webhook Message", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, MESSAGE_FIELD], []),
-  action("edit-webhook-message", "Edit Webhook Message", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, MESSAGE_FIELD, field("content", "string", true, { default: "sample" }), field("withComponents", "boolean", true)], []),
+  action("edit-webhook-message", "Edit Webhook Message", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, MESSAGE_FIELD, ...WEBHOOK_EDIT_MESSAGE_FIELDS, field("threadId", "string", true, { default: null }), field("withComponents", "boolean", true)], []),
   action("delete-webhook-message", "Delete Webhook Message", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, MESSAGE_FIELD], []),
   action("create-interaction-response", "Create Interaction Response", [INTERACTION_FIELD, INTERACTION_TOKEN_FIELD, field("responseType", "integer", false, { default: 4 }), field("responseData", "object", true, { default: { content: "sample" } }), field("withResponse", "boolean", true)], []),
   action("get-original-interaction-response", "Get Original Interaction Response", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD], []),
-  action("edit-original-interaction-response", "Edit Original Interaction Response", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD, field("content", "string", true, { default: "sample" })], []),
+  action("edit-original-interaction-response", "Edit Original Interaction Response", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD, ...WEBHOOK_EDIT_MESSAGE_FIELDS], []),
   action("delete-original-interaction-response", "Delete Original Interaction Response", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD], []),
-  action("create-followup-message", "Create Followup Message", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD, field("content", "string")], []),
+  action("create-followup-message", "Create Followup Message", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD, ...WEBHOOK_CREATE_MESSAGE_FIELDS], []),
   action("get-followup-message", "Get Followup Message", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD, MESSAGE_FIELD], []),
-  action("edit-followup-message", "Edit Followup Message", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD, MESSAGE_FIELD, field("content", "string", true, { default: "sample" })], []),
+  action("edit-followup-message", "Edit Followup Message", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD, MESSAGE_FIELD, ...WEBHOOK_EDIT_MESSAGE_FIELDS], []),
   action("delete-followup-message", "Delete Followup Message", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD, MESSAGE_FIELD], []),
   action("list-global-application-commands", "List Global Application Commands", [APPLICATION_FIELD]),
   action("create-global-application-command", "Create Global Application Command", [APPLICATION_FIELD, field("name", "string"), field("description", "string", true, { default: "sample" }), ...APPLICATION_COMMAND_METADATA_FIELDS]),
@@ -2681,6 +2706,78 @@ describe("discord operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.execute-webhook"), {
+      webhookId: "999",
+      webhookToken: "offline-token",
+      content: "rich webhook",
+      username: "Clawix",
+      avatarUrl: "https://example.invalid/avatar.png",
+      tts: true,
+      embeds: [{ title: "Release" }],
+      allowedMentions: { parse: [] },
+      components: [{ type: 1 }],
+      attachments: [{ id: "0", filename: "release.txt" }],
+      flags: 4096,
+      threadName: "release-thread",
+      appliedTags: ["tag-123"],
+      poll: { question: { text: "Ship it?" } },
+      threadId: "thread-123",
+      wait: true,
+      withComponents: true,
+    }), {
+      method: "POST",
+      endpoint: "webhooks/999/offline-token",
+      auth: [],
+      headers,
+      query: {
+        wait: true,
+        thread_id: "thread-123",
+        with_components: true,
+      },
+      body: {
+        content: "rich webhook",
+        username: "Clawix",
+        avatar_url: "https://example.invalid/avatar.png",
+        tts: true,
+        embeds: [{ title: "Release" }],
+        allowed_mentions: { parse: [] },
+        components: [{ type: 1 }],
+        attachments: [{ id: "0", filename: "release.txt" }],
+        flags: 4096,
+        thread_name: "release-thread",
+        applied_tags: ["tag-123"],
+        poll: { question: { text: "Ship it?" } },
+      },
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.execute-webhook"), {
+      webhookId: "999",
+      webhookToken: "offline-token",
+      content: "webhook file",
+      files: ["hello world"],
+      attachments: [{ id: "0", filename: "hello.txt" }],
+    }), {
+      method: "POST",
+      endpoint: "webhooks/999/offline-token",
+      auth: [],
+      headers,
+      query: {},
+      bodyEncoding: "multipart",
+      body: {
+        payload_json: JSON.stringify({
+          content: "webhook file",
+          attachments: [{ id: "0", filename: "hello.txt" }],
+        }),
+        "files[0]": "hello world",
+      },
+      responseSchema: {
+        type: "object",
+      },
+    });
+
     assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.edit-webhook-message"), {
       webhookId: "999",
       webhookToken: "offline-token",
@@ -2697,6 +2794,40 @@ describe("discord operation runtime", () => {
       },
       body: {
         content: "hello",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.edit-webhook-message"), {
+      webhookId: "999",
+      webhookToken: "offline-token",
+      messageId: "message-123",
+      content: "replace attachment",
+      files: ["updated file"],
+      attachments: [{ id: "0", filename: "updated.txt" }],
+      poll: { question: { text: "Update?" } },
+      threadId: "thread-123",
+      withComponents: true,
+    }), {
+      method: "PATCH",
+      endpoint: "webhooks/999/offline-token/messages/message-123",
+      auth: [],
+      headers,
+      query: {
+        thread_id: "thread-123",
+        with_components: true,
+      },
+      bodyEncoding: "multipart",
+      body: {
+        payload_json: JSON.stringify({
+          content: "replace attachment",
+          attachments: [{ id: "0", filename: "updated.txt" }],
+          poll: { question: { text: "Update?" } },
+        }),
+        "files[0]": "updated file",
       },
       responseSchema: {
         type: "object",
@@ -2802,13 +2933,20 @@ describe("discord operation runtime", () => {
       applicationId: "app-123",
       interactionToken: "interaction-token",
       content: "updated",
+      files: ["original file"],
+      attachments: [{ id: "0", filename: "original.txt" }],
     }), {
       method: "PATCH",
       endpoint: "webhooks/app-123/interaction-token/messages/@original",
       auth: [],
       headers,
+      bodyEncoding: "multipart",
       body: {
-        content: "updated",
+        payload_json: JSON.stringify({
+          content: "updated",
+          attachments: [{ id: "0", filename: "original.txt" }],
+        }),
+        "files[0]": "original file",
       },
       responseSchema: {
         type: "object",
@@ -2834,13 +2972,20 @@ describe("discord operation runtime", () => {
       applicationId: "app-123",
       interactionToken: "interaction-token",
       content: "followup",
+      files: ["followup file"],
+      attachments: [{ id: "0", filename: "followup.txt" }],
     }), {
       method: "POST",
       endpoint: "webhooks/app-123/interaction-token",
       auth: [],
       headers,
+      bodyEncoding: "multipart",
       body: {
-        content: "followup",
+        payload_json: JSON.stringify({
+          content: "followup",
+          attachments: [{ id: "0", filename: "followup.txt" }],
+        }),
+        "files[0]": "followup file",
       },
       responseSchema: {
         type: "object",
@@ -2870,6 +3015,11 @@ describe("discord operation runtime", () => {
       interactionToken: "interaction-token",
       messageId: "message-123",
       content: "updated followup",
+      embeds: [{ title: "Updated" }],
+      components: [{ type: 1 }],
+      attachments: [{ id: "0", filename: "updated.txt" }],
+      flags: 4,
+      poll: { question: { text: "Done?" } },
     }), {
       method: "PATCH",
       endpoint: "webhooks/app-123/interaction-token/messages/message-123",
@@ -2877,6 +3027,11 @@ describe("discord operation runtime", () => {
       headers,
       body: {
         content: "updated followup",
+        embeds: [{ title: "Updated" }],
+        components: [{ type: 1 }],
+        attachments: [{ id: "0", filename: "updated.txt" }],
+        flags: 4,
+        poll: { question: { text: "Done?" } },
       },
       responseSchema: {
         type: "object",
