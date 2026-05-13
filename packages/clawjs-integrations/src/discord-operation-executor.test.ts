@@ -2192,6 +2192,57 @@ describe("discord operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildDiscordOperationRequest(action("get-webhook-with-token", "Get Webhook With Token", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD], []), {
+      webhookId: "999",
+      webhookToken: "offline-token",
+    }), {
+      method: "GET",
+      endpoint: "webhooks/999/offline-token",
+      auth: [],
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(action("update-webhook-with-token", "Update Webhook With Token", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD], []), {
+      webhookId: "999",
+      webhookToken: "offline-token",
+      name: "renamed",
+      avatar: "data:image/png;base64,c2FtcGxl",
+      targetChannelId: "456",
+    }), {
+      method: "PATCH",
+      endpoint: "webhooks/999/offline-token",
+      auth: [],
+      headers,
+      body: {
+        name: "renamed",
+        avatar: "data:image/png;base64,c2FtcGxl",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(action("delete-webhook-with-token", "Delete Webhook With Token", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD], []), {
+      webhookId: "999",
+      webhookToken: "offline-token",
+    }), {
+      method: "DELETE",
+      endpoint: "webhooks/999/offline-token",
+      auth: [],
+      headers,
+      body: {},
+      responseSchema: {
+        type: "null",
+      },
+    });
+
     assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.execute-webhook"), {
       webhookId: "999",
       webhookToken: "offline-token",
