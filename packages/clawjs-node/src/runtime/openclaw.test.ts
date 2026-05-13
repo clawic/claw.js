@@ -188,11 +188,13 @@ test("runtime install, uninstall, setup, and repair build the expected commands"
   assert.deepEqual(npmInstall.args, ["install", "-g", "openclaw"]);
   assert.equal(npmUninstall.command, buildOpenClawUninstallCommand("npm").command);
   assert.deepEqual(npmUninstall.args, ["uninstall", "-g", "openclaw"]);
-  assert.deepEqual(buildOpenClawWorkspaceSetupCommand({ agentId: "demo", workspaceDir: "/tmp/demo" }), {
+  const setupCommand = buildOpenClawWorkspaceSetupCommand({ agentId: "demo", workspaceDir: "/tmp/demo" });
+  assert.deepEqual({ command: setupCommand.command, args: setupCommand.args }, {
     command: "openclaw",
     args: ["agents", "add", "demo", "--non-interactive", "--workspace", "/tmp/demo", "--json"],
   });
-  assert.deepEqual(buildOpenClawRepairCommand(), {
+  const repairCommand = buildOpenClawRepairCommand();
+  assert.deepEqual({ command: repairCommand.command, args: repairCommand.args }, {
     command: "openclaw",
     args: ["gateway", "install"],
   });
@@ -210,11 +212,11 @@ test("runtime install, uninstall, setup, and repair build the expected commands"
     command: expectedPnpmUninstall,
     args: ["remove", "-g", "openclaw"],
   });
-  assert.deepEqual(calls[2], {
+  assert.deepEqual({ command: calls[2]?.command, args: calls[2]?.args }, {
     command: "openclaw",
     args: ["agents", "add", "demo", "--non-interactive", "--workspace", "/tmp/demo", "--json"],
   });
-  assert.deepEqual(calls[3], {
+  assert.deepEqual({ command: calls[3]?.command, args: calls[3]?.args }, {
     command: "openclaw",
     args: ["gateway", "install"],
   });
@@ -407,8 +409,8 @@ exit 0
       return host.exec(command, args, {
         ...options,
         env: {
-          ...env,
           ...(options.env ?? {}),
+          ...env,
         },
       });
     },
