@@ -138,7 +138,7 @@ const DISCORD_ACTIONS = [
   action("trigger-typing-indicator", "Trigger Typing Indicator", [CHANNEL_FIELD]),
   action("group-dm-add-recipient", "Group DM Add Recipient", [CHANNEL_FIELD, USER_FIELD, field("accessToken", "string", false, { default: "sample-access-token" }), field("nick", "string", true, { default: "sample" })]),
   action("group-dm-remove-recipient", "Group DM Remove Recipient", [CHANNEL_FIELD, USER_FIELD]),
-  action("list-messages", "List Messages", [CHANNEL_FIELD, field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
+  action("list-messages", "List Messages", [CHANNEL_FIELD, field("around", "string", true, { default: null }), field("before", "string", true, { default: null }), field("after", "string", true, { default: null }), field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
   action("search-guild-messages", "Search Guild Messages", [
     GUILD_FIELD,
     field("content", "string", true, { default: "sample" }),
@@ -169,8 +169,8 @@ const DISCORD_ACTIONS = [
   action("get-message", "Get Message", [CHANNEL_FIELD, MESSAGE_FIELD]),
   action("send-message", "Send Message", [CHANNEL_FIELD, field("content", "string"), field("messageId", "string", true), field("guildId", "string", true)]),
   action("edit-message", "Edit Message", [CHANNEL_FIELD, MESSAGE_FIELD, field("content", "string", true, { default: "sample" })]),
-  action("delete-message", "Delete Message", [CHANNEL_FIELD, MESSAGE_FIELD]),
-  action("bulk-delete-messages", "Bulk Delete Messages", [CHANNEL_FIELD, field("messages", "array", false, { default: ["sample"] })]),
+  action("delete-message", "Delete Message", [CHANNEL_FIELD, MESSAGE_FIELD, field("auditLogReason", "string", true)]),
+  action("bulk-delete-messages", "Bulk Delete Messages", [CHANNEL_FIELD, field("messages", "array", false, { default: ["sample"] }), field("auditLogReason", "string", true)]),
   action("crosspost-message", "Crosspost Message", [CHANNEL_FIELD, MESSAGE_FIELD]),
   action("list-pinned-messages", "List Pinned Messages", [CHANNEL_FIELD, field("before", "string", true, { default: null }), field("limit", "integer", true, { default: 1, min: 1, max: 50 })]),
   action("pin-message", "Pin Message", [CHANNEL_FIELD, MESSAGE_FIELD, field("auditLogReason", "string", true)]),
@@ -178,7 +178,7 @@ const DISCORD_ACTIONS = [
   action("create-reaction", "Create Reaction", [CHANNEL_FIELD, MESSAGE_FIELD, field("emoji", "string", false, { default: "thumbsup" })]),
   action("delete-own-reaction", "Delete Own Reaction", [CHANNEL_FIELD, MESSAGE_FIELD, field("emoji", "string", false, { default: "thumbsup" })]),
   action("delete-user-reaction", "Delete User Reaction", [CHANNEL_FIELD, MESSAGE_FIELD, USER_FIELD, field("emoji", "string", false, { default: "thumbsup" })]),
-  action("list-reactions", "List Reactions", [CHANNEL_FIELD, MESSAGE_FIELD, field("emoji", "string", false, { default: "thumbsup" }), field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
+  action("list-reactions", "List Reactions", [CHANNEL_FIELD, MESSAGE_FIELD, field("emoji", "string", false, { default: "thumbsup" }), field("after", "string", true, { default: null }), field("limit", "integer", true, { default: 1, min: 1, max: 100 }), field("type", "integer", true, { default: null, min: 0, max: 1 })]),
   action("delete-all-reactions", "Delete All Reactions", [CHANNEL_FIELD, MESSAGE_FIELD]),
   action("delete-all-reactions-for-emoji", "Delete All Reactions For Emoji", [CHANNEL_FIELD, MESSAGE_FIELD, field("emoji", "string", false, { default: "thumbsup" })]),
   action("get-answer-voters", "Get Answer Voters", [CHANNEL_FIELD, MESSAGE_FIELD, ANSWER_FIELD, field("after", "string", true), field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
@@ -728,6 +728,86 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["doing_deep_historical_index", "total_results", "messages"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.list-messages"), {
+      channelId: "123",
+      after: "message-after",
+      limit: 25,
+    }), {
+      method: "GET",
+      endpoint: "channels/123/messages",
+      auth,
+      headers,
+      query: {
+        after: "message-after",
+        limit: 25,
+      },
+      body: {},
+      responseSchema: {
+        type: "array",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-message"), {
+      channelId: "123",
+      messageId: "456",
+      auditLogReason: "moderation cleanup",
+    }), {
+      method: "DELETE",
+      endpoint: "channels/123/messages/456",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "moderation cleanup",
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.bulk-delete-messages"), {
+      channelId: "123",
+      messages: ["456", "789"],
+      auditLogReason: "bulk moderation cleanup",
+    }), {
+      method: "POST",
+      endpoint: "channels/123/messages/bulk-delete",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "bulk moderation cleanup",
+      },
+      body: {
+        messages: ["456", "789"],
+      },
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.list-reactions"), {
+      channelId: "123",
+      messageId: "456",
+      emoji: "wave:789",
+      after: "user-after",
+      limit: 50,
+      type: 1,
+    }), {
+      method: "GET",
+      endpoint: "channels/123/messages/456/reactions/wave%3A789",
+      auth,
+      headers,
+      query: {
+        after: "user-after",
+        limit: 50,
+        type: 1,
+      },
+      body: {},
+      responseSchema: {
+        type: "array",
       },
     });
 
