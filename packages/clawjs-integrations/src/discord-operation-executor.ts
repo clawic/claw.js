@@ -502,9 +502,9 @@ export function buildDiscordOperationRequest(
     case "edit-message":
       return bodyPlan("PATCH", `channels/${channelId(values)}/messages/${messageId(values)}`, auth, headers, messageBody(values, false), { type: "object", requiredPaths: ["id", "channel_id"] });
     case "delete-message":
-      return deletePlan(`channels/${channelId(values)}/messages/${messageId(values)}`, auth, headers, { type: "object" });
+      return deletePlan(`channels/${channelId(values)}/messages/${messageId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "bulk-delete-messages":
-      return bodyPlan("POST", `channels/${channelId(values)}/messages/bulk-delete`, auth, headers, {
+      return bodyPlan("POST", `channels/${channelId(values)}/messages/bulk-delete`, auth, auditHeaders(headers, values), {
         messages: requiredJsonArray(values.messages, "messages"),
       }, { type: "object" });
     case "crosspost-message":
