@@ -200,6 +200,24 @@ claw backup backups/
 
 claw workspace-search query "release" --domains tasks,notes,inbox
 claw workspace-index rebuild
+
+claw data doctor --json
+claw data backup --out backups/main-store --json
+claw data reset --domain notes --json
+
+claw knowledge fact --predicate prefers_response_style --value direct --confidence 0.9 --json
+claw knowledge search response_style --json
+claw profile get --json
+
+claw notes record-note "Release runbook" --body "Deploy from the release branch" --tags ops,runbook --json
+claw notes export page-123 --json
+claw search rebuild --json
+claw search query "release branch" --json
+
+claw business upsert --id customer-1 --kind customer --name "Acme" --notes "Primary account" --json
+claw content upsert --id launch-brief --title "Launch brief" --body "Draft" --json
+claw social upsert --id post-1 --title "Launch post" --channel '{"provider":"linkedin"}' --json
+claw mcp list --json
 ```
 
 For overlapping CRUD verbs, `claw tasks ...`, `claw notes ...`,
@@ -220,6 +238,15 @@ artifacts. `team-work` returns the coordination view across assignments,
 handoffs, approvals, and capacity. `reminders list` and `deadlines
 list` also accept `--before` and `--after` filters over their due
 timestamps.
+
+`data`, `knowledge`, `profile`, `notes record-note`, `business`,
+`content`, `social`, `search`, and `mcp` operate on the canonical local
+ClawJS main store. The main store keeps knowledge facts, pages and
+blocks, profile projections, business/content/social records, local FTS
+search, and registry metadata for sidecar databases. Sidecar files such
+as secrets, conversation artifacts, runtime queues, notifications, and
+operational caches remain referenced through the registry rather than
+being mixed into the main database.
 
 `timeline day|week` returns a shared planning view for Gantt-style
 screens: project groups, task bars, milestone markers, deadline markers,

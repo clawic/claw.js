@@ -783,6 +783,88 @@ test("runCli manages V1 main data app-state and Life domains in the canonical sq
   });
 });
 
+test("runCli manages V2 knowledge, notes, profile, business, and search domains in the main sqlite", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-data-"));
+  await withPatchedEnv({
+    CLAWJS_MAIN_DATA_DIR: tempRoot,
+    CLAWIX_CLAWJS_DATA_DIR: undefined,
+    CLAWJS_MAIN_DB_PATH: undefined,
+    CLAWJS_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    DATABASE_FILES_DIR: undefined,
+  }, async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-data-cwd-"));
+    const notesStdout = captureStream();
+    assert.equal(await runCli(["notes", "record-note", "Server runbook", "--body", "Deploy from the release branch", "--tags", "ops,runbook", "--json"], {
+      stdout: notesStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const page = JSON.parse(notesStdout.getOutput()) as { id: string; title: string; tags: string[]; blocks: Array<{ text: string }> };
+    assert.equal(page.title, "Server runbook");
+    assert.deepEqual(page.tags, ["ops", "runbook"]);
+    assert.equal(page.blocks[0]?.text, "Deploy from the release branch");
+
+    const exportStdout = captureStream();
+    assert.equal(await runCli(["notes", "export", page.id, "--json"], {
+      stdout: exportStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.match((JSON.parse(exportStdout.getOutput()) as { markdown: string }).markdown, /# Server runbook/);
+
+    assert.equal(await runCli(["knowledge", "fact", "--predicate", "prefers_response_style", "--value", "direct", "--confidence", "0.9", "--json"], {
+      stdout: captureStream().stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+
+    const profileStdout = captureStream();
+    assert.equal(await runCli(["profile", "get", "--json"], {
+      stdout: profileStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const profile = JSON.parse(profileStdout.getOutput()) as { items: Array<{ section: string; contentText: string }> };
+    assert.deepEqual(profile.items.map((item) => item.section), ["prefers_response_style"]);
+    assert.equal(profile.items[0]?.contentText, "direct");
+
+    const businessStdout = captureStream();
+    assert.equal(await runCli(["business", "upsert", "--id", "customer-1", "--kind", "customer", "--name", "Acme", "--notes", "Primary account", "--json"], {
+      stdout: businessStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.equal((JSON.parse(businessStdout.getOutput()) as { pageId: string }).pageId, "page-customer-1");
+
+    assert.equal(await runCli(["search", "rebuild", "--json"], {
+      stdout: captureStream().stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const searchStdout = captureStream();
+    assert.equal(await runCli(["search", "query", "release branch", "--json"], {
+      stdout: searchStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const search = JSON.parse(searchStdout.getOutput()) as { pages: Array<{ id: string }> };
+    assert.deepEqual(search.pages.map((item) => item.id), [page.id]);
+
+    const doctorStdout = captureStream();
+    assert.equal(await runCli(["data", "doctor", "--json"], {
+      stdout: doctorStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const doctor = JSON.parse(doctorStdout.getOutput()) as { version: number; logicalDomains: { mainDb: string[]; sidecars: string[] }; registry: Array<{ domain: string; id: string }> };
+    assert.equal(doctor.version, 2);
+    assert.ok(doctor.logicalDomains.mainDb.includes("knowledge"));
+    assert.ok(doctor.logicalDomains.sidecars.includes("conversation-artifacts"));
+    assert.ok(doctor.registry.some((entry) => entry.domain === "conversation-artifacts" && entry.id === "audio"));
+  });
+});
+
 test("runCli indexes external Codex session artifacts without owning their raw bodies", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v1-sessions-"));
   await withPatchedEnv({
