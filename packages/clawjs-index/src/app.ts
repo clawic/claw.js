@@ -67,7 +67,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   store.subscribe((event) => realtime.broadcast(event));
   app.addHook("onClose", async () => { scheduler.stop(); store.close(); });
 
-  app.register(cors, { origin: config.corsOrigins.length > 0 ? config.corsOrigins : true });
+  app.register(cors as any, { origin: config.corsOrigins.length > 0 ? config.corsOrigins : true });
   app.register(async (wsApp) => {
     await wsApp.register(websocket, { errorHandler(_e, socket) { socket.terminate(); } });
     wsApp.get("/v1/realtime", { websocket: true }, async (socket, request) => {

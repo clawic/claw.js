@@ -204,15 +204,15 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     store.close();
   });
 
-  app.register(cors, {
+  app.register(cors as any, {
     origin: config.corsOrigins.length > 0 ? config.corsOrigins : true,
   });
-  app.register(multipart);
-  app.register(fastifyStatic, {
+  app.register(multipart as any);
+  app.register(fastifyStatic as any, {
     root: publicRoot,
     prefix: "/static/",
   });
-  app.register(fastifyStatic, {
+  app.register(fastifyStatic as any, {
     root: brandRoot,
     prefix: "/brand/",
     decorateReply: false,

@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 
-// @ts-expect-error standalone service dependencies are not part of the root TypeScript program
 import Database from "better-sqlite3";
 
 import { generateOpaqueToken, hashSecret } from "./auth.ts";

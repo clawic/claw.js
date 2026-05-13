@@ -7,7 +7,8 @@ import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
 
 import { loadTimeConfig, type TimeServiceConfig } from "./config.ts";
-import type { CreateTemporalItemInput, TemporalExecution, TemporalItem, UpdateTemporalItemInput } from "./logic.ts";
+import type { TemporalExecution, TemporalItem } from "@clawjs/core";
+import type { CreateTemporalItemInput, UpdateTemporalItemInput } from "./logic.ts";
 import {
   EmbeddedTimeEngine,
   type TemporalHeartbeatAgentRunner,
