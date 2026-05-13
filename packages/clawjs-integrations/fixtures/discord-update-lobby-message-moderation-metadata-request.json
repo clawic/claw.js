@@ -1,0 +1,12 @@
+{
+  "method": "PUT",
+  "url": "https://discord.com/api/v10/lobbies/sample/messages/sample/moderation-metadata",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "action": "show"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "sample",
+  "application_id": "sample",
+  "metadata": {
+    "topic": "sample"
+  },
+  "members": [
+    {
+      "id": "sample"
+    }
+  ],
+  "linked_channel": {
+    "id": "sample",
+    "type": 0
+  }
+}
