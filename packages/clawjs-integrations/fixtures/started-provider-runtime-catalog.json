@@ -40153,6 +40153,373 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.create-charge",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Charge",
+          "fields": [
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": false,
+              "default": 1200
+            },
+            {
+              "name": "currency",
+              "type": "string",
+              "optional": false,
+              "default": "usd"
+            },
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "optional": true,
+              "default": "tok_visa"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Sample charge"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-charge",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Charge",
+          "fields": [
+            {
+              "name": "charge",
+              "type": "string",
+              "optional": false,
+              "default": "ch_sample"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Updated charge"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "receipt_email",
+              "type": "string",
+              "optional": true,
+              "default": "person@example.invalid"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.search-charges",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Search Charges",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": false,
+              "default": "metadata['order_id']:'sample'"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "string",
+              "optional": true,
+              "default": "next_page"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-charge-dispute",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Charge Dispute",
+          "fields": [
+            {
+              "name": "charge",
+              "type": "string",
+              "optional": false,
+              "default": "ch_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-charge-dispute",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Charge Dispute",
+          "fields": [
+            {
+              "name": "charge",
+              "type": "string",
+              "optional": false,
+              "default": "ch_sample"
+            },
+            {
+              "name": "evidence",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "customer_name": "Sample Customer"
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "submit",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.close-charge-dispute",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Close Charge Dispute",
+          "fields": [
+            {
+              "name": "charge",
+              "type": "string",
+              "optional": false,
+              "default": "ch_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.refund-charge",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Refund Charge",
+          "fields": [
+            {
+              "name": "charge",
+              "type": "string",
+              "optional": false,
+              "default": "ch_sample"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 500
+            },
+            {
+              "name": "reason",
+              "type": "string",
+              "optional": true,
+              "default": "requested_by_customer"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "reverse_transfer",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-charge-refunds",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Charge Refunds",
+          "fields": [
+            {
+              "name": "charge",
+              "type": "string",
+              "optional": false,
+              "default": "ch_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-charge-refund",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Charge Refund",
+          "fields": [
+            {
+              "name": "charge",
+              "type": "string",
+              "optional": false,
+              "default": "ch_sample"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 500
+            },
+            {
+              "name": "reason",
+              "type": "string",
+              "optional": true,
+              "default": "requested_by_customer"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "refund_application_fee",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-charge-refund",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Charge Refund",
+          "fields": [
+            {
+              "name": "charge",
+              "type": "string",
+              "optional": false,
+              "default": "ch_sample"
+            },
+            {
+              "name": "refund",
+              "type": "string",
+              "optional": false,
+              "default": "re_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-charge-refund",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Charge Refund",
+          "fields": [
+            {
+              "name": "charge",
+              "type": "string",
+              "optional": false,
+              "default": "ch_sample"
+            },
+            {
+              "name": "refund",
+              "type": "string",
+              "optional": false,
+              "default": "re_sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

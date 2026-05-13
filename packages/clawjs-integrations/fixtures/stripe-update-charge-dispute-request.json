@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/charges/ch_sample/dispute",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "evidence=%7B%22customer_name%22%3A%22Sample+Customer%22%7D&metadata=%7B%22order_id%22%3A%22sample%22%7D&submit=false"
+}

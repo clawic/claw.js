@@ -1026,6 +1026,29 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.update-charge-dispute"), {
+      charge: "ch_sample",
+      evidence: { customer_name: "Sample Customer" },
+      metadata: { order_id: "sample" },
+      submit: false,
+    }), {
+      method: "POST",
+      endpoint: "charges/ch_sample/dispute",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        evidence: { customer_name: "Sample Customer" },
+        metadata: { order_id: "sample" },
+        submit: false,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.list-setup-attempts"), {
       limit: 10,
       setup_intent: "seti_sample",
