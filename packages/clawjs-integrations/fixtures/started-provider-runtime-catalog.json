@@ -2455,6 +2455,20 @@
               "name": "channelId",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "before",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 50
             }
           ],
           "authFieldNames": [
@@ -2476,6 +2490,11 @@
               "name": "messageId",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": [
@@ -2497,6 +2516,11 @@
               "name": "messageId",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": [
@@ -2618,6 +2642,54 @@
               "default": 1,
               "min": 1,
               "max": 100
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-all-reactions",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete All Reactions",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-all-reactions-for-emoji",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete All Reactions For Emoji",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "emoji",
+              "type": "string",
+              "optional": false,
+              "default": "thumbsup"
             }
           ],
           "authFieldNames": [
