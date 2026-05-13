@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/customers/cus_sample/sources/card_sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "name=Sample+Card&metadata=%7B%22order_id%22%3A%22sample%22%7D&owner=%7B%22name%22%3A%22Sample+Owner%22%7D"
+}

@@ -1,0 +1,9 @@
+{
+  "method": "DELETE",
+  "url": "https://api.stripe.com/v1/customers/cus_sample/sources/card_sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  },
+  "body": null
+}

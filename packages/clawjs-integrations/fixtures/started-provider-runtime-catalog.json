@@ -39948,6 +39948,211 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.list-customer-sources",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Customer Sources",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": false,
+              "default": "cus_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "object",
+              "type": "string",
+              "optional": true,
+              "default": "card"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-customer-source",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Customer Source",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": false,
+              "default": "cus_sample"
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "optional": true,
+              "default": "tok_visa"
+            },
+            {
+              "name": "card",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "token": "tok_visa"
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-customer-source",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Customer Source",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": false,
+              "default": "cus_sample"
+            },
+            {
+              "name": "sourceId",
+              "type": "string",
+              "optional": false,
+              "default": "card_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-customer-source",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Customer Source",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": false,
+              "default": "cus_sample"
+            },
+            {
+              "name": "sourceId",
+              "type": "string",
+              "optional": false,
+              "default": "card_sample"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Sample Card"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "owner",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "name": "Sample Owner"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-customer-source",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Customer Source",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": false,
+              "default": "cus_sample"
+            },
+            {
+              "name": "sourceId",
+              "type": "string",
+              "optional": false,
+              "default": "card_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.verify-customer-source",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Verify Customer Source",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": false,
+              "default": "cus_sample"
+            },
+            {
+              "name": "sourceId",
+              "type": "string",
+              "optional": false,
+              "default": "ba_sample"
+            },
+            {
+              "name": "amounts",
+              "type": "array",
+              "optional": false,
+              "default": [
+                32,
+                45
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },
