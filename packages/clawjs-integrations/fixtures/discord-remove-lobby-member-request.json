@@ -1,0 +1,8 @@
+{
+  "method": "DELETE",
+  "url": "https://discord.com/api/v10/lobbies/sample/members/sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "method": "PUT",
+  "url": "https://discord.com/api/v10/lobbies/sample/members",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": [
+    {
+      "id": "sample",
+      "metadata": {
+        "role": "sample"
+      },
+      "flags": 1,
+      "remove_member": false
+    }
+  ]
+}
