@@ -3774,6 +3774,57 @@
               "type": "string",
               "optional": true,
               "default": "sample"
+            },
+            {
+              "name": "permissions",
+              "type": "string",
+              "optional": true,
+              "default": "0"
+            },
+            {
+              "name": "color",
+              "type": "integer",
+              "optional": true,
+              "default": 1
+            },
+            {
+              "name": "colors",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "primary_color": 1,
+                "secondary_color": null,
+                "tertiary_color": null
+              }
+            },
+            {
+              "name": "hoist",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            },
+            {
+              "name": "icon",
+              "type": "string",
+              "optional": true,
+              "default": "data:image/png;base64,c2FtcGxl"
+            },
+            {
+              "name": "unicodeEmoji",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "mentionable",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": [
@@ -3832,7 +3883,54 @@
               "name": "name",
               "type": "string",
               "optional": true,
-              "default": "sample"
+              "default": null
+            },
+            {
+              "name": "permissions",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "color",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "colors",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "hoist",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "icon",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "unicodeEmoji",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "mentionable",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": [
@@ -3854,6 +3952,11 @@
               "name": "roleId",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": [
