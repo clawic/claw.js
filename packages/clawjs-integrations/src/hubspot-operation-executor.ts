@@ -246,13 +246,13 @@ export function buildHubSpotOperationRequest(
         objectId: optionalString(values.objectId ?? values.object_id),
       });
     case "list-webhook-subscriptions":
-      return getPlan(`integrations/webhooks/2026-3/${recordId(values.appId, "appId")}/subscriptions`, auth, headers, objectSchema(["results"]));
+      return getPlan(`webhooks/2026-3/${recordId(values.appId, "appId")}/subscriptions`, auth, headers, objectSchema(["results"]));
     case "create-webhook-subscription":
-      return jsonPlan("POST", `integrations/webhooks/2026-3/${recordId(values.appId, "appId")}/subscriptions`, auth, headers, webhookSubscriptionBody(values, true), objectSchema(["id", "subscriptionType"]));
+      return jsonPlan("POST", `webhooks/2026-3/${recordId(values.appId, "appId")}/subscriptions`, auth, headers, webhookSubscriptionBody(values, true), objectSchema(["id", "subscriptionType"]));
     case "update-webhook-subscription":
-      return jsonPlan("PATCH", `integrations/webhooks/2026-3/${recordId(values.appId, "appId")}/subscriptions/${recordId(values.subscriptionId, "subscriptionId")}`, auth, headers, webhookSubscriptionBody(values, false), objectSchema(["id", "subscriptionType"]));
+      return jsonPlan("PATCH", `webhooks/2026-3/${recordId(values.appId, "appId")}/subscriptions/${recordId(values.subscriptionId, "subscriptionId")}`, auth, headers, webhookSubscriptionBody(values, false), objectSchema(["id", "subscriptionType"]));
     case "delete-webhook-subscription":
-      return jsonPlan("DELETE", `integrations/webhooks/2026-3/${recordId(values.appId, "appId")}/subscriptions/${recordId(values.subscriptionId, "subscriptionId")}`, auth, headers, {}, objectSchema());
+      return jsonPlan("DELETE", `webhooks/2026-3/${recordId(values.appId, "appId")}/subscriptions/${recordId(values.subscriptionId, "subscriptionId")}`, auth, headers, {}, objectSchema());
   }
 }
 
