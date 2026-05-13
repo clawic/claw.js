@@ -473,7 +473,7 @@ export function buildDiscordOperationRequest(
     case "set-voice-channel-status":
       return bodyPlan("PUT", `channels/${channelId(values)}/voice-status`, auth, auditHeaders(headers, values), voiceChannelStatusBody(values), { type: "object" });
     case "delete-channel":
-      return deletePlan(`channels/${channelId(values)}`, auth, headers, { type: "object", requiredPaths: ["id"] });
+      return deletePlan(`channels/${channelId(values)}`, auth, auditHeaders(headers, values), { type: "object", requiredPaths: ["id"] });
     case "edit-channel-permissions":
       return bodyPlan("PUT", `channels/${channelId(values)}/permissions/${overwriteId(values)}`, auth, auditHeaders(headers, values), channelPermissionBody(values), { type: "object" });
     case "delete-channel-permission":
