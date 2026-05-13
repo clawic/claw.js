@@ -1,0 +1,11 @@
+{
+  "id": "upsert-records_sample",
+  "records": [
+    {
+      "id": "recRecord123",
+      "fields": {
+        "Name": "Sample"
+      }
+    }
+  ]
+}

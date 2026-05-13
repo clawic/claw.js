@@ -1,0 +1,26 @@
+{
+  "method": "PATCH",
+  "url": "https://api.airtable.com/v0/appBase123/tblTable123",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-airtableAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "records": [
+      {
+        "fields": {
+          "Name": "Sample",
+          "Status": "Open"
+        }
+      }
+    ],
+    "performUpsert": {
+      "fieldsToMergeOn": [
+        "Name"
+      ]
+    },
+    "typecast": false,
+    "returnFieldsByFieldId": false
+  }
+}
