@@ -46,6 +46,11 @@ const OPERATION_ENDPOINTS: Record<string, string> = {
   "unpin-message": "unpinChatMessage",
 };
 
+export const TELEGRAM_ACTION_SLUGS = [
+  ...Object.keys(OPERATION_ENDPOINTS),
+  "send-media-by-url-or-id",
+] as const;
+
 const SNAKE_CASE_FIELDS: Record<string, string> = {
   autoPaging: "auto_paging",
   canAddWebPagePreviews: "can_add_web_page_previews",

@@ -2,4 +2,4 @@
 "@clawjs/integrations": minor
 ---
 
-Add a Telegram connector operation executor for running catalog actions through the Telegram Bot API.
+Expand Telegram Bot API action runtime coverage with exported action slugs, operation-scoped offline fixtures, and catalog audit entries for message, media, invite link, and moderation actions.
