@@ -50,6 +50,33 @@
           ]
         },
         {
+          "id": "discord.action.modify-current-user",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Modify Current User",
+          "fields": [
+            {
+              "name": "username",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "avatar",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "banner",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.list-current-user-guilds",
           "appId": "discord",
           "kind": "action",
@@ -76,6 +103,143 @@
           ],
           "authFieldNames": [
             "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-current-user-guild-member",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Current User Guild Member",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBearerToken"
+          ]
+        },
+        {
+          "id": "discord.action.leave-guild",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Leave Guild",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBearerToken"
+          ]
+        },
+        {
+          "id": "discord.action.create-dm",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create DM",
+          "fields": [
+            {
+              "name": "recipientId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.create-group-dm",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Group DM",
+          "fields": [
+            {
+              "name": "accessTokens",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "sample"
+              ]
+            },
+            {
+              "name": "nicks",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "sample": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "discordBearerToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-current-user-connections",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Current User Connections",
+          "fields": [],
+          "authFieldNames": [
+            "discordBearerToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-current-user-application-role-connection",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Current User Application Role Connection",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBearerToken"
+          ]
+        },
+        {
+          "id": "discord.action.update-current-user-application-role-connection",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Update Current User Application Role Connection",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "platformName",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "platformUsername",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "score": "100"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "discordBearerToken"
           ]
         },
         {
