@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://discord.com/api/v10/skus/sample/subscriptions?before=sample&after=sample&limit=1&user_id=sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret"
+  }
+}

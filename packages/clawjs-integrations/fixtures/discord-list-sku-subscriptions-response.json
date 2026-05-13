@@ -1,0 +1,10 @@
+[
+  {
+    "id": "sample",
+    "user_id": "sample",
+    "sku_ids": [
+      "sample"
+    ],
+    "entitlement_ids": []
+  }
+]
