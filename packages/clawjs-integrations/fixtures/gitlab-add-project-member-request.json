@@ -1,0 +1,13 @@
+{
+  "method": "POST",
+  "url": "https://gitlab.com/api/v4/projects/sample/members",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json",
+    "private-token": "offline-gitlabToken-secret"
+  },
+  "body": {
+    "user_id": "1",
+    "access_level": 30
+  }
+}

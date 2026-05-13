@@ -1,0 +1,14 @@
+{
+  "method": "POST",
+  "url": "https://gitlab.com/api/v4/projects/sample/merge_requests",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json",
+    "private-token": "offline-gitlabToken-secret"
+  },
+  "body": {
+    "source_branch": "sample",
+    "target_branch": "main",
+    "title": "sample"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "method": "DELETE",
+  "url": "https://gitlab.com/api/v4/projects/sample/merge_requests/1",
+  "headers": {
+    "accept": "application/json",
+    "private-token": "offline-gitlabToken-secret"
+  }
+}

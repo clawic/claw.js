@@ -1,0 +1,14 @@
+{
+  "method": "POST",
+  "url": "https://gitlab.com/api/v4/projects/sample/labels",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json",
+    "private-token": "offline-gitlabToken-secret"
+  },
+  "body": {
+    "name": "sample",
+    "new_name": "sample",
+    "color": "#428BCA"
+  }
+}

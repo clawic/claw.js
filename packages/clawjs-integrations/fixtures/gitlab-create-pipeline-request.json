@@ -1,0 +1,12 @@
+{
+  "method": "POST",
+  "url": "https://gitlab.com/api/v4/projects/sample/pipeline",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json",
+    "private-token": "offline-gitlabToken-secret"
+  },
+  "body": {
+    "ref": "main"
+  }
+}

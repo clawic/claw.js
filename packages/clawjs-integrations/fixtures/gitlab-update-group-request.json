@@ -1,0 +1,12 @@
+{
+  "method": "PUT",
+  "url": "https://gitlab.com/api/v4/groups/sample",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json",
+    "private-token": "offline-gitlabToken-secret"
+  },
+  "body": {
+    "name": "sample"
+  }
+}

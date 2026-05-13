@@ -1,0 +1,14 @@
+{
+  "method": "PUT",
+  "url": "https://gitlab.com/api/v4/projects/sample/repository/files/sample",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json",
+    "private-token": "offline-gitlabToken-secret"
+  },
+  "body": {
+    "branch": "main",
+    "content": "sample",
+    "commit_message": "sample"
+  }
+}

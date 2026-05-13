@@ -3,10 +3,10 @@
   "url": "https://gitlab.com/api/v4/projects/sample/issues",
   "headers": {
     "accept": "application/json",
+    "content-type": "application/json",
     "private-token": "offline-gitlabToken-secret"
   },
   "body": {
-    "title": "sample",
-    "description": "sample"
+    "title": "sample"
   }
 }
