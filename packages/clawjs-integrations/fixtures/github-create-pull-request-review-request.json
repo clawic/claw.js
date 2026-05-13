@@ -1,0 +1,21 @@
+{
+  "method": "POST",
+  "url": "https://api.github.com/repos/octocat/Hello-World/pulls/1/reviews",
+  "headers": {
+    "accept": "application/vnd.github+json",
+    "authorization": "Bearer offline-githubToken-secret",
+    "content-type": "application/json",
+    "x-github-api-version": "2026-03-10"
+  },
+  "body": {
+    "body": "Reviewed offline",
+    "event": "COMMENT",
+    "comments": [
+      {
+        "path": "README.md",
+        "position": 1,
+        "body": "Looks good"
+      }
+    ]
+  }
+}
