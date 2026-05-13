@@ -42,7 +42,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20"
+    "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20 --external better-sqlite3"
   },
   "dependencies": {
     "@clawjs/audio": "0.1.0",
@@ -52,6 +52,7 @@
     "@clawjs/index": "0.1.2",
     "@clawjs/sessions": "0.1.0",
     "@clawjs/workspace": "0.1.2",
+    "better-sqlite3": "^12.9.0",
     "playwright": "^1.56.1"
   }
 }

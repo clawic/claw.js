@@ -5,6 +5,7 @@
 
 import path from "node:path";
 import fs from "node:fs";
+import os from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -60,13 +61,25 @@ function writeStatusFile(filePath, payload) {
   }
 }
 
+function expandHome(value) {
+  return value?.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
+}
+
+function defaultClawjsDataRoot(flags) {
+  const explicit = flags["data-dir"] ?? process.env.INDEX_DATA_DIR ?? process.env.CLAWJS_MAIN_DATA_DIR ?? process.env.CLAWIX_CLAWJS_DATA_DIR;
+  if (explicit) return path.resolve(expandHome(explicit));
+  if (process.platform === "darwin") return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
+  if (process.platform === "win32") return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
+  return path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
+}
+
 export async function runOpenIndex(args) {
   const flags = parseFlags(args);
   const port = flags.port ? Number(flags.port) : Number(process.env.INDEX_PORT ?? 7796);
   const host = flags.host ?? flags.bind ?? process.env.INDEX_HOST ?? "127.0.0.1";
   const workspace = flags.workspace ?? process.env.CLAWJS_WORKSPACE ?? process.cwd();
-  const dataDir = flags["data-dir"] ?? path.join(workspace, ".clawjs", "index");
-  const dbPath = flags["db-path"] ?? path.join(dataDir, "index.sqlite");
+  const dataDir = defaultClawjsDataRoot(flags);
+  const dbPath = flags["db-path"] ?? process.env.INDEX_DB_PATH ?? path.join(dataDir, "search.sqlite");
   const statusFile = flags["status-file"];
 
   const buildIndexApp = await loadBuildIndexApp();

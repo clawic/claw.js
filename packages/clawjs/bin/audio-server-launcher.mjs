@@ -9,6 +9,7 @@
 
 import path from "node:path";
 import fs from "node:fs";
+import os from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -69,15 +70,27 @@ function writeStatusFile(filePath, payload) {
   }
 }
 
+function expandHome(value) {
+  return value?.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
+}
+
+function defaultClawjsDataRoot(flags) {
+  const explicit = flags["data-dir"] ?? process.env.AUDIO_DATA_DIR ?? process.env.CLAWJS_MAIN_DATA_DIR ?? process.env.CLAWIX_CLAWJS_DATA_DIR;
+  if (explicit) return path.resolve(expandHome(explicit));
+  if (process.platform === "darwin") return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
+  if (process.platform === "win32") return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
+  return path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
+}
+
 export async function runOpenAudio(args) {
   const flags = parseFlags(args);
 
   const port = flags.port ? Number(flags.port) : Number(process.env.AUDIO_PORT ?? 7794);
   const host = flags.host ?? flags.bind ?? process.env.AUDIO_HOST ?? "127.0.0.1";
   const workspace = flags.workspace ?? process.env.CLAWJS_WORKSPACE ?? process.cwd();
-  const dataDir = flags["data-dir"] ?? path.join(workspace, ".clawjs", "audio");
-  const blobsDir = flags["blobs-dir"] ?? path.join(dataDir, "blobs");
-  const dbPath = flags["db-path"] ?? path.join(dataDir, "audio.sqlite");
+  const dataDir = defaultClawjsDataRoot(flags);
+  const blobsDir = flags["blobs-dir"] ?? process.env.AUDIO_BLOBS_DIR ?? path.join(dataDir, "audio");
+  const dbPath = flags["db-path"] ?? process.env.AUDIO_DB_PATH ?? path.join(dataDir, "audio.sqlite");
   const statusFile = flags["status-file"];
   const sharedSecret = flags.secret ?? process.env.AUDIO_SHARED_SECRET;
 

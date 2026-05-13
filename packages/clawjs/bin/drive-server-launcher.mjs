@@ -6,6 +6,7 @@
 
 import path from "node:path";
 import fs from "node:fs";
+import os from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -21,6 +22,18 @@ function findServerEntry() {
     if (fs.existsSync(candidate)) return candidate;
   }
   return null;
+}
+
+function expandHome(value) {
+  return value?.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
+}
+
+function defaultClawjsDataRoot(flags) {
+  const explicit = flags["data-dir"] ?? process.env.DRIVE_DATA_DIR ?? process.env.CLAWJS_MAIN_DATA_DIR ?? process.env.CLAWIX_CLAWJS_DATA_DIR;
+  if (explicit) return path.resolve(expandHome(explicit));
+  if (process.platform === "darwin") return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
+  if (process.platform === "win32") return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
+  return path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
 }
 
 export async function runOpenDrive(args) {
@@ -41,10 +54,9 @@ export async function runOpenDrive(args) {
 
   if (flags.port) process.env.DRIVE_PORT = flags.port;
   if (flags.host) process.env.DRIVE_HOST = flags.host;
-  if (flags.workspace) {
-    process.env.DRIVE_DATA_DIR = flags.workspace;
-    process.env.DRIVE_DB_PATH = path.join(flags.workspace, "drive.sqlite");
-  }
+  const dataDir = defaultClawjsDataRoot(flags);
+  process.env.DRIVE_DATA_DIR = dataDir;
+  process.env.DRIVE_DB_PATH = flags["db-path"] ?? process.env.DRIVE_DB_PATH ?? path.join(dataDir, "drive.sqlite");
   if (flags["status-file"]) process.env.DRIVE_STATUS_FILE = flags["status-file"];
   if (flags["ocr-sidecar"]) process.env.DRIVE_OCR_SIDECAR = flags["ocr-sidecar"];
   if (flags["embed-sidecar"]) process.env.DRIVE_EMBED_SIDECAR = flags["embed-sidecar"];
@@ -75,13 +87,11 @@ export async function runOpenDrive(args) {
     const overrides = {};
     if (flags.port) overrides.config = { ...(overrides.config ?? {}), port: Number(flags.port) };
     if (flags.host) overrides.config = { ...(overrides.config ?? {}), host: flags.host };
-    if (flags.workspace) {
-      overrides.config = {
-        ...(overrides.config ?? {}),
-        dataDir: flags.workspace,
-        dbPath: path.join(flags.workspace, "drive.sqlite"),
-      };
-    }
+    overrides.config = {
+      ...(overrides.config ?? {}),
+      dataDir,
+      dbPath: process.env.DRIVE_DB_PATH,
+    };
     if (flags["status-file"]) overrides.statusFile = flags["status-file"];
     if (flags["ocr-sidecar"]) overrides.ocrSidecarPath = flags["ocr-sidecar"];
     if (flags["embed-sidecar"]) overrides.embedSidecarPath = flags["embed-sidecar"];

@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
@@ -100,16 +101,31 @@ export interface ChannelServiceConfig {
 }
 
 export function loadChannelConfig(channelName: string, overrides: Partial<ChannelServiceConfig> = {}): ChannelServiceConfig {
-  const cwd = process.cwd();
   const upper = channelName.toUpperCase().replace(/-/g, "_");
-  const dataDir = overrides.dataDir ?? process.env[`${upper}_DATA_DIR`] ?? path.join(cwd, ".data");
+  const dataDir = overrides.dataDir ?? process.env[`${upper}_DATA_DIR`] ?? defaultClawjsDataRoot();
   return {
     host: overrides.host ?? process.env[`${upper}_HOST`] ?? "127.0.0.1",
     port: overrides.port ?? Number(process.env[`${upper}_PORT`] ?? process.env.PORT ?? "0"),
-    dbPath: overrides.dbPath ?? process.env[`${upper}_DB_PATH`] ?? path.join(dataDir, `${channelName}.sqlite`),
+    dbPath: overrides.dbPath ?? process.env[`${upper}_DB_PATH`] ?? process.env.CLAWJS_MAIN_DB_PATH ?? path.join(dataDir, "clawjs.sqlite"),
     dataDir,
     sharedSecret: overrides.sharedSecret ?? process.env[`${upper}_SHARED_SECRET`] ?? `${channelName}-dev-secret-change-me`,
   };
+}
+
+function defaultClawjsDataRoot(): string {
+  if (process.env.CLAWJS_MAIN_DATA_DIR) return expandHome(process.env.CLAWJS_MAIN_DATA_DIR);
+  if (process.env.CLAWIX_CLAWJS_DATA_DIR) return expandHome(process.env.CLAWIX_CLAWJS_DATA_DIR);
+  if (process.platform === "darwin") {
+    return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
+  }
+  if (process.platform === "win32") {
+    return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
+  }
+  return path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
+}
+
+function expandHome(value: string): string {
+  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
 }
 
 interface AccountRow {

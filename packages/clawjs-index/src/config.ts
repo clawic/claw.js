@@ -15,15 +15,14 @@ export interface IndexServiceConfig {
 }
 
 export function loadIndexConfig(overrides: Partial<IndexServiceConfig> = {}): IndexServiceConfig {
-  const home = os.homedir();
   const dataDir =
     overrides.dataDir ??
     process.env.INDEX_DATA_DIR ??
-    path.join(home, ".clawjs", "index");
+    defaultClawjsDataRoot();
   return {
     host: overrides.host ?? process.env.INDEX_HOST ?? "127.0.0.1",
     port: overrides.port ?? Number(process.env.INDEX_PORT ?? process.env.PORT ?? "7796"),
-    dbPath: overrides.dbPath ?? process.env.INDEX_DB_PATH ?? path.join(dataDir, "index.sqlite"),
+    dbPath: overrides.dbPath ?? process.env.INDEX_DB_PATH ?? path.join(dataDir, "search.sqlite"),
     dataDir,
     jwtSecret: overrides.jwtSecret ?? process.env.INDEX_JWT_SECRET ?? "index-dev-secret-change-me",
     corsOrigins: overrides.corsOrigins ?? (process.env.INDEX_CORS_ORIGINS ?? "")
@@ -35,4 +34,20 @@ export function loadIndexConfig(overrides: Partial<IndexServiceConfig> = {}): In
     workerConcurrency: overrides.workerConcurrency ?? Number(process.env.INDEX_WORKER_CONCURRENCY ?? "2"),
     defaultRunTimeoutMs: overrides.defaultRunTimeoutMs ?? Number(process.env.INDEX_RUN_TIMEOUT_MS ?? "600000"),
   };
+}
+
+function defaultClawjsDataRoot(): string {
+  if (process.env.CLAWJS_MAIN_DATA_DIR) return expandHome(process.env.CLAWJS_MAIN_DATA_DIR);
+  if (process.env.CLAWIX_CLAWJS_DATA_DIR) return expandHome(process.env.CLAWIX_CLAWJS_DATA_DIR);
+  if (process.platform === "darwin") {
+    return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
+  }
+  if (process.platform === "win32") {
+    return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
+  }
+  return path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
+}
+
+function expandHome(value: string): string {
+  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
 }
