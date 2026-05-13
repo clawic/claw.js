@@ -5233,6 +5233,11 @@
               "name": "recurrenceRule",
               "type": "object",
               "optional": true
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
             }
           ]
         },
@@ -5343,6 +5348,11 @@
             {
               "name": "recurrenceRule",
               "type": "object",
+              "optional": true
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
               "optional": true
             }
           ]
