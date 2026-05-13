@@ -22,6 +22,9 @@ Instructions for humans and coding agents working on ClawJS documentation.
 - Check CLI documentation against the CLI source and `surface-contract.json` before documenting commands, flags, or examples.
 - Keep public surface and interface docs aligned with `surface-contract.json` and generated package declarations.
 - When adding a public docs page, make it discoverable from `index.md` or the VitePress sidebar unless it is intentionally private or supporting material.
+- For architecture, storage, host, validation, naming, privacy, release, or
+  changeset decisions, start from `decision-map.md` and update the canonical
+  source it points to before editing the map.
 
 ## Writing Rules
 

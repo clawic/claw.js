@@ -42,6 +42,8 @@ flowchart LR
 Build once, expose everything through the SDK, the CLI, the API, or the
 relay. Naming and stability rules live in
 [ADR 0001](docs/adr/0001-naming-and-stability-surfaces.md).
+Long-lived architecture, storage, validation, release, privacy, and naming
+decisions are indexed in [docs/decision-map.md](docs/decision-map.md).
 
 ## Repository Map
 
@@ -128,6 +130,7 @@ npx @clawjs/cli@latest --help
 - [Runtime adapters](docs/runtime.md)
 - [Interface matrix](docs/interface-matrix.md)
 - [Repository map](docs/repository-map.md)
+- [Decision map](docs/decision-map.md)
 - [Host ownership](docs/host-ownership.md)
 - [Support matrix](docs/support-matrix.md)
 

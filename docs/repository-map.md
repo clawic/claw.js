@@ -23,7 +23,7 @@ the platform quickly.
 | `content/` | Content authoring and publishing control plane. |
 | `database/` | Namespace database service with schema, records, files, auth, and realtime. |
 | `delegation/` | Durable async agent delegation control plane. |
-| `docs/` | Canonical Markdown documentation and VitePress source. |
+| `docs/` | Canonical Markdown documentation, VitePress source, and the [Decision Map](./decision-map.md). |
 | `drive/` | Local-first drive and file collaboration service. |
 | `examples/` | Demos, mocks, fixtures, and starter showcases. |
 | `execution/` | Agent-authored code execution, workers, runs, artifacts, and deployment flow. |
@@ -83,3 +83,7 @@ The current layout intentionally replaces older root names:
 
 Historical docs may mention old names only when describing migration history.
 New scripts, docs, tests, and examples should use the current layout.
+
+For architecture, storage, validation, release, privacy, and naming decisions,
+use the [Decision Map](./decision-map.md) to find the canonical document and
+protecting check.

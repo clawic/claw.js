@@ -6,6 +6,10 @@
 - Do not merge changes that leave `npm test`, `npm run test:types`, `npm run test:ts`, `npm run build`, `npm run test:docs`, `npm run test:pack`, or `npm run test:e2e:ci` failing.
 - Prefer additive, well-scoped changes. If a change alters public behavior, update docs and tests in the same patch.
 - Follow the repository branch policy in [docs/git-workflow.md](docs/git-workflow.md).
+- For architecture, storage, naming, host, validation, release, privacy, or
+  changeset decisions, start from [docs/decision-map.md](docs/decision-map.md).
+  It points to the canonical source and the guardrail expected for each
+  decision.
 
 ## Local setup
 

@@ -9,6 +9,8 @@
 - Do not publish if `npm run ci` fails.
 - Treat `main` as the normal tag source. Use `release/0.x` only when patching the current public line without merging all queued work from `next`.
 - Keep the Git workflow in sync with [docs/git-workflow.md](docs/git-workflow.md).
+- Keep release, changeset, publishing, and privacy decisions aligned with
+  [docs/decision-map.md](docs/decision-map.md).
 
 ## Versioning workflow
 

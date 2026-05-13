@@ -7,11 +7,12 @@ Read and follow:
 1. `AGENTS.md`
 2. `docs/host-ownership.md`
 3. `docs/data-storage-boundary.md`
-4. `docs/naming-style-guide.md`
-5. `docs/adr/0001-claw-framework-host-boundary.md`
-6. `docs/adr/0001-naming-and-stability-surfaces.md`
-7. Any docs or wiki pages that `AGENTS.md` explicitly points to
-8. The task-specific docs, tests, and code in the area you are changing
+4. `docs/decision-map.md`
+5. `docs/naming-style-guide.md`
+6. `docs/adr/0001-claw-framework-host-boundary.md`
+7. `docs/adr/0001-naming-and-stability-surfaces.md`
+8. Any docs or wiki pages that `AGENTS.md` explicitly points to
+9. The task-specific docs, tests, and code in the area you are changing
 
 Critical guardrail for prompt-based tests:
 

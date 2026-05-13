@@ -115,5 +115,7 @@ ClawJS writes new canonical workspace state under `.claw/` even when runtimes di
 - [API Reference](/api) for the instance namespaces and runtime-facing methods.
 - [Public Surface](/surface) for the package export inventory.
 - [Repository Map](/repository-map) for root folder ownership and layout rules.
+- [Decision Map](/decision-map) for architecture, storage, validation, release,
+  privacy, and naming decisions with their protecting checks.
 - [Host Ownership](/host-ownership) for the ClawJS, `Claw.app`, and Clawix architecture boundary.
 - [Terminology](/terminology) for canonical product vocabulary.

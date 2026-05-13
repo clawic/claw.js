@@ -30,6 +30,7 @@ function forbidSnippet(relativePath, snippet) {
 const agentDocs = [
   "AGENTS.md",
   "CLAUDE.md",
+  "docs/decision-map.md",
   "docs/host-ownership.md",
   "docs/data-storage-boundary.md",
   "docs/naming-style-guide.md",
@@ -63,9 +64,27 @@ for (const relativePath of ["README.md", ...listMarkdownFiles("docs")]) {
 requireSnippet("CLAUDE.md", "AGENTS.md");
 requireSnippet("CLAUDE.md", "docs/host-ownership.md");
 requireSnippet("CLAUDE.md", "docs/data-storage-boundary.md");
+requireSnippet("CLAUDE.md", "docs/decision-map.md");
 requireSnippet("CLAUDE.md", "docs/naming-style-guide.md");
 requireSnippet("CLAUDE.md", "docs/adr/0001-claw-framework-host-boundary.md");
 requireSnippet("CLAUDE.md", "docs/adr/0001-naming-and-stability-surfaces.md");
+requireSnippet("AGENTS.md", "docs/decision-map.md");
+requireSnippet("CONTRIBUTING.md", "docs/decision-map.md");
+requireSnippet("RELEASING.md", "docs/decision-map.md");
+requireSnippet("docs/AGENTS.md", "decision-map.md");
+requireSnippet("docs/index.md", "Decision Map");
+requireSnippet("docs/repository-map.md", "Decision Map");
+
+for (const snippet of [
+  "decision -> document",
+  "ClawJS/Claw owns framework contracts",
+  "New workspace-local framework writes use `.claw/`",
+  "Sensitive native permissions",
+  "Changesets are release metadata",
+  "PENDING GUARDRAIL",
+]) {
+  requireSnippet("docs/decision-map.md", snippet);
+}
 
 for (const snippet of [
   "~/.claw",
