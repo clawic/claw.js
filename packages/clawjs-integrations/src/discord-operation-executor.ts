@@ -708,7 +708,7 @@ export function buildDiscordOperationRequest(
         after: optionalString(values.after),
       }));
     case "create-stage-instance":
-      return bodyPlan("POST", "stage-instances", auth, headers, stageInstanceBody(values, true), { type: "object", requiredPaths: ["id", "channel_id", "topic"] });
+      return bodyPlan("POST", "stage-instances", auth, auditHeaders(headers, values), stageInstanceBody(values, true), { type: "object", requiredPaths: ["id", "channel_id", "topic"] });
     case "get-stage-instance":
       return getPlan(`stage-instances/${channelId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "channel_id", "topic"] });
     case "update-stage-instance":
