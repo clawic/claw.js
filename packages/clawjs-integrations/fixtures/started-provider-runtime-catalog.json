@@ -1486,6 +1486,60 @@
           ]
         },
         {
+          "id": "discord.action.start-thread-in-forum-or-media-channel",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Start Thread In Forum Or Media Channel",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "autoArchiveDuration",
+              "type": "integer",
+              "optional": true,
+              "default": 60
+            },
+            {
+              "name": "rateLimitPerUser",
+              "type": "integer",
+              "optional": true,
+              "default": 0
+            },
+            {
+              "name": "message",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "content": "sample"
+              }
+            },
+            {
+              "name": "appliedTags",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "sample"
+              ]
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.list-active-threads",
           "appId": "discord",
           "kind": "action",
@@ -1495,6 +1549,92 @@
               "name": "guildId",
               "type": "string",
               "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-public-archived-threads",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Public Archived Threads",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "before",
+              "type": "string",
+              "optional": true,
+              "default": "2026-05-13T10:00:00.000Z"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-private-archived-threads",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Private Archived Threads",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "before",
+              "type": "string",
+              "optional": true,
+              "default": "2026-05-13T10:00:00.000Z"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-joined-private-archived-threads",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Joined Private Archived Threads",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "before",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
             }
           ],
           "authFieldNames": [
