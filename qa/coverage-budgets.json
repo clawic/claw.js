@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "budgets": [
+    {
+      "boundary": "contracts-and-schemas",
+      "lane": "fast",
+      "metric": "statements",
+      "minimum": 70,
+      "ratchet": true
+    },
+    {
+      "boundary": "storage-and-migrations",
+      "lane": "fast",
+      "metric": "statements",
+      "minimum": 65,
+      "ratchet": true
+    },
+    {
+      "boundary": "cli-and-public-api",
+      "lane": "e2e",
+      "metric": "scenario_coverage",
+      "minimum": 1,
+      "ratchet": true
+    },
+    {
+      "boundary": "daemon-and-bridge",
+      "lane": "integration",
+      "metric": "statements",
+      "minimum": 65,
+      "ratchet": true
+    },
+    {
+      "boundary": "browser-ui",
+      "lane": "e2e",
+      "metric": "scenario_coverage",
+      "minimum": 1,
+      "ratchet": true
+    },
+    {
+      "boundary": "host-and-permissions",
+      "lane": "host",
+      "metric": "scenario_coverage",
+      "minimum": 1,
+      "ratchet": false
+    },
+    {
+      "boundary": "device-clients",
+      "lane": "device",
+      "metric": "scenario_coverage",
+      "minimum": 1,
+      "ratchet": false
+    },
+    {
+      "boundary": "live-integrations",
+      "lane": "live",
+      "metric": "scenario_coverage",
+      "minimum": 1,
+      "ratchet": false
+    }
+  ]
+}

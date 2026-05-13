@@ -4,6 +4,8 @@ This matrix is the working checklist for completing the testing architecture in
 ADR 0002. A row is complete only when the listed lanes have real coverage,
 fixtures are synthetic, and any missing physical dependency is recorded in
 `qa/scenarios`.
+Coverage budgets live in `qa/coverage-budgets.json` and are enforced by
+`npm run test:policy`.
 
 | Boundary | Primary lane | Release lane | Evidence |
 | --- | --- | --- | --- |
