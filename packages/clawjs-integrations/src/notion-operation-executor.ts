@@ -32,7 +32,21 @@ export type NotionRuntimeOperation =
   | "delete-comment"
   | "list-users"
   | "get-user"
-  | "get-self";
+  | "get-self"
+  | "list-views"
+  | "get-view"
+  | "create-view"
+  | "update-view"
+  | "delete-view"
+  | "create-view-query"
+  | "get-view-query-results"
+  | "delete-view-query"
+  | "create-file-upload"
+  | "send-file-upload"
+  | "complete-file-upload"
+  | "get-file-upload"
+  | "list-file-uploads"
+  | "list-custom-emojis";
 
 export function isNotionActionOperationSupported(operationId: string): boolean {
   return notionRuntimeOperation(operationId) !== null;
@@ -440,6 +454,224 @@ export function buildNotionOperationRequest(
           requiredPaths: ["id", "object"],
         },
       };
+    case "list-views":
+      return {
+        method: "GET",
+        endpoint: "views",
+        auth,
+        headers,
+        query: removeEmptyValues({
+          database_id: values.databaseId ?? values.database_id,
+          data_source_id: values.dataSourceId ?? values.data_source_id,
+          page_size: values.pageSize ?? values.page_size,
+          start_cursor: values.startCursor ?? values.start_cursor,
+        }),
+        body: {},
+        pagination: notionCursorPagination("results", values),
+        responseSchema: {
+          type: "object",
+          requiredPaths: ["object", "results"],
+        },
+      };
+    case "get-view":
+      return {
+        method: "GET",
+        endpoint: `views/${notionId(values, "viewId", "view_id")}`,
+        auth,
+        headers,
+        body: {},
+        responseSchema: {
+          type: "object",
+          requiredPaths: ["id", "object", "type"],
+        },
+      };
+    case "create-view":
+      return {
+        method: "POST",
+        endpoint: "views",
+        auth,
+        headers,
+        body: removeEmptyValues({
+          database_id: values.databaseId ?? values.database_id,
+          data_source_id: requiredString(firstValue(values.dataSourceId, values.data_source_id), "dataSourceId"),
+          view_id: values.viewId ?? values.view_id,
+          create_database: values.createDatabase ?? values.create_database,
+          name: requiredString(values.name, "name"),
+          type: requiredString(values.type, "type"),
+          filter: values.filter,
+          sorts: values.sorts,
+          configuration: values.configuration,
+          position: values.position,
+        }),
+        responseSchema: {
+          type: "object",
+          requiredPaths: ["id", "object", "type"],
+        },
+      };
+    case "update-view":
+      return {
+        method: "PATCH",
+        endpoint: `views/${notionId(values, "viewId", "view_id")}`,
+        auth,
+        headers,
+        body: removeEmptyValues({
+          name: values.name,
+          filter: values.filter,
+          sorts: values.sorts,
+          configuration: values.configuration,
+        }),
+        responseSchema: {
+          type: "object",
+          requiredPaths: ["id", "object", "type"],
+        },
+      };
+    case "delete-view":
+      return {
+        method: "DELETE",
+        endpoint: `views/${notionId(values, "viewId", "view_id")}`,
+        auth,
+        headers,
+        body: {},
+        responseSchema: {
+          type: "object",
+          requiredPaths: ["id", "object", "type"],
+        },
+      };
+    case "create-view-query":
+      return {
+        method: "POST",
+        endpoint: `views/${notionId(values, "viewId", "view_id")}/queries`,
+        auth,
+        headers,
+        body: removeEmptyValues({
+          page_size: values.pageSize ?? values.page_size,
+        }),
+        responseSchema: {
+          type: "object",
+          requiredPaths: ["object", "results", "query_id"],
+        },
+      };
+    case "get-view-query-results":
+      return {
+        method: "GET",
+        endpoint: `views/${notionId(values, "viewId", "view_id")}/queries/${notionId(values, "queryId", "query_id")}/results`,
+        auth,
+        headers,
+        query: cursorQuery(values),
+        body: {},
+        pagination: notionCursorPagination("results", values),
+        responseSchema: {
+          type: "object",
+          requiredPaths: ["object", "results"],
+        },
+      };
+    case "delete-view-query":
+      return {
+        method: "DELETE",
+        endpoint: `views/${notionId(values, "viewId", "view_id")}/queries/${notionId(values, "queryId", "query_id")}`,
+        auth,
+        headers,
+        body: {},
+        responseSchema: {
+          type: "object",
+          requiredPaths: ["id", "object"],
+        },
+      };
+    case "create-file-upload":
+      return {
+        method: "POST",
+        endpoint: "file_uploads",
+        auth,
+        headers,
+        body: removeEmptyValues({
+          mode: values.mode,
+          filename: values.filename,
+          content_type: values.contentType ?? values.content_type,
+          content_length: values.contentLength ?? values.content_length,
+          number_of_parts: values.numberOfParts ?? values.number_of_parts,
+          external_url: values.externalUrl ?? values.external_url,
+        }),
+        responseSchema: {
+          type: "object",
+          requiredPaths: ["id", "object", "status"],
+        },
+      };
+    case "send-file-upload":
+      return {
+        method: "POST",
+        endpoint: `file_uploads/${notionId(values, "fileUploadId", "file_upload_id")}/send`,
+        auth,
+        headers,
+        bodyEncoding: "multipart",
+        body: removeEmptyValues({
+          file: requiredJson(values.file, "file"),
+          part_number: values.partNumber ?? values.part_number,
+        }),
+        responseSchema: {
+          type: "object",
+          requiredPaths: ["id", "object", "status"],
+        },
+      };
+    case "complete-file-upload":
+      return {
+        method: "POST",
+        endpoint: `file_uploads/${notionId(values, "fileUploadId", "file_upload_id")}/complete`,
+        auth,
+        headers,
+        body: {},
+        responseSchema: {
+          type: "object",
+          requiredPaths: ["id", "object", "status"],
+        },
+      };
+    case "get-file-upload":
+      return {
+        method: "GET",
+        endpoint: `file_uploads/${notionId(values, "fileUploadId", "file_upload_id")}`,
+        auth,
+        headers,
+        body: {},
+        responseSchema: {
+          type: "object",
+          requiredPaths: ["id", "object", "status"],
+        },
+      };
+    case "list-file-uploads":
+      return {
+        method: "GET",
+        endpoint: "file_uploads",
+        auth,
+        headers,
+        query: removeEmptyValues({
+          status: values.status,
+          page_size: values.pageSize ?? values.page_size,
+          start_cursor: values.startCursor ?? values.start_cursor,
+        }),
+        body: {},
+        pagination: notionCursorPagination("results", values),
+        responseSchema: {
+          type: "object",
+          requiredPaths: ["object", "results"],
+        },
+      };
+    case "list-custom-emojis":
+      return {
+        method: "GET",
+        endpoint: "custom_emojis",
+        auth,
+        headers,
+        query: removeEmptyValues({
+          name: values.name,
+          page_size: values.pageSize ?? values.page_size,
+          start_cursor: values.startCursor ?? values.start_cursor,
+        }),
+        body: {},
+        pagination: notionCursorPagination("results", values),
+        responseSchema: {
+          type: "object",
+          requiredPaths: ["object", "results"],
+        },
+      };
   }
 }
 
@@ -471,6 +703,20 @@ function notionRuntimeOperation(operationId: string): NotionRuntimeOperation | n
   if (slug === "list-users") return "list-users";
   if (slug === "get-user" || slug === "retrieve-user") return "get-user";
   if (slug === "get-self" || slug === "retrieve-self" || slug === "get-bot-user") return "get-self";
+  if (slug === "list-views") return "list-views";
+  if (slug === "get-view" || slug === "retrieve-view") return "get-view";
+  if (slug === "create-view") return "create-view";
+  if (slug === "update-view") return "update-view";
+  if (slug === "delete-view") return "delete-view";
+  if (slug === "create-view-query") return "create-view-query";
+  if (slug === "get-view-query-results" || slug === "list-view-query-results") return "get-view-query-results";
+  if (slug === "delete-view-query") return "delete-view-query";
+  if (slug === "create-file-upload") return "create-file-upload";
+  if (slug === "send-file-upload") return "send-file-upload";
+  if (slug === "complete-file-upload") return "complete-file-upload";
+  if (slug === "get-file-upload" || slug === "retrieve-file-upload") return "get-file-upload";
+  if (slug === "list-file-uploads") return "list-file-uploads";
+  if (slug === "list-custom-emojis") return "list-custom-emojis";
   return null;
 }
 
