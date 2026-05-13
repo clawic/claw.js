@@ -167,6 +167,49 @@ describe("airtable operation runtime", () => {
         requiredPaths: ["id", "macSecretBase64", "expirationTime"],
       },
     });
+
+    assert.deepEqual(buildAirtableOperationRequest(operation("airtable.action.upsert-records"), {
+      baseId: "appBase123",
+      tableIdOrName: "tblTable123",
+      records: [{ fields: { Name: "Sample", Status: "Open" } }],
+      performUpsert: { fieldsToMergeOn: ["Name"] },
+      typecast: false,
+      returnFieldsByFieldId: false,
+    }), {
+      method: "PATCH",
+      endpoint: "v0/appBase123/tblTable123",
+      auth,
+      headers,
+      query: {},
+      body: {
+        records: [{ fields: { Name: "Sample", Status: "Open" } }],
+        performUpsert: { fieldsToMergeOn: ["Name"] },
+        typecast: false,
+        returnFieldsByFieldId: false,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["records"],
+      },
+    });
+
+    assert.deepEqual(buildAirtableOperationRequest(operation("airtable.action.set-webhook-notifications"), {
+      baseId: "appBase123",
+      webhookId: "achWebhook123",
+      enable: true,
+    }), {
+      method: "POST",
+      endpoint: "v0/bases/appBase123/webhooks/achWebhook123/enableNotifications",
+      auth,
+      headers,
+      query: {},
+      body: {
+        enable: true,
+      },
+      responseSchema: {
+        type: "object",
+      },
+    });
   });
 
   it("covers Airtable actions with operation-scoped offline fixtures", async () => {
