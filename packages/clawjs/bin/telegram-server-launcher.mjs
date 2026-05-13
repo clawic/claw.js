@@ -1,12 +1,12 @@
 // Launcher for `claw open telegram`. Mirrors database-server-launcher.mjs.
 // Boots the Telegram surface (Fastify app exposed by the workspace
-// `telegram/` package) so the Clawix Mac supervisor can spawn it with
+// `integrations/telegram/` package) so the Clawix Mac supervisor can spawn it with
 // --port / --workspace / --status-file and read back the status file
 // to know when it is ready.
 //
 // Resolution order for buildTelegramApp():
 //   1) Bundled ESM (when @clawjs/telegram ships, the published package).
-//   2) Dev fallback through the workspace `telegram/` package source.
+//   2) Dev fallback through the workspace `integrations/telegram/` package source.
 
 import path from "node:path";
 import fs from "node:fs";

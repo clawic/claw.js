@@ -142,7 +142,7 @@ export const BUILTIN_CLAWJS_RULES: RuleRecord[] = [
     title: "Service surfaces",
     key: "clawjs-service-surfaces",
     priority: 70,
-    content: "Use the dedicated service surface for time, notify, content, IoT, database, ERP, drive, execution-plane, and delegation-plane instead of inventing local schemas.",
+    content: "Use the dedicated service surface for time, notify, content, IoT, database, ERP, drive, execution, and delegation instead of inventing local schemas.",
     applyWhen: { domains: ["time", "notify", "content", "iot", "database", "erp", "drive", "execution", "delegation"] },
     references: [reference("docs/agent-rules/service-surfaces.md", "Service surfaces")],
   }),

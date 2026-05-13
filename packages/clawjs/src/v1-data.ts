@@ -3057,7 +3057,7 @@ function seedSidecarRegistry(sqlite: Database.Database): void {
     { domain: "runtime", id: "queues", path: path.join(root, "runtime.sqlite"), cache: true, metadata: { retention: "compact", owns: ["jobs", "claims", "retries", "nudges", "draft-distillations"] } },
     { domain: "notify", id: "deliveries", path: path.join(root, "notify.sqlite"), cache: true, metadata: { operational: true } },
     { domain: "monitor", id: "events", path: path.join(root, "monitor.sqlite"), cache: true, metadata: { operational: true } },
-    { domain: "infra", id: "relay-execution-plane", path: path.join(root, "infra.sqlite"), cache: true, metadata: { operational: true } },
+    { domain: "infra", id: "relay-execution", path: path.join(root, "infra.sqlite"), cache: true, metadata: { operational: true } },
     { domain: "feed", id: "raw-provider-cache", path: path.join(root, "feed.sqlite"), cache: true, metadata: { rawCache: true, operational: true } },
     { domain: "ops", id: "metrics-cache", path: path.join(root, "ops.sqlite"), cache: true, metadata: { operational: true, rawCache: true } },
   ];

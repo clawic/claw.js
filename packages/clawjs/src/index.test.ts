@@ -276,11 +276,11 @@ test("system capabilities CLI uses the active host contract", async () => {
 async function startDelegationPlaneTestServer(workspaceRoot: string): Promise<{ url: string; stop: () => Promise<void> }> {
   const port = 18_000 + Math.floor(Math.random() * 1_000);
   const url = `http://127.0.0.1:${port}`;
-  const delegationTsxBin = path.join(process.cwd(), "delegation-plane", "node_modules", ".bin", "tsx");
+  const delegationTsxBin = path.join(process.cwd(), "delegation", "node_modules", ".bin", "tsx");
   const rootTsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
   const homeTsxBin = path.join(os.homedir(), "node_modules", ".bin", "tsx");
   const tsxBin = fs.existsSync(delegationTsxBin) ? delegationTsxBin : fs.existsSync(rootTsxBin) ? rootTsxBin : homeTsxBin;
-  const child = spawn(tsxBin, [path.join(process.cwd(), "delegation-plane", "src", "bin", "server.ts")], {
+  const child = spawn(tsxBin, [path.join(process.cwd(), "delegation", "src", "bin", "server.ts")], {
     cwd: process.cwd(),
     stdio: "ignore",
     env: {
@@ -313,7 +313,7 @@ async function startDelegationPlaneTestServer(workspaceRoot: string): Promise<{ 
     }
   }
   child.kill("SIGTERM");
-  throw new Error("Delegation Plane test server did not start.");
+  throw new Error("Delegation test server did not start.");
 }
 
 async function createFakeSecretsCliServer() {
