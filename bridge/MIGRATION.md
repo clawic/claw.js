@@ -65,7 +65,7 @@ bash clawix/macos/scripts/bundle_claw_remote.sh \
 Resulting layout:
 
 ```
-Clawix.app/Contents/Helpers/clawix-bridged                # legacy Swift, untouched
+Clawix.app/Contents/Helpers/<legacy-swift-bridge>           # legacy Swift, untouched
 Clawix.app/Contents/Helpers/claw-remote/               # new Node daemon
   bin/claw-remote
   lib/start.cjs
@@ -97,7 +97,7 @@ Today the Swift `start()` method resolves the helper as:
 
 ```swift
 let helper = Bundle.main.bundleURL
-    .appendingPathComponent("Contents/Helpers/clawix-bridged")
+    .appendingPathComponent("Contents/Helpers/<legacy-swift-bridge>")
 ```
 
 For F8 cutover, change the resolver to prefer the Node daemon when
@@ -107,7 +107,7 @@ present and fall back to the Swift helper:
 let nodeHelper = Bundle.main.bundleURL
     .appendingPathComponent("Contents/Helpers/claw-remote/bin/claw-remote")
 let legacyHelper = Bundle.main.bundleURL
-    .appendingPathComponent("Contents/Helpers/clawix-bridged")
+    .appendingPathComponent("Contents/Helpers/<legacy-swift-bridge>")
 let helper = FileManager.default.fileExists(atPath: nodeHelper.path)
     ? nodeHelper
     : legacyHelper
@@ -134,7 +134,7 @@ The first launch after the flip pops the standard Apple prompts:
 
 Grant each one. Because the new daemon is signed with the same
 identity as the .app, the grants persist across relaunches. Old
-grants for `clawix-bridged` stay in the database; macOS treats them
+grants for the legacy Swift helper stay in the database; macOS treats them
 as orphaned and surfaces the new prompt for `claw-remote`.
 
 If the prompt does not appear:
@@ -182,7 +182,7 @@ the daemon without losing host records or audit logs.
 Once one or two release cycles pass with no rollbacks, the Swift
 helper can be retired:
 
-- Delete `macos/Helpers/Bridged/Sources/clawix-bridged/`.
+- Delete `macos/Helpers/Bridged/Sources/<legacy-swift-bridge>/`.
 - Remove the target from `macos/Package.swift`.
 - Drop the fallback branch in `BackgroundBridgeService.swift`.
 - Adjust `dev.sh` / `build_app.sh` to stop building / signing the
