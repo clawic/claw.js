@@ -40,7 +40,15 @@ const AUTO_MODERATION_TRIGGER_METADATA_FIELD = field("triggerMetadata", "object"
 const DISCORD_ACTIONS = [
   action("get-current-user", "Get Current User", []),
   action("get-user", "Get User", [USER_FIELD]),
+  action("modify-current-user", "Modify Current User", [field("username", "string", true, { default: "sample" }), field("avatar", "string", true), field("banner", "string", true)]),
   action("list-current-user-guilds", "List Current User Guilds", pagingFields()),
+  action("get-current-user-guild-member", "Get Current User Guild Member", [GUILD_FIELD], ["discordBearerToken"]),
+  action("leave-guild", "Leave Guild", [GUILD_FIELD], ["discordBearerToken"]),
+  action("create-dm", "Create DM", [field("recipientId", "string")]),
+  action("create-group-dm", "Create Group DM", [field("accessTokens", "array", false, { default: ["sample"] }), field("nicks", "object", false, { default: { sample: "sample" } })], ["discordBearerToken"]),
+  action("get-current-user-connections", "Get Current User Connections", [], ["discordBearerToken"]),
+  action("get-current-user-application-role-connection", "Get Current User Application Role Connection", [APPLICATION_FIELD], ["discordBearerToken"]),
+  action("update-current-user-application-role-connection", "Update Current User Application Role Connection", [APPLICATION_FIELD, field("platformName", "string", true, { default: "sample" }), field("platformUsername", "string", true, { default: "sample" }), field("metadata", "object", true, { default: { score: "100" } })], ["discordBearerToken"]),
   action("get-guild", "Get Guild", [GUILD_FIELD, field("withCounts", "boolean", true)]),
   action("get-guild-preview", "Get Guild Preview", [GUILD_FIELD]),
   action("modify-guild", "Modify Guild", [GUILD_FIELD, field("name", "string", true, { default: "sample" }), field("verificationLevel", "integer", true, { default: 1 }), field("defaultMessageNotifications", "integer", true, { default: 1 }), field("explicitContentFilter", "integer", true, { default: 1 }), field("afkChannelId", "string", true, { default: "sample" }), field("afkTimeout", "integer", true, { default: 60 }), field("icon", "string", true, { default: "data:image/png;base64,c2FtcGxl" }), field("ownerId", "string", true, { default: "sample" }), field("splash", "string", true, { default: "data:image/png;base64,c2FtcGxl" }), field("discoverySplash", "string", true, { default: "data:image/png;base64,c2FtcGxl" }), field("banner", "string", true, { default: "data:image/png;base64,c2FtcGxl" }), field("systemChannelId", "string", true, { default: "sample" }), field("systemChannelFlags", "integer", true, { default: 0 }), field("rulesChannelId", "string", true, { default: "sample" }), field("publicUpdatesChannelId", "string", true, { default: "sample" }), field("preferredLocale", "string", true, { default: "en-US" }), field("features", "array", true, { default: ["COMMUNITY"] }), field("description", "string", true, { default: "sample" }), field("premiumProgressBarEnabled", "boolean", true, { default: true }), field("safetyAlertsChannelId", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
@@ -293,6 +301,144 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["id", "type"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.modify-current-user"), {
+      username: "Sample Bot",
+      avatar: "data:image/png;base64,c2FtcGxl",
+      banner: "data:image/png;base64,c2FtcGxl",
+    }), {
+      method: "PATCH",
+      endpoint: "users/@me",
+      auth,
+      headers,
+      body: {
+        username: "Sample Bot",
+        avatar: "data:image/png;base64,c2FtcGxl",
+        banner: "data:image/png;base64,c2FtcGxl",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "username"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-current-user-guild-member"), {
+      guildId: "guild-123",
+    }), {
+      method: "GET",
+      endpoint: "users/@me/guilds/guild-123/member",
+      auth: bearerAuth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["user", "roles"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.leave-guild"), {
+      guildId: "guild-123",
+    }), {
+      method: "DELETE",
+      endpoint: "users/@me/guilds/guild-123",
+      auth: bearerAuth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-dm"), {
+      recipientId: "user-123",
+    }), {
+      method: "POST",
+      endpoint: "users/@me/channels",
+      auth,
+      headers,
+      body: {
+        recipient_id: "user-123",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "type"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-group-dm"), {
+      accessTokens: ["access-token-1"],
+      nicks: {
+        "user-123": "Sam",
+      },
+    }), {
+      method: "POST",
+      endpoint: "users/@me/channels",
+      auth: bearerAuth,
+      headers,
+      body: {
+        access_tokens: ["access-token-1"],
+        nicks: {
+          "user-123": "Sam",
+        },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "type", "recipients"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-current-user-connections"), {}), {
+      method: "GET",
+      endpoint: "users/@me/connections",
+      auth: bearerAuth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "array",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-current-user-application-role-connection"), {
+      applicationId: "app-123",
+    }), {
+      method: "GET",
+      endpoint: "users/@me/applications/app-123/role-connection",
+      auth: bearerAuth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["metadata"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.update-current-user-application-role-connection"), {
+      applicationId: "app-123",
+      platformName: "ClawJS",
+      platformUsername: "sample-user",
+      metadata: {
+        score: "100",
+      },
+    }), {
+      method: "PUT",
+      endpoint: "users/@me/applications/app-123/role-connection",
+      auth: bearerAuth,
+      headers,
+      body: {
+        platform_name: "ClawJS",
+        platform_username: "sample-user",
+        metadata: {
+          score: "100",
+        },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["metadata"],
       },
     });
 
