@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "result": [
+    {
+      "update_id": 2300,
+      "channel_post": {
+        "message_id": 3,
+        "chat": {
+          "id": -100,
+          "title": "Builds"
+        },
+        "text": "release ready"
+      }
+    }
+  ]
+}

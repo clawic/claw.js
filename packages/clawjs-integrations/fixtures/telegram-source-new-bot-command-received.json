@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "result": [
+    {
+      "update_id": 2400,
+      "message": {
+        "message_id": 4,
+        "chat": {
+          "id": 123,
+          "type": "private"
+        },
+        "text": "/sample run"
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "method": "GET",
+  "url": "https://api.telegram.org/botoffline-telegramBotApi-secret/getUpdates?timeout=0&allowed_updates=%5B%22message%22%2C%22edited_message%22%2C%22channel_post%22%2C%22edited_channel_post%22%5D",
+  "headers": {
+    "accept": "application/json"
+  }
+}
