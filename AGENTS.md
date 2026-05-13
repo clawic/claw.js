@@ -187,14 +187,14 @@ Pull request rules:
 - For any real secret access, use secure secret storage and avoid reading or printing raw secret values.
 - Do not log or print raw credentials. ClawJS masks some common secret fields, but callers still must avoid exposing secrets.
 - Do not open public issues for vulnerabilities that could expose credentials, workspace contents, or remote execution paths. Report them privately to maintainers first.
-- New framework workspace audit logs live under `.claw/audit/`; `.clawjs/audit/` is legacy compatibility only. If you change audit or logging behavior, review redaction and retention expectations.
+- New framework workspace audit logs live under `.claw/audit/`. `.clawjs/audit/` is a retired pre-public path, not a compatibility target. If you change audit or logging behavior, review redaction and retention expectations.
 
 ## Product And API Expectations
 
 - `@clawjs/claw` is the official SDK package.
 - `@clawjs/node` is a compatibility wrapper, not the primary surface.
 - `@clawjs/cli` is the official CLI package.
-- `claw` is the single public CLI surface. Do not introduce new public `clawjs`, `clawix`, or `commander` command surfaces; legacy commands must be labelled compatibility-only.
+- `claw` is the single public CLI surface. Do not introduce new public `clawjs`, `clawix`, or `commander` command surfaces. Pre-public accidental commands are retired rather than carried as public compatibility unless an ADR explicitly grants a temporary exception.
 - Framework global data belongs under `~/.claw/`, canonical workspace data under `.claw/`, and Clawix host-operational state under `~/.clawix/`. Host GUI-only state may use platform-native app data when it is not framework state.
 - User-facing structured framework records belong in `~/.claw/data/core.sqlite`. Do not introduce new canonical workspace databases like `productivity.sqlite`; use documented sidecars only for runtime, sessions, audio, drive/blob, search, notify, monitor, feed, and encrypted vault state.
 - Public and persistent naming must follow `docs/naming-style-guide.md` and `docs/adr/0001-naming-and-stability-surfaces.md`: JSON/API fields use `camelCase`, CLI flags use `kebab-case`, SQL and collections use `snake_case`, event names use `domain.action`, public package names use `@clawjs/<name>`, and accidental legacy names are removed cleanly before public adoption.
@@ -218,7 +218,7 @@ Pull request rules:
 
 ClawJS exposes a generalised design system surface used by any agent that needs to produce visual artifacts (presentations, cards, posters, social posts, one-pagers, CVs, invoices, certificates, menus, flyers, emails, business cards, web landings, brochures, reports).
 
-Three first-class resources live under `<workspace>/.claw/` for new canonical writes. Legacy `<workspace>/.clawjs/` resources may be read only inside explicit compatibility or migration paths.
+Three first-class resources live under `<workspace>/.claw/` for new canonical writes. `<workspace>/.clawjs/` is a retired pre-public path; do not add new readers or migrations for it unless an ADR explicitly grants a bounded removal exception.
 
 - `styles/<id>/STYLE.md` · a Style is the recipe (tokens for color, typography, spacing, radius, shadow, motion + brand voice + imagery rules + per-format overrides). 10 builtins ship out of the box (`editorial`, `studio`, `midnight`, `signal`, `paper`, `executive`, `product`, `mono`, `warm`, `claw`). Install them with `claw style install-builtins`.
 - `templates/<id>/TEMPLATE.md` · a Template is a parametrised skeleton (category + aspect + typed slots + variants + supported output formats). 30 builtins ship across 13 categories. Install with `claw template install-builtins`.
