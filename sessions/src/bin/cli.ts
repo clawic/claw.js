@@ -61,7 +61,7 @@ if (argv.includes("--help") || argv.includes("-h") || !group) {
     "  sessions import codex [--dir ~/.codex/sessions] [--force]",
     "",
     "Service flags shared by client commands:",
-    "  --url URL (default http://127.0.0.1:4640)",
+    "  --url URL (default http://127.0.0.1:24101)",
     "  --token TOKEN (or --secret)",
   ].join("\n") + "\n");
   process.exit(0);
@@ -80,13 +80,13 @@ async function main(): Promise<void> {
     });
     const address = await app.listen({
       host: flags.host ?? "127.0.0.1",
-      port: flags.port ? Number(flags.port) : 4640,
+      port: flags.port ? Number(flags.port) : 24101,
     });
     process.stdout.write(`${address}\n`);
     return;
   }
 
-  const baseUrl = flags.url ?? "http://127.0.0.1:4640";
+  const baseUrl = flags.url ?? "http://127.0.0.1:24101";
   const token = flags.token ?? flags.secret ?? "";
   const client = new SessionsApiClient({ baseUrl, token });
 

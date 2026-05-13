@@ -14,25 +14,27 @@ export interface IndexServiceConfig {
   defaultRunTimeoutMs: number;
 }
 
+export const SEARCH_DEFAULT_PORT = 24106;
+
 export function loadIndexConfig(overrides: Partial<IndexServiceConfig> = {}): IndexServiceConfig {
   const dataDir =
     overrides.dataDir ??
-    process.env.INDEX_DATA_DIR ??
+    process.env.CLAW_SEARCH_DATA_DIR ??
     defaultClawjsDataRoot();
   return {
-    host: overrides.host ?? process.env.INDEX_HOST ?? "127.0.0.1",
-    port: overrides.port ?? Number(process.env.INDEX_PORT ?? process.env.PORT ?? "7796"),
-    dbPath: overrides.dbPath ?? process.env.INDEX_DB_PATH ?? path.join(dataDir, "search.sqlite"),
+    host: overrides.host ?? process.env.CLAW_SEARCH_HOST ?? "127.0.0.1",
+    port: overrides.port ?? Number(process.env.CLAW_SEARCH_PORT ?? process.env.PORT ?? String(SEARCH_DEFAULT_PORT)),
+    dbPath: overrides.dbPath ?? process.env.CLAW_SEARCH_DB_PATH ?? path.join(dataDir, "search.sqlite"),
     dataDir,
-    jwtSecret: overrides.jwtSecret ?? process.env.INDEX_JWT_SECRET ?? "index-dev-secret-change-me",
-    corsOrigins: overrides.corsOrigins ?? (process.env.INDEX_CORS_ORIGINS ?? "")
+    jwtSecret: overrides.jwtSecret ?? process.env.CLAW_SEARCH_JWT_SECRET ?? "search-dev-secret-change-me",
+    corsOrigins: overrides.corsOrigins ?? (process.env.CLAW_SEARCH_CORS_ORIGINS ?? "")
       .split(",")
       .map((entry) => entry.trim())
       .filter(Boolean),
-    codexBinary: overrides.codexBinary ?? process.env.INDEX_CODEX_BINARY ?? "codex",
-    schedulerTickMs: overrides.schedulerTickMs ?? Number(process.env.INDEX_SCHEDULER_TICK_MS ?? "30000"),
-    workerConcurrency: overrides.workerConcurrency ?? Number(process.env.INDEX_WORKER_CONCURRENCY ?? "2"),
-    defaultRunTimeoutMs: overrides.defaultRunTimeoutMs ?? Number(process.env.INDEX_RUN_TIMEOUT_MS ?? "600000"),
+    codexBinary: overrides.codexBinary ?? process.env.CLAW_SEARCH_CODEX_BINARY ?? "codex",
+    schedulerTickMs: overrides.schedulerTickMs ?? Number(process.env.CLAW_SEARCH_SCHEDULER_TICK_MS ?? "30000"),
+    workerConcurrency: overrides.workerConcurrency ?? Number(process.env.CLAW_SEARCH_WORKER_CONCURRENCY ?? "2"),
+    defaultRunTimeoutMs: overrides.defaultRunTimeoutMs ?? Number(process.env.CLAW_SEARCH_RUN_TIMEOUT_MS ?? "600000"),
   };
 }
 

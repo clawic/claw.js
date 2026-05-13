@@ -5,7 +5,7 @@ import Database from "better-sqlite3";
 
 import { DDL } from "./schema.ts";
 
-const BADGER_SQL_NAMES = [
+const PUBLISHING_SQL_NAMES = [
   "workspace",
   "user",
   "workspace_member",
@@ -123,7 +123,7 @@ function applySchema(db: DB) {
 
 function rewritePublishingSql(sql: string): string {
   let rewritten = sql;
-  for (const name of BADGER_SQL_NAMES) {
+  for (const name of PUBLISHING_SQL_NAMES) {
     rewritten = rewritten.replace(new RegExp(`\\b${name}\\b`, "g"), `publishing_${name}`);
   }
   return rewritten;

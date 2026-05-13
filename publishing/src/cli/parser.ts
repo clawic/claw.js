@@ -55,7 +55,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
 
 export function loadToken(flags: Record<string, string>): string | undefined {
   if (flags.token) return flags.token;
-  if (process.env.BADGER_TOKEN) return process.env.BADGER_TOKEN;
+  if (process.env.CLAW_PUBLISHING_TOKEN) return process.env.CLAW_PUBLISHING_TOKEN;
   const tokenPath = flags["token-file"] ?? loadConfig().tokenStorePath;
   try {
     return fs.readFileSync(tokenPath, "utf8").trim();
@@ -131,7 +131,7 @@ System
   publishing export json --workspace <id> --out FILE
 
 Common flags
-  --url      Base URL (default http://127.0.0.1:4640)
+  --url      Base URL (default http://127.0.0.1:24111)
   --token    Bearer token (defaults to ~/.config/clawjs-publishing/token)
   --workspace <id>  Workspace context for operations
   --json     Always emit JSON
@@ -150,7 +150,7 @@ export async function runCli(argv: string[], host: CliHost): Promise<number> {
   }
 
   const [group, command, sub] = args.positional;
-  const baseUrl = (args.flags.url ?? process.env.BADGER_URL ?? "http://127.0.0.1:4640").replace(/\/$/, "");
+  const baseUrl = (args.flags.url ?? process.env.CLAW_PUBLISHING_URL ?? "http://127.0.0.1:24111").replace(/\/$/, "");
 
   // Local serve
   if (group === "serve") {

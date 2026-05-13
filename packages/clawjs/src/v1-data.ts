@@ -115,7 +115,7 @@ const ERP_SERVICE_TABLES = [
   "erp_jobs",
   "erp_audit_events",
 ];
-const BADGER_SERVICE_TABLES = [
+const PUBLISHING_SERVICE_TABLES = [
   "publishing_workspace",
   "publishing_user",
   "publishing_workspace_member",
@@ -176,7 +176,7 @@ const BADGER_SERVICE_TABLES = [
   "publishing_migrations",
 ];
 const CONTENT_DOMAIN_TABLES = ["content_items", ...CONTENT_SERVICE_TABLES];
-const SOCIAL_DOMAIN_TABLES = ["social_posts", ...BADGER_SERVICE_TABLES];
+const SOCIAL_DOMAIN_TABLES = ["social_posts", ...PUBLISHING_SERVICE_TABLES];
 const BUSINESS_DOMAIN_TABLES = ["business_records", ...CONTENT_DOMAIN_TABLES, ...SOCIAL_DOMAIN_TABLES, "finance_records", "accounting_entries", "accounting_lines", ...ERP_SERVICE_TABLES];
 const CALENDAR_DOMAIN_TABLES = ["calendar_events"];
 const IOT_DOMAIN_TABLES = ["iot_config"];

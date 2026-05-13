@@ -17,7 +17,7 @@ Publishing models the universal concept of "publish content to a destination" so
 ```bash
 npm install
 npm run build
-node dist/server.js               # serves on 127.0.0.1:4640 by default
+node dist/server.js               # serves on 127.0.0.1:24111 by default
 node dist/cli.js workspaces list  # talks to the same loopback port
 ```
 

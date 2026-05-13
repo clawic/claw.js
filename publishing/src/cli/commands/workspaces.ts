@@ -58,7 +58,7 @@ export async function token(ctx: CliContext): Promise<number> {
 
 export function currentWorkspaceId(ctx: CliContext): string {
   if (ctx.args.flags.workspace) return ctx.args.flags.workspace;
-  if (process.env.BADGER_WORKSPACE) return process.env.BADGER_WORKSPACE;
+  if (process.env.CLAW_PUBLISHING_WORKSPACE) return process.env.CLAW_PUBLISHING_WORKSPACE;
   const config = loadConfig();
   const ctxFile = path.join(path.dirname(config.tokenStorePath), "current-workspace");
   try { return fs.readFileSync(ctxFile, "utf8").trim(); } catch { /* fall through */ }

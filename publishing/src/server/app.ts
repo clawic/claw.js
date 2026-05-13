@@ -163,7 +163,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<BuiltApp>
     evergreen,
   });
 
-  const app = Fastify({ logger: { level: process.env.BADGER_LOG_LEVEL ?? "info" } });
+  const app = Fastify({ logger: { level: process.env.CLAW_PUBLISHING_LOG_LEVEL ?? "info" } });
   await app.register(cors, { origin: config.corsOrigins.length ? config.corsOrigins : true, credentials: true });
   await app.register(multipart, { limits: { fileSize: 500 * 1024 * 1024 } });
   await app.register(websocket);
@@ -177,7 +177,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<BuiltApp>
   };
 
   app.decorate("services", services);
-  app.decorate("badgerConfig", config);
+  app.decorate("publishingConfig", config);
   app.decorateRequest("principal", null);
 
   app.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
@@ -236,7 +236,7 @@ function isOpenPath(url: string): boolean {
 declare module "fastify" {
   interface FastifyInstance {
     services: AppServices;
-    badgerConfig: PublishingConfig;
+    publishingConfig: PublishingConfig;
   }
   interface FastifyRequest {
     principal: AuthPrincipal | null;

@@ -1,4 +1,4 @@
-// Minimal client to clawjs-vault. When BADGER_VAULT_URL is unset, we fall back
+// Minimal client to clawjs-vault. When CLAW_PUBLISHING_VAULT_URL is unset, we fall back
 // to a local in-memory + on-disk vault so the framework remains functional in
 // dev/test without standing up the real vault service. Either way, the rest of
 // Publishing only sees opaque `vault_ref` strings.

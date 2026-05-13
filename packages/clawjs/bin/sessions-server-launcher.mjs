@@ -66,7 +66,7 @@ function expandHome(value) {
 }
 
 function defaultClawjsDataRoot(flags) {
-  const explicit = flags["data-dir"] ?? process.env.SESSIONS_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
+  const explicit = flags["data-dir"] ?? process.env.CLAW_SESSIONS_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return path.resolve(expandHome(explicit));
   return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
 }
@@ -74,13 +74,13 @@ function defaultClawjsDataRoot(flags) {
 export async function runOpenSessions(args) {
   const flags = parseFlags(args);
 
-  const port = flags.port ? Number(flags.port) : Number(process.env.SESSIONS_PORT ?? process.env.PORT ?? 7798);
-  const host = flags.host ?? flags.bind ?? process.env.SESSIONS_HOST ?? process.env.HOST ?? "127.0.0.1";
+  const port = flags.port ? Number(flags.port) : Number(process.env.CLAW_SESSIONS_PORT ?? process.env.PORT ?? 24101);
+  const host = flags.host ?? flags.bind ?? process.env.CLAW_SESSIONS_HOST ?? process.env.HOST ?? "127.0.0.1";
   const workspace = flags.workspace ?? process.env.CLAW_WORKSPACE ?? process.cwd();
   const dataDir = defaultClawjsDataRoot(flags);
-  const dbPath = flags["db-path"] ?? process.env.SESSIONS_DB_PATH ?? path.join(dataDir, "sessions.sqlite");
+  const dbPath = flags["db-path"] ?? process.env.CLAW_SESSIONS_DB_PATH ?? path.join(dataDir, "sessions.sqlite");
   const statusFile = flags["status-file"];
-  const sharedSecret = flags.secret ?? process.env.SESSIONS_SHARED_SECRET;
+  const sharedSecret = flags.secret ?? process.env.CLAW_SESSIONS_SHARED_SECRET;
 
   const buildSessionsApp = await loadBuildSessionsApp();
   if (!buildSessionsApp) {

@@ -26,12 +26,12 @@ const isDirectInvocation = (() => {
 
 if (isDirectInvocation) {
   const overrides: BuildAppOptions = { config: {} };
-  if (process.env.BADGER_PORT) overrides.config!.port = Number(process.env.BADGER_PORT);
-  if (process.env.BADGER_HOST) overrides.config!.host = process.env.BADGER_HOST;
-  if (process.env.BADGER_DATA_DIR) overrides.config!.dataDir = process.env.BADGER_DATA_DIR;
-  const built = await startServer({ ...overrides, statusFile: process.env.BADGER_STATUS_FILE });
+  if (process.env.CLAW_PUBLISHING_PORT) overrides.config!.port = Number(process.env.CLAW_PUBLISHING_PORT);
+  if (process.env.CLAW_PUBLISHING_HOST) overrides.config!.host = process.env.CLAW_PUBLISHING_HOST;
+  if (process.env.CLAW_PUBLISHING_DATA_DIR) overrides.config!.dataDir = process.env.CLAW_PUBLISHING_DATA_DIR;
+  const built = await startServer({ ...overrides, statusFile: process.env.CLAW_PUBLISHING_STATUS_FILE });
   process.stdout.write(`publishing listening on http://${built.config.host}:${built.config.port}\n`);
-  if (process.env.BADGER_PRINT_TOKEN === "1") {
+  if (process.env.CLAW_PUBLISHING_PRINT_TOKEN === "1") {
     process.stdout.write(`admin token: ${built.services.auth.getEphemeralAdminToken()}\n`);
   }
 }

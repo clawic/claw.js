@@ -6,7 +6,7 @@
 // Profile, Place, Channel, Doc, Repo, Event, Job, Intent, Review — and bearer
 // auth) lives in sibling modules and is loaded via `buildIndexApp` by
 // `bin/index-server-launcher.mjs` in @clawjs/cli. The macOS Clawix
-// supervisor spawns this on `127.0.0.1:7796` once the daemon-bundled
+// supervisor spawns this on `127.0.0.1:24106` once the daemon-bundled
 // `node_modules/@clawjs/cli/bin/index-server-launcher.mjs` is present.
 //
 // This file is the entry surface that supervisor scripts and bundled

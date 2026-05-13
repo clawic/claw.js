@@ -98,6 +98,7 @@ The docs check script validates that every current export from
     SessionRuntime
     SessionsApiClient
     SessionsApiClientOptions
+    SESSIONS_DEFAULT_PORT
     SessionSearchHit
     SessionsServiceConfig
     SessionsServiceStore

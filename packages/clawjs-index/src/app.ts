@@ -57,7 +57,7 @@ export interface BuildIndexAppOptions {
 export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   const config = loadIndexConfig(options.config);
   fs.mkdirSync(config.dataDir, { recursive: true });
-  const ephemeralAdminToken = loadEphemeralAdminToken({ dataDir: config.dataDir, envVarName: "CLAW_INDEX_ADMIN_TOKEN" });
+  const ephemeralAdminToken = loadEphemeralAdminToken({ dataDir: config.dataDir, envVarName: "CLAW_SEARCH_ADMIN_TOKEN" });
   const app = Fastify({ logger: false });
   const auth = new IndexAuthService(config.jwtSecret, ephemeralAdminToken);
   const store = new IndexStore(config.dbPath);

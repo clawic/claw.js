@@ -271,6 +271,7 @@ test("surface registry freezes ports, paths, sockets, hostnames, and data files"
   assert.equal(clawCorePorts.search, 24106);
   assert.equal(clawCorePorts.signals, 24110);
   assert.equal(clawCorePorts.publishing, 24111);
+  assert.equal(clawCorePorts.monitor, 24114);
   assert.equal(clawLocalHostnames.board, "board.claw.localhost");
   assert.equal(clawLocalHostnames.channels, "channels.claw.localhost");
   assert.equal(clawPublicApiPrefix, "/v1");

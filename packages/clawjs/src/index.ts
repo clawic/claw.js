@@ -26,7 +26,7 @@ import { buildDatabaseApp } from "@clawjs/database";
 import type { ClawInstance, ImageOperation, ImageProvenance, ImageType, TelegramSendMediaInput, TelegramSendMessageInput, VoiceNoteStatus } from "@clawjs/claw";
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
-import { clawCommandRequestSchema, clawContractVersionV1, semanticPlanSchema } from "@clawjs/core";
+import { clawAppPorts, clawCommandRequestSchema, clawContractVersionV1, clawCorePorts, semanticPlanSchema } from "@clawjs/core";
 import type { ClawCommandResponse, ClawDomain, CommitmentKind, CommitmentStatus, ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
 import { runEmbeddedDatabaseCli } from "./database-advanced.ts";
 import { runMagicDbCli } from "./database-magic.ts";
@@ -476,25 +476,25 @@ interface OpenSurfaceState {
 }
 
 const OPEN_SURFACES: OpenSurface[] = [
-  { id: "memory", label: "Memory", port: 18273, kind: "memory", dir: "memory", buildCheck: "dist/cli.js" },
-  { id: "storage", label: "Storage", port: 18419, kind: "internal-storage", dir: "storage/ui", buildCheck: "dist/index.html" },
-  { id: "database", label: "Database", port: 18647, aliases: ["db"], kind: "internal-database" },
-  { id: "secrets", label: "Secrets", port: 18853, kind: "server-script", dir: "secrets", script: "dist/server.js", envHost: "SECRETS_HOST", envPort: "SECRETS_PORT", buildCheck: "dist/server.js" },
-  { id: "time", label: "Time", port: 19121, kind: "server-script", dir: "time", script: "dist/server.js", envHost: "CLAW_TIME_HOST", envPort: "CLAW_TIME_PORT", buildCheck: "dist/server.js" },
-  { id: "feed", label: "Feed", port: 19337, kind: "cli-serve", dir: "modules/feed", buildCheck: "dist/cli.js" },
-  { id: "relay", label: "Relay", port: 19543, kind: "server-script", dir: "relay", script: "dist/server.js", envHost: "HOST", envPort: "PORT", buildCheck: "dist/server.js" },
-  { id: "monitor", label: "Monitor", port: 19759, kind: "server-script", dir: "monitor", script: "dist/main.js", envHost: "MONITOR_HOST", envPort: "MONITOR_PORT", buildCheck: "dist/main.js" },
-  { id: "drive", label: "Drive", port: 19963, kind: "cli-serve", dir: "drive", buildCheck: "dist/cli.js" },
-  { id: "wiki", label: "Wiki", port: 20111, kind: "cli-serve", dir: "wiki", buildCheck: "dist/cli.js" },
-  { id: "execution", label: "Execution", port: 20347, aliases: ["execution"], kind: "server-script", dir: "execution", script: "dist/server.js", envHost: "EXECUTION_PLANE_HOST", envPort: "EXECUTION_PLANE_PORT", buildCheck: "dist/server.js" },
-  { id: "delegation", label: "Delegation", port: 20563, aliases: ["delegation"], kind: "server-script", dir: "delegation", script: "dist/server.js", envHost: "DELEGATION_PLANE_HOST", envPort: "DELEGATION_PLANE_PORT", buildCheck: "dist/server.js" },
-  { id: "content", label: "Content", port: 20789, kind: "cli-serve", dir: "content", buildCheck: "dist/cli.js" },
-  { id: "erp", label: "ERP", port: 20927, kind: "cli-serve", dir: "modules/erp", buildCheck: "dist/cli.js" },
-  { id: "iot", label: "IoT", port: 21143, kind: "cli-serve", dir: "iot", buildCheck: "dist/cli.js" },
-  { id: "day", label: "Day", port: 21377, kind: "day", dir: "apps/day", buildCheck: "dist/serve-dashboard.js" },
-  { id: "company", label: "Company", port: 21587, kind: "next", dir: "apps/company", buildCheck: ".next" },
-  { id: "notify", label: "Notify", port: 21767, aliases: ["hub"], kind: "next", dir: "apps/hub", buildCheck: ".next" },
-  { id: "user", label: "User", port: 21979, kind: "cli-serve", dir: "modules/user", buildCheck: "dist/cli.js" },
+  { id: "memory", label: "Memory", port: clawCorePorts.memory, kind: "memory", dir: "memory", buildCheck: "dist/cli.js" },
+  { id: "storage", label: "Storage", port: 24140, kind: "internal-storage", dir: "storage/ui", buildCheck: "dist/index.html" },
+  { id: "database", label: "Database", port: clawCorePorts.database, aliases: ["db"], kind: "internal-database" },
+  { id: "secrets", label: "Secrets", port: clawCorePorts.secrets, kind: "server-script", dir: "secrets", script: "dist/server.js", envHost: "CLAW_SECRETS_HOST", envPort: "CLAW_SECRETS_PORT", buildCheck: "dist/server.js" },
+  { id: "time", label: "Time", port: 24141, kind: "server-script", dir: "time", script: "dist/server.js", envHost: "CLAW_TIME_HOST", envPort: "CLAW_TIME_PORT", buildCheck: "dist/server.js" },
+  { id: "feed", label: "Feed", port: 24142, kind: "cli-serve", dir: "modules/feed", buildCheck: "dist/cli.js" },
+  { id: "relay", label: "Relay", port: 24143, kind: "server-script", dir: "relay", script: "dist/server.js", envHost: "CLAW_RELAY_HOST", envPort: "CLAW_RELAY_PORT", buildCheck: "dist/server.js" },
+  { id: "monitor", label: "Monitor", port: clawCorePorts.monitor, kind: "server-script", dir: "monitor", script: "dist/main.js", envHost: "CLAW_MONITOR_HOST", envPort: "CLAW_MONITOR_PORT", buildCheck: "dist/main.js" },
+  { id: "drive", label: "Drive", port: clawCorePorts.drive, kind: "cli-serve", dir: "drive", buildCheck: "dist/cli.js" },
+  { id: "wiki", label: "Wiki", port: 24144, kind: "cli-serve", dir: "wiki", buildCheck: "dist/cli.js" },
+  { id: "jobs", label: "Jobs", port: 24145, kind: "server-script", dir: "execution", script: "dist/server.js", envHost: "CLAW_JOBS_HOST", envPort: "CLAW_JOBS_PORT", buildCheck: "dist/server.js" },
+  { id: "delegation", label: "Delegation", port: 24146, aliases: ["delegation"], kind: "server-script", dir: "delegation", script: "dist/server.js", envHost: "CLAW_DELEGATION_HOST", envPort: "CLAW_DELEGATION_PORT", buildCheck: "dist/server.js" },
+  { id: "publishing", label: "Publishing", port: clawCorePorts.publishing, kind: "cli-serve", dir: "publishing", buildCheck: "dist/cli.js" },
+  { id: "erp", label: "ERP", port: 24147, kind: "cli-serve", dir: "modules/erp", buildCheck: "dist/cli.js" },
+  { id: "iot", label: "IoT", port: 24148, kind: "cli-serve", dir: "iot", buildCheck: "dist/cli.js" },
+  { id: "agenda", label: "Agenda", port: clawAppPorts.agenda, kind: "day", dir: "apps/day", buildCheck: "dist/serve-dashboard.js" },
+  { id: "board", label: "Board", port: clawAppPorts.board, kind: "next", dir: "apps/company", buildCheck: ".next" },
+  { id: "channels", label: "Channels", port: clawAppPorts.channels, kind: "next", dir: "apps/hub", buildCheck: ".next" },
+  { id: "user", label: "User", port: 24149, kind: "cli-serve", dir: "modules/user", buildCheck: "dist/cli.js" },
 ];
 
 const OPEN_SURFACE_BY_NAME = new Map<string, OpenSurface>(

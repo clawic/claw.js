@@ -13,7 +13,7 @@ export async function login(ctx: CliContext): Promise<number> {
     out(ctx, { ok: true, stored_at: config.tokenStorePath });
     return 0;
   }
-  out(ctx, { admin_token_path: config.tokenStorePath, base_url: ctx.args.flags.url ?? "http://127.0.0.1:4640" });
+  out(ctx, { admin_token_path: config.tokenStorePath, base_url: ctx.args.flags.url ?? "http://127.0.0.1:24111" });
   return 0;
 }
 
@@ -28,7 +28,7 @@ export async function logs(ctx: CliContext): Promise<number> {
   if (command !== "tail") { ctx.host.stderr.write("only `publishing logs tail` is supported\n"); return 64; }
   // Naive realtime via WebSocket would be more involved; for parity with the
   // CLI surface we expose the audit log as a poll.
-  const ws = ctx.args.flags.workspace ?? process.env.BADGER_WORKSPACE;
+  const ws = ctx.args.flags.workspace ?? process.env.CLAW_PUBLISHING_WORKSPACE;
   if (!ws) { ctx.host.stderr.write("--workspace required\n"); return 64; }
   out(ctx, await ctx.client.get(`/v1/workspaces/${ws}/audit`));
   return 0;
@@ -55,7 +55,7 @@ export async function db(ctx: CliContext): Promise<number> {
 
 export async function importCmd(ctx: CliContext): Promise<number> {
   const [, kind, value] = ctx.args.positional;
-  const ws = ctx.args.flags.workspace ?? process.env.BADGER_WORKSPACE;
+  const ws = ctx.args.flags.workspace ?? process.env.CLAW_PUBLISHING_WORKSPACE;
   if (!ws) { ctx.host.stderr.write("--workspace required\n"); return 64; }
   if (kind === "json") {
     const payload = JSON.parse(fs.readFileSync(value!, "utf8"));
@@ -67,7 +67,7 @@ export async function importCmd(ctx: CliContext): Promise<number> {
 }
 
 export async function exportCmd(ctx: CliContext): Promise<number> {
-  const ws = ctx.args.flags.workspace ?? process.env.BADGER_WORKSPACE;
+  const ws = ctx.args.flags.workspace ?? process.env.CLAW_PUBLISHING_WORKSPACE;
   if (!ws) { ctx.host.stderr.write("--workspace required\n"); return 64; }
   const out_ = ctx.args.flags.out;
   const dump = {
