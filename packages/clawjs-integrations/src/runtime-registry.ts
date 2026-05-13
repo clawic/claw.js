@@ -461,6 +461,8 @@ const DISCORD_ACTION_FIXTURE_NAMES = [
   "update-auto-moderation-rule",
   "delete-auto-moderation-rule",
   "list-guild-invites",
+  "list-channel-invites",
+  "create-channel-invite",
   "list-guild-scheduled-events",
   "create-guild-scheduled-event",
   "get-guild-scheduled-event",
