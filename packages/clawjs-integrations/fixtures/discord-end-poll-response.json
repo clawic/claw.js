@@ -1,0 +1,9 @@
+{
+  "id": "sample",
+  "channel_id": "sample",
+  "poll": {
+    "question": {
+      "text": "sample"
+    }
+  }
+}
