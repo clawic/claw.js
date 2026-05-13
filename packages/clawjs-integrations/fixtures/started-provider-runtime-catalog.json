@@ -41368,6 +41368,66 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.list-billing-credit-grants",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Billing Credit Grants",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "customer_account",
+              "type": "string",
+              "optional": true,
+              "default": "acct_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-billing-credit-grant",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Billing Credit Grant",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "credgrant_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

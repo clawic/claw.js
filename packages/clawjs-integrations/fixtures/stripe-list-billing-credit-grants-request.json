@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.stripe.com/v1/billing/credit_grants?limit=10&customer=cus_sample&customer_account=acct_sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  },
+  "body": null
+}
