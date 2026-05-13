@@ -38912,6 +38912,83 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.update-sigma-saved-query",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Sigma Saved Query",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "sqrq_sample"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Sample query"
+            },
+            {
+              "name": "sql",
+              "type": "string",
+              "optional": true,
+              "default": "select 1"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-sigma-scheduled-query-runs",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Sigma Scheduled Query Runs",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-sigma-scheduled-query-run",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Sigma Scheduled Query Run",
+          "fields": [
+            {
+              "name": "scheduledQueryRun",
+              "type": "string",
+              "optional": false,
+              "default": "sqr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

@@ -1100,6 +1100,27 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.update-sigma-saved-query"), {
+      id: "sqrq_sample",
+      name: "Sample query",
+      sql: "select 1",
+    }), {
+      method: "POST",
+      endpoint: "sigma/saved_queries/sqrq_sample",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        name: "Sample query",
+        sql: "select 1",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-apple-pay-domain"), {
       domain_name: "pay.example.invalid",
     }), {

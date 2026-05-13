@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.stripe.com/v1/sigma/scheduled_query_runs/sqr_sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  },
+  "body": null
+}
