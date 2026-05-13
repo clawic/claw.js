@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/reporting/report_runs",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "report_type=balance.summary.1&parameters=%7B%22interval_start%22%3A1700000000%2C%22interval_end%22%3A1700086400%7D"
+}

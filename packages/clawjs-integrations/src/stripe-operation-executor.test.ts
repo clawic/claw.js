@@ -808,6 +808,26 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-report-run"), {
+      report_type: "balance.summary.1",
+      parameters: { interval_start: 1700000000, interval_end: 1700086400 },
+    }), {
+      method: "POST",
+      endpoint: "reporting/report_runs",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        report_type: "balance.summary.1",
+        parameters: { interval_start: 1700000000, interval_end: 1700086400 },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.list-setup-attempts"), {
       limit: 10,
       setup_intent: "seti_sample",

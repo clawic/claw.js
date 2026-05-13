@@ -34376,6 +34376,115 @@
           ]
         },
         {
+          "id": "stripe.action.list-report-runs",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Report Runs",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "created",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "gte": 1700000000
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-report-run",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Report Run",
+          "fields": [
+            {
+              "name": "report_type",
+              "type": "string",
+              "optional": false,
+              "default": "balance.summary.1"
+            },
+            {
+              "name": "parameters",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "interval_start": 1700000000,
+                "interval_end": 1700086400
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-report-run",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Report Run",
+          "fields": [
+            {
+              "name": "reportRun",
+              "type": "string",
+              "optional": false,
+              "default": "frr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-report-types",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Report Types",
+          "fields": [],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-report-type",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Report Type",
+          "fields": [
+            {
+              "name": "reportType",
+              "type": "string",
+              "optional": false,
+              "default": "balance.summary.1"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-apple-pay-domains",
           "appId": "stripe",
           "kind": "action",
