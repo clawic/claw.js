@@ -1,0 +1,35 @@
+{
+  "method": "POST",
+  "url": "https://graph.facebook.com/v21.0/sample/messages",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-whatsAppAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "messaging_product": "whatsapp",
+    "recipient_type": "individual",
+    "to": "sample",
+    "type": "template",
+    "template": {
+      "name": "sample_template",
+      "language": {
+        "code": "en_US"
+      },
+      "components": [
+        {
+          "type": "body",
+          "parameters": [
+            {
+              "type": "text",
+              "text": "sample"
+            }
+          ]
+        }
+      ]
+    },
+    "context": {
+      "message_id": "sample"
+    }
+  }
+}

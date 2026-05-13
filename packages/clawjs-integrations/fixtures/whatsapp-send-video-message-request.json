@@ -1,0 +1,22 @@
+{
+  "method": "POST",
+  "url": "https://graph.facebook.com/v21.0/sample/messages",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-whatsAppAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "messaging_product": "whatsapp",
+    "recipient_type": "individual",
+    "to": "sample",
+    "type": "video",
+    "video": {
+      "link": "https://example.invalid/media",
+      "caption": "sample"
+    },
+    "context": {
+      "message_id": "sample"
+    }
+  }
+}
