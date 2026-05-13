@@ -681,6 +681,118 @@
           ]
         },
         {
+          "id": "discord.action.get-current-application",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Current Application",
+          "fields": [],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.edit-current-application",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Edit Current Application",
+          "fields": [
+            {
+              "name": "customInstallUrl",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "roleConnectionsVerificationUrl",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "installParams",
+              "type": "object",
+              "optional": true
+            },
+            {
+              "name": "integrationTypesConfig",
+              "type": "object",
+              "optional": true
+            },
+            {
+              "name": "flags",
+              "type": "integer",
+              "optional": true
+            },
+            {
+              "name": "icon",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "coverImage",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "interactionsEndpointUrl",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "tags",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "sample"
+              ]
+            },
+            {
+              "name": "eventWebhooksUrl",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "eventWebhooksStatus",
+              "type": "integer",
+              "optional": true,
+              "default": 1
+            },
+            {
+              "name": "eventWebhooksTypes",
+              "type": "array",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-application-activity-instance",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Application Activity Instance",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "instanceId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.get-application-role-connection-metadata",
           "appId": "discord",
           "kind": "action",
