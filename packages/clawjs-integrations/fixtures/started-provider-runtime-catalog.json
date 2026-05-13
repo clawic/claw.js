@@ -10975,6 +10975,1194 @@
       ]
     },
     {
+      "id": "airtable",
+      "name": "Airtable",
+      "authFieldNames": [
+        "airtableAccessToken"
+      ],
+      "fields": [
+        {
+          "name": "airtableAccessToken",
+          "type": "app",
+          "optional": false,
+          "secret": true
+        }
+      ],
+      "operations": [
+        {
+          "id": "airtable.action.list-records",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "List Records",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableIdOrName",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "offset",
+              "type": "string",
+              "optional": true,
+              "default": "itrOffset123"
+            },
+            {
+              "name": "view",
+              "type": "string",
+              "optional": true,
+              "default": "Grid view"
+            },
+            {
+              "name": "fields",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "Name",
+                "Status"
+              ]
+            },
+            {
+              "name": "filterByFormula",
+              "type": "string",
+              "optional": true,
+              "default": "{Status} = 'Open'"
+            },
+            {
+              "name": "sort",
+              "type": "array",
+              "optional": true,
+              "default": [
+                {
+                  "field": "Name",
+                  "direction": "asc"
+                }
+              ]
+            },
+            {
+              "name": "cellFormat",
+              "type": "string",
+              "optional": true,
+              "default": "json"
+            },
+            {
+              "name": "timeZone",
+              "type": "string",
+              "optional": true,
+              "default": "UTC"
+            },
+            {
+              "name": "userLocale",
+              "type": "string",
+              "optional": true,
+              "default": "en-us"
+            },
+            {
+              "name": "returnFieldsByFieldId",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.get-record",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Get Record",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableIdOrName",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "recRecord123"
+            },
+            {
+              "name": "returnFieldsByFieldId",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.create-record",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Create Record",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableIdOrName",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Sample",
+                "Status": "Open"
+              }
+            },
+            {
+              "name": "typecast",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            },
+            {
+              "name": "returnFieldsByFieldId",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.create-records",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Create Records",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableIdOrName",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "records",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "id": "recRecord123",
+                  "fields": {
+                    "Name": "Sample",
+                    "Status": "Open"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "typecast",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            },
+            {
+              "name": "returnFieldsByFieldId",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.update-record",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Update Record",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableIdOrName",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "recRecord123"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "Name": "Sample",
+                "Status": "Open"
+              }
+            },
+            {
+              "name": "typecast",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            },
+            {
+              "name": "returnFieldsByFieldId",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.replace-record",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Replace Record",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableIdOrName",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "recRecord123"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Sample",
+                "Status": "Open"
+              }
+            },
+            {
+              "name": "typecast",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            },
+            {
+              "name": "returnFieldsByFieldId",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.update-records",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Update Records",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableIdOrName",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "records",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "id": "recRecord123",
+                  "fields": {
+                    "Name": "Sample",
+                    "Status": "Open"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "typecast",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            },
+            {
+              "name": "returnFieldsByFieldId",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.replace-records",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Replace Records",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableIdOrName",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "records",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "id": "recRecord123",
+                  "fields": {
+                    "Name": "Sample",
+                    "Status": "Open"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "typecast",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            },
+            {
+              "name": "returnFieldsByFieldId",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.delete-record",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Delete Record",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableIdOrName",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "recRecord123"
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.delete-records",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Delete Records",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableIdOrName",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "records",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "recRecord123"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.list-record-comments",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "List Record Comments",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableIdOrName",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "recRecord123"
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.create-record-comment",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Create Record Comment",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableIdOrName",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "recRecord123"
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "optional": false,
+              "default": "Looks good"
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.update-record-comment",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Update Record Comment",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableIdOrName",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "recRecord123"
+            },
+            {
+              "name": "commentId",
+              "type": "string",
+              "optional": false,
+              "default": "comComment123"
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "optional": false,
+              "default": "Updated comment"
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.delete-record-comment",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Delete Record Comment",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableIdOrName",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "recRecord123"
+            },
+            {
+              "name": "commentId",
+              "type": "string",
+              "optional": false,
+              "default": "comComment123"
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.list-bases",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "List Bases",
+          "fields": [],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.get-base-schema",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Get Base Schema",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.create-base",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Create Base",
+          "fields": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "Sample Base"
+            },
+            {
+              "name": "workspaceId",
+              "type": "string",
+              "optional": false,
+              "default": "wspWorkspace123"
+            },
+            {
+              "name": "tables",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "name": "Tasks",
+                  "fields": [
+                    {
+                      "name": "Name",
+                      "type": "singleLineText"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.create-table",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Create Table",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "Tasks"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Tracked work"
+            },
+            {
+              "name": "fields",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "name": "Name",
+                  "type": "singleLineText"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.update-table",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Update Table",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableId",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Tasks"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Tracked work"
+            },
+            {
+              "name": "fields",
+              "type": "array",
+              "optional": true,
+              "default": [
+                {
+                  "name": "Name",
+                  "type": "singleLineText"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.create-field",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Create Field",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableId",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "Status"
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false,
+              "default": "singleSelect"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Current status"
+            },
+            {
+              "name": "options",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "choices": [
+                  {
+                    "name": "Open",
+                    "color": "greenBright"
+                  }
+                ]
+              }
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.update-field",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Update Field",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableId",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "fieldId",
+              "type": "string",
+              "optional": false,
+              "default": "fldField123"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Status"
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": true,
+              "default": "singleSelect"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Current status"
+            },
+            {
+              "name": "options",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "choices": [
+                  {
+                    "name": "Open",
+                    "color": "greenBright"
+                  }
+                ]
+              }
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.list-webhooks",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "List Webhooks",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.create-webhook",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Create Webhook",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "notificationUrl",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/airtable/webhook"
+            },
+            {
+              "name": "specification",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "options": {
+                  "filters": {
+                    "dataTypes": [
+                      "tableData"
+                    ],
+                    "recordChangeScope": "tblTable123"
+                  }
+                }
+              }
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.get-webhook-payloads",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Get Webhook Payloads",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "webhookId",
+              "type": "string",
+              "optional": false,
+              "default": "achWebhook123"
+            },
+            {
+              "name": "cursor",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 50,
+              "min": 1,
+              "max": 50
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.refresh-webhook",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Refresh Webhook",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "webhookId",
+              "type": "string",
+              "optional": false,
+              "default": "achWebhook123"
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.delete-webhook",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Delete Webhook",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "webhookId",
+              "type": "string",
+              "optional": false,
+              "default": "achWebhook123"
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.source.record-created",
+          "appId": "airtable",
+          "kind": "source",
+          "name": "Record Created",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "airtable.source.record-updated",
+          "appId": "airtable",
+          "kind": "source",
+          "name": "Record Updated",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "airtable.source.record-deleted",
+          "appId": "airtable",
+          "kind": "source",
+          "name": "Record Deleted",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "airtable.source.comment-created",
+          "appId": "airtable",
+          "kind": "source",
+          "name": "Comment Created",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "airtable.source.comment-updated",
+          "appId": "airtable",
+          "kind": "source",
+          "name": "Comment Updated",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "airtable.source.comment-deleted",
+          "appId": "airtable",
+          "kind": "source",
+          "name": "Comment Deleted",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "airtable.source.webhook-payload",
+          "appId": "airtable",
+          "kind": "source",
+          "name": "Webhook Payload",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        }
+      ]
+    },
+    {
       "id": "salesforce",
       "name": "Salesforce",
       "authFieldNames": [
