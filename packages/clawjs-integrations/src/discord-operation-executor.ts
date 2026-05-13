@@ -747,13 +747,13 @@ export function buildDiscordOperationRequest(
     case "list-guild-webhooks":
       return getPlan(`guilds/${guildId(values)}/webhooks`, auth, headers, { type: "array" });
     case "create-webhook":
-      return bodyPlan("POST", `channels/${channelId(values)}/webhooks`, auth, headers, webhookBody(values), { type: "object", requiredPaths: ["id", "token"] });
+      return bodyPlan("POST", `channels/${channelId(values)}/webhooks`, auth, auditHeaders(headers, values), webhookBody(values), { type: "object", requiredPaths: ["id", "token"] });
     case "get-webhook":
       return getPlan(`webhooks/${webhookId(values)}`, auth, headers, { type: "object", requiredPaths: ["id"] });
     case "update-webhook":
-      return bodyPlan("PATCH", `webhooks/${webhookId(values)}`, auth, headers, webhookBody(values), { type: "object", requiredPaths: ["id"] });
+      return bodyPlan("PATCH", `webhooks/${webhookId(values)}`, auth, auditHeaders(headers, values), webhookBody(values), { type: "object", requiredPaths: ["id"] });
     case "delete-webhook":
-      return deletePlan(`webhooks/${webhookId(values)}`, auth, headers, { type: "object" });
+      return deletePlan(`webhooks/${webhookId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "get-webhook-with-token":
       return getPlan(`webhooks/${webhookId(values)}/${webhookToken(values)}`, [], headers, { type: "object", requiredPaths: ["id"] });
     case "update-webhook-with-token":
