@@ -685,6 +685,82 @@
           ]
         },
         {
+          "id": "discord.action.list-skus",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List SKUs",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-sku-subscriptions",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List SKU Subscriptions",
+          "fields": [
+            {
+              "name": "skuId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "before",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-sku-subscription",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get SKU Subscription",
+          "fields": [
+            {
+              "name": "skuId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "subscriptionId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.get-guild-audit-log",
           "appId": "discord",
           "kind": "action",
