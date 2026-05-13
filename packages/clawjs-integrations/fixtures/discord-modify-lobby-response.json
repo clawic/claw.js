@@ -1,0 +1,12 @@
+{
+  "id": "sample",
+  "application_id": "sample",
+  "metadata": {
+    "topic": "sample"
+  },
+  "members": [
+    {
+      "id": "sample"
+    }
+  ]
+}

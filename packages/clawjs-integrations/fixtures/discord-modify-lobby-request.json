@@ -1,0 +1,20 @@
+{
+  "method": "PATCH",
+  "url": "https://discord.com/api/v10/lobbies/sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "metadata": {
+      "topic": "sample"
+    },
+    "members": [
+      {
+        "id": "sample"
+      }
+    ],
+    "idle_timeout_seconds": 5
+  }
+}
