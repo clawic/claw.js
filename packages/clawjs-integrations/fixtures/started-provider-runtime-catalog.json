@@ -2518,6 +2518,72 @@
               "optional": false
             },
             {
+              "name": "nonce",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "tts",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "embeds",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "components",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "allowedMentions",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "stickerIds",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "attachments",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "flags",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "enforceNonce",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "poll",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "sharedClientTheme",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
               "name": "messageId",
               "type": "string",
               "optional": true
@@ -2553,6 +2619,36 @@
               "type": "string",
               "optional": true,
               "default": "sample"
+            },
+            {
+              "name": "embeds",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "components",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "allowedMentions",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "attachments",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "flags",
+              "type": "integer",
+              "optional": true,
+              "default": null
             }
           ],
           "authFieldNames": [
