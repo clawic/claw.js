@@ -5346,6 +5346,66 @@
               "type": "string",
               "optional": true,
               "default": "sample"
+            },
+            {
+              "name": "nameLocalizations",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "descriptionLocalizations",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "defaultMemberPermissions",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "defaultPermission",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "dmPermission",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "integrationTypes",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "contexts",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "type",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "nsfw",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "handler",
+              "type": "integer",
+              "optional": true,
+              "default": null
             }
           ],
           "authFieldNames": [
@@ -5399,6 +5459,66 @@
               "type": "string",
               "optional": true,
               "default": "sample"
+            },
+            {
+              "name": "nameLocalizations",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "descriptionLocalizations",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "defaultMemberPermissions",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "defaultPermission",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "dmPermission",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "integrationTypes",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "contexts",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "type",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "nsfw",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "handler",
+              "type": "integer",
+              "optional": true,
+              "default": null
             }
           ],
           "authFieldNames": [
@@ -5613,6 +5733,66 @@
               "type": "string",
               "optional": true,
               "default": "sample"
+            },
+            {
+              "name": "nameLocalizations",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "descriptionLocalizations",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "defaultMemberPermissions",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "defaultPermission",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "dmPermission",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "integrationTypes",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "contexts",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "type",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "nsfw",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "handler",
+              "type": "integer",
+              "optional": true,
+              "default": null
             }
           ],
           "authFieldNames": [
@@ -5676,6 +5856,66 @@
               "type": "string",
               "optional": true,
               "default": "sample"
+            },
+            {
+              "name": "nameLocalizations",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "descriptionLocalizations",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "defaultMemberPermissions",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "defaultPermission",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "dmPermission",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "integrationTypes",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "contexts",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "type",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "nsfw",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "handler",
+              "type": "integer",
+              "optional": true,
+              "default": null
             }
           ],
           "authFieldNames": [
