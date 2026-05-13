@@ -4944,6 +4944,34 @@
           ]
         },
         {
+          "id": "discord.action.bulk-overwrite-global-application-commands",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Bulk Overwrite Global Application Commands",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "commands",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "name": "sample",
+                  "description": "sample",
+                  "type": 1
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.list-application-emojis",
           "appId": "discord",
           "kind": "action",
@@ -5195,6 +5223,124 @@
           ],
           "authFieldNames": [
             "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.bulk-overwrite-guild-application-commands",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Bulk Overwrite Guild Application Commands",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "commands",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "name": "sample",
+                  "description": "sample",
+                  "type": 1
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-guild-application-command-permissions",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Application Command Permissions",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBearerToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-application-command-permissions",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Application Command Permissions",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "commandId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBearerToken"
+          ]
+        },
+        {
+          "id": "discord.action.edit-application-command-permissions",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Edit Application Command Permissions",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "commandId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "permissions",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "id": "sample",
+                  "type": 1,
+                  "permission": true
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "discordBearerToken"
           ]
         },
         {
