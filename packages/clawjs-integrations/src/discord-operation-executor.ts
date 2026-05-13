@@ -600,7 +600,7 @@ export function buildDiscordOperationRequest(
     case "get-guild-role-member-counts":
       return getPlan(`guilds/${guildId(values)}/roles/member-counts`, auth, headers, { type: "object" });
     case "create-guild-role":
-      return bodyPlan("POST", `guilds/${guildId(values)}/roles`, auth, headers, roleBody(values), { type: "object", requiredPaths: ["id", "name"] });
+      return bodyPlan("POST", `guilds/${guildId(values)}/roles`, auth, auditHeaders(headers, values), roleBody(values, false), { type: "object", requiredPaths: ["id", "name"] });
     case "modify-guild-role-positions":
       return {
         method: "PATCH",
@@ -612,9 +612,9 @@ export function buildDiscordOperationRequest(
         responseSchema: { type: "array" },
       };
     case "update-guild-role":
-      return bodyPlan("PATCH", `guilds/${guildId(values)}/roles/${roleId(values)}`, auth, headers, roleBody(values), { type: "object", requiredPaths: ["id", "name"] });
+      return bodyPlan("PATCH", `guilds/${guildId(values)}/roles/${roleId(values)}`, auth, auditHeaders(headers, values), roleBody(values, true), { type: "object", requiredPaths: ["id", "name"] });
     case "delete-guild-role":
-      return deletePlan(`guilds/${guildId(values)}/roles/${roleId(values)}`, auth, headers, { type: "object" });
+      return deletePlan(`guilds/${guildId(values)}/roles/${roleId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "add-guild-member-role":
       return putPlan(`guilds/${guildId(values)}/members/${userId(values)}/roles/${roleId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "remove-guild-member-role":
@@ -1608,11 +1608,27 @@ function incidentActionsBody(values: Record<string, IntegrationJson>): Record<st
   return body;
 }
 
-function roleBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+function roleBody(values: Record<string, IntegrationJson>, preserveNulls: boolean): Record<string, IntegrationJson> {
+  if (preserveNulls) {
+    const body: Record<string, IntegrationJson> = {};
+    const assign = (key: string, value: IntegrationJson | undefined) => {
+      if (value !== undefined && value !== "") body[key] = value;
+    };
+    assign("name", optionalNullableStringField(values, "name"));
+    assign("permissions", optionalNullableStringField(values, "permissions"));
+    assign("color", optionalNullableNumberField(values, "color"));
+    if (Object.prototype.hasOwnProperty.call(values, "colors")) assign("colors", optionalNullableJsonObject(values.colors));
+    if (Object.prototype.hasOwnProperty.call(values, "hoist")) assign("hoist", values.hoist);
+    assign("icon", optionalNullableStringField(values, "icon"));
+    assign("unicode_emoji", optionalNullableStringField(values, "unicodeEmoji"));
+    if (Object.prototype.hasOwnProperty.call(values, "mentionable")) assign("mentionable", values.mentionable);
+    return body;
+  }
   return removeEmptyValues({
     name: optionalString(values.name),
     permissions: optionalString(values.permissions),
     color: optionalNumber(values.color),
+    colors: optionalJsonObject(values.colors),
     hoist: values.hoist,
     icon: optionalString(values.icon),
     unicode_emoji: optionalString(values.unicodeEmoji),
