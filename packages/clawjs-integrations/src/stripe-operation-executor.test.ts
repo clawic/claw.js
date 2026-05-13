@@ -1138,6 +1138,25 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.refresh-linked-account"), {
+      account: "la_sample",
+      features: ["balance", "transactions"],
+    }), {
+      method: "POST",
+      endpoint: "linked_accounts/la_sample/refresh",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        features: ["balance", "transactions"],
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-identity-verification-session"), {
       type: "document",
       client_reference_id: "identity_ref_sample",

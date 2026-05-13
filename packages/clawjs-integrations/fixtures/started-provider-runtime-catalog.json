@@ -39384,6 +39384,154 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.list-linked-accounts",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Linked Accounts",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "account_holder",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "customer": "cus_sample"
+              }
+            },
+            {
+              "name": "session",
+              "type": "string",
+              "optional": true,
+              "default": "las_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-linked-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Linked Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "la_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.disconnect-linked-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Disconnect Linked Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "la_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-linked-account-owners",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Linked Account Owners",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "la_sample"
+            },
+            {
+              "name": "ownership",
+              "type": "string",
+              "optional": false,
+              "default": "own_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.refresh-linked-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Refresh Linked Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "la_sample"
+            },
+            {
+              "name": "features",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "balance",
+                "transactions"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },
