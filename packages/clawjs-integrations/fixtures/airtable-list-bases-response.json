@@ -1,0 +1,66 @@
+{
+  "id": "recRecord123",
+  "name": "Sample",
+  "type": "singleSelect",
+  "text": "Looks good",
+  "deleted": true,
+  "fields": {
+    "Name": "Sample",
+    "Status": "Open"
+  },
+  "records": [
+    {
+      "id": "recRecord123",
+      "fields": {
+        "Name": "Sample",
+        "Status": "Open"
+      }
+    }
+  ],
+  "comments": [
+    {
+      "id": "comComment123",
+      "text": "Looks good"
+    }
+  ],
+  "bases": [
+    {
+      "id": "appBase123",
+      "name": "Sample Base"
+    }
+  ],
+  "tables": [
+    {
+      "id": "tblTable123",
+      "name": "Tasks",
+      "fields": [
+        {
+          "id": "fldField123",
+          "name": "Name",
+          "type": "singleLineText"
+        }
+      ]
+    }
+  ],
+  "field": {
+    "id": "fldField123",
+    "name": "Status",
+    "type": "singleSelect"
+  },
+  "webhooks": [
+    {
+      "id": "achWebhook123",
+      "expirationTime": "2026-05-14T00:00:00.000Z"
+    }
+  ],
+  "payloads": [
+    {
+      "id": 1,
+      "timestamp": "2026-05-13T00:00:00.000Z",
+      "baseTransactionNumber": 1
+    }
+  ],
+  "macSecretBase64": "b2ZmbGluZS1tYWMtc2VjcmV0",
+  "expirationTime": "2026-05-14T00:00:00.000Z",
+  "offset": "itrNextOffset123"
+}

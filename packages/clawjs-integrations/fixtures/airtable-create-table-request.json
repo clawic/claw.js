@@ -1,0 +1,18 @@
+{
+  "method": "POST",
+  "url": "https://api.airtable.com/v0/meta/bases/appBase123/tables",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-airtableAccessToken-secret"
+  },
+  "body": {
+    "name": "Tasks",
+    "description": "Tracked work",
+    "fields": [
+      {
+        "name": "Name",
+        "type": "singleLineText"
+      }
+    ]
+  }
+}

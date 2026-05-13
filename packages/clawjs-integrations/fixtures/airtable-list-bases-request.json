@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://api.airtable.com/v0/meta/bases",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-airtableAccessToken-secret"
+  }
+}
