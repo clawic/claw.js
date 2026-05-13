@@ -1,0 +1,16 @@
+{
+  "method": "POST",
+  "url": "https://discord.com/api/v10/guilds/sample/soundboard-sounds",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json",
+    "X-Audit-Log-Reason": "sample"
+  },
+  "body": {
+    "name": "sample",
+    "sound": "data:audio/mpeg;base64,c2FtcGxl",
+    "volume": 1,
+    "emoji_id": "sample"
+  }
+}

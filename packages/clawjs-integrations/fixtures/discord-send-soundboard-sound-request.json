@@ -1,0 +1,13 @@
+{
+  "method": "POST",
+  "url": "https://discord.com/api/v10/channels/sample/send-soundboard-sound",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "sound_id": "sample",
+    "source_guild_id": "sample"
+  }
+}

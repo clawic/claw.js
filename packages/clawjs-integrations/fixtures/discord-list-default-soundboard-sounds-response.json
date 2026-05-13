@@ -1,0 +1,10 @@
+[
+  {
+    "name": "sample",
+    "sound_id": "sample",
+    "volume": 1,
+    "emoji_id": null,
+    "emoji_name": "sample",
+    "available": true
+  }
+]

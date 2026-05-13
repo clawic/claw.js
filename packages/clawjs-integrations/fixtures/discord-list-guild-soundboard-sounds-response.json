@@ -1,0 +1,13 @@
+{
+  "items": [
+    {
+      "name": "sample",
+      "sound_id": "sample",
+      "volume": 1,
+      "emoji_id": "sample",
+      "emoji_name": null,
+      "guild_id": "sample",
+      "available": true
+    }
+  ]
+}

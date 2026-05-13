@@ -1,0 +1,13 @@
+{
+  "channel_id": "sample",
+  "guild_id": "sample",
+  "user_id": "sample",
+  "emoji": {
+    "id": "sample",
+    "name": "sample"
+  },
+  "animation_type": 1,
+  "animation_id": 1,
+  "sound_id": "sample",
+  "sound_volume": 1
+}
