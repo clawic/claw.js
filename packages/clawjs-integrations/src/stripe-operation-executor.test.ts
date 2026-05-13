@@ -962,6 +962,42 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-billing-credit-grant"), {
+      amount: { type: "monetary", monetary: { currency: "usd", value: 1000 } },
+      applicability_config: { scope: { price_type: "metered" } },
+      category: "promotional",
+      customer: "cus_sample",
+      customer_account: "acct_sample",
+      effective_at: 1704067200,
+      expires_at: 1893456000,
+      metadata: { order_id: "sample" },
+      name: "Sample credit grant",
+      priority: 50,
+    }), {
+      method: "POST",
+      endpoint: "billing/credit_grants",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        amount: { type: "monetary", monetary: { currency: "usd", value: 1000 } },
+        applicability_config: { scope: { price_type: "metered" } },
+        category: "promotional",
+        customer: "cus_sample",
+        customer_account: "acct_sample",
+        effective_at: 1704067200,
+        expires_at: 1893456000,
+        metadata: { order_id: "sample" },
+        name: "Sample credit grant",
+        priority: 50,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.process-terminal-reader-setup-intent"), {
       reader: "tmr_sample",
       setup_intent: "seti_sample",

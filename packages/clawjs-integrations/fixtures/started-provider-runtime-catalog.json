@@ -41428,6 +41428,120 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.create-billing-credit-grant",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Billing Credit Grant",
+          "fields": [
+            {
+              "name": "amount",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "type": "monetary",
+                "monetary": {
+                  "currency": "usd",
+                  "value": 1000
+                }
+              }
+            },
+            {
+              "name": "applicability_config",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "scope": {
+                  "price_type": "metered"
+                }
+              }
+            },
+            {
+              "name": "category",
+              "type": "string",
+              "optional": true,
+              "default": "promotional"
+            },
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "customer_account",
+              "type": "string",
+              "optional": true,
+              "default": "acct_sample"
+            },
+            {
+              "name": "effective_at",
+              "type": "integer",
+              "optional": true,
+              "default": 1704067200
+            },
+            {
+              "name": "expires_at",
+              "type": "integer",
+              "optional": true,
+              "default": 1893456000
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Sample credit grant"
+            },
+            {
+              "name": "priority",
+              "type": "integer",
+              "optional": true,
+              "default": 50
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-billing-credit-grant",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Billing Credit Grant",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "credgrant_sample"
+            },
+            {
+              "name": "expires_at",
+              "type": "integer",
+              "optional": true,
+              "default": 1893456000
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

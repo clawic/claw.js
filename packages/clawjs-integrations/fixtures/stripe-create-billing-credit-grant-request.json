@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/billing/credit_grants",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "amount=%7B%22type%22%3A%22monetary%22%2C%22monetary%22%3A%7B%22currency%22%3A%22usd%22%2C%22value%22%3A1000%7D%7D&applicability_config=%7B%22scope%22%3A%7B%22price_type%22%3A%22metered%22%7D%7D&category=promotional&customer=cus_sample&customer_account=acct_sample&effective_at=1704067200&expires_at=1893456000&metadata=%7B%22order_id%22%3A%22sample%22%7D&name=Sample+credit+grant&priority=50"
+}
