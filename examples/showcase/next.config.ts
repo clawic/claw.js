@@ -3,12 +3,21 @@ import type { NextConfig } from "next";
 import { fileURLToPath } from "url";
 
 const demoRoot = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(demoRoot, "..");
+const repoRoot = path.resolve(demoRoot, "../..");
 
 const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   outputFileTracingRoot: repoRoot,
+  transpilePackages: [
+    "@clawjs/claw",
+    "@clawjs/core",
+    "@clawjs/integrations",
+    "@clawjs/workspace",
+  ],
   serverExternalPackages: ["better-sqlite3"],
+  experimental: {
+    externalDir: true,
+  },
   turbopack: {
     root: repoRoot,
   },
