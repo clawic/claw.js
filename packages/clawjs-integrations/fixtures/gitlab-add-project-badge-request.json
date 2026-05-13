@@ -1,0 +1,14 @@
+{
+  "method": "POST",
+  "url": "https://gitlab.com/api/v4/projects/group%2Fproject/badges",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json",
+    "private-token": "offline-gitlabToken-secret"
+  },
+  "body": {
+    "link_url": "https://example.invalid/badge",
+    "image_url": "https://example.invalid/badge.svg",
+    "name": "coverage"
+  }
+}

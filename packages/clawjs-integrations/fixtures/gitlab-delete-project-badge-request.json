@@ -1,0 +1,8 @@
+{
+  "method": "DELETE",
+  "url": "https://gitlab.com/api/v4/projects/group%2Fproject/badges/1",
+  "headers": {
+    "accept": "application/json",
+    "private-token": "offline-gitlabToken-secret"
+  }
+}
