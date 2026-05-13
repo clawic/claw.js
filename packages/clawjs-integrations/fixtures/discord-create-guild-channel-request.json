@@ -8,6 +8,22 @@
   },
   "body": {
     "name": "sample",
-    "type": 0
+    "type": null,
+    "topic": null,
+    "bitrate": null,
+    "user_limit": null,
+    "rate_limit_per_user": null,
+    "position": null,
+    "permission_overwrites": null,
+    "parent_id": null,
+    "nsfw": null,
+    "rtc_region": null,
+    "video_quality_mode": null,
+    "default_auto_archive_duration": null,
+    "default_reaction_emoji": null,
+    "available_tags": null,
+    "default_sort_order": null,
+    "default_forum_layout": null,
+    "default_thread_rate_limit_per_user": null
   }
 }
