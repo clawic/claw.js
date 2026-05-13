@@ -111,6 +111,8 @@ const DISCORD_ACTIONS = [
   action("update-auto-moderation-rule", "Update Auto Moderation Rule", [GUILD_FIELD, AUTO_MODERATION_RULE_FIELD, field("name", "string", true, { default: "sample" }), field("eventType", "integer", true, { default: 1 }), AUTO_MODERATION_TRIGGER_METADATA_FIELD, field("actions", "array", true, { default: [{ type: 1, metadata: { custom_message: "sample" } }] }), field("enabled", "boolean", true), field("exemptRoles", "array", true, { default: ["sample"] }), field("exemptChannels", "array", true, { default: ["sample"] }), field("auditLogReason", "string", true)]),
   action("delete-auto-moderation-rule", "Delete Auto Moderation Rule", [GUILD_FIELD, AUTO_MODERATION_RULE_FIELD, field("auditLogReason", "string", true)]),
   action("list-guild-invites", "List Guild Invites", [GUILD_FIELD]),
+  action("list-channel-invites", "List Channel Invites", [CHANNEL_FIELD]),
+  action("create-channel-invite", "Create Channel Invite", [CHANNEL_FIELD, field("maxAge", "integer", true, { default: 86400, min: 0, max: 604800 }), field("maxUses", "integer", true, { default: 0, min: 0, max: 100 }), field("temporary", "boolean", true), field("unique", "boolean", true), field("targetType", "integer", true, { default: null }), field("targetUserId", "string", true, { default: null }), field("targetApplicationId", "string", true, { default: null }), field("roleIds", "array", true, { default: null }), field("auditLogReason", "string", true)]),
   action("list-guild-scheduled-events", "List Guild Scheduled Events", [GUILD_FIELD, field("withUserCount", "boolean", true)]),
   action("create-guild-scheduled-event", "Create Guild Scheduled Event", [
     GUILD_FIELD,
@@ -378,6 +380,53 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["audit_log_entries"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.list-channel-invites"), {
+      channelId: "123",
+    }), {
+      method: "GET",
+      endpoint: "channels/123/invites",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "array",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-channel-invite"), {
+      channelId: "123",
+      maxAge: 3600,
+      maxUses: 1,
+      temporary: true,
+      unique: true,
+      targetType: 2,
+      targetApplicationId: "app-123",
+      roleIds: ["role-123"],
+      auditLogReason: "temporary invite",
+    }), {
+      method: "POST",
+      endpoint: "channels/123/invites",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "temporary invite",
+      },
+      body: {
+        max_age: 3600,
+        max_uses: 1,
+        temporary: true,
+        unique: true,
+        target_type: 2,
+        target_application_id: "app-123",
+        role_ids: ["role-123"],
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["code"],
       },
     });
 
