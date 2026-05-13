@@ -5,13 +5,46 @@ import type {
   ConnectorOperationDefinition,
 } from "./types.ts";
 
-export type GitHubSourceOperation =
-  | "webhook-event"
-  | "push"
-  | "issues"
-  | "pull-request"
-  | "workflow-run"
-  | "release";
+export const GITHUB_SOURCE_SLUGS = [
+  "webhook-event",
+  "push",
+  "issues",
+  "issue-comment",
+  "pull-request",
+  "pull-request-review",
+  "pull-request-review-comment",
+  "workflow-run",
+  "workflow-job",
+  "release",
+  "deployment",
+  "deployment-status",
+  "check-run",
+  "check-suite",
+  "create",
+  "delete",
+  "fork",
+  "star",
+  "watch",
+  "repository",
+  "member",
+] as const;
+
+export type GitHubSourceOperation = typeof GITHUB_SOURCE_SLUGS[number];
+
+const GITHUB_SOURCE_SET = new Set<string>(GITHUB_SOURCE_SLUGS);
+const GITHUB_SOURCE_ALIASES: Record<string, GitHubSourceOperation> = {
+  event: "webhook-event",
+  issues: "issues",
+  issue_comment: "issue-comment",
+  pull_request: "pull-request",
+  pull_request_review: "pull-request-review",
+  pull_request_review_comment: "pull-request-review-comment",
+  workflow_run: "workflow-run",
+  workflow_job: "workflow-job",
+  deployment_status: "deployment-status",
+  check_run: "check-run",
+  check_suite: "check-suite",
+};
 
 export function isGitHubSourceOperationSupported(operationId: string): boolean {
   return gitHubSourceOperation(operationId) !== null;
@@ -31,11 +64,7 @@ export function buildGitHubSourcePlan(operation: ConnectorOperationDefinition): 
 
 function gitHubSourceOperation(operationId: string): GitHubSourceOperation | null {
   const slug = operationId.split(".").at(-1);
-  if (slug === "webhook-event" || slug === "event") return "webhook-event";
-  if (slug === "push") return "push";
-  if (slug === "issues") return "issues";
-  if (slug === "pull-request" || slug === "pull_request") return "pull-request";
-  if (slug === "workflow-run" || slug === "workflow_run") return "workflow-run";
-  if (slug === "release") return "release";
+  const resolved = slug ? GITHUB_SOURCE_ALIASES[slug] ?? slug : null;
+  if (resolved && GITHUB_SOURCE_SET.has(resolved)) return resolved as GitHubSourceOperation;
   return null;
 }

@@ -11,16 +11,10 @@ import {
 } from "./runtime-webhook.ts";
 import {
   buildGitHubSourcePlan,
+  GITHUB_SOURCE_SLUGS,
 } from "./github-source.ts";
 
-const GITHUB_SOURCE_OPERATIONS = [
-  source("github.source.webhook-event", "Webhook Event"),
-  source("github.source.push", "Push"),
-  source("github.source.issues", "Issues"),
-  source("github.source.pull-request", "Pull Request"),
-  source("github.source.workflow-run", "Workflow Run"),
-  source("github.source.release", "Release"),
-];
+const GITHUB_SOURCE_OPERATIONS = GITHUB_SOURCE_SLUGS.map((slug) => source(`github.source.${slug}`, titleize(slug)));
 
 const GITHUB_SOURCE_CATALOG = normalizeConnectorCatalog({
   version: 1,
@@ -121,4 +115,8 @@ function source(id: string, name: string) {
       usesServiceDb: false,
     },
   };
+}
+
+function titleize(slug: string): string {
+  return slug.split("-").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
 }
