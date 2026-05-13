@@ -1,6 +1,6 @@
 {
   "method": "PATCH",
-  "url": "https://discord.com/api/v10/webhooks/sample/sample/messages/sample",
+  "url": "https://discord.com/api/v10/webhooks/sample/sample/messages/sample?with_components=false",
   "headers": {
     "accept": "application/json",
     "content-type": "application/json"
