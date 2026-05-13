@@ -3115,6 +3115,115 @@
           ]
         },
         {
+          "id": "discord.action.bulk-ban-guild-users",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Bulk Ban Guild Users",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userIds",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "sample"
+              ]
+            },
+            {
+              "name": "deleteMessageSeconds",
+              "type": "integer",
+              "optional": true,
+              "default": 0,
+              "min": 0
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-guild-prune-count",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Prune Count",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "days",
+              "type": "integer",
+              "optional": true,
+              "default": 7,
+              "min": 1
+            },
+            {
+              "name": "includeRoles",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "sample"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.begin-guild-prune",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Begin Guild Prune",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "days",
+              "type": "integer",
+              "optional": true,
+              "default": 7,
+              "min": 1
+            },
+            {
+              "name": "computePruneCount",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "includeRoles",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "sample"
+              ]
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.list-auto-moderation-rules",
           "appId": "discord",
           "kind": "action",
