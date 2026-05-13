@@ -2639,6 +2639,57 @@
           ]
         },
         {
+          "id": "discord.action.add-guild-member",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Add Guild Member",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "accessToken",
+              "type": "string",
+              "optional": false,
+              "default": "sample-access-token"
+            },
+            {
+              "name": "nick",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "roles",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "sample"
+              ]
+            },
+            {
+              "name": "mute",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "deaf",
+              "type": "boolean",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.list-guild-members",
           "appId": "discord",
           "kind": "action",
@@ -2733,6 +2784,77 @@
               "type": "string",
               "optional": true,
               "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.modify-current-member",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Modify Current Member",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "nick",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "avatar",
+              "type": "string",
+              "optional": true,
+              "default": "data:image/png;base64,c2FtcGxl"
+            },
+            {
+              "name": "banner",
+              "type": "string",
+              "optional": true,
+              "default": "data:image/png;base64,c2FtcGxl"
+            },
+            {
+              "name": "bio",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.modify-current-user-nick",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Modify Current User Nick",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "nick",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": [
