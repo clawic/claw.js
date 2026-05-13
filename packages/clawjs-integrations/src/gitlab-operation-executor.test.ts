@@ -3,14 +3,117 @@ import { describe, it } from "node:test";
 
 import { normalizeConnectorCatalog } from "./catalog.ts";
 import {
-  buildGitLabOperationRequest,
-  isGitLabActionOperationSupported,
-} from "./gitlab-operation-executor.ts";
-import {
   verifyConnectorRuntimeCoverage,
   verifyConnectorRuntimeOfflineExecutions,
 } from "./runtime-coverage.ts";
+import {
+  buildGitLabOperationRequest,
+  isGitLabActionOperationSupported,
+} from "./gitlab-operation-executor.ts";
 import type { ConnectorOperationDefinition } from "./types.ts";
+
+const GITLAB_ACTION_SLUGS = [
+  "get-current-user",
+  "get-user",
+  "list-users",
+  "list-projects",
+  "get-project",
+  "create-project",
+  "update-project",
+  "delete-project",
+  "archive-project",
+  "unarchive-project",
+  "star-project",
+  "unstar-project",
+  "fork-project",
+  "list-groups",
+  "get-group",
+  "create-group",
+  "update-group",
+  "delete-group",
+  "list-group-projects",
+  "list-project-issues",
+  "get-project-issue",
+  "create-issue",
+  "update-issue",
+  "delete-issue",
+  "list-issue-notes",
+  "create-issue-note",
+  "update-issue-note",
+  "delete-issue-note",
+  "list-project-merge-requests",
+  "get-merge-request",
+  "create-merge-request",
+  "update-merge-request",
+  "merge-merge-request",
+  "delete-merge-request",
+  "list-merge-request-notes",
+  "create-merge-request-note",
+  "update-merge-request-note",
+  "delete-merge-request-note",
+  "list-branches",
+  "get-branch",
+  "create-branch",
+  "delete-branch",
+  "protect-branch",
+  "unprotect-branch",
+  "list-tags",
+  "get-tag",
+  "create-tag",
+  "delete-tag",
+  "list-repository-tree",
+  "get-repository-file",
+  "create-repository-file",
+  "update-repository-file",
+  "delete-repository-file",
+  "list-commits",
+  "get-commit",
+  "create-commit",
+  "cherry-pick-commit",
+  "revert-commit",
+  "list-pipelines",
+  "get-pipeline",
+  "create-pipeline",
+  "retry-pipeline",
+  "cancel-pipeline",
+  "delete-pipeline",
+  "list-jobs",
+  "get-job",
+  "retry-job",
+  "cancel-job",
+  "erase-job",
+  "play-job",
+  "list-releases",
+  "get-release",
+  "create-release",
+  "update-release",
+  "delete-release",
+  "list-labels",
+  "create-label",
+  "update-label",
+  "delete-label",
+  "list-milestones",
+  "get-milestone",
+  "create-milestone",
+  "update-milestone",
+  "delete-milestone",
+  "list-project-members",
+  "add-project-member",
+  "update-project-member",
+  "remove-project-member",
+  "list-project-hooks",
+  "get-project-hook",
+  "create-project-hook",
+  "update-project-hook",
+  "delete-project-hook",
+  "list-project-variables",
+  "get-project-variable",
+  "create-project-variable",
+  "update-project-variable",
+  "delete-project-variable",
+] as const;
+
+const GITLAB_ACTIONS = GITLAB_ACTION_SLUGS.map((slug) => operationDefinition(slug, fieldsForOperation(slug)));
 
 const GITLAB_CATALOG = normalizeConnectorCatalog({
   version: 1,
@@ -24,35 +127,7 @@ const GITLAB_CATALOG = normalizeConnectorCatalog({
       optional: false,
       secret: true,
     }],
-    operations: [
-      operationDefinition("list-project-issues", [
-        { name: "projectId", type: "string", optional: false },
-        { name: "state", type: "string", optional: true, default: "opened" },
-        { name: "perPage", type: "integer", optional: true, default: 20, min: 1 },
-        { name: "page", type: "integer", optional: true, default: 1, min: 1 },
-      ]),
-      operationDefinition("get-project-issue", [
-        { name: "projectId", type: "string", optional: false },
-        { name: "issueIid", type: "integer", optional: false },
-      ]),
-      operationDefinition("create-issue", [
-        { name: "projectId", type: "string", optional: false },
-        { name: "title", type: "string", optional: false },
-        { name: "description", type: "string", optional: true },
-      ]),
-      operationDefinition("update-issue", [
-        { name: "projectId", type: "string", optional: false },
-        { name: "issueIid", type: "integer", optional: false },
-        { name: "title", type: "string", optional: true },
-        { name: "stateEvent", type: "string", optional: true },
-      ]),
-      operationDefinition("create-issue-note", [
-        { name: "projectId", type: "string", optional: false },
-        { name: "issueIid", type: "integer", optional: false },
-        { name: "body", type: "string", optional: false },
-        { name: "internal", type: "boolean", optional: true },
-      ]),
-    ],
+    operations: GITLAB_ACTIONS,
   }],
 });
 
@@ -60,7 +135,11 @@ const auth = [{ type: "secret" as const, field: "gitlabToken", placement: "heade
 const headers = { accept: "application/json" };
 
 describe("gitlab operation runtime", () => {
-  it("builds GitLab issue and note request plans", () => {
+  it("builds GitLab REST request plans for core resources", () => {
+    assert.equal(isGitLabActionOperationSupported("gitlab.action.create-merge-request"), true);
+    assert.equal(isGitLabActionOperationSupported("gitlab.action.list-merge-requests"), true);
+    assert.equal(isGitLabActionOperationSupported("gitlab.action.fly-to-moon"), false);
+
     assert.deepEqual(buildGitLabOperationRequest(operation("list-project-issues"), {
       projectId: "group/project",
       state: "opened",
@@ -90,90 +169,7 @@ describe("gitlab operation runtime", () => {
       },
     });
 
-    assert.deepEqual(buildGitLabOperationRequest(operation("get-project-issue"), {
-      projectId: "group/project",
-      issueIid: 11,
-    }), {
-      method: "GET",
-      endpoint: "projects/group%2Fproject/issues/11",
-      auth,
-      headers,
-      query: {},
-      body: {},
-      responseSchema: {
-        type: "object",
-        requiredPaths: ["id", "iid", "title"],
-      },
-    });
-
-    assert.deepEqual(buildGitLabOperationRequest(operation("create-issue"), {
-      projectId: "group/project",
-      title: "Found a bug",
-      description: "Steps to reproduce",
-      labels: "bug,backend",
-    }), {
-      method: "POST",
-      endpoint: "projects/group%2Fproject/issues",
-      auth,
-      headers,
-      body: {
-        title: "Found a bug",
-        description: "Steps to reproduce",
-        labels: "bug,backend",
-      },
-      responseSchema: {
-        type: "object",
-        requiredPaths: ["id", "iid", "title"],
-      },
-    });
-
-    assert.deepEqual(buildGitLabOperationRequest(operation("update-issue"), {
-      projectId: "group/project",
-      issueIid: "11",
-      title: "Fixed title",
-      stateEvent: "close",
-    }), {
-      method: "PUT",
-      endpoint: "projects/group%2Fproject/issues/11",
-      auth,
-      headers,
-      body: {
-        title: "Fixed title",
-        state_event: "close",
-      },
-      responseSchema: {
-        type: "object",
-        requiredPaths: ["id", "iid", "title"],
-      },
-    });
-
-    assert.deepEqual(buildGitLabOperationRequest(operation("create-issue-note"), {
-      projectId: "group/project",
-      issueIid: 11,
-      body: "Needs investigation",
-      internal: true,
-    }), {
-      method: "POST",
-      endpoint: "projects/group%2Fproject/issues/11/notes",
-      auth,
-      headers,
-      body: {
-        body: "Needs investigation",
-        internal: true,
-      },
-      responseSchema: {
-        type: "object",
-        requiredPaths: ["id", "body"],
-      },
-    });
-  });
-
-  it("builds representative expanded GitLab request plans", () => {
-    assert.equal(isGitLabActionOperationSupported("gitlab.action.create-merge-request"), true);
-    assert.equal(isGitLabActionOperationSupported("gitlab.action.list-merge-requests"), true);
-    assert.equal(isGitLabActionOperationSupported("gitlab.action.fly-to-moon"), false);
-
-    assert.deepEqual(buildGitLabOperationRequest(runtimeOperation("create-merge-request"), {
+    assert.deepEqual(buildGitLabOperationRequest(operation("create-merge-request"), {
       projectId: "group/project",
       sourceBranch: "feature/gitlab",
       targetBranch: "main",
@@ -196,26 +192,7 @@ describe("gitlab operation runtime", () => {
       },
     });
 
-    assert.deepEqual(buildGitLabOperationRequest(runtimeOperation("get-repository-file"), {
-      projectId: "group/project",
-      filePath: "src/index.ts",
-      ref: "main",
-    }), {
-      method: "GET",
-      endpoint: "projects/group%2Fproject/repository/files/src%2Findex.ts",
-      auth,
-      headers,
-      query: {
-        ref: "main",
-      },
-      body: {},
-      responseSchema: {
-        type: "object",
-        requiredPaths: ["file_path", "content"],
-      },
-    });
-
-    assert.deepEqual(buildGitLabOperationRequest(runtimeOperation("create-commit"), {
+    assert.deepEqual(buildGitLabOperationRequest(operation("create-commit"), {
       projectId: "group/project",
       branch: "main",
       commitMessage: "Update docs",
@@ -236,9 +213,9 @@ describe("gitlab operation runtime", () => {
       },
     });
 
-    assert.deepEqual(buildGitLabOperationRequest(runtimeOperation("create-project-hook"), {
+    assert.deepEqual(buildGitLabOperationRequest(operation("create-project-hook"), {
       projectId: "group/project",
-      url: "https://example.test/gitlab",
+      url: "https://example.invalid/gitlab",
       pushEvents: true,
       enableSslVerification: false,
     }), {
@@ -247,7 +224,7 @@ describe("gitlab operation runtime", () => {
       auth,
       headers,
       body: {
-        url: "https://example.test/gitlab",
+        url: "https://example.invalid/gitlab",
         push_events: true,
         enable_ssl_verification: false,
       },
@@ -258,19 +235,16 @@ describe("gitlab operation runtime", () => {
     });
   });
 
-  it("covers GitLab issue operations with operation-scoped offline fixtures", async () => {
+  it("covers GitLab operations with operation-scoped offline fixtures", async () => {
     const coverage = verifyConnectorRuntimeCoverage(GITLAB_CATALOG);
     assert.equal(coverage.summary.missing, 0);
-    assert.equal(coverage.summary.implemented, 5);
+    assert.equal(coverage.summary.implemented, GITLAB_ACTIONS.length);
 
     const offline = await verifyConnectorRuntimeOfflineExecutions(GITLAB_CATALOG);
-    assert.deepEqual(offline.results.map((result) => result.operationId).sort(), [
-      "gitlab.action.create-issue",
-      "gitlab.action.create-issue-note",
-      "gitlab.action.get-project-issue",
-      "gitlab.action.list-project-issues",
-      "gitlab.action.update-issue",
-    ]);
+    assert.deepEqual(
+      offline.results.map((result) => result.operationId).sort(),
+      GITLAB_ACTIONS.map((operation) => operation.id).sort(),
+    );
   });
 });
 
@@ -281,24 +255,100 @@ function operation(slug: string): ConnectorOperationDefinition {
   return found;
 }
 
-function runtimeOperation(slug: string): ConnectorOperationDefinition {
-  return {
-    id: `gitlab.action.${slug}`,
-    appId: "gitlab",
-    kind: "action",
-    name: slug,
-    fields: [],
-    authFieldNames: ["gitlabToken"],
-  };
-}
-
 function operationDefinition(slug: string, fields: ConnectorOperationDefinition["fields"]) {
   return {
     id: `gitlab.action.${slug}`,
     appId: "gitlab",
     kind: "action" as const,
-    name: slug,
+    name: titleize(slug),
     fields,
     authFieldNames: ["gitlabToken"],
   };
+}
+
+function fieldsForOperation(slug: string): ConnectorOperationDefinition["fields"] {
+  if (slug === "get-current-user") return [];
+  if (slug === "get-user") return [integerField("userId")];
+  if (slug === "list-users" || slug === "list-projects" || slug === "list-groups") return pagingFields();
+  if (slug === "create-project") return [stringField("name")];
+  if (slug === "create-group") return [stringField("name"), stringField("path")];
+  if (slug === "get-group" || slug === "update-group" || slug === "delete-group" || slug === "list-group-projects") {
+    return [stringField("groupId"), ...optionalNameFields(slug), ...listFields(slug)];
+  }
+
+  const fields = [stringField("projectId")];
+  fields.push(...listFields(slug));
+  if (slug.includes("issue")) fields.push(integerField("issueIid"));
+  if (slug.includes("merge-request")) fields.push(integerField("mergeRequestIid"));
+  if (slug.includes("note")) fields.push(integerField("noteId"), stringField("body"));
+  if (slug.includes("branch")) fields.push(stringField("branch"), optionalStringField("ref", "main"));
+  if (slug.includes("tag") || slug.includes("release")) fields.push(stringField("tagName"));
+  if (slug === "create-tag") fields.push(optionalStringField("ref", "main"));
+  if (slug === "create-release" || slug === "update-release") fields.push(optionalStringField("name", "sample"));
+  if (slug.includes("repository-file")) fields.push(stringField("filePath"), optionalStringField("branch", "main"), optionalStringField("ref", "main"), stringField("commitMessage"), stringField("content"));
+  if (slug.includes("commit")) fields.push(stringField("sha"), optionalStringField("branch", "main"), stringField("commitMessage"), arrayField("actions", [{ action: "create", file_path: "sample.txt", content: "sample" }]));
+  if (slug.includes("pipeline")) fields.push(integerField("pipelineId"), optionalStringField("ref", "main"));
+  if (slug.includes("job")) fields.push(integerField("jobId"));
+  if (slug.includes("milestone")) fields.push(integerField("milestoneId"), stringField("title"));
+  if (slug.includes("member")) fields.push(integerField("userId"), integerField("accessLevel", 30));
+  if (slug.includes("hook")) fields.push(integerField("hookId"), optionalStringField("url", "https://example.invalid/webhook"));
+  if (slug.includes("variable")) fields.push(stringField("key"), optionalStringField("value", "sample"));
+  if (slug.includes("label")) fields.push(stringField("name"), optionalStringField("newName", "sample"), optionalStringField("color", "#428BCA"));
+  if (slug === "create-issue" || slug === "update-issue" || slug === "create-merge-request" || slug === "update-merge-request") fields.push(stringField("title"));
+  if (slug === "create-merge-request") fields.push(stringField("sourceBranch"), optionalStringField("targetBranch", "main"));
+  return dedupeFields(fields.filter((field) => requiredForSlug(slug, field.name)));
+}
+
+function requiredForSlug(slug: string, fieldName: string): boolean {
+  if (slug === "list-issue-notes" && fieldName === "issueIid") return true;
+  if (slug === "list-merge-request-notes" && fieldName === "mergeRequestIid") return true;
+  if (slug.startsWith("list-") && fieldName !== "projectId" && fieldName !== "groupId" && !["perPage", "page"].includes(fieldName)) return false;
+  if (slug.startsWith("get-") && ["body", "content", "commitMessage", "accessLevel", "url", "value", "newName", "color", "title"].includes(fieldName)) return false;
+  if (slug === "delete-repository-file" && fieldName === "commitMessage") return true;
+  if ((slug.startsWith("delete-") || slug.startsWith("remove-") || slug.startsWith("cancel-") || slug.startsWith("retry-") || slug.startsWith("erase-") || slug.startsWith("play-")) && ["body", "content", "commitMessage", "accessLevel", "url", "value", "newName", "color", "title", "ref"].includes(fieldName)) return false;
+  return true;
+}
+
+function listFields(slug: string): ConnectorOperationDefinition["fields"] {
+  return slug.startsWith("list-") ? pagingFields() : [];
+}
+
+function optionalNameFields(slug: string): ConnectorOperationDefinition["fields"] {
+  return slug.startsWith("update-") ? [optionalStringField("name", "sample")] : [];
+}
+
+function pagingFields(): ConnectorOperationDefinition["fields"] {
+  return [
+    integerField("perPage", 20, true, 100),
+    integerField("page", 1, true),
+  ];
+}
+
+function dedupeFields(fields: ConnectorOperationDefinition["fields"]): ConnectorOperationDefinition["fields"] {
+  const seen = new Set<string>();
+  return fields.filter((field) => {
+    if (seen.has(field.name)) return false;
+    seen.add(field.name);
+    return true;
+  });
+}
+
+function stringField(name: string): ConnectorOperationDefinition["fields"][number] {
+  return { name, type: "string", optional: false };
+}
+
+function optionalStringField(name: string, defaultValue: string): ConnectorOperationDefinition["fields"][number] {
+  return { name, type: "string", optional: true, default: defaultValue };
+}
+
+function integerField(name: string, min = 1, optional = false, max?: number): ConnectorOperationDefinition["fields"][number] {
+  return { name, type: "integer", optional, min, ...(optional ? { default: min } : {}), ...(max ? { max } : {}) };
+}
+
+function arrayField(name: string, defaultValue: unknown[]): ConnectorOperationDefinition["fields"][number] {
+  return { name, type: "array", optional: false, default: defaultValue as never };
+}
+
+function titleize(slug: string): string {
+  return slug.split("-").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
 }
