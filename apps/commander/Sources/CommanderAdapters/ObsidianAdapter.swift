@@ -30,9 +30,9 @@ public struct ObsidianAdapter: CommanderAdapter {
     }
 
     public func execute(request: CommandRequest, environment: [String : String]) throws -> JSONValue {
-        let vaultPath = request.arguments["vault"] ?? environment["COMMANDER_OBSIDIAN_VAULT"]
+        let vaultPath = request.arguments["vault"] ?? environment["CLAW_HOST_OBSIDIAN_VAULT"]
         guard let vaultPath, !vaultPath.isEmpty else {
-            throw CommanderError.invalidArguments("Missing --vault or COMMANDER_OBSIDIAN_VAULT")
+            throw CommanderError.invalidArguments("Missing --vault or CLAW_HOST_OBSIDIAN_VAULT")
         }
 
         let vaultURL = URL(fileURLWithPath: vaultPath, isDirectory: true)

@@ -14,9 +14,9 @@ public final class AppRuntimeHost: NSObject, @unchecked Sendable {
 
     public init(environment: [String: String] = ProcessInfo.processInfo.environment, registry: AdapterRegistry) throws {
         var resolvedEnvironment = environment
-        resolvedEnvironment["COMMANDER_RUNTIME_TRANSPORT"] = RuntimeInstaller.appOwnedRuntimeTransport
+        resolvedEnvironment["CLAW_HOST_RUNTIME_TRANSPORT"] = RuntimeInstaller.appOwnedRuntimeTransport
         if let bundlePath = RuntimeInstaller.appBundlePath(environment: resolvedEnvironment) {
-            resolvedEnvironment["COMMANDER_HOST_BUNDLE_PATH"] = bundlePath
+            resolvedEnvironment["CLAW_HOST_BUNDLE_PATH"] = bundlePath
             self.bundlePath = bundlePath
         } else {
             self.bundlePath = ""

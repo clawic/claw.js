@@ -6,7 +6,7 @@ import ClawHostKit
 struct CommanderDaemon {
     static func main() {
         var environment = ProcessInfo.processInfo.environment
-        environment["COMMANDER_RUNTIME_TRANSPORT"] = RuntimeInstaller.legacySocketRuntimeTransport
+        environment["CLAW_HOST_RUNTIME_TRANSPORT"] = RuntimeInstaller.legacySocketRuntimeTransport
 
         do {
             let service = try CommandService(environment: environment, registry: DefaultRegistry.make())

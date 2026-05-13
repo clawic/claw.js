@@ -5,7 +5,7 @@ public enum StatePaths {
         if let override = environment["CLAW_HOST_HOME"], !override.isEmpty {
             return URL(fileURLWithPath: override, isDirectory: true)
         }
-        if let override = environment["COMMANDER_HOME"], !override.isEmpty {
+        if let override = environment["CLAW_HOST_HOME"], !override.isEmpty {
             return URL(fileURLWithPath: override, isDirectory: true)
         }
 
@@ -46,7 +46,7 @@ public enum StatePaths {
         if let override = environment["CLAW_HOST_BIN_DIR"], !override.isEmpty {
             return URL(fileURLWithPath: override, isDirectory: true).appendingPathComponent(HostConfiguration.current(environment: environment).cliExecutableName)
         }
-        if let override = environment["COMMANDER_BIN_DIR"], !override.isEmpty {
+        if let override = environment["CLAW_HOST_BIN_DIR"], !override.isEmpty {
             return URL(fileURLWithPath: override, isDirectory: true).appendingPathComponent("commander")
         }
 
@@ -61,7 +61,7 @@ public enum StatePaths {
         if let override = environment["CLAW_HOST_LAUNCH_AGENTS_DIR"], !override.isEmpty {
             return URL(fileURLWithPath: override, isDirectory: true).appendingPathComponent("\(RuntimeInstaller.launchAgentLabel(environment: environment)).plist")
         }
-        if let override = environment["COMMANDER_LAUNCH_AGENTS_DIR"], !override.isEmpty {
+        if let override = environment["CLAW_HOST_LAUNCH_AGENTS_DIR"], !override.isEmpty {
             return URL(fileURLWithPath: override, isDirectory: true).appendingPathComponent("\(RuntimeInstaller.launchAgentLabel(environment: environment)).plist")
         }
 

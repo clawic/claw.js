@@ -290,8 +290,8 @@ final class CommanderE2ETests: XCTestCase {
             "--exit-after-permissions",
         ]
         launchProcess.environment = [
-            "COMMANDER_PERMISSION_REQUEST_DRY_RUN": "1",
-            "COMMANDER_PERMISSION_REQUEST_LOG": requestLog.path,
+            "CLAW_HOST_PERMISSION_REQUEST_DRY_RUN": "1",
+            "CLAW_HOST_PERMISSION_REQUEST_LOG": requestLog.path,
         ]
         launchProcess.standardOutput = Pipe()
         launchProcess.standardError = Pipe()
@@ -340,8 +340,8 @@ final class CommanderE2ETests: XCTestCase {
         let doctor = try context.runCLIUnchecked([
             "system", "doctor", "run", "--json",
         ], environmentOverride: [
-            "COMMANDER_APP_BUNDLE": output.path,
-            "COMMANDER_RUNTIME_TRANSPORT": RuntimeInstaller.appOwnedRuntimeTransport,
+            "CLAW_HOST_APP_BUNDLE": output.path,
+            "CLAW_HOST_RUNTIME_TRANSPORT": RuntimeInstaller.appOwnedRuntimeTransport,
         ])
         if !doctor.ok, doctor.error?.code == "transport_error" {
             throw XCTSkip("Temporary app bundle runtime could not bootstrap on this host")
@@ -353,8 +353,8 @@ final class CommanderE2ETests: XCTestCase {
         let stopped = try context.runCLIUnchecked([
             "system", "daemon", "stop", "--json",
         ], environmentOverride: [
-            "COMMANDER_APP_BUNDLE": output.path,
-            "COMMANDER_RUNTIME_TRANSPORT": RuntimeInstaller.appOwnedRuntimeTransport,
+            "CLAW_HOST_APP_BUNDLE": output.path,
+            "CLAW_HOST_RUNTIME_TRANSPORT": RuntimeInstaller.appOwnedRuntimeTransport,
         ])
         XCTAssertTrue(stopped.ok)
     }
@@ -393,8 +393,8 @@ final class CommanderE2ETests: XCTestCase {
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
         process.arguments = ["-lc", "\"\(installedCLI.path)\" system doctor run --json"]
         process.environment = context.environment.merging([
-            "COMMANDER_APP_BUNDLE": output.path,
-            "COMMANDER_RUNTIME_TRANSPORT": RuntimeInstaller.appOwnedRuntimeTransport,
+            "CLAW_HOST_APP_BUNDLE": output.path,
+            "CLAW_HOST_RUNTIME_TRANSPORT": RuntimeInstaller.appOwnedRuntimeTransport,
         ]) { _, new in new }
         let stdout = Pipe()
         let stderr = Pipe()
@@ -938,7 +938,7 @@ final class CommanderE2ETests: XCTestCase {
             throw XCTSkip("Calendar permission is not authorized on this host")
         }
 
-        let calendarName = "Commander Host Tests \(UUID().uuidString.prefix(8))"
+        let calendarName = "Claw Host Tests \(UUID().uuidString.prefix(8))"
         let calendarStore = EKEventStore()
         let calendar = try HostFixtures.createCalendar(named: calendarName, store: calendarStore)
         defer { try? HostFixtures.deleteCalendar(calendar, store: calendarStore) }
@@ -1057,7 +1057,7 @@ final class CommanderE2ETests: XCTestCase {
             throw XCTSkip("Reminders permission is not authorized on this host")
         }
 
-        let listName = "Commander Host Tests \(UUID().uuidString.prefix(8))"
+        let listName = "Claw Host Tests \(UUID().uuidString.prefix(8))"
         let store = EKEventStore()
         let calendar = try HostFixtures.createReminderList(named: listName, store: store)
         defer { try? HostFixtures.deleteReminderList(calendar, store: store) }
@@ -1302,7 +1302,7 @@ final class CommanderE2ETests: XCTestCase {
             throw XCTSkip("Things3 is not installed on this host")
         }
 
-        let projectName = "Commander Host Tests \(UUID().uuidString.prefix(8))"
+        let projectName = "Claw Host Tests \(UUID().uuidString.prefix(8))"
         let projectID: String
         do {
             projectID = try HostFixtures.createThingsProject(named: projectName)
@@ -1353,17 +1353,17 @@ private struct TestContext {
         binDir = tmp.appendingPathComponent("bin", isDirectory: true)
         launchAgentsDir = tmp.appendingPathComponent("LaunchAgents", isDirectory: true)
         var baseEnvironment = [
-            "COMMANDER_HOME": tmp.appendingPathComponent("state").path,
-            "COMMANDER_BIN_DIR": binDir.path,
-            "COMMANDER_LAUNCH_AGENTS_DIR": launchAgentsDir.path,
-            "COMMANDER_RUNTIME_TRANSPORT": RuntimeInstaller.legacySocketRuntimeTransport,
+            "CLAW_HOST_HOME": tmp.appendingPathComponent("state").path,
+            "CLAW_HOST_BIN_DIR": binDir.path,
+            "CLAW_HOST_LAUNCH_AGENTS_DIR": launchAgentsDir.path,
+            "CLAW_HOST_RUNTIME_TRANSPORT": RuntimeInstaller.legacySocketRuntimeTransport,
             "PATH": ProcessInfo.processInfo.environment["PATH"] ?? "",
         ]
         if testMode {
-            baseEnvironment["COMMANDER_TEST_MODE"] = "1"
+            baseEnvironment["CLAW_HOST_TEST_MODE"] = "1"
         }
         if hostSafe {
-            baseEnvironment["COMMANDER_HOST_SAFE"] = "1"
+            baseEnvironment["CLAW_HOST_SAFE"] = "1"
         }
         environment = baseEnvironment
     }
@@ -1458,8 +1458,8 @@ private func isoDate(hoursFromNow hours: Int) -> String {
 }
 
 private func requireHostSafe() throws {
-    guard ProcessInfo.processInfo.environment["COMMANDER_HOST_SAFE"] == "1" else {
-        throw XCTSkip("Set COMMANDER_HOST_SAFE=1 to run host-safe validation")
+    guard ProcessInfo.processInfo.environment["CLAW_HOST_SAFE"] == "1" else {
+        throw XCTSkip("Set CLAW_HOST_SAFE=1 to run host-safe validation")
     }
 }
 

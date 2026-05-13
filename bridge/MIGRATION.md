@@ -1,4 +1,4 @@
-# Cutover from `clawix-bridged` (Swift) to `claw-remote` (Node)
+# Cutover from the retired Swift bridge to `claw-remote` (Node)
 
 End-to-end migration recipe for the Clawix Mac app. The Node daemon
 (`claw-remote`) replaces the Swift helper without changing the wire
@@ -57,7 +57,7 @@ From the Clawix workspace (`/Users/trabajo/Desktop/Clawix/`):
 bash dev.sh   # produces /Applications/Clawix.app or build/Clawix.app
 
 # Embed the daemon.
-bash clawix/macos/scripts/bundle_clawjs_bridged.sh \
+bash clawix/macos/scripts/bundle_claw_remote.sh \
   --app /Applications/Clawix.app \
   --tarball /Users/trabajo/Desktop/clawjs/bridge/out/claw-remote-darwin-arm64-0.1.0.tar.gz
 ```

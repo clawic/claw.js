@@ -75,9 +75,9 @@ struct CommanderCLI {
 
     static func route(parsed: ParsedCommand, environment: [String: String]) async throws -> CommandResponse {
         var arguments = parsed.arguments
-        if environment["COMMANDER_HOST_SAFE"] == "1" {
+        if environment["CLAW_HOST_SAFE"] == "1" {
             arguments["__validation_mode"] = ValidationMode.hostIsolated.rawValue
-        } else if let validationMode = environment["COMMANDER_HOST_VALIDATION_MODE"], !validationMode.isEmpty {
+        } else if let validationMode = environment["CLAW_HOST_VALIDATION_MODE"], !validationMode.isEmpty {
             arguments["__validation_mode"] = validationMode
         }
         let request = CommandRequest(

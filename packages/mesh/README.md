@@ -87,7 +87,7 @@ The Clawix Swift app should:
 3. On success, reuse the returned `host.id` in subsequent `ssh.*` bridge
    frames over the WebSocket (`ssh.exec`, `ssh.sftp.*`, `ssh.installBridge`).
 
-Until the Swift daemon is replaced by the Node `clawjs-bridged` (see F8 of
+Until the Swift daemon is replaced by the Node `claw-remote` (see F8 of
 the migration plan), this endpoint exists on the new daemon but is not yet
 wired into the production Swift bridge. The contract above is the canonical
 shape the Swift sheet should target once the cutover happens.

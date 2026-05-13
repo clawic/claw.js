@@ -88,8 +88,8 @@ public struct PermissionService: Sendable {
     }
 
     public func requestPermission(for domain: Domain) throws -> OSPermissionState {
-        if ProcessInfo.processInfo.environment["COMMANDER_PERMISSION_REQUEST_DRY_RUN"] == "1" {
-            if let logPath = ProcessInfo.processInfo.environment["COMMANDER_PERMISSION_REQUEST_LOG"] {
+        if ProcessInfo.processInfo.environment["CLAW_HOST_PERMISSION_REQUEST_DRY_RUN"] == "1" {
+            if let logPath = ProcessInfo.processInfo.environment["CLAW_HOST_PERMISSION_REQUEST_LOG"] {
                 let entry = "\(domain.rawValue)\n"
                 if FileManager.default.fileExists(atPath: logPath) {
                     if let handle = FileHandle(forWritingAtPath: logPath) {

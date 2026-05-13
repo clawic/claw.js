@@ -156,7 +156,7 @@ public struct ClientContext: Codable, Equatable, Sendable {
     }
 
     public static func current(executablePath: String? = nil) -> ClientContext {
-        let rawExecutablePath = executablePath ?? CommandLine.arguments.first ?? "commander"
+        let rawExecutablePath = executablePath ?? CommandLine.arguments.first ?? "claw-host"
         return ClientContext(
             pid: getpid(),
             bundleID: Bundle.main.bundleIdentifier,

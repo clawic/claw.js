@@ -60,20 +60,8 @@ public struct HostConfiguration: Codable, Equatable, Sendable {
         permissionPromptName: "Clawix"
     )
 
-    public static let commanderLegacy = HostConfiguration(
-        id: "commander",
-        displayName: "Commander",
-        appSupportDirectoryName: "Commander",
-        cliExecutableName: "commander",
-        daemonExecutableName: "commanderd",
-        launchAgentLabel: "com.clawjs.commander.daemon",
-        machServiceName: "com.clawjs.commander.runtime",
-        logSubsystem: "com.clawjs.commander",
-        permissionPromptName: "Commander"
-    )
-
     public static func current(environment: [String: String] = ProcessInfo.processInfo.environment) -> HostConfiguration {
-        let base = environment["CLAW_HOST_LEGACY_COMMANDER"] == "1" ? HostConfiguration.commanderLegacy : HostConfiguration.claw
+        let base = HostConfiguration.claw
         return HostConfiguration(
             id: environment["CLAW_HOST_ID"]?.nilIfEmpty ?? base.id,
             displayName: environment["CLAW_HOST_DISPLAY_NAME"]?.nilIfEmpty ?? base.displayName,

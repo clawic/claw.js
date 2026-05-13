@@ -135,7 +135,7 @@ call that wraps tarball upload + extraction + service registration.
 |---|---|
 | `node not found in PATH` when running the wrapper | The bundled wrapper assumes `node >= 20`. Install Node or set `NODE=/path/to/node` in the systemd `Environment=` line. |
 | `Cannot find module 'better-sqlite3/build/Release/better_sqlite3.node'` | The prebuilt did not match the host. Re-run `scripts/build-tarball.sh --target <correct-target>` or run `npm rebuild better-sqlite3` inside the install prefix. |
-| `EADDRINUSE 127.0.0.1:24112` | Another `claw-remote` (or `clawix-bridged` legacy Swift) holds the port. Stop it or change `CLAW_REMOTE_PORT`. |
+| `EADDRINUSE 127.0.0.1:24112` | Another `claw-remote` or the retired Swift bridge holds the port. Stop it or change `CLAW_REMOTE_PORT`. |
 | systemd unit not autostarting | `systemctl --user status claw-remote.service` — usually missing `loginctl enable-linger $USER` on Linux servers. |
 | install.sh exits with `tarball not found` | Path is wrong or download failed; pass `--tarball` with an absolute path or a reachable URL. |
 | Mac daemon doesn't survive reboot | Make sure `--launchd` ran and the user is logged in at boot; for headless servers use `sudo launchctl` + `/Library/LaunchDaemons/`. |

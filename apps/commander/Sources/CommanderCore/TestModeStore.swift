@@ -2,11 +2,11 @@ import Foundation
 
 public enum ExecutionEnvironment {
     public static func isTestMode(_ environment: [String: String]) -> Bool {
-        environment["COMMANDER_TEST_MODE"] == "1"
+        environment["CLAW_HOST_TEST_MODE"] == "1"
     }
 
     public static func isHostSafeMode(_ environment: [String: String]) -> Bool {
-        environment["COMMANDER_HOST_SAFE"] == "1" || environment["COMMANDER_HOST_VALIDATION_MODE"] == ValidationMode.hostIsolated.rawValue
+        environment["CLAW_HOST_SAFE"] == "1" || environment["CLAW_HOST_VALIDATION_MODE"] == ValidationMode.hostIsolated.rawValue
     }
 }
 

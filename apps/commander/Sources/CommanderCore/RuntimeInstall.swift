@@ -104,7 +104,7 @@ public enum RuntimeInstaller {
     }
 
     public static func preferredRuntimeTransport(environment: [String: String] = ProcessInfo.processInfo.environment) -> String {
-        if environment["COMMANDER_RUNTIME_TRANSPORT"] == legacySocketRuntimeTransport {
+        if environment["CLAW_HOST_RUNTIME_TRANSPORT"] == legacySocketRuntimeTransport {
             return legacySocketRuntimeTransport
         }
         if ExecutionEnvironment.isTestMode(environment) {
@@ -117,11 +117,11 @@ public enum RuntimeInstaller {
     }
 
     public static func legacySocketFallbackEnabled(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
-        environment["COMMANDER_DISABLE_LEGACY_SOCKET_FALLBACK"] != "1"
+        environment["CLAW_HOST_DISABLE_LEGACY_SOCKET_FALLBACK"] != "1"
     }
 
     public static func appBundlePath(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
-        if let override = environment["COMMANDER_APP_BUNDLE"], FileManager.default.fileExists(atPath: override) {
+        if let override = environment["CLAW_HOST_APP_BUNDLE"], FileManager.default.fileExists(atPath: override) {
             return override
         }
         if let override = environment["CLAW_HOST_APP_BUNDLE"], FileManager.default.fileExists(atPath: override) {
@@ -189,7 +189,7 @@ public enum RuntimeInstaller {
     }
 
     public static func launchAgentIsLoaded(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
-        if environment["COMMANDER_LAUNCH_AGENTS_DIR"] != nil {
+        if environment["CLAW_HOST_LAUNCH_AGENTS_DIR"] != nil {
             return false
         }
 
@@ -247,7 +247,7 @@ public enum RuntimeInstaller {
             <dict>
                 <key>CLAW_HOST_HOME</key>
                 <string>\(statePath)</string>
-                <key>COMMANDER_RUNTIME_TRANSPORT</key>
+                <key>CLAW_HOST_RUNTIME_TRANSPORT</key>
                 <string>\(appExecutablePath(environment: environment) == nil ? legacySocketRuntimeTransport : appOwnedRuntimeTransport)</string>
                 <key>CLAW_HOST_APP_BUNDLE</key>
                 <string>\(appBundlePath(environment: environment) ?? "")</string>

@@ -422,7 +422,7 @@ public actor CommandService {
     }
 
     private func runtimeTransport() -> String {
-        environment["COMMANDER_RUNTIME_TRANSPORT"] ?? RuntimeInstaller.legacySocketRuntimeTransport
+        environment["CLAW_HOST_RUNTIME_TRANSPORT"] ?? RuntimeInstaller.legacySocketRuntimeTransport
     }
 
     private func sanitize(arguments: [String: String]) -> [String: String] {
@@ -464,7 +464,7 @@ public actor CommandService {
         if let rawValue = request.arguments["__validation_mode"], let mode = ValidationMode(rawValue: rawValue) {
             return mode
         }
-        if environment["COMMANDER_HOST_SAFE"] == "1" || environment["COMMANDER_HOST_VALIDATION_MODE"] == ValidationMode.hostIsolated.rawValue {
+        if environment["CLAW_HOST_SAFE"] == "1" || environment["CLAW_HOST_VALIDATION_MODE"] == ValidationMode.hostIsolated.rawValue {
             return .hostIsolated
         }
         if request.domain == .finder && request.arguments["path"] != nil {
@@ -550,27 +550,27 @@ public actor CommandService {
         [
             "calendar": .object([
                 "selector": .string("--calendar"),
-                "value": .string(environment["COMMANDER_HOST_TEST_CALENDAR"] ?? "Commander Host Tests"),
+                "value": .string(environment["CLAW_HOST_TEST_CALENDAR"] ?? "Claw Host Tests"),
             ]),
             "reminders": .object([
                 "selector": .string("--list"),
-                "value": .string(environment["COMMANDER_HOST_TEST_REMINDERS_LIST"] ?? "Commander Host Tests"),
+                "value": .string(environment["CLAW_HOST_TEST_REMINDERS_LIST"] ?? "Claw Host Tests"),
             ]),
             "notes": .object([
                 "selector": .string("--folder"),
-                "value": .string(environment["COMMANDER_HOST_TEST_NOTES_FOLDER"] ?? "Commander Host Tests"),
+                "value": .string(environment["CLAW_HOST_TEST_NOTES_FOLDER"] ?? "Claw Host Tests"),
             ]),
             "mail": .object([
                 "selector": .string("--mailbox"),
-                "value": .string(environment["COMMANDER_HOST_TEST_MAILBOX"] ?? "Drafts"),
+                "value": .string(environment["CLAW_HOST_TEST_MAILBOX"] ?? "Drafts"),
             ]),
             "things": .object([
                 "selector": .string("--project"),
-                "value": .string(environment["COMMANDER_HOST_TEST_THINGS_PROJECT"] ?? "Commander Host Tests"),
+                "value": .string(environment["CLAW_HOST_TEST_THINGS_PROJECT"] ?? "Claw Host Tests"),
             ]),
             "safari": .object([
                 "selector": .string("--window"),
-                "value": .string(environment["COMMANDER_HOST_TEST_SAFARI_WINDOW"] ?? "1"),
+                "value": .string(environment["CLAW_HOST_TEST_SAFARI_WINDOW"] ?? "1"),
             ]),
         ]
     }

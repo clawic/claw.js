@@ -79,7 +79,7 @@ public enum DaemonLauncher {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: daemonBinary)
         process.arguments = ["serve"]
-        process.environment = environment.merging(["COMMANDER_RUNTIME_TRANSPORT": RuntimeInstaller.legacySocketRuntimeTransport]) { _, new in new }
+        process.environment = environment.merging(["CLAW_HOST_RUNTIME_TRANSPORT": RuntimeInstaller.legacySocketRuntimeTransport]) { _, new in new }
         process.standardInput = nil
         process.standardOutput = nil
         process.standardError = nil
