@@ -436,58 +436,47 @@ const NOTION_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/notion-operation-executor.test.ts",
 ];
 
-const NOTION_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
+const NOTION_ACTION_FIXTURE_NAMES = [
+  "get-block",
+  "list-block-children",
+  "append-block-children",
+  "update-block",
+  "delete-block",
+  "search",
+  "get-page",
+  "create-page",
+  "update-page",
+  "get-page-property",
+  "get-database",
+  "create-database",
+  "update-database",
+  "get-data-source",
+  "create-data-source",
+  "update-data-source",
+  "query-data-source",
+  "list-data-source-templates",
+  "get-comment",
+  "list-comments",
+  "create-comment",
+  "update-comment",
+  "delete-comment",
+  "list-users",
+  "get-user",
+  "get-self",
+] as const;
+
+const NOTION_ACTION_FIXTURES: ConnectorRuntimeFixture[] = NOTION_ACTION_FIXTURE_NAMES.flatMap((name) => [
   {
-    kind: "request",
-    operationId: "notion.action.search",
-    path: "packages/clawjs-integrations/fixtures/notion-search-request.json",
+    kind: "request" as const,
+    operationId: `notion.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/notion-${name}-request.json`,
   },
   {
-    kind: "response",
-    operationId: "notion.action.search",
-    path: "packages/clawjs-integrations/fixtures/notion-search-response.json",
+    kind: "response" as const,
+    operationId: `notion.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/notion-${name}-response.json`,
   },
-  {
-    kind: "request",
-    operationId: "notion.action.get-page",
-    path: "packages/clawjs-integrations/fixtures/notion-get-page-request.json",
-  },
-  {
-    kind: "response",
-    operationId: "notion.action.get-page",
-    path: "packages/clawjs-integrations/fixtures/notion-get-page-response.json",
-  },
-  {
-    kind: "request",
-    operationId: "notion.action.create-page",
-    path: "packages/clawjs-integrations/fixtures/notion-create-page-request.json",
-  },
-  {
-    kind: "response",
-    operationId: "notion.action.create-page",
-    path: "packages/clawjs-integrations/fixtures/notion-create-page-response.json",
-  },
-  {
-    kind: "request",
-    operationId: "notion.action.update-page",
-    path: "packages/clawjs-integrations/fixtures/notion-update-page-request.json",
-  },
-  {
-    kind: "response",
-    operationId: "notion.action.update-page",
-    path: "packages/clawjs-integrations/fixtures/notion-update-page-response.json",
-  },
-  {
-    kind: "request",
-    operationId: "notion.action.query-data-source",
-    path: "packages/clawjs-integrations/fixtures/notion-query-data-source-request.json",
-  },
-  {
-    kind: "response",
-    operationId: "notion.action.query-data-source",
-    path: "packages/clawjs-integrations/fixtures/notion-query-data-source-response.json",
-  },
-];
+]);
 
 const WHATSAPP_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/whatsapp-operation-executor.test.ts",
