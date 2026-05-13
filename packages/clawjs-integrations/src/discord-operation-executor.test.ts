@@ -363,7 +363,7 @@ const DISCORD_ACTIONS = [
   action("delete-auto-moderation-rule", "Delete Auto Moderation Rule", [GUILD_FIELD, AUTO_MODERATION_RULE_FIELD, field("auditLogReason", "string", true)]),
   action("list-guild-invites", "List Guild Invites", [GUILD_FIELD]),
   action("list-channel-invites", "List Channel Invites", [CHANNEL_FIELD]),
-  action("create-channel-invite", "Create Channel Invite", [CHANNEL_FIELD, field("maxAge", "integer", true, { default: 86400, min: 0, max: 604800 }), field("maxUses", "integer", true, { default: 0, min: 0, max: 100 }), field("temporary", "boolean", true), field("unique", "boolean", true), field("targetType", "integer", true, { default: null }), field("targetUserId", "string", true, { default: null }), field("targetApplicationId", "string", true, { default: null }), field("roleIds", "array", true, { default: null }), field("auditLogReason", "string", true)]),
+  action("create-channel-invite", "Create Channel Invite", [CHANNEL_FIELD, field("maxAge", "integer", true, { default: 86400, min: 0, max: 604800 }), field("maxUses", "integer", true, { default: 0, min: 0, max: 100 }), field("temporary", "boolean", true), field("unique", "boolean", true), field("targetType", "integer", true, { default: null }), field("targetUserId", "string", true, { default: null }), field("targetApplicationId", "string", true, { default: null }), field("payloadJson", "string", true, { default: "{\"max_age\":3600}" }), field("roleIds", "array", true, { default: null }), field("auditLogReason", "string", true)]),
   action("list-guild-scheduled-events", "List Guild Scheduled Events", [GUILD_FIELD, field("withUserCount", "boolean", true)]),
   action("create-guild-scheduled-event", "Create Guild Scheduled Event", [
     GUILD_FIELD,
@@ -2717,6 +2717,7 @@ describe("discord operation runtime", () => {
       targetType: 2,
       targetApplicationId: "app-123",
       targetUsersFile: "user_id\n123",
+      payloadJson: "{\"max_age\":3600}",
       roleIds: ["role-123"],
       auditLogReason: "temporary invite",
     }), {
@@ -2735,6 +2736,7 @@ describe("discord operation runtime", () => {
         target_type: 2,
         target_application_id: "app-123",
         target_users_file: "user_id\n123",
+        payload_json: "{\"max_age\":3600}",
         role_ids: ["role-123"],
       },
       bodyEncoding: "multipart",

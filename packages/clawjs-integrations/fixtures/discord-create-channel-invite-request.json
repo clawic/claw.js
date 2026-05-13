@@ -11,6 +11,7 @@
     "max_age": 86400,
     "max_uses": 0,
     "temporary": false,
-    "unique": false
+    "unique": false,
+    "payload_json": "{\"max_age\":3600}"
   }
 }
