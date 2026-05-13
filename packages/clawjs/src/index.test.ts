@@ -35,7 +35,7 @@ function runCommand(command: string, args: string[], options: { cwd: string }): 
   const resolvedArgs = command === "npm"
     ? ["-lc", ["npm", ...args].map(shellQuote).join(" ")]
     : args;
-  return execFileSync(executable, resolvedArgs, {
+  const execOptions = {
     cwd: options.cwd,
     encoding: "utf8",
     env: {
@@ -44,7 +44,13 @@ function runCommand(command: string, args: string[], options: { cwd: string }): 
       npm_config_audit: "false",
       npm_config_fund: "false",
     },
-  });
+  } as const;
+  try {
+    return execFileSync(executable, resolvedArgs, execOptions);
+  } catch (error) {
+    if (command !== "npm" || (error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    return execFileSync("/bin/bash", resolvedArgs, execOptions);
+  }
 }
 
 function packWorkspacePackage(packageDir: string, packDir: string): string {
