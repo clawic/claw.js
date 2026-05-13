@@ -87,7 +87,10 @@ updating this ADR or adding a successor ADR.
   - `notify`: `24109`
   - `signals`: `24110`
   - `publishing`: `24111`
-  - `24112-24119`: reserved for future core services
+  - `remote`: `24112`
+  - `remoteStatus`: `24113`
+  - `monitor`: `24114`
+  - `24115-24119`: reserved for future core services
 - ClawJS app/demo ports are fixed as:
   - `showcase`: `24120`
   - `agenda`: `24121`
@@ -347,7 +350,7 @@ Repository checks must block new public or stable uses of:
 - `clawix-bridged`
 - `badger`
 - public `life`
-- `signals`
+- public personal-domain packages outside the `signals` catalog
 - public `mp`
 - public `/mesh` without `/v1`
 - public `/ws`

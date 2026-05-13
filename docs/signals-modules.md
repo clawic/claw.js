@@ -22,10 +22,10 @@ Money, Meta / Reflection).
 
 ## Repository layout
 
-For each vertical with id `<id>`:
+For each vertical with id `signal-id`:
 
-```
-packages/clawjs-<id>/       # publishable npm package (@clawjs/<id>)
+```text
+packages/clawjs-signal-id/  # publishable npm package (@clawjs/signal-id)
 ├── package.json
 ├── tsconfig.json
 └── src/
@@ -35,15 +35,15 @@ packages/clawjs-<id>/       # publishable npm package (@clawjs/<id>)
     ├── config.ts           # loadXConfig() — env + overrides
     └── catalog.json        # curated system variables
 
-<id>/                       # top-level service directory
-├── package.json            # deps: file:../packages/clawjs-<id>
+signal-id/                  # top-level service directory
+├── package.json            # deps: file:../packages/clawjs-signal-id
 ├── tsconfig.json
 ├── src/
 │   └── bin/
 │       ├── server.ts       # Fastify bootstrap
 │       └── cli.ts          # CLI surface
 └── tests/
-    └── e2e/<id>.e2e.test.ts
+    └── e2e/signal-id.e2e.test.ts
 ```
 
 Two shared packages do the heavy lifting so the per-vertical packages
@@ -60,7 +60,7 @@ stay thin:
 
 1. Declare it in `tracking-registry.json` with a unique `id`, the
    category it belongs to, an unused `servicePort`, the
-   `packageName` (`@clawjs/<id>`), and an initial `status` of
+   `packageName` (`@clawjs/signal-id`), and an initial `status` of
    `planned` (graduate to `alpha` / `stable` later).
 
 2. Run the scaffolder:
@@ -74,12 +74,12 @@ stay thin:
    scaffolded files (it never overwrites a hand-curated `catalog.json`
    that already exists).
 
-3. Curate `packages/clawjs-<id>/src/catalog.json`. The default catalog
+3. Curate `packages/clawjs-signal-id/src/catalog.json`. The default catalog
    ships a single free-form text variable so the UI has something to
    render; replace it with the real variables for the domain (with
    HealthKit type identifiers when available).
 
-4. Write the e2e test in `<id>/tests/e2e/<id>.e2e.test.ts` using the
+4. Write the e2e test in `signal-id/tests/e2e/signal-id.e2e.test.ts` using the
    skeleton produced by the scaffolder. It exercises CRUD against an
    in-memory Fastify instance.
 
@@ -90,47 +90,47 @@ stay thin:
 
 ## HTTP surface
 
-Every vertical exposes the same routes under `/v1/<id>/...`:
+Every vertical exposes the same routes under `/v1/signal-id/...`:
 
-```
-GET    /v1/<id>/catalog
-GET    /v1/<id>/variables/:variableId
-POST   /v1/<id>/variables                 # create user variable
-DELETE /v1/<id>/variables/:variableId     # hide if system, delete if user
-POST   /v1/<id>/variables/:variableId/unhide
+```text
+GET    /v1/signal-id/catalog
+GET    /v1/signal-id/variables/variable-id
+POST   /v1/signal-id/variables                 # create user variable
+DELETE /v1/signal-id/variables/variable-id     # hide if system, delete if user
+POST   /v1/signal-id/variables/variable-id/unhide
 
-GET    /v1/<id>/observations              # ?variableId&from&to&source&limit
-POST   /v1/<id>/observations
-POST   /v1/<id>/observations/bulk
-GET    /v1/<id>/observations/:id
-PATCH  /v1/<id>/observations/:id
-DELETE /v1/<id>/observations/:id
+GET    /v1/signal-id/observations              # ?variableId&from&to&source&limit
+POST   /v1/signal-id/observations
+POST   /v1/signal-id/observations/bulk
+GET    /v1/signal-id/observations/observation-id
+PATCH  /v1/signal-id/observations/observation-id
+DELETE /v1/signal-id/observations/observation-id
 
-GET    /v1/<id>/stats/:variableId         # ?from&to&period=day|week|month
+GET    /v1/signal-id/stats/variable-id         # ?from&to&period=day|week|month
 ```
 
 Verticals with `hasSessions: true` in the registry also expose:
 
-```
-GET    /v1/<id>/sessions
-POST   /v1/<id>/sessions
-GET    /v1/<id>/sessions/:id
-PATCH  /v1/<id>/sessions/:id
-DELETE /v1/<id>/sessions/:id
-POST   /v1/<id>/sessions/:sessionId/observations
+```text
+GET    /v1/signal-id/sessions
+POST   /v1/signal-id/sessions
+GET    /v1/signal-id/sessions/session-id
+PATCH  /v1/signal-id/sessions/session-id
+DELETE /v1/signal-id/sessions/session-id
+POST   /v1/signal-id/sessions/session-id/observations
 ```
 
 HealthKit anchor handlers (used by the Clawix iOS bridge to remember
 where each variable left off in the last incremental sync):
 
-```
-GET    /v1/<id>/healthkit/anchor/:variableId
-PUT    /v1/<id>/healthkit/anchor/:variableId   # body: { anchorBlob, lastSyncedAt }
+```text
+GET    /v1/signal-id/healthkit/anchor/variable-id
+PUT    /v1/signal-id/healthkit/anchor/variable-id   # body: { anchorBlob, lastSyncedAt }
 ```
 
 All routes (except `/v1/health`) require an `Authorization: Bearer
-<sharedSecret>` header. The shared secret is sourced from
-`<PREFIX>_SHARED_SECRET` (e.g. `HEALTH_SHARED_SECRET`,
+shared-secret` header. The shared secret is sourced from
+`SIGNAL_PREFIX_SHARED_SECRET` (e.g. `HEALTH_SHARED_SECRET`,
 `TIME_TRACKING_SHARED_SECRET`) or falls back to a dev default.
 
 ## Authentication and discovery
@@ -179,7 +179,7 @@ for the one-time migration script and rollback procedure.
 Per the existing RELEASING.md rules:
 
 1. Curate the catalog for the verticals graduating to `alpha`.
-2. Run `npm test -w <id>` for each vertical you touched.
+2. Run `npm test -w signal-id` for each vertical you touched.
 3. `npm run publish:dry-run` from the repo root.
 4. Real publish requires explicit user authorization (see the
    workspace-private `CLAUDE.md` for the approval gate). The user
