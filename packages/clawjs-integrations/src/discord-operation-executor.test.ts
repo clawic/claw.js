@@ -377,6 +377,7 @@ const DISCORD_ACTIONS = [
     field("description", "string", true, { default: "sample" }),
     field("image", "string", true, { default: null }),
     field("recurrenceRule", "object", true),
+    field("auditLogReason", "string", true),
   ]),
   action("get-guild-scheduled-event", "Get Guild Scheduled Event", [GUILD_FIELD, field("guildScheduledEventId", "string"), field("withUserCount", "boolean", true)]),
   action("update-guild-scheduled-event", "Update Guild Scheduled Event", [
@@ -393,6 +394,7 @@ const DISCORD_ACTIONS = [
     field("status", "integer", true, { default: 2 }),
     field("image", "string", true, { default: null }),
     field("recurrenceRule", "object", true),
+    field("auditLogReason", "string", true),
   ]),
   action("delete-guild-scheduled-event", "Delete Guild Scheduled Event", [GUILD_FIELD, field("guildScheduledEventId", "string")]),
   action("list-guild-scheduled-event-users", "List Guild Scheduled Event Users", [GUILD_FIELD, field("guildScheduledEventId", "string"), field("limit", "integer", true, { default: 1, min: 1, max: 100 }), field("withMember", "boolean", true), field("before", "string", true, { default: null }), field("after", "string", true, { default: null })]),
@@ -3675,11 +3677,15 @@ describe("discord operation runtime", () => {
       scheduledEndTime: "2026-05-13T11:00:00.000Z",
       entityType: 2,
       description: "Release walkthrough",
+      auditLogReason: "schedule release event",
     }), {
       method: "POST",
       endpoint: "guilds/456/scheduled-events",
       auth,
-      headers,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "schedule release event",
+      },
       body: {
         channel_id: "123",
         name: "Launch",
@@ -3741,11 +3747,15 @@ describe("discord operation runtime", () => {
       recurrenceRule: null,
       image: "data:image/png;base64,dXBkYXRlZA==",
       status: 2,
+      auditLogReason: "reschedule event",
     }), {
       method: "PATCH",
       endpoint: "guilds/456/scheduled-events/event-123",
       auth,
-      headers,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "reschedule event",
+      },
       body: {
         channel_id: null,
         entity_metadata: null,
