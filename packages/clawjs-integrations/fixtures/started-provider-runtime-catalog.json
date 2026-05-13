@@ -2899,6 +2899,43 @@
           ]
         },
         {
+          "id": "discord.action.get-guild-role",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Role",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "roleId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-guild-role-member-counts",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Role Member Counts",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.create-guild-role",
           "appId": "discord",
           "kind": "action",
@@ -2914,6 +2951,38 @@
               "type": "string",
               "optional": true,
               "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.modify-guild-role-positions",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Modify Guild Role Positions",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "positions",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "id": "sample",
+                  "position": 1
+                }
+              ]
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": [
