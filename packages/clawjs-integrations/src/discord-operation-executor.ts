@@ -12,8 +12,10 @@ export type DiscordRuntimeOperation =
   | "list-current-user-guilds"
   | "get-guild"
   | "get-guild-preview"
+  | "modify-guild"
   | "list-guild-channels"
   | "create-guild-channel"
+  | "modify-guild-channel-positions"
   | "get-guild-template"
   | "list-guild-templates"
   | "create-guild-template"
@@ -203,12 +205,24 @@ export function buildDiscordOperationRequest(
       }));
     case "get-guild-preview":
       return getPlan(`guilds/${guildId(values)}/preview`, auth, headers, { type: "object", requiredPaths: ["id", "name"] });
+    case "modify-guild":
+      return bodyPlan("PATCH", `guilds/${guildId(values)}`, auth, auditHeaders(headers, values), guildBody(values), { type: "object", requiredPaths: ["id", "name"] });
     case "get-channel":
       return getPlan(`channels/${channelId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "type"] });
     case "list-guild-channels":
       return getPlan(`guilds/${guildId(values)}/channels`, auth, headers, { type: "array" });
     case "create-guild-channel":
       return bodyPlan("POST", `guilds/${guildId(values)}/channels`, auth, headers, channelBody(values), { type: "object", requiredPaths: ["id", "type", "name"] });
+    case "modify-guild-channel-positions":
+      return {
+        method: "PATCH",
+        endpoint: `guilds/${guildId(values)}/channels`,
+        auth,
+        headers: auditHeaders(headers, values),
+        body: {},
+        bodyValue: requiredJsonArray(values.positions, "positions"),
+        responseSchema: { type: "object" },
+      };
     case "get-guild-template":
       return getPlan(`guilds/templates/${templateCode(values)}`, auth, headers, { type: "object", requiredPaths: ["code", "name", "source_guild_id"] });
     case "list-guild-templates":
@@ -612,8 +626,10 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "list-current-user-guilds",
   "get-guild",
   "get-guild-preview",
+  "modify-guild",
   "list-guild-channels",
   "create-guild-channel",
+  "modify-guild-channel-positions",
   "get-guild-template",
   "list-guild-templates",
   "create-guild-template",
@@ -864,6 +880,31 @@ function channelBody(values: Record<string, IntegrationJson>): Record<string, In
     parent_id: optionalString(values.parentId),
     nsfw: values.nsfw,
     permission_overwrites: optionalJsonArray(values.permissionOverwrites),
+  });
+}
+
+function guildBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    name: optionalString(values.name),
+    verification_level: optionalNumber(values.verificationLevel),
+    default_message_notifications: optionalNumber(values.defaultMessageNotifications),
+    explicit_content_filter: optionalNumber(values.explicitContentFilter),
+    afk_channel_id: optionalString(values.afkChannelId),
+    afk_timeout: optionalNumber(values.afkTimeout),
+    icon: optionalString(values.icon),
+    owner_id: optionalString(values.ownerId),
+    splash: optionalString(values.splash),
+    discovery_splash: optionalString(values.discoverySplash),
+    banner: optionalString(values.banner),
+    system_channel_id: optionalString(values.systemChannelId),
+    system_channel_flags: optionalNumber(values.systemChannelFlags),
+    rules_channel_id: optionalString(values.rulesChannelId),
+    public_updates_channel_id: optionalString(values.publicUpdatesChannelId),
+    preferred_locale: optionalString(values.preferredLocale),
+    features: optionalJsonArray(values.features),
+    description: optionalString(values.description),
+    premium_progress_bar_enabled: values.premiumProgressBarEnabled,
+    safety_alerts_channel_id: optionalString(values.safetyAlertsChannelId),
   });
 }
 
