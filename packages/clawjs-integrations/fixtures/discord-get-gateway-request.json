@@ -1,0 +1,7 @@
+{
+  "method": "GET",
+  "url": "https://discord.com/api/v10/gateway",
+  "headers": {
+    "accept": "application/json"
+  }
+}
