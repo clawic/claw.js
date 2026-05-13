@@ -928,10 +928,151 @@
           ]
         },
         {
+          "id": "discord.action.set-voice-channel-status",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Set Voice Channel Status",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.delete-channel",
           "appId": "discord",
           "kind": "action",
           "name": "Delete Channel",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.edit-channel-permissions",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Edit Channel Permissions",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "overwriteId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "allow",
+              "type": "string",
+              "optional": true,
+              "default": "0"
+            },
+            {
+              "name": "deny",
+              "type": "string",
+              "optional": true,
+              "default": "0"
+            },
+            {
+              "name": "permissionType",
+              "type": "integer",
+              "optional": false,
+              "default": 0,
+              "min": 0,
+              "max": 1
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-channel-permission",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Channel Permission",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "overwriteId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.follow-announcement-channel",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Follow Announcement Channel",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "webhookChannelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.trigger-typing-indicator",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Trigger Typing Indicator",
           "fields": [
             {
               "name": "channelId",
