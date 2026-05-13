@@ -9,7 +9,15 @@ import type {
 export type DiscordRuntimeOperation =
   | "get-current-user"
   | "get-user"
+  | "modify-current-user"
   | "list-current-user-guilds"
+  | "get-current-user-guild-member"
+  | "leave-guild"
+  | "create-dm"
+  | "create-group-dm"
+  | "get-current-user-connections"
+  | "get-current-user-application-role-connection"
+  | "update-current-user-application-role-connection"
   | "get-guild"
   | "get-guild-preview"
   | "modify-guild"
@@ -234,8 +242,24 @@ export function buildDiscordOperationRequest(
       return getPlan("users/@me", auth, headers, { type: "object", requiredPaths: ["id", "username"] });
     case "get-user":
       return getPlan(`users/${pathSegment(requiredString(firstValue(values.userId, values.user), "userId"))}`, auth, headers, { type: "object", requiredPaths: ["id", "username"] });
+    case "modify-current-user":
+      return bodyPlan("PATCH", "users/@me", auth, headers, currentUserBody(values), { type: "object", requiredPaths: ["id", "username"] });
     case "list-current-user-guilds":
       return pagedGetPlan("users/@me/guilds", auth, headers, values, { type: "array" });
+    case "get-current-user-guild-member":
+      return getPlan(`users/@me/guilds/${guildId(values)}/member`, bearerAuth, headers, { type: "object", requiredPaths: ["user", "roles"] });
+    case "leave-guild":
+      return deletePlan(`users/@me/guilds/${guildId(values)}`, bearerAuth, headers, { type: "object" });
+    case "create-dm":
+      return bodyPlan("POST", "users/@me/channels", auth, headers, directMessageBody(values), { type: "object", requiredPaths: ["id", "type"] });
+    case "create-group-dm":
+      return bodyPlan("POST", "users/@me/channels", bearerAuth, headers, groupDmBody(values), { type: "object", requiredPaths: ["id", "type", "recipients"] });
+    case "get-current-user-connections":
+      return getPlan("users/@me/connections", bearerAuth, headers, { type: "array" });
+    case "get-current-user-application-role-connection":
+      return getPlan(`users/@me/applications/${applicationId(values)}/role-connection`, bearerAuth, headers, { type: "object", requiredPaths: ["metadata"] });
+    case "update-current-user-application-role-connection":
+      return bodyPlan("PUT", `users/@me/applications/${applicationId(values)}/role-connection`, bearerAuth, headers, userApplicationRoleConnectionBody(values), { type: "object", requiredPaths: ["metadata"] });
     case "get-guild":
       return getPlan(`guilds/${guildId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "name"] }, removeEmptyValues({
         with_counts: values.withCounts,
@@ -758,7 +782,15 @@ function discordRuntimeOperation(operationId: string): DiscordRuntimeOperation |
 const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "get-current-user",
   "get-user",
+  "modify-current-user",
   "list-current-user-guilds",
+  "get-current-user-guild-member",
+  "leave-guild",
+  "create-dm",
+  "create-group-dm",
+  "get-current-user-connections",
+  "get-current-user-application-role-connection",
+  "update-current-user-application-role-connection",
   "get-guild",
   "get-guild-preview",
   "modify-guild",
@@ -1201,6 +1233,35 @@ function messageReference(values: Record<string, IntegrationJson>): IntegrationJ
     channel_id: optionalString(firstValue(values.referenceChannelId, values.channelId, values.channel)),
     guild_id: optionalString(firstValue(values.guildId, values.guild)),
     fail_if_not_exists: values.failIfNotExists,
+  });
+}
+
+function currentUserBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    username: optionalString(values.username),
+    avatar: optionalString(values.avatar),
+    banner: optionalString(values.banner),
+  });
+}
+
+function directMessageBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return {
+    recipient_id: requiredString(firstValue(values.recipientId, values.userId, values.recipient), "recipientId"),
+  };
+}
+
+function groupDmBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return {
+    access_tokens: requiredJsonArray(values.accessTokens, "accessTokens"),
+    nicks: requiredJsonObject(values.nicks, "nicks"),
+  };
+}
+
+function userApplicationRoleConnectionBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    platform_name: optionalString(values.platformName),
+    platform_username: optionalString(values.platformUsername),
+    metadata: optionalJsonObject(values.metadata),
   });
 }
 
