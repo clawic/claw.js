@@ -60,9 +60,9 @@ test("dedicated CLI and claw bridge hit the same database service", async () => 
     "--token",
     loginPayload.accessToken,
     "--id",
-    "sales",
+    "test-sales",
     "--display-name",
-    "Sales",
+    "Test Sales",
     "--json",
   ], { cwd: process.cwd() });
 
@@ -75,9 +75,9 @@ test("dedicated CLI and claw bridge hit the same database service", async () => 
     "--token",
     loginPayload.accessToken,
     "--namespace",
-    "sales",
+    "test-sales",
     "--name",
-    "accounts",
+    "partner_accounts",
     "--fields",
     JSON.stringify([{ name: "name", type: "text", required: true }]),
     "--json",
@@ -92,9 +92,9 @@ test("dedicated CLI and claw bridge hit the same database service", async () => 
     "--token",
     loginPayload.accessToken,
     "--namespace",
-    "sales",
+    "test-sales",
     "--collection",
-    "accounts",
+    "partner_accounts",
     "--data",
     JSON.stringify({ name: "Acme" }),
     "--json",
@@ -110,9 +110,9 @@ test("dedicated CLI and claw bridge hit the same database service", async () => 
     "--token",
     loginPayload.accessToken,
     "--namespace",
-    "sales",
+    "test-sales",
     "--collection",
-    "accounts",
+    "partner_accounts",
     "--json",
   ], {
     cwd: path.resolve(process.cwd(), ".."),
@@ -164,7 +164,7 @@ test("claw db uses the same remote database service for built-ins and magic cust
   const createdLead = await execFileAsync("node", [
     clawBin,
     "db",
-    "leads",
+    "prospects",
     "create",
     "--url",
     server.baseUrl,
@@ -178,9 +178,9 @@ test("claw db uses the same remote database service for built-ins and magic cust
   ], {
     cwd: path.resolve(process.cwd(), ".."),
   });
-  const createdLeadPayload = JSON.parse(createdLead.stdout) as { title: string; metadata?: { website?: string } };
-  assert.equal(createdLeadPayload.title, "Ada");
-  assert.equal(createdLeadPayload.metadata?.website, "https://ada.dev");
+  const createdProspectPayload = JSON.parse(createdLead.stdout) as { title: string; metadata?: { website?: string } };
+  assert.equal(createdProspectPayload.title, "Ada");
+  assert.equal(createdProspectPayload.metadata?.website, "https://ada.dev");
 
   const listedTasks = await execFileAsync("node", [
     clawBin,
@@ -210,15 +210,15 @@ test("claw db uses the same remote database service for built-ins and magic cust
     "--namespace",
     "main",
     "--collection",
-    "leads",
+    "prospects",
     "--json",
   ], {
     cwd: path.resolve(process.cwd(), ".."),
   });
-  const listedLeadsPayload = JSON.parse(listedLeads.stdout) as { total: number; items: Array<{ title: string; metadata?: { website?: string } }> };
-  assert.equal(listedLeadsPayload.total, 1);
-  assert.equal(listedLeadsPayload.items[0]?.title, "Ada");
-  assert.equal(listedLeadsPayload.items[0]?.metadata?.website, "https://ada.dev");
+  const listedProspectsPayload = JSON.parse(listedLeads.stdout) as { total: number; items: Array<{ title: string; metadata?: { website?: string } }> };
+  assert.equal(listedProspectsPayload.total, 1);
+  assert.equal(listedProspectsPayload.items[0]?.title, "Ada");
+  assert.equal(listedProspectsPayload.items[0]?.metadata?.website, "https://ada.dev");
 });
 
 test("claw db remote human mode shows local-first style guidance, implicit create, and schema", async () => {
@@ -256,7 +256,7 @@ test("claw db remote human mode shows local-first style guidance, implicit creat
   const createdLead = await execFileAsync("node", [
     clawBin,
     "db",
-    "leads",
+    "prospects",
     "--url",
     server.baseUrl,
     "--token",
@@ -266,14 +266,14 @@ test("claw db remote human mode shows local-first style guidance, implicit creat
   ], {
     cwd: path.resolve(process.cwd(), ".."),
   });
-  assert.match(createdLead.stderr, /Created collection "leads"/);
+  assert.match(createdLead.stderr, /Created collection "prospects"/);
   assert.match(createdLead.stderr, /Mapped "name" to "title"/);
-  assert.match(createdLead.stdout, /Created lead \S+ "Ada"/);
+  assert.match(createdLead.stdout, /Created prospect \S+ "Ada"/);
 
   const schema = await execFileAsync("node", [
     clawBin,
     "db",
-    "leads",
+    "prospects",
     "schema",
     "--url",
     server.baseUrl,
@@ -285,6 +285,6 @@ test("claw db remote human mode shows local-first style guidance, implicit creat
   });
   const schemaPayload = JSON.parse(schema.stdout) as { exists: boolean; collection: { name: string; fields: Array<{ name: string }> } };
   assert.equal(schemaPayload.exists, true);
-  assert.equal(schemaPayload.collection.name, "leads");
+  assert.equal(schemaPayload.collection.name, "prospects");
   assert.equal(schemaPayload.collection.fields.some((field) => field.name === "title"), true);
 });
