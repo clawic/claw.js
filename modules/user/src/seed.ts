@@ -46,13 +46,13 @@ export function seedUser(workspace: string, userId: string): SeedReport[] {
     db.pragma("foreign_keys = OFF");
     try {
       if (source.id === "relay") seedRelay(db, userId, email, now, reports);
-      else if (source.id === "execution-plane") seedExecutionPlane(db, userId, email, now, reports);
+      else if (source.id === "execution") seedExecutionPlane(db, userId, email, now, reports);
       else if (source.id === "notify") seedNotify(db, userId, now, reports);
       else if (source.id === "feed") seedFeed(db, userId, now, reports);
       else if (source.id === "wiki") seedWiki(db, userId, now, reports);
       else if (source.id === "content") seedContent(db, userId, nowIso, reports);
       else if (source.id === "erp") seedErp(db, userId, now, reports);
-      else if (source.id === "delegation-plane") seedDelegationPlane(db, userId, now, reports);
+      else if (source.id === "delegation") seedDelegationPlane(db, userId, now, reports);
     } finally {
       db.close();
     }
@@ -151,16 +151,16 @@ function seedExecutionPlane(db: Database.Database, userId: string, email: string
   const tx = db.transaction(() => {
     if (tableExists(db, "tenants")) {
       safeRun(db, "INSERT OR REPLACE INTO tenants (id, name, created_at) VALUES (?, ?, ?)", [TENANT_ID, TENANT_NAME, now]);
-      recordRows(reports, "execution-plane", "tenants", 1);
+      recordRows(reports, "execution", "tenants", 1);
     }
     if (tableExists(db, "users")) {
       safeRun(db, "INSERT OR REPLACE INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)", [userId, email, PASSWORD_HASH, now]);
-      recordRows(reports, "execution-plane", "users", 1);
+      recordRows(reports, "execution", "users", 1);
     }
     if (tableExists(db, "memberships")) {
       safeRun(db, "DELETE FROM memberships WHERE user_id = ?", [userId]);
       safeRun(db, "INSERT INTO memberships (user_id, tenant_id, role, scopes_json) VALUES (?, ?, ?, ?)", [userId, TENANT_ID, "owner", JSON.stringify(["*"])]);
-      recordRows(reports, "execution-plane", "memberships", 1);
+      recordRows(reports, "execution", "memberships", 1);
     }
     const projectId = `project-${userId}-demo`;
     const repoId = `repo-${userId}-demo`;
@@ -168,15 +168,15 @@ function seedExecutionPlane(db: Database.Database, userId: string, email: string
     const revisionId = `rev-${userId}-001`;
     if (tableExists(db, "projects")) {
       safeRun(db, "INSERT OR REPLACE INTO projects (id, tenant_id, name, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", [projectId, TENANT_ID, "Demo Project", "Synthetic project for the user dashboard demo", now, now]);
-      recordRows(reports, "execution-plane", "projects", 1);
+      recordRows(reports, "execution", "projects", 1);
     }
     if (tableExists(db, "repositories")) {
       safeRun(db, "INSERT OR REPLACE INTO repositories (id, tenant_id, project_id, name, remote_url, default_branch, secret_ref, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", [repoId, TENANT_ID, projectId, "demo-repo", "https://example.local/test/demo.git", "main", `secret-${userId}-git`, now, now]);
-      recordRows(reports, "execution-plane", "repositories", 1);
+      recordRows(reports, "execution", "repositories", 1);
     }
     if (tableExists(db, "code_assets")) {
       safeRun(db, "INSERT OR REPLACE INTO code_assets (id, tenant_id, project_id, repository_id, name, kind, path, runtime, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [assetId, TENANT_ID, projectId, repoId, "hello.ts", "script", "src/hello.ts", "node20", now, now]);
-      recordRows(reports, "execution-plane", "code_assets", 1);
+      recordRows(reports, "execution", "code_assets", 1);
     }
     if (tableExists(db, "asset_revisions")) {
       safeRun(db, "DELETE FROM asset_revisions WHERE created_by = ?", [userId]);
@@ -189,7 +189,7 @@ function seedExecutionPlane(db: Database.Database, userId: string, email: string
         );
         if (r === "ok") inserted += 1;
       }
-      recordRows(reports, "execution-plane", "asset_revisions", inserted);
+      recordRows(reports, "execution", "asset_revisions", inserted);
     }
     if (tableExists(db, "runs")) {
       safeRun(db, "DELETE FROM runs WHERE worker_id = ?", [userId]);
@@ -202,13 +202,13 @@ function seedExecutionPlane(db: Database.Database, userId: string, email: string
         );
         if (r === "ok") inserted += 1;
       }
-      recordRows(reports, "execution-plane", "runs", inserted);
+      recordRows(reports, "execution", "runs", inserted);
     }
   });
   try {
     tx();
   } catch (err) {
-    recordError(reports, "execution-plane", "transaction", err instanceof Error ? err.message : String(err));
+    recordError(reports, "execution", "transaction", err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -308,7 +308,7 @@ function seedErp(db: Database.Database, userId: string, now: number, reports: Se
 
 function seedDelegationPlane(db: Database.Database, userId: string, now: number, reports: SeedReport[]): void {
   if (!tableExists(db, "delegation_graphs")) return;
-  recordSkip(reports, "delegation-plane", "delegation_graphs", "skipped (heavier schema, seed not implemented)");
+  recordSkip(reports, "delegation", "delegation_graphs", "skipped (heavier schema, seed not implemented)");
 }
 
 function seedMemory(workspace: string, userId: string, reports: SeedReport[]): void {

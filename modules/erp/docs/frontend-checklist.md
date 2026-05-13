@@ -1,12 +1,12 @@
 # Frontend Checklist
 
-This document is the implementation contract for the future SPA in `erp/ui/`.
+This document is the implementation contract for the future SPA in `modules/erp/ui/`.
 The frontend must not infer business rules from database shapes. It consumes:
 
 - `/v1/app/*` for read models
 - `/v1/*` for commands and mutations
-- `erp/docs/api-openapi.json` for route inventory
-- `erp/docs/fixtures/*.json` for frozen payload references
+- `modules/erp/docs/api-openapi.json` for route inventory
+- `modules/erp/docs/fixtures/*.json` for frozen payload references
 
 ## 1. Global Shell
 

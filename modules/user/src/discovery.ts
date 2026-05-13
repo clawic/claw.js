@@ -49,12 +49,12 @@ export function discoverSources(workspace: string): SourceLocation[] {
       ].filter(Boolean) as string[],
     },
     {
-      id: "execution-plane",
-      label: "Execution Plane",
+      id: "execution",
+      label: "Execution",
       kind: "sqlite",
       candidates: [
         process.env.EXECUTION_PLANE_DB_FILE,
-        path.join(workspace, "execution-plane", ".data", "infra.sqlite"),
+        path.join(workspace, "execution", ".data", "infra.sqlite"),
         path.join(dataDir, "infra.sqlite"),
       ].filter(Boolean) as string[],
     },
@@ -106,8 +106,8 @@ export function discoverSources(workspace: string): SourceLocation[] {
       ].filter(Boolean) as string[],
     },
     {
-      id: "delegation-plane",
-      label: "Delegation Plane",
+      id: "delegation",
+      label: "Delegation",
       kind: "sqlite",
       candidates: [
         process.env.DELEGATION_PLANE_DATABASE_FILE,

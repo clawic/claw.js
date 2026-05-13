@@ -79,7 +79,7 @@ const TABLE_SPECS: Record<string, Array<{
       deletable: true,
     },
   ],
-  "execution-plane": [
+  "execution": [
     {
       table: "users",
       primaryKey: "id",
@@ -192,7 +192,7 @@ const TABLE_SPECS: Record<string, Array<{
       writableFields: ["display_name", "employee_number"],
     },
   ],
-  "delegation-plane": [
+  "delegation": [
     {
       table: "delegation_graphs",
       primaryKey: "rowid",

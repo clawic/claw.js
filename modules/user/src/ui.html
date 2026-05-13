@@ -555,13 +555,13 @@ const WRITABLE = {
   "relay/users": ["email", "role"],
   "relay/memberships": ["scopes_json"],
   "relay/devices": ["label", "platform"],
-  "execution-plane/users": ["email"],
-  "execution-plane/memberships": ["scopes_json", "role"],
-  "execution-plane/projects": ["name", "description"],
+  "execution/users": ["email"],
+  "execution/memberships": ["scopes_json", "role"],
+  "execution/projects": ["name", "description"],
   "notify/device_installations": ["device_name", "platform"],
   "notify/user_preferences": ["critical_only", "quiet_hours_json"],
   "content/entries": ["title", "summary", "status"],
-  "erp/employees": ["display_name", "employee_number"],
+  "modules/erp/employees": ["display_name", "employee_number"],
 };
 const DELETABLE = new Set([
   "relay/refresh_tokens",
