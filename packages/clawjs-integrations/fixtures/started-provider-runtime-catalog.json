@@ -32530,6 +32530,433 @@
           ]
         },
         {
+          "id": "stripe.action.list-application-fees",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Application Fees",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "charge",
+              "type": "string",
+              "optional": true,
+              "default": "ch_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-application-fee",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Application Fee",
+          "fields": [
+            {
+              "name": "applicationFeeId",
+              "type": "string",
+              "optional": false,
+              "default": "fee_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.refund-application-fee",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Refund Application Fee",
+          "fields": [
+            {
+              "name": "applicationFeeId",
+              "type": "string",
+              "optional": false,
+              "default": "fee_sample"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 500
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-application-fee-refunds",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Application Fee Refunds",
+          "fields": [
+            {
+              "name": "applicationFeeId",
+              "type": "string",
+              "optional": false,
+              "default": "fee_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-application-fee-refund",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Application Fee Refund",
+          "fields": [
+            {
+              "name": "applicationFeeId",
+              "type": "string",
+              "optional": false,
+              "default": "fee_sample"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 500
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-application-fee-refund",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Application Fee Refund",
+          "fields": [
+            {
+              "name": "applicationFeeId",
+              "type": "string",
+              "optional": false,
+              "default": "fee_sample"
+            },
+            {
+              "name": "refundId",
+              "type": "string",
+              "optional": false,
+              "default": "fr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-application-fee-refund",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Application Fee Refund",
+          "fields": [
+            {
+              "name": "applicationFeeId",
+              "type": "string",
+              "optional": false,
+              "default": "fee_sample"
+            },
+            {
+              "name": "refundId",
+              "type": "string",
+              "optional": false,
+              "default": "fr_sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-topups",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Topups",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 1200
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "optional": true,
+              "default": "succeeded"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-topup",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Topup",
+          "fields": [
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": false,
+              "default": 1200
+            },
+            {
+              "name": "currency",
+              "type": "string",
+              "optional": false,
+              "default": "usd"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Sample topup"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "optional": true,
+              "default": "src_sample"
+            },
+            {
+              "name": "statement_descriptor",
+              "type": "string",
+              "optional": true,
+              "default": "Sample"
+            },
+            {
+              "name": "transfer_group",
+              "type": "string",
+              "optional": true,
+              "default": "group_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-topup",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Topup",
+          "fields": [
+            {
+              "name": "topup",
+              "type": "string",
+              "optional": false,
+              "default": "tu_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-topup",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Topup",
+          "fields": [
+            {
+              "name": "topup",
+              "type": "string",
+              "optional": false,
+              "default": "tu_sample"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Updated topup"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.cancel-topup",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Cancel Topup",
+          "fields": [
+            {
+              "name": "topup",
+              "type": "string",
+              "optional": false,
+              "default": "tu_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-reviews",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Reviews",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-review",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Review",
+          "fields": [
+            {
+              "name": "review",
+              "type": "string",
+              "optional": false,
+              "default": "prv_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.approve-review",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Approve Review",
+          "fields": [
+            {
+              "name": "review",
+              "type": "string",
+              "optional": false,
+              "default": "prv_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-files",
           "appId": "stripe",
           "kind": "action",

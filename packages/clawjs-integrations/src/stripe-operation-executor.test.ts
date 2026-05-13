@@ -476,6 +476,57 @@ describe("stripe operation runtime", () => {
         requiredPaths: ["id", "object"],
       },
     });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-application-fee-refund"), {
+      applicationFeeId: "fee_sample",
+      amount: 500,
+      metadata: { order_id: "sample" },
+    }), {
+      method: "POST",
+      endpoint: "application_fees/fee_sample/refunds",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        amount: 500,
+        metadata: { order_id: "sample" },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-topup"), {
+      amount: 1200,
+      currency: "usd",
+      description: "Sample topup",
+      metadata: { order_id: "sample" },
+      source: "src_sample",
+      statement_descriptor: "Sample",
+      transfer_group: "group_sample",
+    }), {
+      method: "POST",
+      endpoint: "topups",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        amount: 1200,
+        currency: "usd",
+        description: "Sample topup",
+        metadata: { order_id: "sample" },
+        source: "src_sample",
+        statement_descriptor: "Sample",
+        transfer_group: "group_sample",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
   });
 
   it("covers Stripe payment operations with operation-scoped offline fixtures", async () => {
