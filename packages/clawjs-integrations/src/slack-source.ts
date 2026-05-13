@@ -5,12 +5,32 @@ import type {
   ConnectorOperationDefinition,
 } from "./types.ts";
 
-export type SlackSourceOperation =
-  | "event"
-  | "message"
-  | "app-mention"
-  | "reaction-added"
-  | "file-shared";
+export const SLACK_SOURCE_OPERATION_SLUGS = [
+  "event",
+  "message",
+  "app-mention",
+  "reaction-added",
+  "reaction-removed",
+  "file-shared",
+  "file-created",
+  "file-deleted",
+  "member-joined-channel",
+  "member-left-channel",
+  "channel-created",
+  "channel-archive",
+  "channel-unarchive",
+  "app-home-opened",
+  "team-join",
+  "tokens-revoked",
+] as const;
+
+export type SlackSourceOperation = typeof SLACK_SOURCE_OPERATION_SLUGS[number];
+
+const SLACK_SOURCE_OPERATION_SET = new Set<string>(SLACK_SOURCE_OPERATION_SLUGS);
+const SLACK_SOURCE_ALIASES: Record<string, SlackSourceOperation> = {
+  "event-callback": "event",
+  "new-message": "message",
+};
 
 export function isSlackSourceOperationSupported(operationId: string): boolean {
   return slackSourceOperation(operationId) !== null;
@@ -31,10 +51,7 @@ export function buildSlackSourcePlan(operation: ConnectorOperationDefinition): C
 
 function slackSourceOperation(operationId: string): SlackSourceOperation | null {
   const slug = operationId.split(".").at(-1);
-  if (slug === "event" || slug === "event-callback") return "event";
-  if (slug === "message" || slug === "new-message") return "message";
-  if (slug === "app-mention") return "app-mention";
-  if (slug === "reaction-added") return "reaction-added";
-  if (slug === "file-shared") return "file-shared";
+  const resolved = slug ? SLACK_SOURCE_ALIASES[slug] ?? slug : null;
+  if (resolved && SLACK_SOURCE_OPERATION_SET.has(resolved)) return resolved as SlackSourceOperation;
   return null;
 }

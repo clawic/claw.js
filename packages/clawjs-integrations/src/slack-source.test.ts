@@ -11,15 +11,10 @@ import {
 } from "./runtime-webhook.ts";
 import {
   buildSlackSourcePlan,
+  SLACK_SOURCE_OPERATION_SLUGS,
 } from "./slack-source.ts";
 
-const SLACK_SOURCE_OPERATIONS = [
-  source("slack.source.event", "Event"),
-  source("slack.source.message", "Message"),
-  source("slack.source.app-mention", "App Mention"),
-  source("slack.source.reaction-added", "Reaction Added"),
-  source("slack.source.file-shared", "File Shared"),
-];
+const SLACK_SOURCE_OPERATIONS = SLACK_SOURCE_OPERATION_SLUGS.map((slug) => source(`slack.source.${slug}`, titleize(slug)));
 
 const SLACK_SOURCE_CATALOG = normalizeConnectorCatalog({
   version: 1,
@@ -111,4 +106,8 @@ function source(id: string, name: string) {
       usesServiceDb: false,
     },
   };
+}
+
+function titleize(slug: string): string {
+  return slug.split("-").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
 }
