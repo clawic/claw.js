@@ -90,6 +90,8 @@ export type DiscordRuntimeOperation =
   | "update-auto-moderation-rule"
   | "delete-auto-moderation-rule"
   | "list-guild-invites"
+  | "list-channel-invites"
+  | "create-channel-invite"
   | "list-guild-scheduled-events"
   | "create-guild-scheduled-event"
   | "get-guild-scheduled-event"
@@ -366,6 +368,10 @@ export function buildDiscordOperationRequest(
       return deletePlan(`guilds/${guildId(values)}/auto-moderation/rules/${autoModerationRuleId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "list-guild-invites":
       return getPlan(`guilds/${guildId(values)}/invites`, auth, headers, { type: "array" });
+    case "list-channel-invites":
+      return getPlan(`channels/${channelId(values)}/invites`, auth, headers, { type: "array" });
+    case "create-channel-invite":
+      return bodyPlan("POST", `channels/${channelId(values)}/invites`, auth, auditHeaders(headers, values), channelInviteBody(values), { type: "object", requiredPaths: ["code"] });
     case "list-guild-scheduled-events":
       return getPlan(`guilds/${guildId(values)}/scheduled-events`, auth, headers, { type: "array" }, removeEmptyValues({
         with_user_count: values.withUserCount,
@@ -549,6 +555,8 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "update-auto-moderation-rule",
   "delete-auto-moderation-rule",
   "list-guild-invites",
+  "list-channel-invites",
+  "create-channel-invite",
   "list-guild-scheduled-events",
   "create-guild-scheduled-event",
   "get-guild-scheduled-event",
@@ -798,6 +806,19 @@ function webhookBody(values: Record<string, IntegrationJson>): Record<string, In
     name: optionalString(values.name),
     avatar: optionalString(values.avatar),
     channel_id: optionalString(values.targetChannelId),
+  });
+}
+
+function channelInviteBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    max_age: optionalNumber(values.maxAge),
+    max_uses: optionalNumber(values.maxUses),
+    temporary: values.temporary,
+    unique: values.unique,
+    target_type: optionalNumber(values.targetType),
+    target_user_id: optionalString(values.targetUserId),
+    target_application_id: optionalString(values.targetApplicationId),
+    role_ids: optionalJsonArray(values.roleIds),
   });
 }
 
