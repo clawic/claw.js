@@ -60,6 +60,7 @@
     "test:pack": "node ./scripts/pack-smoke.mjs",
     "privacy:check": "node ./scripts/privacy-check.mjs",
     "privacy:test": "vitest run --config vitest.config.ts scripts/privacy-check.test.mjs",
+    "test:policy": "node ./scripts/verify-testing-policy.mjs",
     "test:e2e": "npm run build:packages && rm -rf examples/showcase/.next && NEXT_DIST_DIR=.next-e2e npm --prefix examples/showcase run build && node ./scripts/run-e2e.mjs",
     "test:e2e:ci": "npm run build:packages && rm -rf examples/showcase/.next && NEXT_DIST_DIR=.next-e2e npm --prefix examples/showcase run build && CI=1 node ./scripts/run-e2e.mjs",
     "test:e2e:smoke-real": "npm run build:packages && rm -rf examples/showcase/.next && NEXT_DIST_DIR=.next-e2e npm --prefix examples/showcase run build && playwright test --grep @smoke-real",
@@ -120,6 +121,8 @@
     "test:fast": "node ./scripts/test-lane.mjs fast",
     "test:changed": "node ./scripts/test-lane.mjs changed",
     "test:integration": "node ./scripts/test-lane.mjs integration",
+    "test:host": "node ./scripts/test-lane.mjs host",
+    "test:device": "node ./scripts/test-lane.mjs device",
     "test:live": "node ./scripts/test-lane.mjs live",
     "test:release": "node ./scripts/test-lane.mjs release",
     "test:coverage": "vitest run --config vitest.config.ts --coverage"

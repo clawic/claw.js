@@ -41,6 +41,7 @@ function vitest(args = []) {
 function fast(args = []) {
   npmRun("privacy:check");
   npmRun("privacy:test");
+  npmRun("test:policy");
   vitest(args);
   npmRun("test:types");
 }
@@ -93,6 +94,22 @@ function live() {
   npmRun("test:e2e:smoke-real", extraArgs);
 }
 
+function host() {
+  if (process.env.CLAW_HOST_TEST_COMMAND) {
+    run("bash", ["-lc", process.env.CLAW_HOST_TEST_COMMAND]);
+    return;
+  }
+  console.error("EXTERNAL PENDING host lane: set CLAW_HOST_TEST_COMMAND for signed-host validation.");
+}
+
+function device() {
+  if (process.env.CLAW_DEVICE_TEST_COMMAND) {
+    run("bash", ["-lc", process.env.CLAW_DEVICE_TEST_COMMAND]);
+    return;
+  }
+  console.error("EXTERNAL PENDING device lane: set CLAW_DEVICE_TEST_COMMAND for device validation.");
+}
+
 function release() {
   integration();
   npmRun("test:ts");
@@ -116,6 +133,8 @@ function release() {
   ]) {
     npmRun(script);
   }
+  host();
+  device();
 }
 
 switch (lane) {
@@ -130,6 +149,12 @@ switch (lane) {
     break;
   case "e2e":
     npmRun("test:e2e", extraArgs);
+    break;
+  case "host":
+    host();
+    break;
+  case "device":
+    device();
     break;
   case "live":
     live();
