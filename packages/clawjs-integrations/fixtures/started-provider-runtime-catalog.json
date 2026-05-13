@@ -5690,6 +5690,11 @@
               "name": "name",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": [
@@ -5728,6 +5733,11 @@
               "type": "string",
               "optional": true,
               "default": "sample"
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": [
@@ -5744,6 +5754,11 @@
               "name": "webhookId",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": [
