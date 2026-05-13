@@ -74,6 +74,7 @@ import {
 import {
   buildStripeOperationRequest,
   isStripeActionOperationSupported,
+  STRIPE_ACTION_SLUGS,
 } from "./stripe-operation-executor.ts";
 import {
   buildStripeSourcePlan,
@@ -804,46 +805,7 @@ const STRIPE_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/stripe-operation-executor.test.ts",
 ];
 
-const STRIPE_ACTION_FIXTURE_NAMES = [
-  "list-customers",
-  "get-customer",
-  "create-customer",
-  "list-payment-intents",
-  "get-payment-intent",
-  "create-payment-intent",
-  "list-products",
-  "get-product",
-  "create-product",
-  "update-product",
-  "delete-product",
-  "search-products",
-  "list-prices",
-  "get-price",
-  "create-price",
-  "update-price",
-  "search-prices",
-  "list-subscriptions",
-  "get-subscription",
-  "create-subscription",
-  "update-subscription",
-  "cancel-subscription",
-  "resume-subscription",
-  "search-subscriptions",
-  "list-checkout-sessions",
-  "get-checkout-session",
-  "create-checkout-session",
-  "expire-checkout-session",
-  "list-checkout-session-line-items",
-  "list-refunds",
-  "get-refund",
-  "create-refund",
-  "update-refund",
-  "list-charges",
-  "get-charge",
-  "capture-charge",
-] as const;
-
-const STRIPE_ACTION_FIXTURES: ConnectorRuntimeFixture[] = STRIPE_ACTION_FIXTURE_NAMES.flatMap((name) => [
+const STRIPE_ACTION_FIXTURES: ConnectorRuntimeFixture[] = STRIPE_ACTION_SLUGS.flatMap((name) => [
   {
     kind: "request" as const,
     operationId: `stripe.action.${name}`,
