@@ -526,6 +526,165 @@
           ]
         },
         {
+          "id": "discord.action.list-entitlements",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Entitlements",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "skuIds",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "sample"
+              ]
+            },
+            {
+              "name": "before",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "excludeEnded",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "excludeDeleted",
+              "type": "boolean",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-entitlement",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Entitlement",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "entitlementId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.consume-entitlement",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Consume Entitlement",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "entitlementId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.create-test-entitlement",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Test Entitlement",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "skuId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "ownerId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "ownerType",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1,
+              "max": 2
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-test-entitlement",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Test Entitlement",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "entitlementId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.get-guild-audit-log",
           "appId": "discord",
           "kind": "action",
