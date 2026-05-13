@@ -20,6 +20,13 @@ export type DiscordRuntimeOperation =
   | "sync-guild-template"
   | "update-guild-template"
   | "delete-guild-template"
+  | "send-soundboard-sound"
+  | "list-default-soundboard-sounds"
+  | "list-guild-soundboard-sounds"
+  | "get-guild-soundboard-sound"
+  | "create-guild-soundboard-sound"
+  | "update-guild-soundboard-sound"
+  | "delete-guild-soundboard-sound"
   | "list-guild-emojis"
   | "get-guild-emoji"
   | "create-guild-emoji"
@@ -169,6 +176,20 @@ export function buildDiscordOperationRequest(
       return bodyPlan("PATCH", `guilds/${guildId(values)}/templates/${templateCode(values)}`, auth, headers, guildTemplateBody(values, false), { type: "object", requiredPaths: ["code", "name", "source_guild_id"] });
     case "delete-guild-template":
       return deletePlan(`guilds/${guildId(values)}/templates/${templateCode(values)}`, auth, headers, { type: "object", requiredPaths: ["code", "name", "source_guild_id"] });
+    case "send-soundboard-sound":
+      return bodyPlan("POST", `channels/${channelId(values)}/send-soundboard-sound`, auth, headers, sendSoundboardSoundBody(values), { type: "object" });
+    case "list-default-soundboard-sounds":
+      return getPlan("soundboard-default-sounds", auth, headers, { type: "array" });
+    case "list-guild-soundboard-sounds":
+      return getPlan(`guilds/${guildId(values)}/soundboard-sounds`, auth, headers, { type: "object", requiredPaths: ["items"] });
+    case "get-guild-soundboard-sound":
+      return getPlan(`guilds/${guildId(values)}/soundboard-sounds/${soundboardSoundId(values)}`, auth, headers, { type: "object", requiredPaths: ["sound_id", "name"] });
+    case "create-guild-soundboard-sound":
+      return bodyPlan("POST", `guilds/${guildId(values)}/soundboard-sounds`, auth, auditHeaders(headers, values), soundboardSoundBody(values, true), { type: "object", requiredPaths: ["sound_id", "name"] });
+    case "update-guild-soundboard-sound":
+      return bodyPlan("PATCH", `guilds/${guildId(values)}/soundboard-sounds/${soundboardSoundId(values)}`, auth, auditHeaders(headers, values), soundboardSoundBody(values, false), { type: "object", requiredPaths: ["sound_id", "name"] });
+    case "delete-guild-soundboard-sound":
+      return deletePlan(`guilds/${guildId(values)}/soundboard-sounds/${soundboardSoundId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "list-guild-emojis":
       return getPlan(`guilds/${guildId(values)}/emojis`, auth, headers, { type: "array" });
     case "get-guild-emoji":
@@ -435,6 +456,13 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "sync-guild-template",
   "update-guild-template",
   "delete-guild-template",
+  "send-soundboard-sound",
+  "list-default-soundboard-sounds",
+  "list-guild-soundboard-sounds",
+  "get-guild-soundboard-sound",
+  "create-guild-soundboard-sound",
+  "update-guild-soundboard-sound",
+  "delete-guild-soundboard-sound",
   "list-guild-emojis",
   "get-guild-emoji",
   "create-guild-emoji",
@@ -642,6 +670,24 @@ function guildTemplateBody(values: Record<string, IntegrationJson>, requireCreat
   });
 }
 
+function sendSoundboardSoundBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    sound_id: requiredString(firstValue(values.soundboardSoundId, values.soundId, values.soundboardSound), "soundboardSoundId"),
+    source_guild_id: optionalString(values.sourceGuildId),
+  });
+}
+
+function soundboardSoundBody(values: Record<string, IntegrationJson>, requireCreateFields: boolean): Record<string, IntegrationJson> {
+  const emojiId = optionalString(values.emojiId);
+  return removeEmptyValues({
+    name: requireCreateFields ? requiredString(values.name, "name") : optionalString(values.name),
+    sound: requireCreateFields ? requiredString(values.sound, "sound") : undefined,
+    volume: optionalNumber(values.volume),
+    emoji_id: emojiId,
+    emoji_name: emojiId ? undefined : optionalString(values.emojiName),
+  });
+}
+
 function emojiBody(
   values: Record<string, IntegrationJson>,
   requireCreateFields: boolean,
@@ -830,6 +876,10 @@ function stickerPackId(values: Record<string, IntegrationJson>): string {
 
 function templateCode(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.templateCode, values.template), "templateCode"));
+}
+
+function soundboardSoundId(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.soundboardSoundId, values.soundId, values.soundboardSound), "soundboardSoundId"));
 }
 
 function guildScheduledEventId(values: Record<string, IntegrationJson>): string {

@@ -21,6 +21,12 @@ export type DiscordSourceOperation =
   | "guild-scheduled-event-create"
   | "guild-scheduled-event-update"
   | "guild-scheduled-event-delete"
+  | "guild-soundboard-sound-create"
+  | "guild-soundboard-sound-update"
+  | "guild-soundboard-sound-delete"
+  | "guild-soundboard-sounds-update"
+  | "soundboard-sounds"
+  | "voice-channel-effect-send"
   | "stage-instance-create"
   | "stage-instance-update"
   | "stage-instance-delete"
@@ -44,6 +50,12 @@ const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "guild-scheduled-event-create",
   "guild-scheduled-event-update",
   "guild-scheduled-event-delete",
+  "guild-soundboard-sound-create",
+  "guild-soundboard-sound-update",
+  "guild-soundboard-sound-delete",
+  "guild-soundboard-sounds-update",
+  "soundboard-sounds",
+  "voice-channel-effect-send",
   "stage-instance-create",
   "stage-instance-update",
   "stage-instance-delete",
