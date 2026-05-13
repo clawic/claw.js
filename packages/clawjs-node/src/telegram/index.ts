@@ -221,9 +221,10 @@ export async function downloadTelegramFile(
   timeoutMs = 30_000,
 ): Promise<Buffer> {
   if (resolveSecretsBackend(env) === "secrets") {
-    const baseUrl = (env?.CLAW_SECRETS_BASE_URL ?? process.env.CLAW_SECRETS_BASE_URL ?? env?.SECRETS_BASE_URL ?? process.env.SECRETS_BASE_URL)?.trim()?.replace(/\/+$/, "");
-    const token = (env?.CLAW_SECRETS_TOKEN ?? process.env.CLAW_SECRETS_TOKEN ?? env?.SECRETS_TOKEN ?? process.env.SECRETS_TOKEN)?.trim();
-    const tenantId = (env?.CLAW_SECRETS_TENANT_ID ?? process.env.CLAW_SECRETS_TENANT_ID ?? env?.SECRETS_TENANT_ID ?? process.env.SECRETS_TENANT_ID)?.trim();
+    const secretsEnv = env ?? process.env;
+    const baseUrl = secretsEnv.CLAW_SECRETS_BASE_URL?.trim()?.replace(/\/+$/, "");
+    const token = secretsEnv.CLAW_SECRETS_TOKEN?.trim();
+    const tenantId = secretsEnv.CLAW_SECRETS_TENANT_ID?.trim();
     if (!baseUrl || !token || !tenantId) {
       throw new Error("CLAW_SECRETS_BASE_URL, CLAW_SECRETS_TOKEN, and CLAW_SECRETS_TENANT_ID are required to download Telegram files.");
     }

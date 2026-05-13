@@ -282,9 +282,9 @@ test("secrets backend is used directly for list/types/capabilities/actions/lease
     const runner = new NodeProcessHost();
     const env = {
       ...process.env,
-      SECRETS_BASE_URL: secrets.baseUrl,
-      SECRETS_TOKEN: "secrets-token",
-      SECRETS_TENANT_ID: "demo-tenant",
+      CLAW_SECRETS_BASE_URL: secrets.baseUrl,
+      CLAW_SECRETS_TOKEN: "secrets-token",
+      CLAW_SECRETS_TENANT_ID: "demo-tenant",
     };
 
     const listed = await listSecrets(runner, { env });
@@ -313,9 +313,9 @@ test("secrets backend brokers generic HTTP and typed actions without exposing pl
     const runner = new NodeProcessHost();
     const env = {
       ...process.env,
-      SECRETS_BASE_URL: secrets.baseUrl,
-      SECRETS_TOKEN: "secrets-token",
-      SECRETS_TENANT_ID: "demo-tenant",
+      CLAW_SECRETS_BASE_URL: secrets.baseUrl,
+      CLAW_SECRETS_TOKEN: "secrets-token",
+      CLAW_SECRETS_TENANT_ID: "demo-tenant",
     };
 
     const generic = await brokerSecretHttp(runner, {

@@ -4,7 +4,7 @@ import path from "path";
 import type { CommandRunner } from "../runtime/contracts.ts";
 import { buildSecretsRunnerEnv, resolveSecretsBackend, resolveSecretsCommandSpec } from "./command.ts";
 
-export const DEFAULT_SECRETS_APP_PATH = path.join(os.homedir(), "Applications", "ClawJS Secrets.app");
+export const DEFAULT_CLAW_SECRETS_APP_PATH = path.join(os.homedir(), "Applications", "Claw Secrets.app");
 
 export interface SecretProxyMetadata {
   name: string;
@@ -180,9 +180,9 @@ function normalizeSecretMetadata(raw: Record<string, unknown>): SecretProxyMetad
 
 function resolveSecretsConfig(env?: NodeJS.ProcessEnv): { baseUrl: string; token: string; tenantId: string } {
   const mergedEnv = buildRunnerEnv(env);
-  const baseUrl = (mergedEnv.CLAW_SECRETS_BASE_URL ?? mergedEnv.SECRETS_BASE_URL)?.trim();
-  const token = (mergedEnv.CLAW_SECRETS_TOKEN ?? mergedEnv.SECRETS_TOKEN)?.trim();
-  const tenantId = (mergedEnv.CLAW_SECRETS_TENANT_ID ?? mergedEnv.SECRETS_TENANT_ID)?.trim();
+  const baseUrl = mergedEnv.CLAW_SECRETS_BASE_URL?.trim();
+  const token = mergedEnv.CLAW_SECRETS_TOKEN?.trim();
+  const tenantId = mergedEnv.CLAW_SECRETS_TENANT_ID?.trim();
   if (!baseUrl || !token || !tenantId) {
     throw new Error("CLAW_SECRETS_BASE_URL, CLAW_SECRETS_TOKEN, and CLAW_SECRETS_TENANT_ID are required for the secrets backend.");
   }
@@ -480,7 +480,7 @@ export async function ensureSecretReference(
     missingHeaderNames,
     mismatched,
     instructions: {
-      openAppPath: DEFAULT_SECRETS_APP_PATH,
+      openAppPath: DEFAULT_CLAW_SECRETS_APP_PATH,
       summary: summarizeEnsureResult(status, requirement.name, missingHosts, missingHeaderNames, mismatched),
     },
   };

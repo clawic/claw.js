@@ -4190,14 +4190,11 @@ async function createCliClaw(
       || process.env.CLAW_SECRETS_BASE_URL
       || process.env.CLAW_SECRETS_TOKEN
       || process.env.CLAW_SECRETS_TENANT_ID
-      || process.env.SECRETS_BASE_URL
-      || process.env.SECRETS_TOKEN
-      || process.env.SECRETS_TENANT_ID
     ) ? {
       backend: (flags["secrets-backend"] || explicitSecretsBackend || process.env.CLAW_SECRETS_BACKEND) as "local_proxy" | "secrets" | undefined,
-      baseUrl: flags["secrets-url"] || process.env.CLAW_SECRETS_BASE_URL || process.env.SECRETS_BASE_URL,
-      credential: flags["secrets-token"] || process.env.CLAW_SECRETS_TOKEN || process.env.SECRETS_TOKEN,
-      tenantId: flags["secrets-tenant-id"] || process.env.CLAW_SECRETS_TENANT_ID || process.env.SECRETS_TENANT_ID,
+      baseUrl: flags["secrets-url"] || process.env.CLAW_SECRETS_BASE_URL,
+      credential: flags["secrets-token"] || process.env.CLAW_SECRETS_TOKEN,
+      tenantId: flags["secrets-tenant-id"] || process.env.CLAW_SECRETS_TENANT_ID,
       sidecarPath: flags["secrets-sidecar"] || process.env.CLAW_SECRETS_SIDECAR_PATH,
     } : undefined,
     templates: {
