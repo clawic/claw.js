@@ -2560,6 +2560,12 @@
               "default": null
             },
             {
+              "name": "files",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
               "name": "flags",
               "type": "integer",
               "optional": true,
@@ -2640,6 +2646,12 @@
             },
             {
               "name": "attachments",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "files",
               "type": "array",
               "optional": true,
               "default": null
