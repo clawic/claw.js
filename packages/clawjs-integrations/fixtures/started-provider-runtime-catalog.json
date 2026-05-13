@@ -3351,6 +3351,147 @@
           ]
         },
         {
+          "id": "discord.action.get-guild-widget-settings",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Widget Settings",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.modify-guild-widget",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Modify Guild Widget",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "enabled",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-guild-widget",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Widget",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-guild-vanity-url",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Vanity URL",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-guild-welcome-screen",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Welcome Screen",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.modify-guild-welcome-screen",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Modify Guild Welcome Screen",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "enabled",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "welcomeChannels",
+              "type": "array",
+              "optional": true,
+              "default": [
+                {
+                  "channel_id": "sample",
+                  "description": "sample"
+                }
+              ]
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.list-auto-moderation-rules",
           "appId": "discord",
           "kind": "action",
