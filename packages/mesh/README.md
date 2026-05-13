@@ -10,27 +10,27 @@ bridge server, and the Fastify mesh HTTP plugin.
 
 ## HTTP API
 
-All routes are mounted under `/mesh/*` via `meshServerPlugin`. Three of them
+All routes are mounted under `/v1/v1/mesh/*` via `meshServerPlugin`. Three of them
 are public (bearer-token guarded), the rest are loopback-only. Audit events
 are emitted for every state-changing call.
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| GET | `/mesh/identity` | `Bearer` | Node identity + endpoints + capabilities. |
-| GET | `/mesh/peers` | loopback | All known peers including revoked. |
-| GET | `/mesh/workspaces` | loopback | Local workspaces published by this node. |
-| POST | `/mesh/link` | loopback | Initiate pairing against a remote peer via `MeshLinkClient`. |
-| POST | `/mesh/pair` | `token` body | Accept a pairing request from a remote peer. |
-| POST | `/mesh/jobs` | encrypted envelope | Receive a job from a known peer. Body is a `SignedEnvelope` (encrypted variant). |
-| POST | `/mesh/remote-jobs` | loopback | Send a job to a peer (stub; concrete dispatch lives in the daemon). |
-| POST | `/mesh/hosts` | loopback | Upsert a host record. Optional `sshSecret` is persisted in `SshSecretStore`. |
-| DELETE | `/mesh/hosts/:id` | loopback | Hard-delete a host (and its endpoints via cascade). |
-| POST | `/mesh/hosts/:id/revoke` | loopback | Mark host as revoked (soft-delete). |
-| POST | `/mesh/hosts/:id/unrevoke` | loopback | Clear revoked flag. |
-| GET | `/mesh/ssh/secrets` | loopback | List secret metadata (no payloads). |
-| DELETE | `/mesh/ssh/secrets/:id` | loopback | Remove a stored SSH secret. |
+| GET | `/v1/mesh/identity` | `Bearer` | Node identity + endpoints + capabilities. |
+| GET | `/v1/mesh/peers` | loopback | All known peers including revoked. |
+| GET | `/v1/mesh/workspaces` | loopback | Local workspaces published by this node. |
+| POST | `/v1/mesh/link` | loopback | Initiate pairing against a remote peer via `MeshLinkClient`. |
+| POST | `/v1/mesh/pair` | `token` body | Accept a pairing request from a remote peer. |
+| POST | `/v1/mesh/jobs` | encrypted envelope | Receive a job from a known peer. Body is a `SignedEnvelope` (encrypted variant). |
+| POST | `/v1/mesh/remote-jobs` | loopback | Send a job to a peer (stub; concrete dispatch lives in the daemon). |
+| POST | `/v1/mesh/hosts` | loopback | Upsert a host record. Optional `sshSecret` is persisted in `SshSecretStore`. |
+| DELETE | `/v1/mesh/hosts/:id` | loopback | Hard-delete a host (and its endpoints via cascade). |
+| POST | `/v1/mesh/hosts/:id/revoke` | loopback | Mark host as revoked (soft-delete). |
+| POST | `/v1/mesh/hosts/:id/unrevoke` | loopback | Clear revoked flag. |
+| GET | `/v1/mesh/ssh/secrets` | loopback | List secret metadata (no payloads). |
+| DELETE | `/v1/mesh/ssh/secrets/:id` | loopback | Remove a stored SSH secret. |
 
-### `POST /mesh/hosts`
+### `POST /v1/mesh/hosts`
 
 Adds or updates a host registration. The request runs on loopback only
 (`127.0.0.1`, `::1`, `::ffff:127.0.0.1`, `localhost`) so it cannot be reached
@@ -83,7 +83,7 @@ The Clawix Swift app should:
 
 1. Collect the form input (kind, displayName, host, port, ssh user, auth
    method, secret value).
-2. POST to `http://127.0.0.1:<httpPort>/mesh/hosts` with the body above.
+2. POST to `http://127.0.0.1:<httpPort>/v1/mesh/hosts` with the body above.
 3. On success, reuse the returned `host.id` in subsequent `ssh.*` bridge
    frames over the WebSocket (`ssh.exec`, `ssh.sftp.*`, `ssh.installBridge`).
 
@@ -99,7 +99,7 @@ multitenant SQLite table. Secrets are never logged. Callers obtain them only
 through explicit `get(id)` and pass them to `@clawjs/ssh-client` via the
 `SecretResolver` interface.
 
-## Capabilities advertised in `/mesh/identity`
+## Capabilities advertised in `/v1/mesh/identity`
 
 Daemons assemble the list dynamically. Known values include `codex`,
 `tcc.computer.screenshot`, `tcc.computer.input.keystroke`,
