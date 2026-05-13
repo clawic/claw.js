@@ -847,6 +847,22 @@ describe("stripe operation runtime", () => {
         requiredPaths: ["id", "object", "deleted"],
       },
     });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.archive-invoice-rendering-template"), {
+      template: "irt_sample",
+    }), {
+      method: "POST",
+      endpoint: "invoice_rendering_templates/irt_sample/archive",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
   });
 
   it("covers Stripe payment operations with operation-scoped offline fixtures", async () => {

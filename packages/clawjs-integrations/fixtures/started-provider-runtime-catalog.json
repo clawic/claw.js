@@ -32504,6 +32504,94 @@
           ]
         },
         {
+          "id": "stripe.action.list-invoice-rendering-templates",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Invoice Rendering Templates",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "optional": true,
+              "default": "active"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-invoice-rendering-template",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Invoice Rendering Template",
+          "fields": [
+            {
+              "name": "template",
+              "type": "string",
+              "optional": false,
+              "default": "irt_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.archive-invoice-rendering-template",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Archive Invoice Rendering Template",
+          "fields": [
+            {
+              "name": "template",
+              "type": "string",
+              "optional": false,
+              "default": "irt_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.unarchive-invoice-rendering-template",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Unarchive Invoice Rendering Template",
+          "fields": [
+            {
+              "name": "template",
+              "type": "string",
+              "optional": false,
+              "default": "irt_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-invoices",
           "appId": "stripe",
           "kind": "action",
