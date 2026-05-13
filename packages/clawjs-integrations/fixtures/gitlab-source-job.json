@@ -1,0 +1,18 @@
+{
+  "object_kind": "job",
+  "object_id": "job-sample",
+  "project": {
+    "id": 1,
+    "path_with_namespace": "group/project"
+  },
+  "object_attributes": {
+    "id": 2,
+    "status": "success",
+    "title": "sample",
+    "ref": "main"
+  },
+  "user": {
+    "id": 3,
+    "username": "sample"
+  }
+}

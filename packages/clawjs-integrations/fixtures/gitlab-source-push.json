@@ -1,0 +1,18 @@
+{
+  "object_kind": "push",
+  "object_id": "push-sample",
+  "project": {
+    "id": 1,
+    "path_with_namespace": "group/project"
+  },
+  "object_attributes": {
+    "id": 2,
+    "status": "opened",
+    "title": "sample",
+    "ref": "main"
+  },
+  "user": {
+    "id": 3,
+    "username": "sample"
+  }
+}
