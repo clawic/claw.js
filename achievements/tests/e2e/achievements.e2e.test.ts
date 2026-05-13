@@ -8,7 +8,7 @@ import { buildAchievementsApp, AchievementsClient } from "@clawjs/achievements";
 
 test("achievements CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "achievements-e2e-"));
-  const dbPath = path.join(tmpDir, "achievements.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildAchievementsApp({

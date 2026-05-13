@@ -27,7 +27,7 @@ export default defineConfig({
       DATABASE_HOST: "127.0.0.1",
       DATABASE_PORT: "4510",
       DATABASE_DATA_DIR: path.join(outputRoot, "data"),
-      DATABASE_DB_PATH: path.join(outputRoot, "data", "database.sqlite"),
+      DATABASE_DB_PATH: path.join(outputRoot, "data", "clawjs.sqlite"),
       DATABASE_FILES_DIR: path.join(outputRoot, "data", "files"),
       DATABASE_JWT_SECRET: "database-playwright-secret",
     },

@@ -8,7 +8,7 @@ import { buildCareerApp, CareerClient } from "@clawjs/career";
 
 test("career CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "career-e2e-"));
-  const dbPath = path.join(tmpDir, "career.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildCareerApp({

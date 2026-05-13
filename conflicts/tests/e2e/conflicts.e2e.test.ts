@@ -8,7 +8,7 @@ import { buildConflictsApp, ConflictsClient } from "@clawjs/conflicts";
 
 test("conflicts CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "conflicts-e2e-"));
-  const dbPath = path.join(tmpDir, "conflicts.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildConflictsApp({

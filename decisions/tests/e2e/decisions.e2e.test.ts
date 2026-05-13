@@ -8,7 +8,7 @@ import { buildDecisionsApp, DecisionsClient } from "@clawjs/decisions";
 
 test("decisions CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "decisions-e2e-"));
-  const dbPath = path.join(tmpDir, "decisions.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildDecisionsApp({

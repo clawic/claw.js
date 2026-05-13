@@ -8,7 +8,7 @@ import { buildCritiquesApp, CritiquesClient } from "@clawjs/critiques";
 
 test("critiques CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "critiques-e2e-"));
-  const dbPath = path.join(tmpDir, "critiques.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildCritiquesApp({

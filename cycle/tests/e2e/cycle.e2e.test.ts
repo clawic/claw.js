@@ -8,7 +8,7 @@ import { buildCycleApp, CycleClient } from "@clawjs/cycle";
 
 test("cycle CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cycle-e2e-"));
-  const dbPath = path.join(tmpDir, "cycle.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildCycleApp({
