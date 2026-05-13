@@ -38680,6 +38680,132 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.list-app-secrets",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List App Secrets",
+          "fields": [
+            {
+              "name": "scope",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "type": "account"
+              }
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-app-secret",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create App Secret",
+          "fields": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "sample_secret"
+            },
+            {
+              "name": "payload",
+              "type": "string",
+              "optional": false,
+              "default": "sample_payload"
+            },
+            {
+              "name": "scope",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "type": "account"
+              }
+            },
+            {
+              "name": "expires_at",
+              "type": "integer",
+              "optional": true,
+              "default": 1893456000
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-app-secret",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete App Secret",
+          "fields": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "sample_secret"
+            },
+            {
+              "name": "scope",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "type": "account"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.find-app-secret",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Find App Secret",
+          "fields": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "sample_secret"
+            },
+            {
+              "name": "scope",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "type": "account"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

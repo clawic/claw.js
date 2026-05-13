@@ -1057,6 +1057,30 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-app-secret"), {
+      name: "sample_secret",
+      payload: "sample_payload",
+      scope: { type: "account" },
+      expires_at: 1893456000,
+    }), {
+      method: "POST",
+      endpoint: "apps/secrets",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        name: "sample_secret",
+        payload: "sample_payload",
+        scope: { type: "account" },
+        expires_at: 1893456000,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-apple-pay-domain"), {
       domain_name: "pay.example.invalid",
     }), {
