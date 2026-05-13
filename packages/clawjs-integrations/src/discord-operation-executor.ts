@@ -586,13 +586,13 @@ export function buildDiscordOperationRequest(
         limit: optionalNumber(values.limit),
       }));
     case "modify-guild-member":
-      return bodyPlan("PATCH", `guilds/${guildId(values)}/members/${userId(values)}`, auth, headers, memberBody(values), { type: "object", requiredPaths: ["user"] });
+      return bodyPlan("PATCH", `guilds/${guildId(values)}/members/${userId(values)}`, auth, auditHeaders(headers, values), memberBody(values), { type: "object", requiredPaths: ["user"] });
     case "modify-current-member":
       return bodyPlan("PATCH", `guilds/${guildId(values)}/members/@me`, auth, auditHeaders(headers, values), currentMemberBody(values), { type: "object", requiredPaths: ["user"] });
     case "modify-current-user-nick":
       return bodyPlan("PATCH", `guilds/${guildId(values)}/members/@me/nick`, auth, auditHeaders(headers, values), currentUserNickBody(values), { type: "object", requiredPaths: ["nick"] });
     case "remove-guild-member":
-      return deletePlan(`guilds/${guildId(values)}/members/${userId(values)}`, auth, headers, { type: "object" });
+      return deletePlan(`guilds/${guildId(values)}/members/${userId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "list-guild-roles":
       return getPlan(`guilds/${guildId(values)}/roles`, auth, headers, { type: "array" });
     case "get-guild-role":
@@ -616,9 +616,9 @@ export function buildDiscordOperationRequest(
     case "delete-guild-role":
       return deletePlan(`guilds/${guildId(values)}/roles/${roleId(values)}`, auth, headers, { type: "object" });
     case "add-guild-member-role":
-      return putPlan(`guilds/${guildId(values)}/members/${userId(values)}/roles/${roleId(values)}`, auth, headers, { type: "object" });
+      return putPlan(`guilds/${guildId(values)}/members/${userId(values)}/roles/${roleId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "remove-guild-member-role":
-      return deletePlan(`guilds/${guildId(values)}/members/${userId(values)}/roles/${roleId(values)}`, auth, headers, { type: "object" });
+      return deletePlan(`guilds/${guildId(values)}/members/${userId(values)}/roles/${roleId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "list-guild-bans":
       return getPlan(`guilds/${guildId(values)}/bans`, auth, headers, { type: "array" }, removeEmptyValues({
         before: optionalString(values.before),
@@ -1514,15 +1514,18 @@ function archivedThreadQuery(values: Record<string, IntegrationJson>): Record<st
 }
 
 function memberBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
-  return removeEmptyValues({
-    nick: optionalString(values.nick),
-    roles: optionalJsonArray(values.roles),
-    mute: values.mute,
-    deaf: values.deaf,
-    channel_id: optionalString(values.voiceChannelId),
-    communication_disabled_until: optionalString(values.communicationDisabledUntil),
-    flags: optionalNumber(values.flags),
-  });
+  const body: Record<string, IntegrationJson> = {};
+  const assign = (key: string, value: IntegrationJson | undefined) => {
+    if (value !== undefined && value !== "") body[key] = value;
+  };
+  assign("nick", optionalNullableStringField(values, "nick"));
+  assign("roles", optionalNullableJsonArrayField(values, "roles"));
+  assign("mute", values.mute);
+  assign("deaf", values.deaf);
+  assign("channel_id", optionalNullableStringField(values, "voiceChannelId", "channelId"));
+  assign("communication_disabled_until", optionalNullableStringField(values, "communicationDisabledUntil"));
+  assign("flags", optionalNullableNumberField(values, "flags"));
+  return body;
 }
 
 function addGuildMemberBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
@@ -1887,14 +1890,33 @@ function optionalNullableString(value: IntegrationJson): string | null | undefin
   return optionalString(value);
 }
 
+function optionalNullableStringField(values: Record<string, IntegrationJson>, ...keys: string[]): string | null | undefined {
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(values, key)) return optionalNullableString(values[key]);
+  }
+  return undefined;
+}
+
 function optionalNumber(value: IntegrationJson): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
   return undefined;
 }
 
+function optionalNullableNumberField(values: Record<string, IntegrationJson>, key: string): number | null | undefined {
+  if (!Object.prototype.hasOwnProperty.call(values, key)) return undefined;
+  if (values[key] === null) return null;
+  return optionalNumber(values[key]);
+}
+
 function optionalJsonArray(value: IntegrationJson): IntegrationJson[] | undefined {
   return Array.isArray(value) ? value : undefined;
+}
+
+function optionalNullableJsonArrayField(values: Record<string, IntegrationJson>, key: string): IntegrationJson[] | null | undefined {
+  if (!Object.prototype.hasOwnProperty.call(values, key)) return undefined;
+  if (values[key] === null) return null;
+  return optionalJsonArray(values[key]);
 }
 
 function optionalFileArray(value: IntegrationJson): IntegrationJson[] | undefined {
