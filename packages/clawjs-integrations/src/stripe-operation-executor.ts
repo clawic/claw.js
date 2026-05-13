@@ -2,47 +2,199 @@ import type {
   ConnectorRuntimeRequestPlan,
 } from "./runtime-registry.ts";
 import type {
+  ConnectorFieldDefinition,
   ConnectorOperationDefinition,
   IntegrationJson,
 } from "./types.ts";
 
-export type StripeRuntimeOperation =
-  | "list-customers"
-  | "get-customer"
-  | "create-customer"
-  | "list-payment-intents"
-  | "get-payment-intent"
-  | "create-payment-intent"
-  | "list-products"
-  | "get-product"
-  | "create-product"
-  | "update-product"
-  | "delete-product"
-  | "search-products"
-  | "list-prices"
-  | "get-price"
-  | "create-price"
-  | "update-price"
-  | "search-prices"
-  | "list-subscriptions"
-  | "get-subscription"
-  | "create-subscription"
-  | "update-subscription"
-  | "cancel-subscription"
-  | "resume-subscription"
-  | "search-subscriptions"
-  | "list-checkout-sessions"
-  | "get-checkout-session"
-  | "create-checkout-session"
-  | "expire-checkout-session"
-  | "list-checkout-session-line-items"
-  | "list-refunds"
-  | "get-refund"
-  | "create-refund"
-  | "update-refund"
-  | "list-charges"
-  | "get-charge"
-  | "capture-charge";
+export type StripeField = ConnectorFieldDefinition;
+
+export interface StripeGenericOperationSpec {
+  slug: string;
+  method: "GET" | "POST" | "DELETE";
+  endpoint: string;
+  fields: StripeField[];
+  query?: string[];
+  body?: string[];
+  requiredPaths?: string[];
+}
+
+export const STRIPE_CORE_ACTION_SLUGS = [
+  "list-customers",
+  "get-customer",
+  "create-customer",
+  "list-payment-intents",
+  "get-payment-intent",
+  "create-payment-intent",
+  "list-products",
+  "get-product",
+  "create-product",
+  "update-product",
+  "delete-product",
+  "search-products",
+  "list-prices",
+  "get-price",
+  "create-price",
+  "update-price",
+  "search-prices",
+  "list-subscriptions",
+  "get-subscription",
+  "create-subscription",
+  "update-subscription",
+  "cancel-subscription",
+  "resume-subscription",
+  "search-subscriptions",
+  "list-checkout-sessions",
+  "get-checkout-session",
+  "create-checkout-session",
+  "expire-checkout-session",
+  "list-checkout-session-line-items",
+  "list-refunds",
+  "get-refund",
+  "create-refund",
+  "update-refund",
+  "list-charges",
+  "get-charge",
+  "capture-charge",
+] as const;
+
+const PAGE_FIELDS = [
+  integerField("limit", { optional: true, default: 10, min: 1, max: 100 }),
+  stringField("startingAfter", { optional: true, default: "" }),
+  stringField("endingBefore", { optional: true, default: "" }),
+];
+
+const SEARCH_FIELDS = [
+  stringField("query", { default: "metadata['order_id']:'sample'" }),
+  integerField("limit", { optional: true, default: 10, min: 1, max: 100 }),
+  stringField("page", { optional: true, default: "next_page" }),
+];
+
+export const STRIPE_EXTRA_ACTION_SPECS = [
+  spec("update-customer", "POST", "customers/{customerId}", [stringField("customerId", { default: "cus_sample" }), stringField("email", { optional: true, default: "person@example.invalid" }), stringField("name", { optional: true, default: "Sample Person" }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["email", "name", "metadata"] }),
+  spec("delete-customer", "DELETE", "customers/{customerId}", [stringField("customerId", { default: "cus_sample" })], { requiredPaths: ["id", "object", "deleted"] }),
+  spec("search-customers", "GET", "customers/search", SEARCH_FIELDS, { query: ["query", "limit", "page"], requiredPaths: ["object", "data"] }),
+  spec("update-payment-intent", "POST", "payment_intents/{paymentIntentId}", [stringField("paymentIntentId", { default: "pi_sample" }), integerField("amount", { optional: true, default: 1200 }), stringField("currency", { optional: true, default: "usd" }), stringField("customer", { optional: true, default: "cus_sample" }), stringField("payment_method", { optional: true, default: "pm_sample" }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["amount", "currency", "customer", "payment_method", "metadata"], requiredPaths: ["id", "object", "status"] }),
+  spec("cancel-payment-intent", "POST", "payment_intents/{paymentIntentId}/cancel", [stringField("paymentIntentId", { default: "pi_sample" }), stringField("cancellation_reason", { optional: true, default: "requested_by_customer" })], { body: ["cancellation_reason"], requiredPaths: ["id", "object", "status"] }),
+  spec("capture-payment-intent", "POST", "payment_intents/{paymentIntentId}/capture", [stringField("paymentIntentId", { default: "pi_sample" }), integerField("amount_to_capture", { optional: true, default: 1200 }), stringField("statement_descriptor", { optional: true, default: "Sample" })], { body: ["amount_to_capture", "statement_descriptor"], requiredPaths: ["id", "object", "status"] }),
+  spec("confirm-payment-intent", "POST", "payment_intents/{paymentIntentId}/confirm", [stringField("paymentIntentId", { default: "pi_sample" }), stringField("payment_method", { optional: true, default: "pm_sample" }), stringField("return_url", { optional: true, default: "https://example.invalid/return" })], { body: ["payment_method", "return_url"], requiredPaths: ["id", "object", "status"] }),
+  spec("increment-payment-intent-authorization", "POST", "payment_intents/{paymentIntentId}/increment_authorization", [stringField("paymentIntentId", { default: "pi_sample" }), integerField("amount", { default: 1400 })], { body: ["amount"], requiredPaths: ["id", "object", "status"] }),
+  spec("apply-payment-intent-customer-balance", "POST", "payment_intents/{paymentIntentId}/apply_customer_balance", [stringField("paymentIntentId", { default: "pi_sample" }), integerField("amount", { optional: true, default: 500 })], { body: ["amount"], requiredPaths: ["id", "object", "status"] }),
+  spec("list-payment-intent-line-items", "GET", "payment_intents/{paymentIntentId}/amount_details_line_items", [stringField("paymentIntentId", { default: "pi_sample" }), ...PAGE_FIELDS], { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
+  spec("search-payment-intents", "GET", "payment_intents/search", SEARCH_FIELDS, { query: ["query", "limit", "page"], requiredPaths: ["object", "data"] }),
+  spec("verify-payment-intent-microdeposits", "POST", "payment_intents/{paymentIntentId}/verify_microdeposits", [stringField("paymentIntentId", { default: "pi_sample" }), arrayField("amounts", [32, 45], { optional: true }), stringField("descriptor_code", { optional: true, default: "SM11AA" })], { body: ["amounts", "descriptor_code"], requiredPaths: ["id", "object", "status"] }),
+  spec("list-setup-intents", "GET", "setup_intents", [...PAGE_FIELDS, stringField("customer", { optional: true, default: "cus_sample" })], { query: ["limit", "starting_after", "ending_before", "customer"], requiredPaths: ["object", "data"] }),
+  spec("get-setup-intent", "GET", "setup_intents/{setupIntentId}", [stringField("setupIntentId", { default: "seti_sample" })], { requiredPaths: ["id", "object", "status"] }),
+  spec("create-setup-intent", "POST", "setup_intents", [stringField("customer", { optional: true, default: "cus_sample" }), stringField("payment_method", { optional: true, default: "pm_sample" }), stringField("usage", { optional: true, default: "off_session" }), booleanField("confirm", { optional: true, default: false }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["customer", "payment_method", "usage", "confirm", "metadata"], requiredPaths: ["id", "object", "status"] }),
+  spec("update-setup-intent", "POST", "setup_intents/{setupIntentId}", [stringField("setupIntentId", { default: "seti_sample" }), stringField("customer", { optional: true, default: "cus_sample" }), stringField("payment_method", { optional: true, default: "pm_sample" }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["customer", "payment_method", "metadata"], requiredPaths: ["id", "object", "status"] }),
+  spec("cancel-setup-intent", "POST", "setup_intents/{setupIntentId}/cancel", [stringField("setupIntentId", { default: "seti_sample" }), stringField("cancellation_reason", { optional: true, default: "abandoned" })], { body: ["cancellation_reason"], requiredPaths: ["id", "object", "status"] }),
+  spec("confirm-setup-intent", "POST", "setup_intents/{setupIntentId}/confirm", [stringField("setupIntentId", { default: "seti_sample" }), stringField("payment_method", { optional: true, default: "pm_sample" }), stringField("return_url", { optional: true, default: "https://example.invalid/return" })], { body: ["payment_method", "return_url"], requiredPaths: ["id", "object", "status"] }),
+  spec("verify-setup-intent-microdeposits", "POST", "setup_intents/{setupIntentId}/verify_microdeposits", [stringField("setupIntentId", { default: "seti_sample" }), arrayField("amounts", [32, 45], { optional: true }), stringField("descriptor_code", { optional: true, default: "SM11AA" })], { body: ["amounts", "descriptor_code"], requiredPaths: ["id", "object", "status"] }),
+  spec("list-payment-methods", "GET", "payment_methods", [...PAGE_FIELDS, stringField("customer", { optional: true, default: "cus_sample" }), stringField("type", { optional: true, default: "card" })], { query: ["limit", "starting_after", "ending_before", "customer", "type"], requiredPaths: ["object", "data"] }),
+  spec("get-payment-method", "GET", "payment_methods/{paymentMethodId}", [stringField("paymentMethodId", { default: "pm_sample" })]),
+  spec("create-payment-method", "POST", "payment_methods", [stringField("type", { default: "card" }), objectField("card", { token: "tok_visa" }, { optional: true }), stringField("billing_email", { optional: true, default: "person@example.invalid" }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["type", "card", "billing_email", "metadata"] }),
+  spec("update-payment-method", "POST", "payment_methods/{paymentMethodId}", [stringField("paymentMethodId", { default: "pm_sample" }), objectField("billing_details", { email: "person@example.invalid" }, { optional: true }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["billing_details", "metadata"] }),
+  spec("attach-payment-method", "POST", "payment_methods/{paymentMethodId}/attach", [stringField("paymentMethodId", { default: "pm_sample" }), stringField("customer", { default: "cus_sample" })], { body: ["customer"] }),
+  spec("detach-payment-method", "POST", "payment_methods/{paymentMethodId}/detach", [stringField("paymentMethodId", { default: "pm_sample" })]),
+  spec("get-balance", "GET", "balance", [], { requiredPaths: ["object"] }),
+  spec("list-balance-transactions", "GET", "balance_transactions", [...PAGE_FIELDS, stringField("type", { optional: true, default: "charge" })], { query: ["limit", "starting_after", "ending_before", "type"], requiredPaths: ["object", "data"] }),
+  spec("get-balance-transaction", "GET", "balance_transactions/{balanceTransactionId}", [stringField("balanceTransactionId", { default: "txn_sample" })]),
+  spec("list-events", "GET", "events", [...PAGE_FIELDS, stringField("type", { optional: true, default: "payment_intent.succeeded" })], { query: ["limit", "starting_after", "ending_before", "type"], requiredPaths: ["object", "data"] }),
+  spec("get-event", "GET", "events/{eventId}", [stringField("eventId", { default: "evt_sample" })]),
+  spec("list-disputes", "GET", "disputes", [...PAGE_FIELDS], { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
+  spec("get-dispute", "GET", "disputes/{disputeId}", [stringField("disputeId", { default: "dp_sample" })]),
+  spec("update-dispute", "POST", "disputes/{disputeId}", [stringField("disputeId", { default: "dp_sample" }), objectField("metadata", { order_id: "sample" }, { optional: true }), objectField("evidence", { customer_name: "Sample Person" }, { optional: true })], { body: ["metadata", "evidence"] }),
+  spec("close-dispute", "POST", "disputes/{disputeId}/close", [stringField("disputeId", { default: "dp_sample" })]),
+  spec("list-invoices", "GET", "invoices", [...PAGE_FIELDS, stringField("customer", { optional: true, default: "cus_sample" }), stringField("status", { optional: true, default: "draft" })], { query: ["limit", "starting_after", "ending_before", "customer", "status"], requiredPaths: ["object", "data"] }),
+  spec("get-invoice", "GET", "invoices/{invoiceId}", [stringField("invoiceId", { default: "in_sample" })]),
+  spec("create-invoice", "POST", "invoices", [stringField("customer", { default: "cus_sample" }), stringField("description", { optional: true, default: "Sample invoice" }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["customer", "description", "metadata"] }),
+  spec("update-invoice", "POST", "invoices/{invoiceId}", [stringField("invoiceId", { default: "in_sample" }), stringField("description", { optional: true, default: "Updated invoice" }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["description", "metadata"] }),
+  spec("delete-invoice", "DELETE", "invoices/{invoiceId}", [stringField("invoiceId", { default: "in_sample" })], { requiredPaths: ["id", "object", "deleted"] }),
+  spec("finalize-invoice", "POST", "invoices/{invoiceId}/finalize", [stringField("invoiceId", { default: "in_sample" })]),
+  spec("pay-invoice", "POST", "invoices/{invoiceId}/pay", [stringField("invoiceId", { default: "in_sample" }), stringField("payment_method", { optional: true, default: "pm_sample" })], { body: ["payment_method"] }),
+  spec("send-invoice", "POST", "invoices/{invoiceId}/send", [stringField("invoiceId", { default: "in_sample" })]),
+  spec("void-invoice", "POST", "invoices/{invoiceId}/void", [stringField("invoiceId", { default: "in_sample" })]),
+  spec("mark-invoice-uncollectible", "POST", "invoices/{invoiceId}/mark_uncollectible", [stringField("invoiceId", { default: "in_sample" })]),
+  spec("search-invoices", "GET", "invoices/search", SEARCH_FIELDS, { query: ["query", "limit", "page"], requiredPaths: ["object", "data"] }),
+  spec("list-invoice-line-items", "GET", "invoices/{invoiceId}/lines", [stringField("invoiceId", { default: "in_sample" }), ...PAGE_FIELDS], { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
+  spec("list-invoice-items", "GET", "invoiceitems", [...PAGE_FIELDS, stringField("customer", { optional: true, default: "cus_sample" })], { query: ["limit", "starting_after", "ending_before", "customer"], requiredPaths: ["object", "data"] }),
+  spec("get-invoice-item", "GET", "invoiceitems/{invoiceItemId}", [stringField("invoiceItemId", { default: "ii_sample" })]),
+  spec("create-invoice-item", "POST", "invoiceitems", [stringField("customer", { default: "cus_sample" }), integerField("amount", { default: 1200 }), stringField("currency", { default: "usd" }), stringField("description", { optional: true, default: "Sample item" })], { body: ["customer", "amount", "currency", "description"] }),
+  spec("update-invoice-item", "POST", "invoiceitems/{invoiceItemId}", [stringField("invoiceItemId", { default: "ii_sample" }), stringField("description", { optional: true, default: "Updated item" }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["description", "metadata"] }),
+  spec("delete-invoice-item", "DELETE", "invoiceitems/{invoiceItemId}", [stringField("invoiceItemId", { default: "ii_sample" })], { requiredPaths: ["id", "object", "deleted"] }),
+  spec("list-coupons", "GET", "coupons", PAGE_FIELDS, { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
+  spec("get-coupon", "GET", "coupons/{couponId}", [stringField("couponId", { default: "coupon_sample" })]),
+  spec("create-coupon", "POST", "coupons", [stringField("id", { optional: true, default: "coupon_sample" }), integerField("percent_off", { optional: true, default: 10 }), stringField("duration", { default: "once" }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["id", "percent_off", "duration", "metadata"] }),
+  spec("update-coupon", "POST", "coupons/{couponId}", [stringField("couponId", { default: "coupon_sample" }), stringField("name", { optional: true, default: "Sample Coupon" }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["name", "metadata"] }),
+  spec("delete-coupon", "DELETE", "coupons/{couponId}", [stringField("couponId", { default: "coupon_sample" })], { requiredPaths: ["id", "object", "deleted"] }),
+  spec("list-promotion-codes", "GET", "promotion_codes", [...PAGE_FIELDS, stringField("coupon", { optional: true, default: "coupon_sample" })], { query: ["limit", "starting_after", "ending_before", "coupon"], requiredPaths: ["object", "data"] }),
+  spec("get-promotion-code", "GET", "promotion_codes/{promotionCodeId}", [stringField("promotionCodeId", { default: "promo_sample" })]),
+  spec("create-promotion-code", "POST", "promotion_codes", [stringField("coupon", { default: "coupon_sample" }), stringField("code", { optional: true, default: "SAVE10" }), booleanField("active", { optional: true, default: true })], { body: ["coupon", "code", "active"] }),
+  spec("update-promotion-code", "POST", "promotion_codes/{promotionCodeId}", [stringField("promotionCodeId", { default: "promo_sample" }), booleanField("active", { optional: true, default: true }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["active", "metadata"] }),
+  spec("list-tax-rates", "GET", "tax_rates", [...PAGE_FIELDS, booleanField("active", { optional: true, default: true })], { query: ["limit", "starting_after", "ending_before", "active"], requiredPaths: ["object", "data"] }),
+  spec("get-tax-rate", "GET", "tax_rates/{taxRateId}", [stringField("taxRateId", { default: "txr_sample" })]),
+  spec("create-tax-rate", "POST", "tax_rates", [stringField("display_name", { default: "VAT" }), integerField("percentage", { default: 20 }), booleanField("inclusive", { default: false }), stringField("country", { optional: true, default: "ES" })], { body: ["display_name", "percentage", "inclusive", "country"] }),
+  spec("update-tax-rate", "POST", "tax_rates/{taxRateId}", [stringField("taxRateId", { default: "txr_sample" }), booleanField("active", { optional: true, default: true }), stringField("display_name", { optional: true, default: "VAT" })], { body: ["active", "display_name"] }),
+  spec("list-payouts", "GET", "payouts", PAGE_FIELDS, { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
+  spec("get-payout", "GET", "payouts/{payoutId}", [stringField("payoutId", { default: "po_sample" })]),
+  spec("create-payout", "POST", "payouts", [integerField("amount", { default: 1200 }), stringField("currency", { default: "usd" }), stringField("description", { optional: true, default: "Sample payout" })], { body: ["amount", "currency", "description"] }),
+  spec("update-payout", "POST", "payouts/{payoutId}", [stringField("payoutId", { default: "po_sample" }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["metadata"] }),
+  spec("cancel-payout", "POST", "payouts/{payoutId}/cancel", [stringField("payoutId", { default: "po_sample" })]),
+  spec("reverse-payout", "POST", "payouts/{payoutId}/reverse", [stringField("payoutId", { default: "po_sample" })]),
+  spec("list-transfers", "GET", "transfers", PAGE_FIELDS, { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
+  spec("get-transfer", "GET", "transfers/{transferId}", [stringField("transferId", { default: "tr_sample" })]),
+  spec("create-transfer", "POST", "transfers", [integerField("amount", { default: 1200 }), stringField("currency", { default: "usd" }), stringField("destination", { default: "acct_sample" }), stringField("description", { optional: true, default: "Sample transfer" })], { body: ["amount", "currency", "destination", "description"] }),
+  spec("update-transfer", "POST", "transfers/{transferId}", [stringField("transferId", { default: "tr_sample" }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["metadata"] }),
+  spec("list-transfer-reversals", "GET", "transfers/{transferId}/reversals", [stringField("transferId", { default: "tr_sample" }), ...PAGE_FIELDS], { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
+  spec("get-transfer-reversal", "GET", "transfers/{transferId}/reversals/{reversalId}", [stringField("transferId", { default: "tr_sample" }), stringField("reversalId", { default: "trr_sample" })]),
+  spec("create-transfer-reversal", "POST", "transfers/{transferId}/reversals", [stringField("transferId", { default: "tr_sample" }), integerField("amount", { optional: true, default: 500 }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["amount", "metadata"] }),
+  spec("update-transfer-reversal", "POST", "transfers/{transferId}/reversals/{reversalId}", [stringField("transferId", { default: "tr_sample" }), stringField("reversalId", { default: "trr_sample" }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["metadata"] }),
+  spec("list-subscription-items", "GET", "subscription_items", [...PAGE_FIELDS, stringField("subscription", { default: "sub_sample" })], { query: ["limit", "starting_after", "ending_before", "subscription"], requiredPaths: ["object", "data"] }),
+  spec("get-subscription-item", "GET", "subscription_items/{subscriptionItemId}", [stringField("subscriptionItemId", { default: "si_sample" })]),
+  spec("create-subscription-item", "POST", "subscription_items", [stringField("subscription", { default: "sub_sample" }), stringField("price", { default: "price_sample" }), integerField("quantity", { optional: true, default: 1 })], { body: ["subscription", "price", "quantity"] }),
+  spec("update-subscription-item", "POST", "subscription_items/{subscriptionItemId}", [stringField("subscriptionItemId", { default: "si_sample" }), stringField("price", { optional: true, default: "price_sample" }), integerField("quantity", { optional: true, default: 1 })], { body: ["price", "quantity"] }),
+  spec("delete-subscription-item", "DELETE", "subscription_items/{subscriptionItemId}", [stringField("subscriptionItemId", { default: "si_sample" })], { requiredPaths: ["id", "object", "deleted"] }),
+  spec("list-webhook-endpoints", "GET", "webhook_endpoints", PAGE_FIELDS, { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
+  spec("get-webhook-endpoint", "GET", "webhook_endpoints/{webhookEndpointId}", [stringField("webhookEndpointId", { default: "we_sample" })]),
+  spec("create-webhook-endpoint", "POST", "webhook_endpoints", [stringField("url", { default: "https://example.invalid/stripe/webhook" }), arrayField("enabled_events", ["payment_intent.succeeded"]), stringField("description", { optional: true, default: "Sample endpoint" })], { body: ["url", "enabled_events", "description"] }),
+  spec("update-webhook-endpoint", "POST", "webhook_endpoints/{webhookEndpointId}", [stringField("webhookEndpointId", { default: "we_sample" }), stringField("url", { optional: true, default: "https://example.invalid/stripe/webhook" }), arrayField("enabled_events", ["payment_intent.succeeded"], { optional: true })], { body: ["url", "enabled_events"] }),
+  spec("delete-webhook-endpoint", "DELETE", "webhook_endpoints/{webhookEndpointId}", [stringField("webhookEndpointId", { default: "we_sample" })], { requiredPaths: ["id", "object", "deleted"] }),
+] as const satisfies readonly StripeGenericOperationSpec[];
+
+export const STRIPE_ACTION_SLUGS = [
+  ...STRIPE_CORE_ACTION_SLUGS,
+  ...STRIPE_EXTRA_ACTION_SPECS.map((item) => item.slug),
+] as const;
+
+export type StripeRuntimeOperation = typeof STRIPE_ACTION_SLUGS[number];
+
+const STRIPE_OPERATION_SET = new Set<string>(STRIPE_ACTION_SLUGS);
+const STRIPE_EXTRA_SPEC_BY_SLUG = new Map(STRIPE_EXTRA_ACTION_SPECS.map((item) => [item.slug, item]));
+const STRIPE_OPERATION_ALIASES: Record<string, StripeRuntimeOperation> = {
+  "retrieve-customer": "get-customer",
+  "retrieve-payment-intent": "get-payment-intent",
+  "retrieve-product": "get-product",
+  "retrieve-price": "get-price",
+  "retrieve-subscription": "get-subscription",
+  "retrieve-checkout-session": "get-checkout-session",
+  "retrieve-refund": "get-refund",
+  "retrieve-charge": "get-charge",
+  "retrieve-setup-intent": "get-setup-intent",
+  "retrieve-payment-method": "get-payment-method",
+  "retrieve-balance-transaction": "get-balance-transaction",
+  "retrieve-event": "get-event",
+  "retrieve-dispute": "get-dispute",
+  "retrieve-invoice": "get-invoice",
+  "retrieve-invoice-item": "get-invoice-item",
+  "retrieve-coupon": "get-coupon",
+  "retrieve-promotion-code": "get-promotion-code",
+  "retrieve-tax-rate": "get-tax-rate",
+  "retrieve-payout": "get-payout",
+  "retrieve-transfer": "get-transfer",
+  "retrieve-transfer-reversal": "get-transfer-reversal",
+  "retrieve-subscription-item": "get-subscription-item",
+  "retrieve-webhook-endpoint": "get-webhook-endpoint",
+};
 
 export function isStripeActionOperationSupported(operationId: string): boolean {
   return stripeRuntimeOperation(operationId) !== null;
@@ -62,6 +214,8 @@ export function buildStripeOperationRequest(
     placement: "bearer" as const,
   }));
   const headers = { accept: "application/json" };
+  const genericSpec = STRIPE_EXTRA_SPEC_BY_SLUG.get(runtimeOperation);
+  if (genericSpec) return genericStripePlan(genericSpec, values, auth, headers);
 
   switch (runtimeOperation) {
     case "list-customers":
@@ -288,6 +442,49 @@ export function buildStripeOperationRequest(
   }
 }
 
+function spec(
+  slug: string,
+  method: StripeGenericOperationSpec["method"],
+  endpoint: string,
+  fields: StripeField[],
+  options: {
+    query?: string[];
+    body?: string[];
+    requiredPaths?: string[];
+  } = {},
+): StripeGenericOperationSpec {
+  return {
+    slug,
+    method,
+    endpoint,
+    fields,
+    query: options.query,
+    body: options.body,
+    requiredPaths: options.requiredPaths,
+  };
+}
+
+function genericStripePlan(
+  spec: StripeGenericOperationSpec,
+  values: Record<string, IntegrationJson>,
+  auth: ConnectorRuntimeRequestPlan["auth"],
+  headers: Record<string, string>,
+): ConnectorRuntimeRequestPlan {
+  return {
+    method: spec.method,
+    endpoint: interpolateEndpoint(spec.endpoint, values),
+    auth,
+    headers,
+    query: valuesForApiKeys(values, spec.query ?? []),
+    bodyEncoding: spec.method === "POST" ? "form" : undefined,
+    body: valuesForApiKeys(values, spec.body ?? []),
+    responseSchema: {
+      type: "object",
+      requiredPaths: spec.requiredPaths ?? ["id", "object"],
+    },
+  };
+}
+
 function listPlan(
   endpoint: string,
   values: Record<string, IntegrationJson>,
@@ -387,43 +584,38 @@ function searchPlan(
 
 function stripeRuntimeOperation(operationId: string): StripeRuntimeOperation | null {
   const slug = operationId.split(".").at(-1);
-  if (slug === "list-customers") return "list-customers";
-  if (slug === "get-customer" || slug === "retrieve-customer") return "get-customer";
-  if (slug === "create-customer") return "create-customer";
-  if (slug === "list-payment-intents") return "list-payment-intents";
-  if (slug === "get-payment-intent" || slug === "retrieve-payment-intent") return "get-payment-intent";
-  if (slug === "create-payment-intent") return "create-payment-intent";
-  if (slug === "list-products") return "list-products";
-  if (slug === "get-product" || slug === "retrieve-product") return "get-product";
-  if (slug === "create-product") return "create-product";
-  if (slug === "update-product") return "update-product";
-  if (slug === "delete-product") return "delete-product";
-  if (slug === "search-products") return "search-products";
-  if (slug === "list-prices") return "list-prices";
-  if (slug === "get-price" || slug === "retrieve-price") return "get-price";
-  if (slug === "create-price") return "create-price";
-  if (slug === "update-price") return "update-price";
-  if (slug === "search-prices") return "search-prices";
-  if (slug === "list-subscriptions") return "list-subscriptions";
-  if (slug === "get-subscription" || slug === "retrieve-subscription") return "get-subscription";
-  if (slug === "create-subscription") return "create-subscription";
-  if (slug === "update-subscription") return "update-subscription";
-  if (slug === "cancel-subscription") return "cancel-subscription";
-  if (slug === "resume-subscription") return "resume-subscription";
-  if (slug === "search-subscriptions") return "search-subscriptions";
-  if (slug === "list-checkout-sessions") return "list-checkout-sessions";
-  if (slug === "get-checkout-session" || slug === "retrieve-checkout-session") return "get-checkout-session";
-  if (slug === "create-checkout-session") return "create-checkout-session";
-  if (slug === "expire-checkout-session") return "expire-checkout-session";
-  if (slug === "list-checkout-session-line-items") return "list-checkout-session-line-items";
-  if (slug === "list-refunds") return "list-refunds";
-  if (slug === "get-refund" || slug === "retrieve-refund") return "get-refund";
-  if (slug === "create-refund") return "create-refund";
-  if (slug === "update-refund") return "update-refund";
-  if (slug === "list-charges") return "list-charges";
-  if (slug === "get-charge" || slug === "retrieve-charge") return "get-charge";
-  if (slug === "capture-charge") return "capture-charge";
+  const resolved = slug ? STRIPE_OPERATION_ALIASES[slug] ?? slug : null;
+  if (resolved && STRIPE_OPERATION_SET.has(resolved)) return resolved as StripeRuntimeOperation;
   return null;
+}
+
+function interpolateEndpoint(endpoint: string, values: Record<string, IntegrationJson>): string {
+  return endpoint.replaceAll(/\{([^}]+)\}/g, (_, key: string) => pathSegment(requiredString(valueForApiKey(values, key), key)));
+}
+
+function valuesForApiKeys(values: Record<string, IntegrationJson>, keys: readonly string[]): Record<string, IntegrationJson> {
+  return Object.fromEntries(keys.flatMap((key) => {
+    const value = valueForApiKey(values, key);
+    return value === undefined || value === null || value === "" ? [] : [[key, value]];
+  }));
+}
+
+function valueForApiKey(values: Record<string, IntegrationJson>, key: string): IntegrationJson | undefined {
+  const camel = camelCase(key);
+  const candidates = [
+    key,
+    camel,
+    `${camel}Id`,
+    key.endsWith("_id") ? camelCase(key.slice(0, -3)) : "",
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    if (Object.prototype.hasOwnProperty.call(values, candidate)) return values[candidate];
+  }
+  return undefined;
+}
+
+function camelCase(key: string): string {
+  return key.replaceAll(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
 function firstValue(...values: IntegrationJson[]): IntegrationJson {
@@ -455,4 +647,24 @@ function removeEmptyValues(input: Record<string, IntegrationJson | undefined>): 
   return Object.fromEntries(
     Object.entries(input).filter(([, value]) => value !== undefined && value !== ""),
   ) as Record<string, IntegrationJson>;
+}
+
+function stringField(name: string, options: { optional?: boolean; default: string }): StripeField {
+  return { name, type: "string", optional: options.optional ?? false, default: options.default };
+}
+
+function integerField(name: string, options: { optional?: boolean; default: number; min?: number; max?: number }): StripeField {
+  return { name, type: "integer", optional: options.optional ?? false, default: options.default, ...(options.min ? { min: options.min } : {}), ...(options.max ? { max: options.max } : {}) };
+}
+
+function booleanField(name: string, options: { optional?: boolean; default: boolean }): StripeField {
+  return { name, type: "boolean", optional: options.optional ?? false, default: options.default };
+}
+
+function arrayField(name: string, defaultValue: IntegrationJson[], options: { optional?: boolean } = {}): StripeField {
+  return { name, type: "array", optional: options.optional ?? false, default: defaultValue };
+}
+
+function objectField(name: string, defaultValue: Record<string, IntegrationJson>, options: { optional?: boolean } = {}): StripeField {
+  return { name, type: "object", optional: options.optional ?? false, default: defaultValue };
 }
