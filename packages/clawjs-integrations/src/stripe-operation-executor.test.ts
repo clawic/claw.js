@@ -625,6 +625,46 @@ describe("stripe operation runtime", () => {
         requiredPaths: ["id", "object"],
       },
     });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-quote"), {
+      customer: "cus_sample",
+      line_items: [{ price: "price_sample", quantity: 1 }],
+      description: "Sample quote",
+      metadata: { order_id: "sample" },
+    }), {
+      method: "POST",
+      endpoint: "quotes",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        customer: "cus_sample",
+        line_items: [{ price: "price_sample", quantity: 1 }],
+        description: "Sample quote",
+        metadata: { order_id: "sample" },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.download-quote-pdf"), {
+      quote: "qt_sample",
+    }), {
+      method: "GET",
+      endpoint: "quotes/qt_sample/pdf",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: undefined,
+      responseBodyEncoding: "base64",
+      body: {},
+      responseSchema: {
+        type: "string",
+      },
+    });
   });
 
   it("covers Stripe payment operations with operation-scoped offline fixtures", async () => {

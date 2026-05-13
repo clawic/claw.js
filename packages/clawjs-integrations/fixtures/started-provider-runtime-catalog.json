@@ -31402,6 +31402,293 @@
           ]
         },
         {
+          "id": "stripe.action.list-quotes",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Quotes",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "optional": true,
+              "default": "draft"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-quote",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Quote",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": false,
+              "default": "cus_sample"
+            },
+            {
+              "name": "line_items",
+              "type": "array",
+              "optional": true,
+              "default": [
+                {
+                  "price": "price_sample",
+                  "quantity": 1
+                }
+              ]
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Sample quote"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-quote",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Quote",
+          "fields": [
+            {
+              "name": "quote",
+              "type": "string",
+              "optional": false,
+              "default": "qt_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-quote",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Quote",
+          "fields": [
+            {
+              "name": "quote",
+              "type": "string",
+              "optional": false,
+              "default": "qt_sample"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Updated quote"
+            },
+            {
+              "name": "expires_at",
+              "type": "integer",
+              "optional": true,
+              "default": 1893456000
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.accept-quote",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Accept Quote",
+          "fields": [
+            {
+              "name": "quote",
+              "type": "string",
+              "optional": false,
+              "default": "qt_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.cancel-quote",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Cancel Quote",
+          "fields": [
+            {
+              "name": "quote",
+              "type": "string",
+              "optional": false,
+              "default": "qt_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.finalize-quote",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Finalize Quote",
+          "fields": [
+            {
+              "name": "quote",
+              "type": "string",
+              "optional": false,
+              "default": "qt_sample"
+            },
+            {
+              "name": "expires_at",
+              "type": "integer",
+              "optional": true,
+              "default": 1893456000
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-quote-line-items",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Quote Line Items",
+          "fields": [
+            {
+              "name": "quote",
+              "type": "string",
+              "optional": false,
+              "default": "qt_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-quote-computed-upfront-line-items",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Quote Computed Upfront Line Items",
+          "fields": [
+            {
+              "name": "quote",
+              "type": "string",
+              "optional": false,
+              "default": "qt_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.download-quote-pdf",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Download Quote Pdf",
+          "fields": [
+            {
+              "name": "quote",
+              "type": "string",
+              "optional": false,
+              "default": "qt_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-invoices",
           "appId": "stripe",
           "kind": "action",

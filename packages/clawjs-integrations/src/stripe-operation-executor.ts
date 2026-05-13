@@ -15,6 +15,8 @@ export interface StripeGenericOperationSpec {
   endpoint: string;
   fields: StripeField[];
   bodyEncoding?: "form" | "multipart";
+  responseBodyEncoding?: ConnectorRuntimeRequestPlan["responseBodyEncoding"];
+  responseSchema?: ConnectorRuntimeRequestPlan["responseSchema"];
   query?: string[];
   body?: string[];
   requiredPaths?: string[];
@@ -142,6 +144,16 @@ export const STRIPE_EXTRA_ACTION_SPECS = [
   spec("update-credit-note", "POST", "credit_notes/{id}", [stringField("id", { default: "cn_sample" }), stringField("memo", { optional: true, default: "Updated credit" }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["memo", "metadata"] }),
   spec("void-credit-note", "POST", "credit_notes/{id}/void", [stringField("id", { default: "cn_sample" })]),
   spec("list-credit-note-lines", "GET", "credit_notes/{credit_note}/lines", [stringField("creditNote", { default: "cn_sample" }), ...PAGE_FIELDS], { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
+  spec("list-quotes", "GET", "quotes", [...PAGE_FIELDS, stringField("customer", { optional: true, default: "cus_sample" }), stringField("status", { optional: true, default: "draft" })], { query: ["limit", "starting_after", "ending_before", "customer", "status"], requiredPaths: ["object", "data"] }),
+  spec("create-quote", "POST", "quotes", [stringField("customer", { default: "cus_sample" }), arrayField("line_items", [{ price: "price_sample", quantity: 1 }], { optional: true }), stringField("description", { optional: true, default: "Sample quote" }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["customer", "line_items", "description", "metadata"] }),
+  spec("get-quote", "GET", "quotes/{quote}", [stringField("quote", { default: "qt_sample" })]),
+  spec("update-quote", "POST", "quotes/{quote}", [stringField("quote", { default: "qt_sample" }), stringField("description", { optional: true, default: "Updated quote" }), integerField("expires_at", { optional: true, default: 1893456000 }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["description", "expires_at", "metadata"] }),
+  spec("accept-quote", "POST", "quotes/{quote}/accept", [stringField("quote", { default: "qt_sample" })]),
+  spec("cancel-quote", "POST", "quotes/{quote}/cancel", [stringField("quote", { default: "qt_sample" })]),
+  spec("finalize-quote", "POST", "quotes/{quote}/finalize", [stringField("quote", { default: "qt_sample" }), integerField("expires_at", { optional: true, default: 1893456000 })], { body: ["expires_at"] }),
+  spec("list-quote-line-items", "GET", "quotes/{quote}/line_items", [stringField("quote", { default: "qt_sample" }), ...PAGE_FIELDS], { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
+  spec("list-quote-computed-upfront-line-items", "GET", "quotes/{quote}/computed_upfront_line_items", [stringField("quote", { default: "qt_sample" }), ...PAGE_FIELDS], { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
+  spec("download-quote-pdf", "GET", "quotes/{quote}/pdf", [stringField("quote", { default: "qt_sample" })], { responseBodyEncoding: "base64", responseSchema: { type: "string" } }),
   spec("list-invoices", "GET", "invoices", [...PAGE_FIELDS, stringField("customer", { optional: true, default: "cus_sample" }), stringField("status", { optional: true, default: "draft" })], { query: ["limit", "starting_after", "ending_before", "customer", "status"], requiredPaths: ["object", "data"] }),
   spec("get-invoice", "GET", "invoices/{invoiceId}", [stringField("invoiceId", { default: "in_sample" })]),
   spec("create-invoice", "POST", "invoices", [stringField("customer", { default: "cus_sample" }), stringField("description", { optional: true, default: "Sample invoice" }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["customer", "description", "metadata"] }),
@@ -511,6 +523,8 @@ function spec(
   fields: StripeField[],
   options: {
     bodyEncoding?: StripeGenericOperationSpec["bodyEncoding"];
+    responseBodyEncoding?: StripeGenericOperationSpec["responseBodyEncoding"];
+    responseSchema?: StripeGenericOperationSpec["responseSchema"];
     query?: string[];
     body?: string[];
     requiredPaths?: string[];
@@ -522,6 +536,8 @@ function spec(
     endpoint,
     fields,
     bodyEncoding: options.bodyEncoding,
+    responseBodyEncoding: options.responseBodyEncoding,
+    responseSchema: options.responseSchema,
     query: options.query,
     body: options.body,
     requiredPaths: options.requiredPaths,
@@ -541,8 +557,9 @@ function genericStripePlan(
     headers,
     query: valuesForApiKeys(values, spec.query ?? []),
     bodyEncoding: spec.method === "POST" ? spec.bodyEncoding ?? "form" : undefined,
+    ...(spec.responseBodyEncoding ? { responseBodyEncoding: spec.responseBodyEncoding } : {}),
     body: valuesForApiKeys(values, spec.body ?? []),
-    responseSchema: {
+    responseSchema: spec.responseSchema ?? {
       type: "object",
       requiredPaths: spec.requiredPaths ?? ["id", "object"],
     },
