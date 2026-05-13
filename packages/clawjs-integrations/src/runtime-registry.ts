@@ -20,6 +20,10 @@ import {
   isGitHubActionOperationSupported,
 } from "./github-operation-executor.ts";
 import {
+  buildGitHubSourcePlan,
+  isGitHubSourceOperationSupported,
+} from "./github-source.ts";
+import {
   buildGitLabOperationRequest,
   isGitLabActionOperationSupported,
 } from "./gitlab-operation-executor.ts";
@@ -290,48 +294,101 @@ const GITHUB_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/github-operation-executor.test.ts",
 ];
 
-const GITHUB_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
+const GITHUB_ACTION_FIXTURE_NAMES = [
+  "get-authenticated-user",
+  "get-user",
+  "list-user-repositories",
+  "list-org-repositories",
+  "create-user-repository",
+  "create-org-repository",
+  "get-repository",
+  "update-repository",
+  "delete-repository",
+  "list-branches",
+  "get-branch",
+  "get-repository-content",
+  "create-or-update-file",
+  "delete-file",
+  "get-issue",
+  "list-repository-issues",
+  "create-issue",
+  "update-issue",
+  "lock-issue",
+  "unlock-issue",
+  "list-issue-comments",
+  "create-issue-comment",
+  "update-issue-comment",
+  "delete-issue-comment",
+  "list-labels",
+  "create-label",
+  "update-label",
+  "delete-label",
+  "list-milestones",
+  "create-milestone",
+  "update-milestone",
+  "delete-milestone",
+  "list-pull-requests",
+  "get-pull-request",
+  "create-pull-request",
+  "update-pull-request",
+  "merge-pull-request",
+  "list-pull-request-files",
+  "list-pull-request-commits",
+  "list-releases",
+  "get-release",
+  "create-release",
+  "update-release",
+  "delete-release",
+  "list-workflows",
+  "get-workflow",
+  "dispatch-workflow",
+  "list-workflow-runs",
+  "get-workflow-run",
+  "rerun-workflow-run",
+  "cancel-workflow-run",
+  "list-repository-webhooks",
+  "get-repository-webhook",
+  "create-repository-webhook",
+  "delete-repository-webhook",
+  "ping-repository-webhook",
+  "list-gists",
+  "get-gist",
+  "create-gist",
+  "update-gist",
+  "delete-gist",
+] as const;
+
+const GITHUB_ACTION_FIXTURES: ConnectorRuntimeFixture[] = GITHUB_ACTION_FIXTURE_NAMES.flatMap((name) => [
   {
-    kind: "request",
-    operationId: "github.action.get-issue",
-    path: "packages/clawjs-integrations/fixtures/github-get-issue-request.json",
+    kind: "request" as const,
+    operationId: `github.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/github-${name}-request.json`,
   },
   {
-    kind: "response",
-    operationId: "github.action.get-issue",
-    path: "packages/clawjs-integrations/fixtures/github-get-issue-response.json",
+    kind: "response" as const,
+    operationId: `github.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/github-${name}-response.json`,
   },
-  {
-    kind: "request",
-    operationId: "github.action.list-repository-issues",
-    path: "packages/clawjs-integrations/fixtures/github-list-repository-issues-request.json",
-  },
-  {
-    kind: "response",
-    operationId: "github.action.list-repository-issues",
-    path: "packages/clawjs-integrations/fixtures/github-list-repository-issues-response.json",
-  },
-  {
-    kind: "request",
-    operationId: "github.action.create-issue",
-    path: "packages/clawjs-integrations/fixtures/github-create-issue-request.json",
-  },
-  {
-    kind: "response",
-    operationId: "github.action.create-issue",
-    path: "packages/clawjs-integrations/fixtures/github-create-issue-response.json",
-  },
-  {
-    kind: "request",
-    operationId: "github.action.create-issue-comment",
-    path: "packages/clawjs-integrations/fixtures/github-create-issue-comment-request.json",
-  },
-  {
-    kind: "response",
-    operationId: "github.action.create-issue-comment",
-    path: "packages/clawjs-integrations/fixtures/github-create-issue-comment-response.json",
-  },
+]);
+
+const GITHUB_SOURCE_EVIDENCE = [
+  "packages/clawjs-integrations/src/github-source.test.ts",
 ];
+
+const GITHUB_SOURCE_FIXTURE_NAMES = [
+  "webhook-event",
+  "push",
+  "issues",
+  "pull-request",
+  "workflow-run",
+  "release",
+] as const;
+
+const GITHUB_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = GITHUB_SOURCE_FIXTURE_NAMES.map((name) => ({
+  kind: "source_event",
+  operationId: `github.source.${name}`,
+  path: `packages/clawjs-integrations/fixtures/github-source-${name}.json`,
+}));
 
 const DISCORD_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/discord-operation-executor.test.ts",
@@ -644,6 +701,19 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     supports: (operation) => isGitHubActionOperationSupported(operation.id),
     buildPlan: (operation, values) => ({
       requestPlan: buildGitHubOperationRequest(operation, values),
+    }),
+  },
+  {
+    appId: "github",
+    kind: "source",
+    executorId: "github.webhook",
+    offlineValidated: true,
+    evidence: GITHUB_SOURCE_EVIDENCE,
+    fixtures: GITHUB_SOURCE_FIXTURES,
+    planKinds: ["source"],
+    supports: (operation) => isGitHubSourceOperationSupported(operation.id),
+    buildPlan: (operation) => ({
+      sourcePlan: buildGitHubSourcePlan(operation),
     }),
   },
   {
