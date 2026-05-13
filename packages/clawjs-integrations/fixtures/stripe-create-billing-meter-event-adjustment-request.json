@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/billing/meter_event_adjustments",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "cancel=%7B%22identifier%22%3A%22event_sample%22%7D&event_name=sample_meter_event&type=cancel"
+}

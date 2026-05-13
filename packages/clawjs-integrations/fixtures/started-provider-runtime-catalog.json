@@ -41576,6 +41576,75 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.create-billing-meter-event-adjustment",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Billing Meter Event Adjustment",
+          "fields": [
+            {
+              "name": "cancel",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "identifier": "event_sample"
+              }
+            },
+            {
+              "name": "event_name",
+              "type": "string",
+              "optional": false,
+              "default": "sample_meter_event"
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false,
+              "default": "cancel"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-billing-meter-event",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Billing Meter Event",
+          "fields": [
+            {
+              "name": "event_name",
+              "type": "string",
+              "optional": false,
+              "default": "sample_meter_event"
+            },
+            {
+              "name": "identifier",
+              "type": "string",
+              "optional": true,
+              "default": "event_sample"
+            },
+            {
+              "name": "payload",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "stripe_customer_id": "cus_sample",
+                "value": "10"
+              }
+            },
+            {
+              "name": "timestamp",
+              "type": "integer",
+              "optional": true,
+              "default": 1704067200
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

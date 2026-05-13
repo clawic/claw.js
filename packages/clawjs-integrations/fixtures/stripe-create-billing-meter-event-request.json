@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/billing/meter_events",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "event_name=sample_meter_event&identifier=event_sample&payload=%7B%22stripe_customer_id%22%3A%22cus_sample%22%2C%22value%22%3A%2210%22%7D&timestamp=1704067200"
+}

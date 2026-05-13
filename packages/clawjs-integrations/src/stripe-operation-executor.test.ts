@@ -998,6 +998,30 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-billing-meter-event"), {
+      event_name: "sample_meter_event",
+      identifier: "event_sample",
+      payload: { stripe_customer_id: "cus_sample", value: "10" },
+      timestamp: 1704067200,
+    }), {
+      method: "POST",
+      endpoint: "billing/meter_events",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        event_name: "sample_meter_event",
+        identifier: "event_sample",
+        payload: { stripe_customer_id: "cus_sample", value: "10" },
+        timestamp: 1704067200,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.process-terminal-reader-setup-intent"), {
       reader: "tmr_sample",
       setup_intent: "seti_sample",
