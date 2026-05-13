@@ -30495,37 +30495,6 @@
       ],
       "operations": [
         {
-          "id": "whatsapp.action.send-message",
-          "appId": "whatsapp",
-          "kind": "action",
-          "name": "Send Message",
-          "fields": [
-            {
-              "name": "phoneNumberId",
-              "type": "string",
-              "optional": false
-            },
-            {
-              "name": "quotedMessageId",
-              "type": "string",
-              "optional": true
-            },
-            {
-              "name": "text",
-              "type": "string",
-              "optional": false
-            },
-            {
-              "name": "to",
-              "type": "string",
-              "optional": false
-            }
-          ],
-          "authFieldNames": [
-            "whatsAppAccessToken"
-          ]
-        },
-        {
           "id": "whatsapp.action.verify-phone-number",
           "appId": "whatsapp",
           "kind": "action",
@@ -30539,7 +30508,451 @@
           ],
           "authFieldNames": [
             "whatsAppAccessToken"
-          ]
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "whatsapp.action.send-message",
+          "appId": "whatsapp",
+          "kind": "action",
+          "name": "Send Text Message",
+          "fields": [
+            {
+              "name": "phoneNumberId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "to",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "quotedMessageId",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "whatsAppAccessToken"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "whatsapp.action.send-image-message",
+          "appId": "whatsapp",
+          "kind": "action",
+          "name": "Send Image Message",
+          "fields": [
+            {
+              "name": "phoneNumberId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "to",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "quotedMessageId",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "mediaLink",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/media"
+            },
+            {
+              "name": "caption",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "whatsAppAccessToken"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "whatsapp.action.send-document-message",
+          "appId": "whatsapp",
+          "kind": "action",
+          "name": "Send Document Message",
+          "fields": [
+            {
+              "name": "phoneNumberId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "to",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "quotedMessageId",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "mediaLink",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/media"
+            },
+            {
+              "name": "caption",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "filename",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "whatsAppAccessToken"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "whatsapp.action.send-audio-message",
+          "appId": "whatsapp",
+          "kind": "action",
+          "name": "Send Audio Message",
+          "fields": [
+            {
+              "name": "phoneNumberId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "to",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "quotedMessageId",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "mediaLink",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/media"
+            }
+          ],
+          "authFieldNames": [
+            "whatsAppAccessToken"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "whatsapp.action.send-video-message",
+          "appId": "whatsapp",
+          "kind": "action",
+          "name": "Send Video Message",
+          "fields": [
+            {
+              "name": "phoneNumberId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "to",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "quotedMessageId",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "mediaLink",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/media"
+            },
+            {
+              "name": "caption",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "whatsAppAccessToken"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "whatsapp.action.send-sticker-message",
+          "appId": "whatsapp",
+          "kind": "action",
+          "name": "Send Sticker Message",
+          "fields": [
+            {
+              "name": "phoneNumberId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "to",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "quotedMessageId",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "mediaLink",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/media"
+            }
+          ],
+          "authFieldNames": [
+            "whatsAppAccessToken"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "whatsapp.action.send-location-message",
+          "appId": "whatsapp",
+          "kind": "action",
+          "name": "Send Location Message",
+          "fields": [
+            {
+              "name": "phoneNumberId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "to",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "quotedMessageId",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "latitude",
+              "type": "number",
+              "optional": false,
+              "default": 37.485
+            },
+            {
+              "name": "longitude",
+              "type": "number",
+              "optional": false,
+              "default": -122.153
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "address",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "whatsAppAccessToken"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "whatsapp.action.send-contacts-message",
+          "appId": "whatsapp",
+          "kind": "action",
+          "name": "Send Contacts Message",
+          "fields": [
+            {
+              "name": "phoneNumberId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "to",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "quotedMessageId",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "contacts",
+              "type": "string",
+              "optional": false,
+              "default": "[{\"name\":{\"formatted_name\":\"Sample Contact\"},\"phones\":[{\"phone\":\"15551234567\",\"type\":\"WORK\"}]}]"
+            }
+          ],
+          "authFieldNames": [
+            "whatsAppAccessToken"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "whatsapp.action.send-template-message",
+          "appId": "whatsapp",
+          "kind": "action",
+          "name": "Send Template Message",
+          "fields": [
+            {
+              "name": "phoneNumberId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "to",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "quotedMessageId",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "templateName",
+              "type": "string",
+              "optional": false,
+              "default": "sample_template"
+            },
+            {
+              "name": "languageCode",
+              "type": "string",
+              "optional": false,
+              "default": "en_US"
+            },
+            {
+              "name": "components",
+              "type": "string",
+              "optional": true,
+              "default": "[{\"type\":\"body\",\"parameters\":[{\"type\":\"text\",\"text\":\"sample\"}]}]"
+            }
+          ],
+          "authFieldNames": [
+            "whatsAppAccessToken"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "whatsapp.action.mark-message-read",
+          "appId": "whatsapp",
+          "kind": "action",
+          "name": "Mark Message Read",
+          "fields": [
+            {
+              "name": "phoneNumberId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "whatsAppAccessToken"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
         },
         {
           "id": "whatsapp.source.message-status",
