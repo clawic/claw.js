@@ -1,0 +1,56 @@
+import {
+  arrayField,
+  integerField,
+  objectField,
+  PAGE,
+  spec,
+  SPREADSHEET,
+  stringField,
+  TASKLIST,
+  type GoogleOperationSpec,
+} from "./google-operation-core.ts";
+
+const RANGE = [stringField("range", { default: "Sheet1!A1:B2" })];
+const VALUES = [arrayField("values", [["A", "B"]])];
+const FORM = [stringField("formId", { default: "form-123" })];
+const TASK = [stringField("task", { default: "task-123" })];
+
+export const GOOGLE_PRODUCTIVITY_ACTION_SPECS = [
+  spec("create-spreadsheet", "POST", "https://sheets.googleapis.com/v4/spreadsheets", [objectField("properties", { title: "Sample Sheet" })], { body: ["properties"], requiredPaths: ["spreadsheetId"] }),
+  spec("get-spreadsheet", "GET", "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}", SPREADSHEET, { requiredPaths: ["spreadsheetId"] }),
+  spec("batch-update-spreadsheet", "POST", "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}:batchUpdate", [...SPREADSHEET, arrayField("requests", [{ addSheet: { properties: { title: "Sheet2" } } }])], { body: ["requests"], requiredPaths: ["spreadsheetId", "replies"] }),
+  spec("get-sheet-values", "GET", "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values/{range}", [...SPREADSHEET, ...RANGE], { requiredPaths: ["range", "values"] }),
+  spec("batch-get-sheet-values", "GET", "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values:batchGet", [...SPREADSHEET, arrayField("ranges", ["Sheet1!A1:B2"])], { query: ["ranges"], requiredPaths: ["valueRanges"] }),
+  spec("update-sheet-values", "PUT", "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values/{range}", [...SPREADSHEET, ...RANGE, stringField("valueInputOption", { default: "RAW" }), ...VALUES], { query: ["valueInputOption"], body: ["range", "values"], requiredPaths: ["spreadsheetId", "updatedCells"] }),
+  spec("append-sheet-values", "POST", "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values/{range}:append", [...SPREADSHEET, ...RANGE, stringField("valueInputOption", { default: "RAW" }), ...VALUES], { query: ["valueInputOption"], body: ["range", "values"], requiredPaths: ["spreadsheetId", "updates"] }),
+  spec("clear-sheet-values", "POST", "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values/{range}:clear", [...SPREADSHEET, ...RANGE], { requiredPaths: ["spreadsheetId", "clearedRange"] }),
+  spec("batch-update-sheet-values", "POST", "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values:batchUpdate", [...SPREADSHEET, stringField("valueInputOption", { default: "RAW" }), arrayField("data", [{ range: "Sheet1!A1:B2", values: [["A", "B"]] }])], { body: ["valueInputOption", "data"], requiredPaths: ["spreadsheetId", "responses"] }),
+  spec("batch-clear-sheet-values", "POST", "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values:batchClear", [...SPREADSHEET, arrayField("ranges", ["Sheet1!A1:B2"])], { body: ["ranges"], requiredPaths: ["spreadsheetId", "clearedRanges"] }),
+  spec("copy-sheet-to-spreadsheet", "POST", "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/sheets/{sheetId}:copyTo", [...SPREADSHEET, stringField("sheetId", { default: "0" }), stringField("destinationSpreadsheetId", { default: "spreadsheet-456" })], { body: ["destinationSpreadsheetId"], requiredPaths: ["sheetId"] }),
+  spec("create-document", "POST", "https://docs.googleapis.com/v1/documents", [stringField("title", { default: "Sample Doc" })], { body: ["title"], requiredPaths: ["documentId", "title"] }),
+  spec("get-document", "GET", "https://docs.googleapis.com/v1/documents/{documentId}", [stringField("documentId", { default: "doc-123" })], { requiredPaths: ["documentId", "title"] }),
+  spec("batch-update-document", "POST", "https://docs.googleapis.com/v1/documents/{documentId}:batchUpdate", [stringField("documentId", { default: "doc-123" }), arrayField("requests", [{ insertText: { location: { index: 1 }, text: "Hello" } }])], { body: ["requests"], requiredPaths: ["documentId", "replies"] }),
+  spec("create-form", "POST", "https://forms.googleapis.com/v1/forms", [objectField("info", { title: "Sample Form" })], { body: ["info"], requiredPaths: ["formId", "info"] }),
+  spec("get-form", "GET", "https://forms.googleapis.com/v1/forms/{formId}", FORM, { requiredPaths: ["formId", "info"] }),
+  spec("batch-update-form", "POST", "https://forms.googleapis.com/v1/forms/{formId}:batchUpdate", [...FORM, arrayField("requests", [{ updateFormInfo: { info: { title: "Updated" }, updateMask: "title" } }])], { body: ["requests"], requiredPaths: ["formId", "replies"] }),
+  spec("list-form-responses", "GET", "https://forms.googleapis.com/v1/forms/{formId}/responses", [...FORM, integerField("pageSize", { optional: true, default: 100, min: 1, max: 500 }), stringField("pageToken", { optional: true, default: "offline-page-token" })], { query: ["pageSize", "pageToken"], requiredPaths: ["responses"], pageItems: "responses" }),
+  spec("get-form-response", "GET", "https://forms.googleapis.com/v1/forms/{formId}/responses/{responseId}", [...FORM, stringField("responseId", { default: "response-123" })], { requiredPaths: ["responseId"] }),
+  spec("create-form-watch", "POST", "https://forms.googleapis.com/v1/forms/{formId}/watches", [...FORM, objectField("target", { topic: { topicName: "projects/offline/topics/forms" } }), stringField("eventType", { default: "RESPONSES" })], { body: ["target", "eventType"], requiredPaths: ["id", "eventType"] }),
+  spec("list-form-watches", "GET", "https://forms.googleapis.com/v1/forms/{formId}/watches", FORM, { requiredPaths: ["watches"] }),
+  spec("renew-form-watch", "POST", "https://forms.googleapis.com/v1/forms/{formId}/watches/{watchId}:renew", [...FORM, stringField("watchId", { default: "watch-123" })], { requiredPaths: ["id", "eventType"] }),
+  spec("delete-form-watch", "DELETE", "https://forms.googleapis.com/v1/forms/{formId}/watches/{watchId}", [...FORM, stringField("watchId", { default: "watch-123" })]),
+  spec("list-tasklists", "GET", "https://tasks.googleapis.com/tasks/v1/users/@me/lists", PAGE, { query: ["maxResults", "pageToken"], requiredPaths: ["items"], pageItems: "items" }),
+  spec("get-tasklist", "GET", "https://tasks.googleapis.com/tasks/v1/users/@me/lists/{tasklist}", TASKLIST, { requiredPaths: ["id", "title"] }),
+  spec("create-tasklist", "POST", "https://tasks.googleapis.com/tasks/v1/users/@me/lists", [stringField("title", { default: "Tasks" })], { body: ["title"], requiredPaths: ["id", "title"] }),
+  spec("update-tasklist", "PUT", "https://tasks.googleapis.com/tasks/v1/users/@me/lists/{tasklist}", [...TASKLIST, stringField("title", { default: "Updated Tasks" })], { body: ["title"], requiredPaths: ["id", "title"] }),
+  spec("patch-tasklist", "PATCH", "https://tasks.googleapis.com/tasks/v1/users/@me/lists/{tasklist}", [...TASKLIST, stringField("title", { default: "Patched Tasks" })], { body: ["title"], requiredPaths: ["id", "title"] }),
+  spec("delete-tasklist", "DELETE", "https://tasks.googleapis.com/tasks/v1/users/@me/lists/{tasklist}", TASKLIST),
+  spec("list-tasks", "GET", "https://tasks.googleapis.com/tasks/v1/lists/{tasklist}/tasks", [...TASKLIST, ...PAGE], { query: ["maxResults", "pageToken"], requiredPaths: ["items"], pageItems: "items" }),
+  spec("get-task", "GET", "https://tasks.googleapis.com/tasks/v1/lists/{tasklist}/tasks/{task}", [...TASKLIST, ...TASK], { requiredPaths: ["id", "title"] }),
+  spec("create-task", "POST", "https://tasks.googleapis.com/tasks/v1/lists/{tasklist}/tasks", [...TASKLIST, stringField("title", { default: "Follow up" }), stringField("notes", { optional: true, default: "Sample note" })], { body: ["title", "notes"], requiredPaths: ["id", "title"] }),
+  spec("update-task", "PUT", "https://tasks.googleapis.com/tasks/v1/lists/{tasklist}/tasks/{task}", [...TASKLIST, ...TASK, stringField("title", { default: "Updated task" }), stringField("notes", { optional: true, default: "Updated note" })], { body: ["title", "notes"], requiredPaths: ["id", "title"] }),
+  spec("patch-task", "PATCH", "https://tasks.googleapis.com/tasks/v1/lists/{tasklist}/tasks/{task}", [...TASKLIST, ...TASK, stringField("title", { default: "Patched task" })], { body: ["title"], requiredPaths: ["id", "title"] }),
+  spec("delete-task", "DELETE", "https://tasks.googleapis.com/tasks/v1/lists/{tasklist}/tasks/{task}", [...TASKLIST, ...TASK]),
+  spec("move-task", "POST", "https://tasks.googleapis.com/tasks/v1/lists/{tasklist}/tasks/{task}/move", [...TASKLIST, ...TASK, stringField("parent", { optional: true, default: "parent-task" }), stringField("previous", { optional: true, default: "previous-task" })], { query: ["parent", "previous"], requiredPaths: ["id", "title"] }),
+  spec("clear-completed-tasks", "POST", "https://tasks.googleapis.com/tasks/v1/lists/{tasklist}/clear", TASKLIST),
+] as const satisfies readonly GoogleOperationSpec[];
