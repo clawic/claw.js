@@ -6,37 +6,42 @@
 
 ClawJS is a local-first Agent OS for building runtime-aware agent apps.
 
-It gives builders one framework surface for the pieces that agent products keep
-rebuilding: runtime adapters, local workspace state, host boundaries, sessions,
-memory, secrets, files, media, notifications, data services, remote relay, and
-operator-facing control planes.
+Stop rebuilding the plumbing. ClawJS bundles the moving parts every agent
+product ends up writing itself: sessions, memory, files, secrets, audio,
+skills, MCP, multi-agent delegation, channels into the messengers your users
+already live in, a relay for remote clients, and runtime adapters that let
+you swap the engine underneath.
 
 | Surface | Best for | Example |
 | --- | --- | --- |
 | SDK | local Node.js application code | `claw.sessions.listSessions()` |
 | CLI | operator and automation workflows | `claw sessions list --json` |
-| Relay API | remote browser, mobile, or server clients | `GET /v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/sessions` |
+| Relay API | remote browser, mobile, or server clients | `GET /v1/.../sessions` |
 
 Full comparison: [docs/interface-matrix.md](docs/interface-matrix.md)
 
 ## What You Build On
 
-ClawJS turns the recurring plumbing of agent products into one local-first
-surface: build apps, run workflows, connect clients, and keep agent work
-portable across hosts.
+Four ways in. One agent runtime. Every moving part already there.
 
 ```mermaid
 flowchart LR
-  sdk["SDK\nBuild apps"] --> claw["ClawJS"]
-  cli["CLI\nRun workflows"] --> claw
-  api["API\nConnect clients"] --> claw
-  relay["Relay\nReach devices"] --> claw
-  claw --> work["Agent work\nsessions, files, memory,\nsecrets, notifications"]
+  sdk["SDK"] --> claw
+  cli["CLI"] --> claw
+  api["API"] --> claw
+  relay["Relay"] --> claw
+  claw(["ClawJS"]) ==> agents(["Agents"])
+  agents --> data["Memory · Files · Notes · Secrets"]
+  agents --> ext(["Integrations"])
+  agents --> rt["Runtimes<br/>openclaw · codex · hermes"]
+  ext --> mcp["MCPs · APIs"]
+  ext --> iot["IoT"]
+  ext --> channels["Channels<br/>Telegram · WhatsApp · Discord · Signal · Slack"]
 ```
 
-Create once, then expose the same capabilities to local apps, native hosts,
-automation scripts, and remote control planes. Naming and stability rules live
-in [ADR 0001](docs/adr/0001-naming-and-stability-surfaces.md).
+Build once, expose everything through the SDK, the CLI, the API, or the
+relay. Naming and stability rules live in
+[ADR 0001](docs/adr/0001-naming-and-stability-surfaces.md).
 
 ## Repository Map
 
