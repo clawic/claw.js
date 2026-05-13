@@ -152,7 +152,7 @@ export async function POST() {
   });
   await createRecord<Message>("hub_messages", {
     channelId: chGeneral.id, authorId: "spark-agent", authorKind: "agent",
-    content: "Already on it. I'll push the benchmark report to wiki_pages with the raw data attached.", contentType: "text", pinned: false,
+    content: "Already on it. I'll push the benchmark report to the engineering wiki with the raw data attached.", contentType: "text", pinned: false,
     createdAt: ago(38),
   });
   await createRecord<Message>("hub_messages", {

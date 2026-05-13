@@ -341,7 +341,7 @@ export class WikiStore {
         FOREIGN KEY (space_id) REFERENCES wiki_spaces(id) ON DELETE CASCADE
       );
 
-      CREATE INDEX IF NOT EXISTS wiki_comments_parent_idx ON page_comments(parent_comment_id);
+      CREATE INDEX IF NOT EXISTS page_comments_parent_idx ON page_comments(parent_comment_id);
       CREATE INDEX IF NOT EXISTS wiki_revisions_page_idx ON page_revisions(page_id);
     `);
 

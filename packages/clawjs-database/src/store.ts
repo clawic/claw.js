@@ -1007,67 +1007,6 @@ function builtInCollections(): Array<{
         { name: "import_batches_status_idx", fields: ["status"] },
       ],
     },
-    // ── Wiki app collections ───────────────────────────────────────────
-    // Mirrors the wiki app's data model for cross-app data sync.
-    {
-      name: "wiki_pages",
-      displayName: "Wiki Pages",
-      coreFieldNames: ["title", "slug", "spaceId"],
-      fields: [
-        { name: "title", type: "text", required: true },
-        { name: "slug", type: "text", required: true },
-        { name: "body", type: "text", required: true },
-        { name: "spaceId", type: "text", required: true },
-        { name: "parentPageId", type: "text" },
-        { name: "tags", type: "json" },
-        { name: "status", type: "select", options: ["draft", "published", "archived"] },
-      ],
-      indexes: [{ name: "wiki_pages_slug_idx", fields: ["slug"] }],
-    },
-    {
-      name: "wiki_comments",
-      displayName: "Wiki Comments",
-      coreFieldNames: ["pageId", "body"],
-      fields: [
-        { name: "pageId", type: "text", required: true },
-        { name: "parentCommentId", type: "text" },
-        { name: "body", type: "text", required: true },
-        { name: "authorAgentId", type: "text" },
-        { name: "authorUserId", type: "text" },
-        { name: "upvotes", type: "number" },
-      ],
-      indexes: [{ name: "wiki_comments_page_idx", fields: ["pageId"] }],
-    },
-    {
-      name: "wiki_links",
-      displayName: "Wiki Links",
-      coreFieldNames: ["sourcePageId", "targetPageId", "linkType"],
-      fields: [
-        { name: "sourcePageId", type: "text", required: true },
-        { name: "targetPageId", type: "text", required: true },
-        { name: "linkType", type: "select", required: true, options: ["related", "depends-on", "supersedes", "wikilink"] },
-        { name: "label", type: "text" },
-      ],
-      indexes: [
-        { name: "wiki_links_source_idx", fields: ["sourcePageId"] },
-        { name: "wiki_links_target_idx", fields: ["targetPageId"] },
-      ],
-    },
-    {
-      name: "wiki_revisions",
-      displayName: "Wiki Revisions",
-      coreFieldNames: ["pageId", "revisionNumber"],
-      fields: [
-        { name: "pageId", type: "text", required: true },
-        { name: "revisionNumber", type: "number", required: true },
-        { name: "title", type: "text" },
-        { name: "body", type: "text", required: true },
-        { name: "editedByAgentId", type: "text" },
-        { name: "editedByUserId", type: "text" },
-        { name: "changeSummary", type: "text" },
-      ],
-      indexes: [{ name: "wiki_revisions_page_idx", fields: ["pageId"] }],
-    },
     // ── Hub app collections ────────────────────────────────────────────
     // Real-time communication platform for agents. Spaces contain
     // channels organised by categories; messages flow through channels.
@@ -1372,6 +1311,28 @@ export class DatabaseServiceStore {
         FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE
       );
       CREATE INDEX IF NOT EXISTS page_blocks_page_order_idx ON page_blocks(page_id, sort_order, created_at);
+      CREATE TABLE IF NOT EXISTS page_links (
+        id TEXT PRIMARY KEY,
+        source_page_id TEXT NOT NULL,
+        target_page_id TEXT NOT NULL,
+        relation TEXT NOT NULL DEFAULT 'related',
+        created_at TEXT NOT NULL,
+        UNIQUE (source_page_id, target_page_id, relation),
+        FOREIGN KEY (source_page_id) REFERENCES pages(id) ON DELETE CASCADE,
+        FOREIGN KEY (target_page_id) REFERENCES pages(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS page_links_target_idx ON page_links(target_page_id);
+      CREATE TABLE IF NOT EXISTS page_mentions (
+        id TEXT PRIMARY KEY,
+        page_id TEXT NOT NULL,
+        block_id TEXT,
+        target_kind TEXT NOT NULL,
+        target_id TEXT NOT NULL,
+        label TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS page_mentions_target_idx ON page_mentions(target_kind, target_id);
       CREATE TABLE IF NOT EXISTS page_revisions (
         id TEXT PRIMARY KEY,
         page_id TEXT NOT NULL,
@@ -1383,6 +1344,20 @@ export class DatabaseServiceStore {
         UNIQUE (page_id, revision_number),
         FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE
       );
+      CREATE TABLE IF NOT EXISTS page_comments (
+        id TEXT PRIMARY KEY,
+        page_id TEXT NOT NULL,
+        block_id TEXT,
+        parent_comment_id TEXT,
+        body TEXT NOT NULL,
+        author_kind TEXT NOT NULL DEFAULT 'user',
+        author_id TEXT,
+        upvotes INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS page_comments_page_idx ON page_comments(page_id, created_at);
       CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
         page_id UNINDEXED,
         title,
