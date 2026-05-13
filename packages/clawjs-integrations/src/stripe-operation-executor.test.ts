@@ -736,6 +736,42 @@ describe("stripe operation runtime", () => {
         requiredPaths: ["object", "url"],
       },
     });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.list-setup-attempts"), {
+      limit: 10,
+      setup_intent: "seti_sample",
+    }), {
+      method: "GET",
+      endpoint: "setup_attempts",
+      auth,
+      headers,
+      query: {
+        limit: 10,
+        setup_intent: "seti_sample",
+      },
+      bodyEncoding: undefined,
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["object", "data"],
+      },
+    });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.get-invoice-payment"), {
+      invoicePayment: "inpay_sample",
+    }), {
+      method: "GET",
+      endpoint: "invoice_payments/inpay_sample",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: undefined,
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
   });
 
   it("covers Stripe payment operations with operation-scoped offline fixtures", async () => {

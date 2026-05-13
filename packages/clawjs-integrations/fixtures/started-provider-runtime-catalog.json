@@ -31971,6 +31971,120 @@
           ]
         },
         {
+          "id": "stripe.action.list-setup-attempts",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Setup Attempts",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "setup_intent",
+              "type": "string",
+              "optional": true,
+              "default": "seti_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-mandate",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Mandate",
+          "fields": [
+            {
+              "name": "mandate",
+              "type": "string",
+              "optional": false,
+              "default": "mandate_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-invoice-payments",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Invoice Payments",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "invoice",
+              "type": "string",
+              "optional": true,
+              "default": "in_sample"
+            },
+            {
+              "name": "payment",
+              "type": "string",
+              "optional": true,
+              "default": "py_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-invoice-payment",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Invoice Payment",
+          "fields": [
+            {
+              "name": "invoicePayment",
+              "type": "string",
+              "optional": false,
+              "default": "inpay_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-invoices",
           "appId": "stripe",
           "kind": "action",
