@@ -13,8 +13,8 @@
 
 import { ed25519 } from "@noble/curves/ed25519";
 
-import { encodeCanonicalCbor, decodeCanonicalCbor, type CborValue } from "@clawjs/mp/cbor";
-import { blake3Hash } from "@clawjs/mp/identity";
+import { encodeCanonicalCbor, decodeCanonicalCbor, type CborValue } from "@clawjs/marketplace/cbor";
+import { blake3Hash } from "@clawjs/marketplace/identity";
 
 import type { CapabilityRef } from "./types.ts";
 

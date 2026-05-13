@@ -8,11 +8,11 @@
 // This is the escape hatch for use cases the built-in core verticals
 // (post / item / meetup / want / ...) and the plugin verticals
 // (real-estate / vehicle / dating) don't cover. Examples a user might author:
-//   - `clawjs-mp-book-club/v1` (book swap with reading-progress overlay)
-//   - `clawjs-mp-language-exchange/v1`
-//   - `clawjs-mp-tools-lending/v1`
+//   - `marketplace-book-club/v1` (book swap with reading-progress overlay)
+//   - `marketplace-language-exchange/v1`
+//   - `marketplace-tools-lending/v1`
 
-import type { CborValue } from "@clawjs/mp/cbor";
+import type { CborValue } from "@clawjs/marketplace/cbor";
 
 import type { Block, AudienceLevel, BlockArchetype } from "./types.ts";
 

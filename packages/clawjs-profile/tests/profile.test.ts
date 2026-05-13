@@ -6,9 +6,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mkdtempSync, rmSync } from "node:fs";
 
-import { generateEd25519Keypair, issueCertificate } from "@clawjs/mp/identity";
-import { rootFromMnemonic, generateMnemonic } from "@clawjs/mp/recovery";
-import { buildHandle } from "@clawjs/mp/handles";
+import { generateEd25519Keypair, issueCertificate } from "@clawjs/marketplace/identity";
+import { rootFromMnemonic, generateMnemonic } from "@clawjs/marketplace/recovery";
+import { buildHandle } from "@clawjs/marketplace/handles";
 
 import {
   newBlock, signBlock, verifyBlock, encodeBlock, decodeBlock,

@@ -16,8 +16,8 @@
 
 import Database from "better-sqlite3";
 
-import { encodeCanonicalCbor, decodeCanonicalCbor, type CborValue } from "@clawjs/mp/cbor";
-import type { Handle, PeerDirectoryEntry } from "@clawjs/mp/handles";
+import { encodeCanonicalCbor, decodeCanonicalCbor, type CborValue } from "@clawjs/marketplace/cbor";
+import type { Handle, PeerDirectoryEntry } from "@clawjs/marketplace/handles";
 
 import type { Block, Profile, Group, CapabilityRef, BlockRef } from "./types.ts";
 import { encodeBlock, decodeBlock } from "./blocks.ts";

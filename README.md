@@ -19,6 +19,70 @@ operator-facing control planes.
 
 Full comparison: [docs/interface-matrix.md](docs/interface-matrix.md)
 
+## System Shape
+
+ClawJS is the framework layer. The public surface is intentionally small:
+builders use the SDK in code, operators use the `claw` CLI, and remote clients
+talk to versioned `/v1` APIs. Everything else is a module, service, host
+adapter, or implementation detail behind those contracts.
+
+```mermaid
+flowchart LR
+  builder[Builder code] --> sdk["@clawjs/claw SDK"]
+  operator[Operator / automation] --> cli["claw CLI"]
+  remote[Remote clients] --> api["/v1 API + /v1/events"]
+
+  sdk --> contracts["v1 contracts\nschemas + fixtures"]
+  cli --> contracts
+  api --> contracts
+
+  contracts --> services["Core services"]
+  services --> runtime["runtime"]
+  services --> sessions["sessions"]
+  services --> database["database"]
+  services --> secrets["secrets"]
+  services --> drive["drive"]
+  services --> memory["memory"]
+  services --> search["search"]
+  services --> notify["notify"]
+  services --> mcp["mcp"]
+
+  services --> modules["Modules and apps"]
+  modules --> board["board"]
+  modules --> channels["channels"]
+  modules --> agenda["agenda"]
+  modules --> signals["signals"]
+  modules --> publishing["publishing"]
+  modules --> marketplace["marketplace"]
+
+  services --> storage["~/.claw + .claw/"]
+```
+
+### Extensibility Model
+
+```mermaid
+flowchart TB
+  app["App or host"] --> claw["ClawJS contracts"]
+  claw --> module["Module\nfunctional domain"]
+  claw --> integration["Integration\nexternal service"]
+  claw --> plugin["Plugin\npackage extension"]
+  claw --> skill["Skill\nagent instructions"]
+  claw --> connector["Connector\nprovider credentials"]
+
+  module --> cli["claw commands"]
+  module --> api["/v1 resources"]
+  module --> data["prefixed data\nschemaVersion"]
+  module --> events["domain.action events"]
+
+  integration --> relay["relay transport"]
+  connector --> secrets["secrets + grants"]
+```
+
+Modules register capabilities behind the same naming rules: SQL and collection
+names use `snake_case`, JSON/API fields use `camelCase`, CLI commands and flags
+use `kebab-case`, and public events use `domain.action`. The naming source of
+truth is [ADR 0001](docs/adr/0001-naming-and-stability-surfaces.md).
+
 ## Repository Map
 
 ```text

@@ -15,7 +15,7 @@ export interface ProfileSurfaceDeps {
   chats: ChatDeps;
   marketplace: MarketplaceDeps;
   /** Feature flag — when false, the routes are not mounted (preserving
-   *  backward-compatible behaviour for installations still on mp/1.0.0). */
+   *  backward-compatible behaviour for installations still on marketplace/1.0.0). */
   enabled: boolean;
 }
 

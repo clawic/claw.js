@@ -9,9 +9,9 @@
 // PeerDirectoryEntry. Each Block declares an `audience` (which groups can see
 // it) and `fieldsPerLevel` (which fields are visible at which audience tier).
 
-import type { CborValue } from "@clawjs/mp/cbor";
-import type { CompoundSignature, KeyCertificate } from "@clawjs/mp/identity";
-import type { Handle } from "@clawjs/mp/handles";
+import type { CborValue } from "@clawjs/marketplace/cbor";
+import type { CompoundSignature, KeyCertificate } from "@clawjs/marketplace/identity";
+import type { Handle } from "@clawjs/marketplace/handles";
 
 // ---- audience model ----
 
@@ -146,6 +146,6 @@ export interface Profile {
 
 // ---- helpers consumers re-export ----
 
-export type { Handle } from "@clawjs/mp/handles";
-export type { CborValue } from "@clawjs/mp/cbor";
-export type { CompoundSignature, KeyCertificate } from "@clawjs/mp/identity";
+export type { Handle } from "@clawjs/marketplace/handles";
+export type { CborValue } from "@clawjs/marketplace/cbor";
+export type { CompoundSignature, KeyCertificate } from "@clawjs/marketplace/identity";

@@ -37,7 +37,7 @@ const packageDirs = [
   path.join(rootDir, "packages", "clawjs-agents"),
   path.join(rootDir, "packages", "clawjs-integrations"),
   path.join(rootDir, "packages", "clawjs-index"),
-  path.join(rootDir, "packages", "clawjs-mp"),
+  path.join(rootDir, "packages", "marketplace"),
   path.join(rootDir, "packages", "clawjs-profile"),
   path.join(rootDir, "packages", "clawjs-sessions"),
   path.join(rootDir, "packages", "clawjs-user-model"),

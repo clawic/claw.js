@@ -1,7 +1,7 @@
 {
   "name": "@clawjs/profile",
   "version": "0.1.0",
-  "description": "Clawix Profile: namespace per person with typed blocks, owner-driven groups, capability tokens, and visibility-aware ACL resolution on top of the mp/* peer-to-peer protocol.",
+  "description": "Clawix Profile: namespace per person with typed blocks, owner-driven groups, capability tokens, and visibility-aware ACL resolution on top of the marketplace/* peer-to-peer protocol.",
   "type": "module",
   "license": "MIT",
   "author": {
@@ -65,7 +65,7 @@
     "test": "node --test --import tsx tests/*.test.ts"
   },
   "dependencies": {
-    "@clawjs/mp": "*",
+    "@clawjs/marketplace": "*",
     "@noble/curves": "^1.9.0",
     "@noble/hashes": "^1.8.0",
     "better-sqlite3": "^12.9.0"

@@ -40,7 +40,7 @@
   },
   "dependencies": {
     "@clawjs/core": "0.1.2",
-    "@clawjs/mp": "*",
+    "@clawjs/marketplace": "*",
     "@clawjs/profile": "*",
     "@fastify/cors": "^11.1.0",
     "@fastify/websocket": "^11.2.0",

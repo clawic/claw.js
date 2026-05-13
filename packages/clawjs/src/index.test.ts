@@ -2855,7 +2855,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
     claw: path.resolve(process.cwd(), "packages/clawjs-node"),
     workspace: path.resolve(process.cwd(), "packages/clawjs-workspace"),
     database: path.resolve(process.cwd(), "packages/claw-database"),
-    mp: path.resolve(process.cwd(), "packages/clawjs-mp"),
+    marketplace: path.resolve(process.cwd(), "packages/marketplace"),
     profile: path.resolve(process.cwd(), "packages/clawjs-profile"),
     audio: path.resolve(process.cwd(), "packages/clawjs-audio"),
     index: path.resolve(process.cwd(), "packages/clawjs-index"),
@@ -2868,7 +2868,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
     packWorkspacePackage(packageRoots.claw, packDir),
     packWorkspacePackage(packageRoots.workspace, packDir),
     packWorkspacePackage(packageRoots.database, packDir),
-    packWorkspacePackage(packageRoots.mp, packDir),
+    packWorkspacePackage(packageRoots.marketplace, packDir),
     packWorkspacePackage(packageRoots.profile, packDir),
     packWorkspacePackage(packageRoots.audio, packDir),
     packWorkspacePackage(packageRoots.index, packDir),
@@ -5827,7 +5827,7 @@ test("runCli can manage TTS config and synthesize audio", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async () => new Response(Buffer.from("fake-mp3"), {
     status: 200,
-    headers: { "content-type": "audio/mpeg" },
+    headers: { "content-type": "audio/marketplaceeg" },
   })) as typeof fetch;
 
   try {
@@ -5849,7 +5849,7 @@ test("runCli can manage TTS config and synthesize audio", async () => {
 
     assert.equal(synthExitCode, CLI_EXIT_OK);
     assert.equal(fs.readFileSync(outputPath, "utf8"), "fake-mp3");
-    assert.match(synthStdout.getOutput(), /"mimeType": "audio\/mpeg"/);
+    assert.match(synthStdout.getOutput(), /"mimeType": "audio\/marketplaceeg"/);
   } finally {
     globalThis.fetch = originalFetch;
   }

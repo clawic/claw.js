@@ -13,8 +13,8 @@ import type {
   ProfileDeps, FeedDeps, ChatDeps, MarketplaceDeps,
 } from "../src/routes/index.ts";
 import type { Block, Group, Profile, CapabilityRef } from "@clawjs/profile";
-import { buildHandle } from "@clawjs/mp/handles";
-import { rootFromMnemonic, generateMnemonic } from "@clawjs/mp/recovery";
+import { buildHandle } from "@clawjs/marketplace/handles";
+import { rootFromMnemonic, generateMnemonic } from "@clawjs/marketplace/recovery";
 
 function makeBlock(vertical: string): Block {
   return {

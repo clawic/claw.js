@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 
 import { canonicalTypes } from "./schema/registry.ts";
-import { MpStore } from "./mp-store.ts";
+import { MpStore } from "./marketplace-store.ts";
 import type {
   AlertRow, AlertRule, AlertRuleKind, CollectionRow, DeviceTokenRow, EntityRow,
   EntityType, FieldHistoryPoint, IndexEvent, JsonSchema, MonitorRow,

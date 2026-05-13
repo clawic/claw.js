@@ -4,12 +4,12 @@
 // observable state have the same `blockId`; mutating any field changes it.
 // Signature is compound (RoleKey || DeviceKey) over the canonical payload.
 
-import { encodeCanonicalCbor, decodeCanonicalCbor, type CborValue } from "@clawjs/mp/cbor";
+import { encodeCanonicalCbor, decodeCanonicalCbor, type CborValue } from "@clawjs/marketplace/cbor";
 import {
   blake3Hash, compoundSign, compoundVerify,
   encodeCertificate, decodeCertificate, verifyCertificate,
   type CompoundSignature, type KeyCertificate,
-} from "@clawjs/mp/identity";
+} from "@clawjs/marketplace/identity";
 
 import type { Block, AudienceSpec, CapabilityRef, TrackingRef, AgentPolicy } from "./types.ts";
 

@@ -10,7 +10,7 @@ import type { FastifyInstance } from "fastify";
 import type {
   Block, CapabilityRef, Group, Profile,
 } from "@clawjs/profile";
-import type { Handle } from "@clawjs/mp/handles";
+import type { Handle } from "@clawjs/marketplace/handles";
 
 export interface ProfileDeps {
   init(input: { mnemonic?: string; passphrase?: string; alias: string }): Promise<{ profile: Profile; mnemonic: string }>;

@@ -5,7 +5,7 @@
 // WebSocket via `/v1/feed/stream`.
 
 import type { FastifyInstance } from "fastify";
-import type { CborValue } from "@clawjs/mp/cbor";
+import type { CborValue } from "@clawjs/marketplace/cbor";
 import type { Block } from "@clawjs/profile";
 
 export interface FeedEntry {

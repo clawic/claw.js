@@ -8,7 +8,7 @@
 
 import { randomBytes } from "node:crypto";
 
-import { blake3Hash } from "@clawjs/mp/identity";
+import { blake3Hash } from "@clawjs/marketplace/identity";
 
 import type { Group, GroupInviteLink, AudienceLevel } from "./types.ts";
 import { BUILTIN_AUDIENCE_LEVELS } from "./types.ts";

@@ -1,5 +1,5 @@
 ---
-"@clawjs/mp": minor
+"@clawjs/marketplace": minor
 ---
 
 Add Double Ratchet mailbox transport, multi-device sync envelopes, and federated discovery clients.

@@ -188,10 +188,10 @@ CREATE VIRTUAL TABLE IF NOT EXISTS entities_fts USING fts5(
 );
 
 -- ============================================================================
--- mp/1.0.0 · marketplace protocol tables
+-- marketplace/1.0.0 · marketplace protocol tables
 -- ============================================================================
 -- All `*_keys` tables store encrypted private material; encryption is done in
--- the clawjs-mp identity module (XChaCha20-Poly1305 with a passphrase-derived
+-- the marketplace identity module (XChaCha20-Poly1305 with a passphrase-derived
 -- key) before the bytes ever reach SQLite. Public keys are stored raw.
 
 CREATE TABLE IF NOT EXISTS mp_root_keys (

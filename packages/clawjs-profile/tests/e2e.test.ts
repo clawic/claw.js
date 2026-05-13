@@ -24,21 +24,21 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mkdtempSync, rmSync } from "node:fs";
 
-import { generateEd25519Keypair, issueCertificate } from "@clawjs/mp/identity";
-import { generateMnemonic, rootFromMnemonic } from "@clawjs/mp/recovery";
-import { buildHandle, encodePairingLink, decodePairingLink } from "@clawjs/mp/handles";
+import { generateEd25519Keypair, issueCertificate } from "@clawjs/marketplace/identity";
+import { generateMnemonic, rootFromMnemonic } from "@clawjs/marketplace/recovery";
+import { buildHandle, encodePairingLink, decodePairingLink } from "@clawjs/marketplace/handles";
 import {
   canonicalizeIntent, signIntent,
-} from "@clawjs/mp/wire";
+} from "@clawjs/marketplace/wire";
 import {
   IrohDht, InMemoryIrohAdapter,
-} from "@clawjs/mp/discovery";
-import { itemPlugin } from "@clawjs/mp/verticals/core";
+} from "@clawjs/marketplace/discovery";
+import { itemPlugin } from "@clawjs/marketplace/verticals/core";
 import {
   generatePreKeyPair, signPreKey,
   x3dhInitiate, x3dhRespond,
   initAsAlice, initAsBob, dratchetEncrypt, dratchetDecrypt,
-} from "@clawjs/mp/ratchet";
+} from "@clawjs/marketplace/ratchet";
 
 import {
   newBlock, signBlock,
