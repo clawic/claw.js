@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/payment_methods/pm_sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "billing_details=%7B%22email%22%3A%22person%40example.invalid%22%7D&metadata=%7B%22order_id%22%3A%22sample%22%7D"
+}
