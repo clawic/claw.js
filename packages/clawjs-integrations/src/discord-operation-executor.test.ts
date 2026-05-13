@@ -19,6 +19,9 @@ const WEBHOOK_FIELD = field("webhookId", "string");
 const WEBHOOK_TOKEN_FIELD = field("webhookToken", "string");
 const APPLICATION_FIELD = field("applicationId", "string");
 const COMMAND_FIELD = field("commandId", "string");
+const AUTO_MODERATION_RULE_FIELD = field("autoModerationRuleId", "string");
+const AUTO_MODERATION_ACTIONS_FIELD = field("actions", "array", false, { default: [{ type: 1, metadata: { custom_message: "sample" } }] });
+const AUTO_MODERATION_TRIGGER_METADATA_FIELD = field("triggerMetadata", "object", true, { default: { keyword_filter: ["sample"] } });
 
 const DISCORD_ACTIONS = [
   action("get-current-user", "Get Current User", []),
@@ -74,6 +77,11 @@ const DISCORD_ACTIONS = [
   action("get-guild-ban", "Get Guild Ban", [GUILD_FIELD, USER_FIELD]),
   action("create-guild-ban", "Create Guild Ban", [GUILD_FIELD, USER_FIELD, field("deleteMessageSeconds", "integer", true, { default: 0, min: 0 })]),
   action("remove-guild-ban", "Remove Guild Ban", [GUILD_FIELD, USER_FIELD]),
+  action("list-auto-moderation-rules", "List Auto Moderation Rules", [GUILD_FIELD]),
+  action("get-auto-moderation-rule", "Get Auto Moderation Rule", [GUILD_FIELD, AUTO_MODERATION_RULE_FIELD]),
+  action("create-auto-moderation-rule", "Create Auto Moderation Rule", [GUILD_FIELD, field("name", "string"), field("eventType", "integer", false, { default: 1 }), field("triggerType", "integer", false, { default: 1 }), AUTO_MODERATION_TRIGGER_METADATA_FIELD, AUTO_MODERATION_ACTIONS_FIELD, field("enabled", "boolean", true), field("exemptRoles", "array", true, { default: ["sample"] }), field("exemptChannels", "array", true, { default: ["sample"] }), field("auditLogReason", "string", true)]),
+  action("update-auto-moderation-rule", "Update Auto Moderation Rule", [GUILD_FIELD, AUTO_MODERATION_RULE_FIELD, field("name", "string", true, { default: "sample" }), field("eventType", "integer", true, { default: 1 }), AUTO_MODERATION_TRIGGER_METADATA_FIELD, field("actions", "array", true, { default: [{ type: 1, metadata: { custom_message: "sample" } }] }), field("enabled", "boolean", true), field("exemptRoles", "array", true, { default: ["sample"] }), field("exemptChannels", "array", true, { default: ["sample"] }), field("auditLogReason", "string", true)]),
+  action("delete-auto-moderation-rule", "Delete Auto Moderation Rule", [GUILD_FIELD, AUTO_MODERATION_RULE_FIELD, field("auditLogReason", "string", true)]),
   action("list-guild-invites", "List Guild Invites", [GUILD_FIELD]),
   action("list-guild-scheduled-events", "List Guild Scheduled Events", [GUILD_FIELD, field("withUserCount", "boolean", true)]),
   action("create-guild-scheduled-event", "Create Guild Scheduled Event", [
@@ -212,6 +220,81 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-auto-moderation-rule"), {
+      guildId: "456",
+      name: "Block spoilers",
+      eventType: 1,
+      triggerType: 1,
+      triggerMetadata: {
+        keyword_filter: ["spoiler*"],
+      },
+      actions: [{
+        type: 1,
+        metadata: {
+          custom_message: "Keep spoilers in the right channel",
+        },
+      }],
+      enabled: true,
+      exemptRoles: ["123"],
+      exemptChannels: ["789"],
+      auditLogReason: "policy update",
+    }), {
+      method: "POST",
+      endpoint: "guilds/456/auto-moderation/rules",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "policy update",
+      },
+      body: {
+        name: "Block spoilers",
+        event_type: 1,
+        trigger_type: 1,
+        trigger_metadata: {
+          keyword_filter: ["spoiler*"],
+        },
+        actions: [{
+          type: 1,
+          metadata: {
+            custom_message: "Keep spoilers in the right channel",
+          },
+        }],
+        enabled: true,
+        exempt_roles: ["123"],
+        exempt_channels: ["789"],
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "guild_id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.update-auto-moderation-rule"), {
+      guildId: "456",
+      autoModerationRuleId: "rule-123",
+      name: "Updated rule",
+      eventType: 1,
+      enabled: false,
+      auditLogReason: "policy update",
+    }), {
+      method: "PATCH",
+      endpoint: "guilds/456/auto-moderation/rules/rule-123",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "policy update",
+      },
+      body: {
+        name: "Updated rule",
+        event_type: 1,
+        enabled: false,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "guild_id", "name"],
       },
     });
 
