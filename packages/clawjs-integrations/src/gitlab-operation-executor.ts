@@ -2,6 +2,7 @@ import type {
   ConnectorRuntimeRequestPlan,
 } from "./runtime-registry.ts";
 import type {
+  ConnectorFieldDefinition,
   ConnectorOperationDefinition,
   IntegrationJson,
 } from "./types.ts";
@@ -104,7 +105,115 @@ export type GitLabRuntimeOperation =
   | "get-project-variable"
   | "create-project-variable"
   | "update-project-variable"
-  | "delete-project-variable";
+  | "delete-project-variable"
+  | "list-commit-comments"
+  | "create-commit-comment"
+  | "list-commit-statuses"
+  | "create-commit-status"
+  | "compare-refs"
+  | "list-repository-contributors"
+  | "get-repository-blob"
+  | "get-raw-blob"
+  | "search-project-blobs"
+  | "search-project-commits"
+  | "search-project-issues"
+  | "search-project-merge-requests"
+  | "search-project-users"
+  | "list-issue-discussions"
+  | "create-issue-discussion"
+  | "update-issue-discussion-note"
+  | "delete-issue-discussion-note"
+  | "list-merge-request-discussions"
+  | "create-merge-request-discussion"
+  | "update-merge-request-discussion-note"
+  | "delete-merge-request-discussion-note"
+  | "get-merge-request-approvals"
+  | "approve-merge-request"
+  | "unapprove-merge-request"
+  | "update-merge-request-approvals"
+  | "list-environments"
+  | "get-environment"
+  | "create-environment"
+  | "update-environment"
+  | "delete-environment"
+  | "stop-environment"
+  | "list-deployments"
+  | "get-deployment"
+  | "create-deployment"
+  | "delete-deployment"
+  | "list-group-members"
+  | "add-group-member"
+  | "update-group-member"
+  | "remove-group-member"
+  | "list-project-badges"
+  | "add-project-badge"
+  | "update-project-badge"
+  | "delete-project-badge";
+
+type GitLabField = ConnectorFieldDefinition;
+
+interface GitLabGenericOperationSpec {
+  slug: GitLabRuntimeOperation;
+  method: string;
+  endpoint: string;
+  fields: GitLabField[];
+  response: "array" | "object";
+  requiredPaths?: string[];
+  query?: string[];
+  queryDefaults?: Record<string, IntegrationJson>;
+  body?: string[];
+  paginated?: boolean;
+}
+
+export const GITLAB_EXTRA_ACTION_SPECS = [
+  spec("list-commit-comments", "GET", "projects/{projectId}/repository/commits/{sha}/comments", [projectField(), stringField("sha")], "array", { paginated: true }),
+  spec("create-commit-comment", "POST", "projects/{projectId}/repository/commits/{sha}/comments", [projectField(), stringField("sha"), stringField("note", "Looks good"), optionalStringField("path", "README.md"), integerField("line", 1, true), optionalStringField("lineType", "new")], "object", { body: ["note", "path", "line", "line_type"] }),
+  spec("list-commit-statuses", "GET", "projects/{projectId}/repository/commits/{sha}/statuses", [projectField(), stringField("sha"), optionalStringField("ref", "main"), optionalStringField("name", "ci"), optionalStringField("stage", "test")], "array", { query: ["ref", "name", "stage"], paginated: true }),
+  spec("create-commit-status", "POST", "projects/{projectId}/statuses/{sha}", [projectField(), stringField("sha"), stringField("state", "success"), optionalStringField("ref", "main"), optionalStringField("name", "ci"), optionalStringField("targetUrl", "https://example.invalid/build"), optionalStringField("description", "Build passed")], "object", { body: ["state", "ref", "name", "target_url", "description"] }),
+  spec("compare-refs", "GET", "projects/{projectId}/repository/compare", [projectField(), stringField("from", "main"), stringField("to", "feature"), booleanField("straight", false, true)], "object", { query: ["from", "to", "straight"] }),
+  spec("list-repository-contributors", "GET", "projects/{projectId}/repository/contributors", [projectField()], "array", { paginated: true }),
+  spec("get-repository-blob", "GET", "projects/{projectId}/repository/blobs/{sha}", [projectField(), stringField("sha")], "object", { requiredPaths: ["id"] }),
+  spec("get-raw-blob", "GET", "projects/{projectId}/repository/blobs/{sha}/raw", [projectField(), stringField("sha")], "object"),
+  spec("search-project-blobs", "GET", "projects/{projectId}/search", [projectField(), stringField("search", "runtime")], "array", { query: ["scope", "search"], queryDefaults: { scope: "blobs" }, paginated: true }),
+  spec("search-project-commits", "GET", "projects/{projectId}/search", [projectField(), stringField("search", "runtime")], "array", { query: ["scope", "search"], queryDefaults: { scope: "commits" }, paginated: true }),
+  spec("search-project-issues", "GET", "projects/{projectId}/search", [projectField(), stringField("search", "runtime")], "array", { query: ["scope", "search"], queryDefaults: { scope: "issues" }, paginated: true }),
+  spec("search-project-merge-requests", "GET", "projects/{projectId}/search", [projectField(), stringField("search", "runtime")], "array", { query: ["scope", "search"], queryDefaults: { scope: "merge_requests" }, paginated: true }),
+  spec("search-project-users", "GET", "projects/{projectId}/search", [projectField(), stringField("search", "sample")], "array", { query: ["scope", "search"], queryDefaults: { scope: "users" }, paginated: true }),
+  spec("list-issue-discussions", "GET", "projects/{projectId}/issues/{issueIid}/discussions", [projectField(), integerField("issueIid")], "array", { paginated: true }),
+  spec("create-issue-discussion", "POST", "projects/{projectId}/issues/{issueIid}/discussions", [projectField(), integerField("issueIid"), stringField("body", "Discussion body")], "object", { body: ["body"] }),
+  spec("update-issue-discussion-note", "PUT", "projects/{projectId}/issues/{issueIid}/discussions/{discussionId}/notes/{noteId}", [projectField(), integerField("issueIid"), stringField("discussionId", "discussion_1"), integerField("noteId"), stringField("body", "Updated discussion")], "object", { body: ["body"] }),
+  spec("delete-issue-discussion-note", "DELETE", "projects/{projectId}/issues/{issueIid}/discussions/{discussionId}/notes/{noteId}", [projectField(), integerField("issueIid"), stringField("discussionId", "discussion_1"), integerField("noteId")], "object"),
+  spec("list-merge-request-discussions", "GET", "projects/{projectId}/merge_requests/{mergeRequestIid}/discussions", [projectField(), integerField("mergeRequestIid")], "array", { paginated: true }),
+  spec("create-merge-request-discussion", "POST", "projects/{projectId}/merge_requests/{mergeRequestIid}/discussions", [projectField(), integerField("mergeRequestIid"), stringField("body", "Discussion body")], "object", { body: ["body"] }),
+  spec("update-merge-request-discussion-note", "PUT", "projects/{projectId}/merge_requests/{mergeRequestIid}/discussions/{discussionId}/notes/{noteId}", [projectField(), integerField("mergeRequestIid"), stringField("discussionId", "discussion_1"), integerField("noteId"), stringField("body", "Updated discussion")], "object", { body: ["body"] }),
+  spec("delete-merge-request-discussion-note", "DELETE", "projects/{projectId}/merge_requests/{mergeRequestIid}/discussions/{discussionId}/notes/{noteId}", [projectField(), integerField("mergeRequestIid"), stringField("discussionId", "discussion_1"), integerField("noteId")], "object"),
+  spec("get-merge-request-approvals", "GET", "projects/{projectId}/merge_requests/{mergeRequestIid}/approvals", [projectField(), integerField("mergeRequestIid")], "object"),
+  spec("approve-merge-request", "POST", "projects/{projectId}/merge_requests/{mergeRequestIid}/approve", [projectField(), integerField("mergeRequestIid"), optionalStringField("sha", "abc123")], "object", { body: ["sha"] }),
+  spec("unapprove-merge-request", "POST", "projects/{projectId}/merge_requests/{mergeRequestIid}/unapprove", [projectField(), integerField("mergeRequestIid")], "object"),
+  spec("update-merge-request-approvals", "PUT", "projects/{projectId}/merge_requests/{mergeRequestIid}/approvals", [projectField(), integerField("mergeRequestIid"), integerField("approvalsRequired", 1)], "object", { body: ["approvals_required"] }),
+  spec("list-environments", "GET", "projects/{projectId}/environments", [projectField(), optionalStringField("search", "production"), optionalStringField("states", "available")], "array", { query: ["search", "states"], paginated: true }),
+  spec("get-environment", "GET", "projects/{projectId}/environments/{environmentId}", [projectField(), integerField("environmentId")], "object", { requiredPaths: ["id", "name"] }),
+  spec("create-environment", "POST", "projects/{projectId}/environments", [projectField(), stringField("name", "production"), optionalStringField("externalUrl", "https://example.invalid/env"), optionalStringField("tier", "production")], "object", { body: ["name", "external_url", "tier"], requiredPaths: ["id", "name"] }),
+  spec("update-environment", "PUT", "projects/{projectId}/environments/{environmentId}", [projectField(), integerField("environmentId"), stringField("name", "production"), optionalStringField("externalUrl", "https://example.invalid/env"), optionalStringField("tier", "production")], "object", { body: ["name", "external_url", "tier"], requiredPaths: ["id", "name"] }),
+  spec("delete-environment", "DELETE", "projects/{projectId}/environments/{environmentId}", [projectField(), integerField("environmentId")], "object"),
+  spec("stop-environment", "POST", "projects/{projectId}/environments/{environmentId}/stop", [projectField(), integerField("environmentId")], "object", { requiredPaths: ["id", "name"] }),
+  spec("list-deployments", "GET", "projects/{projectId}/deployments", [projectField(), optionalStringField("environment", "production"), optionalStringField("status", "success")], "array", { query: ["environment", "status"], paginated: true }),
+  spec("get-deployment", "GET", "projects/{projectId}/deployments/{deploymentId}", [projectField(), integerField("deploymentId")], "object", { requiredPaths: ["id"] }),
+  spec("create-deployment", "POST", "projects/{projectId}/deployments", [projectField(), stringField("environment", "production"), stringField("sha", "abc123"), optionalStringField("ref", "main"), booleanField("tag", false, true)], "object", { body: ["environment", "sha", "ref", "tag"], requiredPaths: ["id"] }),
+  spec("delete-deployment", "DELETE", "projects/{projectId}/deployments/{deploymentId}", [projectField(), integerField("deploymentId")], "object"),
+  spec("list-group-members", "GET", "groups/{groupId}/members/all", [groupField(), optionalStringField("query", "sample")], "array", { query: ["query"], paginated: true }),
+  spec("add-group-member", "POST", "groups/{groupId}/members", [groupField(), integerField("userId"), integerField("accessLevel", 30), optionalStringField("expiresAt", "2026-12-31")], "object", { body: ["user_id", "access_level", "expires_at"], requiredPaths: ["id", "username"] }),
+  spec("update-group-member", "PUT", "groups/{groupId}/members/{userId}", [groupField(), integerField("userId"), integerField("accessLevel", 30), optionalStringField("expiresAt", "2026-12-31")], "object", { body: ["access_level", "expires_at"], requiredPaths: ["id", "username"] }),
+  spec("remove-group-member", "DELETE", "groups/{groupId}/members/{userId}", [groupField(), integerField("userId")], "object"),
+  spec("list-project-badges", "GET", "projects/{projectId}/badges", [projectField()], "array", { paginated: true }),
+  spec("add-project-badge", "POST", "projects/{projectId}/badges", [projectField(), stringField("linkUrl", "https://example.invalid/badge"), stringField("imageUrl", "https://example.invalid/badge.svg"), optionalStringField("name", "coverage")], "object", { body: ["link_url", "image_url", "name"], requiredPaths: ["id"] }),
+  spec("update-project-badge", "PUT", "projects/{projectId}/badges/{badgeId}", [projectField(), integerField("badgeId"), stringField("linkUrl", "https://example.invalid/badge"), stringField("imageUrl", "https://example.invalid/badge.svg"), optionalStringField("name", "coverage")], "object", { body: ["link_url", "image_url", "name"], requiredPaths: ["id"] }),
+  spec("delete-project-badge", "DELETE", "projects/{projectId}/badges/{badgeId}", [projectField(), integerField("badgeId")], "object"),
+] as const satisfies readonly GitLabGenericOperationSpec[];
+
+const GITLAB_EXTRA_SPEC_BY_SLUG = new Map<GitLabRuntimeOperation, GitLabGenericOperationSpec>(
+  GITLAB_EXTRA_ACTION_SPECS.map((operation) => [operation.slug, operation]),
+);
 
 export function isGitLabActionOperationSupported(operationId: string): boolean {
   return gitLabRuntimeOperation(operationId) !== null;
@@ -125,6 +234,9 @@ export function buildGitLabOperationRequest(
     name: "PRIVATE-TOKEN",
   }));
   const headers = { accept: "application/json" };
+
+  const genericSpec = GITLAB_EXTRA_SPEC_BY_SLUG.get(runtimeOperation);
+  if (genericSpec) return genericGitLabPlan(genericSpec, values, auth, headers);
 
   switch (runtimeOperation) {
     case "get-current-user":
@@ -542,6 +654,7 @@ const GITLAB_OPERATIONS = new Set<GitLabRuntimeOperation>([
   "create-project-variable",
   "update-project-variable",
   "delete-project-variable",
+  ...GITLAB_EXTRA_ACTION_SPECS.map((operation) => operation.slug),
 ]);
 
 type ResponseSchema = NonNullable<ConnectorRuntimeRequestPlan["responseSchema"]>;
@@ -614,6 +727,59 @@ function deletePlan(
   headers: Record<string, string>,
 ): ConnectorRuntimeRequestPlan {
   return bodyPlan("DELETE", endpoint, auth, headers, {}, objectSchema());
+}
+
+function genericGitLabPlan(
+  spec: GitLabGenericOperationSpec,
+  values: Record<string, IntegrationJson>,
+  auth: ConnectorRuntimeRequestPlan["auth"],
+  headers: Record<string, string>,
+): ConnectorRuntimeRequestPlan {
+  const endpoint = spec.endpoint.replace(/\{([^}]+)\}/g, (_, key: string) => {
+    return pathSegment(requiredString(valueForGitLabKey(values, key), key));
+  });
+  const query = removeEmptyValues({
+    ...(spec.queryDefaults ?? {}),
+    ...valuesForGitLabKeys(spec.query ?? [], values),
+  });
+  const body = removeEmptyValues(valuesForGitLabKeys(spec.body ?? [], values));
+  const responseSchema = spec.response === "array" ? arraySchema() : objectSchema(spec.requiredPaths ?? []);
+  if (spec.method === "GET") {
+    if (spec.paginated) return pagedGetPlan(endpoint, auth, headers, values, responseSchema, query);
+    return getPlan(endpoint, auth, headers, responseSchema, query);
+  }
+  return bodyPlan(spec.method, endpoint, auth, headers, body, responseSchema);
+}
+
+function valuesForGitLabKeys(keys: readonly string[], values: Record<string, IntegrationJson>): Record<string, IntegrationJson | undefined> {
+  return Object.fromEntries(
+    keys
+      .map((key) => [key, valueForGitLabKey(values, key)] as const)
+      .filter(([, value]) => value != null && value !== ""),
+  );
+}
+
+function valueForGitLabKey(values: Record<string, IntegrationJson>, key: string): IntegrationJson | undefined {
+  return firstValue(values[key], values[camelCase(key)]);
+}
+
+function spec(
+  slug: GitLabRuntimeOperation,
+  method: string,
+  endpoint: string,
+  fields: GitLabField[],
+  response: GitLabGenericOperationSpec["response"],
+  options: Omit<GitLabGenericOperationSpec, "slug" | "method" | "endpoint" | "fields" | "response"> = {},
+): GitLabGenericOperationSpec {
+  return { slug, method, endpoint, fields, response, ...options };
+}
+
+function projectField(): GitLabField {
+  return stringField("projectId", "group/project");
+}
+
+function groupField(): GitLabField {
+  return stringField("groupId", "group/project");
 }
 
 function objectSchema(requiredPaths: string[] = []): ResponseSchema {
@@ -773,6 +939,22 @@ function variableBody(values: Record<string, IntegrationJson>, requireCore: bool
   });
 }
 
+function stringField(name: string, defaultValue = "sample", optional = false): GitLabField {
+  return { name, type: "string", optional, default: defaultValue };
+}
+
+function optionalStringField(name: string, defaultValue: string): GitLabField {
+  return stringField(name, defaultValue, true);
+}
+
+function integerField(name: string, defaultValue = 1, optional = false, max?: number): GitLabField {
+  return { name, type: "integer", optional, min: 1, default: defaultValue, ...(max ? { max } : {}) };
+}
+
+function booleanField(name: string, defaultValue: boolean, optional = false): GitLabField {
+  return { name, type: "boolean", optional, default: defaultValue };
+}
+
 function projectId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.projectId, values.project, values.id), "projectId"));
 }
@@ -862,6 +1044,10 @@ function requiredNumber(value: IntegrationJson, name: string): number {
 
 function pathSegment(value: string): string {
   return encodeURIComponent(value);
+}
+
+function camelCase(value: string): string {
+  return value.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
 function numberValue(value: IntegrationJson): number | undefined {

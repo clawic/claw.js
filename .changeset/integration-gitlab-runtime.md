@@ -1,5 +1,5 @@
 ---
-"@clawjs/integrations": patch
+"@clawjs/integrations": minor
 ---
 
-Expand offline GitLab runtime coverage across users, projects, groups, issues, notes, merge requests, repository resources, CI pipelines and jobs, releases, labels, milestones, members, hooks, variables, and webhook events.
+Expand offline GitLab runtime coverage across commit comments, commit statuses, repository comparison and blobs, project search, issue and merge request discussions, merge request approvals, environments, deployments, group members, project badges, and additional webhook events.
