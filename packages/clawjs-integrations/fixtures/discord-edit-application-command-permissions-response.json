@@ -1,0 +1,12 @@
+{
+  "id": "sample",
+  "application_id": "sample",
+  "guild_id": "sample",
+  "permissions": [
+    {
+      "id": "sample",
+      "type": 1,
+      "permission": true
+    }
+  ]
+}

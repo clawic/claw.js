@@ -1,0 +1,18 @@
+{
+  "method": "PUT",
+  "url": "https://discord.com/api/v10/applications/sample/guilds/sample/commands/sample/permissions",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-discordBearerToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "permissions": [
+      {
+        "id": "sample",
+        "type": 1,
+        "permission": true
+      }
+    ]
+  }
+}

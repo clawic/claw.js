@@ -559,6 +559,7 @@ const DISCORD_ACTION_FIXTURE_NAMES = [
   "get-global-application-command",
   "update-global-application-command",
   "delete-global-application-command",
+  "bulk-overwrite-global-application-commands",
   "list-application-emojis",
   "get-application-emoji",
   "create-application-emoji",
@@ -569,6 +570,10 @@ const DISCORD_ACTION_FIXTURE_NAMES = [
   "get-guild-application-command",
   "update-guild-application-command",
   "delete-guild-application-command",
+  "bulk-overwrite-guild-application-commands",
+  "get-guild-application-command-permissions",
+  "get-application-command-permissions",
+  "edit-application-command-permissions",
 ] as const;
 
 const DISCORD_ACTION_FIXTURES: ConnectorRuntimeFixture[] = DISCORD_ACTION_FIXTURE_NAMES.flatMap((name) => [
