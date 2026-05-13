@@ -1708,21 +1708,25 @@ function testEntitlementBody(values: Record<string, IntegrationJson>): Record<st
 }
 
 function scheduledEventBody(values: Record<string, IntegrationJson>, requireCreateFields: boolean): Record<string, IntegrationJson> {
-  return removeEmptyValues({
-    channel_id: optionalString(values.channelId),
-    entity_metadata: optionalJsonObject(values.entityMetadata),
-    name: requireCreateFields ? requiredString(values.name, "name") : optionalString(values.name),
-    privacy_level: requireCreateFields ? optionalNumber(values.privacyLevel) ?? 2 : optionalNumber(values.privacyLevel),
-    scheduled_start_time: requireCreateFields
-      ? requiredString(values.scheduledStartTime, "scheduledStartTime")
-      : optionalString(values.scheduledStartTime),
-    scheduled_end_time: optionalString(values.scheduledEndTime),
-    description: optionalString(values.description),
-    entity_type: requireCreateFields ? optionalNumber(values.entityType) ?? 3 : optionalNumber(values.entityType),
-    status: optionalNumber(values.status),
-    image: optionalString(values.image),
-    recurrence_rule: optionalJsonObject(values.recurrenceRule),
-  });
+  const body: Record<string, IntegrationJson> = {};
+  const assign = (key: string, value: IntegrationJson | undefined) => {
+    if (value !== undefined && value !== "") body[key] = value;
+  };
+  assign("channel_id", requireCreateFields ? optionalString(values.channelId) : optionalNullableString(values.channelId));
+  assign("entity_metadata", requireCreateFields ? optionalJsonObject(values.entityMetadata) : optionalNullableJsonObject(values.entityMetadata));
+  assign("name", requireCreateFields ? requiredString(values.name, "name") : optionalString(values.name));
+  assign("privacy_level", requireCreateFields ? optionalNumber(values.privacyLevel) ?? 2 : optionalNumber(values.privacyLevel));
+  assign(
+    "scheduled_start_time",
+    requireCreateFields ? requiredString(values.scheduledStartTime, "scheduledStartTime") : optionalString(values.scheduledStartTime),
+  );
+  assign("scheduled_end_time", optionalString(values.scheduledEndTime));
+  assign("description", requireCreateFields ? optionalString(values.description) : optionalNullableString(values.description));
+  assign("entity_type", requireCreateFields ? optionalNumber(values.entityType) ?? 3 : optionalNumber(values.entityType));
+  assign("status", optionalNumber(values.status));
+  assign("image", optionalString(values.image));
+  assign("recurrence_rule", requireCreateFields ? optionalJsonObject(values.recurrenceRule) : optionalNullableJsonObject(values.recurrenceRule));
+  return body;
 }
 
 function autoModerationRuleBody(values: Record<string, IntegrationJson>, requireCreateFields: boolean): Record<string, IntegrationJson> {
@@ -1927,6 +1931,11 @@ function optionalJsonObject(value: IntegrationJson): Record<string, IntegrationJ
   return value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, IntegrationJson>
     : undefined;
+}
+
+function optionalNullableJsonObject(value: IntegrationJson): Record<string, IntegrationJson> | null | undefined {
+  if (value === null) return null;
+  return optionalJsonObject(value);
 }
 
 function pathSegment(value: string): string {
