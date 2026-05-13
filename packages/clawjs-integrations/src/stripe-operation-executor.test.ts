@@ -1050,6 +1050,33 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.list-billing-meter-event-summaries"), {
+      id: "mtr_sample",
+      customer: "cus_sample",
+      start_time: 1704067200,
+      end_time: 1704153600,
+      limit: 10,
+      value_grouping_window: "hour",
+    }), {
+      method: "GET",
+      endpoint: "billing/meters/mtr_sample/event_summaries",
+      auth,
+      headers,
+      query: {
+        customer: "cus_sample",
+        start_time: 1704067200,
+        end_time: 1704153600,
+        limit: 10,
+        value_grouping_window: "hour",
+      },
+      bodyEncoding: undefined,
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["object", "data"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.process-terminal-reader-setup-intent"), {
       reader: "tmr_sample",
       setup_intent: "seti_sample",

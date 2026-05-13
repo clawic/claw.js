@@ -41776,6 +41776,101 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.deactivate-billing-meter",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Deactivate Billing Meter",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "mtr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-billing-meter-event-summaries",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Billing Meter Event Summaries",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "mtr_sample"
+            },
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": false,
+              "default": "cus_sample"
+            },
+            {
+              "name": "start_time",
+              "type": "integer",
+              "optional": false,
+              "default": 1704067200
+            },
+            {
+              "name": "end_time",
+              "type": "integer",
+              "optional": false,
+              "default": 1704153600
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "value_grouping_window",
+              "type": "string",
+              "optional": true,
+              "default": "hour"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.reactivate-billing-meter",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Reactivate Billing Meter",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "mtr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },
