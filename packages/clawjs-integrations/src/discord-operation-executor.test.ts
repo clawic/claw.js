@@ -1278,6 +1278,25 @@ describe("discord operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildDiscordOperationRequest(action("get-guild-widget-image", "Get Guild Widget Image", [
+      GUILD_FIELD,
+      field("style", "string", true, { default: "shield" }),
+    ], []), {
+      guildId: "456",
+      style: "banner2",
+    }), {
+      method: "GET",
+      endpoint: "guilds/456/widget.png",
+      auth: [],
+      headers: { accept: "image/png" },
+      query: { style: "banner2" },
+      body: {},
+      responseBodyEncoding: "base64",
+      responseSchema: {
+        type: "string",
+      },
+    });
+
     assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-guild-vanity-url"), {
       guildId: "456",
     }), {
