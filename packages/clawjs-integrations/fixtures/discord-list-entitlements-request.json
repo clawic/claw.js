@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://discord.com/api/v10/applications/sample/entitlements?user_id=sample&sku_ids=sample&before=sample&after=sample&limit=1&guild_id=sample&exclude_ended=false&exclude_deleted=false",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret"
+  }
+}
