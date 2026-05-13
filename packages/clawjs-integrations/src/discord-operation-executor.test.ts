@@ -239,6 +239,7 @@ const DISCORD_ACTIONS = [
   action("get-global-application-command", "Get Global Application Command", [APPLICATION_FIELD, COMMAND_FIELD]),
   action("update-global-application-command", "Update Global Application Command", [APPLICATION_FIELD, COMMAND_FIELD, field("name", "string"), field("description", "string", true, { default: "sample" })]),
   action("delete-global-application-command", "Delete Global Application Command", [APPLICATION_FIELD, COMMAND_FIELD]),
+  action("bulk-overwrite-global-application-commands", "Bulk Overwrite Global Application Commands", [APPLICATION_FIELD, field("commands", "array", false, { default: [{ name: "sample", description: "sample", type: 1 }] })]),
   action("list-application-emojis", "List Application Emojis", [APPLICATION_FIELD]),
   action("get-application-emoji", "Get Application Emoji", [APPLICATION_FIELD, field("emojiId", "string")]),
   action("create-application-emoji", "Create Application Emoji", [APPLICATION_FIELD, field("name", "string"), field("image", "string", false, { default: "data:image/png;base64,c2FtcGxl" })]),
@@ -249,6 +250,10 @@ const DISCORD_ACTIONS = [
   action("get-guild-application-command", "Get Guild Application Command", [APPLICATION_FIELD, GUILD_FIELD, COMMAND_FIELD]),
   action("update-guild-application-command", "Update Guild Application Command", [APPLICATION_FIELD, GUILD_FIELD, COMMAND_FIELD, field("name", "string"), field("description", "string", true, { default: "sample" })]),
   action("delete-guild-application-command", "Delete Guild Application Command", [APPLICATION_FIELD, GUILD_FIELD, COMMAND_FIELD]),
+  action("bulk-overwrite-guild-application-commands", "Bulk Overwrite Guild Application Commands", [APPLICATION_FIELD, GUILD_FIELD, field("commands", "array", false, { default: [{ name: "sample", description: "sample", type: 1 }] })]),
+  action("get-guild-application-command-permissions", "Get Guild Application Command Permissions", [APPLICATION_FIELD, GUILD_FIELD], ["discordBearerToken"]),
+  action("get-application-command-permissions", "Get Application Command Permissions", [APPLICATION_FIELD, GUILD_FIELD, COMMAND_FIELD], ["discordBearerToken"]),
+  action("edit-application-command-permissions", "Edit Application Command Permissions", [APPLICATION_FIELD, GUILD_FIELD, COMMAND_FIELD, field("permissions", "array", false, { default: [{ id: "sample", type: 1, permission: true }] })], ["discordBearerToken"]),
 ];
 
 const DISCORD_CATALOG = normalizeConnectorCatalog({
@@ -2037,6 +2042,112 @@ describe("discord operation runtime", () => {
       body: {},
       responseSchema: {
         type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.bulk-overwrite-global-application-commands"), {
+      applicationId: "app-123",
+      commands: [{
+        name: "ping",
+        description: "Ping command",
+        type: 1,
+      }],
+    }), {
+      method: "PUT",
+      endpoint: "applications/app-123/commands",
+      auth,
+      headers,
+      body: {},
+      bodyValue: [{
+        name: "ping",
+        description: "Ping command",
+        type: 1,
+      }],
+      responseSchema: {
+        type: "array",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.bulk-overwrite-guild-application-commands"), {
+      applicationId: "app-123",
+      guildId: "guild-123",
+      commands: [{
+        name: "guild-ping",
+        description: "Guild ping command",
+        type: 1,
+      }],
+    }), {
+      method: "PUT",
+      endpoint: "applications/app-123/guilds/guild-123/commands",
+      auth,
+      headers,
+      body: {},
+      bodyValue: [{
+        name: "guild-ping",
+        description: "Guild ping command",
+        type: 1,
+      }],
+      responseSchema: {
+        type: "array",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-guild-application-command-permissions"), {
+      applicationId: "app-123",
+      guildId: "guild-123",
+    }), {
+      method: "GET",
+      endpoint: "applications/app-123/guilds/guild-123/commands/permissions",
+      auth: bearerAuth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "array",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-application-command-permissions"), {
+      applicationId: "app-123",
+      guildId: "guild-123",
+      commandId: "command-123",
+    }), {
+      method: "GET",
+      endpoint: "applications/app-123/guilds/guild-123/commands/command-123/permissions",
+      auth: bearerAuth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "application_id", "guild_id", "permissions"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.edit-application-command-permissions"), {
+      applicationId: "app-123",
+      guildId: "guild-123",
+      commandId: "command-123",
+      permissions: [{
+        id: "role-123",
+        type: 1,
+        permission: true,
+      }],
+    }), {
+      method: "PUT",
+      endpoint: "applications/app-123/guilds/guild-123/commands/command-123/permissions",
+      auth: bearerAuth,
+      headers,
+      body: {
+        permissions: [{
+          id: "role-123",
+          type: 1,
+          permission: true,
+        }],
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "application_id", "guild_id", "permissions"],
       },
     });
 
