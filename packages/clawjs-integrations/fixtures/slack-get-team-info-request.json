@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://slack.com/api/team.info?team=T123",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret"
+  }
+}

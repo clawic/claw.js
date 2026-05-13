@@ -1,0 +1,18 @@
+{
+  "method": "POST",
+  "url": "https://slack.com/api/users.profile.set",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "user": "U123",
+    "profile": {
+      "status_text": "Working",
+      "status_emoji": ":computer:"
+    },
+    "name": "status_text",
+    "value": "Working"
+  }
+}
