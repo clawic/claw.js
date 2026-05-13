@@ -41,7 +41,7 @@ export interface VerticalValidator<TOffer = unknown, TWant = TOffer> {
   wantToCbor: (input: TWant) => Record<string, CborValue>;
 }
 
-export interface MpVerticalPlugin<TOffer = unknown, TWant = TOffer> {
+export interface MarketplaceVerticalPlugin<TOffer = unknown, TWant = TOffer> {
   id: string;                       // e.g. "real-estate/v1", "post/v1"
   archetype: VerticalArchetype;
   /** Default per-field minimum audience level (string id, e.g. "public"). */
@@ -53,20 +53,20 @@ export interface MpVerticalPlugin<TOffer = unknown, TWant = TOffer> {
 
 /** A registry of plugins, keyed by their `id`. */
 export class VerticalRegistry {
-  private readonly entries = new Map<string, MpVerticalPlugin>();
+  private readonly entries = new Map<string, MarketplaceVerticalPlugin>();
 
-  register<O, W>(plugin: MpVerticalPlugin<O, W>): void {
+  register<O, W>(plugin: MarketplaceVerticalPlugin<O, W>): void {
     if (this.entries.has(plugin.id)) {
       throw new Error(`vertical-registry: "${plugin.id}" already registered`);
     }
-    this.entries.set(plugin.id, plugin as MpVerticalPlugin);
+    this.entries.set(plugin.id, plugin as MarketplaceVerticalPlugin);
   }
 
-  get(id: string): MpVerticalPlugin | undefined { return this.entries.get(id); }
+  get(id: string): MarketplaceVerticalPlugin | undefined { return this.entries.get(id); }
 
   has(id: string): boolean { return this.entries.has(id); }
 
-  list(): MpVerticalPlugin[] { return Array.from(this.entries.values()); }
+  list(): MarketplaceVerticalPlugin[] { return Array.from(this.entries.values()); }
 
   ids(): string[] { return Array.from(this.entries.keys()); }
 }

@@ -11,7 +11,7 @@
 
 import type { CborValue } from "@clawjs/marketplace/cbor";
 import { discoveryKey } from "@clawjs/marketplace";
-import type { MpVerticalPlugin } from "@clawjs/marketplace/verticals/plugin";
+import type { MarketplaceVerticalPlugin } from "@clawjs/marketplace/verticals/plugin";
 
 export const DATING_VERTICAL_ID = "modules/dating/v1";
 export const DATING_MUTUAL_MATCH_CAPABILITY = "mutual-match";
@@ -159,7 +159,7 @@ export function datingDiscoveryKey(opts: { geo_zone: string; looking_for: Lookin
   });
 }
 
-export const datingPlugin: MpVerticalPlugin<DatingOffer, DatingWant> = {
+export const datingPlugin: MarketplaceVerticalPlugin<DatingOffer, DatingWant> = {
   id: DATING_VERTICAL_ID,
   archetype: "standalone",
   defaultVisibility: { ...DATING_OFFER_VISIBILITY, ...DATING_WANT_VISIBILITY },

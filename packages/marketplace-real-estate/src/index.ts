@@ -1,7 +1,7 @@
 // `real-estate/v1` plugin for the Clawix marketplace/* protocol.
 //
 // This package re-exports the canonical real-estate schema that ships inside
-// `@clawjs/marketplace/verticals` and wraps it as a `MpVerticalPlugin` so it can be
+// `@clawjs/marketplace/verticals` and wraps it as a `MarketplaceVerticalPlugin` so it can be
 // loaded into a `VerticalRegistry` alongside the core verticals.
 //
 // We keep the schema source in `@clawjs/marketplace/verticals` for now to avoid
@@ -9,7 +9,7 @@
 // authoritative location and have `@clawjs/marketplace` re-export from here instead.
 
 import type { CborValue } from "@clawjs/marketplace/cbor";
-import type { MpVerticalPlugin } from "@clawjs/marketplace/verticals/plugin";
+import type { MarketplaceVerticalPlugin } from "@clawjs/marketplace/verticals/plugin";
 import {
   REAL_ESTATE_VERTICAL_ID,
   REAL_ESTATE_OFFER_VISIBILITY,
@@ -37,7 +37,7 @@ const VISIBILITY: Record<string, string> = mapVisibilityToLevels({
   ...REAL_ESTATE_WANT_VISIBILITY,
 });
 
-export const realEstatePlugin: MpVerticalPlugin<RealEstateOffer, RealEstateWant> = {
+export const realEstatePlugin: MarketplaceVerticalPlugin<RealEstateOffer, RealEstateWant> = {
   id: REAL_ESTATE_VERTICAL_ID,
   archetype: "both",
   defaultVisibility: VISIBILITY,

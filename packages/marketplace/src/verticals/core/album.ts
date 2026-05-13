@@ -1,7 +1,7 @@
 // `album/v1` — list of photos with optional caption, optional geo. Standalone.
 
 import type { CborValue } from "../../cbor.ts";
-import type { MpVerticalPlugin } from "../plugin.ts";
+import type { MarketplaceVerticalPlugin } from "../plugin.ts";
 
 export const ALBUM_VERTICAL_ID = "album/v1";
 
@@ -49,7 +49,7 @@ export function albumToCbor(input: AlbumBlock): Record<string, CborValue> {
   return out;
 }
 
-export const albumPlugin: MpVerticalPlugin<AlbumBlock, AlbumBlock> = {
+export const albumPlugin: MarketplaceVerticalPlugin<AlbumBlock, AlbumBlock> = {
   id: ALBUM_VERTICAL_ID,
   archetype: "standalone",
   defaultVisibility: ALBUM_VISIBILITY,

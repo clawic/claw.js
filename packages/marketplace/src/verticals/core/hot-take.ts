@@ -1,7 +1,7 @@
 // `hot-take/v1` — short opinion text with mood/tag. Standalone, feed-shaped.
 
 import type { CborValue } from "../../cbor.ts";
-import type { MpVerticalPlugin } from "../plugin.ts";
+import type { MarketplaceVerticalPlugin } from "../plugin.ts";
 
 export const HOT_TAKE_VERTICAL_ID = "hot-take/v1";
 
@@ -32,7 +32,7 @@ export function hotTakeToCbor(input: HotTakeBlock): Record<string, CborValue> {
   return out;
 }
 
-export const hotTakePlugin: MpVerticalPlugin<HotTakeBlock, HotTakeBlock> = {
+export const hotTakePlugin: MarketplaceVerticalPlugin<HotTakeBlock, HotTakeBlock> = {
   id: HOT_TAKE_VERTICAL_ID,
   archetype: "standalone",
   defaultVisibility: HOT_TAKE_VISIBILITY,

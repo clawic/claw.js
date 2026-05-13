@@ -1,6 +1,6 @@
 // Storage layer for the marketplace/1.0.0 marketplace protocol tables.
 //
-// This file extends the IndexStore with methods scoped to mp_* tables. It
+// This file extends the IndexStore with methods scoped to marketplace_* tables. It
 // intentionally lives in a separate file so the regular index storage stays
 // unchanged.
 
@@ -8,10 +8,10 @@ import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 
 import type {
-  MpDeviceKeyRow, MpInboundMessageRow, MpIntentRow, MpKnownBrokerRow,
-  MpMatchReceiptRow, MpOutboundMessageRow, MpPeerLevelRow, MpRatingRow,
-  MpReceiptStatus, MpRevocationRow, MpRoleKeyRow, MpRootKeyRow,
-  MpVouchInboundRow, MpVouchOutboundRow,
+  MarketplaceDeviceKeyRow, MarketplaceInboundMessageRow, MarketplaceIntentRow, MarketplaceKnownBrokerRow,
+  MarketplaceMatchReceiptRow, MarketplaceOutboundMessageRow, MarketplacePeerLevelRow, MarketplaceRatingRow,
+  MarketplaceReceiptStatus, MarketplaceRevocationRow, MarketplaceRoleKeyRow, MarketplaceRootKeyRow,
+  MarketplaceVouchInboundRow, MarketplaceVouchOutboundRow,
 } from "./marketplace-types.ts";
 
 function uuid(prefix: string): string {
@@ -28,7 +28,7 @@ function asBytes(value: Buffer | Uint8Array | null | undefined): Uint8Array | nu
   return value instanceof Uint8Array ? value : new Uint8Array(value);
 }
 
-export class MpStore {
+export class MarketplaceStore {
   constructor(private readonly db: Database.Database) {}
 
   // ---- root keys ----
@@ -38,29 +38,29 @@ export class MpStore {
     encryptedSeed: Uint8Array;
     encryptionMeta: Record<string, unknown>;
     label?: string;
-  }): MpRootKeyRow {
+  }): MarketplaceRootKeyRow {
     const id = uuid("root");
     this.db.prepare(`
-      INSERT INTO mp_root_keys (id, pubkey, encrypted_seed, encryption_meta, label)
+      INSERT INTO marketplace_root_keys (id, pubkey, encrypted_seed, encryption_meta, label)
       VALUES (?, ?, ?, ?, ?)
     `).run(id, asBuf(input.pubkey), asBuf(input.encryptedSeed), JSON.stringify(input.encryptionMeta), input.label ?? null);
     return this.getRootKey(id)!;
   }
 
-  getRootKey(id: string): MpRootKeyRow | null {
-    const row: any = this.db.prepare(`SELECT id, pubkey, label, created_at, revoked_at FROM mp_root_keys WHERE id = ?`).get(id);
+  getRootKey(id: string): MarketplaceRootKeyRow | null {
+    const row: any = this.db.prepare(`SELECT id, pubkey, label, created_at, revoked_at FROM marketplace_root_keys WHERE id = ?`).get(id);
     if (!row) return null;
     return { id: row.id, pubkey: asBytes(row.pubkey)!, label: row.label, createdAt: row.created_at, revokedAt: row.revoked_at };
   }
 
-  listRootKeys(): MpRootKeyRow[] {
-    return this.db.prepare(`SELECT id, pubkey, label, created_at, revoked_at FROM mp_root_keys ORDER BY created_at ASC`).all().map((row: any) => ({
+  listRootKeys(): MarketplaceRootKeyRow[] {
+    return this.db.prepare(`SELECT id, pubkey, label, created_at, revoked_at FROM marketplace_root_keys ORDER BY created_at ASC`).all().map((row: any) => ({
       id: row.id, pubkey: asBytes(row.pubkey)!, label: row.label, createdAt: row.created_at, revokedAt: row.revoked_at,
     }));
   }
 
   getEncryptedRoot(id: string): { encryptedSeed: Uint8Array; encryptionMeta: Record<string, unknown> } | null {
-    const row: any = this.db.prepare(`SELECT encrypted_seed, encryption_meta FROM mp_root_keys WHERE id = ?`).get(id);
+    const row: any = this.db.prepare(`SELECT encrypted_seed, encryption_meta FROM marketplace_root_keys WHERE id = ?`).get(id);
     if (!row) return null;
     return { encryptedSeed: asBytes(row.encrypted_seed)!, encryptionMeta: JSON.parse(row.encryption_meta) };
   }
@@ -74,17 +74,17 @@ export class MpStore {
     encryptionMeta: Record<string, unknown>;
     deviceName: string;
     certificateCbor: Uint8Array;
-  }): MpDeviceKeyRow {
+  }): MarketplaceDeviceKeyRow {
     const id = uuid("dev");
     this.db.prepare(`
-      INSERT INTO mp_device_keys (id, root_key_id, pubkey, encrypted_priv, encryption_meta, device_name, certificate_cbor)
+      INSERT INTO marketplace_device_keys (id, root_key_id, pubkey, encrypted_priv, encryption_meta, device_name, certificate_cbor)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(id, input.rootKeyId, asBuf(input.pubkey), asBuf(input.encryptedPriv), JSON.stringify(input.encryptionMeta), input.deviceName, asBuf(input.certificateCbor));
     return this.getDeviceKey(id)!;
   }
 
-  getDeviceKey(id: string): MpDeviceKeyRow | null {
-    const row: any = this.db.prepare(`SELECT id, root_key_id, pubkey, device_name, certificate_cbor, created_at, revoked_at FROM mp_device_keys WHERE id = ?`).get(id);
+  getDeviceKey(id: string): MarketplaceDeviceKeyRow | null {
+    const row: any = this.db.prepare(`SELECT id, root_key_id, pubkey, device_name, certificate_cbor, created_at, revoked_at FROM marketplace_device_keys WHERE id = ?`).get(id);
     return row ? {
       id: row.id, rootKeyId: row.root_key_id, pubkey: asBytes(row.pubkey)!,
       deviceName: row.device_name, certificateCbor: asBytes(row.certificate_cbor)!,
@@ -92,10 +92,10 @@ export class MpStore {
     } : null;
   }
 
-  listDeviceKeys(rootKeyId?: string): MpDeviceKeyRow[] {
+  listDeviceKeys(rootKeyId?: string): MarketplaceDeviceKeyRow[] {
     const rows: any[] = rootKeyId
-      ? this.db.prepare(`SELECT id, root_key_id, pubkey, device_name, certificate_cbor, created_at, revoked_at FROM mp_device_keys WHERE root_key_id = ? ORDER BY created_at ASC`).all(rootKeyId)
-      : this.db.prepare(`SELECT id, root_key_id, pubkey, device_name, certificate_cbor, created_at, revoked_at FROM mp_device_keys ORDER BY created_at ASC`).all();
+      ? this.db.prepare(`SELECT id, root_key_id, pubkey, device_name, certificate_cbor, created_at, revoked_at FROM marketplace_device_keys WHERE root_key_id = ? ORDER BY created_at ASC`).all(rootKeyId)
+      : this.db.prepare(`SELECT id, root_key_id, pubkey, device_name, certificate_cbor, created_at, revoked_at FROM marketplace_device_keys ORDER BY created_at ASC`).all();
     return rows.map((row) => ({
       id: row.id, rootKeyId: row.root_key_id, pubkey: asBytes(row.pubkey)!,
       deviceName: row.device_name, certificateCbor: asBytes(row.certificate_cbor)!,
@@ -104,7 +104,7 @@ export class MpStore {
   }
 
   getEncryptedDevice(id: string): { encryptedPriv: Uint8Array; encryptionMeta: Record<string, unknown> } | null {
-    const row: any = this.db.prepare(`SELECT encrypted_priv, encryption_meta FROM mp_device_keys WHERE id = ?`).get(id);
+    const row: any = this.db.prepare(`SELECT encrypted_priv, encryption_meta FROM marketplace_device_keys WHERE id = ?`).get(id);
     if (!row) return null;
     return { encryptedPriv: asBytes(row.encrypted_priv)!, encryptionMeta: JSON.parse(row.encryption_meta) };
   }
@@ -119,17 +119,17 @@ export class MpStore {
     roleName: string;
     vertical: string;
     certificateCbor: Uint8Array;
-  }): MpRoleKeyRow {
+  }): MarketplaceRoleKeyRow {
     const id = uuid("role");
     this.db.prepare(`
-      INSERT INTO mp_role_keys (id, root_key_id, pubkey, encrypted_priv, encryption_meta, role_name, vertical, certificate_cbor)
+      INSERT INTO marketplace_role_keys (id, root_key_id, pubkey, encrypted_priv, encryption_meta, role_name, vertical, certificate_cbor)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(id, input.rootKeyId, asBuf(input.pubkey), asBuf(input.encryptedPriv), JSON.stringify(input.encryptionMeta), input.roleName, input.vertical, asBuf(input.certificateCbor));
     return this.getRoleKey(id)!;
   }
 
-  getRoleKey(id: string): MpRoleKeyRow | null {
-    const row: any = this.db.prepare(`SELECT id, root_key_id, pubkey, role_name, vertical, certificate_cbor, created_at, revoked_at FROM mp_role_keys WHERE id = ?`).get(id);
+  getRoleKey(id: string): MarketplaceRoleKeyRow | null {
+    const row: any = this.db.prepare(`SELECT id, root_key_id, pubkey, role_name, vertical, certificate_cbor, created_at, revoked_at FROM marketplace_role_keys WHERE id = ?`).get(id);
     return row ? {
       id: row.id, rootKeyId: row.root_key_id, pubkey: asBytes(row.pubkey)!,
       roleName: row.role_name, vertical: row.vertical, certificateCbor: asBytes(row.certificate_cbor)!,
@@ -137,12 +137,12 @@ export class MpStore {
     } : null;
   }
 
-  listRoleKeys(filter?: { rootKeyId?: string; vertical?: string }): MpRoleKeyRow[] {
+  listRoleKeys(filter?: { rootKeyId?: string; vertical?: string }): MarketplaceRoleKeyRow[] {
     const clauses: string[] = []; const params: unknown[] = [];
     if (filter?.rootKeyId) { clauses.push("root_key_id = ?"); params.push(filter.rootKeyId); }
     if (filter?.vertical) { clauses.push("vertical = ?"); params.push(filter.vertical); }
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
-    return this.db.prepare(`SELECT id, root_key_id, pubkey, role_name, vertical, certificate_cbor, created_at, revoked_at FROM mp_role_keys ${where} ORDER BY created_at ASC`).all(...params).map((row: any) => ({
+    return this.db.prepare(`SELECT id, root_key_id, pubkey, role_name, vertical, certificate_cbor, created_at, revoked_at FROM marketplace_role_keys ${where} ORDER BY created_at ASC`).all(...params).map((row: any) => ({
       id: row.id, rootKeyId: row.root_key_id, pubkey: asBytes(row.pubkey)!,
       roleName: row.role_name, vertical: row.vertical, certificateCbor: asBytes(row.certificate_cbor)!,
       createdAt: row.created_at, revokedAt: row.revoked_at,
@@ -150,24 +150,24 @@ export class MpStore {
   }
 
   getEncryptedRole(id: string): { encryptedPriv: Uint8Array; encryptionMeta: Record<string, unknown> } | null {
-    const row: any = this.db.prepare(`SELECT encrypted_priv, encryption_meta FROM mp_role_keys WHERE id = ?`).get(id);
+    const row: any = this.db.prepare(`SELECT encrypted_priv, encryption_meta FROM marketplace_role_keys WHERE id = ?`).get(id);
     if (!row) return null;
     return { encryptedPriv: asBytes(row.encrypted_priv)!, encryptionMeta: JSON.parse(row.encryption_meta) };
   }
 
   revokeRoleKey(id: string): void {
-    this.db.prepare(`UPDATE mp_role_keys SET revoked_at = datetime('now') WHERE id = ?`).run(id);
+    this.db.prepare(`UPDATE marketplace_role_keys SET revoked_at = datetime('now') WHERE id = ?`).run(id);
   }
   revokeDeviceKey(id: string): void {
-    this.db.prepare(`UPDATE mp_device_keys SET revoked_at = datetime('now') WHERE id = ?`).run(id);
+    this.db.prepare(`UPDATE marketplace_device_keys SET revoked_at = datetime('now') WHERE id = ?`).run(id);
   }
 
   // ---- intents ----
 
-  insertIntent(input: Omit<MpIntentRow, "id" | "createdAt"> & { id?: string }): MpIntentRow {
+  insertIntent(input: Omit<MarketplaceIntentRow, "id" | "createdAt"> & { id?: string }): MarketplaceIntentRow {
     const id = input.id ?? uuid("int");
     this.db.prepare(`
-      INSERT INTO mp_intents (
+      INSERT INTO marketplace_intents (
         id, intent_id_hash, side, role_key_id, ephemeral_pubkey, vertical,
         payload_json, payload_cbor, visibility_levels_json, reveal_keys_json,
         signature_role, signature_device, provenance, observed_source, observed_external_url,
@@ -186,10 +186,10 @@ export class MpStore {
     return this.getIntent(id)!;
   }
 
-  upsertObservedIntent(input: Omit<MpIntentRow, "id" | "createdAt"> & { id?: string }): MpIntentRow {
+  upsertObservedIntent(input: Omit<MarketplaceIntentRow, "id" | "createdAt"> & { id?: string }): MarketplaceIntentRow {
     const existing = this.findIntentByHash(input.intentIdHash);
     if (existing) {
-      this.db.prepare(`UPDATE mp_intents SET status = ?, payload_json = ?, payload_cbor = ? WHERE id = ?`).run(
+      this.db.prepare(`UPDATE marketplace_intents SET status = ?, payload_json = ?, payload_cbor = ? WHERE id = ?`).run(
         input.status, JSON.stringify(input.payload), asBuf(input.payloadCbor), existing.id,
       );
       return this.getIntent(existing.id)!;
@@ -197,20 +197,20 @@ export class MpStore {
     return this.insertIntent(input);
   }
 
-  findIntentByHash(hash: Uint8Array): MpIntentRow | null {
-    const row: any = this.db.prepare(`SELECT * FROM mp_intents WHERE intent_id_hash = ?`).get(asBuf(hash));
+  findIntentByHash(hash: Uint8Array): MarketplaceIntentRow | null {
+    const row: any = this.db.prepare(`SELECT * FROM marketplace_intents WHERE intent_id_hash = ?`).get(asBuf(hash));
     return row ? this.intentFromRow(row) : null;
   }
 
-  getIntent(id: string): MpIntentRow | null {
-    const row: any = this.db.prepare(`SELECT * FROM mp_intents WHERE id = ?`).get(id);
+  getIntent(id: string): MarketplaceIntentRow | null {
+    const row: any = this.db.prepare(`SELECT * FROM marketplace_intents WHERE id = ?`).get(id);
     return row ? this.intentFromRow(row) : null;
   }
 
   listIntents(filter?: {
     side?: "offer" | "want"; vertical?: string; status?: string;
     provenance?: "native" | "observed"; roleKeyId?: string; limit?: number;
-  }): MpIntentRow[] {
+  }): MarketplaceIntentRow[] {
     const clauses: string[] = []; const params: unknown[] = [];
     if (filter?.side) { clauses.push("side = ?"); params.push(filter.side); }
     if (filter?.vertical) { clauses.push("vertical = ?"); params.push(filter.vertical); }
@@ -219,20 +219,20 @@ export class MpStore {
     if (filter?.roleKeyId) { clauses.push("role_key_id = ?"); params.push(filter.roleKeyId); }
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
     const limit = filter?.limit ?? 500;
-    return this.db.prepare(`SELECT * FROM mp_intents ${where} ORDER BY created_at DESC LIMIT ?`).all(...params, limit).map((r: any) => this.intentFromRow(r));
+    return this.db.prepare(`SELECT * FROM marketplace_intents ${where} ORDER BY created_at DESC LIMIT ?`).all(...params, limit).map((r: any) => this.intentFromRow(r));
   }
 
-  updateIntentStatus(id: string, status: MpIntentRow["status"]): void {
+  updateIntentStatus(id: string, status: MarketplaceIntentRow["status"]): void {
     if (status === "withdrawn") {
-      this.db.prepare(`UPDATE mp_intents SET status = 'withdrawn', withdrawn_at = datetime('now') WHERE id = ?`).run(id);
+      this.db.prepare(`UPDATE marketplace_intents SET status = 'withdrawn', withdrawn_at = datetime('now') WHERE id = ?`).run(id);
     } else if (status === "published") {
-      this.db.prepare(`UPDATE mp_intents SET status = 'published', published_at = datetime('now') WHERE id = ?`).run(id);
+      this.db.prepare(`UPDATE marketplace_intents SET status = 'published', published_at = datetime('now') WHERE id = ?`).run(id);
     } else {
-      this.db.prepare(`UPDATE mp_intents SET status = ? WHERE id = ?`).run(status, id);
+      this.db.prepare(`UPDATE marketplace_intents SET status = ? WHERE id = ?`).run(status, id);
     }
   }
 
-  private intentFromRow(row: any): MpIntentRow {
+  private intentFromRow(row: any): MarketplaceIntentRow {
     return {
       id: row.id, intentIdHash: asBytes(row.intent_id_hash)!, side: row.side,
       roleKeyId: row.role_key_id, ephemeralPubkey: asBytes(row.ephemeral_pubkey),
@@ -256,35 +256,35 @@ export class MpStore {
     rawBlob?: Uint8Array;
   }): void {
     this.db.prepare(`
-      INSERT INTO mp_intent_observations (id, intent_id, source_layer, source_node, raw_blob)
+      INSERT INTO marketplace_intent_observations (id, intent_id, source_layer, source_node, raw_blob)
       VALUES (?, ?, ?, ?, ?)
     `).run(uuid("obsmp"), input.intentId, input.sourceLayer, input.sourceNode ?? null, asBuf(input.rawBlob ?? null));
   }
 
   // ---- peer levels ----
 
-  upsertPeerLevel(input: Omit<MpPeerLevelRow, "id" | "lastUpdatedAt"> & { id?: string }): MpPeerLevelRow {
+  upsertPeerLevel(input: Omit<MarketplacePeerLevelRow, "id" | "lastUpdatedAt"> & { id?: string }): MarketplacePeerLevelRow {
     const existing: any = this.db.prepare(`
-      SELECT id FROM mp_peer_levels
+      SELECT id FROM marketplace_peer_levels
       WHERE my_role_key_id = ? AND peer_pubkey = ? AND COALESCE(intent_id,'') = COALESCE(?,'')
     `).get(input.myRoleKeyId, asBuf(input.peerPubkey), input.intentId ?? null);
     if (existing) {
       this.db.prepare(`
-        UPDATE mp_peer_levels SET current_level = ?, proofs_json = ?, last_updated_at = datetime('now')
+        UPDATE marketplace_peer_levels SET current_level = ?, proofs_json = ?, last_updated_at = datetime('now')
         WHERE id = ?
       `).run(input.currentLevel, input.proofs ? JSON.stringify(input.proofs) : null, existing.id);
       return this.getPeerLevel(existing.id)!;
     }
     const id = input.id ?? uuid("peer");
     this.db.prepare(`
-      INSERT INTO mp_peer_levels (id, my_role_key_id, peer_pubkey, intent_id, current_level, proofs_json)
+      INSERT INTO marketplace_peer_levels (id, my_role_key_id, peer_pubkey, intent_id, current_level, proofs_json)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(id, input.myRoleKeyId, asBuf(input.peerPubkey), input.intentId ?? null, input.currentLevel, input.proofs ? JSON.stringify(input.proofs) : null);
     return this.getPeerLevel(id)!;
   }
 
-  getPeerLevel(id: string): MpPeerLevelRow | null {
-    const row: any = this.db.prepare(`SELECT * FROM mp_peer_levels WHERE id = ?`).get(id);
+  getPeerLevel(id: string): MarketplacePeerLevelRow | null {
+    const row: any = this.db.prepare(`SELECT * FROM marketplace_peer_levels WHERE id = ?`).get(id);
     return row ? {
       id: row.id, myRoleKeyId: row.my_role_key_id, peerPubkey: asBytes(row.peer_pubkey)!,
       intentId: row.intent_id, currentLevel: row.current_level,
@@ -293,12 +293,12 @@ export class MpStore {
     } : null;
   }
 
-  listPeerLevels(filter?: { myRoleKeyId?: string; intentId?: string }): MpPeerLevelRow[] {
+  listPeerLevels(filter?: { myRoleKeyId?: string; intentId?: string }): MarketplacePeerLevelRow[] {
     const clauses: string[] = []; const params: unknown[] = [];
     if (filter?.myRoleKeyId) { clauses.push("my_role_key_id = ?"); params.push(filter.myRoleKeyId); }
     if (filter?.intentId) { clauses.push("intent_id = ?"); params.push(filter.intentId); }
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
-    return this.db.prepare(`SELECT * FROM mp_peer_levels ${where} ORDER BY last_updated_at DESC`).all(...params).map((r: any) => ({
+    return this.db.prepare(`SELECT * FROM marketplace_peer_levels ${where} ORDER BY last_updated_at DESC`).all(...params).map((r: any) => ({
       id: r.id, myRoleKeyId: r.my_role_key_id, peerPubkey: asBytes(r.peer_pubkey)!,
       intentId: r.intent_id, currentLevel: r.current_level,
       proofs: r.proofs_json ? JSON.parse(r.proofs_json) : null,
@@ -308,10 +308,10 @@ export class MpStore {
 
   // ---- mailbox ----
 
-  recordInbound(input: Omit<MpInboundMessageRow, "id" | "receivedAt" | "readAt"> & { id?: string }): MpInboundMessageRow {
+  recordInbound(input: Omit<MarketplaceInboundMessageRow, "id" | "receivedAt" | "readAt"> & { id?: string }): MarketplaceInboundMessageRow {
     const id = input.id ?? uuid("mbi");
     this.db.prepare(`
-      INSERT INTO mp_inbound_messages (
+      INSERT INTO marketplace_inbound_messages (
         id, recipient_role_key_id, sender_pubkey, thread_id, in_reply_to,
         intent_id_ref, kind, plaintext_json, signature_blob, ttl_expires_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -324,26 +324,26 @@ export class MpStore {
     return this.getInbound(id)!;
   }
 
-  getInbound(id: string): MpInboundMessageRow | null {
-    const row: any = this.db.prepare(`SELECT * FROM mp_inbound_messages WHERE id = ?`).get(id);
+  getInbound(id: string): MarketplaceInboundMessageRow | null {
+    const row: any = this.db.prepare(`SELECT * FROM marketplace_inbound_messages WHERE id = ?`).get(id);
     return row ? this.inboundFromRow(row) : null;
   }
 
-  listInbound(filter?: { recipientRoleKeyId?: string; threadId?: Uint8Array; intentIdRef?: string; limit?: number }): MpInboundMessageRow[] {
+  listInbound(filter?: { recipientRoleKeyId?: string; threadId?: Uint8Array; intentIdRef?: string; limit?: number }): MarketplaceInboundMessageRow[] {
     const clauses: string[] = []; const params: unknown[] = [];
     if (filter?.recipientRoleKeyId) { clauses.push("recipient_role_key_id = ?"); params.push(filter.recipientRoleKeyId); }
     if (filter?.threadId) { clauses.push("thread_id = ?"); params.push(asBuf(filter.threadId)); }
     if (filter?.intentIdRef) { clauses.push("intent_id_ref = ?"); params.push(filter.intentIdRef); }
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
     const limit = filter?.limit ?? 500;
-    return this.db.prepare(`SELECT * FROM mp_inbound_messages ${where} ORDER BY received_at DESC LIMIT ?`).all(...params, limit).map((r: any) => this.inboundFromRow(r));
+    return this.db.prepare(`SELECT * FROM marketplace_inbound_messages ${where} ORDER BY received_at DESC LIMIT ?`).all(...params, limit).map((r: any) => this.inboundFromRow(r));
   }
 
   markInboundRead(id: string): void {
-    this.db.prepare(`UPDATE mp_inbound_messages SET read_at = datetime('now') WHERE id = ?`).run(id);
+    this.db.prepare(`UPDATE marketplace_inbound_messages SET read_at = datetime('now') WHERE id = ?`).run(id);
   }
 
-  private inboundFromRow(row: any): MpInboundMessageRow {
+  private inboundFromRow(row: any): MarketplaceInboundMessageRow {
     return {
       id: row.id, recipientRoleKeyId: row.recipient_role_key_id,
       senderPubkey: asBytes(row.sender_pubkey)!, threadId: asBytes(row.thread_id),
@@ -354,10 +354,10 @@ export class MpStore {
     };
   }
 
-  recordOutbound(input: Omit<MpOutboundMessageRow, "id" | "sentAt"> & { id?: string }): MpOutboundMessageRow {
+  recordOutbound(input: Omit<MarketplaceOutboundMessageRow, "id" | "sentAt"> & { id?: string }): MarketplaceOutboundMessageRow {
     const id = input.id ?? uuid("mbo");
     this.db.prepare(`
-      INSERT INTO mp_outbound_messages (
+      INSERT INTO marketplace_outbound_messages (
         id, sender_role_key_id, recipient_pubkey, thread_id, in_reply_to,
         intent_id_ref, kind, plaintext_json, ciphertext_blob, signature_blob, delivery_status
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -370,21 +370,21 @@ export class MpStore {
     return this.getOutbound(id)!;
   }
 
-  getOutbound(id: string): MpOutboundMessageRow | null {
-    const row: any = this.db.prepare(`SELECT * FROM mp_outbound_messages WHERE id = ?`).get(id);
+  getOutbound(id: string): MarketplaceOutboundMessageRow | null {
+    const row: any = this.db.prepare(`SELECT * FROM marketplace_outbound_messages WHERE id = ?`).get(id);
     return row ? this.outboundFromRow(row) : null;
   }
 
-  listOutbound(filter?: { senderRoleKeyId?: string; threadId?: Uint8Array; limit?: number }): MpOutboundMessageRow[] {
+  listOutbound(filter?: { senderRoleKeyId?: string; threadId?: Uint8Array; limit?: number }): MarketplaceOutboundMessageRow[] {
     const clauses: string[] = []; const params: unknown[] = [];
     if (filter?.senderRoleKeyId) { clauses.push("sender_role_key_id = ?"); params.push(filter.senderRoleKeyId); }
     if (filter?.threadId) { clauses.push("thread_id = ?"); params.push(asBuf(filter.threadId)); }
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
     const limit = filter?.limit ?? 500;
-    return this.db.prepare(`SELECT * FROM mp_outbound_messages ${where} ORDER BY sent_at DESC LIMIT ?`).all(...params, limit).map((r: any) => this.outboundFromRow(r));
+    return this.db.prepare(`SELECT * FROM marketplace_outbound_messages ${where} ORDER BY sent_at DESC LIMIT ?`).all(...params, limit).map((r: any) => this.outboundFromRow(r));
   }
 
-  private outboundFromRow(row: any): MpOutboundMessageRow {
+  private outboundFromRow(row: any): MarketplaceOutboundMessageRow {
     return {
       id: row.id, senderRoleKeyId: row.sender_role_key_id,
       recipientPubkey: asBytes(row.recipient_pubkey)!, threadId: asBytes(row.thread_id),
@@ -397,10 +397,10 @@ export class MpStore {
 
   // ---- match receipts ----
 
-  insertMatchReceipt(input: Omit<MpMatchReceiptRow, "id" | "proposedAt"> & { id?: string }): MpMatchReceiptRow {
+  insertMatchReceipt(input: Omit<MarketplaceMatchReceiptRow, "id" | "proposedAt"> & { id?: string }): MarketplaceMatchReceiptRow {
     const id = input.id ?? uuid("rcpt");
     this.db.prepare(`
-      INSERT INTO mp_match_receipts (
+      INSERT INTO marketplace_match_receipts (
         id, receipt_hash, my_role_key_id, peer_role_pubkey, offer_intent_id, want_intent_id,
         reached_level, fields_revealed_json, contact_handover_json, my_signature, peer_signature,
         status, signed_at, rejected_at, payload_cbor
@@ -417,7 +417,7 @@ export class MpStore {
     return this.getMatchReceipt(id)!;
   }
 
-  updateMatchReceipt(id: string, input: Partial<MpMatchReceiptRow>): MpMatchReceiptRow | null {
+  updateMatchReceipt(id: string, input: Partial<MarketplaceMatchReceiptRow>): MarketplaceMatchReceiptRow | null {
     const fields: string[] = []; const values: unknown[] = [];
     if (input.status !== undefined) { fields.push("status = ?"); values.push(input.status); }
     if (input.mySignature !== undefined) { fields.push("my_signature = ?"); values.push(asBuf(input.mySignature)); }
@@ -429,30 +429,30 @@ export class MpStore {
     if (input.payloadCbor !== undefined) { fields.push("payload_cbor = ?"); values.push(asBuf(input.payloadCbor)); }
     if (input.receiptHash !== undefined) { fields.push("receipt_hash = ?"); values.push(asBuf(input.receiptHash)); }
     if (!fields.length) return this.getMatchReceipt(id);
-    this.db.prepare(`UPDATE mp_match_receipts SET ${fields.join(", ")} WHERE id = ?`).run(...values, id);
+    this.db.prepare(`UPDATE marketplace_match_receipts SET ${fields.join(", ")} WHERE id = ?`).run(...values, id);
     return this.getMatchReceipt(id);
   }
 
-  getMatchReceipt(id: string): MpMatchReceiptRow | null {
-    const row: any = this.db.prepare(`SELECT * FROM mp_match_receipts WHERE id = ?`).get(id);
+  getMatchReceipt(id: string): MarketplaceMatchReceiptRow | null {
+    const row: any = this.db.prepare(`SELECT * FROM marketplace_match_receipts WHERE id = ?`).get(id);
     return row ? this.receiptFromRow(row) : null;
   }
 
-  findMatchReceiptByHash(hash: Uint8Array): MpMatchReceiptRow | null {
-    const row: any = this.db.prepare(`SELECT * FROM mp_match_receipts WHERE receipt_hash = ?`).get(asBuf(hash));
+  findMatchReceiptByHash(hash: Uint8Array): MarketplaceMatchReceiptRow | null {
+    const row: any = this.db.prepare(`SELECT * FROM marketplace_match_receipts WHERE receipt_hash = ?`).get(asBuf(hash));
     return row ? this.receiptFromRow(row) : null;
   }
 
-  listMatchReceipts(filter?: { myRoleKeyId?: string; status?: MpReceiptStatus; limit?: number }): MpMatchReceiptRow[] {
+  listMatchReceipts(filter?: { myRoleKeyId?: string; status?: MarketplaceReceiptStatus; limit?: number }): MarketplaceMatchReceiptRow[] {
     const clauses: string[] = []; const params: unknown[] = [];
     if (filter?.myRoleKeyId) { clauses.push("my_role_key_id = ?"); params.push(filter.myRoleKeyId); }
     if (filter?.status) { clauses.push("status = ?"); params.push(filter.status); }
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
     const limit = filter?.limit ?? 500;
-    return this.db.prepare(`SELECT * FROM mp_match_receipts ${where} ORDER BY proposed_at DESC LIMIT ?`).all(...params, limit).map((r: any) => this.receiptFromRow(r));
+    return this.db.prepare(`SELECT * FROM marketplace_match_receipts ${where} ORDER BY proposed_at DESC LIMIT ?`).all(...params, limit).map((r: any) => this.receiptFromRow(r));
   }
 
-  private receiptFromRow(row: any): MpMatchReceiptRow {
+  private receiptFromRow(row: any): MarketplaceMatchReceiptRow {
     return {
       id: row.id, receiptHash: asBytes(row.receipt_hash)!,
       myRoleKeyId: row.my_role_key_id, peerRolePubkey: asBytes(row.peer_role_pubkey)!,
@@ -467,25 +467,25 @@ export class MpStore {
 
   // ---- brokers ----
 
-  upsertBroker(input: Omit<MpKnownBrokerRow, "id" | "lastSeenAt"> & { id?: string }): MpKnownBrokerRow {
-    const existing: any = this.db.prepare(`SELECT id FROM mp_known_brokers WHERE broker_pubkey = ?`).get(asBuf(input.brokerPubkey));
+  upsertBroker(input: Omit<MarketplaceKnownBrokerRow, "id" | "lastSeenAt"> & { id?: string }): MarketplaceKnownBrokerRow {
+    const existing: any = this.db.prepare(`SELECT id FROM marketplace_known_brokers WHERE broker_pubkey = ?`).get(asBuf(input.brokerPubkey));
     if (existing) {
       this.db.prepare(`
-        UPDATE mp_known_brokers SET endpoints_json = ?, verticals_supported_json = ?, policies_json = ?, trust_local = ?, last_seen_at = datetime('now')
+        UPDATE marketplace_known_brokers SET endpoints_json = ?, verticals_supported_json = ?, policies_json = ?, trust_local = ?, last_seen_at = datetime('now')
         WHERE id = ?
       `).run(JSON.stringify(input.endpoints), JSON.stringify(input.verticalsSupported), input.policies ? JSON.stringify(input.policies) : null, input.trustLocal ? 1 : 0, existing.id);
       return this.getBroker(existing.id)!;
     }
     const id = input.id ?? uuid("brk");
     this.db.prepare(`
-      INSERT INTO mp_known_brokers (id, broker_pubkey, endpoints_json, verticals_supported_json, policies_json, trust_local)
+      INSERT INTO marketplace_known_brokers (id, broker_pubkey, endpoints_json, verticals_supported_json, policies_json, trust_local)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(id, asBuf(input.brokerPubkey), JSON.stringify(input.endpoints), JSON.stringify(input.verticalsSupported), input.policies ? JSON.stringify(input.policies) : null, input.trustLocal ? 1 : 0);
     return this.getBroker(id)!;
   }
 
-  getBroker(id: string): MpKnownBrokerRow | null {
-    const row: any = this.db.prepare(`SELECT * FROM mp_known_brokers WHERE id = ?`).get(id);
+  getBroker(id: string): MarketplaceKnownBrokerRow | null {
+    const row: any = this.db.prepare(`SELECT * FROM marketplace_known_brokers WHERE id = ?`).get(id);
     return row ? {
       id: row.id, brokerPubkey: asBytes(row.broker_pubkey)!,
       endpoints: JSON.parse(row.endpoints_json), verticalsSupported: JSON.parse(row.verticals_supported_json),
@@ -494,8 +494,8 @@ export class MpStore {
     } : null;
   }
 
-  listBrokers(filter?: { vertical?: string }): MpKnownBrokerRow[] {
-    const rows: any[] = this.db.prepare(`SELECT * FROM mp_known_brokers ORDER BY last_seen_at DESC`).all();
+  listBrokers(filter?: { vertical?: string }): MarketplaceKnownBrokerRow[] {
+    const rows: any[] = this.db.prepare(`SELECT * FROM marketplace_known_brokers ORDER BY last_seen_at DESC`).all();
     const all = rows.map((row) => ({
       id: row.id, brokerPubkey: asBytes(row.broker_pubkey)!,
       endpoints: JSON.parse(row.endpoints_json), verticalsSupported: JSON.parse(row.verticals_supported_json),
@@ -509,26 +509,26 @@ export class MpStore {
 
   // ---- vouches and ratings ----
 
-  insertVouchInbound(input: Omit<MpVouchInboundRow, "id" | "receivedAt"> & { id?: string }): MpVouchInboundRow {
+  insertVouchInbound(input: Omit<MarketplaceVouchInboundRow, "id" | "receivedAt"> & { id?: string }): MarketplaceVouchInboundRow {
     const id = input.id ?? uuid("vchi");
     this.db.prepare(`
-      INSERT INTO mp_vouches_inbound (id, my_role_key_id, voucher_pubkey, context, text, signature_blob)
+      INSERT INTO marketplace_vouches_inbound (id, my_role_key_id, voucher_pubkey, context, text, signature_blob)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(id, input.myRoleKeyId, asBuf(input.voucherPubkey), input.context, input.text, asBuf(input.signature));
-    const row: any = this.db.prepare(`SELECT * FROM mp_vouches_inbound WHERE id = ?`).get(id);
+    const row: any = this.db.prepare(`SELECT * FROM marketplace_vouches_inbound WHERE id = ?`).get(id);
     return {
       id: row.id, myRoleKeyId: row.my_role_key_id, voucherPubkey: asBytes(row.voucher_pubkey)!,
       context: row.context, text: row.text, receivedAt: row.received_at, signature: asBytes(row.signature_blob)!,
     };
   }
 
-  insertVouchOutbound(input: Omit<MpVouchOutboundRow, "id" | "signedAt"> & { id?: string }): MpVouchOutboundRow {
+  insertVouchOutbound(input: Omit<MarketplaceVouchOutboundRow, "id" | "signedAt"> & { id?: string }): MarketplaceVouchOutboundRow {
     const id = input.id ?? uuid("vcho");
     this.db.prepare(`
-      INSERT INTO mp_vouches_outbound (id, voucher_role_key_id, vouchee_pubkey, context, text, expires_at, signature_blob)
+      INSERT INTO marketplace_vouches_outbound (id, voucher_role_key_id, vouchee_pubkey, context, text, expires_at, signature_blob)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(id, input.voucherRoleKeyId, asBuf(input.voucheePubkey), input.context, input.text, input.expiresAt ?? null, asBuf(input.signature));
-    const row: any = this.db.prepare(`SELECT * FROM mp_vouches_outbound WHERE id = ?`).get(id);
+    const row: any = this.db.prepare(`SELECT * FROM marketplace_vouches_outbound WHERE id = ?`).get(id);
     return {
       id: row.id, voucherRoleKeyId: row.voucher_role_key_id, voucheePubkey: asBytes(row.vouchee_pubkey)!,
       context: row.context, text: row.text, signedAt: row.signed_at, expiresAt: row.expires_at,
@@ -536,13 +536,13 @@ export class MpStore {
     };
   }
 
-  insertRating(input: Omit<MpRatingRow, "id" | "signedAt"> & { id?: string }): MpRatingRow {
+  insertRating(input: Omit<MarketplaceRatingRow, "id" | "signedAt"> & { id?: string }): MarketplaceRatingRow {
     const id = input.id ?? uuid("rate");
     this.db.prepare(`
-      INSERT INTO mp_ratings (id, match_receipt_id, rater_role_pubkey, score, comment, signature_blob, countersignature_blob, mutual_consent)
+      INSERT INTO marketplace_ratings (id, match_receipt_id, rater_role_pubkey, score, comment, signature_blob, countersignature_blob, mutual_consent)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(id, input.matchReceiptId, asBuf(input.raterRolePubkey), input.score, input.comment ?? null, asBuf(input.signature), asBuf(input.countersignature ?? null), input.mutualConsent ? 1 : 0);
-    const row: any = this.db.prepare(`SELECT * FROM mp_ratings WHERE id = ?`).get(id);
+    const row: any = this.db.prepare(`SELECT * FROM marketplace_ratings WHERE id = ?`).get(id);
     return {
       id: row.id, matchReceiptId: row.match_receipt_id,
       raterRolePubkey: asBytes(row.rater_role_pubkey)!,
@@ -555,13 +555,13 @@ export class MpStore {
 
   // ---- revocations ----
 
-  insertRevocation(input: Omit<MpRevocationRow, "id" | "observedAt"> & { id?: string }): MpRevocationRow {
+  insertRevocation(input: Omit<MarketplaceRevocationRow, "id" | "observedAt"> & { id?: string }): MarketplaceRevocationRow {
     const id = input.id ?? uuid("rvk");
     this.db.prepare(`
-      INSERT OR REPLACE INTO mp_revocations (id, revoked_pubkey, revoked_kind, reason, signed_at, root_pubkey, root_signature)
+      INSERT OR REPLACE INTO marketplace_revocations (id, revoked_pubkey, revoked_kind, reason, signed_at, root_pubkey, root_signature)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(id, asBuf(input.revokedPubkey), input.revokedKind, input.reason ?? null, input.signedAt, asBuf(input.rootPubkey), asBuf(input.rootSignature));
-    const row: any = this.db.prepare(`SELECT * FROM mp_revocations WHERE id = ?`).get(id);
+    const row: any = this.db.prepare(`SELECT * FROM marketplace_revocations WHERE id = ?`).get(id);
     return {
       id: row.id, revokedPubkey: asBytes(row.revoked_pubkey)!, revokedKind: row.revoked_kind,
       reason: row.reason, signedAt: row.signed_at, rootPubkey: asBytes(row.root_pubkey)!,
@@ -570,7 +570,7 @@ export class MpStore {
   }
 
   isRevoked(pubkey: Uint8Array): boolean {
-    const row = this.db.prepare(`SELECT 1 FROM mp_revocations WHERE revoked_pubkey = ?`).get(asBuf(pubkey));
+    const row = this.db.prepare(`SELECT 1 FROM marketplace_revocations WHERE revoked_pubkey = ?`).get(asBuf(pubkey));
     return row != null;
   }
 }

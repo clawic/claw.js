@@ -1,7 +1,7 @@
 // `service-offer/v1` — generic freelance / service ad.
 
 import type { CborValue } from "../../cbor.ts";
-import type { MpVerticalPlugin } from "../plugin.ts";
+import type { MarketplaceVerticalPlugin } from "../plugin.ts";
 
 export const SERVICE_OFFER_VERTICAL_ID = "service-offer/v1";
 
@@ -58,7 +58,7 @@ export function serviceOfferToCbor(input: ServiceOfferBlock): Record<string, Cbo
   return out;
 }
 
-export const serviceOfferPlugin: MpVerticalPlugin<ServiceOfferBlock, ServiceOfferBlock> = {
+export const serviceOfferPlugin: MarketplaceVerticalPlugin<ServiceOfferBlock, ServiceOfferBlock> = {
   id: SERVICE_OFFER_VERTICAL_ID,
   archetype: "standalone",
   defaultVisibility: SERVICE_VISIBILITY,

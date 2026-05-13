@@ -8,7 +8,7 @@
 
 import type { CborValue } from "@clawjs/marketplace/cbor";
 import { discoveryKey } from "@clawjs/marketplace";
-import type { MpVerticalPlugin } from "@clawjs/marketplace/verticals/plugin";
+import type { MarketplaceVerticalPlugin } from "@clawjs/marketplace/verticals/plugin";
 
 export const VEHICLE_VERTICAL_ID = "modules/vehicle/v1";
 
@@ -188,7 +188,7 @@ export function vehicleDiscoveryKey(input: { transaction: VehicleTransaction; ge
   });
 }
 
-export const vehiclePlugin: MpVerticalPlugin<VehicleOffer, VehicleWant> = {
+export const vehiclePlugin: MarketplaceVerticalPlugin<VehicleOffer, VehicleWant> = {
   id: VEHICLE_VERTICAL_ID,
   archetype: "both",
   defaultVisibility: { ...VEHICLE_OFFER_VISIBILITY, ...VEHICLE_WANT_VISIBILITY },

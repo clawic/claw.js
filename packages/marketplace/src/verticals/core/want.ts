@@ -1,7 +1,7 @@
 // `want/v1` — inverse listing: "I'm looking for X in vertical Y".
 
 import type { CborValue } from "../../cbor.ts";
-import type { MpVerticalPlugin } from "../plugin.ts";
+import type { MarketplaceVerticalPlugin } from "../plugin.ts";
 
 export const WANT_VERTICAL_ID = "want/v1";
 
@@ -64,7 +64,7 @@ export function wantToCbor(input: WantBlock): Record<string, CborValue> {
   return out;
 }
 
-export const wantPlugin: MpVerticalPlugin<WantBlock, WantBlock> = {
+export const wantPlugin: MarketplaceVerticalPlugin<WantBlock, WantBlock> = {
   id: WANT_VERTICAL_ID,
   archetype: "standalone",
   defaultVisibility: WANT_VISIBILITY,

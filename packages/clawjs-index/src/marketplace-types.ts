@@ -1,8 +1,8 @@
 // Type definitions for the marketplace/1.0.0 marketplace protocol tables.
 // These types are stored alongside the regular index entities but on their
-// own tables (`mp_*`).
+// own tables (`marketplace_*`).
 
-export interface MpRootKeyRow {
+export interface MarketplaceRootKeyRow {
   id: string;
   pubkey: Uint8Array;
   label?: string | null;
@@ -10,7 +10,7 @@ export interface MpRootKeyRow {
   revokedAt?: string | null;
 }
 
-export interface MpDeviceKeyRow {
+export interface MarketplaceDeviceKeyRow {
   id: string;
   rootKeyId: string;
   pubkey: Uint8Array;
@@ -20,7 +20,7 @@ export interface MpDeviceKeyRow {
   revokedAt?: string | null;
 }
 
-export interface MpRoleKeyRow {
+export interface MarketplaceRoleKeyRow {
   id: string;
   rootKeyId: string;
   pubkey: Uint8Array;
@@ -31,14 +31,14 @@ export interface MpRoleKeyRow {
   revokedAt?: string | null;
 }
 
-export type MpIntentSide = "offer" | "want";
-export type MpIntentStatus = "draft" | "published" | "withdrawn" | "expired";
-export type MpProvenance = "native" | "observed";
+export type MarketplaceIntentSide = "offer" | "want";
+export type MarketplaceIntentStatus = "draft" | "published" | "withdrawn" | "expired";
+export type MarketplaceProvenance = "native" | "observed";
 
-export interface MpIntentRow {
+export interface MarketplaceIntentRow {
   id: string;
   intentIdHash: Uint8Array;
-  side: MpIntentSide;
+  side: MarketplaceIntentSide;
   roleKeyId?: string | null;
   ephemeralPubkey?: Uint8Array | null;
   vertical: string;
@@ -48,17 +48,17 @@ export interface MpIntentRow {
   revealKeys?: Record<string, string> | null;
   signatureRole?: Uint8Array | null;
   signatureDevice?: Uint8Array | null;
-  provenance: MpProvenance;
+  provenance: MarketplaceProvenance;
   observedSource?: string | null;
   observedExternalUrl?: string | null;
-  status: MpIntentStatus;
+  status: MarketplaceIntentStatus;
   expiresAt?: string | null;
   createdAt: string;
   publishedAt?: string | null;
   withdrawnAt?: string | null;
 }
 
-export type MpReceiptStatus =
+export type MarketplaceReceiptStatus =
   | "proposed_by_peer"
   | "proposed_by_me"
   | "awaiting_human_approval"
@@ -66,7 +66,7 @@ export type MpReceiptStatus =
   | "rejected"
   | "expired";
 
-export interface MpMatchReceiptRow {
+export interface MarketplaceMatchReceiptRow {
   id: string;
   receiptHash: Uint8Array;
   myRoleKeyId: string;
@@ -78,14 +78,14 @@ export interface MpMatchReceiptRow {
   contactHandover?: Record<string, unknown> | null;
   mySignature?: Uint8Array | null;
   peerSignature?: Uint8Array | null;
-  status: MpReceiptStatus;
+  status: MarketplaceReceiptStatus;
   proposedAt: string;
   signedAt?: string | null;
   rejectedAt?: string | null;
   payloadCbor: Uint8Array;
 }
 
-export interface MpPeerLevelRow {
+export interface MarketplacePeerLevelRow {
   id: string;
   myRoleKeyId: string;
   peerPubkey: Uint8Array;
@@ -95,7 +95,7 @@ export interface MpPeerLevelRow {
   lastUpdatedAt: string;
 }
 
-export interface MpInboundMessageRow {
+export interface MarketplaceInboundMessageRow {
   id: string;
   recipientRoleKeyId: string;
   senderPubkey: Uint8Array;
@@ -110,7 +110,7 @@ export interface MpInboundMessageRow {
   readAt?: string | null;
 }
 
-export interface MpOutboundMessageRow {
+export interface MarketplaceOutboundMessageRow {
   id: string;
   senderRoleKeyId: string;
   recipientPubkey: Uint8Array;
@@ -125,7 +125,7 @@ export interface MpOutboundMessageRow {
   deliveryStatus: "queued" | "sent" | "delivered" | "failed";
 }
 
-export interface MpKnownBrokerRow {
+export interface MarketplaceKnownBrokerRow {
   id: string;
   brokerPubkey: Uint8Array;
   endpoints: string[];
@@ -135,7 +135,7 @@ export interface MpKnownBrokerRow {
   lastSeenAt: string;
 }
 
-export interface MpVouchInboundRow {
+export interface MarketplaceVouchInboundRow {
   id: string;
   myRoleKeyId: string;
   voucherPubkey: Uint8Array;
@@ -145,7 +145,7 @@ export interface MpVouchInboundRow {
   signature: Uint8Array;
 }
 
-export interface MpVouchOutboundRow {
+export interface MarketplaceVouchOutboundRow {
   id: string;
   voucherRoleKeyId: string;
   voucheePubkey: Uint8Array;
@@ -156,7 +156,7 @@ export interface MpVouchOutboundRow {
   signature: Uint8Array;
 }
 
-export interface MpRatingRow {
+export interface MarketplaceRatingRow {
   id: string;
   matchReceiptId: string;
   raterRolePubkey: Uint8Array;
@@ -168,7 +168,7 @@ export interface MpRatingRow {
   mutualConsent: boolean;
 }
 
-export interface MpRevocationRow {
+export interface MarketplaceRevocationRow {
   id: string;
   revokedPubkey: Uint8Array;
   revokedKind: "device" | "role";

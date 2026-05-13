@@ -353,7 +353,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   // --- root keys ---
   app.get("/v1/marketplace/identity/roots", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
-    return { roots: store.mp.listRootKeys().map((r) => ({ ...r, pubkey: bytesToB64(r.pubkey) })) };
+    return { roots: store.marketplace.listRootKeys().map((r) => ({ ...r, pubkey: bytesToB64(r.pubkey) })) };
   });
   app.post("/v1/marketplace/identity/roots", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
@@ -361,7 +361,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     const pubkey = b64ToBytes(body.pubkey);
     const encryptedSeed = b64ToBytes(body.encryptedSeed);
     if (!pubkey || !encryptedSeed) return reply.code(400).send({ error: "pubkey and encryptedSeed required (base64)" });
-    const row = store.mp.insertRootKey({
+    const row = store.marketplace.insertRootKey({
       pubkey, encryptedSeed,
       encryptionMeta: (body.encryptionMeta as Record<string, unknown> | undefined) ?? {},
       label: body.label as string | undefined,
@@ -370,7 +370,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   });
   app.get("/v1/marketplace/identity/roots/:id/secret", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
-    const out = store.mp.getEncryptedRoot((req.params as { id: string }).id);
+    const out = store.marketplace.getEncryptedRoot((req.params as { id: string }).id);
     if (!out) return reply.code(404).send({ error: "not found" });
     return { encryptedSeed: bytesToB64(out.encryptedSeed), encryptionMeta: out.encryptionMeta };
   });
@@ -379,7 +379,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   app.get("/v1/marketplace/identity/devices", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const rootKeyId = (req.query as { rootKeyId?: string }).rootKeyId;
-    return { devices: store.mp.listDeviceKeys(rootKeyId).map((d) => ({ ...d, pubkey: bytesToB64(d.pubkey), certificateCbor: bytesToB64(d.certificateCbor) })) };
+    return { devices: store.marketplace.listDeviceKeys(rootKeyId).map((d) => ({ ...d, pubkey: bytesToB64(d.pubkey), certificateCbor: bytesToB64(d.certificateCbor) })) };
   });
   app.post("/v1/marketplace/identity/devices", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
@@ -390,7 +390,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     if (typeof body.rootKeyId !== "string" || !pubkey || !encryptedPriv || !certificateCbor || typeof body.deviceName !== "string") {
       return reply.code(400).send({ error: "rootKeyId, pubkey, encryptedPriv, deviceName, certificateCbor required" });
     }
-    const row = store.mp.insertDeviceKey({
+    const row = store.marketplace.insertDeviceKey({
       rootKeyId: body.rootKeyId, pubkey, encryptedPriv,
       encryptionMeta: (body.encryptionMeta as Record<string, unknown> | undefined) ?? {},
       deviceName: body.deviceName, certificateCbor,
@@ -402,7 +402,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   app.get("/v1/marketplace/identity/roles", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const q = req.query as { rootKeyId?: string; vertical?: string };
-    return { roles: store.mp.listRoleKeys(q).map((r) => ({ ...r, pubkey: bytesToB64(r.pubkey), certificateCbor: bytesToB64(r.certificateCbor) })) };
+    return { roles: store.marketplace.listRoleKeys(q).map((r) => ({ ...r, pubkey: bytesToB64(r.pubkey), certificateCbor: bytesToB64(r.certificateCbor) })) };
   });
   app.post("/v1/marketplace/identity/roles", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
@@ -413,7 +413,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     if (typeof body.rootKeyId !== "string" || !pubkey || !encryptedPriv || !certificateCbor || typeof body.roleName !== "string" || typeof body.vertical !== "string") {
       return reply.code(400).send({ error: "rootKeyId, pubkey, encryptedPriv, roleName, vertical, certificateCbor required" });
     }
-    const row = store.mp.insertRoleKey({
+    const row = store.marketplace.insertRoleKey({
       rootKeyId: body.rootKeyId, pubkey, encryptedPriv,
       encryptionMeta: (body.encryptionMeta as Record<string, unknown> | undefined) ?? {},
       roleName: body.roleName, vertical: body.vertical, certificateCbor,
@@ -422,7 +422,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   });
   app.post("/v1/marketplace/identity/roles/:id/revoke", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
-    store.mp.revokeRoleKey((req.params as { id: string }).id);
+    store.marketplace.revokeRoleKey((req.params as { id: string }).id);
     return { ok: true };
   });
 
@@ -430,7 +430,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   app.get("/v1/marketplace/intents", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const q = req.query as { side?: "offer" | "want"; vertical?: string; status?: string; provenance?: "native" | "observed"; roleKeyId?: string };
-    return { intents: store.mp.listIntents(q).map((i) => ({
+    return { intents: store.marketplace.listIntents(q).map((i) => ({
       ...i,
       intentIdHash: bytesToB64(i.intentIdHash),
       ephemeralPubkey: bytesToB64(i.ephemeralPubkey),
@@ -447,7 +447,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     if (!intentIdHash || !payloadCbor || typeof body.side !== "string" || typeof body.vertical !== "string" || typeof body.status !== "string" || typeof body.provenance !== "string") {
       return reply.code(400).send({ error: "intentIdHash, side, vertical, payloadCbor, status, provenance required" });
     }
-    const row = store.mp.upsertObservedIntent({
+    const row = store.marketplace.upsertObservedIntent({
       intentIdHash,
       side: body.side as "offer" | "want",
       roleKeyId: (body.roleKeyId as string | undefined) ?? null,
@@ -473,12 +473,12 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     if (typeof body.status !== "string") return reply.code(400).send({ error: "status required" });
-    store.mp.updateIntentStatus((req.params as { id: string }).id, body.status as any);
+    store.marketplace.updateIntentStatus((req.params as { id: string }).id, body.status as any);
     return { ok: true };
   });
   app.get("/v1/marketplace/intents/:id", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
-    const intent = store.mp.getIntent((req.params as { id: string }).id);
+    const intent = store.marketplace.getIntent((req.params as { id: string }).id);
     if (!intent) return reply.code(404).send({ error: "not found" });
     return { intent: { ...intent,
       intentIdHash: bytesToB64(intent.intentIdHash),
@@ -493,7 +493,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   app.get("/v1/marketplace/peer-levels", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const q = req.query as { myRoleKeyId?: string; intentId?: string };
-    return { peers: store.mp.listPeerLevels(q).map((p) => ({ ...p, peerPubkey: bytesToB64(p.peerPubkey) })) };
+    return { peers: store.marketplace.listPeerLevels(q).map((p) => ({ ...p, peerPubkey: bytesToB64(p.peerPubkey) })) };
   });
   app.post("/v1/marketplace/peer-levels", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
@@ -502,7 +502,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     if (typeof body.myRoleKeyId !== "string" || !peerPubkey || typeof body.currentLevel !== "number") {
       return reply.code(400).send({ error: "myRoleKeyId, peerPubkey, currentLevel required" });
     }
-    const row = store.mp.upsertPeerLevel({
+    const row = store.marketplace.upsertPeerLevel({
       myRoleKeyId: body.myRoleKeyId, peerPubkey,
       intentId: (body.intentId as string | undefined) ?? null,
       currentLevel: body.currentLevel as number,
@@ -515,7 +515,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   app.get("/v1/marketplace/mailbox/inbound", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const q = req.query as { recipientRoleKeyId?: string; intentIdRef?: string; limit?: number };
-    return { messages: store.mp.listInbound(q).map((m) => ({
+    return { messages: store.marketplace.listInbound(q).map((m) => ({
       ...m,
       senderPubkey: bytesToB64(m.senderPubkey),
       threadId: bytesToB64(m.threadId),
@@ -530,7 +530,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     if (typeof body.recipientRoleKeyId !== "string" || !senderPubkey || typeof body.kind !== "string") {
       return reply.code(400).send({ error: "recipientRoleKeyId, senderPubkey, kind required" });
     }
-    const row = store.mp.recordInbound({
+    const row = store.marketplace.recordInbound({
       recipientRoleKeyId: body.recipientRoleKeyId, senderPubkey,
       threadId: b64ToBytes(body.threadId), inReplyTo: b64ToBytes(body.inReplyTo),
       intentIdRef: (body.intentIdRef as string | undefined) ?? null,
@@ -547,13 +547,13 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   });
   app.post("/v1/marketplace/mailbox/inbound/:id/read", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
-    store.mp.markInboundRead((req.params as { id: string }).id);
+    store.marketplace.markInboundRead((req.params as { id: string }).id);
     return { ok: true };
   });
   app.get("/v1/marketplace/mailbox/outbound", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const q = req.query as { senderRoleKeyId?: string; limit?: number };
-    return { messages: store.mp.listOutbound(q).map((m) => ({
+    return { messages: store.marketplace.listOutbound(q).map((m) => ({
       ...m,
       recipientPubkey: bytesToB64(m.recipientPubkey),
       threadId: bytesToB64(m.threadId),
@@ -569,7 +569,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     if (typeof body.senderRoleKeyId !== "string" || !recipientPubkey || typeof body.kind !== "string") {
       return reply.code(400).send({ error: "senderRoleKeyId, recipientPubkey, kind required" });
     }
-    const row = store.mp.recordOutbound({
+    const row = store.marketplace.recordOutbound({
       senderRoleKeyId: body.senderRoleKeyId, recipientPubkey,
       threadId: b64ToBytes(body.threadId), inReplyTo: b64ToBytes(body.inReplyTo),
       intentIdRef: (body.intentIdRef as string | undefined) ?? null,
@@ -591,7 +591,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   app.get("/v1/marketplace/match-receipts", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const q = req.query as { myRoleKeyId?: string; status?: any };
-    return { receipts: store.mp.listMatchReceipts(q).map((r) => ({
+    return { receipts: store.marketplace.listMatchReceipts(q).map((r) => ({
       ...r,
       receiptHash: bytesToB64(r.receiptHash),
       peerRolePubkey: bytesToB64(r.peerRolePubkey),
@@ -609,7 +609,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     if (!receiptHash || !peerRolePubkey || !payloadCbor || typeof body.myRoleKeyId !== "string" || typeof body.status !== "string" || typeof body.reachedLevel !== "number") {
       return reply.code(400).send({ error: "receiptHash, myRoleKeyId, peerRolePubkey, reachedLevel, status, payloadCbor required" });
     }
-    const row = store.mp.insertMatchReceipt({
+    const row = store.marketplace.insertMatchReceipt({
       receiptHash, myRoleKeyId: body.myRoleKeyId, peerRolePubkey,
       offerIntentId: (body.offerIntentId as string | undefined) ?? null,
       wantIntentId: (body.wantIntentId as string | undefined) ?? null,
@@ -634,7 +634,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   app.patch("/v1/marketplace/match-receipts/:id", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
-    const updated = store.mp.updateMatchReceipt((req.params as { id: string }).id, {
+    const updated = store.marketplace.updateMatchReceipt((req.params as { id: string }).id, {
       status: body.status as any,
       mySignature: b64ToBytes(body.mySignature) ?? undefined,
       peerSignature: b64ToBytes(body.peerSignature) ?? undefined,
@@ -659,14 +659,14 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   app.get("/v1/marketplace/brokers", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const q = req.query as { vertical?: string };
-    return { brokers: store.mp.listBrokers(q).map((b) => ({ ...b, brokerPubkey: bytesToB64(b.brokerPubkey) })) };
+    return { brokers: store.marketplace.listBrokers(q).map((b) => ({ ...b, brokerPubkey: bytesToB64(b.brokerPubkey) })) };
   });
   app.post("/v1/marketplace/brokers", async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     const brokerPubkey = b64ToBytes(body.brokerPubkey);
     if (!brokerPubkey) return reply.code(400).send({ error: "brokerPubkey required" });
-    const row = store.mp.upsertBroker({
+    const row = store.marketplace.upsertBroker({
       brokerPubkey,
       endpoints: (body.endpoints as string[] | undefined) ?? [],
       verticalsSupported: (body.verticalsSupported as string[] | undefined) ?? [],
@@ -686,7 +686,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     if (!revokedPubkey || !rootPubkey || !rootSignature || (body.revokedKind !== "device" && body.revokedKind !== "role") || typeof body.signedAt !== "string") {
       return reply.code(400).send({ error: "revokedPubkey, revokedKind, signedAt, rootPubkey, rootSignature required" });
     }
-    const row = store.mp.insertRevocation({
+    const row = store.marketplace.insertRevocation({
       revokedPubkey, revokedKind: body.revokedKind, reason: (body.reason as string | undefined) ?? null,
       signedAt: body.signedAt, rootPubkey, rootSignature,
     });

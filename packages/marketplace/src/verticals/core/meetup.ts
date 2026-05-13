@@ -1,7 +1,7 @@
 // `meetup/v1` — a real-world meetup announcement. Standalone.
 
 import type { CborValue } from "../../cbor.ts";
-import type { MpVerticalPlugin } from "../plugin.ts";
+import type { MarketplaceVerticalPlugin } from "../plugin.ts";
 
 export const MEETUP_VERTICAL_ID = "meetup/v1";
 
@@ -68,7 +68,7 @@ export function meetupToCbor(input: MeetupBlock): Record<string, CborValue> {
   return out;
 }
 
-export const meetupPlugin: MpVerticalPlugin<MeetupBlock, MeetupBlock> = {
+export const meetupPlugin: MarketplaceVerticalPlugin<MeetupBlock, MeetupBlock> = {
   id: MEETUP_VERTICAL_ID,
   archetype: "standalone",
   defaultVisibility: MEETUP_VISIBILITY,

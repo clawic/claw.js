@@ -1,7 +1,7 @@
 // `profile-page/v1` — the owner's public "about" surface. One per Profile.
 
 import type { CborValue } from "../../cbor.ts";
-import type { MpVerticalPlugin } from "../plugin.ts";
+import type { MarketplaceVerticalPlugin } from "../plugin.ts";
 
 export const PROFILE_PAGE_VERTICAL_ID = "profile-page/v1";
 
@@ -53,7 +53,7 @@ export function profilePageToCbor(input: ProfilePageBlock): Record<string, CborV
   return out;
 }
 
-export const profilePagePlugin: MpVerticalPlugin<ProfilePageBlock, ProfilePageBlock> = {
+export const profilePagePlugin: MarketplaceVerticalPlugin<ProfilePageBlock, ProfilePageBlock> = {
   id: PROFILE_PAGE_VERTICAL_ID,
   archetype: "standalone",
   defaultVisibility: PROFILE_PAGE_VISIBILITY,

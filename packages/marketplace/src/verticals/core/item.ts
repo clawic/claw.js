@@ -2,7 +2,7 @@
 // referencing a `clawjs-possessions` record (tracked archetype).
 
 import type { CborValue } from "../../cbor.ts";
-import type { MpVerticalPlugin } from "../plugin.ts";
+import type { MarketplaceVerticalPlugin } from "../plugin.ts";
 
 export const ITEM_VERTICAL_ID = "item/v1";
 
@@ -76,7 +76,7 @@ export function itemToCbor(input: ItemBlock): Record<string, CborValue> {
   return out;
 }
 
-export const itemPlugin: MpVerticalPlugin<ItemBlock, ItemBlock> = {
+export const itemPlugin: MarketplaceVerticalPlugin<ItemBlock, ItemBlock> = {
   id: ITEM_VERTICAL_ID,
   archetype: "both",
   defaultVisibility: ITEM_VISIBILITY,

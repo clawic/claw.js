@@ -6,4 +6,4 @@
 "@clawjs/marketplace-dating": minor
 ---
 
-Add recoverable profile identity, human handles, core mp vertical plugins, and standalone domain vertical packages.
+Add recoverable profile identity, human handles, core marketplace vertical plugins, and standalone domain vertical packages.

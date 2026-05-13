@@ -1,7 +1,7 @@
 // `post/v1` — short-form text + optional attachments. Standalone, feed-shaped.
 
 import type { CborValue } from "../../cbor.ts";
-import type { MpVerticalPlugin } from "../plugin.ts";
+import type { MarketplaceVerticalPlugin } from "../plugin.ts";
 
 export const POST_VERTICAL_ID = "post/v1";
 
@@ -41,7 +41,7 @@ export function postToCbor(input: PostBlock): Record<string, CborValue> {
   return out;
 }
 
-export const postPlugin: MpVerticalPlugin<PostBlock, PostBlock> = {
+export const postPlugin: MarketplaceVerticalPlugin<PostBlock, PostBlock> = {
   id: POST_VERTICAL_ID,
   archetype: "standalone",
   defaultVisibility: POST_VISIBILITY,

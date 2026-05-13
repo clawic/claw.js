@@ -1,7 +1,7 @@
 // Core verticals shipped inside `@clawjs/marketplace`. Plugin spec for domain plugins
 // lives at `@clawjs/marketplace/verticals/plugin`.
 
-import { VerticalRegistry, type MpVerticalPlugin } from "../plugin.ts";
+import { VerticalRegistry, type MarketplaceVerticalPlugin } from "../plugin.ts";
 
 import { postPlugin, POST_VERTICAL_ID } from "./post.ts";
 import { hotTakePlugin, HOT_TAKE_VERTICAL_ID } from "./hot-take.ts";
@@ -21,15 +21,15 @@ export * from "./meetup.ts";
 export * from "./profile-page.ts";
 export * from "./want.ts";
 
-export const CORE_VERTICAL_PLUGINS: MpVerticalPlugin[] = [
-  postPlugin as MpVerticalPlugin,
-  hotTakePlugin as MpVerticalPlugin,
-  albumPlugin as MpVerticalPlugin,
-  itemPlugin as MpVerticalPlugin,
-  serviceOfferPlugin as MpVerticalPlugin,
-  meetupPlugin as MpVerticalPlugin,
-  profilePagePlugin as MpVerticalPlugin,
-  wantPlugin as MpVerticalPlugin,
+export const CORE_VERTICAL_PLUGINS: MarketplaceVerticalPlugin[] = [
+  postPlugin as MarketplaceVerticalPlugin,
+  hotTakePlugin as MarketplaceVerticalPlugin,
+  albumPlugin as MarketplaceVerticalPlugin,
+  itemPlugin as MarketplaceVerticalPlugin,
+  serviceOfferPlugin as MarketplaceVerticalPlugin,
+  meetupPlugin as MarketplaceVerticalPlugin,
+  profilePagePlugin as MarketplaceVerticalPlugin,
+  wantPlugin as MarketplaceVerticalPlugin,
 ];
 
 export const CORE_VERTICAL_IDS: readonly string[] = Object.freeze([
