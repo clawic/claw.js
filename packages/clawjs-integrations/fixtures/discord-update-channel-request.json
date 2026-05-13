@@ -7,6 +7,46 @@
     "content-type": "application/json"
   },
   "body": {
-    "name": "sample"
+    "name": "sample",
+    "type": 5,
+    "topic": null,
+    "bitrate": 64000,
+    "user_limit": 25,
+    "rate_limit_per_user": 5,
+    "position": 1,
+    "permission_overwrites": [
+      {
+        "id": "sample",
+        "type": 0,
+        "allow": "0",
+        "deny": null
+      }
+    ],
+    "parent_id": null,
+    "nsfw": false,
+    "rtc_region": null,
+    "video_quality_mode": 2,
+    "default_auto_archive_duration": 1440,
+    "default_reaction_emoji": null,
+    "available_tags": [
+      {
+        "name": "sample",
+        "moderated": false,
+        "emoji_id": null,
+        "emoji_name": "sample"
+      }
+    ],
+    "default_sort_order": null,
+    "default_forum_layout": 2,
+    "default_thread_rate_limit_per_user": 10,
+    "icon": null,
+    "flags": 16,
+    "archived": false,
+    "auto_archive_duration": 1440,
+    "locked": false,
+    "invitable": true,
+    "applied_tags": [
+      "sample"
+    ]
   }
 }
