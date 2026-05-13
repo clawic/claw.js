@@ -41542,6 +41542,40 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.expire-billing-credit-grant",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Expire Billing Credit Grant",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "credgrant_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.void-billing-credit-grant",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Void Billing Credit Grant",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "credgrant_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },
