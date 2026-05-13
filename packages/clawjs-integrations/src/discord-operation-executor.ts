@@ -180,6 +180,11 @@ export function buildDiscordOperationRequest(
     placement: "bearer" as const,
     prefix: "Bot",
   }));
+  const bearerAuth = operation.authFieldNames.map((field) => ({
+    type: "secret" as const,
+    field,
+    placement: "bearer" as const,
+  }));
   const headers = { accept: "application/json" };
 
   switch (runtimeOperation) {
@@ -344,7 +349,7 @@ export function buildDiscordOperationRequest(
     case "remove-lobby-member":
       return deletePlan(`lobbies/${lobbyId(values)}/members/${userId(values)}`, auth, headers, { type: "object" });
     case "leave-lobby":
-      return deletePlan(`lobbies/${lobbyId(values)}/members/@me`, auth, headers, { type: "object" });
+      return deletePlan(`lobbies/${lobbyId(values)}/members/@me`, bearerAuth, headers, { type: "object" });
     case "update-channel":
       return bodyPlan("PATCH", `channels/${channelId(values)}`, auth, headers, channelBody(values), { type: "object", requiredPaths: ["id", "type"] });
     case "set-voice-channel-status":

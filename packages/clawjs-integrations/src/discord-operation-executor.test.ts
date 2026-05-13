@@ -90,7 +90,7 @@ const DISCORD_ACTIONS = [
   action("add-lobby-member", "Add Lobby Member", [LOBBY_FIELD, USER_FIELD, field("metadata", "object", true, { default: { role: "sample" } }), field("flags", "integer", true, { default: 1 })]),
   action("bulk-update-lobby-members", "Bulk Update Lobby Members", [LOBBY_FIELD, field("members", "array", false, { default: [{ id: "sample", metadata: { role: "sample" }, flags: 1, remove_member: false }] })]),
   action("remove-lobby-member", "Remove Lobby Member", [LOBBY_FIELD, USER_FIELD]),
-  action("leave-lobby", "Leave Lobby", [LOBBY_FIELD]),
+  action("leave-lobby", "Leave Lobby", [LOBBY_FIELD], ["discordBearerToken"]),
   action("get-channel", "Get Channel", [CHANNEL_FIELD]),
   action("update-channel", "Update Channel", [CHANNEL_FIELD, field("name", "string", true, { default: "sample" })]),
   action("set-voice-channel-status", "Set Voice Channel Status", [CHANNEL_FIELD, field("status", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
@@ -215,9 +215,14 @@ const DISCORD_CATALOG = normalizeConnectorCatalog({
   apps: [{
     id: "discord",
     name: "Discord",
-    authFieldNames: ["discordBotToken"],
+    authFieldNames: ["discordBotToken", "discordBearerToken"],
     fields: [{
       name: "discordBotToken",
+      type: "app",
+      optional: false,
+      secret: true,
+    }, {
+      name: "discordBearerToken",
       type: "app",
       optional: false,
       secret: true,
@@ -230,6 +235,7 @@ describe("discord operation runtime", () => {
   it("builds Discord REST request plans for core resources", () => {
     const headers = { accept: "application/json" };
     const auth = [{ type: "secret" as const, field: "discordBotToken", placement: "bearer" as const, prefix: "Bot" }];
+    const bearerAuth = [{ type: "secret" as const, field: "discordBearerToken", placement: "bearer" as const }];
 
     assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-channel"), { channelId: "123" }), {
       method: "GET",
@@ -513,7 +519,7 @@ describe("discord operation runtime", () => {
     }), {
       method: "DELETE",
       endpoint: "lobbies/lobby-123/members/@me",
-      auth,
+      auth: bearerAuth,
       headers,
       body: {},
       responseSchema: {

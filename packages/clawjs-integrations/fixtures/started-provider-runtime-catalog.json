@@ -5,11 +5,18 @@
       "id": "discord",
       "name": "Discord",
       "authFieldNames": [
-        "discordBotToken"
+        "discordBotToken",
+        "discordBearerToken"
       ],
       "fields": [
         {
           "name": "discordBotToken",
+          "type": "app",
+          "optional": false,
+          "secret": true
+        },
+        {
+          "name": "discordBearerToken",
           "type": "app",
           "optional": false,
           "secret": true
@@ -1444,7 +1451,7 @@
             }
           ],
           "authFieldNames": [
-            "discordBotToken"
+            "discordBearerToken"
           ]
         },
         {
