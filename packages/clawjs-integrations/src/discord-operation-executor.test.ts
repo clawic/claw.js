@@ -48,6 +48,8 @@ const DISCORD_ACTIONS = [
   action("create-guild-soundboard-sound", "Create Guild Soundboard Sound", [GUILD_FIELD, field("name", "string"), field("sound", "string", false, { default: "data:audio/mpeg;base64,c2FtcGxl" }), field("volume", "number", true, { default: 1 }), field("emojiId", "string", true), field("emojiName", "string", true), field("auditLogReason", "string", true)]),
   action("update-guild-soundboard-sound", "Update Guild Soundboard Sound", [GUILD_FIELD, SOUNDBOARD_SOUND_FIELD, field("name", "string", true, { default: "sample" }), field("volume", "number", true, { default: 1 }), field("emojiId", "string", true), field("emojiName", "string", true), field("auditLogReason", "string", true)]),
   action("delete-guild-soundboard-sound", "Delete Guild Soundboard Sound", [GUILD_FIELD, SOUNDBOARD_SOUND_FIELD, field("auditLogReason", "string", true)]),
+  action("get-application-role-connection-metadata", "Get Application Role Connection Metadata", [APPLICATION_FIELD]),
+  action("update-application-role-connection-metadata", "Update Application Role Connection Metadata", [APPLICATION_FIELD, field("records", "array", false, { default: [{ type: 2, key: "score", name: "Score", description: "Sample score" }] })]),
   action("list-guild-emojis", "List Guild Emojis", [GUILD_FIELD]),
   action("get-guild-emoji", "Get Guild Emoji", [GUILD_FIELD, field("emojiId", "string")]),
   action("create-guild-emoji", "Create Guild Emoji", [GUILD_FIELD, field("name", "string"), field("image", "string", false, { default: "data:image/png;base64,c2FtcGxl" }), field("roles", "array", true, { default: ["sample"] })]),
@@ -324,6 +326,31 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["sound_id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.update-application-role-connection-metadata"), {
+      applicationId: "app-123",
+      records: [{
+        type: 2,
+        key: "score",
+        name: "Score",
+        description: "Sample score",
+      }],
+    }), {
+      method: "PUT",
+      endpoint: "applications/app-123/role-connections/metadata",
+      auth,
+      headers,
+      body: {},
+      bodyValue: [{
+        type: 2,
+        key: "score",
+        name: "Score",
+        description: "Sample score",
+      }],
+      responseSchema: {
+        type: "array",
       },
     });
 
