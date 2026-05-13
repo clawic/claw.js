@@ -15967,6 +15967,93 @@
           ]
         },
         {
+          "id": "airtable.action.upsert-records",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Upsert Records",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "tableIdOrName",
+              "type": "string",
+              "optional": false,
+              "default": "tblTable123"
+            },
+            {
+              "name": "records",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "fields": {
+                    "Name": "Sample",
+                    "Status": "Open"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "performUpsert",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "fieldsToMergeOn": [
+                  "Name"
+                ]
+              }
+            },
+            {
+              "name": "typecast",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            },
+            {
+              "name": "returnFieldsByFieldId",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
+          "id": "airtable.action.set-webhook-notifications",
+          "appId": "airtable",
+          "kind": "action",
+          "name": "Set Webhook Notifications",
+          "fields": [
+            {
+              "name": "baseId",
+              "type": "string",
+              "optional": false,
+              "default": "appBase123"
+            },
+            {
+              "name": "webhookId",
+              "type": "string",
+              "optional": false,
+              "default": "achWebhook123"
+            },
+            {
+              "name": "enable",
+              "type": "boolean",
+              "optional": false,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "airtableAccessToken"
+          ]
+        },
+        {
           "id": "airtable.source.record-created",
           "appId": "airtable",
           "kind": "source",
