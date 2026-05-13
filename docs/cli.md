@@ -5,8 +5,8 @@ description: Command reference for the claw CLI across scaffolding, workspace ma
 
 # CLI
 
-The `claw` binary is shipped by `@clawjs/cli`. It is the primary project
-entrypoint for ClawJS, while `clawjs` remains as a compatibility alias.
+The `claw` binary is shipped by `@clawjs/cli` and is the public project
+entrypoint for ClawJS.
 For the side-by-side SDK, CLI, and Relay comparison, use
 [Interface Matrix](/interface-matrix).
 

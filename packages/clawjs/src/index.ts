@@ -204,126 +204,142 @@ const LOCAL_FIRST_PRODUCTIVITY_GROUPS = new Set([
   "events",
   "my-work",
   "timeline",
-  "workspace-search",
 ]);
 
-export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
-  // Keep these literal group probes aligned with docs/surface-contract.json.
-  // group === "data"
-  // group === "app-state"
-  // group === "life"
-  // group === "knowledge"
-  // group === "profile"
-  // group === "business"
-  // group === "social"
-  // group === "search"
-  // group === "drive"
-  // group === "mcp"
-  // group === "monitor"
-  // group === "infra"
-  // group === "ops"
+type CliSurfaceKind = "canonical" | "portal" | "alias";
+
+interface CliSurfaceEntry {
+  name: string;
+  kind: CliSurfaceKind;
+  summary: string;
+  usage?: string;
+  advanced?: boolean;
+  target?: string;
+}
+
+const PUBLIC_CLI_SURFACE: CliSurfaceEntry[] = [
+  { name: "host", kind: "canonical", summary: "Host registry, status, services, capabilities, permissions, logs, doctor, daemon lifecycle and domains.", usage: "host list|register|use|status|doctor|domains" },
+  { name: "system", kind: "alias", target: "host", summary: "System capabilities alias.", usage: "system capabilities list|grant|revoke" },
+  { name: "database", kind: "canonical", summary: "Local database admin surface.", usage: "database serve|login|namespace|collection|record|token|file" },
+  { name: "db", kind: "alias", target: "database", summary: "Exact alias for local-first database CRUD.", usage: "db <collection> list|get|create|update|delete|schema" },
+  { name: "collections", kind: "alias", target: "database", summary: "Database collections shortcut.", usage: "collections <collection> list|get|schema" },
+  { name: "records", kind: "alias", target: "database", summary: "Database records shortcut.", usage: "records <collection> list|get|create|update|delete" },
+  { name: "work", kind: "canonical", summary: "Work umbrella: tasks, notes, projects, goals, inbox, decisions, assignments, handoffs, approvals and snapshots.", usage: "work agenda|review|export|import|backup" },
+  { name: "projects", kind: "canonical", summary: "Unified Claw projects." },
+  { name: "tasks", kind: "canonical", summary: "Task records and local-first work items." },
+  { name: "notes", kind: "canonical", summary: "Notes and pages." },
+  { name: "people", kind: "canonical", summary: "People records." },
+  { name: "goals", kind: "canonical", summary: "Goal records." },
+  { name: "inbox", kind: "canonical", summary: "Inbox and triage." },
+  { name: "approvals", kind: "canonical", summary: "Work approvals." },
+  { name: "blockers", kind: "canonical", summary: "Blockers." },
+  { name: "decisions", kind: "canonical", summary: "Recorded work decisions." },
+  { name: "assignments", kind: "canonical", summary: "Assignments." },
+  { name: "handoffs", kind: "canonical", summary: "Handoffs." },
+  { name: "artifacts", kind: "canonical", summary: "Work artifacts." },
+  { name: "commitments", kind: "canonical", summary: "Promises and follow-ups." },
+  { name: "sessions", kind: "canonical", summary: "Agent sessions." },
+  { name: "skills", kind: "canonical", summary: "Skill catalog and assignment." },
+  { name: "models", kind: "canonical", summary: "Model list/defaults." },
+  { name: "providers", kind: "canonical", summary: "Provider catalog and auth state." },
+  { name: "auth", kind: "canonical", summary: "Authentication status and login." },
+  { name: "time", kind: "canonical", summary: "Time umbrella for calendar, reminders, deadlines, routines, schedule, watch, agenda, timeline and review." },
+  { name: "calendar", kind: "canonical", summary: "Calendar items." },
+  { name: "reminders", kind: "canonical", summary: "Reminders." },
+  { name: "deadlines", kind: "canonical", summary: "Deadlines." },
+  { name: "routines", kind: "canonical", summary: "Recurring routines." },
+  { name: "schedule", kind: "canonical", summary: "Natural scheduling verb." },
+  { name: "watch", kind: "canonical", summary: "Watch rules." },
+  { name: "agenda", kind: "canonical", summary: "Agenda view." },
+  { name: "timeline", kind: "canonical", summary: "Timeline view." },
+  { name: "review", kind: "canonical", summary: "Daily/weekly review." },
+  { name: "channels", kind: "canonical", summary: "Communication channels." },
+  { name: "telegram", kind: "canonical", summary: "Telegram channel shortcut." },
+  { name: "notify", kind: "canonical", summary: "Send and cancel notifications." },
+  { name: "messages", kind: "canonical", summary: "Messages resource." },
+  { name: "integrations", kind: "canonical", summary: "External integrations." },
+  { name: "media", kind: "canonical", summary: "Media umbrella." },
+  { name: "documents", kind: "canonical", summary: "Documents." },
+  { name: "files", kind: "canonical", summary: "Workspace files." },
+  { name: "images", kind: "canonical", summary: "Image generation and media.", target: "image" },
+  { name: "audio", kind: "canonical", summary: "Audio media." },
+  { name: "video", kind: "canonical", summary: "Video media." },
+  { name: "slides", kind: "canonical", summary: "Slide decks." },
+  { name: "generations", kind: "canonical", summary: "Generated media records." },
+  { name: "templates", kind: "canonical", summary: "Template resources.", target: "template" },
+  { name: "styles", kind: "canonical", summary: "Style resources.", target: "style" },
+  { name: "references", kind: "canonical", summary: "Reference resources.", target: "ref" },
+  { name: "drive", kind: "portal", summary: "Portal to files, documents, media and integrations." },
+  { name: "design", kind: "portal", summary: "Portal to styles, templates, references, slides and images." },
+  { name: "apps", kind: "portal", summary: "Portal/catalog of Claw apps and openable surfaces." },
+  { name: "content", kind: "canonical", summary: "Editorial, publishing and CMS surface." },
+  { name: "posts", kind: "portal", target: "content", summary: "Content posts shortcut." },
+  { name: "campaigns", kind: "portal", target: "content", summary: "Content campaigns shortcut." },
+  { name: "publications", kind: "portal", target: "content", summary: "Content publications shortcut." },
+  { name: "knowledge", kind: "portal", target: "memory", summary: "Knowledge portal backed by memory." },
+  { name: "profile", kind: "portal", target: "user", summary: "Profile portal backed by user." },
+  { name: "user", kind: "canonical", summary: "User model." },
+  { name: "health", kind: "portal", target: "user", summary: "User health domain." },
+  { name: "travel", kind: "portal", target: "user", summary: "User travel domain." },
+  { name: "career", kind: "portal", target: "user", summary: "User career domain." },
+  { name: "family", kind: "portal", target: "user", summary: "User family domain." },
+  { name: "legal", kind: "portal", target: "user", summary: "User legal domain." },
+  { name: "finance", kind: "portal", target: "user", summary: "User finance domain." },
+  { name: "location", kind: "portal", target: "user", summary: "User location domain." },
+  { name: "accounts", kind: "portal", target: "user", summary: "User accounts domain." },
+  { name: "business", kind: "portal", summary: "Business portal." },
+  { name: "social", kind: "portal", target: "content/channels", summary: "Social portal." },
+  { name: "search", kind: "canonical", summary: "Modern workspace search." },
+  { name: "runtime", kind: "canonical", summary: "Runtime adapters and setup." },
+  { name: "monitor", kind: "canonical", summary: "Continuous health, uptime and incident monitoring.", advanced: true },
+  { name: "logs", kind: "portal", summary: "Global logs portal." },
+  { name: "doctor", kind: "canonical", summary: "Diagnostics and repair checks." },
+  { name: "diagnostics", kind: "portal", target: "doctor", summary: "Diagnostics portal." },
+  { name: "mcp", kind: "canonical", summary: "MCP server catalog.", advanced: true },
+  { name: "open", kind: "canonical", summary: "Open local dashboards and surfaces." },
+  { name: "context", kind: "canonical", summary: "Context packs.", advanced: true },
+  { name: "learning", kind: "canonical", summary: "Learning capture and promotion.", advanced: true },
+  { name: "judgment", kind: "canonical", summary: "Reasoned evaluations distinct from work decisions.", advanced: true },
+  { name: "outcomes", kind: "canonical", summary: "Outcome tracking.", advanced: true },
+  { name: "plan", kind: "canonical", summary: "Semantic planning gate.", advanced: true },
+  { name: "code", kind: "canonical", summary: "Engineering agent workflow.", advanced: true },
+  { name: "rules", kind: "canonical", summary: "Persistent agent rules.", advanced: true },
+  { name: "library", kind: "canonical", summary: "Reusable local skills, instructions and bundles.", advanced: true },
+  { name: "soul", kind: "canonical", summary: "Agent identity, posture and persona.", advanced: true },
+  { name: "erp", kind: "canonical", summary: "ERP service.", advanced: true },
+  { name: "iot", kind: "canonical", summary: "IoT service.", advanced: true },
+  { name: "tts", kind: "canonical", summary: "Text-to-speech.", advanced: true },
+  { name: "stt", kind: "canonical", summary: "Speech-to-text.", advanced: true },
+  { name: "voice-notes", kind: "canonical", summary: "Voice notes.", advanced: true },
+  { name: "inference", kind: "canonical", summary: "Generic model inference.", advanced: true },
+  { name: "preview", kind: "canonical", summary: "Preview sharing.", usage: "preview share --url http://127.0.0.1:PORT", advanced: true },
+  { name: "browser", kind: "canonical", summary: "Relay-backed browser sessions.", usage: "browser status|ensure|share", advanced: true },
+  { name: "compat", kind: "canonical", summary: "Advanced compatibility checks.", advanced: true },
+];
+
+const PUBLIC_CLI_SURFACE_BY_NAME = new Map(PUBLIC_CLI_SURFACE.map((entry) => [entry.name, entry]));
+
+function surfaceRows(entries: CliSurfaceEntry[]): string[] {
+  return entries.map((entry) => {
+    const target = entry.target ? ` -> ${entry.target}` : "";
+    return `  ${entry.name.padEnd(14)} ${entry.kind.padEnd(9)} ${entry.summary}${target}`;
+  });
+}
+
+export function buildCliUsage(binName = DEFAULT_CLI_BIN, options: { all?: boolean } = {}): string {
+  const primary = PUBLIC_CLI_SURFACE.filter((entry) => !entry.advanced);
+  const advanced = PUBLIC_CLI_SURFACE.filter((entry) => entry.advanced);
   return [
     `Usage: ${binName} <command> [options]`,
     "",
-    "Primary workflow:",
-    `  ${binName} open <memory|storage|database|secrets|time|feed|drive|wiki|relay|monitor|execution|delegation|content|erp|iot|day|company|notify>`,
-    `  ${binName} db <collection> <title>`,
-    `  ${binName} db <collection> list|get|create|update|delete|schema`,
-    `  ${binName} tasks|notes|people|projects|goals|reminders|deadlines ...`,
+    "Primary commands and portals:",
+    ...surfaceRows(primary),
     "",
-    "Project commands:",
+    "Project scaffolding:",
     `  ${binName} new app|agent|server|workspace|skill|plugin <name> [--dir PATH] [--template NAME] [--package-manager npm|pnpm] [--git] [--install] [--yes]`,
     `  ${binName} generate skill|plugin|provider|channel|command <name> [--project PATH]`,
     `  ${binName} add provider|channel|telegram|scheduler|memory|workspace [name] [--project PATH]`,
-    `  ${binName} info [--project PATH] [--json]`,
-    `  ${binName} doctor [--workspace PATH] [--json]`,
-    "",
-    "Advanced command groups:",
-    `  ${binName} chat [prompt]`,
-    `  ${binName} chat list|resume`,
-    `  ${binName} provider login|status|models|use`,
-    `  ${binName} host list|register|use|status`,
-    `  ${binName} runtime status|install|uninstall|repair|setup-workspace`,
-    `  ${binName} workspace init|attach|inspect|discover|validate|reset|repair`,
-    `  ${binName} files read|write|inspect|diff|sync|apply-template-pack`,
-    `  ${binName} auth status|login|remove`,
-    `  ${binName} models list|default|set-default`,
-    `  ${binName} providers list|catalog|auth-state`,
-    `  ${binName} agents codex setup|status|models|auth status`,
-    `  ${binName} secrets list|describe|types|capabilities|broker http|leases list`,
-    `  ${binName} calendar list|get|create|update|delete|at`,
-    `  ${binName} routines list|get|create|update|delete|enable|disable|run|history|every`,
-    `  ${binName} reminders after`,
-    `  ${binName} watch list|get|enable|disable|delete`,
-    `  ${binName} memory save|list|get|update|delete|search|context|status|capabilities`,
-    `  ${binName} data doctor|backup|restore|reset`,
-    `  ${binName} app-state get|set|snapshot`,
-    `  ${binName} life catalog|seed-catalog|observe|list|delete`,
-    `  ${binName} knowledge entity|fact|list|search|promote`,
-    `  ${binName} notes create|list|get|update|delete|search|record-note|export|import|link`,
-    `  ${binName} wiki create|list|get|update|delete|search|export|import|link`,
-    `  ${binName} profile get|refresh|list`,
-    `  ${binName} business|content|social|finance upsert|list|get|delete`,
-    `  ${binName} ledger entry|line ...`,
-    `  ${binName} iot config set|list|get|delete`,
-    `  ${binName} marketplace choice upsert|list|get|delete`,
-    `  ${binName} search query|rebuild`,
-    `  ${binName} audio index|transcript|artifact list|get|delete`,
-    `  ${binName} drive index|attach|artifact list|get|delete`,
-    `  ${binName} runtime queue|job|event|retention`,
-    `  ${binName} notify|monitor|infra event|list|retention`,
-    `  ${binName} ops event|metric|list|retention`,
-    `  ${binName} mcp list|get|upsert|delete`,
-    `  ${binName} agents|skills|connections list|upsert`,
-    `  ${binName} apps|design list|upsert`,
-    `  ${binName} context prepare|list|show|archive`,
-    `  ${binName} outcomes add|capture|list|show|link|archive`,
-    `  ${binName} commitments capture|add|list|show|fulfill|miss|cancel|link`,
-    `  ${binName} judgment prepare|record|list|show|link|archive`,
-    `  ${binName} learning capture|add|list|show|evidence add|promote|archive`,
-    `  ${binName} rules status|list|get|propose|approve|archive|scopes|compile`,
-    `  ${binName} areas|tasks|goals|projects|milestones|activity ...`,
-    `  ${binName} blockers|artifacts|decisions|work-sessions ...`,
-    `  ${binName} assignments|handoffs|approvals|capacity ...`,
-    `  ${binName} reminders|deadlines|notes|people|inbox ...`,
-    `  ${binName} my-work | team-work | agenda | review daily|weekly`,
-    `  ${binName} timeline day|week --start ISO [--project-id ID]`,
-    `  ${binName} export <file> | import <file> [--replace] | backup <dir>`,
-    `  ${binName} workspace-search query | workspace-index rebuild`,
-    `  ${binName} skills list|inspect|sync|sources|search|install`,
-    `  ${binName} library list|inspect|create|update|remove|import-skill|assign|unassign|resolve|sync`,
-    `  ${binName} plan create|list|show|run|approve|reject|review|policy`,
-    `  ${binName} code init|projects|agents|policy|start|status|list|show|reserve|evidence|check|commit|review|gate|queue|integrate|sync|serve`,
-    `  ${binName} soul init|validate|preview|compile|assign|inspect`,
-    `  ${binName} user init|set|add|propose|verify|review|domains|pack|wizard|entity|link|query|delete|list|get|inspect|validate|preview|compile|assign`,
-    `  ${binName} channels list|status|telegram|assign|unassign|assignments|processors|listen|targets|messages|permissions|commands`,
-    `  ${binName} channels telegram setup|codex setup|codex status`,
-    `  ${binName} open <surface> [--no-browser] [--host HOST] [--port PORT]`,
-    `  ${binName} domains install|status|uninstall|serve`,
-    `  ${binName} preview share --url http://127.0.0.1:PORT [--mode lan|tailscale|cloudflare]`,
-    `  ${binName} browser status|ensure|share --relay-url URL --access-token TOKEN --tenant-id ID --agent-id ID --workspace-id ID`,
-    `  ${binName} telegram connect|status|webhook set|clear|polling start|stop|commands set|get|chats list|inspect|send`,
-    `  ${binName} sessions create|list|search|read|stream|generate-title|index|get`,
-    `  ${binName} documents list|read|search|upload|register|download`,
-    `  ${binName} media list|search|read|download|share create|revoke|list`,
-    `  ${binName} slides create|add|validate|render|share|themes|layouts`,
-    `  ${binName} style list|get|create|delete|export|import|install-builtins|builtins`,
-    `  ${binName} template list|get|create|delete|install-builtins|builtins`,
-    `  ${binName} ref list|get|add|delete|link`,
-    `  ${binName} inference generate-text`,
-    `  ${binName} tts synthesize|config|set-config|providers|catalog`,
-    `  ${binName} stt transcribe|config|set-config|providers`,
-    `  ${binName} voice-notes add|list|get|transcribe`,
-    `  ${binName} image create|edit|import|list|show|delete|backends`,
-    `  ${binName} audio generate|list|read|delete|backends`,
-    `  ${binName} video generate|list|read|delete|backends`,
-    `  ${binName} generations backends|register-command|remove-backend|create|list|read|delete`,
-    `  ${binName} notify send|cancel|subscriptions upsert|delete`,
-    `  ${binName} database serve|login|namespace|collection|record|token|file  # advanced admin surface`,
-    `  ${binName} content serve|login|brand|destination|campaign|entry|variant|approval|publish|token`,
-    `  ${binName} erp serve|login|tenant|company|localization|gl|ar|ap|sales|purchase|inventory|mrp|projects|hr|payroll|support|docs|reports|agents|approvals`,
-    `  ${binName} iot serve|homes|areas|things|state|lights|climate|scenes|automations|approvals|raw`,
-    `  ${binName} compat [--refresh] [--json]`,
+    ...(options.all ? ["", "Advanced commands:", ...surfaceRows(advanced)] : ["", `Run \`${binName} --help --all\` for advanced commands.`]),
     "",
     "Global options:",
     "  --runtime demo|openclaw|codex|zeroclaw|picoclaw|nanobot|nanoclaw|nullclaw|ironclaw|nemoclaw|hermes",
@@ -334,6 +350,99 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
 }
 
 export const CLI_USAGE = buildCliUsage();
+
+const REMOVED_PUBLIC_COMMANDS = new Map<string, string>([
+  ["data", "Use `claw database ...` for technical database operations or `claw work export|import|backup ...` for productivity snapshots."],
+  ["app-state", "App state is internal. Use `claw host ...`, `claw doctor`, or diagnostics surfaces instead."],
+  ["life", "Use real user-domain portals such as `health`, `travel`, `career`, `family`, `legal`, `finance`, `location`, or `accounts`."],
+  ["ops", "Use `claw logs`, `claw doctor`, `claw monitor`, or `claw host ...`."],
+  ["infra", "`infra` is not a public Claw namespace. Use `claw host`, `claw monitor`, or `claw logs`."],
+  ["workspace-search", "Use `claw search query ...`."],
+  ["workspace-index", "Use `claw search rebuild`."],
+  ["export", "Use `claw work export ...`."],
+  ["import", "Use `claw work import ...`."],
+  ["backup", "Use `claw work backup ...` or `claw database ...` for technical database backups."],
+]);
+
+const REMOVED_RUNTIME_COMMANDS = new Set(["queue", "job", "event", "retention"]);
+const REMOVED_V1_CRUD_COMMANDS = new Set(["upsert", "list", "get", "delete"]);
+
+const PLURAL_MEDIA_COMMAND_ALIASES = new Map<string, string>([
+  ["images", "image"],
+  ["styles", "style"],
+  ["templates", "template"],
+  ["references", "ref"],
+]);
+
+const SINGULAR_MEDIA_COMMAND_ALIASES = new Map<string, string>([
+  ["image", "images"],
+  ["style", "styles"],
+  ["template", "templates"],
+  ["ref", "references"],
+]);
+
+const PUBLIC_PORTAL_HELP_ONLY = new Set([
+  "drive",
+  "business",
+  "social",
+  "logs",
+  "diagnostics",
+  "health",
+  "travel",
+  "career",
+  "family",
+  "legal",
+  "finance",
+  "location",
+  "accounts",
+]);
+
+function cliSurfaceEntry(name: string | undefined): CliSurfaceEntry | undefined {
+  return name ? PUBLIC_CLI_SURFACE_BY_NAME.get(name) : undefined;
+}
+
+function buildCommandHelp(binName: string, group: string): string | null {
+  const entry = cliSurfaceEntry(group) ?? cliSurfaceEntry(SINGULAR_MEDIA_COMMAND_ALIASES.get(group));
+  if (!entry) return null;
+  return [
+    `Usage: ${binName} ${entry.usage ?? `${group} [command] [options]`}`,
+    "",
+    `${entry.kind}: ${entry.summary}`,
+    ...(entry.target ? [`Routes to: ${entry.target}`] : []),
+    "",
+    `Run \`${binName} --help --all\` to see the full public surface.`,
+  ].join("\n");
+}
+
+function removedPublicCommandMessage(group: string, binName: string): string | null {
+  const message = REMOVED_PUBLIC_COMMANDS.get(group);
+  if (!message) return null;
+  return `\`${binName} ${group}\` is not part of the public Claw CLI surface. ${message}`;
+}
+
+function normalizePublicCliArgv(argv: string[], stderr: NodeJS.WritableStream, binName: string): string[] {
+  const positionals = extractPositionals(argv);
+  const group = positionals[0];
+  const pluralTarget = group ? PLURAL_MEDIA_COMMAND_ALIASES.get(group) : undefined;
+  if (pluralTarget && (argv.includes("--help") || argv.includes("-h"))) {
+    return argv;
+  }
+  if (group && pluralTarget) {
+    let replaced = false;
+    return argv.map((token) => {
+      if (!replaced && token === group) {
+        replaced = true;
+        return pluralTarget;
+      }
+      return token;
+    });
+  }
+  const canonical = group ? SINGULAR_MEDIA_COMMAND_ALIASES.get(group) : undefined;
+  if (canonical && !argv.includes("--json")) {
+    stderr.write(`Alias: \`${binName} ${group}\` maps to canonical \`${binName} ${canonical}\`.\n`);
+  }
+  return argv;
+}
 
 const CLI_TEMPLATE_ROOT = fileURLToPath(new URL("../templates", import.meta.url));
 
@@ -1637,6 +1746,17 @@ async function runHostCli(input: {
 }): Promise<number> {
   const [, command, hostIdArg] = input.positionals;
   const options = hostRegistryOptions(input.flags);
+
+  if (command === "domains") {
+    return await runDomainsCli({
+      argv: ["domains", ...input.argv.slice(2)],
+      positionals: ["domains", ...input.positionals.slice(2)],
+      flags: input.flags,
+      context: input.context,
+      wantsJson: input.wantsJson,
+      binName: input.binName,
+    });
+  }
 
   if (command === "list" || !command) {
     const registry = readHostRegistry(options);
@@ -6123,13 +6243,24 @@ function resolveProjectRootOrThrow(startDir: string, explicitProject?: string): 
 }
 
 async function runCliUnsafe(argv: string[], context: CliContext): Promise<number> {
+  const binName = context.binName?.trim() || DEFAULT_CLI_BIN;
+  argv = normalizePublicCliArgv(argv, context.stderr, binName);
   const positionals = extractPositionals(argv);
   const [group, command, subcommand] = positionals;
   const wantsJson = argv.includes("--json");
   const flags = parseFlags(argv);
-  const binName = context.binName?.trim() || DEFAULT_CLI_BIN;
-  const usage = buildCliUsage(binName);
+  const usage = buildCliUsage(binName, { all: argv.includes("--all") });
   const wantsHelp = argv.includes("--help") || argv.includes("-h");
+
+  if (wantsHelp || group === "help") {
+    if (!group || group === "help") {
+      context.stdout.write(`${usage}\n`);
+      return CLI_EXIT_OK;
+    }
+    const commandHelp = buildCommandHelp(binName, group);
+    context.stdout.write(`${commandHelp ?? usage}\n`);
+    return CLI_EXIT_OK;
+  }
 
   if (group === "__open-server") {
     return await runOpenServerCommand({ positionals, flags, context });
@@ -6143,12 +6274,37 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runDomainsCli({ argv, positionals, flags, context, wantsJson, binName });
   }
 
+  if (group === "host" && command === "domains") {
+    return await runDomainsCli({ argv: ["domains", ...argv.slice(2)], positionals: ["domains", ...positionals.slice(2)], flags, context, wantsJson, binName });
+  }
+
+  if (group === "host" && (command === "services" || command === "permissions" || command === "capabilities")) {
+    return await runHostForwardCli({
+      domain: "system",
+      resource: command,
+      action: subcommand || "list",
+      flags,
+      context,
+      wantsJson,
+    });
+  }
+
   if (group === "host") {
     return await runHostCli({ argv, positionals, flags, context, wantsJson, binName });
   }
 
   if (group === "system" && command === "capabilities") {
     return await runSystemCapabilitiesCli({ positionals, flags, context, wantsJson, binName });
+  }
+
+  if (group === "diagnostics") {
+    return await runCliUnsafe(["doctor", ...argv.slice(1)], context);
+  }
+
+  if (group && PUBLIC_PORTAL_HELP_ONLY.has(group)) {
+    const commandHelp = buildCommandHelp(binName, group);
+    context.stderr.write(`${commandHelp ?? usage}\n`);
+    return CLI_EXIT_USAGE;
   }
 
   if (group === "chat") {
@@ -6230,9 +6386,79 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     if (v1DataExitCode !== null) return v1DataExitCode;
   }
 
-  if (wantsHelp || group === "help") {
-    context.stdout.write(`${usage}\n`);
-    return CLI_EXIT_OK;
+  const removedPublicCommand = group ? removedPublicCommandMessage(group, binName) : null;
+  if (removedPublicCommand) {
+    throw new CliHandledError("removed_public_command", removedPublicCommand, CLI_EXIT_USAGE);
+  }
+
+  if (group === "runtime" && command && REMOVED_RUNTIME_COMMANDS.has(command)) {
+    throw new CliHandledError(
+      "removed_public_command",
+      `\`${binName} runtime ${command}\` is not part of the public Claw CLI surface. Runtime is limited to adapter setup/status/install/uninstall/repair.`,
+      CLI_EXIT_USAGE,
+    );
+  }
+
+  if ((group === "business" || group === "social") && command && REMOVED_V1_CRUD_COMMANDS.has(command)) {
+    throw new CliHandledError(
+      "removed_public_command",
+      `\`${binName} ${group} ${command}\` was v1 CRUD and is not part of the public Claw CLI surface. Use \`${binName} ${group} --help\` for the portal.`,
+      CLI_EXIT_USAGE,
+    );
+  }
+
+  if (group === "content" && command && REMOVED_V1_CRUD_COMMANDS.has(command)) {
+    throw new CliHandledError(
+      "removed_public_command",
+      `\`${binName} content ${command}\` was v1 CRUD and is not part of the public Claw CLI surface. Use posts, campaigns, publications or the content service commands.`,
+      CLI_EXIT_USAGE,
+    );
+  }
+
+  if (group === "capabilities") {
+    return await runSystemCapabilitiesCli({ positionals: ["system", "capabilities", command ?? "list", ...positionals.slice(2)], flags, context, wantsJson, binName });
+  }
+
+  if (group === "permissions") {
+    return await runHostForwardCli({
+      domain: "system",
+      resource: "permissions",
+      action: command ?? "list",
+      flags,
+      context,
+      wantsJson,
+      extraArguments: {
+        ...(subcommand ? { subject: subcommand } : {}),
+      },
+    });
+  }
+
+  if (group === "work" && command && ["export", "import", "backup"].includes(command)) {
+    return await runCoreProductivityDbCli({
+      argv: [command, ...argv.slice(2)],
+      positionals: [command, ...positionals.slice(2)],
+      flags,
+      workspaceRoot: flags.workspace || context.cwd,
+      stdout: context.stdout,
+      stderr: context.stderr,
+      wantsJson,
+      appId: flags["app-id"] || "clawjs-app",
+      workspaceId: flags["workspace-id"] || pathSafeBasename(flags.workspace || context.cwd),
+      agentId: flags["agent-id"] || flags["workspace-id"] || pathSafeBasename(flags.workspace || context.cwd),
+      contextCwd: context.cwd,
+    });
+  }
+
+  if (group === "diagnostics") {
+    return await runCliUnsafe(["doctor", ...argv.slice(1)], context);
+  }
+
+  if (wantsHelp && group) {
+    const commandHelp = buildCommandHelp(binName, group);
+    if (commandHelp) {
+      context.stdout.write(`${commandHelp}\n`);
+      return CLI_EXIT_OK;
+    }
   }
 
   assertAllowedLocalFlags(group, argv);
@@ -8062,12 +8288,14 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return CLI_EXIT_OK;
   }
 
-  if (group === "export" || group === "import" || group === "backup" || group === "agenda" || group === "review" || group === "my-work" || group === "team-work" || group === "timeline") {
+  const workCommand = group === "work" ? command : group;
+  const workSubcommand = group === "work" ? subcommand : command;
+  if (workCommand === "export" || workCommand === "import" || workCommand === "backup" || workCommand === "agenda" || workCommand === "review" || workCommand === "my-work" || workCommand === "team-work" || workCommand === "timeline") {
     const claw = await createCliWorkspaceClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, context.cwd);
-    if (group === "export") {
-      const targetPath = command || subcommand || flags.path;
+    if (workCommand === "export") {
+      const targetPath = workSubcommand || flags.path;
       if (!targetPath) {
-        context.stderr.write("Usage: claw export <file>\n");
+        context.stderr.write(`Usage: ${binName} work export <file>\n`);
         return CLI_EXIT_USAGE;
       }
       const snapshot = await claw.productivity.exportSnapshot();
@@ -8078,10 +8306,10 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       else context.stdout.write(`${absolutePath}\n`);
       return CLI_EXIT_OK;
     }
-    if (group === "import") {
-      const sourcePath = command || subcommand || flags.path;
+    if (workCommand === "import") {
+      const sourcePath = workSubcommand || flags.path;
       if (!sourcePath) {
-        context.stderr.write("Usage: claw import <file> [--replace]\n");
+        context.stderr.write(`Usage: ${binName} work import <file> [--replace]\n`);
         return CLI_EXIT_USAGE;
       }
       const absolutePath = path.resolve(context.cwd, sourcePath);
@@ -8093,10 +8321,10 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       else context.stdout.write(`${Object.values(imported.importedCollections).reduce((sum, value) => sum + value, 0)}\n`);
       return CLI_EXIT_OK;
     }
-    if (group === "backup") {
-      const targetDir = command || subcommand || flags.path;
+    if (workCommand === "backup") {
+      const targetDir = workSubcommand || flags.path;
       if (!targetDir) {
-        context.stderr.write("Usage: claw backup <directory>\n");
+        context.stderr.write(`Usage: ${binName} work backup <directory>\n`);
         return CLI_EXIT_USAGE;
       }
       const backup = await claw.productivity.backup(targetDir);
@@ -8104,7 +8332,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       else context.stdout.write(`${backup.files.join("\n")}\n`);
       return backup.files.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
-    if (group === "agenda") {
+    if (workCommand === "agenda") {
       const agenda = await claw.agenda.list({
         start: flags.start,
         end: flags.end,
@@ -8114,10 +8342,10 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       else context.stdout.write(`${agenda.items.map((item) => `${item.when} ${item.domain} ${item.status} ${item.title}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
-    if (group === "timeline") {
-      const mode = (command || "week") as "day" | "week";
+    if (workCommand === "timeline") {
+      const mode = (workSubcommand || "week") as "day" | "week";
       if (mode !== "day" && mode !== "week") {
-        context.stderr.write("Usage: claw timeline day|week [--start ISO] [--project-id ID]\n");
+        context.stderr.write(`Usage: ${binName} work timeline day|week [--start ISO] [--project-id ID]\n`);
         return CLI_EXIT_USAGE;
       }
       const range = timelineRange(mode, flags.start);
@@ -8136,10 +8364,10 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       }
       return CLI_EXIT_OK;
     }
-    if (group === "review") {
-      const cadence = (command || "daily") as "daily" | "weekly";
+    if (workCommand === "review") {
+      const cadence = (workSubcommand || "daily") as "daily" | "weekly";
       if (cadence !== "daily" && cadence !== "weekly") {
-        context.stderr.write("Usage: claw review daily|weekly\n");
+        context.stderr.write(`Usage: ${binName} work review daily|weekly\n`);
         return CLI_EXIT_USAGE;
       }
       const review = cadence === "weekly" ? await claw.review.weekly() : await claw.review.daily();
@@ -8147,7 +8375,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       else context.stdout.write(`blocked=${review.summary.blockedTasks} overdue=${review.summary.overdueTasks} goals=${review.summary.activeGoals} projects=${review.summary.activeProjects}\n`);
       return CLI_EXIT_OK;
     }
-    if (group === "my-work") {
+    if (workCommand === "my-work") {
       const myWork = await claw.productivity.myWork({
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
@@ -8155,7 +8383,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       else context.stdout.write(`triage=${myWork.summary.triageThreads} ready=${myWork.summary.readyTasks} blocked=${myWork.summary.blockedTasks} blockers=${myWork.summary.activeBlockers} decisions=${myWork.summary.pendingDecisions}\n`);
       return CLI_EXIT_OK;
     }
-    if (group === "team-work") {
+    if (workCommand === "team-work") {
       const teamWork = await claw.productivity.teamWork({
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });

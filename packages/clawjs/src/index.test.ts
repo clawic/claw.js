@@ -726,73 +726,34 @@ test("runCli prints help and exits successfully", async () => {
 
   assert.equal(exitCode, CLI_EXIT_OK);
   assert.equal(stdout.getOutput().trim(), CLI_USAGE);
-  assert.match(stdout.getOutput(), /Primary workflow:/);
-  assert.match(stdout.getOutput(), /db <collection> <title>/);
-  assert.match(stdout.getOutput(), /data doctor\|backup\|restore\|reset/);
+  assert.match(stdout.getOutput(), /Primary commands and portals:/);
+  assert.match(stdout.getOutput(), /host\s+canonical/);
+  assert.match(stdout.getOutput(), /db\s+alias/);
+  assert.doesNotMatch(stdout.getOutput(), /data doctor\|backup\|restore\|reset/);
 });
 
-test("runCli manages V1 main data app-state and Life domains in the canonical sqlite", async () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v1-data-"));
-  await withPatchedEnv({
-    CLAWJS_MAIN_DATA_DIR: tempRoot,
-    CLAWIX_CLAWJS_DATA_DIR: undefined,
-    CLAWJS_MAIN_DB_PATH: undefined,
-    CLAWJS_DB_PATH: undefined,
-    DATABASE_DB_PATH: undefined,
-    DATABASE_FILES_DIR: undefined,
-  }, async () => {
-    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v1-data-cwd-"));
-    const doctorStdout = captureStream();
-    assert.equal(await runCli(["data", "doctor", "--json"], {
-      stdout: doctorStdout.stream,
-      stderr: captureStream().stream,
-      cwd,
-    }), CLI_EXIT_OK);
-    const doctor = JSON.parse(doctorStdout.getOutput()) as { dbPath: string; policy: { writer: string }; tables: string[] };
-    assert.equal(doctor.dbPath, path.join(tempRoot, "clawjs.sqlite"));
-    assert.equal(doctor.policy.writer, "clawjs-core");
-    assert.ok(doctor.tables.includes("app_state"));
-    assert.ok(doctor.tables.includes("life_observations"));
-
-    const setStdout = captureStream();
-    assert.equal(await runCli(["app-state", "set", "composer.lastMode", "--value", "voice", "--json"], {
-      stdout: setStdout.stream,
-      stderr: captureStream().stream,
-      cwd,
-    }), CLI_EXIT_OK);
-    assert.equal(JSON.parse(setStdout.getOutput()).value, "voice");
-
-    const catalogPath = path.join(cwd, "life-catalog.json");
-    fs.writeFileSync(catalogPath, JSON.stringify({
-      vertical: { label: "Health", category: "life", version: "1" },
-      variables: [{ id: "health.steps", label: "Steps", valueType: "number", unit: { id: "count" } }],
-    }));
-    assert.equal(await runCli(["life", "seed-catalog", "--vertical", "health", "--file", catalogPath, "--json"], {
+test("runCli rejects removed public legacy namespaces before V1 routing", async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-legacy-negative-"));
+  for (const args of [
+    ["data", "doctor"],
+    ["app-state", "snapshot"],
+    ["life", "list"],
+    ["ops", "list"],
+    ["infra", "list"],
+    ["workspace-search", "query", "x"],
+    ["workspace-index", "rebuild"],
+    ["export", "snapshot.json"],
+    ["import", "snapshot.json"],
+    ["backup", "backups"],
+  ]) {
+    const stderr = captureStream();
+    assert.equal(await runCli(args, {
       stdout: captureStream().stream,
-      stderr: captureStream().stream,
+      stderr: stderr.stream,
       cwd,
-    }), CLI_EXIT_OK);
-
-    const observeStdout = captureStream();
-    assert.equal(await runCli(["life", "observe", "--variable", "health.steps", "--value", "1200", "--json"], {
-      stdout: observeStdout.stream,
-      stderr: captureStream().stream,
-      cwd,
-    }), CLI_EXIT_OK);
-    const observation = JSON.parse(observeStdout.getOutput()) as { variableId: string; value: number };
-    assert.equal(observation.variableId, "health.steps");
-    assert.equal(observation.value, 1200);
-
-    const listStdout = captureStream();
-    assert.equal(await runCli(["life", "list", "--variable", "health.steps", "--json"], {
-      stdout: listStdout.stream,
-      stderr: captureStream().stream,
-      cwd,
-    }), CLI_EXIT_OK);
-    const list = JSON.parse(listStdout.getOutput()) as { items: Array<{ variableId: string; value: number }> };
-    assert.equal(list.items.length, 1);
-    assert.equal(list.items[0]?.variableId, "health.steps");
-  });
+    }), CLI_EXIT_USAGE, args.join(" "));
+    assert.match(stderr.getOutput(), /not part of the public Claw CLI surface/);
+  }
 });
 
 test("V2 main data paths default to the Clawix Application Support namespace", () => {
@@ -5937,7 +5898,7 @@ test("runCli supports temporal domain commands and hidden legacy aliases", async
       host: "127.0.0.1",
       port: 0,
       dataDir: path.join(tmpDir, "data"),
-      dbPath: path.join(tmpDir, "data", "time.sqlite"),
+      dbPath: path.join(tmpDir, "data", "clawjs.sqlite"),
       defaultTimeZone: "UTC",
       schedulerIntervalMs: 50,
     },
@@ -6191,7 +6152,7 @@ test("runCli supports heartbeat routines with deterministic gates", async () => 
       host: "127.0.0.1",
       port: 0,
       dataDir: path.join(tmpDir, "time-data"),
-      dbPath: path.join(tmpDir, "time-data", "time.sqlite"),
+      dbPath: path.join(tmpDir, "time-data", "clawjs.sqlite"),
       defaultTimeZone: "UTC",
       schedulerIntervalMs: 50,
     },

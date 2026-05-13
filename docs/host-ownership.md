@@ -11,8 +11,8 @@ ClawJS is the framework. It owns public contracts, schemas, domain APIs,
 storage resolution, CLI behavior, fixtures, and any capability that another app
 could reasonably call through `claw`.
 
-`claw` is the single public CLI. The legacy `clawjs` alias remains only as a
-deprecated compatibility entrypoint and must warn users to switch to `claw`.
+`claw` is the single public CLI. Package metadata must not publish a parallel
+`clawjs` binary.
 
 `Claw.app` is the standalone macOS host for the framework. It owns native
 permission prompts, launch agents, Mach services, host audit logs, grants,

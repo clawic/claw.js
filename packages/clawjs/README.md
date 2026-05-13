@@ -9,7 +9,8 @@ npm install -g @clawjs/cli
 claw --help
 ```
 
-The package exposes `claw` as the primary command and `clawjs` as a compatibility alias.
+The package exposes `claw` as the public command. It does not expose a
+public `clawjs` binary.
 
 Official project flow:
 
@@ -21,4 +22,6 @@ claw generate skill support-triage
 claw add telegram
 ```
 
-The older `create-claw-*` packages still exist as compatibility wrappers, but `claw new` is now the primary documented entrypoint.
+The `create-claw-app`, `create-claw-agent`, `create-claw-server`, and
+`create-claw-plugin` bins remain available for package-manager create flows,
+but `claw new` is the primary documented entrypoint.

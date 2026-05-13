@@ -883,7 +883,7 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
 function shouldHandleV1DataCommand(group: string | undefined, command: string | undefined, wantsHelp: boolean): group is string {
   const commandsByGroup: Record<string, Set<string>> = {
     data: new Set(["doctor", "backup", "restore", "reset", "help"]),
-    "app-state": new Set(["get", "set", "snapshot", "help"]),
+    "app-state": new Set(["get", "set", "snapshot", "project", "pin", "title", "archive", "sidebar", "terminal", "help"]),
     life: new Set(["catalog", "seed-catalog", "observe", "list", "delete", "help"]),
     knowledge: new Set(["entity", "fact", "list", "search", "promote", "help"]),
     notes: new Set(["create", "list", "get", "update", "delete", "search", "export", "import", "link", "record-note", "help"]),
@@ -969,15 +969,249 @@ function runAppStateCommand(input: V1DataCliInput, store: DatabaseServiceStore):
   }
   if (command === "snapshot") {
     const payload = {
-      projects: store.sqlite.prepare("SELECT * FROM app_projects ORDER BY COALESCE(sort_order, 999999), name").all(),
-      pinnedThreads: store.sqlite.prepare("SELECT * FROM app_pinned_threads ORDER BY sort_order").all(),
-      titles: store.sqlite.prepare("SELECT * FROM app_session_titles ORDER BY updated_at DESC").all(),
-      archives: store.sqlite.prepare("SELECT * FROM app_archives ORDER BY archived_at DESC").all(),
-      sidebar: store.sqlite.prepare("SELECT * FROM app_sidebar_snapshots ORDER BY pinned DESC, updated_at DESC LIMIT ?").all(Number(input.flags.limit ?? 200)),
-      terminalTabs: store.sqlite.prepare("SELECT * FROM app_terminal_tabs ORDER BY sort_order, updated_at DESC").all(),
+      projects: store.sqlite.prepare("SELECT * FROM app_projects ORDER BY COALESCE(sort_order, 999999), name").all().map(normalizeDbRow),
+      pinnedThreads: store.sqlite.prepare("SELECT * FROM app_pinned_threads ORDER BY sort_order").all().map(normalizeDbRow),
+      titles: store.sqlite.prepare("SELECT * FROM app_session_titles ORDER BY updated_at DESC").all().map(normalizeDbRow),
+      archives: store.sqlite.prepare("SELECT * FROM app_archives ORDER BY archived_at DESC").all().map(normalizeDbRow),
+      sidebar: store.sqlite.prepare("SELECT * FROM app_sidebar_snapshots ORDER BY pinned DESC, updated_at DESC LIMIT ?").all(Number(input.flags.limit ?? 200)).map(normalizeDbRow),
+      terminalTabs: store.sqlite.prepare("SELECT * FROM app_terminal_tabs ORDER BY sort_order, updated_at DESC").all().map(normalizeDbRow),
     };
     writeSuccess(input, payload);
     return V1_DATA_EXIT_OK;
+  }
+  if (command === "project") {
+    const action = input.positionals[2] || "list";
+    if (action === "list") {
+      const rows = store.sqlite.prepare("SELECT * FROM app_projects ORDER BY COALESCE(sort_order, 999999), name").all();
+      writeSuccess(input, { items: rows.map(normalizeDbRow) });
+      return V1_DATA_EXIT_OK;
+    }
+    if (action === "order") {
+      const ids = parseCsvOrJson(input.flags.ids || input.positionals.slice(3).join(",")) ?? [];
+      const now = nowIso();
+      const tx = store.sqlite.transaction(() => {
+        ids.forEach((id, index) => {
+          store.sqlite.prepare(`
+            UPDATE app_projects
+            SET sort_order = ?, updated_at = ?
+            WHERE id = ?
+          `).run((index + 1) * 1000, now, id);
+        });
+      });
+      tx();
+      writeSuccess(input, { items: ids });
+      return V1_DATA_EXIT_OK;
+    }
+    const id = input.flags.id || input.positionals[3];
+    if (!id) return usageError(input, "Usage: claw app-state project upsert|delete|order ID [--json]");
+    if (action === "delete") {
+      const changes = store.sqlite.prepare("DELETE FROM app_projects WHERE id = ?").run(id).changes;
+      writeSuccess(input, { id, deleted: changes > 0 });
+      return V1_DATA_EXIT_OK;
+    }
+    if (action === "upsert" || action === "set") {
+      const now = nowIso();
+      const name = input.flags.name || id;
+      const projectPath = input.flags.path || "";
+      const sortOrder = input.flags["sort-order"] !== undefined ? Number(input.flags["sort-order"]) : null;
+      store.sqlite.prepare(`
+        INSERT INTO app_projects (id, name, path, sort_order, hidden, metadata_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET name = excluded.name, path = excluded.path,
+          sort_order = COALESCE(excluded.sort_order, app_projects.sort_order),
+          hidden = excluded.hidden, metadata_json = excluded.metadata_json, updated_at = excluded.updated_at
+      `).run(id, name, projectPath, sortOrder, truthy(input.flags.hidden) ? 1 : 0, input.flags.metadata || "{}", now, now);
+      writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM app_projects WHERE id = ?").get(id) as JsonRecord));
+      return V1_DATA_EXIT_OK;
+    }
+  }
+  if (command === "pin") {
+    const action = input.positionals[2] || "list";
+    if (action === "list") {
+      const rows = store.sqlite.prepare("SELECT * FROM app_pinned_threads ORDER BY sort_order").all();
+      writeSuccess(input, { items: rows.map(normalizeDbRow) });
+      return V1_DATA_EXIT_OK;
+    }
+    const threadId = input.flags.id || input.flags["thread-id"] || input.positionals[3];
+    if (!threadId) return usageError(input, "Usage: claw app-state pin upsert|delete THREAD_ID [--json]");
+    if (action === "delete" || action === "unset") {
+      const changes = store.sqlite.prepare("DELETE FROM app_pinned_threads WHERE thread_id = ?").run(threadId).changes;
+      writeSuccess(input, { threadId, deleted: changes > 0 });
+      return V1_DATA_EXIT_OK;
+    }
+    if (action === "upsert" || action === "set") {
+      const now = nowIso();
+      const sortOrder = input.flags["sort-order"] !== undefined
+        ? Number(input.flags["sort-order"])
+        : ((store.sqlite.prepare("SELECT COALESCE(MAX(sort_order), 0) AS max_order FROM app_pinned_threads").get() as { max_order: number }).max_order + 1000);
+      store.sqlite.prepare(`
+        INSERT INTO app_pinned_threads (thread_id, sort_order, pinned_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(thread_id) DO UPDATE SET sort_order = excluded.sort_order, pinned_at = excluded.pinned_at
+      `).run(threadId, sortOrder, now);
+      writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM app_pinned_threads WHERE thread_id = ?").get(threadId) as JsonRecord));
+      return V1_DATA_EXIT_OK;
+    }
+    if (action === "order") {
+      const ids = parseCsvOrJson(input.flags.ids || input.positionals.slice(3).join(",")) ?? [];
+      const now = nowIso();
+      const tx = store.sqlite.transaction(() => {
+        store.sqlite.prepare("DELETE FROM app_pinned_threads").run();
+        ids.forEach((id, index) => {
+          store.sqlite.prepare("INSERT INTO app_pinned_threads (thread_id, sort_order, pinned_at) VALUES (?, ?, ?)").run(id, (index + 1) * 1000, now);
+        });
+      });
+      tx();
+      writeSuccess(input, { items: ids });
+      return V1_DATA_EXIT_OK;
+    }
+  }
+  if (command === "title") {
+    const action = input.positionals[2] || "list";
+    if (action === "list") {
+      const rows = store.sqlite.prepare("SELECT * FROM app_session_titles ORDER BY updated_at DESC").all();
+      writeSuccess(input, { items: rows.map(normalizeDbRow) });
+      return V1_DATA_EXIT_OK;
+    }
+    const threadId = input.flags.id || input.flags["thread-id"] || input.positionals[3];
+    if (!threadId) return usageError(input, "Usage: claw app-state title upsert|delete THREAD_ID --title TEXT [--json]");
+    if (action === "delete") {
+      const changes = store.sqlite.prepare("DELETE FROM app_session_titles WHERE thread_id = ?").run(threadId).changes;
+      writeSuccess(input, { threadId, deleted: changes > 0 });
+      return V1_DATA_EXIT_OK;
+    }
+    if (action === "upsert" || action === "set") {
+      const title = input.flags.title || input.positionals.slice(4).join(" ");
+      if (!title.trim()) return usageError(input, "Usage: claw app-state title upsert THREAD_ID --title TEXT [--json]");
+      const now = nowIso();
+      store.sqlite.prepare(`
+        INSERT INTO app_session_titles (thread_id, title, source, updated_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(thread_id) DO UPDATE SET title = excluded.title, source = excluded.source, updated_at = excluded.updated_at
+      `).run(threadId, title.trim(), input.flags.source || "manual", now);
+      writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM app_session_titles WHERE thread_id = ?").get(threadId) as JsonRecord));
+      return V1_DATA_EXIT_OK;
+    }
+  }
+  if (command === "archive") {
+    const action = input.positionals[2] || "list";
+    if (action === "list") {
+      const rows = store.sqlite.prepare("SELECT * FROM app_archives ORDER BY archived_at DESC").all();
+      writeSuccess(input, { items: rows.map(normalizeDbRow) });
+      return V1_DATA_EXIT_OK;
+    }
+    const threadId = input.flags.id || input.flags["thread-id"] || input.positionals[3];
+    if (!threadId) return usageError(input, "Usage: claw app-state archive set|delete THREAD_ID [--json]");
+    if (action === "delete" || action === "unset") {
+      const changes = store.sqlite.prepare("DELETE FROM app_archives WHERE thread_id = ?").run(threadId).changes;
+      writeSuccess(input, { threadId, deleted: changes > 0 });
+      return V1_DATA_EXIT_OK;
+    }
+    if (action === "upsert" || action === "set") {
+      const now = nowIso();
+      store.sqlite.prepare(`
+        INSERT INTO app_archives (thread_id, archived_at)
+        VALUES (?, ?)
+        ON CONFLICT(thread_id) DO UPDATE SET archived_at = excluded.archived_at
+      `).run(threadId, now);
+      writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM app_archives WHERE thread_id = ?").get(threadId) as JsonRecord));
+      return V1_DATA_EXIT_OK;
+    }
+  }
+  if (command === "sidebar") {
+    const action = input.positionals[2] || "list";
+    if (action === "list") {
+      const rows = store.sqlite.prepare("SELECT * FROM app_sidebar_snapshots ORDER BY pinned DESC, updated_at DESC LIMIT ?").all(Number(input.flags.limit ?? 200));
+      writeSuccess(input, { items: rows.map(normalizeDbRow) });
+      return V1_DATA_EXIT_OK;
+    }
+    if (action === "replace") {
+      const rawItems = input.flags.items || "[]";
+      const items = JSON.parse(rawItems) as Array<Record<string, unknown>>;
+      const now = nowIso();
+      const tx = store.sqlite.transaction(() => {
+        store.sqlite.prepare("DELETE FROM app_sidebar_snapshots").run();
+        for (const item of items) {
+          const threadId = String(item.threadId || "");
+          if (!threadId) continue;
+          store.sqlite.prepare(`
+            INSERT INTO app_sidebar_snapshots (thread_id, chat_uuid, title, cwd, project_path, updated_at, archived, pinned, captured_at, metadata_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(
+            threadId,
+            String(item.chatUuid || ""),
+            String(item.title || threadId),
+            typeof item.cwd === "string" && item.cwd ? item.cwd : null,
+            typeof item.projectPath === "string" && item.projectPath ? item.projectPath : null,
+            typeof item.updatedAt === "string" ? item.updatedAt : now,
+            truthy(item.archived) ? 1 : 0,
+            truthy(item.pinned) ? 1 : 0,
+            now,
+            typeof item.metadata === "string" ? item.metadata : JSON.stringify(item.metadata || {}),
+          );
+        }
+      });
+      tx();
+      writeSuccess(input, { count: items.length });
+      return V1_DATA_EXIT_OK;
+    }
+    const threadId = input.flags.id || input.flags["thread-id"] || input.positionals[3];
+    if (!threadId) return usageError(input, "Usage: claw app-state sidebar upsert|delete|replace THREAD_ID [--json]");
+    if (action === "delete") {
+      const changes = store.sqlite.prepare("DELETE FROM app_sidebar_snapshots WHERE thread_id = ?").run(threadId).changes;
+      writeSuccess(input, { threadId, deleted: changes > 0 });
+      return V1_DATA_EXIT_OK;
+    }
+    if (action === "upsert" || action === "set") {
+      const now = nowIso();
+      store.sqlite.prepare(`
+        INSERT INTO app_sidebar_snapshots (thread_id, chat_uuid, title, cwd, project_path, updated_at, archived, pinned, captured_at, metadata_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(thread_id) DO UPDATE SET chat_uuid = excluded.chat_uuid, title = excluded.title,
+          cwd = excluded.cwd, project_path = excluded.project_path, updated_at = excluded.updated_at,
+          archived = excluded.archived, pinned = excluded.pinned, captured_at = excluded.captured_at,
+          metadata_json = excluded.metadata_json
+      `).run(
+        threadId,
+        input.flags["chat-uuid"] || null,
+        input.flags.title || threadId,
+        input.flags.cwd || null,
+        input.flags["project-path"] || null,
+        input.flags["updated-at"] || now,
+        truthy(input.flags.archived) ? 1 : 0,
+        truthy(input.flags.pinned) ? 1 : 0,
+        now,
+        input.flags.metadata || "{}",
+      );
+      writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM app_sidebar_snapshots WHERE thread_id = ?").get(threadId) as JsonRecord));
+      return V1_DATA_EXIT_OK;
+    }
+  }
+  if (command === "terminal") {
+    const action = input.positionals[2] || "list";
+    if (action === "list") {
+      const rows = store.sqlite.prepare("SELECT * FROM app_terminal_tabs ORDER BY sort_order, updated_at DESC").all();
+      writeSuccess(input, { items: rows.map(normalizeDbRow) });
+      return V1_DATA_EXIT_OK;
+    }
+    const id = input.flags.id || input.positionals[3];
+    if (!id) return usageError(input, "Usage: claw app-state terminal upsert|delete ID [--json]");
+    if (action === "delete") {
+      const changes = store.sqlite.prepare("DELETE FROM app_terminal_tabs WHERE id = ?").run(id).changes;
+      writeSuccess(input, { id, deleted: changes > 0 });
+      return V1_DATA_EXIT_OK;
+    }
+    if (action === "upsert" || action === "set") {
+      const now = nowIso();
+      store.sqlite.prepare(`
+        INSERT INTO app_terminal_tabs (id, title, cwd, sort_order, metadata_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET title = excluded.title, cwd = excluded.cwd,
+          sort_order = excluded.sort_order, metadata_json = excluded.metadata_json, updated_at = excluded.updated_at
+      `).run(id, input.flags.title || id, input.flags.cwd || null, Number(input.flags["sort-order"] ?? 0), input.flags.metadata || "{}", now, now);
+      writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM app_terminal_tabs WHERE id = ?").get(id) as JsonRecord));
+      return V1_DATA_EXIT_OK;
+    }
   }
   return usageError(input, usage(input.binName, "app-state"));
 }
@@ -2380,7 +2614,7 @@ function resetDomain(sqlite: Database.Database, domain: string): JsonRecord {
       if (tableExists(sqlite, "notes_fts")) {
         sqlite.prepare("DELETE FROM notes_fts WHERE page_id IN (SELECT id FROM pages WHERE surface = 'wiki')").run();
       }
-      deleted.wiki_pages = sqlite.prepare("DELETE FROM pages WHERE surface = 'wiki'").run().changes;
+      deleted.wikiPageViews = sqlite.prepare("DELETE FROM pages WHERE surface = 'wiki'").run().changes;
     }
     for (const table of tables) {
       if (!tableExists(sqlite, table)) {

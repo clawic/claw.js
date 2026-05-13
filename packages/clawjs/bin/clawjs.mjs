@@ -8,7 +8,6 @@ import { runOpenSecrets } from "./secrets-server-launcher.mjs";
 import { runOpenDatabase } from "./database-server-launcher.mjs";
 import { runMemoryCli, MEMORY_GROUPS } from "./memory-commands.mjs";
 import { runOpenMemory } from "./memory-server-launcher.mjs";
-import { runDriveCli, DRIVE_GROUPS } from "./drive-commands.mjs";
 import { runOpenDrive } from "./drive-server-launcher.mjs";
 import { runOpenTelegram } from "./telegram-server-launcher.mjs";
 import { runOpenAudio } from "./audio-server-launcher.mjs";
@@ -26,16 +25,13 @@ if (invokedBinName === "clawjs") {
 
 const args = process.argv.slice(2);
 
-// Secrets/Memory/Drive subcommands first (small router; the heavy CLI lives in dist/index.js).
+// Secrets/Memory subcommands first (small router; the heavy CLI lives in dist/index.js).
 const first = args[0];
 if (first && SECRETS_GROUPS.has(first)) {
   process.exit(await runSecretsCli(args));
 }
 if (first && MEMORY_GROUPS.has(first)) {
   process.exit(await runMemoryCli(args));
-}
-if (first && DRIVE_GROUPS.has(first)) {
-  process.exit(await runDriveCli(args));
 }
 if (first && CATALOG_GROUPS.has(first)) {
   process.exit(await runCatalogCli(args));
