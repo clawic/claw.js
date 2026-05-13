@@ -4853,6 +4853,69 @@
           ]
         },
         {
+          "id": "discord.action.get-webhook-with-token",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Webhook With Token",
+          "fields": [
+            {
+              "name": "webhookId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "webhookToken",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
+          "id": "discord.action.update-webhook-with-token",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Update Webhook With Token",
+          "fields": [
+            {
+              "name": "webhookId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "webhookToken",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
+          "id": "discord.action.delete-webhook-with-token",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Webhook With Token",
+          "fields": [
+            {
+              "name": "webhookId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "webhookToken",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
           "id": "discord.action.execute-webhook",
           "appId": "discord",
           "kind": "action",
