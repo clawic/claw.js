@@ -1,0 +1,16 @@
+{
+  "method": "PUT",
+  "url": "https://discord.com/api/v10/users/@me/applications/sample/role-connection",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-discordBearerToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "platform_name": "sample",
+    "platform_username": "sample",
+    "metadata": {
+      "score": "100"
+    }
+  }
+}

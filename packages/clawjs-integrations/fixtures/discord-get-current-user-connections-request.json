@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://discord.com/api/v10/users/@me/connections",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-discordBearerToken-secret"
+  }
+}

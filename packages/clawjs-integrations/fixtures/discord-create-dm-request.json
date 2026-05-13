@@ -1,0 +1,12 @@
+{
+  "method": "POST",
+  "url": "https://discord.com/api/v10/users/@me/channels",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "recipient_id": "sample"
+  }
+}

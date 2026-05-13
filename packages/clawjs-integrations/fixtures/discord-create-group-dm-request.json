@@ -1,0 +1,17 @@
+{
+  "method": "POST",
+  "url": "https://discord.com/api/v10/users/@me/channels",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-discordBearerToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "access_tokens": [
+      "sample"
+    ],
+    "nicks": {
+      "sample": "sample"
+    }
+  }
+}
