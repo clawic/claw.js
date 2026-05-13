@@ -1,0 +1,15 @@
+{
+  "action": "published",
+  "release": {
+    "id": 8,
+    "tag_name": "sample"
+  },
+  "repository": {
+    "id": 2,
+    "full_name": "octocat/sample"
+  },
+  "sender": {
+    "id": 1,
+    "login": "octocat"
+  }
+}

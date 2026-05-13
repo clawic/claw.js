@@ -1,0 +1,16 @@
+{
+  "action": "opened",
+  "issue": {
+    "id": 3,
+    "number": 1,
+    "title": "sample"
+  },
+  "repository": {
+    "id": 2,
+    "full_name": "octocat/sample"
+  },
+  "sender": {
+    "id": 1,
+    "login": "octocat"
+  }
+}
