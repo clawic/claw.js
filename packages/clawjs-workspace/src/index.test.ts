@@ -174,7 +174,7 @@ test("createWorkspaceClaw manages tasks, notes, people, inbox, events, and badge
   assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite")), false);
 });
 
-test("createWorkspaceClaw migrates legacy JSON productivity collections into sqlite", { concurrency: false }, async (t) => {
+test("createWorkspaceClaw ignores pre-public legacy JSON productivity collections", { concurrency: false }, async (t) => {
   const workspaceDir = createWorkspaceDir("migration");
   const dataRoot = useIsolatedMainData(t, workspaceDir);
   const legacyTasksDir = path.join(workspaceDir, ".clawjs", "data", "collections", "tasks");
@@ -242,15 +242,10 @@ test("createWorkspaceClaw migrates legacy JSON productivity collections into sql
     },
   });
 
-  const task = await claw.tasks.get("task-legacy");
-  const goal = await claw.goals.get("goal-legacy");
-  const reminder = await claw.reminders.get("reminder-legacy");
-  const event = await claw.events.get("event-legacy");
-
-  assert.equal(task?.title, "Imported task");
-  assert.equal(goal?.title, "Imported goal");
-  assert.equal(reminder?.anchorId, "task-legacy");
-  assert.deepEqual(event?.linkedTaskIds, ["task-legacy"]);
+  assert.equal(await claw.tasks.get("task-legacy"), null);
+  assert.equal(await claw.goals.get("goal-legacy"), null);
+  assert.equal(await claw.reminders.get("reminder-legacy"), null);
+  assert.equal(await claw.events.get("event-legacy"), null);
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
   assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite")), false);
 });

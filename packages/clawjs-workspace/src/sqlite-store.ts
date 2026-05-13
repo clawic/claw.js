@@ -29,9 +29,13 @@ function assertSafeName(name: string, label: string): string {
   return trimmed;
 }
 
-function resolveCollectionsDir(workspaceDir: string): string {
-  // Legacy read-only import path. New canonical workspace state lives under .claw/.
-  return path.join(workspaceDir, ".clawjs", "data", "collections");
+function extractRecordMetadata(value: unknown): { updatedAt: string | null; archivedAt: string | null } {
+  if (!value || typeof value !== "object") return { updatedAt: null, archivedAt: null };
+  const record = value as Record<string, unknown>;
+  return {
+    updatedAt: typeof record.updatedAt === "string" ? record.updatedAt : null,
+    archivedAt: typeof record.archivedAt === "string" ? record.archivedAt : null,
+  };
 }
 
 function resolveDatabasePath(workspaceDir: string): string {
@@ -47,17 +51,6 @@ function resolveClawjsDataRoot(_workspaceDir: string): string {
 
 function expandHome(value: string): string {
   return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
-}
-
-function extractRecordMetadata(value: unknown): { updatedAt: string | null; archivedAt: string | null } {
-  if (!value || typeof value !== "object") {
-    return { updatedAt: null, archivedAt: null };
-  }
-  const candidate = value as { updatedAt?: unknown; archivedAt?: unknown };
-  return {
-    updatedAt: typeof candidate.updatedAt === "string" ? candidate.updatedAt : null,
-    archivedAt: typeof candidate.archivedAt === "string" ? candidate.archivedAt : null,
-  };
 }
 
 export function createSqliteWorkspaceCollectionStore(workspaceDir: string): SqliteWorkspaceCollectionStore {
@@ -81,83 +74,6 @@ export function createSqliteWorkspaceCollectionStore(workspaceDir: string): Sqli
       meta_value TEXT NOT NULL
     );
   `);
-
-  const getMeta = sqlite.prepare("SELECT meta_value FROM workspace_meta WHERE meta_key = ?");
-  const putMeta = sqlite.prepare(`
-    INSERT INTO workspace_meta (meta_key, meta_value)
-    VALUES (?, ?)
-    ON CONFLICT(meta_key) DO UPDATE SET meta_value = excluded.meta_value
-  `);
-  const hasMigrated = getMeta.get("legacy_json_collections_imported_at") as { meta_value: string } | undefined;
-  if (!hasMigrated) {
-    const collectionsDir = resolveCollectionsDir(workspaceDir);
-    if (fs.existsSync(collectionsDir)) {
-      const insert = sqlite.prepare(`
-        INSERT INTO workspace_records (collection_name, record_id, payload_json, updated_at, archived_at)
-        VALUES (@collection_name, @record_id, @payload_json, @updated_at, @archived_at)
-        ON CONFLICT(collection_name, record_id) DO NOTHING
-      `);
-      const tx = sqlite.transaction(() => {
-        for (const entry of fs.readdirSync(collectionsDir, { withFileTypes: true })) {
-          if (!entry.isDirectory()) continue;
-          const collectionName = assertSafeName(entry.name, "collection name");
-          const dirPath = path.join(collectionsDir, entry.name);
-          for (const fileName of fs.readdirSync(dirPath, { withFileTypes: true })
-            .filter((candidate) => candidate.isFile() && candidate.name.endsWith(".json"))
-            .map((candidate) => candidate.name)
-            .sort((left, right) => left.localeCompare(right))) {
-            const recordId = assertSafeName(fileName.slice(0, -".json".length), "record id");
-            try {
-              const raw = fs.readFileSync(path.join(dirPath, fileName), "utf8");
-              const parsed = JSON.parse(raw) as unknown;
-              const metadata = extractRecordMetadata(parsed);
-              insert.run({
-                collection_name: collectionName,
-                record_id: recordId,
-                payload_json: JSON.stringify(parsed),
-                updated_at: metadata.updatedAt,
-                archived_at: metadata.archivedAt,
-              });
-            } catch {
-              // Ignore unreadable legacy records and continue migrating the rest.
-            }
-          }
-        }
-      });
-      tx();
-    }
-    putMeta.run("legacy_json_collections_imported_at", new Date().toISOString());
-  }
-
-  const hasMigratedSqlite = getMeta.get("legacy_productivity_sqlite_imported_at") as { meta_value: string } | undefined;
-  if (!hasMigratedSqlite) {
-    const legacyPath = path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite");
-    if (fs.existsSync(legacyPath) && path.resolve(legacyPath) !== path.resolve(dbFilePath)) {
-      try {
-        sqlite.prepare("ATTACH DATABASE ? AS legacy_productivity").run(legacyPath);
-        const hasRecordsTable = sqlite.prepare(`
-          SELECT name FROM legacy_productivity.sqlite_master
-          WHERE type = 'table' AND name = 'workspace_records'
-        `).get();
-        if (hasRecordsTable) {
-          sqlite.exec(`
-            INSERT OR IGNORE INTO workspace_records (collection_name, record_id, payload_json, updated_at, archived_at)
-            SELECT collection_name, record_id, payload_json, updated_at, archived_at
-            FROM legacy_productivity.workspace_records
-          `);
-        }
-      } catch {
-        // Ignore broken legacy stores and keep the canonical main DB usable.
-      } finally {
-        try {
-          sqlite.exec("DETACH DATABASE legacy_productivity");
-        } catch {
-          // noop
-        }
-      }
-    }
-    putMeta.run("legacy_productivity_sqlite_imported_at", new Date().toISOString());
-  }
 
   return {
     dbPath: () => dbFilePath,

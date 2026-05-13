@@ -3047,69 +3047,6 @@ async function createWorkspaceExtension(
     }
   }
 
-  function migrateLegacyGenericDbCoreCollections(): void {
-    const migrationKey = "legacy_generic_db_core_imported_at";
-    if (readMeta(migrationKey)) return;
-    const legacyPath = path.join(workspaceDir, ".clawjs", "data", "database.sqlite");
-    if (!fs.existsSync(legacyPath)) {
-      writeMeta(migrationKey, nowIso());
-      return;
-    }
-
-    const collectionMap = new Map<string, ReturnType<typeof data.collection>>([
-      ["tasks", tasksCollection],
-      ["goals", goalsCollection],
-      ["projects", projectsCollection],
-      ["reminders", remindersCollection],
-      ["deadlines", deadlinesCollection],
-      ["notes", notesCollection],
-      ["people", peopleCollection],
-      ["events", eventsCollection],
-    ]);
-    if (Array.from(collectionMap.values()).some((collection) => collection.listIds().length > 0)) {
-      writeMeta(migrationKey, nowIso());
-      return;
-    }
-
-    try {
-      const legacyDb = new Database(legacyPath, { readonly: true });
-      try {
-        const hasRecordsTable = legacyDb.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'records'").get();
-        if (!hasRecordsTable) return;
-        const rows = legacyDb.prepare(`
-          SELECT collection_name, id, data_json, created_at, updated_at
-          FROM records
-          WHERE namespace_id = 'main'
-            AND collection_name IN ('tasks','goals','projects','reminders','deadlines','notes','people','events')
-          ORDER BY collection_name ASC, id ASC
-        `).all() as Array<{ collection_name: string; id: string; data_json: string; created_at: string; updated_at: string }>;
-        for (const row of rows) {
-          const target = collectionMap.get(row.collection_name);
-          if (!target || target.get(row.id)) continue;
-          const payload = JSON.parse(row.data_json) as Record<string, unknown>;
-          if (row.collection_name === "people" && payload.displayName === undefined && typeof payload.title === "string") {
-            payload.displayName = payload.title;
-          }
-          if (row.collection_name === "projects" && payload.name === undefined && typeof payload.title === "string") {
-            payload.name = payload.title;
-          }
-          target.put(row.id, {
-            ...payload,
-            id: row.id,
-            createdAt: typeof payload.createdAt === "string" ? payload.createdAt : row.created_at,
-            updatedAt: typeof payload.updatedAt === "string" ? payload.updatedAt : row.updated_at,
-          });
-        }
-      } finally {
-        legacyDb.close();
-      }
-    } catch {
-      // Broken legacy stores should not block the canonical productivity DB.
-    } finally {
-      writeMeta(migrationKey, nowIso());
-    }
-  }
-
   async function migrateProductivitySchema(): Promise<void> {
     const currentVersion = Number(readMeta("productivity_schema_version") ?? "1");
     if (currentVersion >= PRODUCTIVITY_SCHEMA_VERSION) return;
@@ -8216,7 +8153,6 @@ async function createWorkspaceExtension(
     },
   };
 
-  migrateLegacyGenericDbCoreCollections();
   await migrateProductivitySchema();
   await migrateTemporalCollectionsToTime();
 
