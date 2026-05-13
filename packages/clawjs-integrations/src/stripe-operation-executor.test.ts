@@ -527,6 +527,54 @@ describe("stripe operation runtime", () => {
         requiredPaths: ["id", "object"],
       },
     });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-payment-link"), {
+      line_items: [{ price: "price_sample", quantity: 1 }],
+      metadata: { order_id: "sample" },
+      allow_promotion_codes: true,
+      submit_type: "pay",
+    }), {
+      method: "POST",
+      endpoint: "payment_links",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        line_items: [{ price: "price_sample", quantity: 1 }],
+        metadata: { order_id: "sample" },
+        allow_promotion_codes: true,
+        submit_type: "pay",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-billing-portal-configuration"), {
+      features: { customer_update: { enabled: true } },
+      default_return_url: "https://example.invalid/return",
+      metadata: { order_id: "sample" },
+      name: "Sample portal",
+    }), {
+      method: "POST",
+      endpoint: "billing_portal/configurations",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        features: { customer_update: { enabled: true } },
+        default_return_url: "https://example.invalid/return",
+        metadata: { order_id: "sample" },
+        name: "Sample portal",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
   });
 
   it("covers Stripe payment operations with operation-scoped offline fixtures", async () => {

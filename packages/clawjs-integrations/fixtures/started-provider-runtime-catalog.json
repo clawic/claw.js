@@ -30529,6 +30529,397 @@
           ]
         },
         {
+          "id": "stripe.action.list-payment-links",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Payment Links",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-payment-link",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Payment Link",
+          "fields": [
+            {
+              "name": "line_items",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "price": "price_sample",
+                  "quantity": 1
+                }
+              ]
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "allow_promotion_codes",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "submit_type",
+              "type": "string",
+              "optional": true,
+              "default": "pay"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-payment-link",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Payment Link",
+          "fields": [
+            {
+              "name": "paymentLink",
+              "type": "string",
+              "optional": false,
+              "default": "plink_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-payment-link",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Payment Link",
+          "fields": [
+            {
+              "name": "paymentLink",
+              "type": "string",
+              "optional": false,
+              "default": "plink_sample"
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "inactive_message",
+              "type": "string",
+              "optional": true,
+              "default": "Unavailable"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-payment-link-line-items",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Payment Link Line Items",
+          "fields": [
+            {
+              "name": "paymentLink",
+              "type": "string",
+              "optional": false,
+              "default": "plink_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-confirmation-token",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Confirmation Token",
+          "fields": [
+            {
+              "name": "confirmationToken",
+              "type": "string",
+              "optional": false,
+              "default": "ctoken_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-billing-portal-configurations",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Billing Portal Configurations",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "is_default",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-billing-portal-configuration",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Billing Portal Configuration",
+          "fields": [
+            {
+              "name": "features",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "customer_update": {
+                  "enabled": true
+                }
+              }
+            },
+            {
+              "name": "default_return_url",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/return"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Sample portal"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-billing-portal-configuration",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Billing Portal Configuration",
+          "fields": [
+            {
+              "name": "configuration",
+              "type": "string",
+              "optional": false,
+              "default": "bpc_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-billing-portal-configuration",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Billing Portal Configuration",
+          "fields": [
+            {
+              "name": "configuration",
+              "type": "string",
+              "optional": false,
+              "default": "bpc_sample"
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "features",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "customer_update": {
+                  "enabled": true
+                }
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Updated portal"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-billing-portal-session",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Billing Portal Session",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "configuration",
+              "type": "string",
+              "optional": true,
+              "default": "bpc_sample"
+            },
+            {
+              "name": "return_url",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/return"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-customer-session",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Customer Session",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "components",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "pricing_table": {
+                  "enabled": true
+                }
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.get-balance",
           "appId": "stripe",
           "kind": "action",

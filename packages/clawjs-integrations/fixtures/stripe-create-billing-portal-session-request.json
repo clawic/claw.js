@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/billing_portal/sessions",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "customer=cus_sample&configuration=bpc_sample&return_url=https%3A%2F%2Fexample.invalid%2Freturn"
+}

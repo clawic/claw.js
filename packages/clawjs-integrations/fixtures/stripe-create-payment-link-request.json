@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/payment_links",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "line_items=%7B%22price%22%3A%22price_sample%22%2C%22quantity%22%3A1%7D&metadata=%7B%22order_id%22%3A%22sample%22%7D&allow_promotion_codes=true&submit_type=pay"
+}
