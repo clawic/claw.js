@@ -12,8 +12,8 @@ This project is governed by `CONSTITUTION.md` at the repository root. It defines
 
 - Treat this file as the operational entrypoint for the repo.
 - Treat `AGENTS.md` as the canonical repository instruction file. If a tool such as Claude Code looks for `CLAUDE.md`, that file must redirect back here and remain aligned with this file.
-- Treat `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `RELEASING.md`, `docs/git-workflow.md`, `docs/host-ownership.md`, `docs/adr/0001-claw-framework-host-boundary.md`, and `tests/e2e/README.md` as source-of-truth references for deeper detail.
-- Before changing framework, host, storage, CLI, Clawix integration, permissions, grants, approvals, audit, or domain ownership, read `docs/host-ownership.md` and the ADR.
+- Treat `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `RELEASING.md`, `docs/git-workflow.md`, `docs/host-ownership.md`, `docs/data-storage-boundary.md`, `docs/adr/0001-claw-framework-host-boundary.md`, and `tests/e2e/README.md` as source-of-truth references for deeper detail.
+- Before changing framework, host, storage, CLI, Clawix integration, permissions, grants, approvals, audit, data placement, or domain ownership, read `docs/host-ownership.md`, `docs/data-storage-boundary.md`, and the ADR.
 - For agent-specific operational knowledge, review `agents/wiki/README.md` and the relevant pages under `agents/wiki/` before changing behavior or debugging repeated issues.
 - For host-dependent OpenClaw work, read `agents/wiki/openclaw.md` before changing runtime detection, installation, auth, or onboarding flows.
 - If a change affects public behavior, docs, examples, templates, or package surface, update the relevant docs and tests in the same patch.
@@ -184,6 +184,7 @@ Pull request rules:
 - `@clawjs/cli` is the official CLI package.
 - `claw` is the single public CLI surface. Do not introduce new public `clawjs`, `clawix`, or `commander` command surfaces; legacy commands must be labelled compatibility-only.
 - Framework global data belongs under `~/Library/Application Support/Claw`, canonical workspace data under `.claw/`, and host-local state under `~/Library/Application Support/<Host>`.
+- User-facing structured framework records belong in `~/Library/Application Support/Claw/claw.sqlite`. Do not introduce new canonical workspace databases like `productivity.sqlite`; use documented sidecars only for runtime, sessions, audio, drive/blob, search, notification, monitor, infra, ops, feed, and encrypted vault state.
 - Sensitive native work must be executed by the active signed host (`Claw.app` or an embedded `ClawHostKit` host), not by Node permission prompts.
 - `~/.codex` is an external read-only source. Mirror or index it only; do not delete, move, overwrite, chmod broadly, or write into it without explicit reversible opt-in.
 - Adapter support level is part of the public contract. Do not document experimental adapters as production-ready unless support metadata and docs are updated together.

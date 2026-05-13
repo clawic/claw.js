@@ -31,6 +31,7 @@ const agentDocs = [
   "AGENTS.md",
   "CLAUDE.md",
   "docs/host-ownership.md",
+  "docs/data-storage-boundary.md",
   "docs/adr/0001-claw-framework-host-boundary.md",
 ];
 
@@ -59,6 +60,7 @@ for (const relativePath of ["README.md", ...listMarkdownFiles("docs")]) {
 
 requireSnippet("CLAUDE.md", "AGENTS.md");
 requireSnippet("CLAUDE.md", "docs/host-ownership.md");
+requireSnippet("CLAUDE.md", "docs/data-storage-boundary.md");
 requireSnippet("CLAUDE.md", "docs/adr/0001-claw-framework-host-boundary.md");
 
 for (const snippet of [
@@ -70,6 +72,17 @@ for (const snippet of [
   "~/.codex",
 ]) {
   requireSnippet("docs/host-ownership.md", snippet);
+}
+
+for (const snippet of [
+  "claw.sqlite",
+  "productivity.sqlite",
+  "vault.sqlite",
+  "runtime.sqlite",
+  "search.sqlite",
+  "Plaintext secrets never live",
+]) {
+  requireSnippet("docs/data-storage-boundary.md", snippet);
 }
 
 const ownership = read("docs/host-ownership.md");
