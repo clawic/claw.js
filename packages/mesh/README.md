@@ -10,7 +10,7 @@ bridge server, and the Fastify mesh HTTP plugin.
 
 ## HTTP API
 
-All routes are mounted under `/v1/v1/mesh/*` via `meshServerPlugin`. Three of them
+All routes are mounted under `/v1/mesh/*` via `meshServerPlugin`. Three of them
 are public (bearer-token guarded), the rest are loopback-only. Audit events
 are emitted for every state-changing call.
 
