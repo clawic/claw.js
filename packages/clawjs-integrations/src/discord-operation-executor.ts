@@ -193,6 +193,8 @@ export type DiscordRuntimeOperation =
   | "update-webhook-with-token"
   | "delete-webhook-with-token"
   | "execute-webhook"
+  | "execute-slack-compatible-webhook"
+  | "execute-github-compatible-webhook"
   | "get-webhook-message"
   | "edit-webhook-message"
   | "delete-webhook-message"
@@ -748,6 +750,10 @@ export function buildDiscordOperationRequest(
       return deletePlan(`webhooks/${webhookId(values)}/${webhookToken(values)}`, [], headers, { type: "null" });
     case "execute-webhook":
       return bodyPlan("POST", `webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}`, [], headers, messageBody(values, true), { type: "object" }, removeEmptyValues({ wait: values.wait, thread_id: optionalString(values.threadId) }));
+    case "execute-slack-compatible-webhook":
+      return bodyPlan("POST", `webhooks/${webhookId(values)}/${webhookToken(values)}/slack`, [], headers, webhookServicePayload(values), { type: "object" }, webhookServiceQuery(values));
+    case "execute-github-compatible-webhook":
+      return bodyPlan("POST", `webhooks/${webhookId(values)}/${webhookToken(values)}/github`, [], headers, webhookServicePayload(values), { type: "object" }, webhookServiceQuery(values));
     case "get-webhook-message":
       return getPlan(`webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, { type: "object", requiredPaths: ["id"] }, removeEmptyValues({ thread_id: optionalString(values.threadId) }));
     case "edit-webhook-message":
@@ -1025,6 +1031,8 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "update-webhook-with-token",
   "delete-webhook-with-token",
   "execute-webhook",
+  "execute-slack-compatible-webhook",
+  "execute-github-compatible-webhook",
   "get-webhook-message",
   "edit-webhook-message",
   "delete-webhook-message",
@@ -1494,6 +1502,17 @@ function webhookTokenBody(values: Record<string, IntegrationJson>): Record<strin
   return removeEmptyValues({
     name: optionalString(values.name),
     avatar: optionalString(values.avatar),
+  });
+}
+
+function webhookServicePayload(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return requiredJsonObject(firstValue(values.payload, values.body), "payload");
+}
+
+function webhookServiceQuery(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    wait: values.wait,
+    thread_id: optionalString(values.threadId),
   });
 }
 
