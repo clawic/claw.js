@@ -3766,23 +3766,22 @@ test("runCli handles Telegram /new session reset without model latency", () => {
     "], { stdout: process.stdout, stderr: process.stderr, cwd: process.cwd() });",
     "process.exit(code);",
   ].join(" ");
+  const childEnv = {
+    ...process.env,
+    CLAWJS_TEST_WORKSPACE: workspaceRoot,
+    CLAWJS_MAIN_DATA_DIR: path.join(workspaceRoot, "clawjs-data"),
+  };
+  for (const key of ["CLAWIX_CLAWJS_DATA_DIR", "CLAWJS_MAIN_DB_PATH", "CLAWJS_DB_PATH", "DATABASE_DB_PATH", "DATABASE_FILES_DIR"]) {
+    delete childEnv[key];
+  }
   const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
     cwd: process.cwd(),
     input: payload,
     encoding: "utf8",
-    env: {
-      ...process.env,
-      CLAWJS_TEST_WORKSPACE: workspaceRoot,
-      CLAWJS_MAIN_DATA_DIR: undefined,
-      CLAWIX_CLAWJS_DATA_DIR: undefined,
-      CLAWJS_MAIN_DB_PATH: undefined,
-      CLAWJS_DB_PATH: undefined,
-      DATABASE_DB_PATH: undefined,
-      DATABASE_FILES_DIR: undefined,
-    },
+    env: childEnv,
   });
 
-  assert.equal(result.status, CLI_EXIT_OK, result.stderr);
+  assert.equal(result.status, CLI_EXIT_OK, `${result.stderr}\n${result.stdout}`);
   const output = JSON.parse(result.stdout) as { actions: Array<{ type: string; text?: string }> };
   assert.equal(output.actions.some((action) => action.type === "send_message" && action.text === "New session is ready. What do you want to do next?"), true);
 });

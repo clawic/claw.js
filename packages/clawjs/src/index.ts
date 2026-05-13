@@ -6396,20 +6396,6 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runCodeCli({ positionals, flags, argv, context, wantsJson, binName });
   }
 
-  if (group === "search" && (command === "query" || command === "rebuild")) {
-    const v1DataExitCode = await runV1DataCli({
-      argv,
-      positionals,
-      flags,
-      stdout: context.stdout,
-      stderr: context.stderr,
-      wantsJson,
-      binName,
-      cwd: context.cwd,
-    });
-    if (v1DataExitCode !== null) return v1DataExitCode;
-  }
-
   if (group === "search" && command === "query") {
     const query = subcommand || flags.query;
     if (!query) {
