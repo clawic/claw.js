@@ -1,0 +1,16 @@
+{
+  "method": "PATCH",
+  "url": "https://api.airtable.com/v0/appBase123/tblTable123/recRecord123",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-airtableAccessToken-secret"
+  },
+  "body": {
+    "fields": {
+      "Name": "Sample",
+      "Status": "Open"
+    },
+    "typecast": false,
+    "returnFieldsByFieldId": false
+  }
+}

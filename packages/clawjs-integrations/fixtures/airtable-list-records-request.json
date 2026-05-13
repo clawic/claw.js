@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://api.airtable.com/v0/appBase123/tblTable123?pageSize=100&offset=itrOffset123&view=Grid+view&fields=Name&fields=Status&filterByFormula=%7BStatus%7D+%3D+%27Open%27&sort=%7B%22field%22%3A%22Name%22%2C%22direction%22%3A%22asc%22%7D&cellFormat=json&timeZone=UTC&userLocale=en-us&returnFieldsByFieldId=false",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-airtableAccessToken-secret"
+  }
+}
