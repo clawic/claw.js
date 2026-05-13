@@ -115,7 +115,10 @@ export type DiscordRuntimeOperation =
   | "modify-current-user-nick"
   | "remove-guild-member"
   | "list-guild-roles"
+  | "get-guild-role"
+  | "get-guild-role-member-counts"
   | "create-guild-role"
+  | "modify-guild-role-positions"
   | "update-guild-role"
   | "delete-guild-role"
   | "add-guild-member-role"
@@ -493,8 +496,22 @@ export function buildDiscordOperationRequest(
       return deletePlan(`guilds/${guildId(values)}/members/${userId(values)}`, auth, headers, { type: "object" });
     case "list-guild-roles":
       return getPlan(`guilds/${guildId(values)}/roles`, auth, headers, { type: "array" });
+    case "get-guild-role":
+      return getPlan(`guilds/${guildId(values)}/roles/${roleId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "name"] });
+    case "get-guild-role-member-counts":
+      return getPlan(`guilds/${guildId(values)}/roles/member-counts`, auth, headers, { type: "object" });
     case "create-guild-role":
       return bodyPlan("POST", `guilds/${guildId(values)}/roles`, auth, headers, roleBody(values), { type: "object", requiredPaths: ["id", "name"] });
+    case "modify-guild-role-positions":
+      return {
+        method: "PATCH",
+        endpoint: `guilds/${guildId(values)}/roles`,
+        auth,
+        headers: auditHeaders(headers, values),
+        body: {},
+        bodyValue: requiredJsonArray(values.positions, "positions"),
+        responseSchema: { type: "array" },
+      };
     case "update-guild-role":
       return bodyPlan("PATCH", `guilds/${guildId(values)}/roles/${roleId(values)}`, auth, headers, roleBody(values), { type: "object", requiredPaths: ["id", "name"] });
     case "delete-guild-role":
@@ -747,7 +764,10 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "modify-current-user-nick",
   "remove-guild-member",
   "list-guild-roles",
+  "get-guild-role",
+  "get-guild-role-member-counts",
   "create-guild-role",
+  "modify-guild-role-positions",
   "update-guild-role",
   "delete-guild-role",
   "add-guild-member-role",
