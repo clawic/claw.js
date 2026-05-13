@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "application_id": "app-sample",
+  "type": 1,
+  "event": {
+    "type": "ENTITLEMENT_CREATE",
+    "timestamp": "2026-01-01T00:02:00.000000",
+    "data": {
+      "id": "entitlement-sample",
+      "application_id": "app-sample",
+      "sku_id": "sku-sample",
+      "user_id": "user-sample",
+      "type": 4,
+      "deleted": false,
+      "consumed": false
+    }
+  }
+}

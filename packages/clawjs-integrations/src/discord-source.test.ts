@@ -15,6 +15,11 @@ import {
 
 const DISCORD_SOURCE_OPERATIONS = [
   source("discord.source.event", "Event"),
+  source("discord.source.application-authorized", "Application Authorized", "timestamp"),
+  source("discord.source.application-deauthorized", "Application Deauthorized", "timestamp"),
+  source("discord.source.entitlement-create", "Entitlement Create", "timestamp"),
+  source("discord.source.entitlement-update", "Entitlement Update", "timestamp"),
+  source("discord.source.entitlement-delete", "Entitlement Delete", "timestamp"),
   source("discord.source.message-create", "Message Create"),
   source("discord.source.message-update", "Message Update"),
   source("discord.source.message-delete", "Message Delete"),
@@ -62,6 +67,12 @@ describe("discord event sources", () => {
       dedupe: "id",
       hooks: [],
     });
+    assert.deepEqual(buildDiscordSourcePlan(operation("discord.source.application-authorized")), {
+      delivery: "webhook",
+      dedupe: "timestamp",
+      hooks: [],
+      eventsPath: "event",
+    });
   });
 
   it("extracts Discord event payloads as source events", () => {
@@ -90,6 +101,39 @@ describe("discord event sources", () => {
         name: "sample",
       },
     }]);
+
+    const webhookResult = handleConnectorRuntimeWebhook({
+      operation: operation("discord.source.application-authorized"),
+      payload: {
+        version: 1,
+        application_id: "app-sample",
+        type: 1,
+        event: {
+          type: "APPLICATION_AUTHORIZED",
+          timestamp: "2026-01-01T00:00:00.000000",
+          data: {
+            integration_type: 1,
+            scopes: ["applications.commands"],
+            user: {
+              id: "user-sample",
+              username: "sample",
+            },
+          },
+        },
+      },
+    });
+    assert.deepEqual(webhookResult.events, [{
+      type: "APPLICATION_AUTHORIZED",
+      timestamp: "2026-01-01T00:00:00.000000",
+      data: {
+        integration_type: 1,
+        scopes: ["applications.commands"],
+        user: {
+          id: "user-sample",
+          username: "sample",
+        },
+      },
+    }]);
   });
 
   it("covers Discord event sources with operation-scoped offline fixtures", async () => {
@@ -111,7 +155,7 @@ function operation(operationId: string) {
   return found;
 }
 
-function source(id: string, name: string) {
+function source(id: string, name: string, dedupe = "id") {
   return {
     id,
     appId: "discord",
@@ -124,7 +168,7 @@ function source(id: string, name: string) {
       hasHooks: false,
       hasAdditionalProps: false,
       hasMethods: false,
-      dedupe: "id",
+      dedupe,
     },
     source: {
       delivery: "webhook" as const,

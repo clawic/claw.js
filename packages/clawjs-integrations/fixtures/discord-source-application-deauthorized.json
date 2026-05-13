@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "application_id": "app-sample",
+  "type": 1,
+  "event": {
+    "type": "APPLICATION_DEAUTHORIZED",
+    "timestamp": "2026-01-01T00:01:00.000000",
+    "data": {
+      "user": {
+        "id": "user-sample",
+        "username": "sample"
+      }
+    }
+  }
+}

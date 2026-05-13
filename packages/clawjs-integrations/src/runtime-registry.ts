@@ -622,6 +622,11 @@ const DISCORD_SOURCE_EVIDENCE = [
 
 const DISCORD_SOURCE_FIXTURE_NAMES = [
   "event",
+  "application-authorized",
+  "application-deauthorized",
+  "entitlement-create",
+  "entitlement-update",
+  "entitlement-delete",
   "message-create",
   "message-update",
   "message-delete",
