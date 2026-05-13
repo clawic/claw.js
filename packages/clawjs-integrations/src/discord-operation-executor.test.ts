@@ -89,7 +89,11 @@ const DISCORD_ACTIONS = [
   action("list-reactions", "List Reactions", [CHANNEL_FIELD, MESSAGE_FIELD, field("emoji", "string", false, { default: "thumbsup" }), field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
   action("start-thread-from-message", "Start Thread From Message", [CHANNEL_FIELD, MESSAGE_FIELD, field("name", "string")]),
   action("start-thread-without-message", "Start Thread Without Message", [CHANNEL_FIELD, field("name", "string"), field("type", "integer", true, { default: 11 })]),
+  action("start-thread-in-forum-or-media-channel", "Start Thread In Forum Or Media Channel", [CHANNEL_FIELD, field("name", "string"), field("autoArchiveDuration", "integer", true, { default: 60 }), field("rateLimitPerUser", "integer", true, { default: 0 }), field("message", "object", false, { default: { content: "sample" } }), field("appliedTags", "array", true, { default: ["sample"] }), field("auditLogReason", "string", true)]),
   action("list-active-threads", "List Active Threads", [GUILD_FIELD]),
+  action("list-public-archived-threads", "List Public Archived Threads", [CHANNEL_FIELD, field("before", "string", true, { default: "2026-05-13T10:00:00.000Z" }), field("limit", "integer", true, { default: 1, min: 1 })]),
+  action("list-private-archived-threads", "List Private Archived Threads", [CHANNEL_FIELD, field("before", "string", true, { default: "2026-05-13T10:00:00.000Z" }), field("limit", "integer", true, { default: 1, min: 1 })]),
+  action("list-joined-private-archived-threads", "List Joined Private Archived Threads", [CHANNEL_FIELD, field("before", "string", true), field("limit", "integer", true, { default: 1, min: 1 })]),
   action("join-thread", "Join Thread", [CHANNEL_FIELD]),
   action("leave-thread", "Leave Thread", [CHANNEL_FIELD]),
   action("add-thread-member", "Add Thread Member", [CHANNEL_FIELD, USER_FIELD]),
@@ -530,6 +534,79 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["code"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.start-thread-in-forum-or-media-channel"), {
+      channelId: "123",
+      name: "Forum thread",
+      autoArchiveDuration: 60,
+      rateLimitPerUser: 0,
+      message: {
+        content: "hello",
+      },
+      appliedTags: ["tag-123"],
+      auditLogReason: "new forum thread",
+    }), {
+      method: "POST",
+      endpoint: "channels/123/threads",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "new forum thread",
+      },
+      body: {
+        name: "Forum thread",
+        auto_archive_duration: 60,
+        rate_limit_per_user: 0,
+        message: {
+          content: "hello",
+        },
+        applied_tags: ["tag-123"],
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "type", "name", "message"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.list-public-archived-threads"), {
+      channelId: "123",
+      before: "2026-05-13T10:00:00.000Z",
+      limit: 25,
+    }), {
+      method: "GET",
+      endpoint: "channels/123/threads/archived/public",
+      auth,
+      headers,
+      query: {
+        before: "2026-05-13T10:00:00.000Z",
+        limit: 25,
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["threads", "members", "has_more"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.list-joined-private-archived-threads"), {
+      channelId: "123",
+      before: "thread-before",
+      limit: 10,
+    }), {
+      method: "GET",
+      endpoint: "channels/123/users/@me/threads/archived/private",
+      auth,
+      headers,
+      query: {
+        before: "thread-before",
+        limit: 10,
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["threads", "members", "has_more"],
       },
     });
 
