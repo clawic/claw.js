@@ -1345,6 +1345,109 @@
           ]
         },
         {
+          "id": "discord.action.add-lobby-member",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Add Lobby Member",
+          "fields": [
+            {
+              "name": "lobbyId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "role": "sample"
+              }
+            },
+            {
+              "name": "flags",
+              "type": "integer",
+              "optional": true,
+              "default": 1
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.bulk-update-lobby-members",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Bulk Update Lobby Members",
+          "fields": [
+            {
+              "name": "lobbyId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "members",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "id": "sample",
+                  "metadata": {
+                    "role": "sample"
+                  },
+                  "flags": 1,
+                  "remove_member": false
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.remove-lobby-member",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Remove Lobby Member",
+          "fields": [
+            {
+              "name": "lobbyId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.leave-lobby",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Leave Lobby",
+          "fields": [
+            {
+              "name": "lobbyId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.get-channel",
           "appId": "discord",
           "kind": "action",
