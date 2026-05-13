@@ -38387,6 +38387,188 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.list-entitlement-active-entitlements",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Entitlement Active Entitlements",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": false,
+              "default": "cus_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-entitlement-active-entitlement",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Entitlement Active Entitlement",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "ent_active_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-entitlement-features",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Entitlement Features",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "archived",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            },
+            {
+              "name": "lookup_key",
+              "type": "string",
+              "optional": true,
+              "default": "feature_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-entitlement-feature",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Entitlement Feature",
+          "fields": [
+            {
+              "name": "lookup_key",
+              "type": "string",
+              "optional": false,
+              "default": "feature_sample"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "Sample feature"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-entitlement-feature",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Entitlement Feature",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "feat_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-entitlement-feature",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Entitlement Feature",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "feat_sample"
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Updated feature"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

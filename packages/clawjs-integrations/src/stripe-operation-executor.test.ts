@@ -1009,6 +1009,28 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-entitlement-feature"), {
+      lookup_key: "feature_sample",
+      name: "Sample feature",
+      metadata: { order_id: "sample" },
+    }), {
+      method: "POST",
+      endpoint: "entitlements/features",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        lookup_key: "feature_sample",
+        name: "Sample feature",
+        metadata: { order_id: "sample" },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-apple-pay-domain"), {
       domain_name: "pay.example.invalid",
     }), {
