@@ -51,6 +51,8 @@ const DISCORD_ACTIONS = [
   action("update-current-user-application-role-connection", "Update Current User Application Role Connection", [APPLICATION_FIELD, field("platformName", "string", true, { default: "sample" }), field("platformUsername", "string", true, { default: "sample" }), field("metadata", "object", true, { default: { score: "100" } })], ["discordBearerToken"]),
   action("get-gateway", "Get Gateway", [], []),
   action("get-gateway-bot", "Get Gateway Bot", []),
+  action("get-current-bot-application-information", "Get Current Bot Application Information", []),
+  action("get-current-authorization-information", "Get Current Authorization Information", [], ["discordBearerToken"]),
   action("get-guild", "Get Guild", [GUILD_FIELD, field("withCounts", "boolean", true)]),
   action("get-guild-preview", "Get Guild Preview", [GUILD_FIELD]),
   action("modify-guild", "Modify Guild", [GUILD_FIELD, field("name", "string", true, { default: "sample" }), field("verificationLevel", "integer", true, { default: 1 }), field("defaultMessageNotifications", "integer", true, { default: 1 }), field("explicitContentFilter", "integer", true, { default: 1 }), field("afkChannelId", "string", true, { default: "sample" }), field("afkTimeout", "integer", true, { default: 60 }), field("icon", "string", true, { default: "data:image/png;base64,c2FtcGxl" }), field("ownerId", "string", true, { default: "sample" }), field("splash", "string", true, { default: "data:image/png;base64,c2FtcGxl" }), field("discoverySplash", "string", true, { default: "data:image/png;base64,c2FtcGxl" }), field("banner", "string", true, { default: "data:image/png;base64,c2FtcGxl" }), field("systemChannelId", "string", true, { default: "sample" }), field("systemChannelFlags", "integer", true, { default: 0 }), field("rulesChannelId", "string", true, { default: "sample" }), field("publicUpdatesChannelId", "string", true, { default: "sample" }), field("preferredLocale", "string", true, { default: "en-US" }), field("features", "array", true, { default: ["COMMUNITY"] }), field("description", "string", true, { default: "sample" }), field("premiumProgressBarEnabled", "boolean", true, { default: true }), field("safetyAlertsChannelId", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
@@ -467,6 +469,32 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["url", "shards", "session_start_limit"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-current-bot-application-information"), {}), {
+      method: "GET",
+      endpoint: "oauth2/applications/@me",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "name", "description", "verify_key"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-current-authorization-information"), {}), {
+      method: "GET",
+      endpoint: "oauth2/@me",
+      auth: bearerAuth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["application", "scopes", "expires"],
       },
     });
 
