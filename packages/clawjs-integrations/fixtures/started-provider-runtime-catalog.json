@@ -19436,6 +19436,2395 @@
           ]
         },
         {
+          "id": "stripe.action.update-customer",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Customer",
+          "fields": [
+            {
+              "name": "customerId",
+              "type": "string",
+              "optional": false,
+              "default": "cus_sample"
+            },
+            {
+              "name": "email",
+              "type": "string",
+              "optional": true,
+              "default": "person@example.invalid"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Sample Person"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-customer",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Customer",
+          "fields": [
+            {
+              "name": "customerId",
+              "type": "string",
+              "optional": false,
+              "default": "cus_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.search-customers",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Search Customers",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": false,
+              "default": "metadata['order_id']:'sample'"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "string",
+              "optional": true,
+              "default": "next_page"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-payment-intent",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Payment Intent",
+          "fields": [
+            {
+              "name": "paymentIntentId",
+              "type": "string",
+              "optional": false,
+              "default": "pi_sample"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 1200
+            },
+            {
+              "name": "currency",
+              "type": "string",
+              "optional": true,
+              "default": "usd"
+            },
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "payment_method",
+              "type": "string",
+              "optional": true,
+              "default": "pm_sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.cancel-payment-intent",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Cancel Payment Intent",
+          "fields": [
+            {
+              "name": "paymentIntentId",
+              "type": "string",
+              "optional": false,
+              "default": "pi_sample"
+            },
+            {
+              "name": "cancellation_reason",
+              "type": "string",
+              "optional": true,
+              "default": "requested_by_customer"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.capture-payment-intent",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Capture Payment Intent",
+          "fields": [
+            {
+              "name": "paymentIntentId",
+              "type": "string",
+              "optional": false,
+              "default": "pi_sample"
+            },
+            {
+              "name": "amount_to_capture",
+              "type": "integer",
+              "optional": true,
+              "default": 1200
+            },
+            {
+              "name": "statement_descriptor",
+              "type": "string",
+              "optional": true,
+              "default": "Sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.confirm-payment-intent",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Confirm Payment Intent",
+          "fields": [
+            {
+              "name": "paymentIntentId",
+              "type": "string",
+              "optional": false,
+              "default": "pi_sample"
+            },
+            {
+              "name": "payment_method",
+              "type": "string",
+              "optional": true,
+              "default": "pm_sample"
+            },
+            {
+              "name": "return_url",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/return"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.increment-payment-intent-authorization",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Increment Payment Intent Authorization",
+          "fields": [
+            {
+              "name": "paymentIntentId",
+              "type": "string",
+              "optional": false,
+              "default": "pi_sample"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": false,
+              "default": 1400
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.apply-payment-intent-customer-balance",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Apply Payment Intent Customer Balance",
+          "fields": [
+            {
+              "name": "paymentIntentId",
+              "type": "string",
+              "optional": false,
+              "default": "pi_sample"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 500
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-payment-intent-line-items",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Payment Intent Line Items",
+          "fields": [
+            {
+              "name": "paymentIntentId",
+              "type": "string",
+              "optional": false,
+              "default": "pi_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.search-payment-intents",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Search Payment Intents",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": false,
+              "default": "metadata['order_id']:'sample'"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "string",
+              "optional": true,
+              "default": "next_page"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.verify-payment-intent-microdeposits",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Verify Payment Intent Microdeposits",
+          "fields": [
+            {
+              "name": "paymentIntentId",
+              "type": "string",
+              "optional": false,
+              "default": "pi_sample"
+            },
+            {
+              "name": "amounts",
+              "type": "array",
+              "optional": true,
+              "default": [
+                32,
+                45
+              ]
+            },
+            {
+              "name": "descriptor_code",
+              "type": "string",
+              "optional": true,
+              "default": "SM11AA"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-setup-intents",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Setup Intents",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-setup-intent",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Setup Intent",
+          "fields": [
+            {
+              "name": "setupIntentId",
+              "type": "string",
+              "optional": false,
+              "default": "seti_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-setup-intent",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Setup Intent",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "payment_method",
+              "type": "string",
+              "optional": true,
+              "default": "pm_sample"
+            },
+            {
+              "name": "usage",
+              "type": "string",
+              "optional": true,
+              "default": "off_session"
+            },
+            {
+              "name": "confirm",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-setup-intent",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Setup Intent",
+          "fields": [
+            {
+              "name": "setupIntentId",
+              "type": "string",
+              "optional": false,
+              "default": "seti_sample"
+            },
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "payment_method",
+              "type": "string",
+              "optional": true,
+              "default": "pm_sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.cancel-setup-intent",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Cancel Setup Intent",
+          "fields": [
+            {
+              "name": "setupIntentId",
+              "type": "string",
+              "optional": false,
+              "default": "seti_sample"
+            },
+            {
+              "name": "cancellation_reason",
+              "type": "string",
+              "optional": true,
+              "default": "abandoned"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.confirm-setup-intent",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Confirm Setup Intent",
+          "fields": [
+            {
+              "name": "setupIntentId",
+              "type": "string",
+              "optional": false,
+              "default": "seti_sample"
+            },
+            {
+              "name": "payment_method",
+              "type": "string",
+              "optional": true,
+              "default": "pm_sample"
+            },
+            {
+              "name": "return_url",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/return"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.verify-setup-intent-microdeposits",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Verify Setup Intent Microdeposits",
+          "fields": [
+            {
+              "name": "setupIntentId",
+              "type": "string",
+              "optional": false,
+              "default": "seti_sample"
+            },
+            {
+              "name": "amounts",
+              "type": "array",
+              "optional": true,
+              "default": [
+                32,
+                45
+              ]
+            },
+            {
+              "name": "descriptor_code",
+              "type": "string",
+              "optional": true,
+              "default": "SM11AA"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-payment-methods",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Payment Methods",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": true,
+              "default": "card"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-payment-method",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Payment Method",
+          "fields": [
+            {
+              "name": "paymentMethodId",
+              "type": "string",
+              "optional": false,
+              "default": "pm_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-payment-method",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Payment Method",
+          "fields": [
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false,
+              "default": "card"
+            },
+            {
+              "name": "card",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "token": "tok_visa"
+              }
+            },
+            {
+              "name": "billing_email",
+              "type": "string",
+              "optional": true,
+              "default": "person@example.invalid"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-payment-method",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Payment Method",
+          "fields": [
+            {
+              "name": "paymentMethodId",
+              "type": "string",
+              "optional": false,
+              "default": "pm_sample"
+            },
+            {
+              "name": "billing_details",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "email": "person@example.invalid"
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.attach-payment-method",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Attach Payment Method",
+          "fields": [
+            {
+              "name": "paymentMethodId",
+              "type": "string",
+              "optional": false,
+              "default": "pm_sample"
+            },
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": false,
+              "default": "cus_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.detach-payment-method",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Detach Payment Method",
+          "fields": [
+            {
+              "name": "paymentMethodId",
+              "type": "string",
+              "optional": false,
+              "default": "pm_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-balance",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Balance",
+          "fields": [],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-balance-transactions",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Balance Transactions",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": true,
+              "default": "charge"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-balance-transaction",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Balance Transaction",
+          "fields": [
+            {
+              "name": "balanceTransactionId",
+              "type": "string",
+              "optional": false,
+              "default": "txn_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-events",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Events",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": true,
+              "default": "payment_intent.succeeded"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-event",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Event",
+          "fields": [
+            {
+              "name": "eventId",
+              "type": "string",
+              "optional": false,
+              "default": "evt_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-disputes",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Disputes",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-dispute",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Dispute",
+          "fields": [
+            {
+              "name": "disputeId",
+              "type": "string",
+              "optional": false,
+              "default": "dp_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-dispute",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Dispute",
+          "fields": [
+            {
+              "name": "disputeId",
+              "type": "string",
+              "optional": false,
+              "default": "dp_sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "evidence",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "customer_name": "Sample Person"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.close-dispute",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Close Dispute",
+          "fields": [
+            {
+              "name": "disputeId",
+              "type": "string",
+              "optional": false,
+              "default": "dp_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-invoices",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Invoices",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "optional": true,
+              "default": "draft"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-invoice",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Invoice",
+          "fields": [
+            {
+              "name": "invoiceId",
+              "type": "string",
+              "optional": false,
+              "default": "in_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-invoice",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Invoice",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": false,
+              "default": "cus_sample"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Sample invoice"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-invoice",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Invoice",
+          "fields": [
+            {
+              "name": "invoiceId",
+              "type": "string",
+              "optional": false,
+              "default": "in_sample"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Updated invoice"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-invoice",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Invoice",
+          "fields": [
+            {
+              "name": "invoiceId",
+              "type": "string",
+              "optional": false,
+              "default": "in_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.finalize-invoice",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Finalize Invoice",
+          "fields": [
+            {
+              "name": "invoiceId",
+              "type": "string",
+              "optional": false,
+              "default": "in_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.pay-invoice",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Pay Invoice",
+          "fields": [
+            {
+              "name": "invoiceId",
+              "type": "string",
+              "optional": false,
+              "default": "in_sample"
+            },
+            {
+              "name": "payment_method",
+              "type": "string",
+              "optional": true,
+              "default": "pm_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.send-invoice",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Send Invoice",
+          "fields": [
+            {
+              "name": "invoiceId",
+              "type": "string",
+              "optional": false,
+              "default": "in_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.void-invoice",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Void Invoice",
+          "fields": [
+            {
+              "name": "invoiceId",
+              "type": "string",
+              "optional": false,
+              "default": "in_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.mark-invoice-uncollectible",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Mark Invoice Uncollectible",
+          "fields": [
+            {
+              "name": "invoiceId",
+              "type": "string",
+              "optional": false,
+              "default": "in_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.search-invoices",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Search Invoices",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": false,
+              "default": "metadata['order_id']:'sample'"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "string",
+              "optional": true,
+              "default": "next_page"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-invoice-line-items",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Invoice Line Items",
+          "fields": [
+            {
+              "name": "invoiceId",
+              "type": "string",
+              "optional": false,
+              "default": "in_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-invoice-items",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Invoice Items",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-invoice-item",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Invoice Item",
+          "fields": [
+            {
+              "name": "invoiceItemId",
+              "type": "string",
+              "optional": false,
+              "default": "ii_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-invoice-item",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Invoice Item",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": false,
+              "default": "cus_sample"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": false,
+              "default": 1200
+            },
+            {
+              "name": "currency",
+              "type": "string",
+              "optional": false,
+              "default": "usd"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Sample item"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-invoice-item",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Invoice Item",
+          "fields": [
+            {
+              "name": "invoiceItemId",
+              "type": "string",
+              "optional": false,
+              "default": "ii_sample"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Updated item"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-invoice-item",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Invoice Item",
+          "fields": [
+            {
+              "name": "invoiceItemId",
+              "type": "string",
+              "optional": false,
+              "default": "ii_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-coupons",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Coupons",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-coupon",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Coupon",
+          "fields": [
+            {
+              "name": "couponId",
+              "type": "string",
+              "optional": false,
+              "default": "coupon_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-coupon",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Coupon",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": true,
+              "default": "coupon_sample"
+            },
+            {
+              "name": "percent_off",
+              "type": "integer",
+              "optional": true,
+              "default": 10
+            },
+            {
+              "name": "duration",
+              "type": "string",
+              "optional": false,
+              "default": "once"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-coupon",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Coupon",
+          "fields": [
+            {
+              "name": "couponId",
+              "type": "string",
+              "optional": false,
+              "default": "coupon_sample"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Sample Coupon"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-coupon",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Coupon",
+          "fields": [
+            {
+              "name": "couponId",
+              "type": "string",
+              "optional": false,
+              "default": "coupon_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-promotion-codes",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Promotion Codes",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "coupon",
+              "type": "string",
+              "optional": true,
+              "default": "coupon_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-promotion-code",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Promotion Code",
+          "fields": [
+            {
+              "name": "promotionCodeId",
+              "type": "string",
+              "optional": false,
+              "default": "promo_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-promotion-code",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Promotion Code",
+          "fields": [
+            {
+              "name": "coupon",
+              "type": "string",
+              "optional": false,
+              "default": "coupon_sample"
+            },
+            {
+              "name": "code",
+              "type": "string",
+              "optional": true,
+              "default": "SAVE10"
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-promotion-code",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Promotion Code",
+          "fields": [
+            {
+              "name": "promotionCodeId",
+              "type": "string",
+              "optional": false,
+              "default": "promo_sample"
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-tax-rates",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Tax Rates",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-tax-rate",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Tax Rate",
+          "fields": [
+            {
+              "name": "taxRateId",
+              "type": "string",
+              "optional": false,
+              "default": "txr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-tax-rate",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Tax Rate",
+          "fields": [
+            {
+              "name": "display_name",
+              "type": "string",
+              "optional": false,
+              "default": "VAT"
+            },
+            {
+              "name": "percentage",
+              "type": "integer",
+              "optional": false,
+              "default": 20
+            },
+            {
+              "name": "inclusive",
+              "type": "boolean",
+              "optional": false,
+              "default": false
+            },
+            {
+              "name": "country",
+              "type": "string",
+              "optional": true,
+              "default": "ES"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-tax-rate",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Tax Rate",
+          "fields": [
+            {
+              "name": "taxRateId",
+              "type": "string",
+              "optional": false,
+              "default": "txr_sample"
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "display_name",
+              "type": "string",
+              "optional": true,
+              "default": "VAT"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-payouts",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Payouts",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-payout",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Payout",
+          "fields": [
+            {
+              "name": "payoutId",
+              "type": "string",
+              "optional": false,
+              "default": "po_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-payout",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Payout",
+          "fields": [
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": false,
+              "default": 1200
+            },
+            {
+              "name": "currency",
+              "type": "string",
+              "optional": false,
+              "default": "usd"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Sample payout"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-payout",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Payout",
+          "fields": [
+            {
+              "name": "payoutId",
+              "type": "string",
+              "optional": false,
+              "default": "po_sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.cancel-payout",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Cancel Payout",
+          "fields": [
+            {
+              "name": "payoutId",
+              "type": "string",
+              "optional": false,
+              "default": "po_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.reverse-payout",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Reverse Payout",
+          "fields": [
+            {
+              "name": "payoutId",
+              "type": "string",
+              "optional": false,
+              "default": "po_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-transfers",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Transfers",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-transfer",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Transfer",
+          "fields": [
+            {
+              "name": "transferId",
+              "type": "string",
+              "optional": false,
+              "default": "tr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-transfer",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Transfer",
+          "fields": [
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": false,
+              "default": 1200
+            },
+            {
+              "name": "currency",
+              "type": "string",
+              "optional": false,
+              "default": "usd"
+            },
+            {
+              "name": "destination",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Sample transfer"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-transfer",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Transfer",
+          "fields": [
+            {
+              "name": "transferId",
+              "type": "string",
+              "optional": false,
+              "default": "tr_sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-transfer-reversals",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Transfer Reversals",
+          "fields": [
+            {
+              "name": "transferId",
+              "type": "string",
+              "optional": false,
+              "default": "tr_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-transfer-reversal",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Transfer Reversal",
+          "fields": [
+            {
+              "name": "transferId",
+              "type": "string",
+              "optional": false,
+              "default": "tr_sample"
+            },
+            {
+              "name": "reversalId",
+              "type": "string",
+              "optional": false,
+              "default": "trr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-transfer-reversal",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Transfer Reversal",
+          "fields": [
+            {
+              "name": "transferId",
+              "type": "string",
+              "optional": false,
+              "default": "tr_sample"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 500
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-transfer-reversal",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Transfer Reversal",
+          "fields": [
+            {
+              "name": "transferId",
+              "type": "string",
+              "optional": false,
+              "default": "tr_sample"
+            },
+            {
+              "name": "reversalId",
+              "type": "string",
+              "optional": false,
+              "default": "trr_sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-subscription-items",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Subscription Items",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "subscription",
+              "type": "string",
+              "optional": false,
+              "default": "sub_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-subscription-item",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Subscription Item",
+          "fields": [
+            {
+              "name": "subscriptionItemId",
+              "type": "string",
+              "optional": false,
+              "default": "si_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-subscription-item",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Subscription Item",
+          "fields": [
+            {
+              "name": "subscription",
+              "type": "string",
+              "optional": false,
+              "default": "sub_sample"
+            },
+            {
+              "name": "price",
+              "type": "string",
+              "optional": false,
+              "default": "price_sample"
+            },
+            {
+              "name": "quantity",
+              "type": "integer",
+              "optional": true,
+              "default": 1
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-subscription-item",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Subscription Item",
+          "fields": [
+            {
+              "name": "subscriptionItemId",
+              "type": "string",
+              "optional": false,
+              "default": "si_sample"
+            },
+            {
+              "name": "price",
+              "type": "string",
+              "optional": true,
+              "default": "price_sample"
+            },
+            {
+              "name": "quantity",
+              "type": "integer",
+              "optional": true,
+              "default": 1
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-subscription-item",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Subscription Item",
+          "fields": [
+            {
+              "name": "subscriptionItemId",
+              "type": "string",
+              "optional": false,
+              "default": "si_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-webhook-endpoints",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Webhook Endpoints",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-webhook-endpoint",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Webhook Endpoint",
+          "fields": [
+            {
+              "name": "webhookEndpointId",
+              "type": "string",
+              "optional": false,
+              "default": "we_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-webhook-endpoint",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Webhook Endpoint",
+          "fields": [
+            {
+              "name": "url",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/stripe/webhook"
+            },
+            {
+              "name": "enabled_events",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "payment_intent.succeeded"
+              ]
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Sample endpoint"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-webhook-endpoint",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Webhook Endpoint",
+          "fields": [
+            {
+              "name": "webhookEndpointId",
+              "type": "string",
+              "optional": false,
+              "default": "we_sample"
+            },
+            {
+              "name": "url",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/stripe/webhook"
+            },
+            {
+              "name": "enabled_events",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "payment_intent.succeeded"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-webhook-endpoint",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Webhook Endpoint",
+          "fields": [
+            {
+              "name": "webhookEndpointId",
+              "type": "string",
+              "optional": false,
+              "default": "we_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.source.event",
           "appId": "stripe",
           "kind": "source",
