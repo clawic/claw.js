@@ -1,0 +1,14 @@
+{
+  "method": "POST",
+  "url": "https://discord.com/api/v10/interactions/sample/sample/callback?with_response=false",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json"
+  },
+  "body": {
+    "type": 4,
+    "data": {
+      "content": "sample"
+    }
+  }
+}
