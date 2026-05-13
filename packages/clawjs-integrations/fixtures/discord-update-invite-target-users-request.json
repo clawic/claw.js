@@ -1,0 +1,9 @@
+{
+  "method": "PUT",
+  "url": "https://discord.com/api/v10/invites/sample/target-users",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret"
+  },
+  "body": "[object FormData]"
+}

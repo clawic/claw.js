@@ -1,0 +1,10 @@
+{
+  "runtimeResponse": {
+    "status": 200,
+    "headers": {
+      "content-type": "text/csv"
+    },
+    "body": "user_id\n123\n",
+    "bodyEncoding": "text"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://discord.com/api/v10/invites/sample/target-users",
+  "headers": {
+    "accept": "text/csv",
+    "authorization": "Bot offline-discordBotToken-secret"
+  }
+}

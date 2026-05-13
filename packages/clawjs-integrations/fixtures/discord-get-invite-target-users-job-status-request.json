@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://discord.com/api/v10/invites/sample/target-users/job-status",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret"
+  }
+}
