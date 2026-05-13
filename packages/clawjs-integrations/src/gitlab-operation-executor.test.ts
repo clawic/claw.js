@@ -8,6 +8,7 @@ import {
 } from "./runtime-coverage.ts";
 import {
   buildGitLabOperationRequest,
+  GITLAB_EXTRA_ACTION_SPECS,
   isGitLabActionOperationSupported,
 } from "./gitlab-operation-executor.ts";
 import type { ConnectorOperationDefinition } from "./types.ts";
@@ -111,6 +112,7 @@ const GITLAB_ACTION_SLUGS = [
   "create-project-variable",
   "update-project-variable",
   "delete-project-variable",
+  ...GITLAB_EXTRA_ACTION_SPECS.map((operation) => operation.slug),
 ] as const;
 
 const GITLAB_ACTIONS = GITLAB_ACTION_SLUGS.map((slug) => operationDefinition(slug, fieldsForOperation(slug)));
@@ -233,6 +235,82 @@ describe("gitlab operation runtime", () => {
         requiredPaths: ["id", "url"],
       },
     });
+
+    assert.deepEqual(buildGitLabOperationRequest(operation("create-commit-status"), {
+      projectId: "group/project",
+      sha: "abc123",
+      state: "success",
+      ref: "main",
+      name: "ci",
+      targetUrl: "https://example.invalid/build",
+      description: "Build passed",
+    }), {
+      method: "POST",
+      endpoint: "projects/group%2Fproject/statuses/abc123",
+      auth,
+      headers,
+      body: {
+        state: "success",
+        ref: "main",
+        name: "ci",
+        target_url: "https://example.invalid/build",
+        description: "Build passed",
+      },
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildGitLabOperationRequest(operation("search-project-merge-requests"), {
+      projectId: "group/project",
+      search: "runtime",
+      perPage: 20,
+      page: 1,
+    }), {
+      method: "GET",
+      endpoint: "projects/group%2Fproject/search",
+      auth,
+      headers,
+      query: {
+        scope: "merge_requests",
+        search: "runtime",
+        per_page: 20,
+        page: 1,
+      },
+      body: {},
+      pagination: {
+        mode: "offset",
+        itemsPath: "",
+        offsetParam: "page",
+        limitParam: "per_page",
+        pageSize: 20,
+        maxPages: 1,
+      },
+      responseSchema: {
+        type: "array",
+      },
+    });
+
+    assert.deepEqual(buildGitLabOperationRequest(operation("create-environment"), {
+      projectId: "group/project",
+      name: "production",
+      externalUrl: "https://example.invalid/env",
+      tier: "production",
+    }), {
+      method: "POST",
+      endpoint: "projects/group%2Fproject/environments",
+      auth,
+      headers,
+      body: {
+        name: "production",
+        external_url: "https://example.invalid/env",
+        tier: "production",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "name"],
+      },
+    });
   });
 
   it("covers GitLab operations with operation-scoped offline fixtures", async () => {
@@ -267,6 +345,9 @@ function operationDefinition(slug: string, fields: ConnectorOperationDefinition[
 }
 
 function fieldsForOperation(slug: string): ConnectorOperationDefinition["fields"] {
+  const extraSpec = GITLAB_EXTRA_ACTION_SPECS.find((operation) => operation.slug === slug);
+  if (extraSpec) return extraSpec.fields;
+
   if (slug === "get-current-user") return [];
   if (slug === "get-user") return [integerField("userId")];
   if (slug === "list-users" || slug === "list-projects" || slug === "list-groups") return pagingFields();
