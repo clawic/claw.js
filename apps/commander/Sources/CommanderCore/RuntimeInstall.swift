@@ -124,9 +124,6 @@ public enum RuntimeInstaller {
         if let override = environment["CLAW_HOST_APP_BUNDLE"], FileManager.default.fileExists(atPath: override) {
             return override
         }
-        if let override = environment["CLAW_HOST_APP_BUNDLE"], FileManager.default.fileExists(atPath: override) {
-            return override
-        }
 
         let bundlePath = Bundle.main.bundleURL.path
         if Bundle.main.bundleURL.pathExtension == "app", FileManager.default.fileExists(atPath: bundlePath) {
