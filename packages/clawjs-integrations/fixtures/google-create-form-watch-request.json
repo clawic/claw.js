@@ -1,0 +1,17 @@
+{
+  "method": "POST",
+  "url": "https://forms.googleapis.com/v1/forms/form-123/watches",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "target": {
+      "topic": {
+        "topicName": "projects/offline/topics/forms"
+      }
+    },
+    "eventType": "RESPONSES"
+  }
+}

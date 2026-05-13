@@ -1,0 +1,14 @@
+{
+  "method": "POST",
+  "url": "https://sheets.googleapis.com/v4/spreadsheets/spreadsheet-123/values:batchClear",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "ranges": [
+      "Sheet1!A1:B2"
+    ]
+  }
+}

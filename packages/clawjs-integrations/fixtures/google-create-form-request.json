@@ -1,0 +1,14 @@
+{
+  "method": "POST",
+  "url": "https://forms.googleapis.com/v1/forms",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "info": {
+      "title": "Sample Form"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://forms.googleapis.com/v1/forms/form-123",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://forms.googleapis.com/v1/forms/form-123/responses?pageSize=100&pageToken=offline-page-token",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://tasks.googleapis.com/tasks/v1/users/@me/lists?maxResults=100&pageToken=offline-page-token",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "method": "POST",
+  "url": "https://docs.googleapis.com/v1/documents",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "title": "Sample Doc"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://tasks.googleapis.com/tasks/v1/lists/%40default/tasks/task-123",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret"
+  }
+}

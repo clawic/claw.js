@@ -1,0 +1,12 @@
+{
+  "method": "POST",
+  "url": "https://tasks.googleapis.com/tasks/v1/users/@me/lists",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "title": "Tasks"
+  }
+}

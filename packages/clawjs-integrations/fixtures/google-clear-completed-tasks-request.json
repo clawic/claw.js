@@ -1,0 +1,8 @@
+{
+  "method": "POST",
+  "url": "https://tasks.googleapis.com/tasks/v1/lists/%40default/clear",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret"
+  }
+}

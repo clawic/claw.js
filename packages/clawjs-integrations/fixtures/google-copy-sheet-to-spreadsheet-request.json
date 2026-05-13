@@ -1,0 +1,12 @@
+{
+  "method": "POST",
+  "url": "https://sheets.googleapis.com/v4/spreadsheets/spreadsheet-123/sheets/0:copyTo",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "destinationSpreadsheetId": "spreadsheet-456"
+  }
+}

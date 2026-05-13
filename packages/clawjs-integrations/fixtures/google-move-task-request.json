@@ -1,0 +1,8 @@
+{
+  "method": "POST",
+  "url": "https://tasks.googleapis.com/tasks/v1/lists/%40default/tasks/task-123/move?parent=parent-task&previous=previous-task",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret"
+  }
+}

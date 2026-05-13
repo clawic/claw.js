@@ -1,0 +1,8 @@
+{
+  "method": "POST",
+  "url": "https://sheets.googleapis.com/v4/spreadsheets/spreadsheet-123/values/Sheet1!A1%3AB2:clear",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret"
+  }
+}

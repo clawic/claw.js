@@ -1,0 +1,20 @@
+{
+  "method": "POST",
+  "url": "https://sheets.googleapis.com/v4/spreadsheets/spreadsheet-123:batchUpdate",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "requests": [
+      {
+        "addSheet": {
+          "properties": {
+            "title": "Sheet2"
+          }
+        }
+      }
+    ]
+  }
+}

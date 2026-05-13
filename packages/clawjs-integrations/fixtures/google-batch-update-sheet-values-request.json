@@ -1,0 +1,23 @@
+{
+  "method": "POST",
+  "url": "https://sheets.googleapis.com/v4/spreadsheets/spreadsheet-123/values:batchUpdate",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "valueInputOption": "RAW",
+    "data": [
+      {
+        "range": "Sheet1!A1:B2",
+        "values": [
+          [
+            "A",
+            "B"
+          ]
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://docs.googleapis.com/v1/documents/doc-123",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret"
+  }
+}
