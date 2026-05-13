@@ -1,0 +1,12 @@
+{
+  "token": "verification-token",
+  "team_id": "T123",
+  "api_app_id": "A123",
+  "event_id": "Ev_team_join",
+  "event_time": 1710000000,
+  "type": "event_callback",
+  "event": {
+    "type": "team_join",
+    "user": "U123"
+  }
+}

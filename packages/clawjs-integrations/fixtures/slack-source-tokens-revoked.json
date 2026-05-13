@@ -1,0 +1,20 @@
+{
+  "token": "verification-token",
+  "team_id": "T123",
+  "api_app_id": "A123",
+  "event_id": "Ev_tokens_revoked",
+  "event_time": 1710000000,
+  "type": "event_callback",
+  "event": {
+    "type": "tokens_revoked",
+    "user": "U123",
+    "tokens": {
+      "oauth": [
+        "U123"
+      ],
+      "bot": [
+        "B123"
+      ]
+    }
+  }
+}
