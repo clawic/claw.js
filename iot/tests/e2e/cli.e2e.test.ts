@@ -16,7 +16,7 @@ before(async () => {
   await execFileAsync("npm", ["run", "build"], { cwd: process.cwd() });
   await execFileAsync("npm", ["run", "build:packages"], { cwd: repoRoot });
   iotDistCli = path.join(process.cwd(), "dist", "cli.js");
-  clawBin = path.join(repoRoot, "packages", "clawjs", "bin", "clawjs.mjs");
+  clawBin = path.join(repoRoot, "packages", "clawjs", "bin", "claw.mjs");
 });
 
 afterEach(async () => {

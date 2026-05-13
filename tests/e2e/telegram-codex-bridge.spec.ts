@@ -270,7 +270,7 @@ async function runClawJson(rootDir: string, args: string[], input: {
   env?: NodeJS.ProcessEnv;
 }) {
   const child = spawn(process.execPath, [
-    path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs"),
+    path.join(rootDir, "packages", "clawjs", "bin", "claw.mjs"),
     ...args,
     "--runtime",
     "codex",
@@ -563,7 +563,7 @@ async function runProcessor(rootDir: string, input: {
   env?: NodeJS.ProcessEnv;
 }) {
   const args = [
-    path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs"),
+    path.join(rootDir, "packages", "clawjs", "bin", "claw.mjs"),
     "channels",
     "codex-processor",
     "run",

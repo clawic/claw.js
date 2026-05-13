@@ -17,7 +17,7 @@ import { runCatalogCli, CATALOG_GROUPS } from "./catalog-commands.mjs";
 import { BUILTIN_COLLECTIONS_BY_ALIAS } from "@clawjs/core";
 
 const invokedBinName = path.basename(process.argv[1] || "claw");
-const publicBinName = invokedBinName === "clawjs.mjs" ? "claw" : invokedBinName;
+const publicBinName = invokedBinName === "claw.mjs" ? "claw" : invokedBinName;
 
 const args = process.argv.slice(2);
 

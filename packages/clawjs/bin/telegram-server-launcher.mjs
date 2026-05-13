@@ -90,7 +90,7 @@ export async function runOpenTelegram(args) {
   // can find a working executable in non-interactive contexts (the Mac
   // app launches us without inheriting a shell PATH that resolves it).
   if (!process.env.CLAW_BIN) {
-    process.env.CLAW_BIN = path.resolve(HERE, "clawjs.mjs");
+    process.env.CLAW_BIN = path.resolve(HERE, "claw.mjs");
   }
 
   const buildTelegramApp = await loadBuildTelegramApp();

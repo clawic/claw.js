@@ -8,7 +8,7 @@ import { expect, test } from "./fixtures";
 
 const execFileAsync = promisify(execFile);
 
-const BIN = path.join(process.cwd(), "packages", "clawjs", "bin", "clawjs.mjs");
+const BIN = path.join(process.cwd(), "packages", "clawjs", "bin", "claw.mjs");
 
 interface RunOptions {
   home: string;

@@ -9,7 +9,7 @@ import { expect, saveArtifactScreenshot, test } from "./fixtures";
 const execFileAsync = promisify(execFile);
 
 function cliPath(rootDir: string) {
-  return path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs");
+  return path.join(rootDir, "packages", "clawjs", "bin", "claw.mjs");
 }
 
 async function runCli(rootDir: string, args: string[], options: { reject?: boolean; env?: NodeJS.ProcessEnv } = {}) {

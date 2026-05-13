@@ -50,7 +50,7 @@ async function waitForJsonLine(child: ReturnType<typeof spawn>) {
 test("preview share exposes a local server through a tokenized LAN proxy", async ({ page }) => {
   const preview = await createPreviewServer();
   const rootDir = process.cwd();
-  const binPath = path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs");
+  const binPath = path.join(rootDir, "packages", "clawjs", "bin", "claw.mjs");
   const child = spawn(process.execPath, [
     binPath,
     "preview",
@@ -92,7 +92,7 @@ test("preview share exposes a local server through a tokenized LAN proxy", async
 test("preview share reports optional tunnel providers without real external services", async ({ page }) => {
   const preview = await createPreviewServer();
   const rootDir = process.cwd();
-  const binPath = path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs");
+  const binPath = path.join(rootDir, "packages", "clawjs", "bin", "claw.mjs");
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-preview-share-"));
   const tailscalePath = path.join(tempRoot, "tailscale");
   fs.writeFileSync(tailscalePath, "#!/bin/sh\nprintf 'tailscale mock\\n'\n");

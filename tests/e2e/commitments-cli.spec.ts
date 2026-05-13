@@ -9,7 +9,7 @@ import { expect, saveArtifactScreenshot, test } from "./fixtures";
 const execFileAsync = promisify(execFile);
 
 function clawBin(rootDir: string): string {
-  return path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs");
+  return path.join(rootDir, "packages", "clawjs", "bin", "claw.mjs");
 }
 
 function writeSession(workspaceDir: string, sessionId: string, messages: Array<{ role: "user" | "assistant"; text: string }>) {

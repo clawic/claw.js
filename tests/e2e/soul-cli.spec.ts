@@ -12,7 +12,7 @@ test("SoulSpec CLI compiles structured souls into isolated workspace files", asy
   const rootDir = process.cwd();
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-soul-"));
   const workspaceDir = path.join(tempRoot, "workspace");
-  const binPath = path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs");
+  const binPath = path.join(rootDir, "packages", "clawjs", "bin", "claw.mjs");
   const baseArgs = ["--workspace", workspaceDir, "--json"];
 
   fs.mkdirSync(workspaceDir, { recursive: true });
@@ -65,7 +65,7 @@ test("SoulSpec CLI resolves per-agent souls and default fallback", async () => {
   const rootDir = process.cwd();
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-soul-invalid-"));
   const workspaceDir = path.join(tempRoot, "workspace");
-  const binPath = path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs");
+  const binPath = path.join(rootDir, "packages", "clawjs", "bin", "claw.mjs");
   const baseArgs = ["--workspace", workspaceDir, "--json"];
 
   await execFileAsync(process.execPath, [
@@ -91,7 +91,7 @@ test("SoulSpec CLI migrates legacy structured souls automatically", async () => 
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-soul-legacy-"));
   const workspaceDir = path.join(tempRoot, "workspace");
   const stateDir = path.join(workspaceDir, ".claw");
-  const binPath = path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs");
+  const binPath = path.join(rootDir, "packages", "clawjs", "bin", "claw.mjs");
   fs.mkdirSync(stateDir, { recursive: true });
   fs.writeFileSync(path.join(stateDir, "souls.json"), JSON.stringify({
     schemaVersion: 1,
@@ -116,7 +116,7 @@ test("SoulSpec CLI rejects invalid structured setting values", async () => {
   const rootDir = process.cwd();
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-soul-invalid-"));
   const workspaceDir = path.join(tempRoot, "workspace");
-  const binPath = path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs");
+  const binPath = path.join(rootDir, "packages", "clawjs", "bin", "claw.mjs");
   const baseArgs = ["--workspace", workspaceDir, "--json"];
 
   await expect(execFileAsync(process.execPath, [

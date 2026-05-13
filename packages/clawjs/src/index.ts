@@ -1284,7 +1284,7 @@ function prepareOpenSurface(surface: OpenSurface, workspace: string): void {
 function cliBinPath(): string {
   const currentArgv = process.argv[1];
   if (currentArgv && fs.existsSync(currentArgv)) return currentArgv;
-  const packagedBin = fileURLToPath(new URL("../bin/clawjs.mjs", import.meta.url));
+  const packagedBin = fileURLToPath(new URL("../bin/claw.mjs", import.meta.url));
   if (fs.existsSync(packagedBin)) return packagedBin;
   return fileURLToPath(import.meta.url);
 }
@@ -3169,7 +3169,7 @@ function shellQuote(value: string): string {
 
 function currentCliEntryPath(): string {
   const entry = fileURLToPath(import.meta.url);
-  const packagedBin = path.resolve(path.dirname(entry), "..", "bin", "clawjs.mjs");
+  const packagedBin = path.resolve(path.dirname(entry), "..", "bin", "claw.mjs");
   return fs.existsSync(packagedBin) ? packagedBin : entry;
 }
 
@@ -12311,7 +12311,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       }
 
       const entry = fileURLToPath(import.meta.url);
-      const packagedBin = path.resolve(path.dirname(entry), "..", "bin", "clawjs.mjs");
+      const packagedBin = path.resolve(path.dirname(entry), "..", "bin", "claw.mjs");
       const cliEntry = fs.existsSync(packagedBin) ? packagedBin : entry;
       const args = [
         cliEntry,

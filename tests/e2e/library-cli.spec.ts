@@ -24,7 +24,7 @@ test("local library assets sync into an isolated workspace without real services
     description: "Hermetic domain-management skill fixture.",
   }, null, 2));
 
-  const binPath = path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs");
+  const binPath = path.join(rootDir, "packages", "clawjs", "bin", "claw.mjs");
   const baseArgs = ["--library-dir", libraryDir, "--workspace", workspaceDir, "--json"];
   await execFileAsync(process.execPath, [binPath, "library", "import-skill", "namecheap", "--id", "namecheap", "--path", skillSourceDir, ...baseArgs], { cwd: rootDir });
   await execFileAsync(process.execPath, [binPath, "library", "create", "ceo-soul", "--kind", "instruction", "--content", "Operate like a pragmatic CEO.", "--projection", "agents", ...baseArgs], { cwd: rootDir });
@@ -45,7 +45,7 @@ test("library secret requirements stay reference-only in hermetic CLI output", a
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-library-secrets-"));
   const workspaceDir = path.join(tempRoot, "workspace");
   const libraryDir = path.join(tempRoot, "library");
-  const binPath = path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs");
+  const binPath = path.join(rootDir, "packages", "clawjs", "bin", "claw.mjs");
   const baseArgs = ["--library-dir", libraryDir, "--workspace", workspaceDir, "--json"];
 
   await execFileAsync(process.execPath, [

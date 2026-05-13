@@ -2879,7 +2879,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
   runCommand("npm", ["init", "-y"], { cwd: installRoot });
   runCommand("npm", ["install", "--prefer-offline", ...tarballs], { cwd: installRoot });
 
-  const binPath = path.join(installRoot, "node_modules", "@clawjs", "cli", "bin", "clawjs.mjs");
+  const binPath = path.join(installRoot, "node_modules", "@clawjs", "cli", "bin", "claw.mjs");
   assert.equal(fs.existsSync(binPath), true);
 
   const magicDbTask = runInstalledClawProcess(binPath, installRoot, [

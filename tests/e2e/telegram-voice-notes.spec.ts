@@ -131,7 +131,7 @@ process.stdin.on("end", () => {
     CLAW_SECRETS_PROXY_PATH: proxyPath,
     FAKE_TELEGRAM_PROXY_STATE: statePath,
   };
-  const cli = path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs");
+  const cli = path.join(rootDir, "packages", "clawjs", "bin", "claw.mjs");
 
   async function run(args: string[]) {
     const { spawn } = await import("child_process");

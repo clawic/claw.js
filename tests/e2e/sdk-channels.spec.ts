@@ -353,7 +353,7 @@ process.stdin.on("end", () => {
     });
     fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
 
-    const cliPath = path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs");
+    const cliPath = path.join(rootDir, "packages", "clawjs", "bin", "claw.mjs");
     const cliEnv = {
       ...process.env,
       CI: "1",
