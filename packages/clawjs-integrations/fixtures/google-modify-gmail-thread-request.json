@@ -1,0 +1,15 @@
+{
+  "method": "POST",
+  "url": "https://gmail.googleapis.com/gmail/v1/users/me/threads/thread-123/modify",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "addLabelIds": [
+      "Label_1"
+    ],
+    "removeLabelIds": []
+  }
+}

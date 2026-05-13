@@ -1,0 +1,8 @@
+{
+  "method": "POST",
+  "url": "https://gmail.googleapis.com/gmail/v1/users/me/stop",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret"
+  }
+}

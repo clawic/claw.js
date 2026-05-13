@@ -1,0 +1,13 @@
+{
+  "method": "PUT",
+  "url": "https://gmail.googleapis.com/gmail/v1/users/me/settings/autoForwarding",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "enabled": false,
+    "emailAddress": "forward@example.invalid"
+  }
+}

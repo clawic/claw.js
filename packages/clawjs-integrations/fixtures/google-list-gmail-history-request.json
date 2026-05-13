@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://gmail.googleapis.com/gmail/v1/users/me/history?startHistoryId=1000&maxResults=100&pageToken=offline-page-token",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret"
+  }
+}

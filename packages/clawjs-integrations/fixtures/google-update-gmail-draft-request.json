@@ -1,0 +1,14 @@
+{
+  "method": "PUT",
+  "url": "https://gmail.googleapis.com/gmail/v1/users/me/drafts/draft-123",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "message": {
+      "raw": "RnJvbTogbWVAZXhhbXBsZS5pbnZhbGlkCg=="
+    }
+  }
+}

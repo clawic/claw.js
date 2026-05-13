@@ -1,0 +1,171 @@
+{
+  "id": "item-123",
+  "name": "Sample",
+  "title": "Sample",
+  "emailAddress": "me@example.invalid",
+  "threadId": "thread-123",
+  "historyId": "1000",
+  "expiration": "1893456000000",
+  "resourceId": "resource-123",
+  "startPageToken": "start-token",
+  "files": [
+    {
+      "id": "file-123",
+      "name": "Sample"
+    }
+  ],
+  "changes": [
+    {
+      "fileId": "file-123"
+    }
+  ],
+  "ids": [
+    "generated-id-1"
+  ],
+  "permissions": [
+    {
+      "id": "perm-123",
+      "role": "reader"
+    }
+  ],
+  "comments": [
+    {
+      "id": "comment-123",
+      "content": "Looks good"
+    }
+  ],
+  "replies": [
+    {}
+  ],
+  "revisions": [
+    {
+      "id": "rev-123"
+    }
+  ],
+  "drives": [
+    {
+      "id": "drive-123",
+      "name": "Shared Drive"
+    }
+  ],
+  "messages": [
+    {
+      "id": "msg-123",
+      "threadId": "thread-123"
+    }
+  ],
+  "data": "offline-attachment-data",
+  "threads": [
+    {
+      "id": "thread-123",
+      "messages": []
+    }
+  ],
+  "labels": [
+    {
+      "id": "Label_1",
+      "name": "Claw"
+    }
+  ],
+  "drafts": [
+    {
+      "id": "draft-123",
+      "message": {
+        "id": "msg-123"
+      }
+    }
+  ],
+  "message": {
+    "id": "msg-123"
+  },
+  "history": [
+    {
+      "id": "1000",
+      "messages": []
+    }
+  ],
+  "filter": [
+    {
+      "id": "filter-123"
+    }
+  ],
+  "enabled": true,
+  "accessWindow": "disabled",
+  "enableAutoReply": true,
+  "delegates": [
+    {
+      "delegateEmail": "delegate@example.invalid"
+    }
+  ],
+  "delegateEmail": "delegate@example.invalid",
+  "sendAs": [
+    {
+      "sendAsEmail": "me@example.invalid"
+    }
+  ],
+  "sendAsEmail": "me@example.invalid",
+  "items": [
+    {
+      "id": "item-123",
+      "title": "Sample",
+      "summary": "Sample"
+    }
+  ],
+  "summary": "Sample",
+  "calendars": {
+    "primary": {
+      "busy": []
+    }
+  },
+  "calendar": {},
+  "event": {},
+  "value": "UTC",
+  "spreadsheetId": "spreadsheet-123",
+  "updatedCells": 2,
+  "updates": {
+    "updatedCells": 2
+  },
+  "range": "Sheet1!A1:B2",
+  "values": [
+    [
+      "A",
+      "B"
+    ]
+  ],
+  "valueRanges": [
+    {
+      "range": "Sheet1!A1:B2",
+      "values": [
+        [
+          "A",
+          "B"
+        ]
+      ]
+    }
+  ],
+  "responses": [
+    {
+      "updatedCells": 2
+    }
+  ],
+  "clearedRange": "Sheet1!A1:B2",
+  "clearedRanges": [
+    "Sheet1!A1:B2"
+  ],
+  "sheetId": 0,
+  "documentId": "doc-123",
+  "formId": "form-123",
+  "info": {
+    "title": "Sample Form"
+  },
+  "responseId": "response-123",
+  "watches": [
+    {
+      "id": "watch-123",
+      "eventType": "RESPONSES"
+    }
+  ],
+  "eventType": "RESPONSES",
+  "role": "reader",
+  "content": "Looks good"
+}

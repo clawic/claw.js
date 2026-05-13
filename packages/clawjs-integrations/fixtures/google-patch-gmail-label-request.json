@@ -1,0 +1,12 @@
+{
+  "method": "PATCH",
+  "url": "https://gmail.googleapis.com/gmail/v1/users/me/labels/Label_1",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "name": "Claw Patched"
+  }
+}

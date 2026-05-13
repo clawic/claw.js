@@ -1,0 +1,8 @@
+{
+  "method": "DELETE",
+  "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages/msg-123",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret"
+  }
+}

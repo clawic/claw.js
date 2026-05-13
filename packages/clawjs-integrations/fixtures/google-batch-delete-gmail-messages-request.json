@@ -1,0 +1,14 @@
+{
+  "method": "POST",
+  "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages/batchDelete",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "ids": [
+      "msg-123"
+    ]
+  }
+}

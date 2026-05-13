@@ -1,0 +1,12 @@
+{
+  "method": "PUT",
+  "url": "https://gmail.googleapis.com/gmail/v1/users/me/settings/pop",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "accessWindow": "disabled"
+  }
+}

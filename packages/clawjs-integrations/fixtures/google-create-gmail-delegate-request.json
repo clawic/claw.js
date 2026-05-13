@@ -1,0 +1,12 @@
+{
+  "method": "POST",
+  "url": "https://gmail.googleapis.com/gmail/v1/users/me/settings/delegates",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "delegateEmail": "delegate@example.invalid"
+  }
+}
