@@ -38989,6 +38989,40 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.get-balance-settings",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Balance Settings",
+          "fields": [],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-balance-settings",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Balance Settings",
+          "fields": [
+            {
+              "name": "payments",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "debit_negative_balances": false,
+                "payouts": {
+                  "schedule": {
+                    "interval": "manual"
+                  }
+                }
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

@@ -1121,6 +1121,30 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.update-balance-settings"), {
+      payments: {
+        debit_negative_balances: false,
+        payouts: { schedule: { interval: "manual" } },
+      },
+    }), {
+      method: "POST",
+      endpoint: "balance_settings",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        payments: {
+          debit_negative_balances: false,
+          payouts: { schedule: { interval: "manual" } },
+        },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-apple-pay-domain"), {
       domain_name: "pay.example.invalid",
     }), {

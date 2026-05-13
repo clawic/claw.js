@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/balance_settings",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "payments=%7B%22debit_negative_balances%22%3Afalse%2C%22payouts%22%3A%7B%22schedule%22%3A%7B%22interval%22%3A%22manual%22%7D%7D%7D"
+}
