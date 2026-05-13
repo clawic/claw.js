@@ -422,6 +422,60 @@ describe("stripe operation runtime", () => {
         requiredPaths: ["id", "object"],
       },
     });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-plan"), {
+      currency: "usd",
+      interval: "month",
+      amount: 1200,
+      product: "prod_sample",
+      nickname: "Sample plan",
+      metadata: { order_id: "sample" },
+    }), {
+      method: "POST",
+      endpoint: "plans",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        currency: "usd",
+        interval: "month",
+        amount: 1200,
+        product: "prod_sample",
+        nickname: "Sample plan",
+        metadata: { order_id: "sample" },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-shipping-rate"), {
+      display_name: "Sample shipping",
+      fixed_amount: { amount: 500, currency: "usd" },
+      tax_behavior: "exclusive",
+      tax_code: "txcd_sample",
+      metadata: { order_id: "sample" },
+    }), {
+      method: "POST",
+      endpoint: "shipping_rates",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        display_name: "Sample shipping",
+        fixed_amount: { amount: 500, currency: "usd" },
+        tax_behavior: "exclusive",
+        tax_code: "txcd_sample",
+        metadata: { order_id: "sample" },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
   });
 
   it("covers Stripe payment operations with operation-scoped offline fixtures", async () => {

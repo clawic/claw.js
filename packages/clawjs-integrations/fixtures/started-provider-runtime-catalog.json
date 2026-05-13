@@ -31313,6 +31313,369 @@
           ]
         },
         {
+          "id": "stripe.action.list-plans",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Plans",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "product",
+              "type": "string",
+              "optional": true,
+              "default": "prod_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-plan",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Plan",
+          "fields": [
+            {
+              "name": "currency",
+              "type": "string",
+              "optional": false,
+              "default": "usd"
+            },
+            {
+              "name": "interval",
+              "type": "string",
+              "optional": false,
+              "default": "month"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 1200
+            },
+            {
+              "name": "product",
+              "type": "string",
+              "optional": true,
+              "default": "prod_sample"
+            },
+            {
+              "name": "nickname",
+              "type": "string",
+              "optional": true,
+              "default": "Sample plan"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-plan",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Plan",
+          "fields": [
+            {
+              "name": "plan",
+              "type": "string",
+              "optional": false,
+              "default": "plan_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-plan",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Plan",
+          "fields": [
+            {
+              "name": "plan",
+              "type": "string",
+              "optional": false,
+              "default": "plan_sample"
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "nickname",
+              "type": "string",
+              "optional": true,
+              "default": "Updated plan"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-plan",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Plan",
+          "fields": [
+            {
+              "name": "plan",
+              "type": "string",
+              "optional": false,
+              "default": "plan_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-shipping-rates",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Shipping Rates",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "currency",
+              "type": "string",
+              "optional": true,
+              "default": "usd"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-shipping-rate",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Shipping Rate",
+          "fields": [
+            {
+              "name": "display_name",
+              "type": "string",
+              "optional": false,
+              "default": "Sample shipping"
+            },
+            {
+              "name": "fixed_amount",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "amount": 500,
+                "currency": "usd"
+              }
+            },
+            {
+              "name": "tax_behavior",
+              "type": "string",
+              "optional": true,
+              "default": "exclusive"
+            },
+            {
+              "name": "tax_code",
+              "type": "string",
+              "optional": true,
+              "default": "txcd_sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-shipping-rate",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Shipping Rate",
+          "fields": [
+            {
+              "name": "shippingRateToken",
+              "type": "string",
+              "optional": false,
+              "default": "shr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-shipping-rate",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Shipping Rate",
+          "fields": [
+            {
+              "name": "shippingRateToken",
+              "type": "string",
+              "optional": false,
+              "default": "shr_sample"
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "fixed_amount",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "amount": 500,
+                "currency": "usd"
+              }
+            },
+            {
+              "name": "tax_behavior",
+              "type": "string",
+              "optional": true,
+              "default": "exclusive"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-tax-codes",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Tax Codes",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-tax-code",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Tax Code",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "txcd_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-promotion-codes",
           "appId": "stripe",
           "kind": "action",

@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/shipping_rates/shr_sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "active=true&fixed_amount=%7B%22amount%22%3A500%2C%22currency%22%3A%22usd%22%7D&tax_behavior=exclusive&metadata=%7B%22order_id%22%3A%22sample%22%7D"
+}
