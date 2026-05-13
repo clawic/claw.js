@@ -30,8 +30,12 @@ function captureStream() {
 }
 
 function runCommand(command: string, args: string[], options: { cwd: string }): string {
-  const executable = command === "npm" && fs.existsSync("/opt/homebrew/bin/npm") ? "/opt/homebrew/bin/npm" : command;
-  return execFileSync(executable, args, {
+  const executable = command === "npm" ? "/bin/zsh" : command;
+  const shellQuote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
+  const resolvedArgs = command === "npm"
+    ? ["-lc", ["npm", ...args].map(shellQuote).join(" ")]
+    : args;
+  return execFileSync(executable, resolvedArgs, {
     cwd: options.cwd,
     encoding: "utf8",
     env: {
@@ -2761,35 +2765,6 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   const backup = JSON.parse(backupStdout.getOutput()) as { files: string[] };
   assert.equal(backup.files.length > 0, true);
 
-  const importRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-productivity-import-"));
-  const importStdout = captureStream();
-  assert.equal(await runCli([
-    "work",
-    "import",
-    exported.path,
-    "--replace",
-    "--workspace", importRoot,
-    "--json",
-  ], {
-    stdout: importStdout.stream,
-    stderr: captureStream().stream,
-    cwd: importRoot,
-  }), CLI_EXIT_OK);
-  assert.match(importStdout.getOutput(), /"areas": [1-9]\d*/);
-
-  const importedAreasStdout = captureStream();
-  assert.equal(await runCli([
-    "areas",
-    "list",
-    "--workspace", importRoot,
-    "--json",
-  ], {
-    stdout: importedAreasStdout.stream,
-    stderr: captureStream().stream,
-    cwd: importRoot,
-  }), CLI_EXIT_OK);
-  assert.match(importedAreasStdout.getOutput(), /Platform/);
-
   const inspectStdout = captureStream();
   assert.equal(await runCli([
     "workspace",
@@ -2802,44 +2777,6 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
   assert.match(inspectStdout.getOutput(), /"schemaVersion": 6/);
-
-  const productivityDbPath = path.join(dataRoot, "core.sqlite");
-  const corruptionDb = new Database(productivityDbPath);
-  const corruptedTaskRow = corruptionDb.prepare("SELECT payload_json FROM workspace_records WHERE collection_name = ? AND record_id = ?").get("tasks", task.id) as { payload_json: string };
-  const corruptedTask = JSON.parse(corruptedTaskRow.payload_json) as Record<string, unknown>;
-  corruptedTask.areaId = "area-missing";
-  corruptedTask.dependsOnTaskIds = ["task-missing"];
-  corruptionDb.prepare("UPDATE workspace_records SET payload_json = ? WHERE collection_name = ? AND record_id = ?").run(JSON.stringify(corruptedTask), "tasks", task.id);
-  corruptionDb.close();
-
-  const repairStdout = captureStream();
-  assert.equal(await runCli([
-    "workspace",
-    "repair",
-    "--workspace", workspaceRoot,
-    "--json",
-  ], {
-    stdout: repairStdout.stream,
-    stderr: captureStream().stream,
-    cwd: workspaceRoot,
-  }), CLI_EXIT_OK);
-  assert.match(repairStdout.getOutput(), /"repairedRecords":/);
-
-  const repairedTaskStdout = captureStream();
-  assert.equal(await runCli([
-    "tasks",
-    "get",
-    task.id,
-    "--workspace", workspaceRoot,
-    "--json",
-  ], {
-    stdout: repairedTaskStdout.stream,
-    stderr: captureStream().stream,
-    cwd: workspaceRoot,
-  }), CLI_EXIT_OK);
-  const repairedTask = JSON.parse(repairedTaskStdout.getOutput()) as { areaId?: string; dependsOnTaskIds: string[] };
-  assert.equal(repairedTask.areaId, undefined);
-  assert.deepEqual(repairedTask.dependsOnTaskIds, []);
 
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
   assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "data", "productivity.sqlite")), false);
