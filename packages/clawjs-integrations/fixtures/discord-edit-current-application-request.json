@@ -1,0 +1,24 @@
+{
+  "method": "PATCH",
+  "url": "https://discord.com/api/v10/applications/@me",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "custom_install_url": "sample",
+    "description": "sample",
+    "role_connections_verification_url": "sample",
+    "flags": 1,
+    "icon": "sample",
+    "cover_image": "sample",
+    "interactions_endpoint_url": "sample",
+    "tags": [
+      "sample"
+    ],
+    "event_webhooks_url": "sample",
+    "event_webhooks_status": 1,
+    "event_webhooks_types": []
+  }
+}

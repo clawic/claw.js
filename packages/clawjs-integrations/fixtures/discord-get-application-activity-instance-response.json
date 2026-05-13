@@ -1,0 +1,14 @@
+{
+  "application_id": "sample",
+  "instance_id": "sample",
+  "launch_id": "sample",
+  "location": {
+    "id": "sample",
+    "kind": "gc",
+    "channel_id": "sample",
+    "guild_id": "sample"
+  },
+  "users": [
+    "sample"
+  ]
+}
