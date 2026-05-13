@@ -217,9 +217,11 @@ test("system capabilities CLI uses the active host contract", async () => {
 
     const result = await runCliCapture(["system", "capabilities", "list", "--claw-home", clawHome, "--json"], workspaceRoot);
     assert.equal(result.code, CLI_EXIT_OK, result.stderr);
-    assert.equal(requestPayload?.domain, "system");
-    assert.equal(requestPayload?.resource, "capabilities");
-    assert.equal(requestPayload?.action, "list");
+    assert.ok(requestPayload);
+    const capturedRequest = requestPayload as { domain: string; resource: string; action: string };
+    assert.equal(capturedRequest.domain, "system");
+    assert.equal(capturedRequest.resource, "capabilities");
+    assert.equal(capturedRequest.action, "list");
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
