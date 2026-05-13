@@ -139,6 +139,9 @@ export type DiscordRuntimeOperation =
   | "get-guild-vanity-url"
   | "get-guild-welcome-screen"
   | "modify-guild-welcome-screen"
+  | "get-guild-onboarding"
+  | "modify-guild-onboarding"
+  | "modify-guild-incident-actions"
   | "list-auto-moderation-rules"
   | "get-auto-moderation-rule"
   | "create-auto-moderation-rule"
@@ -567,6 +570,12 @@ export function buildDiscordOperationRequest(
       return getPlan(`guilds/${guildId(values)}/welcome-screen`, auth, headers, { type: "object", requiredPaths: ["welcome_channels", "description"] });
     case "modify-guild-welcome-screen":
       return bodyPlan("PATCH", `guilds/${guildId(values)}/welcome-screen`, auth, auditHeaders(headers, values), welcomeScreenBody(values), { type: "object", requiredPaths: ["welcome_channels", "description"] });
+    case "get-guild-onboarding":
+      return getPlan(`guilds/${guildId(values)}/onboarding`, auth, headers, { type: "object", requiredPaths: ["guild_id", "prompts", "default_channel_ids", "enabled", "mode"] });
+    case "modify-guild-onboarding":
+      return bodyPlan("PUT", `guilds/${guildId(values)}/onboarding`, auth, auditHeaders(headers, values), guildOnboardingBody(values), { type: "object", requiredPaths: ["guild_id", "prompts", "default_channel_ids", "enabled", "mode"] });
+    case "modify-guild-incident-actions":
+      return bodyPlan("PUT", `guilds/${guildId(values)}/incident-actions`, auth, headers, incidentActionsBody(values), { type: "object", requiredPaths: ["invites_disabled_until", "dms_disabled_until"] });
     case "list-auto-moderation-rules":
       return getPlan(`guilds/${guildId(values)}/auto-moderation/rules`, auth, headers, { type: "array" });
     case "get-auto-moderation-rule":
@@ -815,6 +824,9 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "get-guild-vanity-url",
   "get-guild-welcome-screen",
   "modify-guild-welcome-screen",
+  "get-guild-onboarding",
+  "modify-guild-onboarding",
+  "modify-guild-incident-actions",
   "list-auto-moderation-rules",
   "get-auto-moderation-rule",
   "create-auto-moderation-rule",
@@ -1213,6 +1225,24 @@ function welcomeScreenBody(values: Record<string, IntegrationJson>): Record<stri
   });
 }
 
+function guildOnboardingBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    prompts: optionalJsonArray(values.prompts),
+    default_channel_ids: optionalJsonArray(values.defaultChannelIds),
+    enabled: values.enabled,
+    mode: optionalNumber(values.mode),
+  });
+}
+
+function incidentActionsBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  const body: Record<string, IntegrationJson> = {};
+  const invitesDisabledUntil = optionalNullableString(values.invitesDisabledUntil);
+  const dmsDisabledUntil = optionalNullableString(values.dmsDisabledUntil);
+  if (invitesDisabledUntil !== undefined) body.invites_disabled_until = invitesDisabledUntil;
+  if (dmsDisabledUntil !== undefined) body.dms_disabled_until = dmsDisabledUntil;
+  return body;
+}
+
 function roleBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
   return removeEmptyValues({
     name: optionalString(values.name),
@@ -1417,6 +1447,11 @@ function optionalString(value: IntegrationJson): string | undefined {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return undefined;
+}
+
+function optionalNullableString(value: IntegrationJson): string | null | undefined {
+  if (value === null) return null;
+  return optionalString(value);
 }
 
 function optionalNumber(value: IntegrationJson): number | undefined {
