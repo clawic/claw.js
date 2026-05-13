@@ -47,15 +47,17 @@ claw \
 
 ## What Gets Created
 
-The stable SDK-owned layer lives under `.clawjs/`:
+The stable SDK-owned layer lives under `.claw/`:
 
-- `.clawjs/manifest.json`
-- `.clawjs/compat/`
+- `.claw/manifest.json`
 - `.claw/state/desired/`
-- `.clawjs/observed/`
-- `.clawjs/projections/`
-- `.clawjs/sessions/`
-- `.clawjs/data/` when the productivity layer is enabled
+- `.claw/state/observed/`
+- `.claw/projections/`
+- `.claw/sessions/`
+- `.claw/audit/`
+- `.claw/locks/`
+- `.claw/backups/`
+- `.claw/browser/`
 
 The selected adapter also seeds its own runtime-facing files such as
 `SOUL.md`, `AGENTS.md`, `IDENTITY.md`, or `MEMORY.md`.
@@ -63,9 +65,9 @@ The selected adapter also seeds its own runtime-facing files such as
 ## Ownership Rules
 
 - `.claw/state/desired/` stores desired SDK-owned state
-- `.clawjs/observed/` stores rebuildable runtime snapshots
-- `.clawjs/projections/` stores settings-to-file bindings
-- runtime-facing files stay outside `.clawjs/`
+- `.claw/state/observed/` stores rebuildable runtime snapshots
+- `.claw/projections/` stores settings-to-file bindings
+- runtime-facing files stay outside `.claw/`
 
 ## Follow-On References
 

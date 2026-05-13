@@ -23,7 +23,7 @@ real installed runtime.
 | If you are... | Use this path | Why |
 | --- | --- | --- |
 | Creating a new app or agent | `claw new ...` with the generated `demo` scripts | Fastest first success; no external runtime install required. |
-| Wiring ClawJS into an existing repo | Manual workspace init | Keeps your existing project shape and adds `.clawjs/` explicitly. |
+| Wiring ClawJS into an existing repo | Manual workspace init | Keeps your existing project shape and adds `.claw/` explicitly. |
 | Targeting a real runtime | `openclaw` setup | `openclaw` is the production-supported adapter. |
 | Exposing a remote client | Relay after local setup | Relay routes requests to a connected workspace; it is not the first local bootstrap step. |
 
@@ -64,7 +64,7 @@ npm run dev
 Success means:
 
 - the project exists
-- `.clawjs/manifest.json` exists
+- `.claw/manifest.json` exists
 - `npm run claw:status` prints JSON for the `demo` adapter
 - the app starts locally with the generated scripts
 
@@ -132,15 +132,15 @@ Add `--template-pack /path/to/template-pack.json` if you want template mutations
 
 This command creates the stable ClawJS layer:
 
-- `.clawjs/manifest.json`
-- `.clawjs/audit/`
+- `.claw/manifest.json`
+- `.claw/audit/`
 - `.claw/state/desired/`
-- `.clawjs/observed/`
-- `.clawjs/projections/`
-- `.clawjs/backups/`
-- `.clawjs/locks/`
-- `.clawjs/compat/`
-- `.clawjs/sessions/`
+- `.claw/state/observed/`
+- `.claw/projections/`
+- `.claw/backups/`
+- `.claw/locks/`
+- `.claw/browser/`
+- `.claw/sessions/`
 
 It also seeds the runtime-facing files defined by the selected adapter.
 
@@ -236,8 +236,8 @@ Use `workspace inspect` to read file locations and persisted state, and `workspa
 The important ownership rule is:
 
 - `.claw/state/desired/` stores what the user wants
-- `.clawjs/observed/` stores rebuildable snapshots of what the runtime currently reports
-- `.clawjs/projections/` stores how ClawJS projects settings into visible files
+- `.claw/state/observed/` stores rebuildable snapshots of what the runtime currently reports
+- `.claw/projections/` stores how ClawJS projects settings into visible files
 
 ```bash
 claw \

@@ -1,6 +1,6 @@
 ---
 title: Workspace
-description: Learn the stable .clawjs layout, adapter file contracts, and the main workspace operations.
+description: Learn the stable .claw layout, adapter file contracts, and the main workspace operations.
 ---
 
 # Workspace
@@ -14,12 +14,11 @@ container.
 
 ## Stable internal layout
 
-- `.clawjs/manifest.json`
-- `.clawjs/compat/`
+- `.claw/manifest.json`
 - `.claw/state/desired/`
-- `.clawjs/observed/`
-- `.clawjs/projections/`
-- `.clawjs/sessions/`
+- `.claw/state/observed/`
+- `.claw/projections/`
+- `.claw/sessions/`
 
 `state/desired` stores what the user wants, `state/observed` stores rebuildable
 runtime snapshots, and `projections` stores the binding/schema layer
