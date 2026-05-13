@@ -1533,14 +1533,18 @@ function channelInviteBody(values: Record<string, IntegrationJson>): Record<stri
 function applicationCommandBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
   return removeEmptyValues({
     name: requiredString(values.name, "name"),
+    name_localizations: optionalJsonObject(values.nameLocalizations),
     description: optionalString(values.description),
+    description_localizations: optionalJsonObject(values.descriptionLocalizations),
     type: optionalNumber(values.type),
     options: optionalJsonArray(values.options),
     default_member_permissions: optionalString(values.defaultMemberPermissions),
     dm_permission: values.dmPermission,
+    default_permission: values.defaultPermission,
     nsfw: values.nsfw,
     integration_types: optionalJsonArray(values.integrationTypes),
     contexts: optionalJsonArray(values.contexts),
+    handler: optionalNumber(values.handler),
   });
 }
 
