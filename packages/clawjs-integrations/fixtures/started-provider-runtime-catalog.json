@@ -194,6 +194,84 @@
       ]
     },
     {
+      "id": "stripe",
+      "name": "Stripe",
+      "authFieldNames": ["stripeSecretKey"],
+      "fields": [
+        {
+          "name": "stripeSecretKey",
+          "type": "app",
+          "optional": false,
+          "secret": true
+        }
+      ],
+      "operations": [
+        {
+          "id": "stripe.action.create-customer",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Customer",
+          "fields": [
+            { "name": "email", "type": "string", "optional": true },
+            { "name": "name", "type": "string", "optional": true }
+          ],
+          "authFieldNames": ["stripeSecretKey"]
+        },
+        {
+          "id": "stripe.action.create-payment-intent",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Payment Intent",
+          "fields": [
+            { "name": "amount", "type": "integer", "optional": false },
+            { "name": "currency", "type": "string", "optional": false },
+            { "name": "customerId", "type": "string", "optional": true }
+          ],
+          "authFieldNames": ["stripeSecretKey"]
+        },
+        {
+          "id": "stripe.action.get-customer",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Customer",
+          "fields": [
+            { "name": "customerId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["stripeSecretKey"]
+        },
+        {
+          "id": "stripe.action.get-payment-intent",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Payment Intent",
+          "fields": [
+            { "name": "paymentIntentId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["stripeSecretKey"]
+        },
+        {
+          "id": "stripe.action.list-customers",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Customers",
+          "fields": [
+            { "name": "limit", "type": "integer", "optional": true, "default": 10, "min": 1 }
+          ],
+          "authFieldNames": ["stripeSecretKey"]
+        },
+        {
+          "id": "stripe.action.list-payment-intents",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Payment Intents",
+          "fields": [
+            { "name": "limit", "type": "integer", "optional": true, "default": 10, "min": 1 }
+          ],
+          "authFieldNames": ["stripeSecretKey"]
+        }
+      ]
+    },
+    {
       "id": "slack",
       "name": "Slack",
       "authFieldNames": ["slackBotToken"],
