@@ -1703,6 +1703,7 @@ function channelInviteBody(values: Record<string, IntegrationJson>): Record<stri
     target_user_id: optionalString(values.targetUserId),
     target_application_id: optionalString(values.targetApplicationId),
     target_users_file: optionalString(values.targetUsersFile),
+    payload_json: optionalString(values.payloadJson),
     role_ids: optionalJsonArray(values.roleIds),
   });
 }
