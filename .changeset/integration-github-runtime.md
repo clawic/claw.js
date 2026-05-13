@@ -1,5 +1,5 @@
 ---
-"@clawjs/integrations": patch
+"@clawjs/integrations": minor
 ---
 
-Expand offline GitHub runtime coverage across repositories, contents, issues, comments, labels, milestones, pull requests, releases, Actions workflows and runs, repository webhooks, users, gists, and webhook events.
+Expand offline GitHub runtime coverage across commits, commit statuses, collaborators, topics, forks, pull request reviews, deployments, Actions artifacts and jobs, repository secrets metadata, organization membership, search, Git references, and additional webhook events.
