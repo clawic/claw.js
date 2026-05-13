@@ -134,14 +134,12 @@ The productivity instance adds:
 The productivity layer stores user-facing records in the canonical
 Claw main database while the base workspace metadata stays under the
 stable ``.claw/manifest.json`, `state/desired`, `state/observed`, and
-`projections` folders. `.clawjs/` is legacy compatibility only.
+`projections` folders. `.clawjs/` is a retired pre-public path.
 
 The current local-first database path on macOS is
-`~/.claw/data/core.sqlite`. Older
-workspaces that still contain the legacy productivity database are
-detected and migrated by the local data layer. After migration, new
-writes should use `claw db ...`, `@clawjs/workspace`, or the database
-service APIs instead of writing the old file directly.
+`~/.claw/data/core.sqlite`. New writes should use `claw db ...`,
+`@clawjs/workspace`, or the database service APIs instead of writing
+workspace-local SQLite files directly.
 
 That split matters:
 

@@ -91,8 +91,8 @@ for (const snippet of [
 }
 
 const ownership = read("docs/host-ownership.md");
-if (!/\.clawjs[\s\S]{0,120}legacy compatibility only/.test(ownership)) {
-  fail("docs/host-ownership.md must label .clawjs as legacy compatibility only");
+if (!/\.clawjs[\s\S]{0,160}retired pre-public path/.test(ownership)) {
+  fail("docs/host-ownership.md must label .clawjs as a retired pre-public path");
 }
 
 for (const snippet of [

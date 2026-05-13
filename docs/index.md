@@ -72,7 +72,7 @@ Every runtime status includes a typed `capabilityMap`. Capabilities are not impl
 
 ### Stable `.claw/` layer
 
-ClawJS writes new canonical workspace state under `.claw/` even when runtimes disagree on file names or directory structure. Legacy `.clawjs/` paths are compatibility-only until they are removed.
+ClawJS writes new canonical workspace state under `.claw/` even when runtimes disagree on file names or directory structure. `.clawjs/` is a retired pre-public path, not a public compatibility contract.
 
 ## Start Here
 
