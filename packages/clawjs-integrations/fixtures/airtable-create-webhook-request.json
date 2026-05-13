@@ -1,0 +1,21 @@
+{
+  "method": "POST",
+  "url": "https://api.airtable.com/v0/bases/appBase123/webhooks",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-airtableAccessToken-secret"
+  },
+  "body": {
+    "notificationUrl": "https://example.invalid/airtable/webhook",
+    "specification": {
+      "options": {
+        "filters": {
+          "dataTypes": [
+            "tableData"
+          ],
+          "recordChangeScope": "tblTable123"
+        }
+      }
+    }
+  }
+}
