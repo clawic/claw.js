@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/tax/calculations",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "currency=usd&line_items=%7B%22amount%22%3A1200%2C%22reference%22%3A%22line_1%22%2C%22tax_behavior%22%3A%22exclusive%22%2C%22tax_code%22%3A%22txcd_sample%22%7D&customer_details=%7B%22address%22%3A%7B%22country%22%3A%22US%22%2C%22postal_code%22%3A%2294111%22%7D%2C%22address_source%22%3A%22billing%22%7D&shipping_cost=%7B%22amount%22%3A500%7D"
+}

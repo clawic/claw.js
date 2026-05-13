@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://api.stripe.com/v1/tax/registrations?limit=10&status=active",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  }
+}

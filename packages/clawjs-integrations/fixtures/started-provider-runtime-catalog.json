@@ -34485,6 +34485,418 @@
           ]
         },
         {
+          "id": "stripe.action.find-tax-associations",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Find Tax Associations",
+          "fields": [
+            {
+              "name": "payment_intent",
+              "type": "string",
+              "optional": false,
+              "default": "pi_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-tax-calculation",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Tax Calculation",
+          "fields": [
+            {
+              "name": "currency",
+              "type": "string",
+              "optional": false,
+              "default": "usd"
+            },
+            {
+              "name": "line_items",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "amount": 1200,
+                  "reference": "line_1",
+                  "tax_behavior": "exclusive",
+                  "tax_code": "txcd_sample"
+                }
+              ]
+            },
+            {
+              "name": "customer_details",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "address": {
+                  "country": "US",
+                  "postal_code": "94111"
+                },
+                "address_source": "billing"
+              }
+            },
+            {
+              "name": "shipping_cost",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "amount": 500
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-tax-calculation",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Tax Calculation",
+          "fields": [
+            {
+              "name": "calculation",
+              "type": "string",
+              "optional": false,
+              "default": "taxcalc_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-tax-calculation-line-items",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Tax Calculation Line Items",
+          "fields": [
+            {
+              "name": "calculation",
+              "type": "string",
+              "optional": false,
+              "default": "taxcalc_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-tax-registrations",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Tax Registrations",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "optional": true,
+              "default": "active"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-tax-registration",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Tax Registration",
+          "fields": [
+            {
+              "name": "country",
+              "type": "string",
+              "optional": false,
+              "default": "US"
+            },
+            {
+              "name": "active_from",
+              "type": "string",
+              "optional": false,
+              "default": "now"
+            },
+            {
+              "name": "country_options",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "us": {
+                  "type": "local_amusement_tax"
+                }
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-tax-registration",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Tax Registration",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "taxreg_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-tax-registration",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Tax Registration",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "taxreg_sample"
+            },
+            {
+              "name": "active_from",
+              "type": "string",
+              "optional": true,
+              "default": "now"
+            },
+            {
+              "name": "expires_at",
+              "type": "integer",
+              "optional": true,
+              "default": 1893456000
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-tax-settings",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Tax Settings",
+          "fields": [],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-tax-settings",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Tax Settings",
+          "fields": [
+            {
+              "name": "defaults",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "tax_code": "txcd_sample",
+                "tax_behavior": "exclusive"
+              }
+            },
+            {
+              "name": "head_office",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "address": {
+                  "country": "US",
+                  "postal_code": "94111"
+                }
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-tax-transaction-from-calculation",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Tax Transaction From Calculation",
+          "fields": [
+            {
+              "name": "calculation",
+              "type": "string",
+              "optional": false,
+              "default": "taxcalc_sample"
+            },
+            {
+              "name": "reference",
+              "type": "string",
+              "optional": false,
+              "default": "order_123"
+            },
+            {
+              "name": "posted_at",
+              "type": "integer",
+              "optional": true,
+              "default": 1700000000
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-tax-transaction-reversal",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Tax Transaction Reversal",
+          "fields": [
+            {
+              "name": "mode",
+              "type": "string",
+              "optional": false,
+              "default": "full"
+            },
+            {
+              "name": "original_transaction",
+              "type": "string",
+              "optional": false,
+              "default": "taxtxn_sample"
+            },
+            {
+              "name": "reference",
+              "type": "string",
+              "optional": false,
+              "default": "refund_123"
+            },
+            {
+              "name": "flat_amount",
+              "type": "integer",
+              "optional": true,
+              "default": 500
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-tax-transaction",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Tax Transaction",
+          "fields": [
+            {
+              "name": "transaction",
+              "type": "string",
+              "optional": false,
+              "default": "taxtxn_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-tax-transaction-line-items",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Tax Transaction Line Items",
+          "fields": [
+            {
+              "name": "transaction",
+              "type": "string",
+              "optional": false,
+              "default": "taxtxn_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-early-fraud-warnings",
           "appId": "stripe",
           "kind": "action",

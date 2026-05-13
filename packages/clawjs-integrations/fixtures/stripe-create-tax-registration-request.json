@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/tax/registrations",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "country=US&active_from=now&country_options=%7B%22us%22%3A%7B%22type%22%3A%22local_amusement_tax%22%7D%7D"
+}

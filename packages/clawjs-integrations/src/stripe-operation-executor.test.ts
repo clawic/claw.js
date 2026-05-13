@@ -852,6 +852,30 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-tax-calculation"), {
+      currency: "usd",
+      line_items: [{ amount: 1200, reference: "line_1", tax_behavior: "exclusive", tax_code: "txcd_sample" }],
+      customer_details: { address: { country: "US", postal_code: "94111" }, address_source: "billing" },
+      shipping_cost: { amount: 500 },
+    }), {
+      method: "POST",
+      endpoint: "tax/calculations",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        currency: "usd",
+        line_items: [{ amount: 1200, reference: "line_1", tax_behavior: "exclusive", tax_code: "txcd_sample" }],
+        customer_details: { address: { country: "US", postal_code: "94111" }, address_source: "billing" },
+        shipping_cost: { amount: 500 },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.list-setup-attempts"), {
       limit: 10,
       setup_intent: "seti_sample",

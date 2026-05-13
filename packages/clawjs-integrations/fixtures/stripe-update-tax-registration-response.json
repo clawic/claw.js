@@ -1,0 +1,16 @@
+{
+  "id": "stripe_sample",
+  "object": "stripe_object",
+  "status": "succeeded",
+  "url": "https://example.invalid/terminal-link",
+  "secret": "terminal_connection_secret_sample",
+  "deleted": true,
+  "data": [
+    {
+      "id": "stripe_sample",
+      "object": "stripe_object",
+      "status": "succeeded"
+    }
+  ],
+  "has_more": false
+}

@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/tax/settings",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "defaults=%7B%22tax_code%22%3A%22txcd_sample%22%2C%22tax_behavior%22%3A%22exclusive%22%7D&head_office=%7B%22address%22%3A%7B%22country%22%3A%22US%22%2C%22postal_code%22%3A%2294111%22%7D%7D"
+}
