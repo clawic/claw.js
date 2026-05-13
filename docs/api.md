@@ -315,7 +315,7 @@ const features = claw.features.describe();
 The ownership model is the important bit:
 
 - `intent` stores desired SDK-owned state under `.claw/state/desired/`
-- `observed` stores rebuildable runtime-derived state under `.clawjs/observed/`
+- `observed` stores rebuildable runtime-derived state under `.claw/state/observed/`
 - `features.describe()` tells you which domains are adapter-owned, SDK-owned, or mixed before you call `apply()`
 
 That keeps UI and automation code from guessing which side owns a given
@@ -371,7 +371,7 @@ claw.auth.removeProvider("openai");
 ```
 These auth operations also update the canonical provider intent under
 `.claw/state/desired/providers.json`, while observed auth summaries stay
-rebuildable under `.clawjs/observed/providers.json`.
+rebuildable under `.claw/state/observed/providers.json`.
 
 `prepareLogin()` tells you whether ClawJS can reuse existing auth for the
 requested provider or whether an interactive flow still needs to be

@@ -199,25 +199,20 @@ const LIFE_CATALOG_COLLECTION_INDEXES: IndexDefinition[] = [
 ];
 
 export function resolveClawjsDataRoot(env: NodeJS.ProcessEnv = process.env): string {
-  const explicit = env.CLAWJS_MAIN_DATA_DIR || env.CLAWIX_CLAWJS_DATA_DIR || env.CLAW_HOME;
-  if (explicit) return path.resolve(expandHome(explicit));
-  if (process.platform === "win32") {
-    return path.join(env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
-  }
-  if (process.platform === "darwin") {
-    return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
-  }
-  return path.join(env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
+  const explicitData = env.CLAW_DATA_DIR || env.CLAWIX_CLAW_DATA_DIR || env.CLAWJS_MAIN_DATA_DIR || env.CLAWIX_CLAWJS_DATA_DIR;
+  if (explicitData) return path.resolve(expandHome(explicitData));
+  const home = path.resolve(expandHome(env.CLAW_HOME || path.join(os.homedir(), ".claw")));
+  return path.join(home, "data");
 }
 
 export function resolveClawjsMainDbPath(env: NodeJS.ProcessEnv = process.env): string {
-  const explicit = env.CLAWJS_MAIN_DB_PATH || env.CLAWJS_DB_PATH;
+  const explicit = env.CLAW_DB_PATH || env.CLAWJS_MAIN_DB_PATH || env.CLAWJS_DB_PATH;
   if (explicit) return path.resolve(expandHome(explicit));
-  return path.join(resolveClawjsDataRoot(env), "clawjs.sqlite");
+  return path.join(resolveClawjsDataRoot(env), "core.sqlite");
 }
 
 export function resolveClawjsFilesDir(env: NodeJS.ProcessEnv = process.env): string {
-  const explicit = env.CLAWJS_MAIN_FILES_DIR;
+  const explicit = env.CLAW_FILES_DIR || env.CLAWJS_MAIN_FILES_DIR;
   if (explicit) return path.resolve(expandHome(explicit));
   return path.join(resolveClawjsDataRoot(env), "files");
 }
@@ -2503,7 +2498,7 @@ function backupData(outDir: string): JsonRecord {
   for (const suffix of ["", "-wal", "-shm"]) {
     const src = `${dbPath}${suffix}`;
     if (!fs.existsSync(src)) continue;
-    const dest = path.join(outDir, `clawjs.sqlite${suffix}`);
+    const dest = path.join(outDir, `core.sqlite${suffix}`);
     fs.copyFileSync(src, dest);
     copied.push(dest);
   }
@@ -2547,7 +2542,7 @@ function backupData(outDir: string): JsonRecord {
 }
 
 function restoreData(fromDir: string): JsonRecord {
-  const src = path.join(fromDir, "clawjs.sqlite");
+  const src = path.join(fromDir, "core.sqlite");
   if (!fs.existsSync(src)) throw new Error(`Missing backup DB at ${src}`);
   const dest = resolveClawjsMainDbPath();
   fs.mkdirSync(path.dirname(dest), { recursive: true });

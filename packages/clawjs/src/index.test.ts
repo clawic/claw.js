@@ -730,17 +730,17 @@ async function withPatchedEnv<TValue>(
 
 function useIsolatedMainData(t: { after(fn: () => void): void }, workspaceRoot: string): string {
   const previous = new Map([
-    ["CLAWJS_MAIN_DATA_DIR", process.env.CLAWJS_MAIN_DATA_DIR],
-    ["CLAWIX_CLAWJS_DATA_DIR", process.env.CLAWIX_CLAWJS_DATA_DIR],
-    ["CLAWJS_MAIN_DB_PATH", process.env.CLAWJS_MAIN_DB_PATH],
+    ["CLAW_DATA_DIR", process.env.CLAW_DATA_DIR],
+    ["CLAWIX_CLAW_DATA_DIR", process.env.CLAWIX_CLAW_DATA_DIR],
+    ["CLAW_DB_PATH", process.env.CLAW_DB_PATH],
     ["CLAWJS_DB_PATH", process.env.CLAWJS_DB_PATH],
     ["DATABASE_DB_PATH", process.env.DATABASE_DB_PATH],
     ["DATABASE_FILES_DIR", process.env.DATABASE_FILES_DIR],
   ]);
-  const dataRoot = path.join(workspaceRoot, "clawjs-data");
-  process.env.CLAWJS_MAIN_DATA_DIR = dataRoot;
-  delete process.env.CLAWIX_CLAWJS_DATA_DIR;
-  delete process.env.CLAWJS_MAIN_DB_PATH;
+  const dataRoot = path.join(workspaceRoot, "claw-data");
+  process.env.CLAW_DATA_DIR = dataRoot;
+  delete process.env.CLAWIX_CLAW_DATA_DIR;
+  delete process.env.CLAW_DB_PATH;
   delete process.env.CLAWJS_DB_PATH;
   delete process.env.DATABASE_DB_PATH;
   delete process.env.DATABASE_FILES_DIR;
@@ -822,22 +822,40 @@ test("runCli rejects removed public legacy namespaces before V1 routing", async 
   }
 });
 
-test("V2 main data paths default to the Clawix Application Support namespace", () => {
-  assert.match(resolveClawjsDataRoot(), /Clawix[\\/]clawjs$/);
-  assert.match(resolveClawjsMainDbPath(), /Clawix[\\/]clawjs[\\/]clawjs\.sqlite$/);
-  assert.match(resolveClawjsFilesDir(), /Clawix[\\/]clawjs[\\/]files$/);
+test("V2 main data paths default to the Claw home data namespace", () => {
+  assert.equal(resolveClawjsDataRoot({} as NodeJS.ProcessEnv), path.join(os.homedir(), ".claw", "data"));
+  assert.equal(resolveClawjsMainDbPath({} as NodeJS.ProcessEnv), path.join(os.homedir(), ".claw", "data", "core.sqlite"));
+  assert.equal(resolveClawjsFilesDir({} as NodeJS.ProcessEnv), path.join(os.homedir(), ".claw", "data", "files"));
 
   const explicit = path.join(os.tmpdir(), "clawjs-explicit-root");
-  assert.equal(resolveClawjsDataRoot({ CLAWJS_MAIN_DATA_DIR: explicit } as NodeJS.ProcessEnv), explicit);
-  assert.equal(resolveClawjsMainDbPath({ CLAWJS_MAIN_DATA_DIR: explicit } as NodeJS.ProcessEnv), path.join(explicit, "clawjs.sqlite"));
+  assert.equal(resolveClawjsDataRoot({ CLAW_DATA_DIR: explicit } as NodeJS.ProcessEnv), explicit);
+  assert.equal(resolveClawjsMainDbPath({ CLAW_DATA_DIR: explicit } as NodeJS.ProcessEnv), path.join(explicit, "core.sqlite"));
+  assert.equal(
+    resolveClawjsDataRoot({
+      CLAW_HOME: path.join(os.tmpdir(), "claw-home"),
+      CLAW_DATA_DIR: explicit,
+    } as NodeJS.ProcessEnv),
+    explicit,
+  );
+  assert.equal(
+    resolveClawjsDataRoot({ CLAW_HOME: path.join(os.tmpdir(), "claw-home") } as NodeJS.ProcessEnv),
+    path.join(os.tmpdir(), "claw-home", "data"),
+  );
+  assert.equal(
+    resolveClawjsMainDbPath({
+      CLAW_DATA_DIR: explicit,
+      CLAW_DB_PATH: path.join(os.tmpdir(), "custom-core.sqlite"),
+    } as NodeJS.ProcessEnv),
+    path.join(os.tmpdir(), "custom-core.sqlite"),
+  );
 });
 
 test("runCli manages V2 knowledge, notes, profile, business, and search domains in the main sqlite", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-data-"));
   await withPatchedEnv({
-    CLAWJS_MAIN_DATA_DIR: tempRoot,
-    CLAWIX_CLAWJS_DATA_DIR: undefined,
-    CLAWJS_MAIN_DB_PATH: undefined,
+    CLAW_DATA_DIR: tempRoot,
+    CLAWIX_CLAW_DATA_DIR: undefined,
+    CLAW_DB_PATH: undefined,
     CLAWJS_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
     DATABASE_FILES_DIR: undefined,
@@ -1065,7 +1083,7 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     assert.match(fs.readFileSync(mcpConfig, "utf8"), /^model = "gpt"/);
     assert.match(fs.readFileSync(mcpConfig, "utf8"), /enabled = false/);
 
-    const main = new Database(path.join(tempRoot, "clawjs.sqlite"), { readonly: true });
+    const main = new Database(path.join(tempRoot, "core.sqlite"), { readonly: true });
     try {
       assert.equal((main.prepare("SELECT secret_ref FROM agents WHERE id = ?").get("agent-ops") as { secret_ref: string }).secret_ref, "vault://agents/ops");
       assert.deepEqual(JSON.parse((main.prepare("SELECT secret_refs_json FROM skills WHERE slug = ?").get("deploy") as { secret_refs_json: string }).secret_refs_json), ["vault://skills/deploy-token"]);
@@ -1107,9 +1125,9 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
 test("runCli indexes external Codex session artifacts without owning their raw bodies", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v1-sessions-"));
   await withPatchedEnv({
-    CLAWJS_MAIN_DATA_DIR: path.join(tempRoot, "data"),
-    CLAWIX_CLAWJS_DATA_DIR: undefined,
-    CLAWJS_MAIN_DB_PATH: undefined,
+    CLAW_DATA_DIR: path.join(tempRoot, "data"),
+    CLAWIX_CLAW_DATA_DIR: undefined,
+    CLAW_DB_PATH: undefined,
     CLAWJS_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
     DATABASE_FILES_DIR: undefined,
@@ -1179,9 +1197,9 @@ test("runCli indexes external Codex session artifacts without owning their raw b
 test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime, search, and backup reset", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-sidecars-"));
   await withPatchedEnv({
-    CLAWJS_MAIN_DATA_DIR: path.join(tempRoot, "data"),
-    CLAWIX_CLAWJS_DATA_DIR: undefined,
-    CLAWJS_MAIN_DB_PATH: undefined,
+    CLAW_DATA_DIR: path.join(tempRoot, "data"),
+    CLAWIX_CLAW_DATA_DIR: undefined,
+    CLAW_DB_PATH: undefined,
     CLAWJS_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
     DATABASE_FILES_DIR: undefined,
@@ -1341,9 +1359,9 @@ test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime
 test("runCli reset covers V2 main DB legacy service tables when present", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-reset-"));
   await withPatchedEnv({
-    CLAWJS_MAIN_DATA_DIR: tempRoot,
-    CLAWIX_CLAWJS_DATA_DIR: undefined,
-    CLAWJS_MAIN_DB_PATH: undefined,
+    CLAW_DATA_DIR: tempRoot,
+    CLAWIX_CLAW_DATA_DIR: undefined,
+    CLAW_DB_PATH: undefined,
     CLAWJS_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
   }, async () => {
@@ -1370,7 +1388,7 @@ test("runCli reset covers V2 main DB legacy service tables when present", async 
       "temporal_projections",
       "wiki_spaces",
     ];
-    const db = new Database(path.join(tempRoot, "clawjs.sqlite"));
+    const db = new Database(path.join(tempRoot, "core.sqlite"));
     try {
       for (const table of tables) {
         db.exec(`CREATE TABLE IF NOT EXISTS ${table} (id TEXT PRIMARY KEY)`);
@@ -1392,7 +1410,7 @@ test("runCli reset covers V2 main DB legacy service tables when present", async 
       }), CLI_EXIT_OK);
     }
 
-    const readonly = new Database(path.join(tempRoot, "clawjs.sqlite"), { readonly: true });
+    const readonly = new Database(path.join(tempRoot, "core.sqlite"), { readonly: true });
     try {
       for (const table of tables) {
         assert.equal((readonly.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get() as { count: number }).count, 0, table);
@@ -1407,9 +1425,9 @@ test("runCli reset covers V2 main DB legacy service tables when present", async 
 test("runCli reset clears V2 sidecar service tables when present", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-sidecar-reset-"));
   await withPatchedEnv({
-    CLAWJS_MAIN_DATA_DIR: tempRoot,
-    CLAWIX_CLAWJS_DATA_DIR: undefined,
-    CLAWJS_MAIN_DB_PATH: undefined,
+    CLAW_DATA_DIR: tempRoot,
+    CLAWIX_CLAW_DATA_DIR: undefined,
+    CLAW_DB_PATH: undefined,
     CLAWJS_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
   }, async () => {
@@ -1451,9 +1469,9 @@ test("runCli reset clears V2 sidecar service tables when present", async () => {
 test("runCli mirrors local memory into V2 knowledge and profile projection", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-memory-"));
   await withPatchedEnv({
-    CLAWJS_MAIN_DATA_DIR: tempRoot,
-    CLAWIX_CLAWJS_DATA_DIR: undefined,
-    CLAWJS_MAIN_DB_PATH: undefined,
+    CLAW_DATA_DIR: tempRoot,
+    CLAWIX_CLAW_DATA_DIR: undefined,
+    CLAW_DB_PATH: undefined,
     CLAWJS_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
     DATABASE_FILES_DIR: undefined,
@@ -1530,6 +1548,31 @@ test("runCli prints db-specific help and database admin help", async () => {
   }), CLI_EXIT_OK);
   assert.match(adminStdout.getOutput(), /Usage: claw database serve\|login/);
   assert.match(adminStdout.getOutput(), /canonical: Local database admin surface/);
+});
+
+test("runCli keeps public help short and gates the advanced surface behind --all", async () => {
+  const help = await runCliCapture(["--help"], process.cwd());
+  assert.equal(help.code, CLI_EXIT_OK);
+  assert.match(help.stdout, /Usage: claw <command> \[options\]/);
+  assert.match(help.stdout, /Run `claw --help --all` for advanced commands\./);
+  assert.doesNotMatch(help.stdout, /^\s+context\s+canonical/m);
+  assert.doesNotMatch(help.stdout, /^\s+compat\s+canonical/m);
+
+  const allHelp = await runCliCapture(["--help", "--all"], process.cwd());
+  assert.equal(allHelp.code, CLI_EXIT_OK);
+  assert.match(allHelp.stdout, /Advanced commands:/);
+  assert.match(allHelp.stdout, /^\s+context\s+canonical/m);
+  assert.match(allHelp.stdout, /^\s+compat\s+canonical/m);
+
+  const hostHelp = await runCliCapture(["host", "--help"], process.cwd());
+  assert.equal(hostHelp.code, CLI_EXIT_OK);
+  assert.match(hostHelp.stdout, /Usage: claw host/);
+  assert.match(hostHelp.stdout, /services/);
+  assert.match(hostHelp.stdout, /capabilities/);
+
+  const systemCapabilitiesHelp = await runCliCapture(["system", "capabilities", "--help"], process.cwd());
+  assert.equal(systemCapabilitiesHelp.code, CLI_EXIT_OK);
+  assert.match(systemCapabilitiesHelp.stdout, /Usage: claw system capabilities/);
 });
 
 test("runCli supports implicit db create, schema inspection, human output, and alias parity", async (t) => {
@@ -2113,7 +2156,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   assert.equal(schema.collection.name, "leads");
   assert.equal(schema.collection.fields.some((field) => field.name === "title"), true);
 
-  assert.equal(fs.existsSync(path.join(dataRoot, "clawjs.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
   assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "data", "database.sqlite")), false);
   assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "data", "productivity.sqlite")), false);
   assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "workspace.manifest.json")), false);
@@ -2759,7 +2802,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   }), CLI_EXIT_OK);
   assert.match(inspectStdout.getOutput(), /"schemaVersion": 6/);
 
-  const productivityDbPath = path.join(dataRoot, "clawjs.sqlite");
+  const productivityDbPath = path.join(dataRoot, "core.sqlite");
   const corruptionDb = new Database(productivityDbPath);
   const corruptedTaskRow = corruptionDb.prepare("SELECT payload_json FROM workspace_records WHERE collection_name = ? AND record_id = ?").get("tasks", task.id) as { payload_json: string };
   const corruptedTask = JSON.parse(corruptedTaskRow.payload_json) as Record<string, unknown>;
@@ -2797,7 +2840,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   assert.equal(repairedTask.areaId, undefined);
   assert.deepEqual(repairedTask.dependsOnTaskIds, []);
 
-  assert.equal(fs.existsSync(path.join(dataRoot, "clawjs.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
   assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "data", "productivity.sqlite")), false);
   assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "workspace.manifest.json")), false);
   assert.ok(note.id);
@@ -2811,7 +2854,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
     core: path.resolve(process.cwd(), "packages/clawjs-core"),
     claw: path.resolve(process.cwd(), "packages/clawjs-node"),
     workspace: path.resolve(process.cwd(), "packages/clawjs-workspace"),
-    database: path.resolve(process.cwd(), "packages/clawjs-database"),
+    database: path.resolve(process.cwd(), "packages/claw-database"),
     mp: path.resolve(process.cwd(), "packages/clawjs-mp"),
     profile: path.resolve(process.cwd(), "packages/clawjs-profile"),
     audio: path.resolve(process.cwd(), "packages/clawjs-audio"),
@@ -2887,7 +2930,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.equal(magicSchema.exists, true);
   assert.equal(magicSchema.collection.name, "leads");
 
-  assert.equal(fs.existsSync(path.join(dataRoot, "clawjs.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
   assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "data", "database.sqlite")), false);
   assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "data", "productivity.sqlite")), false);
   assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "workspace.manifest.json")), false);
@@ -3343,7 +3386,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "backups",
     "--json",
   ])) as { files: string[] };
-  assert.equal(backup.files.some((filePath) => filePath.endsWith("clawjs.sqlite")), true);
+  assert.equal(backup.files.some((filePath) => filePath.endsWith("core.sqlite")), true);
 
   const importRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-installed-import-"));
   const imported = JSON.parse(runInstalledClaw(binPath, importRoot, [
@@ -3371,7 +3414,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.match(dbTask.stderr, /Using local database for this project/);
   assert.match(dbTask.stdout, /Created task \S+ "Magic fallback"/);
 
-  assert.equal(fs.existsSync(path.join(dataRoot, "clawjs.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
   assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "data", "database.sqlite")), false);
   assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "data", "productivity.sqlite")), false);
   assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "workspace.manifest.json")), false);
@@ -3423,7 +3466,7 @@ test("runCli migrates legacy workspace sqlite productivity data into the local d
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
   assert.match(listStdout.getOutput(), /Imported task/);
-  assert.equal(fs.existsSync(path.join(dataRoot, "clawjs.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
   assert.equal(fs.existsSync(legacyDbPath), true);
   assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "data", "productivity.sqlite")), true);
 });
@@ -3769,9 +3812,9 @@ test("runCli handles Telegram /new session reset without model latency", () => {
   const childEnv: Record<string, string | undefined> = {
     ...process.env,
     CLAWJS_TEST_WORKSPACE: workspaceRoot,
-    CLAWJS_MAIN_DATA_DIR: path.join(workspaceRoot, "clawjs-data"),
+    CLAW_DATA_DIR: path.join(workspaceRoot, "claw-data"),
   };
-  for (const key of ["CLAWIX_CLAWJS_DATA_DIR", "CLAWJS_MAIN_DB_PATH", "CLAWJS_DB_PATH", "DATABASE_DB_PATH", "DATABASE_FILES_DIR"]) {
+  for (const key of ["CLAWIX_CLAW_DATA_DIR", "CLAW_DB_PATH", "CLAWJS_DB_PATH", "DATABASE_DB_PATH", "DATABASE_FILES_DIR"]) {
     delete childEnv[key];
   }
   const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
@@ -6016,7 +6059,7 @@ test("runCli supports temporal domain commands and hidden legacy aliases", async
       host: "127.0.0.1",
       port: 0,
       dataDir: path.join(tmpDir, "data"),
-      dbPath: path.join(tmpDir, "data", "clawjs.sqlite"),
+      dbPath: path.join(tmpDir, "data", "core.sqlite"),
       defaultTimeZone: "UTC",
       schedulerIntervalMs: 50,
     },
@@ -6291,7 +6334,7 @@ test("runCli supports heartbeat routines with deterministic gates", async () => 
       host: "127.0.0.1",
       port: 0,
       dataDir: path.join(tmpDir, "time-data"),
-      dbPath: path.join(tmpDir, "time-data", "clawjs.sqlite"),
+      dbPath: path.join(tmpDir, "time-data", "core.sqlite"),
       defaultTimeZone: "UTC",
       schedulerIntervalMs: 50,
     },

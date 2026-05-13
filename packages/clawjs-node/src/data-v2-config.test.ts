@@ -33,9 +33,9 @@ import { loadTimeConfig } from "../../../time/src/server/config.ts";
 test("V2 data configs route canonical domains to main DB and sidecars under the ClawJS root", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-v2-config-"));
   withPatchedEnv({
-    CLAWJS_MAIN_DATA_DIR: root,
-    CLAWIX_CLAWJS_DATA_DIR: undefined,
-    CLAWJS_MAIN_DB_PATH: undefined,
+    CLAW_DATA_DIR: root,
+    CLAWIX_CLAW_DATA_DIR: undefined,
+    CLAW_DB_PATH: undefined,
     USER_MODEL_DATA_DIR: undefined,
     USER_MODEL_DB_PATH: undefined,
     TRACKING_DATA_DIR: undefined,
@@ -68,26 +68,26 @@ test("V2 data configs route canonical domains to main DB and sidecars under the 
     IOT_DB_PATH: undefined,
   }, () => {
     assert.equal(loadUserModelConfig().dataDir, root);
-    assert.equal(loadUserModelConfig().dbPath, path.join(root, "clawjs.sqlite"));
+    assert.equal(loadUserModelConfig().dbPath, path.join(root, "core.sqlite"));
 
     const tracking = loadTrackingServiceConfig({ domain: "sleep", defaultPort: 4701 });
     assert.equal(tracking.dataDir, root);
-    assert.equal(tracking.dbPath, path.join(root, "clawjs.sqlite"));
+    assert.equal(tracking.dbPath, path.join(root, "core.sqlite"));
 
     assert.equal(loadRuntimeConfig().dbPath, path.join(root, "runtime.sqlite"));
     assert.equal(loadSessionsConfig().dbPath, path.join(root, "sessions.sqlite"));
     assert.equal(loadAudioConfig().dbPath, path.join(root, "audio.sqlite"));
     assert.equal(loadIndexConfig().dbPath, path.join(root, "search.sqlite"));
-    assert.equal(loadMCPConfig().dbPath, path.join(root, "clawjs.sqlite"));
-    assert.equal(loadChannelConfig("telegram").dbPath, path.join(root, "clawjs.sqlite"));
+    assert.equal(loadMCPConfig().dbPath, path.join(root, "core.sqlite"));
+    assert.equal(loadChannelConfig("telegram").dbPath, path.join(root, "core.sqlite"));
     assert.equal(loadVoiceConfig().dbPath, path.join(root, "audio.sqlite"));
     assert.equal(loadVoiceConfig().outputDir, path.join(root, "audio"));
     assert.equal(loadSandboxConfig().dbPath, path.join(root, "runtime.sqlite"));
-    assert.equal(loadContentConfig().dbPath, path.join(root, "clawjs.sqlite"));
-    assert.equal(loadErpConfig().dbPath, path.join(root, "clawjs.sqlite"));
-    assert.equal(loadPublishingConfig().dbPath, path.join(root, "clawjs.sqlite"));
-    assert.equal(loadTimeConfig().dbPath, path.join(root, "clawjs.sqlite"));
-    assert.equal(loadIotConfig().dbPath, path.join(root, "clawjs.sqlite"));
+    assert.equal(loadContentConfig().dbPath, path.join(root, "core.sqlite"));
+    assert.equal(loadErpConfig().dbPath, path.join(root, "core.sqlite"));
+    assert.equal(loadPublishingConfig().dbPath, path.join(root, "core.sqlite"));
+    assert.equal(loadTimeConfig().dbPath, path.join(root, "core.sqlite"));
+    assert.equal(loadIotConfig().dbPath, path.join(root, "core.sqlite"));
     assert.equal(loadNotifyConfig().dbPath, path.join(root, "notify.sqlite"));
     assert.equal(loadFeedConfig().dbPath, path.join(root, "feed.sqlite"));
     assert.equal(loadDelegationPlaneConfig().databaseFile, path.join(root, "runtime.sqlite"));
@@ -98,15 +98,15 @@ test("V2 workspace collections and context memory use the main DB", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-v2-main-stores-"));
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-v2-main-workspace-"));
   withPatchedEnv({
-    CLAWJS_MAIN_DATA_DIR: root,
-    CLAWIX_CLAWJS_DATA_DIR: undefined,
-    CLAWJS_MAIN_DB_PATH: undefined,
+    CLAW_DATA_DIR: root,
+    CLAWIX_CLAW_DATA_DIR: undefined,
+    CLAW_DB_PATH: undefined,
   }, () => {
     const collectionStore = createSqliteWorkspaceCollectionStore(workspaceDir);
-    assert.equal(collectionStore.dbPath(), path.join(root, "clawjs.sqlite"));
+    assert.equal(collectionStore.dbPath(), path.join(root, "core.sqlite"));
     collectionStore.collection("tasks").put("task_1", { id: "task_1", title: "Ship main DB" });
 
-    const sqlite = new Database(path.join(root, "clawjs.sqlite"));
+    const sqlite = new Database(path.join(root, "core.sqlite"));
     sqlite.exec(`
       CREATE TABLE IF NOT EXISTS knowledge_entities (
         id TEXT PRIMARY KEY,
@@ -169,7 +169,7 @@ test("V2 workspace collections and context memory use the main DB", () => {
 
     const apps = createAppsStore();
     const app = apps.create({ name: "V2 App", slug: "v2-app", indexHtml: "<!doctype html><title>V2</title>" });
-    const appsSqlite = new Database(path.join(root, "clawjs.sqlite"));
+    const appsSqlite = new Database(path.join(root, "core.sqlite"));
     const row = appsSqlite.prepare("SELECT slug, root_path, manifest_json FROM apps WHERE id = ?").get(app.id) as { slug: string; root_path: string; manifest_json: string };
     assert.equal(row.slug, "v2-app");
     assert.equal(row.root_path, path.join(root, "apps", "v2-app"));

@@ -15,7 +15,7 @@ The watcher surface has two layers:
 | Method | Description |
 |----|----|
 | `file(fileName, callback, options?)` | Watches one workspace-relative file. |
-| `transcript(sessionId, callback, options?)` | Watches `.clawjs/sessions/<session-id>.jsonl` for changes. |
+| `transcript(sessionId, callback, options?)` | Watches `.claw/sessions/<session-id>.jsonl` for changes. |
 | `runtimeStatus(callback, options?)` | Polls `claw.runtime.status()` and emits changed values. |
 | `providerStatus(callback, options?)` | Polls provider auth summaries and emits changed values. |
 | `events(type, listener)` | Subscribes to the internal event bus for one event type or `*`. |

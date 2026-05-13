@@ -77,12 +77,10 @@ export async function runOpenDatabase(args) {
   const port = flags.port ? Number(flags.port) : Number(process.env.DATABASE_PORT ?? 7790);
   const host = flags.host ?? flags.bind ?? process.env.DATABASE_HOST ?? "127.0.0.1";
   const workspace = flags.workspace ?? process.env.CLAWJS_WORKSPACE ?? process.cwd();
-  const defaultDataDir = process.platform === "darwin"
-    ? path.join(process.env.HOME || "", "Library", "Application Support", "Clawix", "clawjs")
-    : path.join(process.env.HOME || "", ".clawjs");
-  const dataDir = flags["data-dir"] ?? process.env.CLAWJS_MAIN_DATA_DIR ?? defaultDataDir;
+  const defaultDataDir = path.join(process.env.CLAW_HOME ?? path.join(process.env.HOME || "", ".claw"), "data");
+  const dataDir = flags["data-dir"] ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWJS_MAIN_DATA_DIR ?? process.env.CLAWIX_CLAWJS_DATA_DIR ?? defaultDataDir;
   const filesDir = flags["files-dir"] ?? path.join(dataDir, "files");
-  const dbPath = flags["db-path"] ?? process.env.CLAWJS_MAIN_DB_PATH ?? path.join(dataDir, "clawjs.sqlite");
+  const dbPath = flags["db-path"] ?? process.env.CLAW_DB_PATH ?? process.env.CLAWJS_MAIN_DB_PATH ?? path.join(dataDir, "core.sqlite");
   const statusFile = flags["status-file"];
 
   const buildDatabaseApp = await loadBuildDatabaseApp();

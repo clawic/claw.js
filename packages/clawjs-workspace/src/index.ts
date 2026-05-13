@@ -6914,7 +6914,9 @@ async function createWorkspaceExtension(
     },
     create: async (input) => {
       if (useTimeService) {
+        const eventId = toId("event", input.id);
         const created = await claw.time.create({
+          id: eventId,
           kind: "event",
           title: input.title,
           description: input.description,
@@ -6924,7 +6926,7 @@ async function createWorkspaceExtension(
           participants: (input.attendeePersonIds ?? []).map((personId) => ({ kind: "human", label: personId, personId })),
           actions: (input.reminders ?? []).map((reminder) => ({ kind: "notify", target: reminder.channel, id: reminder.id })),
           projections: [{
-            id: `${input.id ?? "event"}-workspace-events`,
+            id: `${eventId}-workspace-events`,
             target: "workspace_events",
             provider: "workspace",
             detail: {

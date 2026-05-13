@@ -8,13 +8,13 @@ import type { TestContext } from "node:test";
 import { createLocalStorageStore } from "./store.ts";
 
 function useIsolatedStorageDataDir(t: TestContext, workspaceDir: string): void {
-  const previous = process.env.CLAWJS_MAIN_DATA_DIR;
-  process.env.CLAWJS_MAIN_DATA_DIR = path.join(workspaceDir, ".data");
+  const previous = process.env.CLAW_DATA_DIR;
+  process.env.CLAW_DATA_DIR = path.join(workspaceDir, ".data");
   t.after(() => {
     if (previous === undefined) {
-      delete process.env.CLAWJS_MAIN_DATA_DIR;
+      delete process.env.CLAW_DATA_DIR;
     } else {
-      process.env.CLAWJS_MAIN_DATA_DIR = previous;
+      process.env.CLAW_DATA_DIR = previous;
     }
   });
 }

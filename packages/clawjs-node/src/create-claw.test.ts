@@ -1026,7 +1026,7 @@ test("createClaw exposes the time namespace when configured", async () => {
       host: "127.0.0.1",
       port: 0,
       dataDir,
-      dbPath: path.join(dataDir, "clawjs.sqlite"),
+      dbPath: path.join(dataDir, "core.sqlite"),
       defaultTimeZone: "Europe/Madrid",
       schedulerIntervalMs: 60_000,
     },
@@ -1114,7 +1114,7 @@ test("createClaw embeds the time engine by default", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-time-sdk-embedded-"));
   const dataRoot = path.join(workspaceDir, "clawjs-data");
   await withPatchedEnv({
-    CLAWJS_MAIN_DATA_DIR: dataRoot,
+    CLAW_DATA_DIR: dataRoot,
   }, async () => {
     const claw = await createClaw({
       runtime: { adapter: "demo" },
@@ -1142,7 +1142,7 @@ test("createClaw embeds the time engine by default", async () => {
     assert.equal(signalled.items[0]?.id, created.item.id);
     assert.equal(signalled.items[0]?.status, "cancelled");
 
-    assert.equal(fs.existsSync(path.join(dataRoot, "clawjs.sqlite")), true);
+    assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
     assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite")), false);
   });
 });

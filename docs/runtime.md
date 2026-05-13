@@ -83,7 +83,7 @@ Runtime-facing files are defined per adapter, not globally. Examples:
 - **PicoClaw:** \`SOUL.md\`, \`USER.md\`, \`AGENTS.md\`,
   \`IDENTITY.md\`, \`memory/MEMORY.md\`
 
-ClawJS keeps its own managed layer under `.clawjs/` independently of
+ClawJS keeps its own managed layer under `.claw/` independently of
 those runtime contracts. A runtime adapter selects the workspace
 contract; the workspace then hosts one agent identity or many, depending
 on adapter behavior.

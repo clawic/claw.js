@@ -84,7 +84,7 @@ ClawJS writes new canonical workspace state under `.claw/` even when runtimes di
 
 ### Build apps
 
-- [Workspace](/workspace) for the stable `.clawjs` layout and the `@clawjs/workspace` productivity layer.
+- [Workspace](/workspace) for the stable `.claw` layout and the `@clawjs/workspace` productivity layer.
 - [Sessions](/sessions) for stored conversations, streaming, documents, title generation, and native runtime chat boundaries.
 - [Local Agent Asset Library](/local-library) for reusable skills, instruction modules, and bundles assigned to local agents.
 - [Agent Rules](/agent-rules/) for compact prompt-injected ClawJS operating instructions.

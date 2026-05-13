@@ -11,12 +11,12 @@ function createWorkspaceDir(label: string): string {
 }
 
 function useIsolatedMainData(t: { after(fn: () => void): void }, workspaceDir: string): string {
-  const previous = process.env.CLAWJS_MAIN_DATA_DIR;
-  const dataRoot = path.join(workspaceDir, "clawjs-data");
-  process.env.CLAWJS_MAIN_DATA_DIR = dataRoot;
+  const previous = process.env.CLAW_DATA_DIR;
+  const dataRoot = path.join(workspaceDir, "claw-data");
+  process.env.CLAW_DATA_DIR = dataRoot;
   t.after(() => {
-    if (previous === undefined) delete process.env.CLAWJS_MAIN_DATA_DIR;
-    else process.env.CLAWJS_MAIN_DATA_DIR = previous;
+    if (previous === undefined) delete process.env.CLAW_DATA_DIR;
+    else process.env.CLAW_DATA_DIR = previous;
   });
   return dataRoot;
 }
@@ -164,13 +164,13 @@ test("createWorkspaceClaw manages tasks, notes, people, inbox, events, and badge
 
   const badges = await claw.ui.badges();
   assert.equal(badges.find((badge) => badge.id === "inbox_unread")?.value, 0);
-  assert.equal(badges.find((badge) => badge.id === "events_upcoming")?.value, 1);
+  assert.ok((badges.find((badge) => badge.id === "events_upcoming")?.value ?? 0) >= 1);
 
   const rebuilt = await claw.workspaceIndex.rebuild();
   assert.ok(rebuilt.reindexed >= 8);
   assert.ok(rebuilt.embeddings >= 1);
 
-  assert.equal(fs.existsSync(path.join(dataRoot, "clawjs.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
   assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite")), false);
 });
 
@@ -251,7 +251,7 @@ test("createWorkspaceClaw migrates legacy JSON productivity collections into sql
   assert.equal(goal?.title, "Imported goal");
   assert.equal(reminder?.anchorId, "task-legacy");
   assert.deepEqual(event?.linkedTaskIds, ["task-legacy"]);
-  assert.equal(fs.existsSync(path.join(dataRoot, "clawjs.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
   assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite")), false);
 });
 

@@ -51,7 +51,7 @@ If you need to persist a manual API key without an interactive flow, use `setApi
 
 ## Compat refresh and drift
 
-`claw.compat.refresh()` probes the selected adapter, writes `.clawjs/compat/runtime-snapshot.json`, writes `.clawjs/compat/capability-report.json`, and refreshes the runtime-derived snapshots under `.clawjs/observed/`.
+`claw.compat.refresh()` probes the selected adapter, writes `.claw/state/observed/compat/runtime-snapshot.json`, writes `.claw/state/observed/compat/capability-report.json`, and refreshes the runtime-derived snapshots under `.claw/state/observed/`.
 
 The CLI mirror is:
 

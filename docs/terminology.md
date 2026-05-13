@@ -27,7 +27,7 @@ A workspace is the isolated operational directory managed by ClawJS.
 
 It combines:
 
-- the stable `.clawjs/` layer
+- the stable `.claw/` layer
 - the runtime-facing files declared by the selected runtime adapter
 - the persisted state and sessions associated with that isolated context
 

@@ -75,8 +75,9 @@ the platform quickly.
 The current layout intentionally replaces older root names:
 
 - `execution-plane/` became `execution/`.
-- `delegation-plane/` became `delegation/`.
-- `badger/` became `publishing/`.
+- The old delegation plane area is retired; queue/runtime work uses `jobs`,
+  and agent assignment remains `delegation`.
+- The old social publishing workspace became `publishing/`.
 - `public/` became `assets/`.
 - `demo/` and `mock/` moved under `examples/`.
 

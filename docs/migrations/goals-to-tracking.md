@@ -31,7 +31,7 @@ user who downgrades their Clawix Mac to a version without
 
    ```bash
    node scripts/migrate-iot-goals.mjs \
-     --source ~/.clawjs/iot.sqlite \
+    --source ~/.claw/data/iot.sqlite \
      --target http://127.0.0.1:4762 \
      --token "$GOALS_SHARED_SECRET" \
      --dry-run

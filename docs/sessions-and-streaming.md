@@ -10,7 +10,7 @@ canonical reference now lives in [Sessions](/sessions).
 
 ## Quick Reference
 
-- Session transcripts live under `.clawjs/sessions/<session-id>.jsonl`
+- Session transcripts live under `.claw/sessions/<session-id>.jsonl`
 - `claw.sessions` exposes session CRUD, title generation, session
   search, structured event streaming, and raw chunk streaming
 - `claw sessions stream --events` emits the same normalized event model

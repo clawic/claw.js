@@ -16,8 +16,8 @@ reflects the actual public API shipped by `@clawjs/claw`.
 | `applyTemplatePack(templatePackPath?, options?)` | Loads a template pack from disk and applies it to the current workspace. |
 | `diffBinding(binding, settings, render)` | Previews the result of a binding sync without writing. |
 | `syncBinding(binding, settings, render)` | Applies a single binding to its target file. |
-| `readBindingStore()`, `writeBindingStore(bindings)` | Read or replace the binding store under `.clawjs/projections/file-bindings.json`. |
-| `readSettingsSchema()`, `writeSettingsSchema(schema)` | Read or replace the persisted schema under `.clawjs/projections/settings-schema.json`. |
+| `readBindingStore()`, `writeBindingStore(bindings)` | Read or replace the binding store under `.claw/projections/file-bindings.json`. |
+| `readSettingsSchema()`, `writeSettingsSchema(schema)` | Read or replace the persisted schema under `.claw/projections/settings-schema.json`. |
 | `readSettingsValues()`, `writeSettingsValues(values)` | Read or replace file-setting intent under `.claw/state/desired/files.json`. |
 | `validateSettings(values)` | Validates candidate settings against the persisted schema. |
 | `renderTemplate(template, values)` | Renders a settings template string with plain object values. |

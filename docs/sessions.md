@@ -5,7 +5,7 @@ description: Session storage, normalized stream events, and adapter-aware transp
 
 # Sessions
 
-Session data lives in `.clawjs/sessions/<session-id>.jsonl`. The store keeps session headers and message events in a line-delimited format, independent of the selected runtime adapter.
+Session data lives in `.claw/sessions/<session-id>.jsonl`. The store keeps session headers and message events in a line-delimited format, independent of the selected runtime adapter.
 
 ## Which Surface To Use
 
@@ -48,7 +48,7 @@ type DocumentRef = {
 
 Use `claw.documents.upload()` or `claw.documents.register()` first, then attach the
 returned refs to the message. ClawJS keeps the canonical blob in the workspace and
-persists only document refs in `.clawjs/sessions/<session-id>.jsonl`.
+persists only document refs in `.claw/sessions/<session-id>.jsonl`.
 
 CLI equivalents:
 

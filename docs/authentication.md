@@ -27,7 +27,7 @@ Auth writes now update two separate layers on purpose:
 
 - `.claw/state/desired/providers.json` for desired provider state and
   preferred auth mode
-- `.clawjs/observed/providers.json` for the rebuildable snapshot of
+- `.claw/state/observed/providers.json` for the rebuildable snapshot of
   current runtime auth
 
 For the OpenClaw adapter, `claw.auth.status()` treats persisted auth-store

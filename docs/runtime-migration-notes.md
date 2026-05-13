@@ -11,7 +11,7 @@ This repo keeps compatibility normalization logic for the current workspace snap
 
 Current compat snapshots live at:
 
-- `.clawjs/compat/runtime-snapshot.json`
+- `.claw/state/observed/compat/runtime-snapshot.json`
 
 `migrateCompatSnapshot()` normalizes the current snapshot payload into the current compat schema. `repairWorkspace()` calls that normalization after it recreates the internal workspace layout.
 

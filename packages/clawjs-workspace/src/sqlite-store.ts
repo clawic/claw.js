@@ -30,24 +30,22 @@ function assertSafeName(name: string, label: string): string {
 }
 
 function resolveCollectionsDir(workspaceDir: string): string {
+  // Legacy read-only import path. New canonical workspace state lives under .claw/.
   return path.join(workspaceDir, ".clawjs", "data", "collections");
 }
 
 function resolveDatabasePath(workspaceDir: string): string {
+  if (process.env.CLAW_DB_PATH) return expandHome(process.env.CLAW_DB_PATH);
   if (process.env.CLAWJS_MAIN_DB_PATH) return expandHome(process.env.CLAWJS_MAIN_DB_PATH);
-  return path.join(resolveClawjsDataRoot(workspaceDir), "clawjs.sqlite");
+  return path.join(resolveClawjsDataRoot(workspaceDir), "core.sqlite");
 }
 
 function resolveClawjsDataRoot(_workspaceDir: string): string {
+  if (process.env.CLAW_DATA_DIR) return expandHome(process.env.CLAW_DATA_DIR);
+  if (process.env.CLAWIX_CLAW_DATA_DIR) return expandHome(process.env.CLAWIX_CLAW_DATA_DIR);
   if (process.env.CLAWJS_MAIN_DATA_DIR) return expandHome(process.env.CLAWJS_MAIN_DATA_DIR);
   if (process.env.CLAWIX_CLAWJS_DATA_DIR) return expandHome(process.env.CLAWIX_CLAWJS_DATA_DIR);
-  if (process.platform === "darwin") {
-    return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
-  }
-  if (process.platform === "win32") {
-    return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
-  }
-  return path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
+  return path.join(expandHome(process.env.CLAW_HOME || path.join(os.homedir(), ".claw")), "data");
 }
 
 function expandHome(value: string): string {
