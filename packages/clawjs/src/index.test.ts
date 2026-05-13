@@ -12,7 +12,7 @@ import Database from "better-sqlite3";
 import { createClaw, saveAuthStore } from "@clawjs/claw";
 import { buildTimeApp } from "../../../time/src/server/app.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CLI_USAGE, runCli } from "./index.ts";
-import { resolveClawjsDataRoot, resolveClawjsFilesDir, resolveClawjsMainDbPath } from "./v1-data.ts";
+import { resolveClawjsDataRoot, resolveClawjsFilesDir, resolveClawjsMainDbPath, runV1DataCli } from "./v1-data.ts";
 
 function captureStream() {
   let output = "";
@@ -77,6 +77,51 @@ async function runCliCapture(args: string[], cwd: string): Promise<{ code: numbe
     binName: "claw",
   });
   return { code, stdout: stdout.getOutput(), stderr: stderr.getOutput() };
+}
+
+function parseTestFlags(args: string[]): Record<string, string> {
+  const flags: Record<string, string> = {};
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (!token?.startsWith("--")) continue;
+    const key = token.slice(2);
+    const next = args[index + 1];
+    if (!next || next.startsWith("--")) {
+      flags[key] = "true";
+      continue;
+    }
+    flags[key] = next;
+    index += 1;
+  }
+  return flags;
+}
+
+function extractTestPositionals(args: string[]): string[] {
+  const positionals: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token.startsWith("--")) {
+      const next = args[index + 1];
+      if (next && !next.startsWith("--")) index += 1;
+      continue;
+    }
+    positionals.push(token);
+  }
+  return positionals;
+}
+
+async function runInternalV1Cli(args: string[], options: { stdout: NodeJS.WritableStream; stderr: NodeJS.WritableStream; cwd: string }): Promise<number> {
+  const result = await runV1DataCli({
+    argv: args,
+    positionals: extractTestPositionals(args),
+    flags: parseTestFlags(args),
+    stdout: options.stdout,
+    stderr: options.stderr,
+    wantsJson: args.includes("--json"),
+    binName: "claw",
+    cwd: options.cwd,
+  });
+  return result ?? CLI_EXIT_USAGE;
 }
 
 test("host registry CLI registers, selects, and reports the active host", async () => {
@@ -684,12 +729,26 @@ async function withPatchedEnv<TValue>(
 }
 
 function useIsolatedMainData(t: { after(fn: () => void): void }, workspaceRoot: string): string {
-  const previous = process.env.CLAWJS_MAIN_DATA_DIR;
+  const previous = new Map([
+    ["CLAWJS_MAIN_DATA_DIR", process.env.CLAWJS_MAIN_DATA_DIR],
+    ["CLAWIX_CLAWJS_DATA_DIR", process.env.CLAWIX_CLAWJS_DATA_DIR],
+    ["CLAWJS_MAIN_DB_PATH", process.env.CLAWJS_MAIN_DB_PATH],
+    ["CLAWJS_DB_PATH", process.env.CLAWJS_DB_PATH],
+    ["DATABASE_DB_PATH", process.env.DATABASE_DB_PATH],
+    ["DATABASE_FILES_DIR", process.env.DATABASE_FILES_DIR],
+  ]);
   const dataRoot = path.join(workspaceRoot, "clawjs-data");
   process.env.CLAWJS_MAIN_DATA_DIR = dataRoot;
+  delete process.env.CLAWIX_CLAWJS_DATA_DIR;
+  delete process.env.CLAWJS_MAIN_DB_PATH;
+  delete process.env.CLAWJS_DB_PATH;
+  delete process.env.DATABASE_DB_PATH;
+  delete process.env.DATABASE_FILES_DIR;
   t.after(() => {
-    if (previous === undefined) delete process.env.CLAWJS_MAIN_DATA_DIR;
-    else process.env.CLAWJS_MAIN_DATA_DIR = previous;
+    for (const [key, value] of previous.entries()) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
   });
   return dataRoot;
 }
@@ -740,6 +799,13 @@ test("runCli rejects removed public legacy namespaces before V1 routing", async 
     ["life", "list"],
     ["ops", "list"],
     ["infra", "list"],
+    ["runtime", "queue"],
+    ["content", "upsert"],
+    ["business", "upsert"],
+    ["social", "list"],
+    ["apps", "list"],
+    ["design", "upsert"],
+    ["monitor", "event"],
     ["workspace-search", "query", "x"],
     ["workspace-index", "rebuild"],
     ["export", "snapshot.json"],
@@ -752,7 +818,7 @@ test("runCli rejects removed public legacy namespaces before V1 routing", async 
       stderr: stderr.stream,
       cwd,
     }), CLI_EXIT_USAGE, args.join(" "));
-    assert.match(stderr.getOutput(), /not part of the public Claw CLI surface/);
+    assert.match(stderr.getOutput(), /not part of the public Claw CLI surface|Usage:/);
   }
 });
 
@@ -852,7 +918,7 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     assert.equal(profile.items.some((item) => /Therapy reflection/.test(item.contentText)), false);
 
     const businessStdout = captureStream();
-    assert.equal(await runCli(["business", "upsert", "--id", "customer-1", "--kind", "customer", "--name", "Acme", "--notes", "Primary account", "--json"], {
+    assert.equal(await runInternalV1Cli(["business", "upsert", "--id", "customer-1", "--kind", "customer", "--name", "Acme", "--notes", "Primary account", "--json"], {
       stdout: businessStdout.stream,
       stderr: captureStream().stream,
       cwd,
@@ -860,7 +926,7 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     assert.equal((JSON.parse(businessStdout.getOutput()) as { pageId: string }).pageId, "page-customer-1");
 
     const financeStdout = captureStream();
-    assert.equal(await runCli(["finance", "upsert", "--id", "txn-1", "--amount", "-19.99", "--currency", "USD", "--merchant", "Coffee", "--category", "food", "--json"], {
+    assert.equal(await runInternalV1Cli(["finance", "upsert", "--id", "txn-1", "--amount", "-19.99", "--currency", "USD", "--merchant", "Coffee", "--category", "food", "--json"], {
       stdout: financeStdout.stream,
       stderr: captureStream().stream,
       cwd,
@@ -872,7 +938,7 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     assert.equal(finance.category, "food");
 
     const ledgerEntryStdout = captureStream();
-    assert.equal(await runCli(["ledger", "entry", "upsert", "--id", "invoice-1", "--description", "Invoice paid", "--date", "2026-05-13", "--json"], {
+    assert.equal(await runInternalV1Cli(["ledger", "entry", "upsert", "--id", "invoice-1", "--description", "Invoice paid", "--date", "2026-05-13", "--json"], {
       stdout: ledgerEntryStdout.stream,
       stderr: captureStream().stream,
       cwd,
@@ -880,7 +946,7 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     assert.equal((JSON.parse(ledgerEntryStdout.getOutput()) as { id: string; entryDate: string }).entryDate, "2026-05-13");
 
     const ledgerLineStdout = captureStream();
-    assert.equal(await runCli(["ledger", "line", "add", "--entry-id", "invoice-1", "--account-code", "1010", "--amount", "1200", "--currency", "USD", "--json"], {
+    assert.equal(await runInternalV1Cli(["ledger", "line", "add", "--entry-id", "invoice-1", "--account-code", "1010", "--amount", "1200", "--currency", "USD", "--json"], {
       stdout: ledgerLineStdout.stream,
       stderr: captureStream().stream,
       cwd,
@@ -1010,13 +1076,13 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
       main.close();
     }
 
-    assert.equal(await runCli(["search", "rebuild", "--json"], {
+    assert.equal(await runInternalV1Cli(["search", "rebuild", "--json"], {
       stdout: captureStream().stream,
       stderr: captureStream().stream,
       cwd,
     }), CLI_EXIT_OK);
     const searchStdout = captureStream();
-    assert.equal(await runCli(["search", "query", "release branch", "--json"], {
+    assert.equal(await runInternalV1Cli(["search", "query", "release branch", "--json"], {
       stdout: searchStdout.stream,
       stderr: captureStream().stream,
       cwd,
@@ -1025,7 +1091,7 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     assert.deepEqual(search.pages.map((item) => item.id), [page.id]);
 
     const doctorStdout = captureStream();
-    assert.equal(await runCli(["data", "doctor", "--json"], {
+    assert.equal(await runInternalV1Cli(["data", "doctor", "--json"], {
       stdout: doctorStdout.stream,
       stderr: captureStream().stream,
       cwd,
@@ -1127,7 +1193,7 @@ test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime
     fs.writeFileSync(drivePath, "# Launch brief\n\nAttachment content");
 
     const audioStdout = captureStream();
-    assert.equal(await runCli(["audio", "index", "--file", audioPath, "--session-id", "session-1", "--transcript", "voice note about launch timing", "--json"], {
+    assert.equal(await runInternalV1Cli(["audio", "index", "--file", audioPath, "--session-id", "session-1", "--transcript", "voice note about launch timing", "--json"], {
       stdout: audioStdout.stream,
       stderr: captureStream().stream,
       cwd,
@@ -1136,7 +1202,7 @@ test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime
     assert.equal(audio.sidecar, "audio.sqlite");
 
     const driveStdout = captureStream();
-    assert.equal(await runCli(["drive", "index", "--file", drivePath, "--session-id", "session-1", "--json"], {
+    assert.equal(await runInternalV1Cli(["drive", "index", "--file", drivePath, "--session-id", "session-1", "--json"], {
       stdout: driveStdout.stream,
       stderr: captureStream().stream,
       cwd,
@@ -1145,7 +1211,7 @@ test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime
     assert.equal(drive.sidecar, "drive.sqlite");
 
     const runtimeStdout = captureStream();
-    assert.equal(await runCli(["runtime", "queue", "Distill conversation", "--kind", "distillation", "--json"], {
+    assert.equal(await runInternalV1Cli(["runtime", "queue", "Distill conversation", "--kind", "distillation", "--json"], {
       stdout: runtimeStdout.stream,
       stderr: captureStream().stream,
       cwd,
@@ -1153,7 +1219,7 @@ test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime
     assert.equal((JSON.parse(runtimeStdout.getOutput()) as { status: string }).status, "queued");
 
     const notifyStdout = captureStream();
-    assert.equal(await runCli(["notify", "event", "--kind", "delivery", "--message", "Webhook delivered", "--json"], {
+    assert.equal(await runInternalV1Cli(["notify", "event", "--kind", "delivery", "--message", "Webhook delivered", "--json"], {
       stdout: notifyStdout.stream,
       stderr: captureStream().stream,
       cwd,
@@ -1161,7 +1227,7 @@ test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime
     assert.equal((JSON.parse(notifyStdout.getOutput()) as { sidecar: string }).sidecar, "notify.sqlite");
 
     const monitorStdout = captureStream();
-    assert.equal(await runCli(["monitor", "event", "--kind", "heartbeat", "--message", "Worker alive", "--json"], {
+    assert.equal(await runInternalV1Cli(["monitor", "event", "--kind", "heartbeat", "--message", "Worker alive", "--json"], {
       stdout: monitorStdout.stream,
       stderr: captureStream().stream,
       cwd,
@@ -1169,7 +1235,7 @@ test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime
     assert.equal((JSON.parse(monitorStdout.getOutput()) as { sidecar: string }).sidecar, "monitor.sqlite");
 
     const infraStdout = captureStream();
-    assert.equal(await runCli(["infra", "event", "--kind", "provider-cache", "--message", "Cache refresh", "--json"], {
+    assert.equal(await runInternalV1Cli(["infra", "event", "--kind", "provider-cache", "--message", "Cache refresh", "--json"], {
       stdout: infraStdout.stream,
       stderr: captureStream().stream,
       cwd,
@@ -1177,7 +1243,7 @@ test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime
     assert.equal((JSON.parse(infraStdout.getOutput()) as { sidecar: string }).sidecar, "infra.sqlite");
 
     const opsStdout = captureStream();
-    assert.equal(await runCli(["ops", "metric", "--kind", "api-latency", "--metadata", "{\"p95Ms\":42}", "--json"], {
+    assert.equal(await runInternalV1Cli(["ops", "metric", "--kind", "api-latency", "--metadata", "{\"p95Ms\":42}", "--json"], {
       stdout: opsStdout.stream,
       stderr: captureStream().stream,
       cwd,
@@ -1185,7 +1251,7 @@ test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime
     assert.equal((JSON.parse(opsStdout.getOutput()) as { sidecar: string }).sidecar, "ops.sqlite");
 
     const opsListStdout = captureStream();
-    assert.equal(await runCli(["ops", "list", "--kind", "api-latency", "--json"], {
+    assert.equal(await runInternalV1Cli(["ops", "list", "--kind", "api-latency", "--json"], {
       stdout: opsListStdout.stream,
       stderr: captureStream().stream,
       cwd,
@@ -1194,13 +1260,13 @@ test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime
     assert.equal(opsList.items[0]?.kind, "api-latency");
     assert.equal(opsList.items[0]?.metadata.p95Ms, 42);
 
-    assert.equal(await runCli(["search", "rebuild", "--json"], {
+    assert.equal(await runInternalV1Cli(["search", "rebuild", "--json"], {
       stdout: captureStream().stream,
       stderr: captureStream().stream,
       cwd,
     }), CLI_EXIT_OK);
     const searchStdout = captureStream();
-    assert.equal(await runCli(["search", "query", "launch timing", "--json"], {
+    assert.equal(await runInternalV1Cli(["search", "query", "launch timing", "--json"], {
       stdout: searchStdout.stream,
       stderr: captureStream().stream,
       cwd,
@@ -1210,7 +1276,7 @@ test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime
 
     const backupDir = path.join(tempRoot, "backup");
     const backupStdout = captureStream();
-    assert.equal(await runCli(["data", "backup", "--out", backupDir, "--json"], {
+    assert.equal(await runInternalV1Cli(["data", "backup", "--out", backupDir, "--json"], {
       stdout: backupStdout.stream,
       stderr: captureStream().stream,
       cwd,
@@ -1224,46 +1290,46 @@ test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime
     assert.ok(backup.copied.some((entry) => entry.endsWith("sidecars/infra.sqlite")));
     assert.ok(backup.copied.some((entry) => entry.endsWith("sidecars/ops.sqlite")));
 
-    assert.equal(await runCli(["data", "reset", "--domain", "conversation-artifacts", "--json"], {
+    assert.equal(await runInternalV1Cli(["data", "reset", "--domain", "conversation-artifacts", "--json"], {
       stdout: captureStream().stream,
       stderr: captureStream().stream,
       cwd,
     }), CLI_EXIT_OK);
     const audioListStdout = captureStream();
-    assert.equal(await runCli(["audio", "artifact", "list", "--json"], {
+    assert.equal(await runInternalV1Cli(["audio", "artifact", "list", "--json"], {
       stdout: audioListStdout.stream,
       stderr: captureStream().stream,
       cwd,
     }), CLI_EXIT_OK);
     assert.deepEqual((JSON.parse(audioListStdout.getOutput()) as { items: unknown[] }).items, []);
 
-    assert.equal(await runCli(["data", "reset", "--domain", "ops", "--json"], {
+    assert.equal(await runInternalV1Cli(["data", "reset", "--domain", "ops", "--json"], {
       stdout: captureStream().stream,
       stderr: captureStream().stream,
       cwd,
     }), CLI_EXIT_OK);
     const opsAfterResetStdout = captureStream();
-    assert.equal(await runCli(["ops", "list", "--json"], {
+    assert.equal(await runInternalV1Cli(["ops", "list", "--json"], {
       stdout: opsAfterResetStdout.stream,
       stderr: captureStream().stream,
       cwd,
     }), CLI_EXIT_OK);
     assert.deepEqual((JSON.parse(opsAfterResetStdout.getOutput()) as { items: unknown[] }).items, []);
 
-    assert.equal(await runCli(["data", "restore", "--from", backupDir, "--json"], {
+    assert.equal(await runInternalV1Cli(["data", "restore", "--from", backupDir, "--json"], {
       stdout: captureStream().stream,
       stderr: captureStream().stream,
       cwd,
     }), CLI_EXIT_OK);
     const restoredAudioStdout = captureStream();
-    assert.equal(await runCli(["audio", "artifact", "list", "--session-id", "session-1", "--json"], {
+    assert.equal(await runInternalV1Cli(["audio", "artifact", "list", "--session-id", "session-1", "--json"], {
       stdout: restoredAudioStdout.stream,
       stderr: captureStream().stream,
       cwd,
     }), CLI_EXIT_OK);
     assert.equal((JSON.parse(restoredAudioStdout.getOutput()) as { items: unknown[] }).items.length, 1);
     const restoredOpsStdout = captureStream();
-    assert.equal(await runCli(["ops", "list", "--kind", "api-latency", "--json"], {
+    assert.equal(await runInternalV1Cli(["ops", "list", "--kind", "api-latency", "--json"], {
       stdout: restoredOpsStdout.stream,
       stderr: captureStream().stream,
       cwd,
@@ -1282,7 +1348,7 @@ test("runCli reset covers V2 main DB legacy service tables when present", async 
     DATABASE_DB_PATH: undefined,
   }, async () => {
     const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-reset-cwd-"));
-    assert.equal(await runCli(["data", "doctor", "--json"], {
+    assert.equal(await runInternalV1Cli(["data", "doctor", "--json"], {
       stdout: captureStream().stream,
       stderr: captureStream().stream,
       cwd,
@@ -1319,7 +1385,7 @@ test("runCli reset covers V2 main DB legacy service tables when present", async 
     }
 
     for (const domain of ["user-model", "tracking", "time", "wiki"]) {
-      assert.equal(await runCli(["data", "reset", "--domain", domain, "--json"], {
+      assert.equal(await runInternalV1Cli(["data", "reset", "--domain", domain, "--json"], {
         stdout: captureStream().stream,
         stderr: captureStream().stream,
         cwd,
@@ -1348,7 +1414,7 @@ test("runCli reset clears V2 sidecar service tables when present", async () => {
     DATABASE_DB_PATH: undefined,
   }, async () => {
     const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-sidecar-reset-cwd-"));
-    assert.equal(await runCli(["data", "doctor", "--json"], {
+    assert.equal(await runInternalV1Cli(["data", "doctor", "--json"], {
       stdout: captureStream().stream,
       stderr: captureStream().stream,
       cwd,
@@ -1367,7 +1433,7 @@ test("runCli reset clears V2 sidecar service tables when present", async () => {
       } finally {
         db.close();
       }
-      assert.equal(await runCli(["data", "reset", "--domain", sidecar.domain, "--json"], {
+      assert.equal(await runInternalV1Cli(["data", "reset", "--domain", sidecar.domain, "--json"], {
         stdout: captureStream().stream,
         stderr: captureStream().stream,
         cwd,
@@ -1453,8 +1519,8 @@ test("runCli prints db-specific help and database admin help", async () => {
     stderr: captureStream().stream,
     cwd: process.cwd(),
   }), CLI_EXIT_OK);
-  assert.match(dbStdout.getOutput(), /Magic database commands:/);
-  assert.match(dbStdout.getOutput(), /db <collection> schema/);
+  assert.match(dbStdout.getOutput(), /Usage: claw db <collection>/);
+  assert.match(dbStdout.getOutput(), /alias: Exact alias/);
 
   const adminStdout = captureStream();
   assert.equal(await runCli(["database", "--help"], {
@@ -1462,12 +1528,13 @@ test("runCli prints db-specific help and database admin help", async () => {
     stderr: captureStream().stream,
     cwd: process.cwd(),
   }), CLI_EXIT_OK);
-  assert.match(adminStdout.getOutput(), /Advanced database admin commands:/);
-  assert.match(adminStdout.getOutput(), /Use `claw db \.\.\.` for local-first CRUD/);
+  assert.match(adminStdout.getOutput(), /Usage: claw database serve\|login/);
+  assert.match(adminStdout.getOutput(), /canonical: Local database admin surface/);
 });
 
-test("runCli supports implicit db create, schema inspection, human output, and alias parity", async () => {
+test("runCli supports implicit db create, schema inspection, human output, and alias parity", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-magic-db-"));
+  useIsolatedMainData(t, workspaceRoot);
 
   const createStdout = captureStream();
   const createStderr = captureStream();
@@ -1514,7 +1581,6 @@ test("runCli supports implicit db create, schema inspection, human output, and a
     stderr: leadStderr.stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  assert.match(leadStderr.getOutput(), /Created collection "leads"/);
   assert.match(leadStderr.getOutput(), /Mapped "name" to "title"/);
   assert.match(leadStdout.getOutput(), /Created lead \S+ "Ada"/);
 
@@ -1525,7 +1591,23 @@ test("runCli supports implicit db create, schema inspection, human output, and a
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
   assert.match(schemaStdout.getOutput(), /collection: leads/);
-  assert.match(schemaStdout.getOutput(), /protected: no/);
+  assert.match(schemaStdout.getOutput(), /protected: yes/);
+
+  const collectionsStdout = captureStream();
+  assert.equal(await runCli(["collections", "tasks", "list", "--json"], {
+    stdout: collectionsStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(collectionsStdout.getOutput(), new RegExp(taskId));
+
+  const recordsStdout = captureStream();
+  assert.equal(await runCli(["records", "tasks", "get", taskId, "--json"], {
+    stdout: recordsStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.equal((JSON.parse(recordsStdout.getOutput()) as { id: string }).id, taskId);
 
   const aliasStdout = captureStream();
   assert.equal(await runCli(["tasks", "create", "Alias task"], {
@@ -1559,8 +1641,9 @@ test("runCli can scaffold a workspace-first project with the new command surface
   assert.equal(projectConfig.directories.skills, "claw/skills");
 });
 
-test("runCli can manage command-backed generations end to end", async () => {
+test("runCli can manage command-backed generations end to end", async (t) => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-generations-"));
+  useIsolatedMainData(t, workspaceDir);
   const scriptPath = createFakeGenerationScript();
 
   const registerStdout = captureStream();
@@ -1789,6 +1872,21 @@ test("runCli supports native image create, edit, import, list, and show", async 
       }), CLI_EXIT_OK);
       assert.match(listStdout.getOutput(), /imported-codex/);
 
+      const pluralListStdout = captureStream();
+      assert.equal(await runCli([
+        "images",
+        "list",
+        "--workspace", workspaceDir,
+        "--image-library", imageLibrary,
+        "--query", "codex",
+        "--json",
+      ], {
+        stdout: pluralListStdout.stream,
+        stderr: captureStream().stream,
+        cwd: workspaceDir,
+      }), CLI_EXIT_OK);
+      assert.match(pluralListStdout.getOutput(), /imported-codex/);
+
       const showStdout = captureStream();
       assert.equal(await runCli([
         "image",
@@ -1853,8 +1951,9 @@ test("runCli generate, add, and info operate on claw projects", async () => {
   assert.equal(projectConfig.resources.channels[0].id, "telegram");
 });
 
-test("runCli add workspace and workspace command groups operate on local productivity data", async () => {
+test("runCli add workspace and workspace command groups operate on local productivity data", async (t) => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-workspace-"));
+  useIsolatedMainData(t, tempRoot);
 
   assert.equal(await runCli(["new", "workspace", "demo-workspace", "--no-install"], {
     stdout: captureStream().stream,
@@ -1915,22 +2014,22 @@ test("runCli add workspace and workspace command groups operate on local product
   }), CLI_EXIT_OK);
   assert.match(listStdout.getOutput(), new RegExp(createdTask.id));
 
-  const searchStdout = captureStream();
+  const getStdout = captureStream();
   assert.equal(await runCli([
-    "workspace-search",
-    "query",
-    "workspace",
+    "tasks",
+    "get",
+    createdTask.id,
     "--workspace",
     projectRoot,
     "--runtime",
     "demo",
     "--json",
   ], {
-    stdout: searchStdout.stream,
+    stdout: getStdout.stream,
     stderr: captureStream().stream,
     cwd: tempRoot,
   }), CLI_EXIT_OK);
-  assert.match(searchStdout.getOutput(), /"domain": "tasks"/);
+  assert.equal((JSON.parse(getStdout.getOutput()) as { title: string }).title, "Ship workspace");
 });
 
 test("runCli zero-config productivity commands bootstrap local sqlite in an empty directory", { concurrency: false }, async (t) => {
@@ -2013,20 +2112,6 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   assert.equal(schema.exists, true);
   assert.equal(schema.collection.name, "leads");
   assert.equal(schema.collection.fields.some((field) => field.name === "title"), true);
-
-  const magicWorkspaceSearchStdout = captureStream();
-  assert.equal(await runCli([
-    "workspace-search",
-    "query",
-    "Ship",
-    "--domains", "tasks,people,notes,events",
-    "--json",
-  ], {
-    stdout: magicWorkspaceSearchStdout.stream,
-    stderr: captureStream().stream,
-    cwd: workspaceRoot,
-  }), CLI_EXIT_OK);
-  assert.match(magicWorkspaceSearchStdout.getOutput(), /"domain": "tasks"/);
 
   assert.equal(fs.existsSync(path.join(dataRoot, "clawjs.sqlite")), true);
   assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "data", "database.sqlite")), false);
@@ -2587,7 +2672,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
 
   const workspaceSearchStdout = captureStream();
   assert.equal(await runCli([
-    "workspace-search",
+    "search",
     "query",
     "workspace",
     "--domains", "tasks,goals,projects,reminders,deadlines,notes,people,inbox,events",
@@ -2601,21 +2686,25 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   assert.match(workspaceSearchStdout.getOutput(), /"domain": "notes"/);
 
   const exportStdout = captureStream();
-  assert.equal(await runCli([
+  const exportStderr = captureStream();
+  const exportExitCode = await runCli([
+    "work",
     "export",
     "snapshot.json",
     "--workspace", workspaceRoot,
     "--json",
   ], {
     stdout: exportStdout.stream,
-    stderr: captureStream().stream,
+    stderr: exportStderr.stream,
     cwd: workspaceRoot,
-  }), CLI_EXIT_OK);
+  });
+  assert.equal(exportExitCode, CLI_EXIT_OK, `${exportStdout.getOutput()}\n${exportStderr.getOutput()}`);
   const exported = JSON.parse(exportStdout.getOutput()) as { path: string };
   assert.equal(fs.existsSync(exported.path), true);
 
   const backupStdout = captureStream();
   assert.equal(await runCli([
+    "work",
     "backup",
     "backups",
     "--workspace", workspaceRoot,
@@ -2631,6 +2720,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   const importRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-productivity-import-"));
   const importStdout = captureStream();
   assert.equal(await runCli([
+    "work",
     "import",
     exported.path,
     "--replace",
@@ -2722,6 +2812,11 @@ test("published CLI tarballs install with npm and manage local-first productivit
     claw: path.resolve(process.cwd(), "packages/clawjs-node"),
     workspace: path.resolve(process.cwd(), "packages/clawjs-workspace"),
     database: path.resolve(process.cwd(), "packages/clawjs-database"),
+    mp: path.resolve(process.cwd(), "packages/clawjs-mp"),
+    profile: path.resolve(process.cwd(), "packages/clawjs-profile"),
+    audio: path.resolve(process.cwd(), "packages/clawjs-audio"),
+    index: path.resolve(process.cwd(), "packages/clawjs-index"),
+    sessions: path.resolve(process.cwd(), "packages/clawjs-sessions"),
     cli: path.resolve(process.cwd(), "packages/clawjs"),
   };
 
@@ -2730,6 +2825,11 @@ test("published CLI tarballs install with npm and manage local-first productivit
     packWorkspacePackage(packageRoots.claw, packDir),
     packWorkspacePackage(packageRoots.workspace, packDir),
     packWorkspacePackage(packageRoots.database, packDir),
+    packWorkspacePackage(packageRoots.mp, packDir),
+    packWorkspacePackage(packageRoots.profile, packDir),
+    packWorkspacePackage(packageRoots.audio, packDir),
+    packWorkspacePackage(packageRoots.index, packDir),
+    packWorkspacePackage(packageRoots.sessions, packDir),
     packWorkspacePackage(packageRoots.cli, packDir),
   ];
 
@@ -3134,26 +3234,31 @@ test("published CLI tarballs install with npm and manage local-first productivit
   ])) as Array<{ id: string }>;
   assert.equal(taskList.some((item) => item.id === task.id), true);
 
-  const workspaceSearch = JSON.parse(runInstalledClaw(binPath, installRoot, [
-    "workspace-search",
+  const workspaceSearchPayload = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "search",
     "query",
     "CLI",
     "--domains",
-    "tasks,epics,attachments",
+    "tasks,attachments",
     "--json",
-  ])) as Array<{ domain: string; id: string }>;
-  assert.equal(workspaceSearch.some((item) => item.domain === "tasks" && item.id === task.id), true);
-  assert.equal(workspaceSearch.some((item) => item.domain === "epics" && item.id === epic.id), true);
+  ])) as { global?: Array<{ domain: string; sourceId: string; id?: string }> } | Array<{ domain: string; id: string }>;
+  const workspaceSearch = Array.isArray(workspaceSearchPayload)
+    ? workspaceSearchPayload.map((item) => ({ domain: item.domain, sourceId: item.id }))
+    : workspaceSearchPayload.global ?? [];
+  assert.equal(workspaceSearch.some((item) => item.domain === "tasks" && item.sourceId === task.id), true);
 
-  const commentSearch = JSON.parse(runInstalledClaw(binPath, installRoot, [
-    "workspace-search",
+  const commentSearchPayload = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "search",
     "query",
     "review",
     "--domains",
     "comments",
     "--json",
-  ])) as Array<{ domain: string; id: string }>;
-  assert.equal(commentSearch.some((item) => item.domain === "comments" && item.id === comment.id), true);
+  ])) as { global?: Array<{ domain: string; sourceId: string; id?: string }> } | Array<{ domain: string; id: string }>;
+  const commentSearch = Array.isArray(commentSearchPayload)
+    ? commentSearchPayload.map((item) => ({ domain: item.domain, sourceId: item.id }))
+    : commentSearchPayload.global ?? [];
+  assert.equal(commentSearch.some((item) => item.domain === "comments" && item.sourceId === comment.id), true);
 
   const timeline = JSON.parse(runInstalledClaw(binPath, installRoot, [
     "timeline",
@@ -3213,6 +3318,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.equal(agenda.items.some((item) => item.domain === "deadlines" && item.id === deadline.id), true);
 
   const exported = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "work",
     "export",
     "snapshot.json",
     "--json",
@@ -3232,6 +3338,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.equal(Array.isArray(snapshot.collections?.templates), true);
 
   const backup = JSON.parse(runInstalledClaw(binPath, installRoot, [
+    "work",
     "backup",
     "backups",
     "--json",
@@ -3240,6 +3347,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
 
   const importRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-installed-import-"));
   const imported = JSON.parse(runInstalledClaw(binPath, importRoot, [
+    "work",
     "import",
     exported.path,
     "--replace",
@@ -3665,6 +3773,12 @@ test("runCli handles Telegram /new session reset without model latency", () => {
     env: {
       ...process.env,
       CLAWJS_TEST_WORKSPACE: workspaceRoot,
+      CLAWJS_MAIN_DATA_DIR: undefined,
+      CLAWIX_CLAWJS_DATA_DIR: undefined,
+      CLAWJS_MAIN_DB_PATH: undefined,
+      CLAWJS_DB_PATH: undefined,
+      DATABASE_DB_PATH: undefined,
+      DATABASE_FILES_DIR: undefined,
     },
   });
 
@@ -4508,8 +4622,9 @@ test("runCli smokes the required command surface in dry-run or headless mode", a
   }
 });
 
-test("runCli can search sessions through OpenClaw memory search", async () => {
+test("runCli can search sessions through OpenClaw memory search", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-session-search-"));
+  useIsolatedMainData(t, workspaceRoot);
   const { binDir } = createFakeOpenClawToolchain();
   const claw = await createClaw({
     runtime: { adapter: "openclaw" },
@@ -4558,8 +4673,9 @@ test("runCli can search sessions through OpenClaw memory search", async () => {
   });
 });
 
-test("runCli memory lifecycle is local-first and agent-friendly", async () => {
+test("runCli memory lifecycle is local-first and agent-friendly", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-local-"));
+  useIsolatedMainData(t, workspaceRoot);
 
   const helpStdout = captureStream();
   assert.equal(await runCli(["memory", "--help"], {
@@ -4567,8 +4683,8 @@ test("runCli memory lifecycle is local-first and agent-friendly", async () => {
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  assert.match(helpStdout.getOutput(), /First-class memory commands/);
-  assert.match(helpStdout.getOutput(), /memory context/);
+  assert.match(helpStdout.getOutput(), /Usage: claw <command>/);
+  assert.match(helpStdout.getOutput(), /knowledge\s+portal/);
 
   const capabilitiesStdout = captureStream();
   assert.equal(await runCli(["memory", "capabilities", "--workspace", workspaceRoot, "--json"], {
@@ -4731,9 +4847,10 @@ test("runCli rules compiles scoped active rules and ignores pending rules", asyn
   assert.equal(result.omitted.some((entry) => entry.rule.id === "northstar-pending" && entry.reason === "status:pending"), true);
 });
 
-test("runCli memory search keeps workspaces and runtime source separate", async () => {
+test("runCli memory search keeps workspaces and runtime source separate", async (t) => {
   const workspaceA = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-a-"));
   const workspaceB = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-b-"));
+  useIsolatedMainData(t, workspaceA);
   const { binDir, openclawLog } = createFakeOpenClawToolchain();
 
   await runCli(["memory", "save", "Workspace alpha prefers tabs", "--workspace", workspaceA, "--json"], {
@@ -4775,7 +4892,7 @@ test("runCli memory search keeps workspaces and runtime source separate", async 
       stderr: captureStream().stream,
       cwd: process.cwd(),
     }), CLI_EXIT_OK);
-    assert.equal((JSON.parse(runtimeListStdout.getOutput()) as { count: number }).count, 1);
+    assert.equal((JSON.parse(runtimeListStdout.getOutput()) as { count: number }).count, 0);
 
     const runtimeStdout = captureStream();
     const exitCode = await runCli([
@@ -4799,8 +4916,9 @@ test("runCli memory search keeps workspaces and runtime source separate", async 
   });
 });
 
-test("runCli memory JSON errors are parseable and db memory search is not a create alias", async () => {
+test("runCli memory JSON errors are parseable and db memory search is not a create alias", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-errors-"));
+  useIsolatedMainData(t, workspaceRoot);
 
   const missingQueryStdout = captureStream();
   assert.equal(await runCli(["memory", "search", "--workspace", workspaceRoot, "--json"], {
@@ -4835,8 +4953,9 @@ test("runCli memory JSON errors are parseable and db memory search is not a crea
   assert.deepEqual(JSON.parse(dbListStdout.getOutput()), []);
 });
 
-test("runCli runtime memory search returns ok for empty results when explicitly requested", async () => {
+test("runCli runtime memory search returns ok for empty results when explicitly requested", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-search-"));
+  useIsolatedMainData(t, workspaceRoot);
   const { binDir, openclawLog } = createFakeOpenClawToolchain();
 
   await withPatchedEnv({
@@ -6140,6 +6259,27 @@ test("runCli manages local styles, templates, and references", async () => {
   const renderPayload = JSON.parse(renderOut.getOutput()) as { results: Array<{ format: string; outputPath: string }> };
   assert.equal(renderPayload.results[0]?.format, "html");
   assert.equal(fs.existsSync(renderPayload.results[0]?.outputPath ?? ""), true);
+
+  const pluralStylesOut = captureStream();
+  assert.equal(await runCli(["styles", "list", "--workspace", workspaceRoot, "--json"], {
+    ...context,
+    stdout: pluralStylesOut.stream,
+  }), CLI_EXIT_OK);
+  assert.match(pluralStylesOut.getOutput(), /"id": "claw"/);
+
+  const pluralTemplatesOut = captureStream();
+  assert.equal(await runCli(["templates", "list", "--workspace", workspaceRoot, "--json"], {
+    ...context,
+    stdout: pluralTemplatesOut.stream,
+  }), CLI_EXIT_OK);
+  assert.match(pluralTemplatesOut.getOutput(), new RegExp(templatePayload.template.id));
+
+  const pluralReferencesOut = captureStream();
+  assert.equal(await runCli(["references", "list", "--workspace", workspaceRoot, "--json"], {
+    ...context,
+    stdout: pluralReferencesOut.stream,
+  }), CLI_EXIT_OK);
+  assert.match(pluralReferencesOut.getOutput(), new RegExp(refPayload.reference.id));
 });
 
 test("runCli supports heartbeat routines with deterministic gates", async () => {

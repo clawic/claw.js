@@ -383,8 +383,11 @@ const SINGULAR_MEDIA_COMMAND_ALIASES = new Map<string, string>([
 
 const PUBLIC_PORTAL_HELP_ONLY = new Set([
   "drive",
+  "design",
+  "apps",
   "business",
   "social",
+  "monitor",
   "logs",
   "diagnostics",
   "health",
@@ -3975,22 +3978,11 @@ async function runTelegramCodexProcessor(input: {
         : stripTelegramCodexCommand(rawText, botUsername);
   const persistUserMessage = !(rotatesSession && sessionCommand && !sessionCommand.rest) && command !== "continue";
   if (!persistUserMessage && rotatesSession && sessionCommand) {
-    const result = await claw.inference.generateText({
-      systemPrompt,
-      contextBlocks: [
-        { title: "Telegram", content: `provider=${provider}\naccount=${accountId}\ntarget=${targetLabel}\nsender=${event.message?.senderLabel ?? senderId}` },
-      ],
-      ruleHints: telegramRuleHints,
-      messages: [{ role: "user", content: telegramCodexResetPrompt(sessionCommand.command === "reset" ? "reset" : "new") }],
-      transport: (input.flags.transport as "auto" | "gateway" | "cli" | undefined) ?? "auto",
-      ...(input.flags.model ? { model: input.flags.model } : {}),
-      ...(input.flags["gateway-retries"] ? { gatewayRetries: Number(input.flags["gateway-retries"]) } : { gatewayRetries: 1 }),
-    });
-    const resetText = result.text || (sessionCommand.command === "reset"
+    const resetText = sessionCommand.command === "reset"
       ? "Session reset. What do you want to do next?"
-      : "New session is ready. What do you want to do next?");
+      : "New session is ready. What do you want to do next?";
     appendAssistantTurn(resetText, { command: sessionCommand.command, sessionReset: true });
-    replies.push({ text: resetText, ...(result.transport ? { transport: result.transport } : {}), fallback: result.fallback });
+    replies.push({ text: resetText, transport: "cli", fallback: false });
   } else if (persistUserMessage) {
     const processed = await processPrompt(formatTelegramCodexPrompt(event, promptText), {
       ...(providerMessageId ? { providerMessageId } : {}),
@@ -6252,6 +6244,27 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const usage = buildCliUsage(binName, { all: argv.includes("--all") });
   const wantsHelp = argv.includes("--help") || argv.includes("-h");
 
+  const removedMessage = group ? removedPublicCommandMessage(group, binName) : null;
+  if (removedMessage) {
+    context.stderr.write(`${removedMessage}\n`);
+    return CLI_EXIT_USAGE;
+  }
+
+  if (group === "runtime" && command && REMOVED_RUNTIME_COMMANDS.has(command)) {
+    context.stderr.write(`\`${binName} runtime ${command}\` is not part of the public Claw CLI surface. Runtime is limited to adapters and setup.\n`);
+    return CLI_EXIT_USAGE;
+  }
+
+  if ((group === "business" || group === "social") && command && REMOVED_V1_CRUD_COMMANDS.has(command)) {
+    context.stderr.write(`\`${binName} ${group} ${command}\` is legacy V1 CRUD and is not part of the public Claw CLI surface. Use the ${group} portal help to pick a supported route.\n`);
+    return CLI_EXIT_USAGE;
+  }
+
+  if (group === "content" && command && REMOVED_V1_CRUD_COMMANDS.has(command)) {
+    context.stderr.write(`\`${binName} content ${command}\` is legacy V1 CRUD and is not part of the public Claw CLI surface. Use posts, campaigns, publications, or content service commands.\n`);
+    return CLI_EXIT_USAGE;
+  }
+
   if (wantsHelp || group === "help") {
     if (!group || group === "help") {
       context.stdout.write(`${usage}\n`);
@@ -6295,6 +6308,17 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "system" && command === "capabilities") {
     return await runSystemCapabilitiesCli({ positionals, flags, context, wantsJson, binName });
+  }
+
+  if (group === "collections" || group === "records") {
+    return await runCliUnsafe(["db", ...argv.slice(1)], context);
+  }
+
+  if (group === "content" && (command === "posts" || command === "campaigns" || command === "publications")) {
+    const contentGroup = command === "posts" ? "entry" : command === "campaigns" ? "campaign" : "publish";
+    const contentCommand = command === "publications" ? (!subcommand || subcommand === "list" ? "runs" : subcommand) : (subcommand ?? "list");
+    const passthrough = subcommand ? argv.slice(3) : argv.slice(2);
+    return await runDelegatedContentCli(["content", contentGroup, contentCommand, ...passthrough], flags, context);
   }
 
   if (group === "diagnostics") {
@@ -6372,6 +6396,65 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runCodeCli({ positionals, flags, argv, context, wantsJson, binName });
   }
 
+  if (group === "search" && (command === "query" || command === "rebuild")) {
+    const v1DataExitCode = await runV1DataCli({
+      argv,
+      positionals,
+      flags,
+      stdout: context.stdout,
+      stderr: context.stderr,
+      wantsJson,
+      binName,
+      cwd: context.cwd,
+    });
+    if (v1DataExitCode !== null) return v1DataExitCode;
+  }
+
+  if (group === "search" && command === "query") {
+    const query = subcommand || flags.query;
+    if (!query) {
+      context.stderr.write(`Usage: ${binName} search query <query> [--domains tasks,notes,...]\n`);
+      return CLI_EXIT_USAGE;
+    }
+    const searchWorkspaceRoot = flags.workspace || context.cwd;
+    const claw = await createCliWorkspaceClaw(
+      resolveRuntimeAdapterId(flags),
+      flags,
+      searchWorkspaceRoot,
+      flags["app-id"] || "clawjs-app",
+      flags["workspace-id"] || pathSafeBasename(searchWorkspaceRoot),
+      flags["agent-id"] || flags["workspace-id"] || pathSafeBasename(searchWorkspaceRoot),
+      context.cwd,
+    );
+    const results = await claw.search.query({
+      query,
+      domains: parseCsvFlag(flags.domains) as Array<"areas" | "tasks" | "goals" | "projects" | "milestones" | "activity" | "blockers" | "artifacts" | "decisions" | "work_sessions" | "assignments" | "handoffs" | "approvals" | "capacity" | "reminders" | "deadlines" | "notes" | "people" | "inbox" | "events">,
+      strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
+      ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+      includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
+    });
+    if (wantsJson) writeJson(context.stdout, results);
+    else context.stdout.write(`${results.map((result) => `${result.domain} ${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
+    return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+  }
+
+  if (group === "search" && command === "rebuild") {
+    const searchWorkspaceRoot = flags.workspace || context.cwd;
+    const claw = await createCliWorkspaceClaw(
+      resolveRuntimeAdapterId(flags),
+      flags,
+      searchWorkspaceRoot,
+      flags["app-id"] || "clawjs-app",
+      flags["workspace-id"] || pathSafeBasename(searchWorkspaceRoot),
+      flags["agent-id"] || flags["workspace-id"] || pathSafeBasename(searchWorkspaceRoot),
+      context.cwd,
+    );
+    const result = await claw.workspaceIndex.rebuild();
+    if (wantsJson) writeJson(context.stdout, result);
+    else context.stdout.write(`reindexed=${result.reindexed} embeddings=${result.embeddings}\n`);
+    return CLI_EXIT_OK;
+  }
+
   {
     const v1DataExitCode = await runV1DataCli({
       argv,
@@ -6430,22 +6513,6 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       extraArguments: {
         ...(subcommand ? { subject: subcommand } : {}),
       },
-    });
-  }
-
-  if (group === "work" && command && ["export", "import", "backup"].includes(command)) {
-    return await runCoreProductivityDbCli({
-      argv: [command, ...argv.slice(2)],
-      positionals: [command, ...positionals.slice(2)],
-      flags,
-      workspaceRoot: flags.workspace || context.cwd,
-      stdout: context.stdout,
-      stderr: context.stderr,
-      wantsJson,
-      appId: flags["app-id"] || "clawjs-app",
-      workspaceId: flags["workspace-id"] || pathSafeBasename(flags.workspace || context.cwd),
-      agentId: flags["agent-id"] || flags["workspace-id"] || pathSafeBasename(flags.workspace || context.cwd),
-      contextCwd: context.cwd,
     });
   }
 

@@ -3331,6 +3331,38 @@ function rebuildSearchSidecar(main: Database.Database): number {
       metadata: {},
     });
   }
+  if (tableExists(main, "workspace_records")) {
+    const records = main.prepare(`
+      SELECT collection_name, record_id, payload_json, updated_at
+      FROM workspace_records
+      WHERE archived_at IS NULL
+      ORDER BY updated_at DESC
+      LIMIT 10000
+    `).all() as Array<{ collection_name: string; record_id: string; payload_json: string; updated_at: string | null }>;
+    for (const record of records) {
+      const payload = parseJson(record.payload_json, {}) as JsonRecord;
+      const title = String(payload.title ?? payload.name ?? payload.subject ?? payload.label ?? record.record_id);
+      const body = [
+        payload.description,
+        payload.content,
+        payload.body,
+        payload.summary,
+        payload.status,
+        payload.kind,
+        payload.email,
+      ].filter((value) => typeof value === "string" && value.trim()).join("\n");
+      docs.push({
+        id: `${record.collection_name}:${record.record_id}`,
+        domain: record.collection_name === "inbox_threads" || record.collection_name === "inbox_messages" ? "inbox" : record.collection_name,
+        sourceId: record.record_id,
+        title,
+        body,
+        path: null,
+        updatedAt: record.updated_at ?? new Date(0).toISOString(),
+        metadata: { collection: record.collection_name },
+      });
+    }
+  }
   const sessionSidecar = openSidecar("sessions.sqlite");
   try {
     const sessions = sessionSidecar.prepare("SELECT session_id, title, snippet, cwd, artifact_path, updated_at FROM conversation_sessions").all() as Array<{ session_id: string; title: string; snippet: string; cwd: string | null; artifact_path: string; updated_at: string }>;

@@ -475,6 +475,7 @@ function listLocalRecords(input: MemoryCliInput, store: DatabaseServiceStore): R
 
 function filterMemories(input: MemoryCliInput, memories: MemoryRecord[]): MemoryRecord[] {
   const includeHistory = input.argv.includes("--include-history");
+  const includeAllWorkspaces = input.argv.includes("--all-workspaces");
   const kind = input.flags.kind;
   const scopeUser = input.flags["scope-user"];
   const scopeAgent = input.flags["scope-agent"];
@@ -482,6 +483,7 @@ function filterMemories(input: MemoryCliInput, memories: MemoryRecord[]): Memory
   const limit = readPositiveInteger(input.flags.limit, 50);
   return memories
     .filter((memory) => includeHistory || isCurrentMemory(memory))
+    .filter((memory) => includeAllWorkspaces || memory.metadata.workspaceId === input.workspaceId)
     .filter((memory) => !kind || memory.kind === kind)
     .filter((memory) => !scopeUser || memory.scopeUser === scopeUser)
     .filter((memory) => !scopeAgent || memory.scopeAgent === scopeAgent)

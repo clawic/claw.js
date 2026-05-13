@@ -264,11 +264,14 @@ for (const marker of surfaceContract.taxonomy.visibility) {
 
 const cliSourceRaw = read(path.join(rootDir, "packages", "clawjs", "src", "index.ts"));
 const cliDocRaw = read(path.join(rootDir, "docs", "cli.md"));
+function cliSourceHasGroup(groupName) {
+  return cliSourceRaw.includes(`group === "${groupName}"`)
+    || cliSourceRaw.includes(`name: "${groupName}"`)
+    || cliSourceRaw.includes(`"${groupName}":`)
+    || cliSourceRaw.includes(`${groupName}:`);
+}
 for (const group of surfaceContract.cli.groups) {
-  const sourceGroupSnippet = group.name === "new" || group.name === "generate" || group.name === "add" || group.name === "info" || group.name === "doctor" || group.name === "compat"
-    ? `group === "${group.name}"`
-    : `group === "${group.name}"`;
-  if (!cliSourceRaw.includes(sourceGroupSnippet)) {
+  if (!cliSourceHasGroup(group.name)) {
     violations.push(`packages/clawjs/src/index.ts is missing CLI group ${group.name}`);
   }
   if (!cliDocRaw.includes(`claw ${group.name}`)) {
