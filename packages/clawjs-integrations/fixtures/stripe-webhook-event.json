@@ -1,0 +1,11 @@
+{
+  "id": "evt_sample",
+  "object": "event",
+  "type": "checkout.session.completed",
+  "data": {
+    "object": {
+      "id": "cs_sample",
+      "object": "checkout.session"
+    }
+  }
+}
