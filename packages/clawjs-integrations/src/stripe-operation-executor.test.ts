@@ -987,6 +987,25 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.verify-source"), {
+      source: "src_sample",
+      values: ["32", "45"],
+    }), {
+      method: "POST",
+      endpoint: "sources/src_sample/verify",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        values: ["32", "45"],
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.list-setup-attempts"), {
       limit: 10,
       setup_intent: "seti_sample",

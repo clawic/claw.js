@@ -39744,6 +39744,210 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.create-source",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Source",
+          "fields": [
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false,
+              "default": "card"
+            },
+            {
+              "name": "currency",
+              "type": "string",
+              "optional": true,
+              "default": "usd"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 1200
+            },
+            {
+              "name": "owner",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "email": "person@example.invalid"
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-source",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Source",
+          "fields": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false,
+              "default": "src_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-source",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Source",
+          "fields": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false,
+              "default": "src_sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "owner",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "email": "person@example.invalid"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-source-mandate-notification",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Source Mandate Notification",
+          "fields": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false,
+              "default": "src_sample"
+            },
+            {
+              "name": "mandateNotification",
+              "type": "string",
+              "optional": false,
+              "default": "mn_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-source-transactions",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Source Transactions",
+          "fields": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false,
+              "default": "src_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-source-transaction",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Source Transaction",
+          "fields": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false,
+              "default": "src_sample"
+            },
+            {
+              "name": "sourceTransaction",
+              "type": "string",
+              "optional": false,
+              "default": "srctxn_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.verify-source",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Verify Source",
+          "fields": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false,
+              "default": "src_sample"
+            },
+            {
+              "name": "values",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "32",
+                "45"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },
