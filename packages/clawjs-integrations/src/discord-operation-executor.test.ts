@@ -21,6 +21,8 @@ const WEBHOOK_FIELD = field("webhookId", "string");
 const WEBHOOK_TOKEN_FIELD = field("webhookToken", "string");
 const APPLICATION_FIELD = field("applicationId", "string");
 const COMMAND_FIELD = field("commandId", "string");
+const ENTITLEMENT_FIELD = field("entitlementId", "string");
+const SKU_FIELD = field("skuId", "string");
 const TEMPLATE_CODE_FIELD = field("templateCode", "string");
 const SOUNDBOARD_SOUND_FIELD = field("soundboardSoundId", "string");
 const STICKER_FIELD = field("stickerId", "string");
@@ -52,6 +54,11 @@ const DISCORD_ACTIONS = [
   action("delete-guild-soundboard-sound", "Delete Guild Soundboard Sound", [GUILD_FIELD, SOUNDBOARD_SOUND_FIELD, field("auditLogReason", "string", true)]),
   action("get-application-role-connection-metadata", "Get Application Role Connection Metadata", [APPLICATION_FIELD]),
   action("update-application-role-connection-metadata", "Update Application Role Connection Metadata", [APPLICATION_FIELD, field("records", "array", false, { default: [{ type: 2, key: "score", name: "Score", description: "Sample score" }] })]),
+  action("list-entitlements", "List Entitlements", [APPLICATION_FIELD, field("userId", "string", true), field("skuIds", "array", true, { default: ["sample"] }), field("before", "string", true), field("after", "string", true), field("limit", "integer", true, { default: 1, min: 1, max: 100 }), field("guildId", "string", true), field("excludeEnded", "boolean", true), field("excludeDeleted", "boolean", true)]),
+  action("get-entitlement", "Get Entitlement", [APPLICATION_FIELD, ENTITLEMENT_FIELD]),
+  action("consume-entitlement", "Consume Entitlement", [APPLICATION_FIELD, ENTITLEMENT_FIELD]),
+  action("create-test-entitlement", "Create Test Entitlement", [APPLICATION_FIELD, SKU_FIELD, field("ownerId", "string"), field("ownerType", "integer", false, { default: 1, min: 1, max: 2 })]),
+  action("delete-test-entitlement", "Delete Test Entitlement", [APPLICATION_FIELD, ENTITLEMENT_FIELD]),
   action("get-guild-audit-log", "Get Guild Audit Log", [GUILD_FIELD, USER_FIELD, field("actionType", "integer", true, { default: 1 }), field("before", "string", true), field("after", "string", true), field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
   action("list-guild-emojis", "List Guild Emojis", [GUILD_FIELD]),
   action("get-guild-emoji", "Get Guild Emoji", [GUILD_FIELD, field("emojiId", "string")]),
@@ -501,6 +508,102 @@ describe("discord operation runtime", () => {
       }],
       responseSchema: {
         type: "array",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.list-entitlements"), {
+      applicationId: "app-123",
+      userId: "user-123",
+      skuIds: ["sku-1", "sku-2"],
+      before: "ent-before",
+      after: "ent-after",
+      limit: 50,
+      guildId: "guild-123",
+      excludeEnded: true,
+      excludeDeleted: false,
+    }), {
+      method: "GET",
+      endpoint: "applications/app-123/entitlements",
+      auth,
+      headers,
+      query: {
+        user_id: "user-123",
+        sku_ids: "sku-1,sku-2",
+        before: "ent-before",
+        after: "ent-after",
+        limit: 50,
+        guild_id: "guild-123",
+        exclude_ended: true,
+        exclude_deleted: false,
+      },
+      body: {},
+      responseSchema: {
+        type: "array",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-entitlement"), {
+      applicationId: "app-123",
+      entitlementId: "ent-123",
+    }), {
+      method: "GET",
+      endpoint: "applications/app-123/entitlements/ent-123",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "sku_id", "application_id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.consume-entitlement"), {
+      applicationId: "app-123",
+      entitlementId: "ent-123",
+    }), {
+      method: "POST",
+      endpoint: "applications/app-123/entitlements/ent-123/consume",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-test-entitlement"), {
+      applicationId: "app-123",
+      skuId: "sku-123",
+      ownerId: "owner-123",
+      ownerType: 1,
+    }), {
+      method: "POST",
+      endpoint: "applications/app-123/entitlements",
+      auth,
+      headers,
+      body: {
+        sku_id: "sku-123",
+        owner_id: "owner-123",
+        owner_type: 1,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "sku_id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-test-entitlement"), {
+      applicationId: "app-123",
+      entitlementId: "ent-123",
+    }), {
+      method: "DELETE",
+      endpoint: "applications/app-123/entitlements/ent-123",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "object",
       },
     });
 
