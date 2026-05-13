@@ -6,9 +6,6 @@
     "content-type": "application/json"
   },
   "body": {
-    "content": "sample",
-    "message_reference": {
-      "message_id": "sample"
-    }
+    "content": "sample"
   }
 }
