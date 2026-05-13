@@ -280,6 +280,197 @@
           ]
         },
         {
+          "id": "discord.action.get-sticker",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Sticker",
+          "fields": [
+            {
+              "name": "stickerId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-sticker-packs",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Sticker Packs",
+          "fields": [],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-sticker-pack",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Sticker Pack",
+          "fields": [
+            {
+              "name": "stickerPackId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-guild-stickers",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Guild Stickers",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-guild-sticker",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Sticker",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "stickerId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.create-guild-sticker",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Guild Sticker",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "tags",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "file",
+              "type": "string",
+              "optional": false,
+              "default": "sample-file"
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.update-guild-sticker",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Update Guild Sticker",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "stickerId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "tags",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-guild-sticker",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Guild Sticker",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "stickerId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.get-channel",
           "appId": "discord",
           "kind": "action",
@@ -2609,6 +2800,27 @@
           "appId": "discord",
           "kind": "source",
           "name": "Guild Emojis Update",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.guild-stickers-update",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Guild Stickers Update",
           "fields": [],
           "authFieldNames": [],
           "runtime": {
