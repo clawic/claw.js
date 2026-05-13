@@ -114,7 +114,7 @@ export interface Block {
   overlay?: Record<string, CborValue>;                  // commerce overlay over the tracked record
   content?: Record<string, CborValue>;                  // archetype === 'standalone' only
   audience: AudienceSpec;
-  fieldsPerLevel: Record<string, AudienceLevel[]>;      // per-field min-level visibility list
+  fieldsPerLevel: Record<string, (AudienceLevel | string)[]>;      // per-field min-level visibility list
   agentPolicy?: AgentPolicy;
   createdAt: number;
   updatedAt: number;
