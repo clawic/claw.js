@@ -1,0 +1,11 @@
+{
+  "id": "member-event-sample",
+  "guild_id": "guild-sample",
+  "user": {
+    "id": "user-sample",
+    "username": "sample"
+  },
+  "roles": [
+    "role-sample"
+  ]
+}

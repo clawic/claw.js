@@ -1,0 +1,11 @@
+{
+  "id": "interaction-sample",
+  "type": 2,
+  "application_id": "app-sample",
+  "guild_id": "guild-sample",
+  "channel_id": "channel-sample",
+  "data": {
+    "id": "command-sample",
+    "name": "sample"
+  }
+}

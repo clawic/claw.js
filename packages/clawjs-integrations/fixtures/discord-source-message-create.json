@@ -1,0 +1,10 @@
+{
+  "id": "message-sample",
+  "channel_id": "channel-sample",
+  "guild_id": "guild-sample",
+  "content": "sample",
+  "author": {
+    "id": "user-sample",
+    "username": "sample"
+  }
+}

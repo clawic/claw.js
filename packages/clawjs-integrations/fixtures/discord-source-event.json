@@ -1,0 +1,10 @@
+{
+  "id": "event-sample",
+  "t": "READY",
+  "s": 1,
+  "d": {
+    "application": {
+      "id": "app-sample"
+    }
+  }
+}
