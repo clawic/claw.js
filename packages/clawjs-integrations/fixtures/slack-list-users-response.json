@@ -1,8 +1,8 @@
 {
   "ok": true,
-  "channels": [
+  "members": [
     {
-      "id": "C123",
+      "id": "U123",
       "name": "sample"
     }
   ],

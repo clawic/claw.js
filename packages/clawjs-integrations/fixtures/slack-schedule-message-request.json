@@ -1,0 +1,14 @@
+{
+  "method": "POST",
+  "url": "https://slack.com/api/chat.scheduleMessage",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "channel": "sample",
+    "text": "sample",
+    "post_at": 1710003600
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "method": "POST",
+  "url": "https://slack.com/api/reactions.remove",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "channel": "sample",
+    "timestamp": "sample",
+    "name": "thumbsup"
+  }
+}

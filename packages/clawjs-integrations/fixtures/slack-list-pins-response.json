@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "items": [
+    {
+      "type": "message",
+      "message": {
+        "type": "message",
+        "ts": "1710000000.000000",
+        "text": "sample",
+        "user": "U123"
+      }
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "method": "POST",
+  "url": "https://slack.com/api/views.update",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "view": {
+      "type": "modal",
+      "title": {
+        "type": "plain_text",
+        "text": "Sample"
+      },
+      "blocks": [],
+      "close": {
+        "type": "plain_text",
+        "text": "Close"
+      }
+    },
+    "view_id": "sample"
+  }
+}

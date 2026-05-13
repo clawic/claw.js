@@ -1,10 +1,7 @@
 {
   "ok": true,
-  "channels": [
-    {
-      "id": "C123",
-      "name": "sample"
-    }
+  "members": [
+    "U123"
   ],
   "response_metadata": {
     "next_cursor": ""

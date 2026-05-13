@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "messages": [
+    {
+      "type": "message",
+      "ts": "1710000000.000000",
+      "text": "sample",
+      "user": "U123"
+    }
+  ],
+  "response_metadata": {
+    "next_cursor": ""
+  }
+}

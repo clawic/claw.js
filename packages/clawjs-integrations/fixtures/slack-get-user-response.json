@@ -1,7 +1,7 @@
 {
   "ok": true,
-  "channel": {
-    "id": "C123",
+  "user": {
+    "id": "U123",
     "name": "sample"
   }
 }

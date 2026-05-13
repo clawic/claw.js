@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "messages": {
+    "total": 1,
+    "matches": [
+      {
+        "type": "message",
+        "ts": "1710000000.000000",
+        "text": "sample",
+        "user": "U123"
+      }
+    ]
+  }
+}

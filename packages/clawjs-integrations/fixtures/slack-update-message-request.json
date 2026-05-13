@@ -1,0 +1,14 @@
+{
+  "method": "POST",
+  "url": "https://slack.com/api/chat.update",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "channel": "sample",
+    "ts": "sample",
+    "text": "sample"
+  }
+}

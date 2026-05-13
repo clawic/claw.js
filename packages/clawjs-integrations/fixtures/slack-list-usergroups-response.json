@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "usergroups": [
+    {
+      "id": "S123",
+      "handle": "sample"
+    }
+  ]
+}

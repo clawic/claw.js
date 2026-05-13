@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "type": "message",
+  "channel": "C123",
+  "message": {
+    "type": "message",
+    "ts": "1710000000.000000",
+    "text": "sample",
+    "user": "U123"
+  }
+}

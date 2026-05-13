@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://slack.com/api/reminders.list",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret"
+  }
+}

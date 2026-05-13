@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "files": [
+    {
+      "id": "F123",
+      "name": "sample.txt"
+    }
+  ],
+  "paging": {
+    "page": 1,
+    "pages": 1,
+    "count": 1,
+    "total": 1
+  }
+}
