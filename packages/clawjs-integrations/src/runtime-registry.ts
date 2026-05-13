@@ -49,10 +49,12 @@ import {
 } from "./airtable-source.ts";
 import {
   buildGitLabOperationRequest,
+  GITLAB_EXTRA_ACTION_SPECS,
   isGitLabActionOperationSupported,
 } from "./gitlab-operation-executor.ts";
 import {
   buildGitLabSourcePlan,
+  GITLAB_SOURCE_SLUGS,
   isGitLabSourceOperationSupported,
 } from "./gitlab-source.ts";
 import {
@@ -595,24 +597,24 @@ const GITLAB_ACTION_FIXTURES: ConnectorRuntimeFixture[] = GITLAB_ACTION_FIXTURE_
   },
 ]);
 
+const GITLAB_EXTRA_ACTION_FIXTURES: ConnectorRuntimeFixture[] = GITLAB_EXTRA_ACTION_SPECS.flatMap((operation) => [
+  {
+    kind: "request" as const,
+    operationId: `gitlab.action.${operation.slug}`,
+    path: `packages/clawjs-integrations/fixtures/gitlab-${operation.slug}-request.json`,
+  },
+  {
+    kind: "response" as const,
+    operationId: `gitlab.action.${operation.slug}`,
+    path: `packages/clawjs-integrations/fixtures/gitlab-${operation.slug}-response.json`,
+  },
+]);
+
 const GITLAB_SOURCE_EVIDENCE = [
   "packages/clawjs-integrations/src/gitlab-source.test.ts",
 ];
 
-const GITLAB_SOURCE_FIXTURE_NAMES = [
-  "event",
-  "push",
-  "tag-push",
-  "issue",
-  "merge-request",
-  "note",
-  "job",
-  "pipeline",
-  "wiki-page",
-  "release",
-] as const;
-
-const GITLAB_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = GITLAB_SOURCE_FIXTURE_NAMES.map((name) => ({
+const GITLAB_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = GITLAB_SOURCE_SLUGS.map((name) => ({
   kind: "source_event" as const,
   operationId: `gitlab.source.${name}`,
   path: `packages/clawjs-integrations/fixtures/gitlab-source-${name}.json`,
@@ -993,7 +995,7 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     baseUrl: "https://gitlab.com/api/v4/",
     offlineValidated: true,
     evidence: GITLAB_ACTION_EVIDENCE,
-    fixtures: GITLAB_ACTION_FIXTURES,
+    fixtures: [...GITLAB_ACTION_FIXTURES, ...GITLAB_EXTRA_ACTION_FIXTURES],
     planKinds: ["request"],
     supports: (operation) => isGitLabActionOperationSupported(operation.id),
     buildPlan: (operation, values) => ({
