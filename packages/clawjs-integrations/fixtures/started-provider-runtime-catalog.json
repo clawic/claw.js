@@ -285,6 +285,60 @@
       ],
       "operations": [
         {
+          "id": "notion.action.get-block",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Get Block",
+          "fields": [
+            { "name": "blockId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.list-block-children",
+          "appId": "notion",
+          "kind": "action",
+          "name": "List Block Children",
+          "fields": [
+            { "name": "blockId", "type": "string", "optional": false },
+            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.append-block-children",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Append Block Children",
+          "fields": [
+            { "name": "blockId", "type": "string", "optional": false },
+            { "name": "children", "type": "array", "optional": false, "default": [{ "object": "block", "type": "paragraph", "paragraph": { "rich_text": [] } }] }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.update-block",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Update Block",
+          "fields": [
+            { "name": "blockId", "type": "string", "optional": false },
+            { "name": "type", "type": "string", "optional": false, "default": "paragraph" },
+            { "name": "paragraph", "type": "object", "optional": false, "default": { "rich_text": [{ "text": { "content": "sample" } }] } }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.delete-block",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Delete Block",
+          "fields": [
+            { "name": "blockId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
           "id": "notion.action.create-page",
           "appId": "notion",
           "kind": "action",
@@ -307,10 +361,98 @@
           "authFieldNames": ["notionToken"]
         },
         {
+          "id": "notion.action.get-page-property",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Get Page Property",
+          "fields": [
+            { "name": "pageId", "type": "string", "optional": false },
+            { "name": "propertyId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.get-database",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Get Database",
+          "fields": [
+            { "name": "databaseId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.create-database",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Create Database",
+          "fields": [
+            { "name": "pageId", "type": "string", "optional": false },
+            { "name": "properties", "type": "object", "optional": false, "default": { "Name": { "title": {} } } },
+            { "name": "title", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.update-database",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Update Database",
+          "fields": [
+            { "name": "databaseId", "type": "string", "optional": false },
+            { "name": "title", "type": "string", "optional": true }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.get-data-source",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Get Data Source",
+          "fields": [
+            { "name": "dataSourceId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.create-data-source",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Create Data Source",
+          "fields": [
+            { "name": "databaseId", "type": "string", "optional": false },
+            { "name": "properties", "type": "object", "optional": false, "default": { "Name": { "title": {} } } },
+            { "name": "title", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.update-data-source",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Update Data Source",
+          "fields": [
+            { "name": "dataSourceId", "type": "string", "optional": false },
+            { "name": "title", "type": "string", "optional": true }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
           "id": "notion.action.query-data-source",
           "appId": "notion",
           "kind": "action",
           "name": "Query Data Source",
+          "fields": [
+            { "name": "dataSourceId", "type": "string", "optional": false },
+            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.list-data-source-templates",
+          "appId": "notion",
+          "kind": "action",
+          "name": "List Data Source Templates",
           "fields": [
             { "name": "dataSourceId", "type": "string", "optional": false },
             { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 }
@@ -326,6 +468,87 @@
             { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 },
             { "name": "query", "type": "string", "optional": true }
           ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.get-comment",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Get Comment",
+          "fields": [
+            { "name": "commentId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.list-comments",
+          "appId": "notion",
+          "kind": "action",
+          "name": "List Comments",
+          "fields": [
+            { "name": "blockId", "type": "string", "optional": false },
+            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.create-comment",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Create Comment",
+          "fields": [
+            { "name": "pageId", "type": "string", "optional": false },
+            { "name": "text", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.update-comment",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Update Comment",
+          "fields": [
+            { "name": "commentId", "type": "string", "optional": false },
+            { "name": "text", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.delete-comment",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Delete Comment",
+          "fields": [
+            { "name": "commentId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.list-users",
+          "appId": "notion",
+          "kind": "action",
+          "name": "List Users",
+          "fields": [
+            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.get-user",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Get User",
+          "fields": [
+            { "name": "userId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.get-self",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Get Self",
+          "fields": [],
           "authFieldNames": ["notionToken"]
         },
         {
