@@ -665,6 +665,53 @@ describe("stripe operation runtime", () => {
         type: "string",
       },
     });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-subscription-schedule"), {
+      customer: "cus_sample",
+      start_date: 1893456000,
+      phases: [{ items: [{ price: "price_sample", quantity: 1 }] }],
+      end_behavior: "release",
+      metadata: { order_id: "sample" },
+    }), {
+      method: "POST",
+      endpoint: "subscription_schedules",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        customer: "cus_sample",
+        start_date: 1893456000,
+        phases: [{ items: [{ price: "price_sample", quantity: 1 }] }],
+        end_behavior: "release",
+        metadata: { order_id: "sample" },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object", "status"],
+      },
+    });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.cancel-subscription-schedule"), {
+      schedule: "sub_sched_sample",
+      invoice_now: false,
+      prorate: true,
+    }), {
+      method: "POST",
+      endpoint: "subscription_schedules/sub_sched_sample/cancel",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        invoice_now: false,
+        prorate: true,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object", "status"],
+      },
+    });
   });
 
   it("covers Stripe payment operations with operation-scoped offline fixtures", async () => {

@@ -31689,6 +31689,216 @@
           ]
         },
         {
+          "id": "stripe.action.list-subscription-schedules",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Subscription Schedules",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "scheduled",
+              "type": "string",
+              "optional": true,
+              "default": "true"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-subscription-schedule",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Subscription Schedule",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": false,
+              "default": "cus_sample"
+            },
+            {
+              "name": "start_date",
+              "type": "integer",
+              "optional": true,
+              "default": 1893456000
+            },
+            {
+              "name": "phases",
+              "type": "array",
+              "optional": true,
+              "default": [
+                {
+                  "items": [
+                    {
+                      "price": "price_sample",
+                      "quantity": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "end_behavior",
+              "type": "string",
+              "optional": true,
+              "default": "release"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-subscription-schedule",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Subscription Schedule",
+          "fields": [
+            {
+              "name": "schedule",
+              "type": "string",
+              "optional": false,
+              "default": "sub_sched_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-subscription-schedule",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Subscription Schedule",
+          "fields": [
+            {
+              "name": "schedule",
+              "type": "string",
+              "optional": false,
+              "default": "sub_sched_sample"
+            },
+            {
+              "name": "phases",
+              "type": "array",
+              "optional": true,
+              "default": [
+                {
+                  "items": [
+                    {
+                      "price": "price_sample",
+                      "quantity": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "end_behavior",
+              "type": "string",
+              "optional": true,
+              "default": "release"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.cancel-subscription-schedule",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Cancel Subscription Schedule",
+          "fields": [
+            {
+              "name": "schedule",
+              "type": "string",
+              "optional": false,
+              "default": "sub_sched_sample"
+            },
+            {
+              "name": "invoice_now",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            },
+            {
+              "name": "prorate",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.release-subscription-schedule",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Release Subscription Schedule",
+          "fields": [
+            {
+              "name": "schedule",
+              "type": "string",
+              "optional": false,
+              "default": "sub_sched_sample"
+            },
+            {
+              "name": "preserve_cancel_date",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-invoices",
           "appId": "stripe",
           "kind": "action",
