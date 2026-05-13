@@ -1,6 +1,6 @@
 {
   "method": "POST",
-  "url": "https://api.github.com/repos/sample/sample/issues/1/comments",
+  "url": "https://api.github.com/repos/sample/sample/hooks",
   "headers": {
     "accept": "application/vnd.github+json",
     "authorization": "Bearer offline-githubToken-secret",
@@ -8,6 +8,11 @@
     "x-github-api-version": "2026-03-10"
   },
   "body": {
-    "body": "sample"
+    "name": "web",
+    "active": true,
+    "config": {
+      "url": "https://example.invalid/webhook",
+      "content_type": "json"
+    }
   }
 }

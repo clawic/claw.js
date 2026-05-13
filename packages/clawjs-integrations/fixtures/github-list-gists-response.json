@@ -1,0 +1,11 @@
+[
+  {
+    "id": "gist_sample",
+    "files": {
+      "sample.txt": {
+        "filename": "sample.txt",
+        "content": "sample"
+      }
+    }
+  }
+]

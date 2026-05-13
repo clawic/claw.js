@@ -1,13 +1,9 @@
 {
   "method": "POST",
-  "url": "https://api.github.com/repos/sample/sample/issues/1/comments",
+  "url": "https://api.github.com/repos/sample/sample/actions/runs/1/cancel",
   "headers": {
     "accept": "application/vnd.github+json",
     "authorization": "Bearer offline-githubToken-secret",
-    "content-type": "application/json",
     "x-github-api-version": "2026-03-10"
-  },
-  "body": {
-    "body": "sample"
   }
 }

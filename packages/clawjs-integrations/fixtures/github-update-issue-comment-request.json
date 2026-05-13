@@ -1,6 +1,6 @@
 {
-  "method": "POST",
-  "url": "https://api.github.com/repos/sample/sample/issues/1/comments",
+  "method": "PATCH",
+  "url": "https://api.github.com/repos/sample/sample/issues/comments/1",
   "headers": {
     "accept": "application/vnd.github+json",
     "authorization": "Bearer offline-githubToken-secret",
