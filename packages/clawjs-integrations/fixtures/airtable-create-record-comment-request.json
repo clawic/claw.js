@@ -1,0 +1,11 @@
+{
+  "method": "POST",
+  "url": "https://api.airtable.com/v0/appBase123/tblTable123/recRecord123/comments",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-airtableAccessToken-secret"
+  },
+  "body": {
+    "text": "Looks good"
+  }
+}

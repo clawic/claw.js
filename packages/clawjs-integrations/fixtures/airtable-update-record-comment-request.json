@@ -1,0 +1,11 @@
+{
+  "method": "PATCH",
+  "url": "https://api.airtable.com/v0/appBase123/tblTable123/recRecord123/comments/comComment123",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-airtableAccessToken-secret"
+  },
+  "body": {
+    "text": "Updated comment"
+  }
+}
