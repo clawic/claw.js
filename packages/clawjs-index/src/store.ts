@@ -228,7 +228,7 @@ export class IndexStore {
     observedAt?: string; runId?: string | null; agentSessionId?: string | null;
   }): { entityId: string; isNew: boolean; changedFields: string[]; entity: EntityRow } {
     const type = this.getTypeByName(input.typeName);
-    if (!type) throw new Error(`unknown entity type "${input.typeName}". Declare it via index.types.declare first or pick a canonical type.`);
+    if (!type) throw new Error(`unknown entity type "${input.typeName}". Declare it via search.types.declare first or pick a canonical type.`);
     const identityKey = deriveIdentityKey(type.name, type.identityFields, input.data);
     const existing = this.db.prepare(`${this.selectEntity()} WHERE e.type_id = ? AND e.identity_key = ?`).get(type.id, identityKey);
     const observedAt = input.observedAt ?? new Date().toISOString();

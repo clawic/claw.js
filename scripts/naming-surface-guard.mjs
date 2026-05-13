@@ -104,7 +104,7 @@ for (const relativePath of [
   "packages/clawjs-index/src/config.ts",
   "packages/clawjs/bin/sessions-server-launcher.mjs",
   "packages/clawjs/bin/index-server-launcher.mjs",
-  "packages/clawjs-index-mcp/bin/clawjs-index-mcp.mjs",
+  "packages/clawjs-search-mcp/bin/claw-search-mcp.mjs",
   "packages/clawjs/src/index.ts",
 ]) {
   for (const snippet of ["4640", "7796", "7798", "18273", "18419", "18647", "20347"]) {

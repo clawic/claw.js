@@ -100,7 +100,7 @@ export class IndexScheduler {
     const header = monitor
       ? `[index monitor "${monitor.name ?? monitor.id}"] Scheduled fire at ${new Date().toISOString()}.`
       : `[index search run] Manual trigger at ${new Date().toISOString()}.`;
-    const body = template ?? "Use the MCP `index.*` tools to capture results as typed entities. Upsert each match with index.entities.upsert.";
+    const body = template ?? "Use the MCP `search.*` tools to capture results as typed entities. Upsert each match with search.entities.upsert.";
     return `${header}\n\nCriteria: ${JSON.stringify(criteria, null, 2)}\n\n${body}`.trim();
   }
 

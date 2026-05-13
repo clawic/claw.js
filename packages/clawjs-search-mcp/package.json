@@ -1,7 +1,7 @@
 {
-  "name": "@clawjs/index-mcp",
+  "name": "@clawjs/search-mcp",
   "version": "0.1.2",
-  "description": "MCP stdio server that exposes the @clawjs/index API as typed tools.",
+  "description": "MCP stdio server that exposes the @clawjs/search API as typed tools.",
   "type": "module",
   "license": "MIT",
   "author": {
@@ -22,7 +22,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "clawjs-index-mcp": "./bin/clawjs-index-mcp.mjs"
+    "claw-search-mcp": "./bin/claw-search-mcp.mjs"
   },
   "exports": {
     ".": {

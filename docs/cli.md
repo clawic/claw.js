@@ -16,7 +16,7 @@ claw host --help
 
 The public package also keeps `create-claw-app`, `create-claw-agent`,
 `create-claw-server`, `create-claw-plugin`, and the technical
-`clawjs-index-mcp` entrypoint. It does not expose a public `clawjs` bin.
+`claw-search-mcp` entrypoint. It does not expose a public `clawjs` bin.
 
 ## Project Flow
 
@@ -63,7 +63,7 @@ claw info --json
 
 ```bash
 claw host list
-claw host register local --name "Local Claw" --kind standalone --transport http --address http://127.0.0.1:4510 --use
+claw host register local --name "Local Claw" --kind standalone --transport http --address http://127.0.0.1:24102 --use
 claw host use local
 claw host status
 claw host doctor
@@ -78,7 +78,7 @@ claw system capabilities grant calendar.read
 claw system capabilities revoke calendar.read
 
 claw database serve
-claw database login --url http://127.0.0.1:4510
+claw database login --url http://127.0.0.1:24102
 claw database namespace list
 claw database collection list
 claw database record list
@@ -175,8 +175,8 @@ claw telegram chats list
 claw telegram chats inspect 123
 claw telegram send --chat-id 123 --text "hello"
 claw notify send --title "Build finished" --body "Ready"
-claw notify subscriptions upsert --notify-url http://127.0.0.1:4510 --notify-client-token token --json
-claw notify subscriptions delete sub-123 --notify-url http://127.0.0.1:4510 --notify-client-token token
+claw notify subscriptions upsert --notify-url http://127.0.0.1:24102 --notify-client-token token --json
+claw notify subscriptions delete sub-123 --notify-url http://127.0.0.1:24102 --notify-client-token token
 ```
 
 ## Media And Design
