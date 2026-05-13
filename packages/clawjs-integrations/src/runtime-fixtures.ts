@@ -100,11 +100,12 @@ function responseFromFixture(
   const status = fixture.status ?? options.status ?? 200;
   const headers = { ...(options.headers ?? {}), ...(fixture.headers ?? {}) };
   if (fixture.bodyEncoding === "base64") {
-    return new Response(Buffer.from(String(fixture.body ?? ""), "base64"), { status, headers });
+    return new Response(bodyForStatus(status, Buffer.from(String(fixture.body ?? ""), "base64")), { status, headers });
   }
   if (fixture.bodyEncoding === "text") {
-    return new Response(String(fixture.body ?? ""), { status, headers });
+    return new Response(bodyForStatus(status, String(fixture.body ?? "")), { status, headers });
   }
+  if (isNullBodyStatus(status)) return new Response(null, { status, headers });
   return Response.json(fixture.body ?? null, { status, headers });
 }
 
@@ -195,6 +196,14 @@ function isOptionalStringRecord(value: IntegrationJson | undefined): value is Re
   if (value === undefined) return true;
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   return Object.values(value).every((entry) => typeof entry === "string");
+}
+
+function bodyForStatus(status: number, body: BodyInit): BodyInit | null {
+  return isNullBodyStatus(status) ? null : body;
+}
+
+function isNullBodyStatus(status: number): boolean {
+  return status === 204 || status === 205 || status === 304;
 }
 
 function isResponseFixtureKind(kind: ConnectorRuntimeFixtureKind): boolean {

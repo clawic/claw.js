@@ -107,6 +107,26 @@ describe("connector runtime fixtures", () => {
     assert.deepEqual([...new Uint8Array(await response.arrayBuffer())], [137, 80, 78, 71]);
   });
 
+  it("builds empty responses for null-body runtime response statuses", async () => {
+    const fetchImpl = createConnectorRuntimeFixtureFetch([{
+      kind: "response",
+      path: "inline",
+      resolvedPath: "inline",
+      body: {
+        runtimeResponse: {
+          status: 204,
+          body: "",
+          bodyEncoding: "text",
+        },
+      },
+    }]);
+
+    const response = await fetchImpl("https://example.invalid/empty");
+
+    assert.equal(response.status, 204);
+    assert.equal(await response.text(), "");
+  });
+
   it("rejects outgoing request fixture mismatches", async () => {
     const fixtures = loadConnectorRuntimeFixtures([
       {
