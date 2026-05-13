@@ -152,6 +152,134 @@
           ]
         },
         {
+          "id": "discord.action.list-guild-emojis",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Guild Emojis",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-guild-emoji",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Emoji",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "emojiId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.create-guild-emoji",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Guild Emoji",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "image",
+              "type": "string",
+              "optional": false,
+              "default": "data:image/png;base64,c2FtcGxl"
+            },
+            {
+              "name": "roles",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "sample"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.update-guild-emoji",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Update Guild Emoji",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "emojiId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "roles",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "sample"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-guild-emoji",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Guild Emoji",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "emojiId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.get-channel",
           "appId": "discord",
           "kind": "action",
@@ -1721,6 +1849,118 @@
           ]
         },
         {
+          "id": "discord.action.list-application-emojis",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Application Emojis",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-application-emoji",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Application Emoji",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "emojiId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.create-application-emoji",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Application Emoji",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "image",
+              "type": "string",
+              "optional": false,
+              "default": "data:image/png;base64,c2FtcGxl"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.update-application-emoji",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Update Application Emoji",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "emojiId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-application-emoji",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Application Emoji",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "emojiId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.list-guild-application-commands",
           "appId": "discord",
           "kind": "action",
@@ -1930,6 +2170,27 @@
           "appId": "discord",
           "kind": "source",
           "name": "Message Delete",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.guild-emojis-update",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Guild Emojis Update",
           "fields": [],
           "authFieldNames": [],
           "runtime": {
