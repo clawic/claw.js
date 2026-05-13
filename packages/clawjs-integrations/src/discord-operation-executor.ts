@@ -754,29 +754,29 @@ export function buildDiscordOperationRequest(
     case "create-webhook":
       return bodyPlan("POST", `channels/${channelId(values)}/webhooks`, auth, auditHeaders(headers, values), webhookBody(values), { type: "object", requiredPaths: ["id", "token"] });
     case "get-webhook":
-      return getPlan(`webhooks/${webhookId(values)}`, auth, headers, { type: "object", requiredPaths: ["id"] });
+      return getPlan(`integrations/webhooks/${webhookId(values)}`, auth, headers, { type: "object", requiredPaths: ["id"] });
     case "update-webhook":
-      return bodyPlan("PATCH", `webhooks/${webhookId(values)}`, auth, auditHeaders(headers, values), webhookBody(values), { type: "object", requiredPaths: ["id"] });
+      return bodyPlan("PATCH", `integrations/webhooks/${webhookId(values)}`, auth, auditHeaders(headers, values), webhookBody(values), { type: "object", requiredPaths: ["id"] });
     case "delete-webhook":
-      return deletePlan(`webhooks/${webhookId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
+      return deletePlan(`integrations/webhooks/${webhookId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "get-webhook-with-token":
-      return getPlan(`webhooks/${webhookId(values)}/${webhookToken(values)}`, [], headers, { type: "object", requiredPaths: ["id"] });
+      return getPlan(`integrations/webhooks/${webhookId(values)}/${webhookToken(values)}`, [], headers, { type: "object", requiredPaths: ["id"] });
     case "update-webhook-with-token":
-      return bodyPlan("PATCH", `webhooks/${webhookId(values)}/${webhookToken(values)}`, [], headers, webhookTokenBody(values), { type: "object", requiredPaths: ["id"] });
+      return bodyPlan("PATCH", `integrations/webhooks/${webhookId(values)}/${webhookToken(values)}`, [], headers, webhookTokenBody(values), { type: "object", requiredPaths: ["id"] });
     case "delete-webhook-with-token":
-      return deletePlan(`webhooks/${webhookId(values)}/${webhookToken(values)}`, [], headers, { type: "null" });
+      return deletePlan(`integrations/webhooks/${webhookId(values)}/${webhookToken(values)}`, [], headers, { type: "null" });
     case "execute-webhook":
-      return webhookMessagePlan("POST", `webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}`, [], headers, values, true, values.wait === true ? { type: "object" } : { type: "null" }, removeEmptyValues({ wait: values.wait, thread_id: optionalString(values.threadId), with_components: values.withComponents }));
+      return webhookMessagePlan("POST", `integrations/webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}`, [], headers, values, true, values.wait === true ? { type: "object" } : { type: "null" }, removeEmptyValues({ wait: values.wait, thread_id: optionalString(values.threadId), with_components: values.withComponents }));
     case "execute-slack-compatible-webhook":
-      return bodyPlan("POST", `webhooks/${webhookId(values)}/${webhookToken(values)}/slack`, [], headers, webhookServicePayload(values), values.wait === false ? { type: "null" } : { type: "object" }, webhookServiceQuery(values));
+      return bodyPlan("POST", `integrations/webhooks/${webhookId(values)}/${webhookToken(values)}/slack`, [], headers, webhookServicePayload(values), values.wait === false ? { type: "null" } : { type: "object" }, webhookServiceQuery(values));
     case "execute-github-compatible-webhook":
-      return bodyPlan("POST", `webhooks/${webhookId(values)}/${webhookToken(values)}/github`, [], headers, webhookServicePayload(values), values.wait === false ? { type: "null" } : { type: "object" }, webhookServiceQuery(values));
+      return bodyPlan("POST", `integrations/webhooks/${webhookId(values)}/${webhookToken(values)}/github`, [], headers, webhookServicePayload(values), values.wait === false ? { type: "null" } : { type: "object" }, webhookServiceQuery(values));
     case "get-webhook-message":
-      return getPlan(`webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, { type: "object", requiredPaths: ["id"] }, removeEmptyValues({ thread_id: optionalString(values.threadId) }));
+      return getPlan(`integrations/webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, { type: "object", requiredPaths: ["id"] }, removeEmptyValues({ thread_id: optionalString(values.threadId) }));
     case "edit-webhook-message":
-      return webhookMessagePlan("PATCH", `webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, values, false, { type: "object", requiredPaths: ["id"] }, removeEmptyValues({ thread_id: optionalString(values.threadId), with_components: values.withComponents }));
+      return webhookMessagePlan("PATCH", `integrations/webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, values, false, { type: "object", requiredPaths: ["id"] }, removeEmptyValues({ thread_id: optionalString(values.threadId), with_components: values.withComponents }));
     case "delete-webhook-message":
-      return deletePlan(`webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, { type: "null" }, removeEmptyValues({ thread_id: optionalString(values.threadId) }));
+      return deletePlan(`integrations/webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, { type: "null" }, removeEmptyValues({ thread_id: optionalString(values.threadId) }));
     case "create-interaction-response":
       return bodyPlan(
         "POST",
@@ -788,19 +788,19 @@ export function buildDiscordOperationRequest(
         removeEmptyValues({ with_response: values.withResponse }),
       );
     case "get-original-interaction-response":
-      return getPlan(`webhooks/${applicationId(values)}/${interactionToken(values)}/messages/@original`, [], headers, { type: "object", requiredPaths: ["id"] });
+      return getPlan(`integrations/webhooks/${applicationId(values)}/${interactionToken(values)}/messages/@original`, [], headers, { type: "object", requiredPaths: ["id"] });
     case "edit-original-interaction-response":
-      return webhookMessagePlan("PATCH", `webhooks/${applicationId(values)}/${interactionToken(values)}/messages/@original`, [], headers, values, false, { type: "object", requiredPaths: ["id"] });
+      return webhookMessagePlan("PATCH", `integrations/webhooks/${applicationId(values)}/${interactionToken(values)}/messages/@original`, [], headers, values, false, { type: "object", requiredPaths: ["id"] });
     case "delete-original-interaction-response":
-      return deletePlan(`webhooks/${applicationId(values)}/${interactionToken(values)}/messages/@original`, [], headers, { type: "null" });
+      return deletePlan(`integrations/webhooks/${applicationId(values)}/${interactionToken(values)}/messages/@original`, [], headers, { type: "null" });
     case "create-followup-message":
-      return webhookMessagePlan("POST", `webhooks/${applicationId(values)}/${interactionToken(values)}`, [], headers, values, true, { type: "object", requiredPaths: ["id"] });
+      return webhookMessagePlan("POST", `integrations/webhooks/${applicationId(values)}/${interactionToken(values)}`, [], headers, values, true, { type: "object", requiredPaths: ["id"] });
     case "get-followup-message":
-      return getPlan(`webhooks/${applicationId(values)}/${interactionToken(values)}/messages/${messageId(values)}`, [], headers, { type: "object", requiredPaths: ["id"] });
+      return getPlan(`integrations/webhooks/${applicationId(values)}/${interactionToken(values)}/messages/${messageId(values)}`, [], headers, { type: "object", requiredPaths: ["id"] });
     case "edit-followup-message":
-      return webhookMessagePlan("PATCH", `webhooks/${applicationId(values)}/${interactionToken(values)}/messages/${messageId(values)}`, [], headers, values, false, { type: "object", requiredPaths: ["id"] });
+      return webhookMessagePlan("PATCH", `integrations/webhooks/${applicationId(values)}/${interactionToken(values)}/messages/${messageId(values)}`, [], headers, values, false, { type: "object", requiredPaths: ["id"] });
     case "delete-followup-message":
-      return deletePlan(`webhooks/${applicationId(values)}/${interactionToken(values)}/messages/${messageId(values)}`, [], headers, { type: "null" });
+      return deletePlan(`integrations/webhooks/${applicationId(values)}/${interactionToken(values)}/messages/${messageId(values)}`, [], headers, { type: "null" });
     case "list-global-application-commands":
       return getPlan(`applications/${applicationId(values)}/commands`, auth, headers, { type: "array" }, removeEmptyValues({ with_localizations: values.withLocalizations }));
     case "create-global-application-command":

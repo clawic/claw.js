@@ -203,7 +203,7 @@ export function buildGitHubOperationRequest(
     case "get-user":
       return getPlan(`users/${pathSegment(requiredString(values.username, "username"))}`, auth, headers, {}, ["id", "login"]);
     case "list-user-repositories":
-      return getPagedPlan("user/repos", auth, headers, {
+      return getPagedPlan("modules/user/repos", auth, headers, {
         visibility: values.visibility,
         affiliation: values.affiliation,
         type: values.type,
@@ -221,7 +221,7 @@ export function buildGitHubOperationRequest(
         page: values.page ?? 1,
       }, "array");
     case "create-user-repository":
-      return postPlan("user/repos", auth, headers, repositoryBody(values, true), ["id", "name", "full_name"]);
+      return postPlan("modules/user/repos", auth, headers, repositoryBody(values, true), ["id", "name", "full_name"]);
     case "create-org-repository":
       return postPlan(`orgs/${pathSegment(requiredString(firstValue(values.org, values.organization), "org"))}/repos`, auth, headers, repositoryBody(values, true), ["id", "name", "full_name"]);
     case "get-repository":

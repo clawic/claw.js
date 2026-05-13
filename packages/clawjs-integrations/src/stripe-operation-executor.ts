@@ -93,8 +93,8 @@ export const STRIPE_EXTRA_ACTION_SPECS = [
   spec("cancel-setup-intent", "POST", "setup_intents/{setupIntentId}/cancel", [stringField("setupIntentId", { default: "seti_sample" }), stringField("cancellation_reason", { optional: true, default: "abandoned" })], { body: ["cancellation_reason"], requiredPaths: ["id", "object", "status"] }),
   spec("confirm-setup-intent", "POST", "setup_intents/{setupIntentId}/confirm", [stringField("setupIntentId", { default: "seti_sample" }), stringField("payment_method", { optional: true, default: "pm_sample" }), stringField("return_url", { optional: true, default: "https://example.invalid/return" })], { body: ["payment_method", "return_url"], requiredPaths: ["id", "object", "status"] }),
   spec("verify-setup-intent-microdeposits", "POST", "setup_intents/{setupIntentId}/verify_microdeposits", [stringField("setupIntentId", { default: "seti_sample" }), arrayField("amounts", [32, 45], { optional: true }), stringField("descriptor_code", { optional: true, default: "SM11AA" })], { body: ["amounts", "descriptor_code"], requiredPaths: ["id", "object", "status"] }),
-  spec("delete-subscription-discount", "DELETE", "subscriptions/{subscription_exposed_id}/discount", [stringField("subscriptionExposedId", { default: "sub_sample" })], { requiredPaths: ["id", "object", "deleted"] }),
-  spec("migrate-subscription", "POST", "subscriptions/{subscription}/migrate", [stringField("subscription", { default: "sub_sample" }), objectField("billing_mode", { type: "flexible", flexible: { proration_discounts: "included" } })], { body: ["billing_mode"], requiredPaths: ["id", "object", "status"] }),
+  spec("delete-subscription-discount", "DELETE", "modules/subscriptions/{subscription_exposed_id}/discount", [stringField("subscriptionExposedId", { default: "sub_sample" })], { requiredPaths: ["id", "object", "deleted"] }),
+  spec("migrate-subscription", "POST", "modules/subscriptions/{subscription}/migrate", [stringField("subscription", { default: "sub_sample" }), objectField("billing_mode", { type: "flexible", flexible: { proration_discounts: "included" } })], { body: ["billing_mode"], requiredPaths: ["id", "object", "status"] }),
   spec("update-checkout-session", "POST", "checkout/sessions/{session}", [stringField("session", { default: "cs_sample" }), objectField("metadata", { order_id: "sample" }, { optional: true }), arrayField("line_items", [{ id: "li_sample", quantity: 2 }], { optional: true }), arrayField("shipping_options", [{ shipping_rate: "shr_sample" }], { optional: true }), objectField("collected_information", { shipping_details: { name: "Sample Person", address: { country: "US", line1: "123 Sample St" } } }, { optional: true })], { body: ["metadata", "line_items", "shipping_options", "collected_information"], requiredPaths: ["id", "object", "mode"] }),
   spec("list-payment-methods", "GET", "payment_methods", [...PAGE_FIELDS, stringField("customer", { optional: true, default: "cus_sample" }), stringField("type", { optional: true, default: "card" })], { query: ["limit", "starting_after", "ending_before", "customer", "type"], requiredPaths: ["object", "data"] }),
   spec("get-payment-method", "GET", "payment_methods/{paymentMethodId}", [stringField("paymentMethodId", { default: "pm_sample" })]),
@@ -178,14 +178,14 @@ export const STRIPE_EXTRA_ACTION_SPECS = [
   spec("list-credit-note-lines", "GET", "credit_notes/{credit_note}/lines", [stringField("creditNote", { default: "cn_sample" }), ...PAGE_FIELDS], { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
   spec("list-quotes", "GET", "quotes", [...PAGE_FIELDS, stringField("customer", { optional: true, default: "cus_sample" }), stringField("status", { optional: true, default: "draft" })], { query: ["limit", "starting_after", "ending_before", "customer", "status"], requiredPaths: ["object", "data"] }),
   spec("create-quote", "POST", "quotes", [stringField("customer", { default: "cus_sample" }), arrayField("line_items", [{ price: "price_sample", quantity: 1 }], { optional: true }), stringField("description", { optional: true, default: "Sample quote" }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["customer", "line_items", "description", "metadata"] }),
-  spec("get-quote", "GET", "quotes/{quote}", [stringField("quote", { default: "qt_sample" })]),
-  spec("update-quote", "POST", "quotes/{quote}", [stringField("quote", { default: "qt_sample" }), stringField("description", { optional: true, default: "Updated quote" }), integerField("expires_at", { optional: true, default: 1893456000 }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["description", "expires_at", "metadata"] }),
-  spec("accept-quote", "POST", "quotes/{quote}/accept", [stringField("quote", { default: "qt_sample" })]),
-  spec("cancel-quote", "POST", "quotes/{quote}/cancel", [stringField("quote", { default: "qt_sample" })]),
-  spec("finalize-quote", "POST", "quotes/{quote}/finalize", [stringField("quote", { default: "qt_sample" }), integerField("expires_at", { optional: true, default: 1893456000 })], { body: ["expires_at"] }),
-  spec("list-quote-line-items", "GET", "quotes/{quote}/line_items", [stringField("quote", { default: "qt_sample" }), ...PAGE_FIELDS], { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
-  spec("list-quote-computed-upfront-line-items", "GET", "quotes/{quote}/computed_upfront_line_items", [stringField("quote", { default: "qt_sample" }), ...PAGE_FIELDS], { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
-  spec("download-quote-pdf", "GET", "quotes/{quote}/pdf", [stringField("quote", { default: "qt_sample" })], { responseBodyEncoding: "base64", responseSchema: { type: "string" } }),
+  spec("get-quote", "GET", "modules/quotes/{quote}", [stringField("quote", { default: "qt_sample" })]),
+  spec("update-quote", "POST", "modules/quotes/{quote}", [stringField("quote", { default: "qt_sample" }), stringField("description", { optional: true, default: "Updated quote" }), integerField("expires_at", { optional: true, default: 1893456000 }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["description", "expires_at", "metadata"] }),
+  spec("accept-quote", "POST", "modules/quotes/{quote}/accept", [stringField("quote", { default: "qt_sample" })]),
+  spec("cancel-quote", "POST", "modules/quotes/{quote}/cancel", [stringField("quote", { default: "qt_sample" })]),
+  spec("finalize-quote", "POST", "modules/quotes/{quote}/finalize", [stringField("quote", { default: "qt_sample" }), integerField("expires_at", { optional: true, default: 1893456000 })], { body: ["expires_at"] }),
+  spec("list-quote-line-items", "GET", "modules/quotes/{quote}/line_items", [stringField("quote", { default: "qt_sample" }), ...PAGE_FIELDS], { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
+  spec("list-quote-computed-upfront-line-items", "GET", "modules/quotes/{quote}/computed_upfront_line_items", [stringField("quote", { default: "qt_sample" }), ...PAGE_FIELDS], { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
+  spec("download-quote-pdf", "GET", "modules/quotes/{quote}/pdf", [stringField("quote", { default: "qt_sample" })], { responseBodyEncoding: "base64", responseSchema: { type: "string" } }),
   spec("list-subscription-schedules", "GET", "subscription_schedules", [...PAGE_FIELDS, stringField("customer", { optional: true, default: "cus_sample" }), stringField("scheduled", { optional: true, default: "true" })], { query: ["limit", "starting_after", "ending_before", "customer", "scheduled"], requiredPaths: ["object", "data"] }),
   spec("create-subscription-schedule", "POST", "subscription_schedules", [stringField("customer", { default: "cus_sample" }), integerField("start_date", { optional: true, default: 1893456000 }), arrayField("phases", [{ items: [{ price: "price_sample", quantity: 1 }] }], { optional: true }), stringField("end_behavior", { optional: true, default: "release" }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["customer", "start_date", "phases", "end_behavior", "metadata"], requiredPaths: ["id", "object", "status"] }),
   spec("get-subscription-schedule", "GET", "subscription_schedules/{schedule}", [stringField("schedule", { default: "sub_sched_sample" })], { requiredPaths: ["id", "object", "status"] }),
@@ -719,7 +719,7 @@ export function buildStripeOperationRequest(
         trial_period_days: values.trialPeriodDays ?? values.trial_period_days,
       }), auth, headers, ["id", "object", "status"]);
     case "update-subscription":
-      return postFormPlan(`subscriptions/${pathSegment(requiredString(firstValue(values.subscriptionId, values.subscription), "subscriptionId"))}`, removeEmptyValues({
+      return postFormPlan(`modules/subscriptions/${pathSegment(requiredString(firstValue(values.subscriptionId, values.subscription), "subscriptionId"))}`, removeEmptyValues({
         items: values.items,
         metadata: values.metadata,
         pause_collection: values.pauseCollection ?? values.pause_collection,
@@ -729,7 +729,7 @@ export function buildStripeOperationRequest(
     case "cancel-subscription":
       return {
         method: "DELETE",
-        endpoint: `subscriptions/${pathSegment(requiredString(firstValue(values.subscriptionId, values.subscription), "subscriptionId"))}`,
+        endpoint: `modules/subscriptions/${pathSegment(requiredString(firstValue(values.subscriptionId, values.subscription), "subscriptionId"))}`,
         auth,
         headers,
         body: {},
@@ -739,12 +739,12 @@ export function buildStripeOperationRequest(
         },
       };
     case "resume-subscription":
-      return postFormPlan(`subscriptions/${pathSegment(requiredString(firstValue(values.subscriptionId, values.subscription), "subscriptionId"))}/resume`, removeEmptyValues({
+      return postFormPlan(`modules/subscriptions/${pathSegment(requiredString(firstValue(values.subscriptionId, values.subscription), "subscriptionId"))}/resume`, removeEmptyValues({
         billing_cycle_anchor: values.billingCycleAnchor ?? values.billing_cycle_anchor,
         proration_behavior: values.prorationBehavior ?? values.proration_behavior,
       }), auth, headers, ["id", "object", "status"]);
     case "search-subscriptions":
-      return searchPlan("subscriptions/search", values, auth, headers);
+      return searchPlan("modules/subscriptions/search", values, auth, headers);
     case "list-checkout-sessions":
       return listPlan("checkout/sessions", values, auth, headers);
     case "get-checkout-session":

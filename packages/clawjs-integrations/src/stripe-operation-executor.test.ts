@@ -370,7 +370,7 @@ describe("stripe operation runtime", () => {
       billing_mode: { type: "flexible", flexible: { proration_discounts: "included" } },
     }), {
       method: "POST",
-      endpoint: "subscriptions/sub_sample/migrate",
+      endpoint: "modules/subscriptions/sub_sample/migrate",
       auth,
       headers,
       query: {},
@@ -738,7 +738,7 @@ describe("stripe operation runtime", () => {
       quote: "qt_sample",
     }), {
       method: "GET",
-      endpoint: "quotes/qt_sample/pdf",
+      endpoint: "modules/quotes/qt_sample/pdf",
       auth,
       headers,
       query: {},

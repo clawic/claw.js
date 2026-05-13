@@ -3344,7 +3344,7 @@ describe("discord operation runtime", () => {
       auditLogReason: "rename deploy hook",
     }), {
       method: "PATCH",
-      endpoint: "webhooks/999",
+      endpoint: "integrations/webhooks/999",
       auth,
       headers: {
         ...headers,
@@ -3366,7 +3366,7 @@ describe("discord operation runtime", () => {
       auditLogReason: "retire deploy hook",
     }), {
       method: "DELETE",
-      endpoint: "webhooks/999",
+      endpoint: "integrations/webhooks/999",
       auth,
       headers: {
         ...headers,
@@ -3383,7 +3383,7 @@ describe("discord operation runtime", () => {
       webhookToken: "offline-token",
     }), {
       method: "GET",
-      endpoint: "webhooks/999/offline-token",
+      endpoint: "integrations/webhooks/999/offline-token",
       auth: [],
       headers,
       query: {},
@@ -3402,7 +3402,7 @@ describe("discord operation runtime", () => {
       targetChannelId: "456",
     }), {
       method: "PATCH",
-      endpoint: "webhooks/999/offline-token",
+      endpoint: "integrations/webhooks/999/offline-token",
       auth: [],
       headers,
       body: {
@@ -3420,7 +3420,7 @@ describe("discord operation runtime", () => {
       webhookToken: "offline-token",
     }), {
       method: "DELETE",
-      endpoint: "webhooks/999/offline-token",
+      endpoint: "integrations/webhooks/999/offline-token",
       auth: [],
       headers,
       body: {},
@@ -3437,7 +3437,7 @@ describe("discord operation runtime", () => {
       withComponents: true,
     }), {
       method: "POST",
-      endpoint: "webhooks/999/offline-token",
+      endpoint: "integrations/webhooks/999/offline-token",
       auth: [],
       headers,
       query: {
@@ -3472,7 +3472,7 @@ describe("discord operation runtime", () => {
       withComponents: true,
     }), {
       method: "POST",
-      endpoint: "webhooks/999/offline-token",
+      endpoint: "integrations/webhooks/999/offline-token",
       auth: [],
       headers,
       query: {
@@ -3507,7 +3507,7 @@ describe("discord operation runtime", () => {
       attachments: [{ id: "0", filename: "hello.txt" }],
     }), {
       method: "POST",
-      endpoint: "webhooks/999/offline-token",
+      endpoint: "integrations/webhooks/999/offline-token",
       auth: [],
       headers,
       query: {},
@@ -3531,7 +3531,7 @@ describe("discord operation runtime", () => {
       threadId: "thread-123",
     }), {
       method: "GET",
-      endpoint: "webhooks/999/offline-token/messages/message-123",
+      endpoint: "integrations/webhooks/999/offline-token/messages/message-123",
       auth: [],
       headers,
       query: {
@@ -3552,7 +3552,7 @@ describe("discord operation runtime", () => {
       withComponents: true,
     }), {
       method: "PATCH",
-      endpoint: "webhooks/999/offline-token/messages/message-123",
+      endpoint: "integrations/webhooks/999/offline-token/messages/message-123",
       auth: [],
       headers,
       query: {
@@ -3579,7 +3579,7 @@ describe("discord operation runtime", () => {
       withComponents: true,
     }), {
       method: "PATCH",
-      endpoint: "webhooks/999/offline-token/messages/message-123",
+      endpoint: "integrations/webhooks/999/offline-token/messages/message-123",
       auth: [],
       headers,
       query: {
@@ -3608,7 +3608,7 @@ describe("discord operation runtime", () => {
       threadId: "thread-123",
     }), {
       method: "DELETE",
-      endpoint: "webhooks/999/offline-token/messages/message-123",
+      endpoint: "integrations/webhooks/999/offline-token/messages/message-123",
       auth: [],
       headers,
       query: {
@@ -3630,7 +3630,7 @@ describe("discord operation runtime", () => {
       threadId: "thread-123",
     }), {
       method: "POST",
-      endpoint: "webhooks/999/offline-token/slack",
+      endpoint: "integrations/webhooks/999/offline-token/slack",
       auth: [],
       headers,
       query: {
@@ -3654,7 +3654,7 @@ describe("discord operation runtime", () => {
       wait: false,
     }), {
       method: "POST",
-      endpoint: "webhooks/999/offline-token/slack",
+      endpoint: "integrations/webhooks/999/offline-token/slack",
       auth: [],
       headers,
       query: {
@@ -3678,7 +3678,7 @@ describe("discord operation runtime", () => {
       threadId: "thread-123",
     }), {
       method: "POST",
-      endpoint: "webhooks/999/offline-token/github",
+      endpoint: "integrations/webhooks/999/offline-token/github",
       auth: [],
       headers,
       query: {
@@ -3702,7 +3702,7 @@ describe("discord operation runtime", () => {
       wait: false,
     }), {
       method: "POST",
-      endpoint: "webhooks/999/offline-token/github",
+      endpoint: "integrations/webhooks/999/offline-token/github",
       auth: [],
       headers,
       query: {
@@ -3776,7 +3776,7 @@ describe("discord operation runtime", () => {
       interactionToken: "interaction-token",
     }), {
       method: "GET",
-      endpoint: "webhooks/app-123/interaction-token/messages/@original",
+      endpoint: "integrations/webhooks/app-123/interaction-token/messages/@original",
       auth: [],
       headers,
       query: {},
@@ -3795,7 +3795,7 @@ describe("discord operation runtime", () => {
       attachments: [{ id: "0", filename: "original.txt" }],
     }), {
       method: "PATCH",
-      endpoint: "webhooks/app-123/interaction-token/messages/@original",
+      endpoint: "integrations/webhooks/app-123/interaction-token/messages/@original",
       auth: [],
       headers,
       bodyEncoding: "multipart",
@@ -3817,7 +3817,7 @@ describe("discord operation runtime", () => {
       interactionToken: "interaction-token",
     }), {
       method: "DELETE",
-      endpoint: "webhooks/app-123/interaction-token/messages/@original",
+      endpoint: "integrations/webhooks/app-123/interaction-token/messages/@original",
       auth: [],
       headers,
       body: {},
@@ -3834,7 +3834,7 @@ describe("discord operation runtime", () => {
       attachments: [{ id: "0", filename: "followup.txt" }],
     }), {
       method: "POST",
-      endpoint: "webhooks/app-123/interaction-token",
+      endpoint: "integrations/webhooks/app-123/interaction-token",
       auth: [],
       headers,
       bodyEncoding: "multipart",
@@ -3857,7 +3857,7 @@ describe("discord operation runtime", () => {
       messageId: "message-123",
     }), {
       method: "GET",
-      endpoint: "webhooks/app-123/interaction-token/messages/message-123",
+      endpoint: "integrations/webhooks/app-123/interaction-token/messages/message-123",
       auth: [],
       headers,
       query: {},
@@ -3880,7 +3880,7 @@ describe("discord operation runtime", () => {
       poll: { question: { text: "Done?" } },
     }), {
       method: "PATCH",
-      endpoint: "webhooks/app-123/interaction-token/messages/message-123",
+      endpoint: "integrations/webhooks/app-123/interaction-token/messages/message-123",
       auth: [],
       headers,
       body: {
@@ -3903,7 +3903,7 @@ describe("discord operation runtime", () => {
       messageId: "message-123",
     }), {
       method: "DELETE",
-      endpoint: "webhooks/app-123/interaction-token/messages/message-123",
+      endpoint: "integrations/webhooks/app-123/interaction-token/messages/message-123",
       auth: [],
       headers,
       body: {},
