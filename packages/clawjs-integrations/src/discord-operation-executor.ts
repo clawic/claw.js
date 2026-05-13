@@ -124,6 +124,9 @@ export type DiscordRuntimeOperation =
   | "get-guild-ban"
   | "create-guild-ban"
   | "remove-guild-ban"
+  | "bulk-ban-guild-users"
+  | "get-guild-prune-count"
+  | "begin-guild-prune"
   | "list-auto-moderation-rules"
   | "get-auto-moderation-rule"
   | "create-auto-moderation-rule"
@@ -514,6 +517,12 @@ export function buildDiscordOperationRequest(
       }));
     case "remove-guild-ban":
       return deletePlan(`guilds/${guildId(values)}/bans/${userId(values)}`, auth, headers, { type: "object" });
+    case "bulk-ban-guild-users":
+      return bodyPlan("POST", `guilds/${guildId(values)}/bulk-ban`, auth, auditHeaders(headers, values), bulkGuildBanBody(values), { type: "object", requiredPaths: ["banned_users", "failed_users"] });
+    case "get-guild-prune-count":
+      return getPlan(`guilds/${guildId(values)}/prune`, auth, headers, { type: "object", requiredPaths: ["pruned"] }, guildPruneQuery(values));
+    case "begin-guild-prune":
+      return bodyPlan("POST", `guilds/${guildId(values)}/prune`, auth, auditHeaders(headers, values), beginGuildPruneBody(values), { type: "object", requiredPaths: ["pruned"] });
     case "list-auto-moderation-rules":
       return getPlan(`guilds/${guildId(values)}/auto-moderation/rules`, auth, headers, { type: "array" });
     case "get-auto-moderation-rule":
@@ -747,6 +756,9 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "get-guild-ban",
   "create-guild-ban",
   "remove-guild-ban",
+  "bulk-ban-guild-users",
+  "get-guild-prune-count",
+  "begin-guild-prune",
   "list-auto-moderation-rules",
   "get-auto-moderation-rule",
   "create-auto-moderation-rule",
@@ -1106,6 +1118,28 @@ function currentUserNickBody(values: Record<string, IntegrationJson>): Record<st
   return {
     nick: requiredString(values.nick, "nick"),
   };
+}
+
+function bulkGuildBanBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    user_ids: requiredJsonArray(values.userIds, "userIds"),
+    delete_message_seconds: optionalNumber(values.deleteMessageSeconds),
+  });
+}
+
+function guildPruneQuery(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    days: optionalNumber(values.days),
+    include_roles: optionalCommaDelimited(values.includeRoles),
+  });
+}
+
+function beginGuildPruneBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    days: optionalNumber(values.days),
+    compute_prune_count: values.computePruneCount,
+    include_roles: optionalJsonArray(values.includeRoles),
+  });
 }
 
 function roleBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
