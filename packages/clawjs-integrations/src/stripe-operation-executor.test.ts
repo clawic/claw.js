@@ -780,6 +780,34 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-climate-order"), {
+      amount: 1200,
+      currency: "usd",
+      product: "climsku_sample",
+      metric_tons: "1.0",
+      beneficiary: { public_name: "Sample Organization" },
+      metadata: { order_id: "sample" },
+    }), {
+      method: "POST",
+      endpoint: "climate/orders",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        amount: 1200,
+        currency: "usd",
+        product: "climsku_sample",
+        metric_tons: "1.0",
+        beneficiary: { public_name: "Sample Organization" },
+        metadata: { order_id: "sample" },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.list-setup-attempts"), {
       limit: 10,
       setup_intent: "seti_sample",

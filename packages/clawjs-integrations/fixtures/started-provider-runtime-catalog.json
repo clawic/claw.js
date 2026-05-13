@@ -34131,6 +34131,251 @@
           ]
         },
         {
+          "id": "stripe.action.list-climate-orders",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Climate Orders",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-climate-order",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Climate Order",
+          "fields": [
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 1200
+            },
+            {
+              "name": "currency",
+              "type": "string",
+              "optional": true,
+              "default": "usd"
+            },
+            {
+              "name": "product",
+              "type": "string",
+              "optional": false,
+              "default": "climsku_sample"
+            },
+            {
+              "name": "metric_tons",
+              "type": "string",
+              "optional": true,
+              "default": "1.0"
+            },
+            {
+              "name": "beneficiary",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "public_name": "Sample Organization"
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-climate-order",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Climate Order",
+          "fields": [
+            {
+              "name": "order",
+              "type": "string",
+              "optional": false,
+              "default": "climorder_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-climate-order",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Climate Order",
+          "fields": [
+            {
+              "name": "order",
+              "type": "string",
+              "optional": false,
+              "default": "climorder_sample"
+            },
+            {
+              "name": "beneficiary",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "public_name": "Sample Organization"
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.cancel-climate-order",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Cancel Climate Order",
+          "fields": [
+            {
+              "name": "order",
+              "type": "string",
+              "optional": false,
+              "default": "climorder_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-climate-products",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Climate Products",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-climate-product",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Climate Product",
+          "fields": [
+            {
+              "name": "product",
+              "type": "string",
+              "optional": false,
+              "default": "climsku_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-climate-suppliers",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Climate Suppliers",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-climate-supplier",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Climate Supplier",
+          "fields": [
+            {
+              "name": "supplier",
+              "type": "string",
+              "optional": false,
+              "default": "climsup_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-apple-pay-domains",
           "appId": "stripe",
           "kind": "action",

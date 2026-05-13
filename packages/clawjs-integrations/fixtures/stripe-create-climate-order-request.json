@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/climate/orders",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "amount=1200&currency=usd&product=climsku_sample&metric_tons=1.0&beneficiary=%7B%22public_name%22%3A%22Sample+Organization%22%7D&metadata=%7B%22order_id%22%3A%22sample%22%7D"
+}
