@@ -1,0 +1,14 @@
+{
+  "method": "POST",
+  "url": "https://api.hubapi.com/crm/v3/objects/notes",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-hubspotAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "properties": {
+      "name": "sample"
+    }
+  }
+}

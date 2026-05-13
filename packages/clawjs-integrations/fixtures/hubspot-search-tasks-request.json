@@ -1,0 +1,17 @@
+{
+  "method": "POST",
+  "url": "https://api.hubapi.com/crm/v3/objects/tasks/search",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-hubspotAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "query": "sample",
+    "properties": [
+      "email"
+    ],
+    "limit": 100,
+    "after": "100"
+  }
+}

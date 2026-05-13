@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://api.hubapi.com/crm/v3/objects/tasks?limit=100&after=100&properties=email",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-hubspotAccessToken-secret"
+  }
+}

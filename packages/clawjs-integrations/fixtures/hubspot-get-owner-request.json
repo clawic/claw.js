@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://api.hubapi.com/crm/v3/owners/sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-hubspotAccessToken-secret"
+  }
+}

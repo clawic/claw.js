@@ -1,0 +1,8 @@
+{
+  "method": "DELETE",
+  "url": "https://api.hubapi.com/crm/v3/objects/line_items/sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-hubspotAccessToken-secret"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "method": "POST",
+  "url": "https://api.hubapi.com/files/v3/files",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-hubspotAccessToken-secret"
+  },
+  "body": "[object FormData]"
+}

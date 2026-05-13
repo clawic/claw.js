@@ -1,0 +1,12 @@
+{
+  "method": "POST",
+  "url": "https://api.hubapi.com/files/v3/folders",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-hubspotAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "name": "sample"
+  }
+}

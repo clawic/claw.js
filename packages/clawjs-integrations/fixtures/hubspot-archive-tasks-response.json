@@ -1,0 +1,9 @@
+{
+  "id": "101",
+  "name": "sample",
+  "label": "Sample",
+  "type": "string",
+  "properties": {
+    "name": "sample"
+  }
+}

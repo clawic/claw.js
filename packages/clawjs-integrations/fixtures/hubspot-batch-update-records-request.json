@@ -1,0 +1,16 @@
+{
+  "method": "POST",
+  "url": "https://api.hubapi.com/crm/v3/objects/sample/batch/update",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-hubspotAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "inputs": [
+      {
+        "id": "101"
+      }
+    ]
+  }
+}

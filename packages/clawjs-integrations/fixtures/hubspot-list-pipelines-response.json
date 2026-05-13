@@ -1,0 +1,32 @@
+{
+  "id": "101",
+  "name": "sample",
+  "label": "Sample",
+  "type": "string",
+  "properties": {
+    "name": "sample"
+  },
+  "stages": [
+    {
+      "id": "stage-sample",
+      "label": "Sample"
+    }
+  ],
+  "results": [
+    {
+      "id": "101",
+      "name": "sample",
+      "label": "Sample",
+      "type": "string",
+      "properties": {
+        "name": "sample"
+      },
+      "stages": [
+        {
+          "id": "stage-sample",
+          "label": "Sample"
+        }
+      ]
+    }
+  ]
+}

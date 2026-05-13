@@ -1,0 +1,12 @@
+{
+  "method": "PATCH",
+  "url": "https://api.hubapi.com/webhooks/2026-3/sample/subscriptions/sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-hubspotAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "subscriptionType": "contact.creation"
+  }
+}

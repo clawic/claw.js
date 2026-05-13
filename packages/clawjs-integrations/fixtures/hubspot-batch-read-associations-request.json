@@ -1,0 +1,22 @@
+{
+  "method": "POST",
+  "url": "https://api.hubapi.com/crm/v3/associations/sample/sample/batch/read",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-hubspotAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "inputs": [
+      {
+        "from": {
+          "id": "101"
+        },
+        "to": {
+          "id": "202"
+        },
+        "type": "contact_to_company"
+      }
+    ]
+  }
+}

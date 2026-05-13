@@ -1,0 +1,15 @@
+{
+  "method": "POST",
+  "url": "https://api.hubapi.com/crm/v3/properties/sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-hubspotAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "name": "sample",
+    "label": "sample",
+    "type": "sample",
+    "fieldType": "sample"
+  }
+}

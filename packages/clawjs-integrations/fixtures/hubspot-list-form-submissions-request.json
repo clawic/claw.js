@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://api.hubapi.com/form-integrations/v1/submissions/forms/sample?limit=100&after=100",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-hubspotAccessToken-secret"
+  }
+}
