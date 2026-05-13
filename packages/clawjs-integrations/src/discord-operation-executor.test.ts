@@ -323,7 +323,7 @@ const DISCORD_ACTIONS = [
   ]),
   action("delete-guild-scheduled-event", "Delete Guild Scheduled Event", [GUILD_FIELD, field("guildScheduledEventId", "string")]),
   action("list-guild-scheduled-event-users", "List Guild Scheduled Event Users", [GUILD_FIELD, field("guildScheduledEventId", "string"), field("limit", "integer", true, { default: 1, min: 1, max: 100 }), field("withMember", "boolean", true), field("before", "string", true, { default: null }), field("after", "string", true, { default: null })]),
-  action("create-stage-instance", "Create Stage Instance", [CHANNEL_FIELD, field("topic", "string"), field("privacyLevel", "integer", true, { default: 2 }), field("sendStartNotification", "boolean", true), field("guildScheduledEventId", "string", true)]),
+  action("create-stage-instance", "Create Stage Instance", [CHANNEL_FIELD, field("topic", "string"), field("privacyLevel", "integer", true, { default: 2 }), field("sendStartNotification", "boolean", true), field("guildScheduledEventId", "string", true), field("auditLogReason", "string", true)]),
   action("get-stage-instance", "Get Stage Instance", [CHANNEL_FIELD]),
   action("update-stage-instance", "Update Stage Instance", [CHANNEL_FIELD, field("topic", "string", true, { default: "sample" }), field("privacyLevel", "integer", true, { default: 2 }), field("auditLogReason", "string", true)]),
   action("delete-stage-instance", "Delete Stage Instance", [CHANNEL_FIELD, field("auditLogReason", "string", true)]),
@@ -3357,11 +3357,15 @@ describe("discord operation runtime", () => {
       privacyLevel: 2,
       sendStartNotification: true,
       guildScheduledEventId: "event-123",
+      auditLogReason: "start stage",
     }), {
       method: "POST",
       endpoint: "stage-instances",
       auth,
-      headers,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "start stage",
+      },
       body: {
         channel_id: "123",
         topic: "Launch room",
