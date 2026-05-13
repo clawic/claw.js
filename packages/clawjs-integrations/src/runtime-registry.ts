@@ -464,6 +464,8 @@ const DISCORD_ACTION_FIXTURE_NAMES = [
   "delete-channel-permission",
   "follow-announcement-channel",
   "trigger-typing-indicator",
+  "group-dm-add-recipient",
+  "group-dm-remove-recipient",
   "list-messages",
   "get-message",
   "send-message",
