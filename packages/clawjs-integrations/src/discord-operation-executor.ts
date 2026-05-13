@@ -1334,14 +1334,17 @@ function sendSoundboardSoundBody(values: Record<string, IntegrationJson>): Recor
 }
 
 function soundboardSoundBody(values: Record<string, IntegrationJson>, requireCreateFields: boolean): Record<string, IntegrationJson> {
-  const emojiId = optionalString(values.emojiId);
-  return removeEmptyValues({
+  const emojiId = requireCreateFields ? optionalNullableStringField(values, "emojiId") : optionalString(values.emojiId);
+  const body: Record<string, IntegrationJson> = removeEmptyValues({
     name: requireCreateFields ? requiredString(values.name, "name") : optionalString(values.name),
     sound: requireCreateFields ? requiredString(values.sound, "sound") : undefined,
-    volume: optionalNumber(values.volume),
-    emoji_id: emojiId,
-    emoji_name: emojiId ? undefined : optionalString(values.emojiName),
   });
+  const volume = requireCreateFields ? optionalNullableNumberField(values, "volume") : optionalNumber(values.volume);
+  if (volume !== undefined) body.volume = volume;
+  if (emojiId !== undefined) body.emoji_id = emojiId;
+  const emojiName = requireCreateFields ? optionalNullableStringField(values, "emojiName") : optionalString(values.emojiName);
+  if (!emojiId && emojiName !== undefined) body.emoji_name = emojiName;
+  return body;
 }
 
 function emojiBody(
