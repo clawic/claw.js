@@ -409,10 +409,10 @@ const DISCORD_ACTIONS = [
   action("get-invite-target-users-job-status", "Get Invite Target Users Job Status", [field("inviteCode", "string")]),
   action("list-channel-webhooks", "List Channel Webhooks", [CHANNEL_FIELD]),
   action("list-guild-webhooks", "List Guild Webhooks", [GUILD_FIELD]),
-  action("create-webhook", "Create Webhook", [CHANNEL_FIELD, field("name", "string")]),
+  action("create-webhook", "Create Webhook", [CHANNEL_FIELD, field("name", "string"), field("auditLogReason", "string", true)]),
   action("get-webhook", "Get Webhook", [WEBHOOK_FIELD]),
-  action("update-webhook", "Update Webhook", [WEBHOOK_FIELD, field("name", "string", true, { default: "sample" })]),
-  action("delete-webhook", "Delete Webhook", [WEBHOOK_FIELD]),
+  action("update-webhook", "Update Webhook", [WEBHOOK_FIELD, field("name", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
+  action("delete-webhook", "Delete Webhook", [WEBHOOK_FIELD, field("auditLogReason", "string", true)]),
   action("get-webhook-with-token", "Get Webhook With Token", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD], []),
   action("update-webhook-with-token", "Update Webhook With Token", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, field("name", "string", true, { default: "sample" })], []),
   action("delete-webhook-with-token", "Delete Webhook With Token", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD], []),
@@ -3108,6 +3108,65 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-webhook"), {
+      channelId: "123",
+      name: "deploys",
+      auditLogReason: "create deploy hook",
+    }), {
+      method: "POST",
+      endpoint: "channels/123/webhooks",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "create deploy hook",
+      },
+      body: {
+        name: "deploys",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "token"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.update-webhook"), {
+      webhookId: "999",
+      name: "release deploys",
+      auditLogReason: "rename deploy hook",
+    }), {
+      method: "PATCH",
+      endpoint: "webhooks/999",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "rename deploy hook",
+      },
+      body: {
+        name: "release deploys",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-webhook"), {
+      webhookId: "999",
+      auditLogReason: "retire deploy hook",
+    }), {
+      method: "DELETE",
+      endpoint: "webhooks/999",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "retire deploy hook",
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
       },
     });
 
