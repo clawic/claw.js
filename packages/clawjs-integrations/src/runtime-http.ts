@@ -1,3 +1,5 @@
+import { Buffer } from "node:buffer";
+
 import type {
   ConnectorRuntimeAuthBinding,
   ConnectorRuntimeRequestPlan,
@@ -60,7 +62,7 @@ export async function executeConnectorRuntimeRequestPlan(
   const maxRetries = input.maxRetries ?? 0;
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
     const response = await fetcher(request.url, request.init);
-    const parsed = await parseRuntimeHttpResponse(response);
+    const parsed = await parseRuntimeHttpResponse(response, input.plan.responseBodyEncoding);
     if (response.ok) {
       assertRuntimeOutput(input.plan, parsed);
       return parsed;
@@ -310,14 +312,15 @@ function appendFormValue(form: FormData, key: string, value: IntegrationJson): v
   form.append(key, String(value));
 }
 
-async function parseRuntimeHttpResponse(response: Response): Promise<ConnectorRuntimeHttpResponse> {
+async function parseRuntimeHttpResponse(
+  response: Response,
+  responseBodyEncoding: ConnectorRuntimeRequestPlan["responseBodyEncoding"],
+): Promise<ConnectorRuntimeHttpResponse> {
   const headers: Record<string, string> = {};
   response.headers.forEach((value, key) => {
     headers[key] = value;
   });
-  const text = await response.text();
-  const contentType = response.headers.get("content-type") ?? "";
-  const body = parseRuntimeHttpBody(text, contentType);
+  const body = await parseRuntimeHttpBody(response, responseBodyEncoding);
   return {
     status: response.status,
     ok: response.ok,
@@ -327,8 +330,20 @@ async function parseRuntimeHttpResponse(response: Response): Promise<ConnectorRu
   };
 }
 
-function parseRuntimeHttpBody(text: string, contentType: string): IntegrationJson {
+async function parseRuntimeHttpBody(
+  response: Response,
+  responseBodyEncoding: ConnectorRuntimeRequestPlan["responseBodyEncoding"],
+): Promise<IntegrationJson> {
+  if (responseBodyEncoding === "base64") {
+    const arrayBuffer = await response.arrayBuffer();
+    if (arrayBuffer.byteLength === 0) return null;
+    return Buffer.from(arrayBuffer).toString("base64");
+  }
+  const text = await response.text();
+  const contentType = response.headers.get("content-type") ?? "";
   if (!text) return null;
+  if (responseBodyEncoding === "text") return text;
+  if (responseBodyEncoding === "json") return JSON.parse(text) as IntegrationJson;
   if (isJsonContentType(contentType)) {
     return JSON.parse(text) as IntegrationJson;
   }

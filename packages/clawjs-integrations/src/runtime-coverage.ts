@@ -625,6 +625,10 @@ function isRequestPlan(value: ConnectorRuntimeRequestPlan | undefined): boolean 
     && isOptionalJsonRecord(value.query)
     && isRequiredJsonRecord(value.body)
     && (value.bodyValue === undefined || isIntegrationJson(value.bodyValue))
+    && (
+      value.responseBodyEncoding === undefined
+      || ["json", "text", "base64"].includes(value.responseBodyEncoding)
+    )
     && isOutputSchema(value.responseSchema)
   );
 }

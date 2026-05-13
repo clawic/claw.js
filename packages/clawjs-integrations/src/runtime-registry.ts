@@ -155,6 +155,7 @@ export interface ConnectorRuntimeRequestPlan {
   body: Record<string, IntegrationJson>;
   bodyValue?: IntegrationJson;
   bodyEncoding?: "json" | "form" | "multipart" | "text" | "none";
+  responseBodyEncoding?: "json" | "text" | "base64";
   pagination?: ConnectorRuntimePaginationPlan;
   responseSchema?: ConnectorRuntimeOutputSchema;
 }
