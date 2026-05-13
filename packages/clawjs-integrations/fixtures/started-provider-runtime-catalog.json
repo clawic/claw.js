@@ -4940,6 +4940,11 @@
               "name": "wait",
               "type": "boolean",
               "optional": true
+            },
+            {
+              "name": "withComponents",
+              "type": "boolean",
+              "optional": true
             }
           ],
           "authFieldNames": []
@@ -5068,6 +5073,11 @@
               "type": "string",
               "optional": true,
               "default": "sample"
+            },
+            {
+              "name": "withComponents",
+              "type": "boolean",
+              "optional": true
             }
           ],
           "authFieldNames": []
