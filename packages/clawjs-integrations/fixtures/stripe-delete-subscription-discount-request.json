@@ -1,0 +1,9 @@
+{
+  "method": "DELETE",
+  "url": "https://api.stripe.com/v1/subscriptions/sub_sample/discount",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  },
+  "body": null
+}

@@ -39339,6 +39339,51 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.delete-subscription-discount",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Subscription Discount",
+          "fields": [
+            {
+              "name": "subscriptionExposedId",
+              "type": "string",
+              "optional": false,
+              "default": "sub_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.migrate-subscription",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Migrate Subscription",
+          "fields": [
+            {
+              "name": "subscription",
+              "type": "string",
+              "optional": false,
+              "default": "sub_sample"
+            },
+            {
+              "name": "billing_mode",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "type": "flexible",
+                "flexible": {
+                  "proration_discounts": "included"
+                }
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

@@ -365,6 +365,25 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.migrate-subscription"), {
+      subscription: "sub_sample",
+      billing_mode: { type: "flexible", flexible: { proration_discounts: "included" } },
+    }), {
+      method: "POST",
+      endpoint: "subscriptions/sub_sample/migrate",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        billing_mode: { type: "flexible", flexible: { proration_discounts: "included" } },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object", "status"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.pay-invoice"), {
       invoiceId: "in_sample",
       payment_method: "pm_sample",

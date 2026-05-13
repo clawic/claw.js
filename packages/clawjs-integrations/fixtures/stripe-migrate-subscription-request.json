@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/subscriptions/sub_sample/migrate",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "billing_mode=%7B%22type%22%3A%22flexible%22%2C%22flexible%22%3A%7B%22proration_discounts%22%3A%22included%22%7D%7D"
+}
