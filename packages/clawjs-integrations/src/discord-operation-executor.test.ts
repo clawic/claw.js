@@ -167,6 +167,9 @@ const DISCORD_ACTIONS = [
   action("get-guild-vanity-url", "Get Guild Vanity URL", [GUILD_FIELD]),
   action("get-guild-welcome-screen", "Get Guild Welcome Screen", [GUILD_FIELD]),
   action("modify-guild-welcome-screen", "Modify Guild Welcome Screen", [GUILD_FIELD, field("enabled", "boolean", true, { default: true }), field("welcomeChannels", "array", true, { default: [{ channel_id: "sample", description: "sample" }] }), field("description", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
+  action("get-guild-onboarding", "Get Guild Onboarding", [GUILD_FIELD]),
+  action("modify-guild-onboarding", "Modify Guild Onboarding", [GUILD_FIELD, field("prompts", "array", true, { default: [{ id: "sample", type: 0, options: [], title: "sample", single_select: true, required: false, in_onboarding: true }] }), field("defaultChannelIds", "array", true, { default: ["sample"] }), field("enabled", "boolean", true, { default: true }), field("mode", "integer", true, { default: 0 }), field("auditLogReason", "string", true)]),
+  action("modify-guild-incident-actions", "Modify Guild Incident Actions", [GUILD_FIELD, field("invitesDisabledUntil", "string", true, { default: null }), field("dmsDisabledUntil", "string", true, { default: "2026-05-13T14:00:00.000Z" })]),
   action("list-auto-moderation-rules", "List Auto Moderation Rules", [GUILD_FIELD]),
   action("get-auto-moderation-rule", "Get Auto Moderation Rule", [GUILD_FIELD, AUTO_MODERATION_RULE_FIELD]),
   action("create-auto-moderation-rule", "Create Auto Moderation Rule", [GUILD_FIELD, field("name", "string"), field("eventType", "integer", false, { default: 1 }), field("triggerType", "integer", false, { default: 1 }), AUTO_MODERATION_TRIGGER_METADATA_FIELD, AUTO_MODERATION_ACTIONS_FIELD, field("enabled", "boolean", true), field("exemptRoles", "array", true, { default: ["sample"] }), field("exemptChannels", "array", true, { default: ["sample"] }), field("auditLogReason", "string", true)]),
@@ -1071,6 +1074,76 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["welcome_channels", "description"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-guild-onboarding"), {
+      guildId: "456",
+    }), {
+      method: "GET",
+      endpoint: "guilds/456/onboarding",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["guild_id", "prompts", "default_channel_ids", "enabled", "mode"],
+      },
+    });
+
+    const onboardingPrompts = [{
+      id: "prompt-123",
+      type: 0,
+      options: [],
+      title: "Start",
+      single_select: true,
+      required: false,
+      in_onboarding: true,
+    }];
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.modify-guild-onboarding"), {
+      guildId: "456",
+      prompts: onboardingPrompts,
+      defaultChannelIds: ["channel-123"],
+      enabled: true,
+      mode: 0,
+      auditLogReason: "refresh onboarding",
+    }), {
+      method: "PUT",
+      endpoint: "guilds/456/onboarding",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "refresh onboarding",
+      },
+      body: {
+        prompts: onboardingPrompts,
+        default_channel_ids: ["channel-123"],
+        enabled: true,
+        mode: 0,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["guild_id", "prompts", "default_channel_ids", "enabled", "mode"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.modify-guild-incident-actions"), {
+      guildId: "456",
+      invitesDisabledUntil: null,
+      dmsDisabledUntil: "2026-05-13T14:00:00.000Z",
+    }), {
+      method: "PUT",
+      endpoint: "guilds/456/incident-actions",
+      auth,
+      headers,
+      body: {
+        invites_disabled_until: null,
+        dms_disabled_until: "2026-05-13T14:00:00.000Z",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["invites_disabled_until", "dms_disabled_until"],
       },
     });
 
