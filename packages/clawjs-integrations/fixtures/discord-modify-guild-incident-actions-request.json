@@ -1,0 +1,13 @@
+{
+  "method": "PUT",
+  "url": "https://discord.com/api/v10/guilds/sample/incident-actions",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "invites_disabled_until": null,
+    "dms_disabled_until": "2026-05-13T14:00:00.000Z"
+  }
+}

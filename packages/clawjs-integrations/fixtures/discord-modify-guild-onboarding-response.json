@@ -1,0 +1,19 @@
+{
+  "guild_id": "sample",
+  "prompts": [
+    {
+      "id": "sample",
+      "type": 0,
+      "options": [],
+      "title": "sample",
+      "single_select": true,
+      "required": false,
+      "in_onboarding": true
+    }
+  ],
+  "default_channel_ids": [
+    "sample"
+  ],
+  "enabled": true,
+  "mode": 0
+}

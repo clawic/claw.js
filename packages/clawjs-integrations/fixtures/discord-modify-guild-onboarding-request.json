@@ -1,0 +1,28 @@
+{
+  "method": "PUT",
+  "url": "https://discord.com/api/v10/guilds/sample/onboarding",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json",
+    "x-audit-log-reason": "sample"
+  },
+  "body": {
+    "prompts": [
+      {
+        "id": "sample",
+        "type": 0,
+        "options": [],
+        "title": "sample",
+        "single_select": true,
+        "required": false,
+        "in_onboarding": true
+      }
+    ],
+    "default_channel_ids": [
+      "sample"
+    ],
+    "enabled": true,
+    "mode": 0
+  }
+}

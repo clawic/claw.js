@@ -1,0 +1,9 @@
+{
+  "guild_id": "sample",
+  "prompts": [],
+  "default_channel_ids": [
+    "sample"
+  ],
+  "enabled": true,
+  "mode": 0
+}
