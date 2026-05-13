@@ -259,6 +259,22 @@
           ]
         },
         {
+          "id": "discord.action.get-guild-voice-regions",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Voice Regions",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.list-guild-channels",
           "appId": "discord",
           "kind": "action",
@@ -3281,6 +3297,48 @@
               "default": [
                 "sample"
               ]
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-guild-integrations",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Integrations",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-guild-integration",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Guild Integration",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "integrationId",
+              "type": "string",
+              "optional": false
             },
             {
               "name": "auditLogReason",
