@@ -8,7 +8,7 @@ import { buildEventsAttendedApp, EventsAttendedClient } from "@clawjs/events-att
 
 test("events-attended CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "events-attended-e2e-"));
-  const dbPath = path.join(tmpDir, "events-attended.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildEventsAttendedApp({

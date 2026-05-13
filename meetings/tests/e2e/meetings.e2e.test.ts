@@ -8,7 +8,7 @@ import { buildMeetingsApp, MeetingsClient } from "@clawjs/meetings";
 
 test("meetings CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "meetings-e2e-"));
-  const dbPath = path.join(tmpDir, "meetings.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildMeetingsApp({

@@ -8,7 +8,7 @@ import { buildHydrationApp, HydrationClient } from "@clawjs/hydration";
 
 test("hydration CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "hydration-e2e-"));
-  const dbPath = path.join(tmpDir, "hydration.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildHydrationApp({

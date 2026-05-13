@@ -8,7 +8,7 @@ import { buildEmotionsApp, EmotionsClient } from "@clawjs/emotions";
 
 test("emotions CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "emotions-e2e-"));
-  const dbPath = path.join(tmpDir, "emotions.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildEmotionsApp({

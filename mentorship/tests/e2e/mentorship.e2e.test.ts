@@ -8,7 +8,7 @@ import { buildMentorshipApp, MentorshipClient } from "@clawjs/mentorship";
 
 test("mentorship CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "mentorship-e2e-"));
-  const dbPath = path.join(tmpDir, "mentorship.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildMentorshipApp({

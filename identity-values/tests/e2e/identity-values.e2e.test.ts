@@ -8,7 +8,7 @@ import { buildIdentityValuesApp, IdentityValuesClient } from "@clawjs/identity-v
 
 test("identity-values CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "identity-values-e2e-"));
-  const dbPath = path.join(tmpDir, "identity-values.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildIdentityValuesApp({

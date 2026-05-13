@@ -8,7 +8,7 @@ import { buildGamesApp, GamesClient } from "@clawjs/games";
 
 test("games CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "games-e2e-"));
-  const dbPath = path.join(tmpDir, "games.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildGamesApp({

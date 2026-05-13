@@ -8,7 +8,7 @@ import { buildHomeApp, HomeClient } from "@clawjs/home";
 
 test("home CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "home-e2e-"));
-  const dbPath = path.join(tmpDir, "home.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildHomeApp({

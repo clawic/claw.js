@@ -8,7 +8,7 @@ import { buildMemorableMomentsApp, MemorableMomentsClient } from "@clawjs/memora
 
 test("memorable-moments CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "memorable-moments-e2e-"));
-  const dbPath = path.join(tmpDir, "memorable-moments.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildMemorableMomentsApp({

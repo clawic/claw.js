@@ -8,7 +8,7 @@ import { buildHotTakesApp, HotTakesClient } from "@clawjs/hot-takes";
 
 test("hot-takes CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "hot-takes-e2e-"));
-  const dbPath = path.join(tmpDir, "hot-takes.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildHotTakesApp({

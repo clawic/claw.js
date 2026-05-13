@@ -8,7 +8,7 @@ import { buildIncomeApp, IncomeClient } from "@clawjs/income";
 
 test("income CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "income-e2e-"));
-  const dbPath = path.join(tmpDir, "income.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildIncomeApp({

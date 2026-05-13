@@ -8,7 +8,7 @@ import { buildFinanceApp, FinanceClient } from "@clawjs/finance";
 
 test("finance CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "finance-e2e-"));
-  const dbPath = path.join(tmpDir, "finance.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildFinanceApp({
