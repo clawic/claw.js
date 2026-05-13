@@ -17,6 +17,13 @@ import { runOpenSessions } from "./sessions-server-launcher.mjs";
 import { runCatalogCli, CATALOG_GROUPS } from "./catalog-commands.mjs";
 import { BUILTIN_COLLECTIONS_BY_ALIAS } from "@clawjs/core";
 
+const invokedBinName = path.basename(process.argv[1] || "claw");
+const publicBinName = invokedBinName === "clawjs.mjs" ? "claw" : invokedBinName;
+
+if (invokedBinName === "clawjs") {
+  process.stderr.write("[claw] `clawjs` is deprecated and will be removed in a future phase. Use `claw` instead.\n");
+}
+
 const args = process.argv.slice(2);
 
 // Secrets/Memory/Drive subcommands first (small router; the heavy CLI lives in dist/index.js).
@@ -78,7 +85,7 @@ const exitCode = await runCli(args, {
   stdout: process.stdout,
   stderr: process.stderr,
   cwd: process.cwd(),
-  binName: path.basename(process.argv[1] || "claw"),
+  binName: publicBinName,
 });
 
 process.exit(exitCode);

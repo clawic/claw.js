@@ -121,9 +121,9 @@ const DISCORD_ACTIONS = [
   action("modify-guild-channel-positions", "Modify Guild Channel Positions", [GUILD_FIELD, field("positions", "array", false, { default: [{ id: "sample", position: 1, lock_permissions: false, parent_id: "sample" }] }), field("auditLogReason", "string", true)]),
   action("get-guild-template", "Get Guild Template", [TEMPLATE_CODE_FIELD]),
   action("list-guild-templates", "List Guild Templates", [GUILD_FIELD]),
-  action("create-guild-template", "Create Guild Template", [GUILD_FIELD, field("name", "string"), field("description", "string", true, { default: "sample" })]),
+  action("create-guild-template", "Create Guild Template", [GUILD_FIELD, field("name", "string"), field("description", "string", true, { default: null })]),
   action("sync-guild-template", "Sync Guild Template", [GUILD_FIELD, TEMPLATE_CODE_FIELD]),
-  action("update-guild-template", "Update Guild Template", [GUILD_FIELD, TEMPLATE_CODE_FIELD, field("name", "string", true, { default: "sample" }), field("description", "string", true, { default: "sample" })]),
+  action("update-guild-template", "Update Guild Template", [GUILD_FIELD, TEMPLATE_CODE_FIELD, field("name", "string", true, { default: "sample" }), field("description", "string", true, { default: null })]),
   action("delete-guild-template", "Delete Guild Template", [GUILD_FIELD, TEMPLATE_CODE_FIELD]),
   action("send-soundboard-sound", "Send Soundboard Sound", [CHANNEL_FIELD, SOUNDBOARD_SOUND_FIELD, field("sourceGuildId", "string", true)]),
   action("list-default-soundboard-sounds", "List Default Soundboard Sounds", []),
@@ -2132,7 +2132,7 @@ describe("discord operation runtime", () => {
     assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-guild-template"), {
       guildId: "456",
       name: "Support Server",
-      description: "Public support layout",
+      description: null,
     }), {
       method: "POST",
       endpoint: "guilds/456/templates",
@@ -2140,7 +2140,7 @@ describe("discord operation runtime", () => {
       headers,
       body: {
         name: "Support Server",
-        description: "Public support layout",
+        description: null,
       },
       responseSchema: {
         type: "object",
@@ -2157,6 +2157,26 @@ describe("discord operation runtime", () => {
       auth,
       headers,
       body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["code", "name", "source_guild_id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.update-guild-template"), {
+      guildId: "456",
+      templateCode: "abc123",
+      name: "Support Server",
+      description: null,
+    }), {
+      method: "PATCH",
+      endpoint: "guilds/456/templates/abc123",
+      auth,
+      headers,
+      body: {
+        name: "Support Server",
+        description: null,
+      },
       responseSchema: {
         type: "object",
         requiredPaths: ["code", "name", "source_guild_id"],

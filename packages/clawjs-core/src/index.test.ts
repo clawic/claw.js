@@ -19,6 +19,9 @@ import {
   clawCommandResponseSchema,
   clawContractFixturesV1,
   clawContractVersionV1,
+  clawDomainOwnershipEntriesV1,
+  clawDomainOwnershipMatrixV1,
+  clawDomainSchema,
   clawHostRegistrySchema,
   clawJsonSchemasV1,
   agentRecordSchema,
@@ -174,6 +177,32 @@ test("host contract fixtures and JSON schema exports cover the public v1 surface
   assert.equal(request.schemaVersion, clawContractVersionV1);
   assert.equal(response.meta.hostId, "clawix");
   assert.equal(registry.activeHostId, "clawix");
+});
+
+test("domain ownership matrix covers every v1 host domain", () => {
+  const domains = new Set(clawDomainSchema.options);
+
+  assert.equal(clawDomainOwnershipEntriesV1.length, domains.size);
+  assert.deepEqual(
+    Object.keys(clawDomainOwnershipMatrixV1).sort(),
+    [...domains].sort(),
+  );
+
+  for (const entry of clawDomainOwnershipEntriesV1) {
+    assert.equal(entry.domain in clawDomainOwnershipMatrixV1, true);
+    assert.equal(entry.frameworkOwns.length > 0, true, entry.domain);
+    assert.equal(entry.hostOwns.length > 0, true, entry.domain);
+    assert.equal(entry.clawixUiOwns.length > 0, true, entry.domain);
+    assert.ok(entry.phase >= 5 && entry.phase <= 12, entry.domain);
+    assert.ok(entry.requiredTests.includes("contract_fixture"), entry.domain);
+    assert.ok(entry.requiredTests.includes("cli_json"), entry.domain);
+    assert.ok(entry.requiredTests.includes("clawix_embedded"), entry.domain);
+  }
+
+  assert.deepEqual(clawDomainOwnershipMatrixV1.calendar.requiredTests.includes("signed_permission_preflight"), true);
+  assert.deepEqual(clawDomainOwnershipMatrixV1.system.brokerRequired, true);
+  assert.deepEqual(clawDomainOwnershipMatrixV1.sessions.requiredTests.includes("codex_read_only"), true);
+  assert.deepEqual(clawDomainOwnershipMatrixV1.voice.destructivePolicy, "none");
 });
 
 test("storage helpers resolve Claw roots and enforce Codex read-only policy", () => {
