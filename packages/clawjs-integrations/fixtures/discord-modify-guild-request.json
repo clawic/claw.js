@@ -1,0 +1,34 @@
+{
+  "method": "PATCH",
+  "url": "https://discord.com/api/v10/guilds/sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json",
+    "x-audit-log-reason": "sample"
+  },
+  "body": {
+    "name": "sample",
+    "verification_level": 1,
+    "default_message_notifications": 1,
+    "explicit_content_filter": 1,
+    "afk_channel_id": "sample",
+    "afk_timeout": 60,
+    "icon": "data:image/png;base64,c2FtcGxl",
+    "owner_id": "sample",
+    "splash": "data:image/png;base64,c2FtcGxl",
+    "discovery_splash": "data:image/png;base64,c2FtcGxl",
+    "banner": "data:image/png;base64,c2FtcGxl",
+    "system_channel_id": "sample",
+    "system_channel_flags": 0,
+    "rules_channel_id": "sample",
+    "public_updates_channel_id": "sample",
+    "preferred_locale": "en-US",
+    "features": [
+      "COMMUNITY"
+    ],
+    "description": "sample",
+    "premium_progress_bar_enabled": true,
+    "safety_alerts_channel_id": "sample"
+  }
+}

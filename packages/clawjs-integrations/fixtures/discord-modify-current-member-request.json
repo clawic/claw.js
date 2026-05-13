@@ -1,0 +1,16 @@
+{
+  "method": "PATCH",
+  "url": "https://discord.com/api/v10/guilds/sample/members/@me",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json",
+    "x-audit-log-reason": "sample"
+  },
+  "body": {
+    "nick": "sample",
+    "avatar": "data:image/png;base64,c2FtcGxl",
+    "banner": "data:image/png;base64,c2FtcGxl",
+    "bio": "sample"
+  }
+}
