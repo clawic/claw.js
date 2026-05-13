@@ -75,7 +75,7 @@ function minimalPayload(collection: BuiltinCollectionDefinition): Record<string,
 }
 
 function nonRequiredTextField(collection: BuiltinCollectionDefinition): BuiltinFieldDefinition | undefined {
-  return collection.fields.find((f) => !f.required && (f.type === "text" || f.type === "markdown"));
+  return collection.fields.find((f) => !f.required && f.name !== "notes" && f.name !== "notesBody" && (f.type === "text" || f.type === "markdown"));
 }
 
 const NAMESPACE = "smoke";
@@ -119,4 +119,64 @@ test("smoke: CRUD a record on every built-in collection", async (t) => {
     });
   }
   assert.equal(failures, 0, `Smoke test had ${failures} create failures`);
+});
+
+test("record notes are stored as associated Pages instead of record JSON fields", () => {
+  const record = store.createRecord(NAMESPACE, "personal_notes", {
+    title: "Project note",
+    notes: "Call out the long form body.",
+  });
+
+  assert.equal(record.notes, undefined);
+  assert.equal(typeof record.pageId, "string");
+
+  const raw = store.sqlite.prepare(`
+    SELECT data_json
+    FROM records
+    WHERE namespace_id = ? AND collection_name = ? AND id = ?
+  `).get(NAMESPACE, "personal_notes", record.id) as { data_json: string };
+  const data = JSON.parse(raw.data_json) as Record<string, unknown>;
+  assert.equal(data.notes, undefined);
+  assert.equal(data.notesBody, undefined);
+  assert.equal(data.pageId, record.pageId);
+
+  const page = store.sqlite.prepare(`
+    SELECT title, space, surface, source_record_domain, source_record_id
+    FROM pages
+    WHERE id = ?
+  `).get(record.pageId) as {
+    title: string;
+    space: string;
+    surface: string;
+    source_record_domain: string;
+    source_record_id: string;
+  };
+  assert.equal(page.title, "Project note");
+  assert.equal(page.space, "records");
+  assert.equal(page.surface, "record_note");
+  assert.equal(page.source_record_domain, `${NAMESPACE}.personal_notes`);
+  assert.equal(page.source_record_id, record.id);
+
+  const block = store.sqlite.prepare(`
+    SELECT text
+    FROM page_blocks
+    WHERE page_id = ?
+  `).get(record.pageId) as { text: string };
+  assert.equal(block.text, "Call out the long form body.");
+
+  const updated = store.updateRecord(NAMESPACE, "personal_notes", record.id, {
+    notesBody: "Updated body",
+  });
+  assert.equal(updated.notesBody, undefined);
+  assert.equal(updated.pageId, record.pageId);
+  const updatedBlock = store.sqlite.prepare(`
+    SELECT text
+    FROM page_blocks
+    WHERE page_id = ?
+  `).get(record.pageId) as { text: string };
+  assert.equal(updatedBlock.text, "Updated body");
+
+  assert.equal(store.deleteRecord(NAMESPACE, "personal_notes", record.id), true);
+  const deletedPage = store.sqlite.prepare("SELECT id FROM pages WHERE id = ?").get(record.pageId);
+  assert.equal(deletedPage, undefined);
 });

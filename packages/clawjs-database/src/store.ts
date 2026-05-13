@@ -62,6 +62,7 @@ interface FileRow {
 }
 
 const SYSTEM_FIELDS = ["id", "createdAt", "updatedAt"] as const;
+const RECORD_PAGE_FIELDS = new Set(["pageId", "notes", "notesBody"]);
 const VALID_OPERATIONS = new Set<DatabaseOperation>([
   "schema:read",
   "schema:write",
@@ -88,6 +89,32 @@ function parseJson<T>(value: string | null | undefined, fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function recordPageTitle(collection: CollectionDefinition, payload: Record<string, unknown>): string {
+  return stringValue(payload.title) ?? stringValue(payload.name) ?? `${collection.displayName} note`;
+}
+
+function recordPageFieldWasProvided(payload: Record<string, unknown>): boolean {
+  return Object.prototype.hasOwnProperty.call(payload, "notesBody")
+    || Object.prototype.hasOwnProperty.call(payload, "notes");
+}
+
+function recordPageBody(payload: Record<string, unknown>): string | null {
+  const value = Object.prototype.hasOwnProperty.call(payload, "notesBody") ? payload.notesBody : payload.notes;
+  if (value === null || value === undefined) return "";
+  if (typeof value !== "string") {
+    throw new Error("Record notes must be text.");
+  }
+  return value;
+}
+
+function recordPageId(namespaceId: string, collectionName: string, recordId: string): string {
+  return `record-note-${slugify(namespaceId)}-${slugify(collectionName)}-${slugify(recordId)}`;
 }
 
 function slugify(value: string): string {
@@ -1310,6 +1337,59 @@ export class DatabaseServiceStore {
         meta_key TEXT PRIMARY KEY,
         meta_value TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS pages (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        space TEXT NOT NULL DEFAULT 'notes',
+        surface TEXT NOT NULL DEFAULT 'note',
+        owner_id TEXT,
+        author_kind TEXT NOT NULL DEFAULT 'user',
+        author_id TEXT,
+        visibility TEXT NOT NULL DEFAULT 'private',
+        sensitivity TEXT NOT NULL DEFAULT 'normal',
+        tags_json TEXT NOT NULL DEFAULT '[]',
+        properties_json TEXT NOT NULL DEFAULT '{}',
+        source_record_domain TEXT,
+        source_record_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        archived_at TEXT
+      );
+      CREATE INDEX IF NOT EXISTS pages_space_updated_idx ON pages(space, archived_at, updated_at DESC);
+      CREATE INDEX IF NOT EXISTS pages_surface_idx ON pages(surface, updated_at DESC);
+      CREATE INDEX IF NOT EXISTS pages_source_record_idx ON pages(source_record_domain, source_record_id);
+      CREATE TABLE IF NOT EXISTS page_blocks (
+        id TEXT PRIMARY KEY,
+        page_id TEXT NOT NULL,
+        parent_block_id TEXT,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        kind TEXT NOT NULL DEFAULT 'paragraph',
+        content_json TEXT NOT NULL DEFAULT '{}',
+        text TEXT NOT NULL DEFAULT '',
+        metadata_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS page_blocks_page_order_idx ON page_blocks(page_id, sort_order, created_at);
+      CREATE TABLE IF NOT EXISTS page_revisions (
+        id TEXT PRIMARY KEY,
+        page_id TEXT NOT NULL,
+        revision_number INTEGER NOT NULL,
+        snapshot_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        author_kind TEXT NOT NULL DEFAULT 'system',
+        author_id TEXT,
+        UNIQUE (page_id, revision_number),
+        FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE
+      );
+      CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
+        page_id UNINDEXED,
+        title,
+        body,
+        tags,
+        tokenize='unicode61'
+      );
     `);
   }
 
@@ -1600,8 +1680,17 @@ export class DatabaseServiceStore {
       if (SYSTEM_FIELDS.includes(key as typeof SYSTEM_FIELDS[number])) {
         throw new Error(`System field ${key} cannot be mutated.`);
       }
-      if (!allowed.has(key)) {
+      if (!allowed.has(key) && !RECORD_PAGE_FIELDS.has(key)) {
         throw new Error(`Unknown field ${key} for collection ${collection.name}.`);
+      }
+      if (key === "pageId" && payload[key] !== undefined && payload[key] !== null && typeof payload[key] !== "string") {
+        throw new Error("Record pageId must be text.");
+      }
+      if ((key === "notes" || key === "notesBody") && !allowed.has(key)) {
+        const value = payload[key];
+        if (value !== undefined && value !== null && typeof value !== "string") {
+          throw new Error(`Record ${key} must be text.`);
+        }
       }
     }
     for (const field of collection.fields) {
@@ -1616,6 +1705,116 @@ export class DatabaseServiceStore {
       : collection;
     validateRecordRules(effectiveCollection, payload);
     return payload;
+  }
+
+  private normalizeRecordForStorage(input: {
+    namespaceId: string;
+    collectionName: string;
+    recordId: string;
+    collection: CollectionDefinition;
+    payload: Record<string, unknown>;
+    timestamp: string;
+  }): Record<string, unknown> {
+    const normalized = { ...input.payload };
+    const hasPageBody = recordPageFieldWasProvided(normalized);
+    const pageBody = hasPageBody ? recordPageBody(normalized) : null;
+    delete normalized.notes;
+    delete normalized.notesBody;
+
+    if (!hasPageBody) {
+      return normalized;
+    }
+
+    const pageId = stringValue(normalized.pageId) ?? recordPageId(input.namespaceId, input.collectionName, input.recordId);
+    this.upsertRecordPage({
+      pageId,
+      collection: input.collection,
+      namespaceId: input.namespaceId,
+      collectionName: input.collectionName,
+      recordId: input.recordId,
+      payload: normalized,
+      body: pageBody ?? "",
+      timestamp: input.timestamp,
+    });
+    normalized.pageId = pageId;
+    return normalized;
+  }
+
+  private upsertRecordPage(input: {
+    pageId: string;
+    collection: CollectionDefinition;
+    namespaceId: string;
+    collectionName: string;
+    recordId: string;
+    payload: Record<string, unknown>;
+    body: string;
+    timestamp: string;
+  }): void {
+    const title = recordPageTitle(input.collection, input.payload);
+    const sourceRecordDomain = `${input.namespaceId}.${input.collectionName}`;
+    const properties = JSON.stringify({
+      namespaceId: input.namespaceId,
+      collectionName: input.collectionName,
+      recordId: input.recordId,
+    });
+    this.sqlite.prepare(`
+      INSERT INTO pages (
+        id, title, space, surface, author_kind, visibility, sensitivity,
+        tags_json, properties_json, source_record_domain, source_record_id,
+        created_at, updated_at
+      )
+      VALUES (?, ?, 'records', 'record_note', 'system', 'private', 'normal', '[]', ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        title = excluded.title,
+        properties_json = excluded.properties_json,
+        source_record_domain = excluded.source_record_domain,
+        source_record_id = excluded.source_record_id,
+        updated_at = excluded.updated_at,
+        archived_at = NULL
+    `).run(
+      input.pageId,
+      title,
+      properties,
+      sourceRecordDomain,
+      input.recordId,
+      input.timestamp,
+      input.timestamp,
+    );
+
+    this.sqlite.prepare("DELETE FROM page_blocks WHERE page_id = ?").run(input.pageId);
+    this.sqlite.prepare(`
+      INSERT INTO page_blocks (id, page_id, sort_order, kind, content_json, text, metadata_json, created_at, updated_at)
+      VALUES (?, ?, 0, 'paragraph', ?, ?, '{}', ?, ?)
+    `).run(
+      `${input.pageId}:block:0`,
+      input.pageId,
+      JSON.stringify({ text: input.body }),
+      input.body,
+      input.timestamp,
+      input.timestamp,
+    );
+
+    const revisionNumber = ((this.sqlite.prepare(`
+      SELECT MAX(revision_number) AS revision_number
+      FROM page_revisions
+      WHERE page_id = ?
+    `).get(input.pageId) as { revision_number: number | null } | undefined)?.revision_number ?? 0) + 1;
+    this.sqlite.prepare(`
+      INSERT INTO page_revisions (id, page_id, revision_number, snapshot_json, created_at, author_kind)
+      VALUES (?, ?, ?, ?, ?, 'system')
+    `).run(
+      `rev-${randomUUID()}`,
+      input.pageId,
+      revisionNumber,
+      JSON.stringify({ title, blocks: [{ kind: "paragraph", text: input.body }] }),
+      input.timestamp,
+    );
+
+    this.sqlite.prepare("DELETE FROM notes_fts WHERE page_id = ?").run(input.pageId);
+    this.sqlite.prepare(`
+      INSERT INTO notes_fts (page_id, title, body, tags)
+      VALUES (?, ?, ?, '')
+    `).run(input.pageId, title, input.body);
   }
 
   listRecords(namespaceId: string, collectionName: string, options: {
@@ -1670,9 +1869,17 @@ export class DatabaseServiceStore {
   createRecord(namespaceId: string, collectionName: string, payload: Record<string, unknown>): RecordEnvelope {
     const collection = this.getCollection(namespaceId, collectionName);
     if (!collection) throw new Error(`Collection ${collectionName} does not exist.`);
-    const normalized = this.validateRecordPayload(collection, payload, "create");
+    const validated = this.validateRecordPayload(collection, payload, "create");
     const id = randomUUID();
     const now = nowIso();
+    const normalized = this.normalizeRecordForStorage({
+      namespaceId,
+      collectionName,
+      recordId: id,
+      collection,
+      payload: validated,
+      timestamp: now,
+    });
     this.sqlite.prepare(`
       INSERT INTO records (namespace_id, collection_name, id, data_json, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -1690,9 +1897,17 @@ export class DatabaseServiceStore {
   }): RecordEnvelope {
     const collection = this.getCollection(input.namespaceId, input.collectionName);
     if (!collection) throw new Error(`Collection ${input.collectionName} does not exist.`);
-    const normalized = this.validateRecordPayload(collection, input.payload, "update");
+    const validated = this.validateRecordPayload(collection, input.payload, "update");
     const createdAt = input.createdAt ?? nowIso();
     const updatedAt = input.updatedAt ?? createdAt;
+    const normalized = this.normalizeRecordForStorage({
+      namespaceId: input.namespaceId,
+      collectionName: input.collectionName,
+      recordId: input.recordId,
+      collection,
+      payload: validated,
+      timestamp: updatedAt,
+    });
     this.sqlite.prepare(`
       INSERT INTO records (namespace_id, collection_name, id, data_json, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -1719,8 +1934,16 @@ export class DatabaseServiceStore {
       ...Object.fromEntries(Object.entries(current).filter(([key]) => !SYSTEM_FIELDS.includes(key as typeof SYSTEM_FIELDS[number]))),
       ...payload,
     };
-    const normalized = this.validateRecordPayload(collection, merged, "update");
+    const validated = this.validateRecordPayload(collection, merged, "update");
     const now = nowIso();
+    const normalized = this.normalizeRecordForStorage({
+      namespaceId,
+      collectionName,
+      recordId: id,
+      collection,
+      payload: validated,
+      timestamp: now,
+    });
     this.sqlite.prepare(`
       UPDATE records
       SET data_json = ?, updated_at = ?
@@ -1730,6 +1953,10 @@ export class DatabaseServiceStore {
   }
 
   deleteRecord(namespaceId: string, collectionName: string, id: string): boolean {
+    this.sqlite.prepare(`
+      DELETE FROM pages
+      WHERE source_record_domain = ? AND source_record_id = ?
+    `).run(`${namespaceId}.${collectionName}`, id);
     return this.sqlite.prepare(`
       DELETE FROM records
       WHERE namespace_id = ? AND collection_name = ? AND id = ?
