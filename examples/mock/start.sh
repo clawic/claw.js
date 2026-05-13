@@ -6,9 +6,9 @@
 # All data lives in a temp directory and resets on every restart.
 #
 # Usage:
-#   ./mock/start.sh          # dev server (hot reload)
-#   ./mock/start.sh build    # production build
-#   ./mock/start.sh start    # production server (requires prior build)
+#   ./examples/mock/start.sh          # dev server (hot reload)
+#   ./examples/mock/start.sh build    # production build
+#   ./examples/mock/start.sh start    # production server (requires prior build)
 # ──────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -84,7 +84,7 @@ case "$CMD" in
   build)
     echo "Building production bundle..."
     cd "$DEMO_DIR" && npm run build
-    echo "Done! Run './mock/start.sh start' to serve."
+    echo "Done! Run './examples/mock/start.sh start' to serve."
     ;;
   start)
     echo "Starting production server on port $PORT..."
@@ -94,7 +94,7 @@ case "$CMD" in
     ;;
   *)
     echo "Unknown command: $CMD"
-    echo "Usage: ./mock/start.sh [dev|build|start] [port]"
+    echo "Usage: ./examples/mock/start.sh [dev|build|start] [port]"
     exit 1
     ;;
 esac
