@@ -66,6 +66,7 @@ export type DiscordRuntimeOperation =
   | "leave-lobby"
   | "link-channel-to-lobby"
   | "unlink-channel-from-lobby"
+  | "update-lobby-message-moderation-metadata"
   | "get-channel"
   | "update-channel"
   | "set-voice-channel-status"
@@ -356,6 +357,8 @@ export function buildDiscordOperationRequest(
       return bodyPlan("PATCH", `lobbies/${lobbyId(values)}/channel-linking`, bearerAuth, headers, lobbyChannelLinkBody(values), { type: "object", requiredPaths: ["id", "application_id", "members", "linked_channel"] });
     case "unlink-channel-from-lobby":
       return bodyPlan("PATCH", `lobbies/${lobbyId(values)}/channel-linking`, bearerAuth, headers, {}, { type: "object", requiredPaths: ["id", "application_id", "members"] });
+    case "update-lobby-message-moderation-metadata":
+      return bodyPlan("PUT", `lobbies/${lobbyId(values)}/messages/${messageId(values)}/moderation-metadata`, auth, headers, lobbyMessageModerationMetadataBody(values), { type: "object" });
     case "update-channel":
       return bodyPlan("PATCH", `channels/${channelId(values)}`, auth, headers, channelBody(values), { type: "object", requiredPaths: ["id", "type"] });
     case "set-voice-channel-status":
@@ -663,6 +666,7 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "leave-lobby",
   "link-channel-to-lobby",
   "unlink-channel-from-lobby",
+  "update-lobby-message-moderation-metadata",
   "get-channel",
   "update-channel",
   "set-voice-channel-status",
@@ -897,6 +901,10 @@ function lobbyChannelLinkBody(values: Record<string, IntegrationJson>): Record<s
   return {
     channel_id: requiredString(values.channelId, "channelId"),
   };
+}
+
+function lobbyMessageModerationMetadataBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return requiredJsonObject(values.metadata, "metadata");
 }
 
 function channelPermissionBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
