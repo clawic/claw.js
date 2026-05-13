@@ -1818,7 +1818,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return result;
   });
 
-  app.get("/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/ws", { websocket: true }, async (socket, request) => {
+  app.get("/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/events", { websocket: true }, async (socket, request) => {
     const fastifyRequest = request as unknown as FastifyRequest<{ Params: WorkspaceParams }>;
     const host = fastifyRequest.headers.host ?? new URL(config.publicBaseUrl).host;
     if (!isLoopbackHost(host) && !isSecureRequest(fastifyRequest)) {

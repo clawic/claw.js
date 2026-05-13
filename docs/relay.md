@@ -359,7 +359,7 @@ Workspace-scoped browser routes now expose the connector-hosted shared Chromium 
 - `POST /v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/control/acquire`
 - `POST /v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/control/release`
 - `POST /v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/navigate`
-- `GET /v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/ws`
+- `GET /v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/events`
 
 The browser route family is Relay-first:
 

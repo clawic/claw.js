@@ -111,7 +111,7 @@ export function BrowserTab({
     const token = sessionStorage.getItem("accessToken");
     if (!token) return;
     const wsBase = window.location.origin.replace(/^http/, "ws");
-    const socket = new WebSocket(`${wsBase}/v1${prefix}/browser/ws?access_token=${encodeURIComponent(token)}`);
+    const socket = new WebSocket(`${wsBase}/v1${prefix}/browser/events?access_token=${encodeURIComponent(token)}`);
     wsRef.current = socket;
     setWsState("connecting");
 

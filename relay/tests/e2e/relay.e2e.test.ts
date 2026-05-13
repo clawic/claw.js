@@ -1948,7 +1948,7 @@ describe("relay e2e", () => {
     assert.match(ensuredPayload.shareUrl, /browser\/demo-tenant\/browser-agent\/main$/);
 
     const browserWs = new WebSocket(
-      `${baseUrl.replace(/^http/, "ws")}/v1/tenants/demo-tenant/agents/browser-agent/workspaces/main/browser/ws?access_token=${encodeURIComponent(userTokens.accessToken)}`,
+      `${baseUrl.replace(/^http/, "ws")}/v1/tenants/demo-tenant/agents/browser-agent/workspaces/main/browser/events?access_token=${encodeURIComponent(userTokens.accessToken)}`,
     );
     const firstMessages: Array<Record<string, unknown>> = [];
     await new Promise<void>((resolve, reject) => {

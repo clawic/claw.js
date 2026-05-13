@@ -114,7 +114,7 @@ The Relay also exposes equivalent project-scoped routes under:
 | Shared browser ensure/share | `-` | `claw browser ensure`, `claw browser share` | `POST WS/browser/session` |
 | Shared browser takeover | `-` | `-` | `POST WS/browser/control/acquire`, `POST WS/browser/control/release` |
 | Shared browser navigate | `-` | `-` | `POST WS/browser/navigate` |
-| Shared browser live stream | `-` | `-` | `GET WS/browser/ws` |
+| Shared browser live stream | `-` | `-` | `GET /browser/events` |
 | Admin create workspace | `-` | `-` | `POST /v1/admin/tenants/:tenantId/agents/:agentId/workspaces` |
 | Admin delete workspace | `-` | `-` | `DELETE /v1/admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId` |
 | Settings read | `claw.files.readSettingsValues()` | `-` | `GET /v1/admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/config` |
