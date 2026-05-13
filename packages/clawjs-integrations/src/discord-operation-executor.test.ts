@@ -77,6 +77,11 @@ const DISCORD_ACTIONS = [
   action("create-guild-sticker", "Create Guild Sticker", [GUILD_FIELD, field("name", "string"), field("description", "string"), field("tags", "string"), field("file", "string", false, { default: "sample-file" }), field("auditLogReason", "string", true)]),
   action("update-guild-sticker", "Update Guild Sticker", [GUILD_FIELD, STICKER_FIELD, field("name", "string", true, { default: "sample" }), field("description", "string", true, { default: "sample" }), field("tags", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
   action("delete-guild-sticker", "Delete Guild Sticker", [GUILD_FIELD, STICKER_FIELD, field("auditLogReason", "string", true)]),
+  action("list-voice-regions", "List Voice Regions", []),
+  action("get-current-user-voice-state", "Get Current User Voice State", [GUILD_FIELD]),
+  action("get-user-voice-state", "Get User Voice State", [GUILD_FIELD, USER_FIELD]),
+  action("modify-current-user-voice-state", "Modify Current User Voice State", [GUILD_FIELD, CHANNEL_FIELD, field("suppress", "boolean", true), field("requestToSpeakTimestamp", "string", true)]),
+  action("modify-user-voice-state", "Modify User Voice State", [GUILD_FIELD, USER_FIELD, CHANNEL_FIELD, field("suppress", "boolean", true)]),
   action("get-channel", "Get Channel", [CHANNEL_FIELD]),
   action("update-channel", "Update Channel", [CHANNEL_FIELD, field("name", "string", true, { default: "sample" })]),
   action("set-voice-channel-status", "Set Voice Channel Status", [CHANNEL_FIELD, field("status", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
@@ -290,6 +295,89 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["id", "channel_id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.list-voice-regions"), {}), {
+      method: "GET",
+      endpoint: "voice/regions",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "array",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-current-user-voice-state"), {
+      guildId: "456",
+    }), {
+      method: "GET",
+      endpoint: "guilds/456/voice-states/@me",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["user_id", "session_id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-user-voice-state"), {
+      guildId: "456",
+      userId: "123",
+    }), {
+      method: "GET",
+      endpoint: "guilds/456/voice-states/123",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["user_id", "session_id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.modify-current-user-voice-state"), {
+      guildId: "456",
+      channelId: "789",
+      suppress: false,
+      requestToSpeakTimestamp: "2026-05-13T11:00:00.000Z",
+    }), {
+      method: "PATCH",
+      endpoint: "guilds/456/voice-states/@me",
+      auth,
+      headers,
+      body: {
+        channel_id: "789",
+        suppress: false,
+        request_to_speak_timestamp: "2026-05-13T11:00:00.000Z",
+      },
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.modify-user-voice-state"), {
+      guildId: "456",
+      userId: "123",
+      channelId: "789",
+      suppress: true,
+      requestToSpeakTimestamp: "ignored",
+    }), {
+      method: "PATCH",
+      endpoint: "guilds/456/voice-states/123",
+      auth,
+      headers,
+      body: {
+        channel_id: "789",
+        suppress: true,
+      },
+      responseSchema: {
+        type: "object",
       },
     });
 
