@@ -14,7 +14,7 @@ export async function startTimeServer(prefix = "content-time") {
       host: "127.0.0.1",
       port: 0,
       dataDir: path.join(rootDir, ".data"),
-      dbPath: path.join(rootDir, ".data", "time.sqlite"),
+      dbPath: path.join(rootDir, ".data", "clawjs.sqlite"),
       jwtSecret: "time-test-secret",
       defaultTimeZone: "UTC",
     },

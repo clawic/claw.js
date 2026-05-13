@@ -14,7 +14,7 @@ test("TimeClient can create items, read legacy projections, and cancel follow-up
       host: "127.0.0.1",
       port: 0,
       dataDir: path.join(tmpDir, "data"),
-      dbPath: path.join(tmpDir, "data", "time.sqlite"),
+      dbPath: path.join(tmpDir, "data", "clawjs.sqlite"),
       defaultTimeZone: "UTC",
       schedulerIntervalMs: 50,
     },
@@ -65,7 +65,7 @@ test("heartbeat routines enforce runtime safety, budgets, targets, and compact r
       host: "127.0.0.1",
       port: 0,
       dataDir: path.join(tmpDir, "data"),
-      dbPath: path.join(tmpDir, "data", "time.sqlite"),
+      dbPath: path.join(tmpDir, "data", "clawjs.sqlite"),
       defaultTimeZone: "UTC",
       schedulerIntervalMs: 50,
     },
@@ -243,7 +243,7 @@ test("heartbeat routines enforce runtime safety, budgets, targets, and compact r
 
 test("heartbeat scheduler recovers stale running executions on startup", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-time-stale-"));
-  const dbPath = path.join(tmpDir, "data", "time.sqlite");
+  const dbPath = path.join(tmpDir, "data", "clawjs.sqlite");
   const built = buildTimeApp({
     config: {
       host: "127.0.0.1",

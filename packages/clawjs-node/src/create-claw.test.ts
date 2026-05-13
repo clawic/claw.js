@@ -1026,7 +1026,7 @@ test("createClaw exposes the time namespace when configured", async () => {
       host: "127.0.0.1",
       port: 0,
       dataDir,
-      dbPath: path.join(dataDir, "time.sqlite"),
+      dbPath: path.join(dataDir, "clawjs.sqlite"),
       defaultTimeZone: "Europe/Madrid",
       schedulerIntervalMs: 60_000,
     },

@@ -26,7 +26,9 @@ import { loadContentConfig } from "../../../content/src/server/config.ts";
 import { loadDelegationPlaneConfig } from "../../../delegation-plane/src/server/config.ts";
 import { loadErpConfig } from "../../../erp/src/server/config.ts";
 import { loadFeedConfig } from "../../../feed/src/server/config.ts";
+import { loadIotConfig } from "../../../iot/src/server/config.ts";
 import { loadNotifyConfig } from "../../../notify/src/server/config.ts";
+import { loadTimeConfig } from "../../../time/src/server/config.ts";
 
 test("V2 data configs route canonical domains to main DB and sidecars under the ClawJS root", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-v2-config-"));
@@ -60,6 +62,10 @@ test("V2 data configs route canonical domains to main DB and sidecars under the 
     FEED_DB_PATH: undefined,
     DELEGATION_PLANE_DATA_DIR: undefined,
     DELEGATION_PLANE_DATABASE_FILE: undefined,
+    CLAWJS_TIME_DATA_DIR: undefined,
+    CLAWJS_TIME_DB_FILE: undefined,
+    IOT_DATA_DIR: undefined,
+    IOT_DB_PATH: undefined,
   }, () => {
     assert.equal(loadUserModelConfig().dataDir, root);
     assert.equal(loadUserModelConfig().dbPath, path.join(root, "clawjs.sqlite"));
@@ -80,6 +86,8 @@ test("V2 data configs route canonical domains to main DB and sidecars under the 
     assert.equal(loadContentConfig().dbPath, path.join(root, "clawjs.sqlite"));
     assert.equal(loadErpConfig().dbPath, path.join(root, "clawjs.sqlite"));
     assert.equal(loadBadgerConfig().dbPath, path.join(root, "clawjs.sqlite"));
+    assert.equal(loadTimeConfig().dbPath, path.join(root, "clawjs.sqlite"));
+    assert.equal(loadIotConfig().dbPath, path.join(root, "clawjs.sqlite"));
     assert.equal(loadNotifyConfig().dbPath, path.join(root, "notify.sqlite"));
     assert.equal(loadFeedConfig().dbPath, path.join(root, "feed.sqlite"));
     assert.equal(loadDelegationPlaneConfig().databaseFile, path.join(root, "runtime.sqlite"));
