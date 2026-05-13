@@ -17,6 +17,7 @@ const MESSAGE_FIELD = field("messageId", "string");
 const ANSWER_FIELD = field("answerId", "string");
 const USER_FIELD = field("userId", "string");
 const ROLE_FIELD = field("roleId", "string");
+const INTEGRATION_FIELD = field("integrationId", "string");
 const WEBHOOK_FIELD = field("webhookId", "string");
 const WEBHOOK_TOKEN_FIELD = field("webhookToken", "string");
 const APPLICATION_FIELD = field("applicationId", "string");
@@ -40,6 +41,7 @@ const DISCORD_ACTIONS = [
   action("get-guild", "Get Guild", [GUILD_FIELD, field("withCounts", "boolean", true)]),
   action("get-guild-preview", "Get Guild Preview", [GUILD_FIELD]),
   action("modify-guild", "Modify Guild", [GUILD_FIELD, field("name", "string", true, { default: "sample" }), field("verificationLevel", "integer", true, { default: 1 }), field("defaultMessageNotifications", "integer", true, { default: 1 }), field("explicitContentFilter", "integer", true, { default: 1 }), field("afkChannelId", "string", true, { default: "sample" }), field("afkTimeout", "integer", true, { default: 60 }), field("icon", "string", true, { default: "data:image/png;base64,c2FtcGxl" }), field("ownerId", "string", true, { default: "sample" }), field("splash", "string", true, { default: "data:image/png;base64,c2FtcGxl" }), field("discoverySplash", "string", true, { default: "data:image/png;base64,c2FtcGxl" }), field("banner", "string", true, { default: "data:image/png;base64,c2FtcGxl" }), field("systemChannelId", "string", true, { default: "sample" }), field("systemChannelFlags", "integer", true, { default: 0 }), field("rulesChannelId", "string", true, { default: "sample" }), field("publicUpdatesChannelId", "string", true, { default: "sample" }), field("preferredLocale", "string", true, { default: "en-US" }), field("features", "array", true, { default: ["COMMUNITY"] }), field("description", "string", true, { default: "sample" }), field("premiumProgressBarEnabled", "boolean", true, { default: true }), field("safetyAlertsChannelId", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
+  action("get-guild-voice-regions", "Get Guild Voice Regions", [GUILD_FIELD]),
   action("list-guild-channels", "List Guild Channels", [GUILD_FIELD]),
   action("create-guild-channel", "Create Guild Channel", [GUILD_FIELD, field("name", "string"), field("type", "integer", true, { default: 0 })]),
   action("modify-guild-channel-positions", "Modify Guild Channel Positions", [GUILD_FIELD, field("positions", "array", false, { default: [{ id: "sample", position: 1, lock_permissions: false, parent_id: "sample" }] }), field("auditLogReason", "string", true)]),
@@ -157,6 +159,8 @@ const DISCORD_ACTIONS = [
   action("bulk-ban-guild-users", "Bulk Ban Guild Users", [GUILD_FIELD, field("userIds", "array", false, { default: ["sample"] }), field("deleteMessageSeconds", "integer", true, { default: 0, min: 0 }), field("auditLogReason", "string", true)]),
   action("get-guild-prune-count", "Get Guild Prune Count", [GUILD_FIELD, field("days", "integer", true, { default: 7, min: 1 }), field("includeRoles", "array", true, { default: ["sample"] })]),
   action("begin-guild-prune", "Begin Guild Prune", [GUILD_FIELD, field("days", "integer", true, { default: 7, min: 1 }), field("computePruneCount", "boolean", true, { default: true }), field("includeRoles", "array", true, { default: ["sample"] }), field("auditLogReason", "string", true)]),
+  action("get-guild-integrations", "Get Guild Integrations", [GUILD_FIELD]),
+  action("delete-guild-integration", "Delete Guild Integration", [GUILD_FIELD, INTEGRATION_FIELD, field("auditLogReason", "string", true)]),
   action("list-auto-moderation-rules", "List Auto Moderation Rules", [GUILD_FIELD]),
   action("get-auto-moderation-rule", "Get Auto Moderation Rule", [GUILD_FIELD, AUTO_MODERATION_RULE_FIELD]),
   action("create-auto-moderation-rule", "Create Auto Moderation Rule", [GUILD_FIELD, field("name", "string"), field("eventType", "integer", false, { default: 1 }), field("triggerType", "integer", false, { default: 1 }), AUTO_MODERATION_TRIGGER_METADATA_FIELD, AUTO_MODERATION_ACTIONS_FIELD, field("enabled", "boolean", true), field("exemptRoles", "array", true, { default: ["sample"] }), field("exemptChannels", "array", true, { default: ["sample"] }), field("auditLogReason", "string", true)]),
@@ -320,6 +324,20 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-guild-voice-regions"), {
+      guildId: "456",
+    }), {
+      method: "GET",
+      endpoint: "guilds/456/regions",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "array",
       },
     });
 
@@ -907,6 +925,38 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["pruned"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-guild-integrations"), {
+      guildId: "456",
+    }), {
+      method: "GET",
+      endpoint: "guilds/456/integrations",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "array",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-guild-integration"), {
+      guildId: "456",
+      integrationId: "integration-123",
+      auditLogReason: "retire integration",
+    }), {
+      method: "DELETE",
+      endpoint: "guilds/456/integrations/integration-123",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "retire integration",
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
       },
     });
 
