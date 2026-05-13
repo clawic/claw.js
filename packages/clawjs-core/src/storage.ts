@@ -36,10 +36,7 @@ function joinPath(...parts: string[]): string {
 }
 
 export function resolveClawGlobalDataDir(input: ClawStorageRootsInput): string {
-  const platform = input.platform ?? "darwin";
-  if (platform === "darwin") return joinPath(input.homeDir, "Library", "Application Support", "Claw");
-  if (platform === "win32") return joinPath(input.appDataDir ?? joinPath(input.homeDir, "AppData", "Roaming"), "Claw");
-  return joinPath(input.xdgDataHome ?? joinPath(input.homeDir, ".local", "share"), "Claw");
+  return joinPath(input.homeDir, ".claw");
 }
 
 export function resolveClawWorkspaceDir(workspaceRoot: string): string {
@@ -47,6 +44,7 @@ export function resolveClawWorkspaceDir(workspaceRoot: string): string {
 }
 
 export function resolveClawHostStateDir(input: ClawStorageRootsInput & { hostName: string }): string {
+  if (input.hostName.toLowerCase() === "clawix") return joinPath(input.homeDir, ".clawix");
   const platform = input.platform ?? "darwin";
   if (platform === "darwin") return joinPath(input.homeDir, "Library", "Application Support", input.hostName);
   if (platform === "win32") return joinPath(input.appDataDir ?? joinPath(input.homeDir, "AppData", "Roaming"), input.hostName);
@@ -54,7 +52,7 @@ export function resolveClawHostStateDir(input: ClawStorageRootsInput & { hostNam
 }
 
 export function resolveClawHostRegistryPath(input: ClawStorageRootsInput): string {
-  return joinPath(resolveClawGlobalDataDir(input), "hosts", "registry.json");
+  return joinPath(resolveClawGlobalDataDir(input), "state", "hosts", "registry.json");
 }
 
 export function isInsideCodexHome(pathname: string, homeDir: string): boolean {

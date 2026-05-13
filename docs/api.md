@@ -114,7 +114,7 @@ workspace database and blob directory directly.
 The public surface is intentionally tiered:
 
 - `SDK core`: product primitives such as workspace setup, sessions, documents, providers, files, and inference.
-- `SDK advanced public`: intent/observed state, watch APIs, orchestration, secrets, generations, speech, and adapter-adjacent helpers.
+- `SDK advanced public`: desired/observed state, watch APIs, orchestration, secrets, generations, speech, and adapter-adjacent helpers.
 - `workspace extension public`: `@clawjs/workspace` namespaces layered on top of the base SDK.
 
 Visibility markers used elsewhere in the docs:
@@ -314,7 +314,7 @@ const features = claw.features.describe();
 
 The ownership model is the important bit:
 
-- `intent` stores desired SDK-owned state under `.clawjs/intents/`
+- `intent` stores desired SDK-owned state under `.claw/state/desired/`
 - `observed` stores rebuildable runtime-derived state under `.clawjs/observed/`
 - `features.describe()` tells you which domains are adapter-owned, SDK-owned, or mixed before you call `apply()`
 
@@ -370,7 +370,7 @@ await claw.auth.setProviderEnabled("openai-codex", true, { preferredAuthMode: "o
 claw.auth.removeProvider("openai");
 ```
 These auth operations also update the canonical provider intent under
-`.clawjs/intents/providers.json`, while observed auth summaries stay
+`.claw/state/desired/providers.json`, while observed auth summaries stay
 rebuildable under `.clawjs/observed/providers.json`.
 
 `prepareLogin()` tells you whether ClawJS can reuse existing auth for the

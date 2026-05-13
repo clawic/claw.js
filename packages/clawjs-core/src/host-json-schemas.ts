@@ -35,7 +35,7 @@ const domainEnum = [
 export const clawJsonSchemasV1 = {
   commandRequest: {
     $schema: "https://json-schema.org/draft/2020-12/schema",
-    $id: "https://schemas.claw.dev/v1/command-request.schema.json",
+    $id: "https://schemas.clawjs.ai/v1/command-request.schema.json",
     type: "object",
     additionalProperties: false,
     required: ["schemaVersion", "requestId", "domain", "resource", "action"],
@@ -62,7 +62,7 @@ export const clawJsonSchemasV1 = {
   },
   commandResponse: {
     $schema: "https://json-schema.org/draft/2020-12/schema",
-    $id: "https://schemas.claw.dev/v1/command-response.schema.json",
+    $id: "https://schemas.clawjs.ai/v1/command-response.schema.json",
     type: "object",
     additionalProperties: false,
     required: ["schemaVersion", "requestId", "ok"],
@@ -71,7 +71,7 @@ export const clawJsonSchemasV1 = {
       requestId: stringSchema,
       ok: booleanSchema,
       data: true,
-      error: { $ref: "https://schemas.claw.dev/v1/command-error.schema.json" },
+      error: { $ref: "https://schemas.clawjs.ai/v1/command-error.schema.json" },
       meta: {
         type: "object",
         properties: {
@@ -86,7 +86,7 @@ export const clawJsonSchemasV1 = {
   },
   commandError: {
     $schema: "https://json-schema.org/draft/2020-12/schema",
-    $id: "https://schemas.claw.dev/v1/command-error.schema.json",
+    $id: "https://schemas.clawjs.ai/v1/command-error.schema.json",
     type: "object",
     additionalProperties: false,
     required: ["code", "message"],
@@ -98,7 +98,7 @@ export const clawJsonSchemasV1 = {
   },
   capability: {
     $schema: "https://json-schema.org/draft/2020-12/schema",
-    $id: "https://schemas.claw.dev/v1/capability.schema.json",
+    $id: "https://schemas.clawjs.ai/v1/capability.schema.json",
     type: "object",
     required: ["id", "domain", "actions", "riskLevel"],
     properties: {
@@ -115,7 +115,7 @@ export const clawJsonSchemasV1 = {
   },
   hostDescriptor: {
     $schema: "https://json-schema.org/draft/2020-12/schema",
-    $id: "https://schemas.claw.dev/v1/host-descriptor.schema.json",
+    $id: "https://schemas.clawjs.ai/v1/host-descriptor.schema.json",
     type: "object",
     required: ["schemaVersion", "id", "displayName", "kind", "registeredAt", "updatedAt"],
     properties: {
@@ -135,7 +135,7 @@ export const clawJsonSchemasV1 = {
           tokenRef: stringSchema,
         },
       },
-      capabilities: { type: "array", items: { $ref: "https://schemas.claw.dev/v1/capability.schema.json" } },
+      capabilities: { type: "array", items: { $ref: "https://schemas.clawjs.ai/v1/capability.schema.json" } },
       registeredAt: stringSchema,
       updatedAt: stringSchema,
     },

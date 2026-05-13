@@ -51,7 +51,7 @@ The stable SDK-owned layer lives under `.clawjs/`:
 
 - `.clawjs/manifest.json`
 - `.clawjs/compat/`
-- `.clawjs/intents/`
+- `.claw/state/desired/`
 - `.clawjs/observed/`
 - `.clawjs/projections/`
 - `.clawjs/sessions/`
@@ -62,7 +62,7 @@ The selected adapter also seeds its own runtime-facing files such as
 
 ## Ownership Rules
 
-- `.clawjs/intents/` stores desired SDK-owned state
+- `.claw/state/desired/` stores desired SDK-owned state
 - `.clawjs/observed/` stores rebuildable runtime snapshots
 - `.clawjs/projections/` stores settings-to-file bindings
 - runtime-facing files stay outside `.clawjs/`

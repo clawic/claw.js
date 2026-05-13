@@ -25,7 +25,7 @@ remain adapter-specific.
 
 Auth writes now update two separate layers on purpose:
 
-- `.clawjs/intents/providers.json` for desired provider state and
+- `.claw/state/desired/providers.json` for desired provider state and
   preferred auth mode
 - `.clawjs/observed/providers.json` for the rebuildable snapshot of
   current runtime auth

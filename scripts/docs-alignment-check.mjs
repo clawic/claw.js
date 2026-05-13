@@ -64,7 +64,7 @@ requireSnippet("CLAUDE.md", "docs/data-storage-boundary.md");
 requireSnippet("CLAUDE.md", "docs/adr/0001-claw-framework-host-boundary.md");
 
 for (const snippet of [
-  "~/Library/Application Support/Claw",
+  "~/.claw",
   ".claw/",
   "ClawHostKit",
   "Claw.app",
@@ -75,7 +75,7 @@ for (const snippet of [
 }
 
 for (const snippet of [
-  "claw.sqlite",
+  "core.sqlite",
   "productivity.sqlite",
   "vault.sqlite",
   "runtime.sqlite",

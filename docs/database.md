@@ -13,7 +13,7 @@ for agents or apps.
 ClawJS now exposes database behavior through three related surfaces:
 
 - `claw db ...` for the normal local-first CRUD workflow backed by
-  the canonical main database at `~/Library/Application Support/Claw/claw.sqlite`
+  the canonical main database at `~/.claw/data/core.sqlite`
 - `claw database ...` for low-level service administration and remote
   namespace operations
 - `@clawjs/database` for the shared service app, store, API client,
@@ -97,7 +97,7 @@ files.
 
 The local-first CLI now stores user-facing records in the canonical
 Claw main database:
-`~/Library/Application Support/Claw/claw.sqlite` on macOS.
+`~/.claw/data/core.sqlite` on macOS.
 Existing development workspaces that still have older local productivity
 or generic database files are recognized and migrated forward by the
 local database layer. Treat that migration as one-way for normal usage:

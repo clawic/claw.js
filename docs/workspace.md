@@ -16,12 +16,12 @@ container.
 
 - `.clawjs/manifest.json`
 - `.clawjs/compat/`
-- `.clawjs/intents/`
+- `.claw/state/desired/`
 - `.clawjs/observed/`
 - `.clawjs/projections/`
 - `.clawjs/sessions/`
 
-`intents` store what the user wants, `observed` stores rebuildable
+`state/desired` stores what the user wants, `state/observed` stores rebuildable
 runtime snapshots, and `projections` stores the binding/schema layer
 used to project settings into visible workspace files.
 
@@ -53,7 +53,7 @@ await claw.workspace.init();
 
 const snapshot = await claw.workspace.inspect();
 console.log(snapshot.manifest);
-console.log(snapshot.intents);
+console.log(snapshot.desiredState);
 console.log(snapshot.observed);
 console.log(snapshot.workspaceState);
 console.log(snapshot.skillsState);
@@ -134,11 +134,11 @@ The productivity instance adds:
 
 The productivity layer stores user-facing records in the canonical
 Claw main database while the base workspace metadata stays under the
-stable `.claw/manifest`, `compat`, `intents`, `observed`, and
+stable ``.claw/manifest.json`, `state/desired`, `state/observed`, and
 `projections` folders. `.clawjs/` is legacy compatibility only.
 
 The current local-first database path on macOS is
-`~/Library/Application Support/Claw/claw.sqlite`. Older
+`~/.claw/data/core.sqlite`. Older
 workspaces that still contain the legacy productivity database are
 detected and migrated by the local data layer. After migration, new
 writes should use `claw db ...`, `@clawjs/workspace`, or the database
@@ -146,7 +146,7 @@ service APIs instead of writing the old file directly.
 
 That split matters:
 
-- `.claw/manifest`, `intents`, `observed`, and `projections` are SDK-owned control planes
+- ``.claw/manifest.json`, `state/desired`, `state/observed`, and `projections` are SDK-owned control planes
 - the canonical main DB stores user-facing productivity records
 - runtime-facing files such as `SOUL.md` or `IDENTITY.md` stay outside `.claw/`
 

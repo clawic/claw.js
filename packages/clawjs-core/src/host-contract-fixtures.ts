@@ -55,10 +55,10 @@ export const clawHostDescriptorFixtureV1: ClawHostDescriptor = {
   kind: "embedded",
   bundleId: "com.example.clawix",
   executablePath: "/Applications/Clawix.app/Contents/MacOS/Clawix",
-  appSupportDir: "/Users/demo/Library/Application Support/Clawix",
+  appSupportDir: "/Users/demo/.clawix",
   endpoint: {
     transport: "unix_socket",
-    address: "/Users/demo/Library/Application Support/Clawix/daemon.sock",
+    address: "/Users/demo/.clawix/run/clawix-bridge.sock",
   },
   capabilities: clawHostCapabilityFixturesV1,
   registeredAt: clawContractFixtureTimestamp,

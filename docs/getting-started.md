@@ -134,7 +134,7 @@ This command creates the stable ClawJS layer:
 
 - `.clawjs/manifest.json`
 - `.clawjs/audit/`
-- `.clawjs/intents/`
+- `.claw/state/desired/`
 - `.clawjs/observed/`
 - `.clawjs/projections/`
 - `.clawjs/backups/`
@@ -235,7 +235,7 @@ Use `workspace inspect` to read file locations and persisted state, and `workspa
 
 The important ownership rule is:
 
-- `.clawjs/intents/` stores what the user wants
+- `.claw/state/desired/` stores what the user wants
 - `.clawjs/observed/` stores rebuildable snapshots of what the runtime currently reports
 - `.clawjs/projections/` stores how ClawJS projects settings into visible files
 

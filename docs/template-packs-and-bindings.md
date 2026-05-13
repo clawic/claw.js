@@ -63,7 +63,7 @@ const result = await claw.files.applyTemplatePack("/path/to/template-pack.json")
 
 Bindings are stored in `.clawjs/projections/file-bindings.json`, and the settings schema record is stored in `.clawjs/projections/settings-schema.json`.
 
-Persisted settings values now live in `.clawjs/intents/files.json`, because file settings are part of the SDK-owned intent layer rather than a runtime snapshot.
+Persisted settings values now live in `.claw/state/desired/files.json`, because file settings are part of the SDK-owned intent layer rather than a runtime snapshot.
 
 The binding definition has these important fields:
 

@@ -21,8 +21,8 @@ identity, never from Node.
 - `ClawHostKit` is the embeddable host runtime used by Clawix and future hosts.
 - Clawix embeds `ClawHostKit` and remains the human UI plus Clawix-signed host.
 - A per-user host registry records available hosts and the active host.
-- Framework global data lives in `~/Library/Application Support/Claw`.
-- The framework main database is `~/Library/Application Support/Claw/claw.sqlite`.
+- Framework global data lives in `~/.claw`.
+- The framework main database is `~/.claw/data/core.sqlite`.
 - Canonical workspace data lives in `.claw/`.
 - Host-local data lives in `~/Library/Application Support/<Host>`.
 - `.clawjs` is legacy compatibility only.

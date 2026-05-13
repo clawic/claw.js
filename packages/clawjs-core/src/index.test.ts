@@ -17,8 +17,21 @@ import {
   capacityRecordSchema,
   clawCommandRequestSchema,
   clawCommandResponseSchema,
+  clawCorePorts,
   clawContractFixturesV1,
   clawContractVersionV1,
+  clawDataFiles,
+  clawEventsPath,
+  clawExportExtensions,
+  clawGlobalHomeLayout,
+  clawLocalHostnames,
+  clawPublicApiPrefix,
+  clawServiceSocketPath,
+  clawServiceWindowsPipe,
+  clawSurfaceRegistryVersion,
+  clawWorkspaceLayout,
+  clawixBridgePort,
+  clawixHomeLayout,
   clawDomainOwnershipEntriesV1,
   clawDomainOwnershipMatrixV1,
   clawDomainSchema,
@@ -166,9 +179,9 @@ test("host contract schemas validate v1 command and registry payloads", () => {
 });
 
 test("host contract fixtures and JSON schema exports cover the public v1 surface", () => {
-  assert.equal(clawJsonSchemasV1.commandRequest.$id, "https://schemas.claw.dev/v1/command-request.schema.json");
-  assert.equal(clawJsonSchemasV1.commandResponse.$id, "https://schemas.claw.dev/v1/command-response.schema.json");
-  assert.equal(clawJsonSchemasV1.hostDescriptor.$id, "https://schemas.claw.dev/v1/host-descriptor.schema.json");
+  assert.equal(clawJsonSchemasV1.commandRequest.$id, "https://schemas.clawjs.ai/v1/command-request.schema.json");
+  assert.equal(clawJsonSchemasV1.commandResponse.$id, "https://schemas.clawjs.ai/v1/command-response.schema.json");
+  assert.equal(clawJsonSchemasV1.hostDescriptor.$id, "https://schemas.clawjs.ai/v1/host-descriptor.schema.json");
 
   const request = clawCommandRequestSchema.parse(clawContractFixturesV1.commandRequest);
   const response = clawCommandResponseSchema.parse(clawContractFixturesV1.commandResponse);
@@ -208,16 +221,16 @@ test("domain ownership matrix covers every v1 host domain", () => {
 test("storage helpers resolve Claw roots and enforce Codex read-only policy", () => {
   assert.equal(
     resolveClawGlobalDataDir({ homeDir: "/Users/demo", platform: "darwin" }),
-    "/Users/demo/Library/Application Support/Claw",
+    "/Users/demo/.claw",
   );
   assert.equal(resolveClawWorkspaceDir("/repo/app"), "/repo/app/.claw");
   assert.equal(
     resolveClawHostStateDir({ homeDir: "/Users/demo", hostName: "Clawix", platform: "darwin" }),
-    "/Users/demo/Library/Application Support/Clawix",
+    "/Users/demo/.clawix",
   );
   assert.equal(
     resolveClawHostRegistryPath({ homeDir: "/Users/demo", platform: "darwin" }),
-    "/Users/demo/Library/Application Support/Claw/hosts/registry.json",
+    "/Users/demo/.claw/state/hosts/registry.json",
   );
 
   assert.doesNotThrow(() => assertCodexReadOnlyPath({
@@ -248,6 +261,28 @@ test("storage helpers resolve Claw roots and enforce Codex read-only policy", ()
     allowedOperations: ["read", "mirror", "index"],
     writePolicy: "agents_md_opt_in_only",
   });
+});
+
+test("surface registry freezes ports, paths, sockets, hostnames, and data files", () => {
+  assert.equal(clawSurfaceRegistryVersion, 1);
+  assert.equal(clawixBridgePort, 24080);
+  assert.equal(clawCorePorts.runtime, 24100);
+  assert.equal(clawCorePorts.sessions, 24101);
+  assert.equal(clawCorePorts.search, 24106);
+  assert.equal(clawCorePorts.signals, 24110);
+  assert.equal(clawCorePorts.publishing, 24111);
+  assert.equal(clawLocalHostnames.board, "board.claw.localhost");
+  assert.equal(clawLocalHostnames.channels, "channels.claw.localhost");
+  assert.equal(clawPublicApiPrefix, "/v1");
+  assert.equal(clawEventsPath, "/v1/events");
+  assert.equal(clawDataFiles.mainDatabase, "core.sqlite");
+  assert.equal(clawWorkspaceLayout.manifest, ".claw/manifest.json");
+  assert.equal(clawWorkspaceLayout.browser, ".claw/browser");
+  assert.equal(clawGlobalHomeLayout.config, "~/.claw/config.yaml");
+  assert.equal(clawixHomeLayout.bridgeSocket, "~/.clawix/run/clawix-bridge.sock");
+  assert.equal(clawServiceSocketPath("runtime"), "~/.claw/run/claw-runtime.sock");
+  assert.equal(clawServiceWindowsPipe("runtime"), String.raw`\\.\pipe\claw-runtime`);
+  assert.equal(clawExportExtensions.backup, ".clawbackup");
 });
 
 test("semantic plan schema validates agent-native action previews", () => {

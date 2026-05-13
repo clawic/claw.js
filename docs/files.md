@@ -18,7 +18,7 @@ reflects the actual public API shipped by `@clawjs/claw`.
 | `syncBinding(binding, settings, render)` | Applies a single binding to its target file. |
 | `readBindingStore()`, `writeBindingStore(bindings)` | Read or replace the binding store under `.clawjs/projections/file-bindings.json`. |
 | `readSettingsSchema()`, `writeSettingsSchema(schema)` | Read or replace the persisted schema under `.clawjs/projections/settings-schema.json`. |
-| `readSettingsValues()`, `writeSettingsValues(values)` | Read or replace file-setting intent under `.clawjs/intents/files.json`. |
+| `readSettingsValues()`, `writeSettingsValues(values)` | Read or replace file-setting intent under `.claw/state/desired/files.json`. |
 | `validateSettings(values)` | Validates candidate settings against the persisted schema. |
 | `renderTemplate(template, values)` | Renders a settings template string with plain object values. |
 | `updateSettings(values, options)` | Updates persisted settings values and optionally auto-syncs bindings. |
