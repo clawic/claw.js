@@ -1,0 +1,9 @@
+{
+  "guild_id": "sample",
+  "emojis": [
+    {
+      "id": "sample",
+      "name": "sample"
+    }
+  ]
+}

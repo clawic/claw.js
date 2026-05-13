@@ -1,0 +1,11 @@
+{
+  "id": "sample",
+  "name": "sample",
+  "roles": [
+    "sample"
+  ],
+  "require_colons": true,
+  "managed": false,
+  "animated": false,
+  "available": true
+}
