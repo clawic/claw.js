@@ -19,6 +19,7 @@ const WEBHOOK_FIELD = field("webhookId", "string");
 const WEBHOOK_TOKEN_FIELD = field("webhookToken", "string");
 const APPLICATION_FIELD = field("applicationId", "string");
 const COMMAND_FIELD = field("commandId", "string");
+const TEMPLATE_CODE_FIELD = field("templateCode", "string");
 const STICKER_FIELD = field("stickerId", "string");
 const STICKER_PACK_FIELD = field("stickerPackId", "string");
 const AUTO_MODERATION_RULE_FIELD = field("autoModerationRuleId", "string");
@@ -33,6 +34,12 @@ const DISCORD_ACTIONS = [
   action("get-guild-preview", "Get Guild Preview", [GUILD_FIELD]),
   action("list-guild-channels", "List Guild Channels", [GUILD_FIELD]),
   action("create-guild-channel", "Create Guild Channel", [GUILD_FIELD, field("name", "string"), field("type", "integer", true, { default: 0 })]),
+  action("get-guild-template", "Get Guild Template", [TEMPLATE_CODE_FIELD]),
+  action("list-guild-templates", "List Guild Templates", [GUILD_FIELD]),
+  action("create-guild-template", "Create Guild Template", [GUILD_FIELD, field("name", "string"), field("description", "string", true, { default: "sample" })]),
+  action("sync-guild-template", "Sync Guild Template", [GUILD_FIELD, TEMPLATE_CODE_FIELD]),
+  action("update-guild-template", "Update Guild Template", [GUILD_FIELD, TEMPLATE_CODE_FIELD, field("name", "string", true, { default: "sample" }), field("description", "string", true, { default: "sample" })]),
+  action("delete-guild-template", "Delete Guild Template", [GUILD_FIELD, TEMPLATE_CODE_FIELD]),
   action("list-guild-emojis", "List Guild Emojis", [GUILD_FIELD]),
   action("get-guild-emoji", "Get Guild Emoji", [GUILD_FIELD, field("emojiId", "string")]),
   action("create-guild-emoji", "Create Guild Emoji", [GUILD_FIELD, field("name", "string"), field("image", "string", false, { default: "data:image/png;base64,c2FtcGxl" }), field("roles", "array", true, { default: ["sample"] })]),
@@ -230,6 +237,40 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-guild-template"), {
+      guildId: "456",
+      name: "Support Server",
+      description: "Public support layout",
+    }), {
+      method: "POST",
+      endpoint: "guilds/456/templates",
+      auth,
+      headers,
+      body: {
+        name: "Support Server",
+        description: "Public support layout",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["code", "name", "source_guild_id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.sync-guild-template"), {
+      guildId: "456",
+      templateCode: "abc123",
+    }), {
+      method: "PUT",
+      endpoint: "guilds/456/templates/abc123",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["code", "name", "source_guild_id"],
       },
     });
 
