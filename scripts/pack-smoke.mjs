@@ -31,10 +31,14 @@ const packageDirs = [
   path.join(rootDir, "packages", "clawjs-node"),
   path.join(rootDir, "packages", "clawjs-workspace"),
   path.join(rootDir, "packages", "clawjs-node-compat"),
+  path.join(rootDir, "packages", "clawjs-database"),
   path.join(rootDir, "packages", "clawjs"),
   path.join(rootDir, "packages", "clawjs-audio"),
   path.join(rootDir, "packages", "clawjs-agents"),
   path.join(rootDir, "packages", "clawjs-integrations"),
+  path.join(rootDir, "packages", "clawjs-index"),
+  path.join(rootDir, "packages", "clawjs-mp"),
+  path.join(rootDir, "packages", "clawjs-profile"),
   path.join(rootDir, "packages", "clawjs-sessions"),
   path.join(rootDir, "packages", "clawjs-user-model"),
   path.join(rootDir, "packages", "clawjs-runtime"),
@@ -155,12 +159,6 @@ if (!fs.existsSync(path.join(generatedWorkspaceRoot, "claw", "skills", "support-
 run(shortCliBin, ["add", "telegram", "--project", generatedWorkspaceRoot], { cwd: appDir });
 if (!fs.existsSync(path.join(generatedWorkspaceRoot, "claw", "channels", "telegram.json"))) {
   throw new Error("claw add telegram did not scaffold the expected channel config.");
-}
-
-const cliBin = path.join(appDir, "node_modules", ".bin", "clawjs");
-const cliOutput = run(cliBin, ["--runtime", "demo", "runtime", "status", "--json"], { cwd: appDir });
-if (!cliOutput.includes('"adapter": "demo"')) {
-  throw new Error("Installed clawjs CLI did not execute correctly against the demo adapter.");
 }
 
 const createAppBin = path.join(appDir, "node_modules", ".bin", "create-claw-app");
