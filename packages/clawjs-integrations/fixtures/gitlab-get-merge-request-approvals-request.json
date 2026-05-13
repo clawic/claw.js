@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://gitlab.com/api/v4/projects/group%2Fproject/merge_requests/1/approvals",
+  "headers": {
+    "accept": "application/json",
+    "private-token": "offline-gitlabToken-secret"
+  }
+}

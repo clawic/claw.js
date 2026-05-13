@@ -1,0 +1,12 @@
+{
+  "method": "POST",
+  "url": "https://gitlab.com/api/v4/projects/group%2Fproject/issues/1/discussions",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json",
+    "private-token": "offline-gitlabToken-secret"
+  },
+  "body": {
+    "body": "Discussion body"
+  }
+}

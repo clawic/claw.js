@@ -1,0 +1,12 @@
+{
+  "method": "PUT",
+  "url": "https://gitlab.com/api/v4/projects/group%2Fproject/merge_requests/1/discussions/discussion_1/notes/1",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json",
+    "private-token": "offline-gitlabToken-secret"
+  },
+  "body": {
+    "body": "Updated discussion"
+  }
+}
