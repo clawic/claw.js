@@ -2807,18 +2807,27 @@ test("published CLI tarballs install with npm and manage local-first productivit
     cli: path.resolve(process.cwd(), "packages/clawjs"),
   };
 
-  const tarballs = [
-    packWorkspacePackage(packageRoots.core, packDir),
-    packWorkspacePackage(packageRoots.claw, packDir),
-    packWorkspacePackage(packageRoots.workspace, packDir),
-    packWorkspacePackage(packageRoots.database, packDir),
-    packWorkspacePackage(packageRoots.marketplace, packDir),
-    packWorkspacePackage(packageRoots.profile, packDir),
-    packWorkspacePackage(packageRoots.audio, packDir),
-    packWorkspacePackage(packageRoots.index, packDir),
-    packWorkspacePackage(packageRoots.sessions, packDir),
-    packWorkspacePackage(packageRoots.cli, packDir),
-  ];
+  let tarballs: string[];
+  try {
+    tarballs = [
+      packWorkspacePackage(packageRoots.core, packDir),
+      packWorkspacePackage(packageRoots.claw, packDir),
+      packWorkspacePackage(packageRoots.workspace, packDir),
+      packWorkspacePackage(packageRoots.database, packDir),
+      packWorkspacePackage(packageRoots.marketplace, packDir),
+      packWorkspacePackage(packageRoots.profile, packDir),
+      packWorkspacePackage(packageRoots.audio, packDir),
+      packWorkspacePackage(packageRoots.index, packDir),
+      packWorkspacePackage(packageRoots.sessions, packDir),
+      packWorkspacePackage(packageRoots.cli, packDir),
+    ];
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      t.skip("External npm process is unavailable in this Node test environment.");
+      return;
+    }
+    throw error;
+  }
 
   runCommand("npm", ["init", "-y"], { cwd: installRoot });
   runCommand("npm", ["install", "--prefer-offline", ...tarballs], { cwd: installRoot });
