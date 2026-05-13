@@ -10,6 +10,9 @@ dist/
 .claude/
 examples/demo/.claude/
 .clawjs/
+.claw/.skills-v2.migrated
+.claw/observed/
+.claw/state/observed/
 .runtime/
 .memory/
 .playwright-cli/
