@@ -4945,6 +4945,80 @@
           "authFieldNames": []
         },
         {
+          "id": "discord.action.execute-slack-compatible-webhook",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Execute Slack-Compatible Webhook",
+          "fields": [
+            {
+              "name": "webhookId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "webhookToken",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "payload",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "text": "sample"
+              }
+            },
+            {
+              "name": "wait",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "threadId",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
+          "id": "discord.action.execute-github-compatible-webhook",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Execute GitHub-Compatible Webhook",
+          "fields": [
+            {
+              "name": "webhookId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "webhookToken",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "payload",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "ref": "refs/heads/main"
+              }
+            },
+            {
+              "name": "wait",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "threadId",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
           "id": "discord.action.get-webhook-message",
           "appId": "discord",
           "kind": "action",
