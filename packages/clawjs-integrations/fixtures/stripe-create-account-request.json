@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/accounts",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "type=express&country=US&email=account%40example.invalid&capabilities=%7B%22card_payments%22%3A%7B%22requested%22%3Atrue%7D%2C%22transfers%22%3A%7B%22requested%22%3Atrue%7D%7D&metadata=%7B%22order_id%22%3A%22sample%22%7D"
+}

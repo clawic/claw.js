@@ -737,6 +737,26 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.update-account-capability"), {
+      account: "acct_sample",
+      capability: "card_payments",
+      requested: true,
+    }), {
+      method: "POST",
+      endpoint: "accounts/acct_sample/capabilities/card_payments",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        requested: true,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.list-setup-attempts"), {
       limit: 10,
       setup_intent: "seti_sample",

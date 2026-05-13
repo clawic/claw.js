@@ -29087,6 +29087,40 @@
       ],
       "operations": [
         {
+          "id": "stripe.action.list-customers",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Customers",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-customer",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Customer",
+          "fields": [
+            {
+              "name": "customerId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.create-customer",
           "appId": "stripe",
           "kind": "action",
@@ -29101,6 +29135,40 @@
               "name": "name",
               "type": "string",
               "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-payment-intents",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Payment Intents",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-payment-intent",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Payment Intent",
+          "fields": [
+            {
+              "name": "paymentIntentId",
+              "type": "string",
+              "optional": false
             }
           ],
           "authFieldNames": [
@@ -29127,74 +29195,6 @@
               "name": "customerId",
               "type": "string",
               "optional": true
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.get-customer",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Get Customer",
-          "fields": [
-            {
-              "name": "customerId",
-              "type": "string",
-              "optional": false
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.get-payment-intent",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Get Payment Intent",
-          "fields": [
-            {
-              "name": "paymentIntentId",
-              "type": "string",
-              "optional": false
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.list-customers",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "List Customers",
-          "fields": [
-            {
-              "name": "limit",
-              "type": "integer",
-              "optional": true,
-              "default": 10,
-              "min": 1
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.list-payment-intents",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "List Payment Intents",
-          "fields": [
-            {
-              "name": "limit",
-              "type": "integer",
-              "optional": true,
-              "default": 10,
-              "min": 1
             }
           ],
           "authFieldNames": [
@@ -30699,227 +30699,6 @@
           ]
         },
         {
-          "id": "stripe.action.get-confirmation-token",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Get Confirmation Token",
-          "fields": [
-            {
-              "name": "confirmationToken",
-              "type": "string",
-              "optional": false,
-              "default": "ctoken_sample"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.list-billing-portal-configurations",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "List Billing Portal Configurations",
-          "fields": [
-            {
-              "name": "limit",
-              "type": "integer",
-              "optional": true,
-              "default": 10,
-              "min": 1,
-              "max": 100
-            },
-            {
-              "name": "startingAfter",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            },
-            {
-              "name": "endingBefore",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            },
-            {
-              "name": "active",
-              "type": "boolean",
-              "optional": true,
-              "default": true
-            },
-            {
-              "name": "is_default",
-              "type": "boolean",
-              "optional": true,
-              "default": false
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.create-billing-portal-configuration",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Create Billing Portal Configuration",
-          "fields": [
-            {
-              "name": "features",
-              "type": "object",
-              "optional": false,
-              "default": {
-                "customer_update": {
-                  "enabled": true
-                }
-              }
-            },
-            {
-              "name": "default_return_url",
-              "type": "string",
-              "optional": true,
-              "default": "https://example.invalid/return"
-            },
-            {
-              "name": "metadata",
-              "type": "object",
-              "optional": true,
-              "default": {
-                "order_id": "sample"
-              }
-            },
-            {
-              "name": "name",
-              "type": "string",
-              "optional": true,
-              "default": "Sample portal"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.get-billing-portal-configuration",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Get Billing Portal Configuration",
-          "fields": [
-            {
-              "name": "configuration",
-              "type": "string",
-              "optional": false,
-              "default": "bpc_sample"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.update-billing-portal-configuration",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Update Billing Portal Configuration",
-          "fields": [
-            {
-              "name": "configuration",
-              "type": "string",
-              "optional": false,
-              "default": "bpc_sample"
-            },
-            {
-              "name": "active",
-              "type": "boolean",
-              "optional": true,
-              "default": true
-            },
-            {
-              "name": "features",
-              "type": "object",
-              "optional": true,
-              "default": {
-                "customer_update": {
-                  "enabled": true
-                }
-              }
-            },
-            {
-              "name": "metadata",
-              "type": "object",
-              "optional": true,
-              "default": {
-                "order_id": "sample"
-              }
-            },
-            {
-              "name": "name",
-              "type": "string",
-              "optional": true,
-              "default": "Updated portal"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.create-billing-portal-session",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Create Billing Portal Session",
-          "fields": [
-            {
-              "name": "customer",
-              "type": "string",
-              "optional": true,
-              "default": "cus_sample"
-            },
-            {
-              "name": "configuration",
-              "type": "string",
-              "optional": true,
-              "default": "bpc_sample"
-            },
-            {
-              "name": "return_url",
-              "type": "string",
-              "optional": true,
-              "default": "https://example.invalid/return"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.create-customer-session",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Create Customer Session",
-          "fields": [
-            {
-              "name": "customer",
-              "type": "string",
-              "optional": true,
-              "default": "cus_sample"
-            },
-            {
-              "name": "components",
-              "type": "object",
-              "optional": false,
-              "default": {
-                "pricing_table": {
-                  "enabled": true
-                }
-              }
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
           "id": "stripe.action.get-balance",
           "appId": "stripe",
           "kind": "action",
@@ -30977,6 +30756,595 @@
               "type": "string",
               "optional": false,
               "default": "txn_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-application-fees",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Application Fees",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "charge",
+              "type": "string",
+              "optional": true,
+              "default": "ch_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-application-fee",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Application Fee",
+          "fields": [
+            {
+              "name": "applicationFeeId",
+              "type": "string",
+              "optional": false,
+              "default": "fee_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.refund-application-fee",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Refund Application Fee",
+          "fields": [
+            {
+              "name": "applicationFeeId",
+              "type": "string",
+              "optional": false,
+              "default": "fee_sample"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 500
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-application-fee-refunds",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Application Fee Refunds",
+          "fields": [
+            {
+              "name": "applicationFeeId",
+              "type": "string",
+              "optional": false,
+              "default": "fee_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-application-fee-refund",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Application Fee Refund",
+          "fields": [
+            {
+              "name": "applicationFeeId",
+              "type": "string",
+              "optional": false,
+              "default": "fee_sample"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 500
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-application-fee-refund",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Application Fee Refund",
+          "fields": [
+            {
+              "name": "applicationFeeId",
+              "type": "string",
+              "optional": false,
+              "default": "fee_sample"
+            },
+            {
+              "name": "refundId",
+              "type": "string",
+              "optional": false,
+              "default": "fr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-application-fee-refund",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Application Fee Refund",
+          "fields": [
+            {
+              "name": "applicationFeeId",
+              "type": "string",
+              "optional": false,
+              "default": "fee_sample"
+            },
+            {
+              "name": "refundId",
+              "type": "string",
+              "optional": false,
+              "default": "fr_sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-files",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Files",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "purpose",
+              "type": "string",
+              "optional": true,
+              "default": "business_logo"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-file",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create File",
+          "fields": [
+            {
+              "name": "file",
+              "type": "string",
+              "optional": false,
+              "default": "sample-file"
+            },
+            {
+              "name": "purpose",
+              "type": "string",
+              "optional": false,
+              "default": "business_logo"
+            },
+            {
+              "name": "file_link_data",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "create": true
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-file",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get File",
+          "fields": [
+            {
+              "name": "file",
+              "type": "string",
+              "optional": false,
+              "default": "file_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-file-links",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List File Links",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "file",
+              "type": "string",
+              "optional": true,
+              "default": "file_sample"
+            },
+            {
+              "name": "expired",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-file-link",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create File Link",
+          "fields": [
+            {
+              "name": "file",
+              "type": "string",
+              "optional": false,
+              "default": "file_sample"
+            },
+            {
+              "name": "expires_at",
+              "type": "integer",
+              "optional": true,
+              "default": 1893456000
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-file-link",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get File Link",
+          "fields": [
+            {
+              "name": "link",
+              "type": "string",
+              "optional": false,
+              "default": "link_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-file-link",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update File Link",
+          "fields": [
+            {
+              "name": "link",
+              "type": "string",
+              "optional": false,
+              "default": "link_sample"
+            },
+            {
+              "name": "expires_at",
+              "type": "integer",
+              "optional": true,
+              "default": 1893456000
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-country-specs",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Country Specs",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-country-spec",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Country Spec",
+          "fields": [
+            {
+              "name": "country",
+              "type": "string",
+              "optional": false,
+              "default": "US"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-exchange-rates",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Exchange Rates",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-exchange-rate",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Exchange Rate",
+          "fields": [
+            {
+              "name": "rateId",
+              "type": "string",
+              "optional": false,
+              "default": "usd"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-token",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Token",
+          "fields": [
+            {
+              "name": "cvc_update",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "cvc": "123"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-token",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Token",
+          "fields": [
+            {
+              "name": "token",
+              "type": "string",
+              "optional": false,
+              "default": "tok_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-ephemeral-key",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Ephemeral Key",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-ephemeral-key",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Ephemeral Key",
+          "fields": [
+            {
+              "name": "key",
+              "type": "string",
+              "optional": false,
+              "default": "ephkey_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-confirmation-token",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Confirmation Token",
+          "fields": [
+            {
+              "name": "confirmationToken",
+              "type": "string",
+              "optional": false,
+              "default": "ctoken_sample"
             }
           ],
           "authFieldNames": [
@@ -31904,6 +32272,609 @@
           "kind": "action",
           "name": "Get Account",
           "fields": [],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-accounts",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Accounts",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "email",
+              "type": "string",
+              "optional": true,
+              "default": "account@example.invalid"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Account",
+          "fields": [
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false,
+              "default": "express"
+            },
+            {
+              "name": "country",
+              "type": "string",
+              "optional": true,
+              "default": "US"
+            },
+            {
+              "name": "email",
+              "type": "string",
+              "optional": true,
+              "default": "account@example.invalid"
+            },
+            {
+              "name": "capabilities",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "card_payments": {
+                  "requested": true
+                },
+                "transfers": {
+                  "requested": true
+                }
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-connected-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Connected Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "email",
+              "type": "string",
+              "optional": true,
+              "default": "account@example.invalid"
+            },
+            {
+              "name": "business_profile",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "name": "Sample Business"
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.reject-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Reject Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "reason",
+              "type": "string",
+              "optional": false,
+              "default": "fraud"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-account-login-link",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Account Login Link",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-account-capabilities",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Account Capabilities",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-account-capability",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Account Capability",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "capability",
+              "type": "string",
+              "optional": false,
+              "default": "card_payments"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-account-capability",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Account Capability",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "capability",
+              "type": "string",
+              "optional": false,
+              "default": "card_payments"
+            },
+            {
+              "name": "requested",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-account-external-accounts",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Account External Accounts",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "object",
+              "type": "string",
+              "optional": true,
+              "default": "bank_account"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-account-external-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Account External Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "external_account",
+              "type": "string",
+              "optional": false,
+              "default": "btok_sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-account-external-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Account External Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "ba_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-account-external-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Account External Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "ba_sample"
+            },
+            {
+              "name": "account_holder_name",
+              "type": "string",
+              "optional": true,
+              "default": "Sample Person"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-account-external-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Account External Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "ba_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-account-people",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Account People",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "relationship",
+              "type": "string",
+              "optional": true,
+              "default": "representative"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-account-person",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Account Person",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "first_name",
+              "type": "string",
+              "optional": true,
+              "default": "Sample"
+            },
+            {
+              "name": "last_name",
+              "type": "string",
+              "optional": true,
+              "default": "Person"
+            },
+            {
+              "name": "relationship",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "representative": true
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-account-person",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Account Person",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "person",
+              "type": "string",
+              "optional": false,
+              "default": "person_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-account-person",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Account Person",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "person",
+              "type": "string",
+              "optional": false,
+              "default": "person_sample"
+            },
+            {
+              "name": "first_name",
+              "type": "string",
+              "optional": true,
+              "default": "Updated"
+            },
+            {
+              "name": "last_name",
+              "type": "string",
+              "optional": true,
+              "default": "Person"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-account-person",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Account Person",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "person",
+              "type": "string",
+              "optional": false,
+              "default": "person_sample"
+            }
+          ],
           "authFieldNames": [
             "stripeSecretKey"
           ]
@@ -33323,6 +34294,120 @@
           ]
         },
         {
+          "id": "stripe.action.list-promotion-codes",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Promotion Codes",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "coupon",
+              "type": "string",
+              "optional": true,
+              "default": "coupon_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-promotion-code",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Promotion Code",
+          "fields": [
+            {
+              "name": "promotionCodeId",
+              "type": "string",
+              "optional": false,
+              "default": "promo_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-promotion-code",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Promotion Code",
+          "fields": [
+            {
+              "name": "coupon",
+              "type": "string",
+              "optional": false,
+              "default": "coupon_sample"
+            },
+            {
+              "name": "code",
+              "type": "string",
+              "optional": true,
+              "default": "SAVE10"
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-promotion-code",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Promotion Code",
+          "fields": [
+            {
+              "name": "promotionCodeId",
+              "type": "string",
+              "optional": false,
+              "default": "promo_sample"
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-shipping-rates",
           "appId": "stripe",
           "kind": "action",
@@ -33523,120 +34608,6 @@
           ]
         },
         {
-          "id": "stripe.action.list-promotion-codes",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "List Promotion Codes",
-          "fields": [
-            {
-              "name": "limit",
-              "type": "integer",
-              "optional": true,
-              "default": 10,
-              "min": 1,
-              "max": 100
-            },
-            {
-              "name": "startingAfter",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            },
-            {
-              "name": "endingBefore",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            },
-            {
-              "name": "coupon",
-              "type": "string",
-              "optional": true,
-              "default": "coupon_sample"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.get-promotion-code",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Get Promotion Code",
-          "fields": [
-            {
-              "name": "promotionCodeId",
-              "type": "string",
-              "optional": false,
-              "default": "promo_sample"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.create-promotion-code",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Create Promotion Code",
-          "fields": [
-            {
-              "name": "coupon",
-              "type": "string",
-              "optional": false,
-              "default": "coupon_sample"
-            },
-            {
-              "name": "code",
-              "type": "string",
-              "optional": true,
-              "default": "SAVE10"
-            },
-            {
-              "name": "active",
-              "type": "boolean",
-              "optional": true,
-              "default": true
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.update-promotion-code",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Update Promotion Code",
-          "fields": [
-            {
-              "name": "promotionCodeId",
-              "type": "string",
-              "optional": false,
-              "default": "promo_sample"
-            },
-            {
-              "name": "active",
-              "type": "boolean",
-              "optional": true,
-              "default": true
-            },
-            {
-              "name": "metadata",
-              "type": "object",
-              "optional": true,
-              "default": {
-                "order_id": "sample"
-              }
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
           "id": "stripe.action.list-tax-rates",
           "appId": "stripe",
           "kind": "action",
@@ -33748,6 +34719,234 @@
               "type": "string",
               "optional": true,
               "default": "VAT"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-topups",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Topups",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 1200
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "optional": true,
+              "default": "succeeded"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-topup",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Topup",
+          "fields": [
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": false,
+              "default": 1200
+            },
+            {
+              "name": "currency",
+              "type": "string",
+              "optional": false,
+              "default": "usd"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Sample topup"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "optional": true,
+              "default": "src_sample"
+            },
+            {
+              "name": "statement_descriptor",
+              "type": "string",
+              "optional": true,
+              "default": "Sample"
+            },
+            {
+              "name": "transfer_group",
+              "type": "string",
+              "optional": true,
+              "default": "group_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-topup",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Topup",
+          "fields": [
+            {
+              "name": "topup",
+              "type": "string",
+              "optional": false,
+              "default": "tu_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-topup",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Topup",
+          "fields": [
+            {
+              "name": "topup",
+              "type": "string",
+              "optional": false,
+              "default": "tu_sample"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Updated topup"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.cancel-topup",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Cancel Topup",
+          "fields": [
+            {
+              "name": "topup",
+              "type": "string",
+              "optional": false,
+              "default": "tu_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-reviews",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Reviews",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-review",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Review",
+          "fields": [
+            {
+              "name": "review",
+              "type": "string",
+              "optional": false,
+              "default": "prv_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.approve-review",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Approve Review",
+          "fields": [
+            {
+              "name": "review",
+              "type": "string",
+              "optional": false,
+              "default": "prv_sample"
             }
           ],
           "authFieldNames": [
@@ -34250,6 +35449,210 @@
           ]
         },
         {
+          "id": "stripe.action.list-billing-portal-configurations",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Billing Portal Configurations",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "is_default",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-billing-portal-configuration",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Billing Portal Configuration",
+          "fields": [
+            {
+              "name": "features",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "customer_update": {
+                  "enabled": true
+                }
+              }
+            },
+            {
+              "name": "default_return_url",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/return"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Sample portal"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-billing-portal-configuration",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Billing Portal Configuration",
+          "fields": [
+            {
+              "name": "configuration",
+              "type": "string",
+              "optional": false,
+              "default": "bpc_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-billing-portal-configuration",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Billing Portal Configuration",
+          "fields": [
+            {
+              "name": "configuration",
+              "type": "string",
+              "optional": false,
+              "default": "bpc_sample"
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "features",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "customer_update": {
+                  "enabled": true
+                }
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Updated portal"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-billing-portal-session",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Billing Portal Session",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "configuration",
+              "type": "string",
+              "optional": true,
+              "default": "bpc_sample"
+            },
+            {
+              "name": "return_url",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/return"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-customer-session",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Customer Session",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "components",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "pricing_table": {
+                  "enabled": true
+                }
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-webhook-endpoints",
           "appId": "stripe",
           "kind": "action",
@@ -34370,806 +35773,6 @@
               "type": "string",
               "optional": false,
               "default": "we_sample"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.list-application-fees",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "List Application Fees",
-          "fields": [
-            {
-              "name": "limit",
-              "type": "integer",
-              "optional": true,
-              "default": 10,
-              "min": 1,
-              "max": 100
-            },
-            {
-              "name": "startingAfter",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            },
-            {
-              "name": "endingBefore",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            },
-            {
-              "name": "charge",
-              "type": "string",
-              "optional": true,
-              "default": "ch_sample"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.get-application-fee",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Get Application Fee",
-          "fields": [
-            {
-              "name": "applicationFeeId",
-              "type": "string",
-              "optional": false,
-              "default": "fee_sample"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.refund-application-fee",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Refund Application Fee",
-          "fields": [
-            {
-              "name": "applicationFeeId",
-              "type": "string",
-              "optional": false,
-              "default": "fee_sample"
-            },
-            {
-              "name": "amount",
-              "type": "integer",
-              "optional": true,
-              "default": 500
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.list-application-fee-refunds",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "List Application Fee Refunds",
-          "fields": [
-            {
-              "name": "applicationFeeId",
-              "type": "string",
-              "optional": false,
-              "default": "fee_sample"
-            },
-            {
-              "name": "limit",
-              "type": "integer",
-              "optional": true,
-              "default": 10,
-              "min": 1,
-              "max": 100
-            },
-            {
-              "name": "startingAfter",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            },
-            {
-              "name": "endingBefore",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.create-application-fee-refund",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Create Application Fee Refund",
-          "fields": [
-            {
-              "name": "applicationFeeId",
-              "type": "string",
-              "optional": false,
-              "default": "fee_sample"
-            },
-            {
-              "name": "amount",
-              "type": "integer",
-              "optional": true,
-              "default": 500
-            },
-            {
-              "name": "metadata",
-              "type": "object",
-              "optional": true,
-              "default": {
-                "order_id": "sample"
-              }
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.get-application-fee-refund",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Get Application Fee Refund",
-          "fields": [
-            {
-              "name": "applicationFeeId",
-              "type": "string",
-              "optional": false,
-              "default": "fee_sample"
-            },
-            {
-              "name": "refundId",
-              "type": "string",
-              "optional": false,
-              "default": "fr_sample"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.update-application-fee-refund",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Update Application Fee Refund",
-          "fields": [
-            {
-              "name": "applicationFeeId",
-              "type": "string",
-              "optional": false,
-              "default": "fee_sample"
-            },
-            {
-              "name": "refundId",
-              "type": "string",
-              "optional": false,
-              "default": "fr_sample"
-            },
-            {
-              "name": "metadata",
-              "type": "object",
-              "optional": true,
-              "default": {
-                "order_id": "sample"
-              }
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.list-topups",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "List Topups",
-          "fields": [
-            {
-              "name": "limit",
-              "type": "integer",
-              "optional": true,
-              "default": 10,
-              "min": 1,
-              "max": 100
-            },
-            {
-              "name": "startingAfter",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            },
-            {
-              "name": "endingBefore",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            },
-            {
-              "name": "amount",
-              "type": "integer",
-              "optional": true,
-              "default": 1200
-            },
-            {
-              "name": "status",
-              "type": "string",
-              "optional": true,
-              "default": "succeeded"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.create-topup",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Create Topup",
-          "fields": [
-            {
-              "name": "amount",
-              "type": "integer",
-              "optional": false,
-              "default": 1200
-            },
-            {
-              "name": "currency",
-              "type": "string",
-              "optional": false,
-              "default": "usd"
-            },
-            {
-              "name": "description",
-              "type": "string",
-              "optional": true,
-              "default": "Sample topup"
-            },
-            {
-              "name": "metadata",
-              "type": "object",
-              "optional": true,
-              "default": {
-                "order_id": "sample"
-              }
-            },
-            {
-              "name": "source",
-              "type": "string",
-              "optional": true,
-              "default": "src_sample"
-            },
-            {
-              "name": "statement_descriptor",
-              "type": "string",
-              "optional": true,
-              "default": "Sample"
-            },
-            {
-              "name": "transfer_group",
-              "type": "string",
-              "optional": true,
-              "default": "group_sample"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.get-topup",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Get Topup",
-          "fields": [
-            {
-              "name": "topup",
-              "type": "string",
-              "optional": false,
-              "default": "tu_sample"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.update-topup",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Update Topup",
-          "fields": [
-            {
-              "name": "topup",
-              "type": "string",
-              "optional": false,
-              "default": "tu_sample"
-            },
-            {
-              "name": "description",
-              "type": "string",
-              "optional": true,
-              "default": "Updated topup"
-            },
-            {
-              "name": "metadata",
-              "type": "object",
-              "optional": true,
-              "default": {
-                "order_id": "sample"
-              }
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.cancel-topup",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Cancel Topup",
-          "fields": [
-            {
-              "name": "topup",
-              "type": "string",
-              "optional": false,
-              "default": "tu_sample"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.list-reviews",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "List Reviews",
-          "fields": [
-            {
-              "name": "limit",
-              "type": "integer",
-              "optional": true,
-              "default": 10,
-              "min": 1,
-              "max": 100
-            },
-            {
-              "name": "startingAfter",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            },
-            {
-              "name": "endingBefore",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.get-review",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Get Review",
-          "fields": [
-            {
-              "name": "review",
-              "type": "string",
-              "optional": false,
-              "default": "prv_sample"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.approve-review",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Approve Review",
-          "fields": [
-            {
-              "name": "review",
-              "type": "string",
-              "optional": false,
-              "default": "prv_sample"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.list-files",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "List Files",
-          "fields": [
-            {
-              "name": "limit",
-              "type": "integer",
-              "optional": true,
-              "default": 10,
-              "min": 1,
-              "max": 100
-            },
-            {
-              "name": "startingAfter",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            },
-            {
-              "name": "endingBefore",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            },
-            {
-              "name": "purpose",
-              "type": "string",
-              "optional": true,
-              "default": "business_logo"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.create-file",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Create File",
-          "fields": [
-            {
-              "name": "file",
-              "type": "string",
-              "optional": false,
-              "default": "sample-file"
-            },
-            {
-              "name": "purpose",
-              "type": "string",
-              "optional": false,
-              "default": "business_logo"
-            },
-            {
-              "name": "file_link_data",
-              "type": "object",
-              "optional": true,
-              "default": {
-                "create": true
-              }
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.get-file",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Get File",
-          "fields": [
-            {
-              "name": "file",
-              "type": "string",
-              "optional": false,
-              "default": "file_sample"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.list-file-links",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "List File Links",
-          "fields": [
-            {
-              "name": "limit",
-              "type": "integer",
-              "optional": true,
-              "default": 10,
-              "min": 1,
-              "max": 100
-            },
-            {
-              "name": "startingAfter",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            },
-            {
-              "name": "endingBefore",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            },
-            {
-              "name": "file",
-              "type": "string",
-              "optional": true,
-              "default": "file_sample"
-            },
-            {
-              "name": "expired",
-              "type": "boolean",
-              "optional": true,
-              "default": false
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.create-file-link",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Create File Link",
-          "fields": [
-            {
-              "name": "file",
-              "type": "string",
-              "optional": false,
-              "default": "file_sample"
-            },
-            {
-              "name": "expires_at",
-              "type": "integer",
-              "optional": true,
-              "default": 1893456000
-            },
-            {
-              "name": "metadata",
-              "type": "object",
-              "optional": true,
-              "default": {
-                "order_id": "sample"
-              }
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.get-file-link",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Get File Link",
-          "fields": [
-            {
-              "name": "link",
-              "type": "string",
-              "optional": false,
-              "default": "link_sample"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.update-file-link",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Update File Link",
-          "fields": [
-            {
-              "name": "link",
-              "type": "string",
-              "optional": false,
-              "default": "link_sample"
-            },
-            {
-              "name": "expires_at",
-              "type": "integer",
-              "optional": true,
-              "default": 1893456000
-            },
-            {
-              "name": "metadata",
-              "type": "object",
-              "optional": true,
-              "default": {
-                "order_id": "sample"
-              }
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.list-country-specs",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "List Country Specs",
-          "fields": [
-            {
-              "name": "limit",
-              "type": "integer",
-              "optional": true,
-              "default": 10,
-              "min": 1,
-              "max": 100
-            },
-            {
-              "name": "startingAfter",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            },
-            {
-              "name": "endingBefore",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.get-country-spec",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Get Country Spec",
-          "fields": [
-            {
-              "name": "country",
-              "type": "string",
-              "optional": false,
-              "default": "US"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.list-exchange-rates",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "List Exchange Rates",
-          "fields": [
-            {
-              "name": "limit",
-              "type": "integer",
-              "optional": true,
-              "default": 10,
-              "min": 1,
-              "max": 100
-            },
-            {
-              "name": "startingAfter",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            },
-            {
-              "name": "endingBefore",
-              "type": "string",
-              "optional": true,
-              "default": ""
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.get-exchange-rate",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Get Exchange Rate",
-          "fields": [
-            {
-              "name": "rateId",
-              "type": "string",
-              "optional": false,
-              "default": "usd"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.create-token",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Create Token",
-          "fields": [
-            {
-              "name": "cvc_update",
-              "type": "object",
-              "optional": true,
-              "default": {
-                "cvc": "123"
-              }
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.get-token",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Get Token",
-          "fields": [
-            {
-              "name": "token",
-              "type": "string",
-              "optional": false,
-              "default": "tok_sample"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.create-ephemeral-key",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Create Ephemeral Key",
-          "fields": [
-            {
-              "name": "customer",
-              "type": "string",
-              "optional": true,
-              "default": "cus_sample"
-            }
-          ],
-          "authFieldNames": [
-            "stripeSecretKey"
-          ]
-        },
-        {
-          "id": "stripe.action.delete-ephemeral-key",
-          "appId": "stripe",
-          "kind": "action",
-          "name": "Delete Ephemeral Key",
-          "fields": [
-            {
-              "name": "key",
-              "type": "string",
-              "optional": false,
-              "default": "ephkey_sample"
             }
           ],
           "authFieldNames": [
