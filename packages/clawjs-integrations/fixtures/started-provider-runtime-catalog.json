@@ -261,6 +261,26 @@
           ]
         },
         {
+          "id": "discord.action.get-current-bot-application-information",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Current Bot Application Information",
+          "fields": [],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-current-authorization-information",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Current Authorization Information",
+          "fields": [],
+          "authFieldNames": [
+            "discordBearerToken"
+          ]
+        },
+        {
           "id": "discord.action.get-guild",
           "appId": "discord",
           "kind": "action",
