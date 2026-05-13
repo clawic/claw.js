@@ -32322,6 +32322,188 @@
           ]
         },
         {
+          "id": "stripe.action.list-apple-pay-domains",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Apple Pay Domains",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-apple-pay-domain",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Apple Pay Domain",
+          "fields": [
+            {
+              "name": "domain_name",
+              "type": "string",
+              "optional": false,
+              "default": "pay.example.invalid"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-apple-pay-domain",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Apple Pay Domain",
+          "fields": [
+            {
+              "name": "domain",
+              "type": "string",
+              "optional": false,
+              "default": "apwc_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-apple-pay-domain",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Apple Pay Domain",
+          "fields": [
+            {
+              "name": "domain",
+              "type": "string",
+              "optional": false,
+              "default": "apwc_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-tax-ids",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Tax Ids",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-tax-id",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Tax Id",
+          "fields": [
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false,
+              "default": "eu_vat"
+            },
+            {
+              "name": "value",
+              "type": "string",
+              "optional": false,
+              "default": "DE123456789"
+            },
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-tax-id",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Tax Id",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "txi_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-tax-id",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Tax Id",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "txi_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-invoices",
           "appId": "stripe",
           "kind": "action",

@@ -813,6 +813,40 @@ describe("stripe operation runtime", () => {
         requiredPaths: ["id", "object"],
       },
     });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-apple-pay-domain"), {
+      domain_name: "pay.example.invalid",
+    }), {
+      method: "POST",
+      endpoint: "apple_pay/domains",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        domain_name: "pay.example.invalid",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.delete-tax-id"), {
+      id: "txi_sample",
+    }), {
+      method: "DELETE",
+      endpoint: "tax_ids/txi_sample",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: undefined,
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object", "deleted"],
+      },
+    });
   });
 
   it("covers Stripe payment operations with operation-scoped offline fixtures", async () => {
