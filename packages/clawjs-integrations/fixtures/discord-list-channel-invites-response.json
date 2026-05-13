@@ -1,0 +1,9 @@
+[
+  {
+    "id": "list-channel-invites-sample",
+    "code": "sample",
+    "channel": {
+      "id": "sample"
+    }
+  }
+]

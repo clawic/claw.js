@@ -1,0 +1,16 @@
+{
+  "method": "POST",
+  "url": "https://discord.com/api/v10/channels/sample/invites",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json",
+    "x-audit-log-reason": "sample"
+  },
+  "body": {
+    "max_age": 86400,
+    "max_uses": 0,
+    "temporary": false,
+    "unique": false
+  }
+}

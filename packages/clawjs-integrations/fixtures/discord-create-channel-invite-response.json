@@ -1,0 +1,7 @@
+{
+  "id": "create-channel-invite-sample",
+  "code": "sample",
+  "channel": {
+    "id": "sample"
+  }
+}
