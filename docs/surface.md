@@ -1831,3 +1831,28 @@ The docs check script validates that every current export from
     workspaceStateSnapshotSchema
     WorkspaceSurfaceDescriptor
     WorkspaceToolDescriptor
+
+## Surface Registry Exports
+
+    clawAppPorts
+    clawCorePorts
+    clawDataFiles
+    clawDeepLinkSchemes
+    clawDefaultBindAddress
+    clawEventsPath
+    clawExportExtensions
+    clawGlobalHomeLayout
+    clawLocalHostnames
+    clawPortRange
+    clawPortSubranges
+    clawPrivateAppApiPrefix
+    clawPublicApiPrefix
+    clawServiceSocketName
+    clawServiceSocketPath
+    clawServiceWindowsPipe
+    clawSurfaceRegistryVersion
+    clawWorkspaceLayout
+    clawixBridgePort
+    clawixDeepLinkRoutes
+    clawixHomeLayout
+    clawixPortRange
