@@ -1,0 +1,15 @@
+{
+  "id": "sample",
+  "guild_id": "sample",
+  "action": {
+    "type": 1
+  },
+  "rule_id": "sample",
+  "rule_trigger_type": 1,
+  "user_id": "sample",
+  "channel_id": "sample",
+  "message_id": "sample",
+  "content": "sample",
+  "matched_keyword": "sample",
+  "matched_content": "sample"
+}

@@ -1,0 +1,8 @@
+{
+  "id": "sample",
+  "guild_id": "sample",
+  "name": "sample",
+  "event_type": 1,
+  "trigger_type": 1,
+  "enabled": false
+}

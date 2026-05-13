@@ -1,0 +1,35 @@
+{
+  "method": "POST",
+  "url": "https://discord.com/api/v10/guilds/sample/auto-moderation/rules",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json",
+    "X-Audit-Log-Reason": "sample"
+  },
+  "body": {
+    "name": "sample",
+    "event_type": 1,
+    "trigger_type": 1,
+    "trigger_metadata": {
+      "keyword_filter": [
+        "sample"
+      ]
+    },
+    "actions": [
+      {
+        "type": 1,
+        "metadata": {
+          "custom_message": "sample"
+        }
+      }
+    ],
+    "enabled": false,
+    "exempt_roles": [
+      "sample"
+    ],
+    "exempt_channels": [
+      "sample"
+    ]
+  }
+}

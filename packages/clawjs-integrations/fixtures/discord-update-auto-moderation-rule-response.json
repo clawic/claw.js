@@ -1,0 +1,14 @@
+{
+  "id": "sample",
+  "guild_id": "sample",
+  "name": "sample",
+  "creator_id": "sample",
+  "event_type": 1,
+  "trigger_type": 1,
+  "actions": [
+    {
+      "type": 1
+    }
+  ],
+  "enabled": false
+}
