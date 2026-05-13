@@ -34,6 +34,9 @@ export type DiscordRuntimeOperation =
   | "consume-entitlement"
   | "create-test-entitlement"
   | "delete-test-entitlement"
+  | "list-skus"
+  | "list-sku-subscriptions"
+  | "get-sku-subscription"
   | "get-guild-audit-log"
   | "list-guild-emojis"
   | "get-guild-emoji"
@@ -242,6 +245,17 @@ export function buildDiscordOperationRequest(
       return bodyPlan("POST", `applications/${applicationId(values)}/entitlements`, auth, headers, testEntitlementBody(values), { type: "object", requiredPaths: ["id", "sku_id"] });
     case "delete-test-entitlement":
       return deletePlan(`applications/${applicationId(values)}/entitlements/${entitlementId(values)}`, auth, headers, { type: "object" });
+    case "list-skus":
+      return getPlan(`applications/${applicationId(values)}/skus`, auth, headers, { type: "array" });
+    case "list-sku-subscriptions":
+      return getPlan(`skus/${skuId(values)}/subscriptions`, auth, headers, { type: "array" }, removeEmptyValues({
+        before: optionalString(values.before),
+        after: optionalString(values.after),
+        limit: optionalNumber(values.limit),
+        user_id: requiredString(values.userId, "userId"),
+      }));
+    case "get-sku-subscription":
+      return getPlan(`skus/${skuId(values)}/subscriptions/${subscriptionId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "user_id", "sku_ids"] });
     case "get-guild-audit-log":
       return getPlan(`guilds/${guildId(values)}/audit-logs`, auth, headers, { type: "object", requiredPaths: ["audit_log_entries"] }, removeEmptyValues({
         user_id: optionalString(values.userId),
@@ -559,6 +573,9 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "consume-entitlement",
   "create-test-entitlement",
   "delete-test-entitlement",
+  "list-skus",
+  "list-sku-subscriptions",
+  "get-sku-subscription",
   "get-guild-audit-log",
   "list-guild-emojis",
   "get-guild-emoji",
@@ -1041,6 +1058,14 @@ function commandId(values: Record<string, IntegrationJson>): string {
 
 function entitlementId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.entitlementId, values.entitlement), "entitlementId"));
+}
+
+function skuId(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.skuId, values.sku), "skuId"));
+}
+
+function subscriptionId(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.subscriptionId, values.subscription), "subscriptionId"));
 }
 
 function emojiId(values: Record<string, IntegrationJson>): string {
