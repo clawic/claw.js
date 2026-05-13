@@ -1,0 +1,16 @@
+{
+  "method": "PATCH",
+  "url": "https://discord.com/api/v10/guilds/sample/roles",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json",
+    "x-audit-log-reason": "sample"
+  },
+  "body": [
+    {
+      "id": "sample",
+      "position": 1
+    }
+  ]
+}
