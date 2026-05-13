@@ -39221,6 +39221,76 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.create-link-account-session",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Link Account Session",
+          "fields": [
+            {
+              "name": "account_holder",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "type": "customer",
+                "customer": "cus_sample"
+              }
+            },
+            {
+              "name": "permissions",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "balances",
+                "transactions"
+              ]
+            },
+            {
+              "name": "filters",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "countries": [
+                  "US"
+                ]
+              }
+            },
+            {
+              "name": "prefetch",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "balances"
+              ]
+            },
+            {
+              "name": "return_url",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/return"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-link-account-session",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Link Account Session",
+          "fields": [
+            {
+              "name": "session",
+              "type": "string",
+              "optional": false,
+              "default": "las_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

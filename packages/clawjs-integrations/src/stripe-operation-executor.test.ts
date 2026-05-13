@@ -1071,6 +1071,32 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-link-account-session"), {
+      account_holder: { type: "customer", customer: "cus_sample" },
+      permissions: ["balances", "transactions"],
+      filters: { countries: ["US"] },
+      prefetch: ["balances"],
+      return_url: "https://example.invalid/return",
+    }), {
+      method: "POST",
+      endpoint: "link_account_sessions",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        account_holder: { type: "customer", customer: "cus_sample" },
+        permissions: ["balances", "transactions"],
+        filters: { countries: ["US"] },
+        prefetch: ["balances"],
+        return_url: "https://example.invalid/return",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-identity-verification-session"), {
       type: "document",
       client_reference_id: "identity_ref_sample",
