@@ -32,6 +32,16 @@ import {
   isGitLabSourceOperationSupported,
 } from "./gitlab-source.ts";
 import {
+  buildHubSpotOperationRequest,
+  HUBSPOT_ACTION_SLUGS,
+  isHubSpotActionOperationSupported,
+} from "./hubspot-operation-executor.ts";
+import {
+  buildHubSpotSourcePlan,
+  HUBSPOT_SOURCE_SLUGS,
+  isHubSpotSourceOperationSupported,
+} from "./hubspot-source.ts";
+import {
   buildStripeOperationRequest,
   isStripeActionOperationSupported,
 } from "./stripe-operation-executor.ts";
@@ -652,6 +662,33 @@ const GITLAB_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = GITLAB_SOURCE_FIXTURE_
   path: `packages/clawjs-integrations/fixtures/gitlab-source-${name}.json`,
 }));
 
+const HUBSPOT_ACTION_EVIDENCE = [
+  "packages/clawjs-integrations/src/hubspot-operation-executor.test.ts",
+];
+
+const HUBSPOT_ACTION_FIXTURES: ConnectorRuntimeFixture[] = HUBSPOT_ACTION_SLUGS.flatMap((name) => [
+  {
+    kind: "request" as const,
+    operationId: `hubspot.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/hubspot-${name}-request.json`,
+  },
+  {
+    kind: "response" as const,
+    operationId: `hubspot.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/hubspot-${name}-response.json`,
+  },
+]);
+
+const HUBSPOT_SOURCE_EVIDENCE = [
+  "packages/clawjs-integrations/src/hubspot-source.test.ts",
+];
+
+const HUBSPOT_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = HUBSPOT_SOURCE_SLUGS.map((name) => ({
+  kind: "source_event" as const,
+  operationId: `hubspot.source.${name}`,
+  path: `packages/clawjs-integrations/fixtures/hubspot-source-${name}.json`,
+}));
+
 const STRIPE_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/stripe-operation-executor.test.ts",
 ];
@@ -895,6 +932,33 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     supports: (operation) => isGitHubSourceOperationSupported(operation.id),
     buildPlan: (operation) => ({
       sourcePlan: buildGitHubSourcePlan(operation),
+    }),
+  },
+  {
+    appId: "hubspot",
+    kind: "action",
+    executorId: "hubspot.core-api.http",
+    baseUrl: "https://api.hubapi.com/",
+    offlineValidated: true,
+    evidence: HUBSPOT_ACTION_EVIDENCE,
+    fixtures: HUBSPOT_ACTION_FIXTURES,
+    planKinds: ["request"],
+    supports: (operation) => isHubSpotActionOperationSupported(operation.id),
+    buildPlan: (operation, values) => ({
+      requestPlan: buildHubSpotOperationRequest(operation, values),
+    }),
+  },
+  {
+    appId: "hubspot",
+    kind: "source",
+    executorId: "hubspot.webhook",
+    offlineValidated: true,
+    evidence: HUBSPOT_SOURCE_EVIDENCE,
+    fixtures: HUBSPOT_SOURCE_FIXTURES,
+    planKinds: ["source"],
+    supports: (operation) => isHubSpotSourceOperationSupported(operation.id),
+    buildPlan: (operation) => ({
+      sourcePlan: buildHubSpotSourcePlan(operation),
     }),
   },
   {
