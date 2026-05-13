@@ -738,7 +738,7 @@ function sampleSecretsForOperation(operation: ConnectorOperationDefinition): Rec
 }
 
 function sampleValueForField(field: ConnectorFieldDefinition): IntegrationJson {
-  if (Object.prototype.hasOwnProperty.call(field, "default")) return field.default ?? null;
+  if (Object.prototype.hasOwnProperty.call(field, "default")) return isIntegrationJson(field.default) ? field.default : null;
   if (field.options?.length) return field.options[0]?.value ?? null;
   if (field.type === "boolean") return false;
   if (field.type === "integer" || field.type === "number") return field.min ?? 1;

@@ -14,7 +14,7 @@ export function buildConnectorValues(
     if (Object.prototype.hasOwnProperty.call(input, field.name)) {
       values[field.name] = input[field.name] ?? null;
     } else if (Object.prototype.hasOwnProperty.call(field, "default")) {
-      values[field.name] = field.default ?? null;
+      values[field.name] = integrationJsonOrNull(field.default);
     }
   }
   return values;
@@ -78,4 +78,18 @@ function isValidConnectorFieldType(type: string, value: IntegrationJson): boolea
     default:
       return true;
   }
+}
+
+function integrationJsonOrNull(value: unknown): IntegrationJson {
+  return isIntegrationJson(value) ? value : null;
+}
+
+function isIntegrationJson(value: unknown): value is IntegrationJson {
+  if (value === null) return true;
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return true;
+  if (Array.isArray(value)) return value.every(isIntegrationJson);
+  if (value && typeof value === "object") {
+    return Object.values(value).every(isIntegrationJson);
+  }
+  return false;
 }

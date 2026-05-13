@@ -460,6 +460,7 @@ describe("connector catalog", () => {
       operationId: "chat_service.source.new-message",
       input: { values: { channel: "general" } },
     });
+    assert.equal(blockedPlan.status, "source_plan");
     const blocked = sourceSubscriptionFromPlan(blockedPlan, {
       now: "2026-05-12T12:00:00.000Z",
     });
@@ -476,6 +477,7 @@ describe("connector catalog", () => {
         secretRefs: { bot: "secret://bot" },
       },
     });
+    assert.equal(readyPlan.status, "source_plan");
     const ready = sourceSubscriptionFromPlan(readyPlan, {
       id: "sub_1",
       now: "2026-05-12T12:01:00.000Z",
@@ -497,6 +499,7 @@ describe("connector catalog", () => {
         secretRefs: { bot: "secret://bot" },
       },
     });
+    assert.equal(plan.status, "source_plan");
     const first = scheduler.register(plan, {
       id: "sub_1",
       now: "2026-05-12T12:00:00.000Z",

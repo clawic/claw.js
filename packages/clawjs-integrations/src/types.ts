@@ -41,7 +41,7 @@ export interface ConnectorFieldDefinition {
   alertType?: string;
   content?: string;
   optional: boolean;
-  default?: IntegrationJson;
+  default?: unknown;
   options?: ConnectorFieldOption[];
   propDefinition?: ConnectorFieldPropDefinitionMetadata;
   dynamicOptions?: ConnectorFieldDynamicOptions;
