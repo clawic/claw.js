@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/webhook_endpoints/we_sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "url=https%3A%2F%2Fexample.invalid%2Fstripe%2Fwebhook&enabled_events=payment_intent.succeeded"
+}

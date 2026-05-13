@@ -1,0 +1,11 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "stripe_sample",
+      "object": "stripe_object",
+      "status": "succeeded"
+    }
+  ],
+  "has_more": false
+}
