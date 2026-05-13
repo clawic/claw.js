@@ -101,6 +101,10 @@ const DISCORD_ACTIONS = [
   ]),
   action("delete-guild-scheduled-event", "Delete Guild Scheduled Event", [GUILD_FIELD, field("guildScheduledEventId", "string")]),
   action("list-guild-scheduled-event-users", "List Guild Scheduled Event Users", [GUILD_FIELD, field("guildScheduledEventId", "string"), field("limit", "integer", true, { default: 1, min: 1, max: 100 }), field("withMember", "boolean", true)]),
+  action("create-stage-instance", "Create Stage Instance", [CHANNEL_FIELD, field("topic", "string"), field("privacyLevel", "integer", true, { default: 2 }), field("sendStartNotification", "boolean", true), field("guildScheduledEventId", "string", true)]),
+  action("get-stage-instance", "Get Stage Instance", [CHANNEL_FIELD]),
+  action("update-stage-instance", "Update Stage Instance", [CHANNEL_FIELD, field("topic", "string", true, { default: "sample" }), field("privacyLevel", "integer", true, { default: 2 }), field("auditLogReason", "string", true)]),
+  action("delete-stage-instance", "Delete Stage Instance", [CHANNEL_FIELD, field("auditLogReason", "string", true)]),
   action("get-invite", "Get Invite", [field("inviteCode", "string"), field("withCounts", "boolean", true), field("withExpiration", "boolean", true)]),
   action("delete-invite", "Delete Invite", [field("inviteCode", "string")]),
   action("list-channel-webhooks", "List Channel Webhooks", [CHANNEL_FIELD]),
@@ -294,6 +298,53 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["id", "guild_id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-stage-instance"), {
+      channelId: "123",
+      topic: "Launch room",
+      privacyLevel: 2,
+      sendStartNotification: true,
+      guildScheduledEventId: "event-123",
+    }), {
+      method: "POST",
+      endpoint: "stage-instances",
+      auth,
+      headers,
+      body: {
+        channel_id: "123",
+        topic: "Launch room",
+        privacy_level: 2,
+        send_start_notification: true,
+        guild_scheduled_event_id: "event-123",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "channel_id", "topic"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.update-stage-instance"), {
+      channelId: "123",
+      topic: "Updated room",
+      privacyLevel: 2,
+      auditLogReason: "rescheduled",
+    }), {
+      method: "PATCH",
+      endpoint: "stage-instances/123",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "rescheduled",
+      },
+      body: {
+        topic: "Updated room",
+        privacy_level: 2,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "channel_id", "topic"],
       },
     });
   });
