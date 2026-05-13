@@ -1,0 +1,14 @@
+{
+  "action": "created",
+  "repository": {
+    "id": 2,
+    "full_name": "octocat/sample"
+  },
+  "sender": {
+    "id": 1,
+    "login": "octocat"
+  },
+  "star": {
+    "id": "star_sample"
+  }
+}

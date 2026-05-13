@@ -1,0 +1,10 @@
+{
+  "action": "created",
+  "repository": {
+    "id": "repository_sample"
+  },
+  "sender": {
+    "id": 1,
+    "login": "octocat"
+  }
+}

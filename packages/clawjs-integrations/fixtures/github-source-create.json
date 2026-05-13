@@ -1,0 +1,13 @@
+{
+  "action": "created",
+  "repository": {
+    "id": 2,
+    "full_name": "octocat/sample"
+  },
+  "sender": {
+    "id": 1,
+    "login": "octocat"
+  },
+  "ref": "feature",
+  "ref_type": "branch"
+}
