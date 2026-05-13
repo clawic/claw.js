@@ -1,0 +1,7 @@
+{
+  "ok": true,
+  "result": {
+    "id": "promote-chat-member",
+    "endpoint": "promoteChatMember"
+  }
+}

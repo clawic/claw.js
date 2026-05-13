@@ -1,0 +1,15 @@
+{
+  "method": "POST",
+  "url": "https://api.telegram.org/botoffline-telegramBotApi-secret/promoteChatMember",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json"
+  },
+  "body": {
+    "chat_id": "sample",
+    "user_id": "sample",
+    "can_change_info": false,
+    "can_invite_users": false,
+    "can_pin_messages": false
+  }
+}

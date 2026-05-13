@@ -1,0 +1,7 @@
+{
+  "ok": true,
+  "result": {
+    "id": "send-text-message-or-reply",
+    "endpoint": "sendMessage"
+  }
+}

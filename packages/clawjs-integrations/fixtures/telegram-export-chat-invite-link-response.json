@@ -1,0 +1,7 @@
+{
+  "ok": true,
+  "result": {
+    "id": "export-chat-invite-link",
+    "endpoint": "exportChatInviteLink"
+  }
+}

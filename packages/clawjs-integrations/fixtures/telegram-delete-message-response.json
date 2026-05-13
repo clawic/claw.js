@@ -1,0 +1,7 @@
+{
+  "ok": true,
+  "result": {
+    "id": "delete-message",
+    "endpoint": "deleteMessage"
+  }
+}

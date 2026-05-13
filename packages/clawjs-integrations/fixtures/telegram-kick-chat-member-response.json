@@ -1,0 +1,7 @@
+{
+  "ok": true,
+  "result": {
+    "id": "kick-chat-member",
+    "endpoint": "banChatMember"
+  }
+}

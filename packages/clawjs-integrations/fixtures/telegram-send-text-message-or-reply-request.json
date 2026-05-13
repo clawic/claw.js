@@ -1,0 +1,14 @@
+{
+  "method": "POST",
+  "url": "https://api.telegram.org/botoffline-telegramBotApi-secret/sendMessage",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json"
+  },
+  "body": {
+    "chat_id": "sample",
+    "text": "sample",
+    "parse_mode": "sample",
+    "reply_markup": {}
+  }
+}

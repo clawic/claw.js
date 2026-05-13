@@ -1,0 +1,7 @@
+{
+  "ok": true,
+  "result": {
+    "id": "edit-text-message",
+    "endpoint": "editMessageText"
+  }
+}

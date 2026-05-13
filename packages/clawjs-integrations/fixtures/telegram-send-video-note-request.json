@@ -1,0 +1,14 @@
+{
+  "method": "POST",
+  "url": "https://api.telegram.org/botoffline-telegramBotApi-secret/sendVideoNote",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json"
+  },
+  "body": {
+    "chat_id": "sample",
+    "video_note": "sample",
+    "length": 1,
+    "duration": 1
+  }
+}

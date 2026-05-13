@@ -1,0 +1,7 @@
+{
+  "ok": true,
+  "result": {
+    "id": "get-num-members-in-chat",
+    "endpoint": "getChatMemberCount"
+  }
+}

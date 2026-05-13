@@ -1,0 +1,7 @@
+{
+  "ok": true,
+  "result": {
+    "id": "send-media-by-url-or-id",
+    "endpoint": "sendDocument"
+  }
+}

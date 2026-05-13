@@ -1,0 +1,16 @@
+{
+  "method": "POST",
+  "url": "https://api.telegram.org/botoffline-telegramBotApi-secret/restrictChatMember",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json"
+  },
+  "body": {
+    "chat_id": "sample",
+    "user_id": "sample",
+    "until_date": 1,
+    "can_send_messages": false,
+    "can_send_media_messages": false,
+    "can_invite_users": false
+  }
+}
