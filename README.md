@@ -26,17 +26,17 @@ Four ways in. One agent runtime. Every moving part already there.
 
 ```mermaid
 flowchart LR
-  sdk["SDK"] --> claw
-  cli["CLI"] --> claw
-  api["API"] --> claw
-  relay["Relay"] --> claw
+  sdk["SDK"] -.-> claw
+  cli["CLI"] -.-> claw
+  api["API"] -.-> claw
+  relay["Relay"] -.-> claw
   claw(["ClawJS"]) ==> agents(["Agents"])
   agents --> data["Memory · Files · Notes · Secrets"]
   agents --> ext(["Integrations"])
-  agents --> rt["Runtimes<br/>openclaw · codex · hermes"]
-  ext --> mcp["MCPs · APIs"]
-  ext --> iot["IoT"]
+  agents --> rt["Runtimes<br/>OpenClaw · Codex · Hermes · Claude · OpenCode · Cursor"]
   ext --> channels["Channels<br/>Telegram · WhatsApp · Discord · Signal · Slack"]
+  ext --> mcp["MCPs · APIs"]
+  ext --> iot["IoT · Webhooks"]
 ```
 
 Build once, expose everything through the SDK, the CLI, the API, or the
