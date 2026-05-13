@@ -57,9 +57,12 @@ const APP_STATE_DOMAIN_TABLES = [
 ];
 const LIFE_DOMAIN_TABLES = ["life_verticals", "life_variables", "life_sessions", "life_observations"];
 const RESOURCE_DOMAIN_TABLES = ["resources", "apps", "design_resources"];
-const AGENT_DOMAIN_TABLES = ["agents", "skills", "skill_collections", "connections"];
+const AGENT_DOMAIN_TABLES = ["agents", "skills", "skill_collections", "connections", "channel_accounts", "channel_routing", "channel_messages"];
 const SESSION_DOMAIN_TABLES = ["session_index"];
-const SIDECAR_FILENAMES = ["vault.sqlite", "sessions.sqlite", "audio.sqlite", "drive.sqlite", "search.sqlite", "runtime.sqlite", "notify.sqlite", "monitor.sqlite", "infra.sqlite", "ops.sqlite"];
+const USER_MODEL_DOMAIN_TABLES = ["user_profile_items", "user_profile_meta", "user_profile_history"];
+const TRACKING_RUNTIME_DOMAIN_TABLES = ["system_variables", "user_variables", "observations", "sessions", "healthkit_sync_state", "hidden_system_variables"];
+const TIME_RUNTIME_DOMAIN_TABLES = ["temporal_projections", "temporal_run_log", "temporal_executions", "temporal_items"];
+const SIDECAR_FILENAMES = ["vault.sqlite", "sessions.sqlite", "audio.sqlite", "drive.sqlite", "search.sqlite", "runtime.sqlite", "notify.sqlite", "monitor.sqlite", "infra.sqlite", "feed.sqlite", "ops.sqlite"];
 const KNOWLEDGE_DOMAIN_TABLES = [
   "knowledge_entities",
   "knowledge_facts",
@@ -71,11 +74,114 @@ const KNOWLEDGE_DOMAIN_TABLES = [
   "page_comments",
   "profile_projection",
 ];
-const PRODUCTIVITY_DOMAIN_TABLES = ["productivity_items"];
-const BUSINESS_DOMAIN_TABLES = ["business_records", "content_items", "social_posts", "finance_records", "accounting_entries", "accounting_lines"];
+const WIKI_VIEW_TABLES = [
+  "wiki_admins",
+  "wiki_spaces",
+  "wiki_scoped_tokens",
+];
+const PRODUCTIVITY_DOMAIN_TABLES = ["productivity_items", "workspace_records", "workspace_meta", ...TIME_RUNTIME_DOMAIN_TABLES];
+const CONTENT_SERVICE_TABLES = [
+  "content_admins",
+  "content_brands",
+  "content_destinations",
+  "content_campaigns",
+  "content_entries",
+  "content_revisions",
+  "content_assets",
+  "content_variants",
+  "content_approvals",
+  "content_plans",
+  "content_publication_runs",
+  "content_scoped_tokens",
+];
+const ERP_SERVICE_TABLES = [
+  "erp_admins",
+  "erp_tenants",
+  "erp_legal_entities",
+  "erp_branches",
+  "erp_warehouses",
+  "erp_fiscal_periods",
+  "erp_accounts",
+  "erp_items",
+  "erp_employees",
+  "erp_projects",
+  "erp_localizations",
+  "erp_counters",
+  "erp_documents",
+  "erp_journal_entries",
+  "erp_journal_lines",
+  "erp_inventory_balances",
+  "erp_approvals",
+  "erp_jobs",
+  "erp_audit_events",
+];
+const BADGER_SERVICE_TABLES = [
+  "badger_workspace",
+  "badger_user",
+  "badger_workspace_member",
+  "badger_workspace_invitation",
+  "badger_api_token",
+  "badger_audit_event",
+  "badger_channel_family",
+  "badger_channel_account",
+  "badger_channel_account_health",
+  "badger_post",
+  "badger_post_account",
+  "badger_post_variant",
+  "badger_post_label",
+  "badger_post_label_pivot",
+  "badger_media",
+  "badger_post_media_pivot",
+  "badger_post_activity",
+  "badger_queue",
+  "badger_queue_slot",
+  "badger_queue_account",
+  "badger_queue_entry",
+  "badger_blackout_window",
+  "badger_recurrence",
+  "badger_bulk_import_batch",
+  "badger_campaign",
+  "badger_template",
+  "badger_hashtag_group",
+  "badger_dynamic_variable",
+  "badger_evergreen_pool",
+  "badger_evergreen_pool_member",
+  "badger_ab_variant_set",
+  "badger_ab_variant_member",
+  "badger_utm_template",
+  "badger_tracked_link",
+  "badger_link_shortener_provider",
+  "badger_locale_variant_policy",
+  "badger_audience_segment",
+  "badger_account_metric_daily",
+  "badger_post_metric",
+  "badger_report",
+  "badger_report_export",
+  "badger_imported_post",
+  "badger_inbox_thread",
+  "badger_inbox_message",
+  "badger_inbox_rule",
+  "badger_approval_workflow",
+  "badger_post_approval",
+  "badger_post_approval_decision",
+  "badger_external_reviewer_link",
+  "badger_webhook",
+  "badger_webhook_delivery",
+  "badger_integration_service",
+  "badger_ai_brand_voice",
+  "badger_job",
+  "badger_job_batch",
+  "badger_setting",
+  "badger_system_status",
+  "badger_badger_migrations",
+];
+const CONTENT_DOMAIN_TABLES = ["content_items", ...CONTENT_SERVICE_TABLES];
+const SOCIAL_DOMAIN_TABLES = ["social_posts", ...BADGER_SERVICE_TABLES];
+const BUSINESS_DOMAIN_TABLES = ["business_records", ...CONTENT_DOMAIN_TABLES, ...SOCIAL_DOMAIN_TABLES, "finance_records", "accounting_entries", "accounting_lines", ...ERP_SERVICE_TABLES];
 const CALENDAR_DOMAIN_TABLES = ["calendar_events"];
 const IOT_DOMAIN_TABLES = ["iot_config"];
 const MARKETPLACE_DOMAIN_TABLES = ["marketplace_choices"];
+const MCP_DOMAIN_TABLES = ["mcp_servers", "mcp_tools"];
 
 const LIFE_CATALOG_COLLECTION_FIELDS: FieldDefinition[] = [
   { name: "verticalId", type: "text", required: true },
@@ -375,6 +481,7 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
       body TEXT NOT NULL,
       author_kind TEXT NOT NULL DEFAULT 'user',
       author_id TEXT,
+      upvotes INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE
@@ -744,6 +851,8 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
         return runOperationalSidecarCommand(input, store, "monitor.sqlite", "monitor");
       case "infra":
         return runOperationalSidecarCommand(input, store, "infra.sqlite", "infra");
+      case "feed":
+        return runOperationalSidecarCommand(input, store, "feed.sqlite", "feed");
       case "ops":
         return runOperationalSidecarCommand(input, store, "ops.sqlite", "ops");
       case "mcp":
@@ -795,7 +904,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     monitor: new Set(["event", "list", "retention", "help"]),
     infra: new Set(["event", "list", "retention", "help"]),
     ops: new Set(["event", "metric", "list", "retention", "help"]),
-    mcp: new Set(["list", "get", "upsert", "delete", "help"]),
+    mcp: new Set(["list", "get", "upsert", "delete", "config-path", "help"]),
     apps: new Set(["list", "upsert", "help"]),
     design: new Set(["list", "upsert", "help"]),
     agents: new Set(["list", "upsert", "help"]),
@@ -1851,6 +1960,14 @@ function runOperationalSidecarCommand(input: V1DataCliInput, store: DatabaseServ
 function runMcpCommand(input: V1DataCliInput): number {
   const command = input.positionals[1];
   const configPath = input.flags.config || path.join(os.homedir(), ".codex", "config.toml");
+  if (command === "config-path") {
+    const scope = input.flags.scope || input.positionals[2] || "user";
+    const resolved = scope === "project"
+      ? path.join(path.resolve(input.cwd, expandHome(input.flags.project || input.flags.cwd || input.cwd)), ".codex", "config.toml")
+      : configPath;
+    writeSuccess(input, { scope, configPath: resolved, exists: fs.existsSync(resolved), source: "codex-config" });
+    return V1_DATA_EXIT_OK;
+  }
   if (command === "list" || command === "get") {
     const servers = readMcpServers(configPath);
     if (command === "get") {
@@ -2135,7 +2252,7 @@ function doctorPayload(sqlite: Database.Database): JsonRecord {
       rawRuntime: "operational-sidecars",
     },
     logicalDomains: {
-      mainDb: ["knowledge", "notes", "profile", "life", "tasks", "business", "content", "social", "calendar", "apps", "design", "agents", "skills", "connections"],
+      mainDb: ["knowledge", "notes", "profile", "user-model", "life", "tracking", "tasks", "productivity", "time", "business", "content", "social", "finance", "ledger", "calendar", "iot", "marketplace", "apps", "design", "agents", "skills", "connections"],
       sidecars: ["secrets", "conversation-artifacts", "search", "runtime", "notify", "monitor", "infra", "ops"],
       externalSources: ["codex", "mcp"],
     },
@@ -2233,17 +2350,23 @@ function resetDomain(sqlite: Database.Database, domain: string): JsonRecord {
   const normalized = domain.trim().toLowerCase();
   const sidecarOnlyDomains = new Set(["audio", "drive", "runtime", "notify", "monitor", "infra", "ops", "conversation-artifacts"]);
   const tables =
-    normalized === "all" ? [...APP_STATE_DOMAIN_TABLES, ...LIFE_DOMAIN_TABLES, ...KNOWLEDGE_DOMAIN_TABLES, ...PRODUCTIVITY_DOMAIN_TABLES, ...BUSINESS_DOMAIN_TABLES, ...CALENDAR_DOMAIN_TABLES, ...IOT_DOMAIN_TABLES, ...MARKETPLACE_DOMAIN_TABLES, ...RESOURCE_DOMAIN_TABLES, ...AGENT_DOMAIN_TABLES, ...SESSION_DOMAIN_TABLES] :
+    normalized === "all" ? [...APP_STATE_DOMAIN_TABLES, ...LIFE_DOMAIN_TABLES, ...TRACKING_RUNTIME_DOMAIN_TABLES, ...KNOWLEDGE_DOMAIN_TABLES, ...WIKI_VIEW_TABLES, ...USER_MODEL_DOMAIN_TABLES, ...PRODUCTIVITY_DOMAIN_TABLES, ...BUSINESS_DOMAIN_TABLES, ...CALENDAR_DOMAIN_TABLES, ...IOT_DOMAIN_TABLES, ...MARKETPLACE_DOMAIN_TABLES, ...RESOURCE_DOMAIN_TABLES, ...AGENT_DOMAIN_TABLES, ...MCP_DOMAIN_TABLES, ...SESSION_DOMAIN_TABLES] :
     normalized === "app-state" ? APP_STATE_DOMAIN_TABLES :
-    normalized === "life" ? LIFE_DOMAIN_TABLES :
-    normalized === "knowledge" || normalized === "notes" || normalized === "profile" || normalized === "wiki" ? KNOWLEDGE_DOMAIN_TABLES :
-    normalized === "tasks" || normalized === "productivity" ? PRODUCTIVITY_DOMAIN_TABLES :
-    normalized === "business" || normalized === "content" || normalized === "social" || normalized === "finance" || normalized === "ledger" ? BUSINESS_DOMAIN_TABLES :
+    normalized === "life" || normalized === "tracking" ? [...LIFE_DOMAIN_TABLES, ...TRACKING_RUNTIME_DOMAIN_TABLES] :
+    normalized === "knowledge" || normalized === "notes" ? KNOWLEDGE_DOMAIN_TABLES :
+    normalized === "wiki" ? WIKI_VIEW_TABLES :
+    normalized === "profile" || normalized === "user-model" ? [...KNOWLEDGE_DOMAIN_TABLES, ...USER_MODEL_DOMAIN_TABLES] :
+    normalized === "tasks" || normalized === "productivity" || normalized === "time" ? PRODUCTIVITY_DOMAIN_TABLES :
+    normalized === "business" ? BUSINESS_DOMAIN_TABLES :
+    normalized === "content" ? CONTENT_DOMAIN_TABLES :
+    normalized === "social" ? SOCIAL_DOMAIN_TABLES :
+    normalized === "finance" || normalized === "ledger" ? ["finance_records", "accounting_entries", "accounting_lines", ...ERP_SERVICE_TABLES] :
     normalized === "marketplace" ? MARKETPLACE_DOMAIN_TABLES :
     normalized === "calendar" ? CALENDAR_DOMAIN_TABLES :
     normalized === "iot" ? IOT_DOMAIN_TABLES :
     normalized === "resources" || normalized === "apps" || normalized === "design" ? RESOURCE_DOMAIN_TABLES :
     normalized === "agents" || normalized === "skills" || normalized === "connections" ? AGENT_DOMAIN_TABLES :
+    normalized === "mcp" ? MCP_DOMAIN_TABLES :
     normalized === "sessions-index" || normalized === "sessions" ? SESSION_DOMAIN_TABLES :
     normalized === "search" ? ["notes_fts", "session_index_fts"] :
     sidecarOnlyDomains.has(normalized) ? [] :
@@ -2251,9 +2374,19 @@ function resetDomain(sqlite: Database.Database, domain: string): JsonRecord {
   if (tables.length === 0 && !sidecarOnlyDomains.has(normalized)) throw new Error(`Unknown reset domain: ${domain}`);
   const deleted: Record<string, number> = {};
   const tx = sqlite.transaction(() => {
-    if (tables.includes("session_index")) sqlite.prepare("DELETE FROM session_index_fts").run();
-    if (tables.includes("pages")) sqlite.prepare("DELETE FROM notes_fts").run();
+    if (tables.includes("session_index") && tableExists(sqlite, "session_index_fts")) sqlite.prepare("DELETE FROM session_index_fts").run();
+    if (tables.includes("pages") && tableExists(sqlite, "notes_fts")) sqlite.prepare("DELETE FROM notes_fts").run();
+    if (normalized === "wiki" && tableExists(sqlite, "pages")) {
+      if (tableExists(sqlite, "notes_fts")) {
+        sqlite.prepare("DELETE FROM notes_fts WHERE page_id IN (SELECT id FROM pages WHERE surface = 'wiki')").run();
+      }
+      deleted.wiki_pages = sqlite.prepare("DELETE FROM pages WHERE surface = 'wiki'").run().changes;
+    }
     for (const table of tables) {
+      if (!tableExists(sqlite, table)) {
+        deleted[table] = 0;
+        continue;
+      }
       deleted[table] = sqlite.prepare(`DELETE FROM ${quoteIdent(table)}`).run().changes;
     }
   });
@@ -2691,6 +2824,7 @@ function seedSidecarRegistry(sqlite: Database.Database): void {
     { domain: "notify", id: "deliveries", path: path.join(root, "notify.sqlite"), cache: true, metadata: { operational: true } },
     { domain: "monitor", id: "events", path: path.join(root, "monitor.sqlite"), cache: true, metadata: { operational: true } },
     { domain: "infra", id: "relay-execution-plane", path: path.join(root, "infra.sqlite"), cache: true, metadata: { operational: true } },
+    { domain: "feed", id: "raw-provider-cache", path: path.join(root, "feed.sqlite"), cache: true, metadata: { rawCache: true, operational: true } },
     { domain: "ops", id: "metrics-cache", path: path.join(root, "ops.sqlite"), cache: true, metadata: { operational: true, rawCache: true } },
   ];
   const now = nowIso();
@@ -3090,6 +3224,10 @@ function resetSidecarDomain(domain: string, deleted: Record<string, number>): vo
     const sqlite = openSidecar(filename);
     try {
       for (const table of tables) {
+        if (!tableExists(sqlite, table)) {
+          deleted[`${filename}:${table}`] = 0;
+          continue;
+        }
         deleted[`${filename}:${table}`] = sqlite.prepare(`DELETE FROM ${quoteIdent(table)}`).run().changes;
       }
     } finally {
@@ -3100,29 +3238,74 @@ function resetSidecarDomain(domain: string, deleted: Record<string, number>): vo
     clear("sessions.sqlite", ["conversation_fts", "conversation_messages", "conversation_sessions"]);
   }
   if (domain === "all" || domain === "audio" || domain === "conversation-artifacts") {
-    clear("audio.sqlite", ["audio_fts", "audio_items"]);
+    clear("audio.sqlite", ["audio_fts", "audio_items", "voice_tts_runs", "voice_stt_runs"]);
   }
   if (domain === "all" || domain === "drive" || domain === "conversation-artifacts") {
-    clear("drive.sqlite", ["drive_fts", "drive_items"]);
+    clear("drive.sqlite", ["drive_fts", "drive_items", "storage_objects", "storage_tokens", "storage_shares"]);
   }
   if (domain === "all" || domain === "search") {
     clear("search.sqlite", ["search_fts", "search_documents"]);
   }
   if (domain === "all" || domain === "runtime") {
-    clear("runtime.sqlite", ["runtime_events", "runtime_jobs"]);
+    clear("runtime.sqlite", [
+      "runtime_events",
+      "runtime_jobs",
+      "sandbox_runs",
+      "code_gate_runs",
+      "code_policies",
+      "code_host_syncs",
+      "code_queue",
+      "code_reviews",
+      "code_checks",
+      "code_evidence",
+      "code_reservations",
+      "code_intents",
+      "code_repositories",
+      "code_agents",
+      "code_projects",
+      "delegation_graphs",
+      "delegation_nodes",
+      "dependency_edges",
+      "agent_workers",
+      "agent_runs",
+      "delegation_events",
+      "run_logs",
+    ]);
   }
   if (domain === "all" || domain === "notify") {
-    clear("notify.sqlite", ["operational_events"]);
+    clear("notify.sqlite", [
+      "operational_events",
+      "admins",
+      "source_apps",
+      "source_app_tokens",
+      "client_apps",
+      "device_installations",
+      "user_preferences",
+      "subscriptions",
+      "notifications",
+      "deliveries",
+      "delivery_attempts",
+      "receipts",
+      "glance_states",
+    ]);
   }
   if (domain === "all" || domain === "monitor") {
-    clear("monitor.sqlite", ["operational_events"]);
+    clear("monitor.sqlite", ["operational_events", "monitors", "heartbeats", "incidents", "instances"]);
   }
   if (domain === "all" || domain === "infra") {
     clear("infra.sqlite", ["operational_events"]);
   }
+  if (domain === "all" || domain === "feed") {
+    clear("feed.sqlite", ["operational_events", "admins", "sources", "items", "annotations", "collections", "collection_items", "scoped_tokens"]);
+  }
   if (domain === "all" || domain === "ops") {
     clear("ops.sqlite", ["operational_events"]);
   }
+}
+
+function tableExists(sqlite: Database.Database, table: string): boolean {
+  const row = sqlite.prepare("SELECT name FROM sqlite_master WHERE type IN ('table', 'view') AND name = ?").get(table) as { name: string } | undefined;
+  return !!row;
 }
 
 function readMcpServers(configPath: string): Array<JsonRecord & { id: string }> {
@@ -3322,7 +3505,7 @@ function usage(binName: string, group: string): string {
     case "ops":
       return `Usage: ${binName} ops event|metric|list|retention [--json]`;
     case "mcp":
-      return `Usage: ${binName} mcp list|get|upsert|delete [--json]`;
+      return `Usage: ${binName} mcp list|get|upsert|delete|config-path [--json]`;
     case "apps":
       return `Usage: ${binName} apps list|upsert [--json]`;
     case "design":
