@@ -252,10 +252,10 @@ const DISCORD_ACTIONS = [
   action("list-guild-members", "List Guild Members", [GUILD_FIELD, field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
   action("get-guild-member", "Get Guild Member", [GUILD_FIELD, USER_FIELD]),
   action("search-guild-members", "Search Guild Members", [GUILD_FIELD, field("query", "string"), field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
-  action("modify-guild-member", "Modify Guild Member", [GUILD_FIELD, USER_FIELD, field("nick", "string", true, { default: "sample" })]),
+  action("modify-guild-member", "Modify Guild Member", [GUILD_FIELD, USER_FIELD, field("nick", "string", true, { default: "sample" }), field("roles", "array", true), field("mute", "boolean", true), field("deaf", "boolean", true), field("voiceChannelId", "string", true), field("communicationDisabledUntil", "string", true), field("flags", "integer", true), field("auditLogReason", "string", true)]),
   action("modify-current-member", "Modify Current Member", [GUILD_FIELD, field("nick", "string", true, { default: "sample" }), field("avatar", "string", true, { default: "data:image/png;base64,c2FtcGxl" }), field("banner", "string", true, { default: "data:image/png;base64,c2FtcGxl" }), field("bio", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
   action("modify-current-user-nick", "Modify Current User Nick", [GUILD_FIELD, field("nick", "string"), field("auditLogReason", "string", true)]),
-  action("remove-guild-member", "Remove Guild Member", [GUILD_FIELD, USER_FIELD]),
+  action("remove-guild-member", "Remove Guild Member", [GUILD_FIELD, USER_FIELD, field("auditLogReason", "string", true)]),
   action("list-guild-roles", "List Guild Roles", [GUILD_FIELD]),
   action("get-guild-role", "Get Guild Role", [GUILD_FIELD, ROLE_FIELD]),
   action("get-guild-role-member-counts", "Get Guild Role Member Counts", [GUILD_FIELD]),
@@ -263,8 +263,8 @@ const DISCORD_ACTIONS = [
   action("modify-guild-role-positions", "Modify Guild Role Positions", [GUILD_FIELD, field("positions", "array", false, { default: [{ id: "sample", position: 1 }] }), field("auditLogReason", "string", true)]),
   action("update-guild-role", "Update Guild Role", [GUILD_FIELD, ROLE_FIELD, field("name", "string", true, { default: "sample" })]),
   action("delete-guild-role", "Delete Guild Role", [GUILD_FIELD, ROLE_FIELD]),
-  action("add-guild-member-role", "Add Guild Member Role", [GUILD_FIELD, USER_FIELD, ROLE_FIELD]),
-  action("remove-guild-member-role", "Remove Guild Member Role", [GUILD_FIELD, USER_FIELD, ROLE_FIELD]),
+  action("add-guild-member-role", "Add Guild Member Role", [GUILD_FIELD, USER_FIELD, ROLE_FIELD, field("auditLogReason", "string", true)]),
+  action("remove-guild-member-role", "Remove Guild Member Role", [GUILD_FIELD, USER_FIELD, ROLE_FIELD, field("auditLogReason", "string", true)]),
   action("list-guild-bans", "List Guild Bans", [GUILD_FIELD, field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
   action("get-guild-ban", "Get Guild Ban", [GUILD_FIELD, USER_FIELD]),
   action("create-guild-ban", "Create Guild Ban", [GUILD_FIELD, USER_FIELD, field("deleteMessageSeconds", "integer", true, { default: 0, min: 0 })]),
@@ -1526,6 +1526,40 @@ describe("discord operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.modify-guild-member"), {
+      guildId: "456",
+      userId: "123",
+      nick: null,
+      roles: ["789"],
+      mute: false,
+      deaf: true,
+      voiceChannelId: null,
+      communicationDisabledUntil: null,
+      flags: 1,
+      auditLogReason: "member moderation",
+    }), {
+      method: "PATCH",
+      endpoint: "guilds/456/members/123",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "member moderation",
+      },
+      body: {
+        nick: null,
+        roles: ["789"],
+        mute: false,
+        deaf: true,
+        channel_id: null,
+        communication_disabled_until: null,
+        flags: 1,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["user"],
+      },
+    });
+
     assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.modify-current-member"), {
       guildId: "456",
       nick: "Display",
@@ -1571,6 +1605,24 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["nick"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.remove-guild-member"), {
+      guildId: "456",
+      userId: "123",
+      auditLogReason: "member removal",
+    }), {
+      method: "DELETE",
+      endpoint: "guilds/456/members/123",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "member removal",
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
       },
     });
 
@@ -1917,6 +1969,44 @@ describe("discord operation runtime", () => {
       bodyValue: [{ id: "123", position: 2 }],
       responseSchema: {
         type: "array",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.add-guild-member-role"), {
+      guildId: "456",
+      userId: "123",
+      roleId: "role-123",
+      auditLogReason: "grant role",
+    }), {
+      method: "PUT",
+      endpoint: "guilds/456/members/123/roles/role-123",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "grant role",
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.remove-guild-member-role"), {
+      guildId: "456",
+      userId: "123",
+      roleId: "role-123",
+      auditLogReason: "revoke role",
+    }), {
+      method: "DELETE",
+      endpoint: "guilds/456/members/123/roles/role-123",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "revoke role",
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
       },
     });
 
