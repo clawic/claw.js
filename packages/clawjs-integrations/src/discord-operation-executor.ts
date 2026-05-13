@@ -18,6 +18,8 @@ export type DiscordRuntimeOperation =
   | "get-current-user-connections"
   | "get-current-user-application-role-connection"
   | "update-current-user-application-role-connection"
+  | "get-gateway"
+  | "get-gateway-bot"
   | "get-guild"
   | "get-guild-preview"
   | "modify-guild"
@@ -260,6 +262,10 @@ export function buildDiscordOperationRequest(
       return getPlan(`users/@me/applications/${applicationId(values)}/role-connection`, bearerAuth, headers, { type: "object", requiredPaths: ["metadata"] });
     case "update-current-user-application-role-connection":
       return bodyPlan("PUT", `users/@me/applications/${applicationId(values)}/role-connection`, bearerAuth, headers, userApplicationRoleConnectionBody(values), { type: "object", requiredPaths: ["metadata"] });
+    case "get-gateway":
+      return getPlan("gateway", [], headers, { type: "object", requiredPaths: ["url"] });
+    case "get-gateway-bot":
+      return getPlan("gateway/bot", auth, headers, { type: "object", requiredPaths: ["url", "shards", "session_start_limit"] });
     case "get-guild":
       return getPlan(`guilds/${guildId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "name"] }, removeEmptyValues({
         with_counts: values.withCounts,
@@ -791,6 +797,8 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "get-current-user-connections",
   "get-current-user-application-role-connection",
   "update-current-user-application-role-connection",
+  "get-gateway",
+  "get-gateway-bot",
   "get-guild",
   "get-guild-preview",
   "modify-guild",
