@@ -318,6 +318,29 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.update-checkout-session"), {
+      session: "cs_sample",
+      metadata: { order_id: "sample" },
+      line_items: [{ id: "li_sample", quantity: 2 }],
+      shipping_options: [{ shipping_rate: "shr_sample" }],
+    }), {
+      method: "POST",
+      endpoint: "checkout/sessions/cs_sample",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        metadata: { order_id: "sample" },
+        line_items: [{ id: "li_sample", quantity: 2 }],
+        shipping_options: [{ shipping_rate: "shr_sample" }],
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object", "mode"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-setup-intent"), {
       customer: "cus_sample",
       payment_method: "pm_sample",

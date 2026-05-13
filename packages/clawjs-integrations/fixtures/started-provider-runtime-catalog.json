@@ -39040,6 +39040,66 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.update-checkout-session",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Checkout Session",
+          "fields": [
+            {
+              "name": "session",
+              "type": "string",
+              "optional": false,
+              "default": "cs_sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "line_items",
+              "type": "array",
+              "optional": true,
+              "default": [
+                {
+                  "id": "li_sample",
+                  "quantity": 2
+                }
+              ]
+            },
+            {
+              "name": "shipping_options",
+              "type": "array",
+              "optional": true,
+              "default": [
+                {
+                  "shipping_rate": "shr_sample"
+                }
+              ]
+            },
+            {
+              "name": "collected_information",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "shipping_details": {
+                  "name": "Sample Person",
+                  "address": {
+                    "country": "US",
+                    "line1": "123 Sample St"
+                  }
+                }
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },
