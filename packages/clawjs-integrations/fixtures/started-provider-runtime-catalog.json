@@ -1234,6 +1234,117 @@
           ]
         },
         {
+          "id": "discord.action.create-lobby",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Lobby",
+          "fields": [
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "topic": "sample"
+              }
+            },
+            {
+              "name": "members",
+              "type": "array",
+              "optional": true,
+              "default": [
+                {
+                  "id": "sample"
+                }
+              ]
+            },
+            {
+              "name": "idleTimeoutSeconds",
+              "type": "integer",
+              "optional": true,
+              "default": 5,
+              "min": 5,
+              "max": 604800
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-lobby",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Lobby",
+          "fields": [
+            {
+              "name": "lobbyId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.modify-lobby",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Modify Lobby",
+          "fields": [
+            {
+              "name": "lobbyId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "topic": "sample"
+              }
+            },
+            {
+              "name": "members",
+              "type": "array",
+              "optional": true,
+              "default": [
+                {
+                  "id": "sample"
+                }
+              ]
+            },
+            {
+              "name": "idleTimeoutSeconds",
+              "type": "integer",
+              "optional": true,
+              "default": 5,
+              "min": 5,
+              "max": 604800
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-lobby",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Lobby",
+          "fields": [
+            {
+              "name": "lobbyId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.get-channel",
           "appId": "discord",
           "kind": "action",
