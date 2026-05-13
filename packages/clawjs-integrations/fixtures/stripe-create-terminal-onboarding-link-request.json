@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/terminal/onboarding_links",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "link_type=apple_terms_and_conditions&link_options=%7B%22apple_terms_and_conditions%22%3A%7B%22country%22%3A%22US%22%7D%7D&on_behalf_of=acct_sample"
+}

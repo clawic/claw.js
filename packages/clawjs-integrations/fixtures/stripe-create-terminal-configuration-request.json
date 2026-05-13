@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/terminal/configurations",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "name=Sample+terminal+configuration&tipping=%7B%22aud%22%3A%7B%22fixed_amounts%22%3A%5B100%2C200%5D%7D%7D&offline=%7B%22enabled%22%3Afalse%7D&wifi=%7B%22enterprise_eap_peap%22%3A%7B%22ca_certificate_file%22%3A%22file_sample%22%7D%7D"
+}

@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/terminal/readers/tmr_sample/collect_payment_method",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "payment_intent=pi_sample&collect_config=%7B%22enable_customer_cancellation%22%3Atrue%7D"
+}

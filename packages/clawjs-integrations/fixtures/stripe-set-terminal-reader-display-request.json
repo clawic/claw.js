@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/terminal/readers/tmr_sample/set_reader_display",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "type=cart&cart=%7B%22currency%22%3A%22usd%22%2C%22line_items%22%3A%5B%7B%22amount%22%3A500%2C%22description%22%3A%22Sample%22%2C%22quantity%22%3A1%7D%5D%7D"
+}

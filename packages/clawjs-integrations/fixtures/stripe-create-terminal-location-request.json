@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/terminal/locations",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "display_name=Sample+store&address=%7B%22line1%22%3A%22123+Test+St%22%2C%22city%22%3A%22San+Francisco%22%2C%22country%22%3A%22US%22%2C%22postal_code%22%3A%2294111%22%2C%22state%22%3A%22CA%22%7D&phone=%2B14155550100&metadata=%7B%22order_id%22%3A%22sample%22%7D"
+}

@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/terminal/readers/tmr_sample/process_setup_intent",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "setup_intent=seti_sample&allow_redisplay=unspecified&process_config=%7B%22enable_customer_cancellation%22%3Atrue%7D"
+}

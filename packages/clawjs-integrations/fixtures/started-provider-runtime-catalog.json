@@ -33293,6 +33293,844 @@
           ]
         },
         {
+          "id": "stripe.action.list-terminal-configurations",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Terminal Configurations",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "is_account_default",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-terminal-configuration",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Terminal Configuration",
+          "fields": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "Sample terminal configuration"
+            },
+            {
+              "name": "tipping",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "aud": {
+                  "fixed_amounts": [
+                    100,
+                    200
+                  ]
+                }
+              }
+            },
+            {
+              "name": "offline",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "enabled": false
+              }
+            },
+            {
+              "name": "wifi",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "enterprise_eap_peap": {
+                  "ca_certificate_file": "file_sample"
+                }
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-terminal-configuration",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Terminal Configuration",
+          "fields": [
+            {
+              "name": "configuration",
+              "type": "string",
+              "optional": false,
+              "default": "tmc_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-terminal-configuration",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Terminal Configuration",
+          "fields": [
+            {
+              "name": "configuration",
+              "type": "string",
+              "optional": false,
+              "default": "tmc_sample"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Updated terminal configuration"
+            },
+            {
+              "name": "tipping",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "aud": {
+                  "fixed_amounts": [
+                    100,
+                    200
+                  ]
+                }
+              }
+            },
+            {
+              "name": "offline",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "enabled": false
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-terminal-configuration",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Terminal Configuration",
+          "fields": [
+            {
+              "name": "configuration",
+              "type": "string",
+              "optional": false,
+              "default": "tmc_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-terminal-connection-token",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Terminal Connection Token",
+          "fields": [
+            {
+              "name": "location",
+              "type": "string",
+              "optional": true,
+              "default": "tml_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-terminal-locations",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Terminal Locations",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-terminal-location",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Terminal Location",
+          "fields": [
+            {
+              "name": "display_name",
+              "type": "string",
+              "optional": false,
+              "default": "Sample store"
+            },
+            {
+              "name": "address",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "line1": "123 Test St",
+                "city": "San Francisco",
+                "country": "US",
+                "postal_code": "94111",
+                "state": "CA"
+              }
+            },
+            {
+              "name": "phone",
+              "type": "string",
+              "optional": true,
+              "default": "+14155550100"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-terminal-location",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Terminal Location",
+          "fields": [
+            {
+              "name": "location",
+              "type": "string",
+              "optional": false,
+              "default": "tml_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-terminal-location",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Terminal Location",
+          "fields": [
+            {
+              "name": "location",
+              "type": "string",
+              "optional": false,
+              "default": "tml_sample"
+            },
+            {
+              "name": "display_name",
+              "type": "string",
+              "optional": true,
+              "default": "Updated store"
+            },
+            {
+              "name": "address",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "line1": "123 Test St",
+                "city": "San Francisco",
+                "country": "US",
+                "postal_code": "94111",
+                "state": "CA"
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-terminal-location",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Terminal Location",
+          "fields": [
+            {
+              "name": "location",
+              "type": "string",
+              "optional": false,
+              "default": "tml_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-terminal-onboarding-link",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Terminal Onboarding Link",
+          "fields": [
+            {
+              "name": "link_type",
+              "type": "string",
+              "optional": false,
+              "default": "apple_terms_and_conditions"
+            },
+            {
+              "name": "link_options",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "apple_terms_and_conditions": {
+                  "country": "US"
+                }
+              }
+            },
+            {
+              "name": "on_behalf_of",
+              "type": "string",
+              "optional": true,
+              "default": "acct_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-terminal-readers",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Terminal Readers",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "location",
+              "type": "string",
+              "optional": true,
+              "default": "tml_sample"
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "optional": true,
+              "default": "online"
+            },
+            {
+              "name": "device_type",
+              "type": "string",
+              "optional": true,
+              "default": "bbpos_wisepad3"
+            },
+            {
+              "name": "serial_number",
+              "type": "string",
+              "optional": true,
+              "default": "123-456-789"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-terminal-reader",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Terminal Reader",
+          "fields": [
+            {
+              "name": "registration_code",
+              "type": "string",
+              "optional": false,
+              "default": "simulated-wpe"
+            },
+            {
+              "name": "label",
+              "type": "string",
+              "optional": true,
+              "default": "Front desk"
+            },
+            {
+              "name": "location",
+              "type": "string",
+              "optional": true,
+              "default": "tml_sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-terminal-reader",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Terminal Reader",
+          "fields": [
+            {
+              "name": "reader",
+              "type": "string",
+              "optional": false,
+              "default": "tmr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-terminal-reader",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Terminal Reader",
+          "fields": [
+            {
+              "name": "reader",
+              "type": "string",
+              "optional": false,
+              "default": "tmr_sample"
+            },
+            {
+              "name": "label",
+              "type": "string",
+              "optional": true,
+              "default": "Updated reader"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-terminal-reader",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Terminal Reader",
+          "fields": [
+            {
+              "name": "reader",
+              "type": "string",
+              "optional": false,
+              "default": "tmr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.cancel-terminal-reader-action",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Cancel Terminal Reader Action",
+          "fields": [
+            {
+              "name": "reader",
+              "type": "string",
+              "optional": false,
+              "default": "tmr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.collect-terminal-reader-inputs",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Collect Terminal Reader Inputs",
+          "fields": [
+            {
+              "name": "reader",
+              "type": "string",
+              "optional": false,
+              "default": "tmr_sample"
+            },
+            {
+              "name": "inputs",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "type": "selection",
+                  "custom_text": {
+                    "title": "Choose receipt"
+                  },
+                  "selection": {
+                    "choices": [
+                      {
+                        "style": "primary",
+                        "text": "Email"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.collect-terminal-reader-payment-method",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Collect Terminal Reader Payment Method",
+          "fields": [
+            {
+              "name": "reader",
+              "type": "string",
+              "optional": false,
+              "default": "tmr_sample"
+            },
+            {
+              "name": "payment_intent",
+              "type": "string",
+              "optional": false,
+              "default": "pi_sample"
+            },
+            {
+              "name": "collect_config",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "enable_customer_cancellation": true
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.confirm-terminal-reader-payment-intent",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Confirm Terminal Reader Payment Intent",
+          "fields": [
+            {
+              "name": "reader",
+              "type": "string",
+              "optional": false,
+              "default": "tmr_sample"
+            },
+            {
+              "name": "payment_intent",
+              "type": "string",
+              "optional": false,
+              "default": "pi_sample"
+            },
+            {
+              "name": "confirm_config",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "return_url": "https://example.invalid/return"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.process-terminal-reader-payment-intent",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Process Terminal Reader Payment Intent",
+          "fields": [
+            {
+              "name": "reader",
+              "type": "string",
+              "optional": false,
+              "default": "tmr_sample"
+            },
+            {
+              "name": "payment_intent",
+              "type": "string",
+              "optional": false,
+              "default": "pi_sample"
+            },
+            {
+              "name": "process_config",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "enable_customer_cancellation": true
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.process-terminal-reader-setup-intent",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Process Terminal Reader Setup Intent",
+          "fields": [
+            {
+              "name": "reader",
+              "type": "string",
+              "optional": false,
+              "default": "tmr_sample"
+            },
+            {
+              "name": "setup_intent",
+              "type": "string",
+              "optional": false,
+              "default": "seti_sample"
+            },
+            {
+              "name": "allow_redisplay",
+              "type": "string",
+              "optional": false,
+              "default": "unspecified"
+            },
+            {
+              "name": "process_config",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "enable_customer_cancellation": true
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.refund-terminal-reader-payment",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Refund Terminal Reader Payment",
+          "fields": [
+            {
+              "name": "reader",
+              "type": "string",
+              "optional": false,
+              "default": "tmr_sample"
+            },
+            {
+              "name": "payment_intent",
+              "type": "string",
+              "optional": true,
+              "default": "pi_sample"
+            },
+            {
+              "name": "charge",
+              "type": "string",
+              "optional": true,
+              "default": "ch_sample"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 500
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.set-terminal-reader-display",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Set Terminal Reader Display",
+          "fields": [
+            {
+              "name": "reader",
+              "type": "string",
+              "optional": false,
+              "default": "tmr_sample"
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false,
+              "default": "cart"
+            },
+            {
+              "name": "cart",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "currency": "usd",
+                "line_items": [
+                  {
+                    "amount": 500,
+                    "description": "Sample",
+                    "quantity": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-terminal-refund",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Terminal Refund",
+          "fields": [
+            {
+              "name": "payment_intent",
+              "type": "string",
+              "optional": true,
+              "default": "pi_sample"
+            },
+            {
+              "name": "charge",
+              "type": "string",
+              "optional": true,
+              "default": "ch_sample"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 500
+            },
+            {
+              "name": "reason",
+              "type": "string",
+              "optional": true,
+              "default": "requested_by_customer"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-apple-pay-domains",
           "appId": "stripe",
           "kind": "action",

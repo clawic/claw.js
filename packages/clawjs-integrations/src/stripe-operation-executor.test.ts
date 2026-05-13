@@ -757,6 +757,29 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.process-terminal-reader-setup-intent"), {
+      reader: "tmr_sample",
+      setup_intent: "seti_sample",
+      allow_redisplay: "unspecified",
+      process_config: { enable_customer_cancellation: true },
+    }), {
+      method: "POST",
+      endpoint: "terminal/readers/tmr_sample/process_setup_intent",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        setup_intent: "seti_sample",
+        allow_redisplay: "unspecified",
+        process_config: { enable_customer_cancellation: true },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.list-setup-attempts"), {
       limit: 10,
       setup_intent: "seti_sample",

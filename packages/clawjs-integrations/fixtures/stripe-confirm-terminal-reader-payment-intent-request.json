@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/terminal/readers/tmr_sample/confirm_payment_intent",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "payment_intent=pi_sample&confirm_config=%7B%22return_url%22%3A%22https%3A%2F%2Fexample.invalid%2Freturn%22%7D"
+}

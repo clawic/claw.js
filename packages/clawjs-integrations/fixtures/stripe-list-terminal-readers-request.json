@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://api.stripe.com/v1/terminal/readers?limit=10&location=tml_sample&status=online&device_type=bbpos_wisepad3&serial_number=123-456-789",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  }
+}
