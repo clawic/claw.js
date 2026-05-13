@@ -126,9 +126,9 @@ const DISCORD_ACTIONS = [
   action("get-guild-audit-log", "Get Guild Audit Log", [GUILD_FIELD, USER_FIELD, field("actionType", "integer", true, { default: 1 }), field("before", "string", true), field("after", "string", true), field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
   action("list-guild-emojis", "List Guild Emojis", [GUILD_FIELD]),
   action("get-guild-emoji", "Get Guild Emoji", [GUILD_FIELD, field("emojiId", "string")]),
-  action("create-guild-emoji", "Create Guild Emoji", [GUILD_FIELD, field("name", "string"), field("image", "string", false, { default: "data:image/png;base64,c2FtcGxl" }), field("roles", "array", true, { default: ["sample"] })]),
-  action("update-guild-emoji", "Update Guild Emoji", [GUILD_FIELD, field("emojiId", "string"), field("name", "string", true, { default: "sample" }), field("roles", "array", true, { default: ["sample"] })]),
-  action("delete-guild-emoji", "Delete Guild Emoji", [GUILD_FIELD, field("emojiId", "string")]),
+  action("create-guild-emoji", "Create Guild Emoji", [GUILD_FIELD, field("name", "string"), field("image", "string", false, { default: "data:image/png;base64,c2FtcGxl" }), field("roles", "array", true, { default: ["sample"] }), field("auditLogReason", "string", true)]),
+  action("update-guild-emoji", "Update Guild Emoji", [GUILD_FIELD, field("emojiId", "string"), field("name", "string", true, { default: "sample" }), field("roles", "array", true, { default: ["sample"] }), field("auditLogReason", "string", true)]),
+  action("delete-guild-emoji", "Delete Guild Emoji", [GUILD_FIELD, field("emojiId", "string"), field("auditLogReason", "string", true)]),
   action("get-sticker", "Get Sticker", [STICKER_FIELD]),
   action("list-sticker-packs", "List Sticker Packs", []),
   action("get-sticker-pack", "Get Sticker Pack", [STICKER_PACK_FIELD]),
@@ -2586,11 +2586,15 @@ describe("discord operation runtime", () => {
       name: "wave",
       image: "data:image/png;base64,c2FtcGxl",
       roles: ["123"],
+      auditLogReason: "emoji rollout",
     }), {
       method: "POST",
       endpoint: "guilds/456/emojis",
       auth,
-      headers,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "emoji rollout",
+      },
       body: {
         name: "wave",
         image: "data:image/png;base64,c2FtcGxl",
@@ -2599,6 +2603,48 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.update-guild-emoji"), {
+      guildId: "456",
+      emojiId: "emoji-123",
+      name: "wave2",
+      roles: ["123"],
+      auditLogReason: "emoji rename",
+    }), {
+      method: "PATCH",
+      endpoint: "guilds/456/emojis/emoji-123",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "emoji rename",
+      },
+      body: {
+        name: "wave2",
+        roles: ["123"],
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-guild-emoji"), {
+      guildId: "456",
+      emojiId: "emoji-123",
+      auditLogReason: "emoji cleanup",
+    }), {
+      method: "DELETE",
+      endpoint: "guilds/456/emojis/emoji-123",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "emoji cleanup",
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
       },
     });
 
