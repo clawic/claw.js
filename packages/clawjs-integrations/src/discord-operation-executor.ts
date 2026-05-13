@@ -14,6 +14,11 @@ export type DiscordRuntimeOperation =
   | "get-guild-preview"
   | "list-guild-channels"
   | "create-guild-channel"
+  | "list-guild-emojis"
+  | "get-guild-emoji"
+  | "create-guild-emoji"
+  | "update-guild-emoji"
+  | "delete-guild-emoji"
   | "get-channel"
   | "update-channel"
   | "delete-channel"
@@ -79,6 +84,11 @@ export type DiscordRuntimeOperation =
   | "get-global-application-command"
   | "update-global-application-command"
   | "delete-global-application-command"
+  | "list-application-emojis"
+  | "get-application-emoji"
+  | "create-application-emoji"
+  | "update-application-emoji"
+  | "delete-application-emoji"
   | "list-guild-application-commands"
   | "create-guild-application-command"
   | "get-guild-application-command"
@@ -124,6 +134,16 @@ export function buildDiscordOperationRequest(
       return getPlan(`guilds/${guildId(values)}/channels`, auth, headers, { type: "array" });
     case "create-guild-channel":
       return bodyPlan("POST", `guilds/${guildId(values)}/channels`, auth, headers, channelBody(values), { type: "object", requiredPaths: ["id", "type", "name"] });
+    case "list-guild-emojis":
+      return getPlan(`guilds/${guildId(values)}/emojis`, auth, headers, { type: "array" });
+    case "get-guild-emoji":
+      return getPlan(`guilds/${guildId(values)}/emojis/${emojiId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "name"] });
+    case "create-guild-emoji":
+      return bodyPlan("POST", `guilds/${guildId(values)}/emojis`, auth, headers, emojiBody(values, true, true), { type: "object", requiredPaths: ["id", "name"] });
+    case "update-guild-emoji":
+      return bodyPlan("PATCH", `guilds/${guildId(values)}/emojis/${emojiId(values)}`, auth, headers, emojiBody(values, false, true), { type: "object", requiredPaths: ["id", "name"] });
+    case "delete-guild-emoji":
+      return deletePlan(`guilds/${guildId(values)}/emojis/${emojiId(values)}`, auth, headers, { type: "object" });
     case "update-channel":
       return bodyPlan("PATCH", `channels/${channelId(values)}`, auth, headers, channelBody(values), { type: "object", requiredPaths: ["id", "type"] });
     case "delete-channel":
@@ -292,6 +312,16 @@ export function buildDiscordOperationRequest(
       return bodyPlan("PATCH", `applications/${applicationId(values)}/commands/${commandId(values)}`, auth, headers, applicationCommandBody(values), { type: "object", requiredPaths: ["id", "name"] });
     case "delete-global-application-command":
       return deletePlan(`applications/${applicationId(values)}/commands/${commandId(values)}`, auth, headers, { type: "object" });
+    case "list-application-emojis":
+      return getPlan(`applications/${applicationId(values)}/emojis`, auth, headers, { type: "object", requiredPaths: ["items"] });
+    case "get-application-emoji":
+      return getPlan(`applications/${applicationId(values)}/emojis/${emojiId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "name"] });
+    case "create-application-emoji":
+      return bodyPlan("POST", `applications/${applicationId(values)}/emojis`, auth, headers, emojiBody(values, true, false), { type: "object", requiredPaths: ["id", "name"] });
+    case "update-application-emoji":
+      return bodyPlan("PATCH", `applications/${applicationId(values)}/emojis/${emojiId(values)}`, auth, headers, emojiBody(values, false, false), { type: "object", requiredPaths: ["id", "name"] });
+    case "delete-application-emoji":
+      return deletePlan(`applications/${applicationId(values)}/emojis/${emojiId(values)}`, auth, headers, { type: "object" });
     case "list-guild-application-commands":
       return getPlan(`applications/${applicationId(values)}/guilds/${guildId(values)}/commands`, auth, headers, { type: "array" }, removeEmptyValues({ with_localizations: values.withLocalizations }));
     case "create-guild-application-command":
@@ -322,6 +352,11 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "get-guild-preview",
   "list-guild-channels",
   "create-guild-channel",
+  "list-guild-emojis",
+  "get-guild-emoji",
+  "create-guild-emoji",
+  "update-guild-emoji",
+  "delete-guild-emoji",
   "get-channel",
   "update-channel",
   "delete-channel",
@@ -387,6 +422,11 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "get-global-application-command",
   "update-global-application-command",
   "delete-global-application-command",
+  "list-application-emojis",
+  "get-application-emoji",
+  "create-application-emoji",
+  "update-application-emoji",
+  "delete-application-emoji",
   "list-guild-application-commands",
   "create-guild-application-command",
   "get-guild-application-command",
@@ -492,6 +532,18 @@ function channelBody(values: Record<string, IntegrationJson>): Record<string, In
     parent_id: optionalString(values.parentId),
     nsfw: values.nsfw,
     permission_overwrites: optionalJsonArray(values.permissionOverwrites),
+  });
+}
+
+function emojiBody(
+  values: Record<string, IntegrationJson>,
+  requireCreateFields: boolean,
+  includeRoles: boolean,
+): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    name: requireCreateFields ? requiredString(values.name, "name") : optionalString(values.name),
+    image: requireCreateFields ? requiredString(values.image, "image") : optionalString(values.image),
+    ...(includeRoles ? { roles: optionalJsonArray(values.roles) } : {}),
   });
 }
 
@@ -623,6 +675,10 @@ function applicationId(values: Record<string, IntegrationJson>): string {
 
 function commandId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.commandId, values.command), "commandId"));
+}
+
+function emojiId(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.emojiId, values.emoji), "emojiId"));
 }
 
 function guildScheduledEventId(values: Record<string, IntegrationJson>): string {

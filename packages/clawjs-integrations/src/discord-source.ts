@@ -10,6 +10,7 @@ export type DiscordSourceOperation =
   | "message-create"
   | "message-update"
   | "message-delete"
+  | "guild-emojis-update"
   | "guild-member-add"
   | "guild-member-remove"
   | "guild-scheduled-event-create"
@@ -24,6 +25,7 @@ const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "message-create",
   "message-update",
   "message-delete",
+  "guild-emojis-update",
   "guild-member-add",
   "guild-member-remove",
   "guild-scheduled-event-create",
