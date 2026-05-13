@@ -133,10 +133,13 @@ const DISCORD_ACTIONS = [
   action("remove-thread-member", "Remove Thread Member", [CHANNEL_FIELD, USER_FIELD]),
   action("get-thread-member", "Get Thread Member", [CHANNEL_FIELD, USER_FIELD, field("withMember", "boolean", true)]),
   action("list-thread-members", "List Thread Members", [CHANNEL_FIELD, field("withMember", "boolean", true), field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
+  action("add-guild-member", "Add Guild Member", [GUILD_FIELD, USER_FIELD, field("accessToken", "string", false, { default: "sample-access-token" }), field("nick", "string", true, { default: "sample" }), field("roles", "array", true, { default: ["sample"] }), field("mute", "boolean", true), field("deaf", "boolean", true)]),
   action("list-guild-members", "List Guild Members", [GUILD_FIELD, field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
   action("get-guild-member", "Get Guild Member", [GUILD_FIELD, USER_FIELD]),
   action("search-guild-members", "Search Guild Members", [GUILD_FIELD, field("query", "string"), field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
   action("modify-guild-member", "Modify Guild Member", [GUILD_FIELD, USER_FIELD, field("nick", "string", true, { default: "sample" })]),
+  action("modify-current-member", "Modify Current Member", [GUILD_FIELD, field("nick", "string", true, { default: "sample" }), field("avatar", "string", true, { default: "data:image/png;base64,c2FtcGxl" }), field("banner", "string", true, { default: "data:image/png;base64,c2FtcGxl" }), field("bio", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
+  action("modify-current-user-nick", "Modify Current User Nick", [GUILD_FIELD, field("nick", "string"), field("auditLogReason", "string", true)]),
   action("remove-guild-member", "Remove Guild Member", [GUILD_FIELD, USER_FIELD]),
   action("list-guild-roles", "List Guild Roles", [GUILD_FIELD]),
   action("create-guild-role", "Create Guild Role", [GUILD_FIELD, field("name", "string", true, { default: "sample" })]),
@@ -756,6 +759,80 @@ describe("discord operation runtime", () => {
       body: {},
       responseSchema: {
         type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.add-guild-member"), {
+      guildId: "456",
+      userId: "123",
+      accessToken: "member-token",
+      nick: "Member",
+      roles: ["789"],
+      mute: false,
+      deaf: true,
+    }), {
+      method: "PUT",
+      endpoint: "guilds/456/members/123",
+      auth,
+      headers,
+      body: {
+        access_token: "member-token",
+        nick: "Member",
+        roles: ["789"],
+        mute: false,
+        deaf: true,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["user"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.modify-current-member"), {
+      guildId: "456",
+      nick: "Display",
+      avatar: "data:image/png;base64,c2FtcGxl",
+      banner: "data:image/png;base64,c2FtcGxl",
+      bio: "Working on guild setup",
+      auditLogReason: "profile update",
+    }), {
+      method: "PATCH",
+      endpoint: "guilds/456/members/@me",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "profile update",
+      },
+      body: {
+        nick: "Display",
+        avatar: "data:image/png;base64,c2FtcGxl",
+        banner: "data:image/png;base64,c2FtcGxl",
+        bio: "Working on guild setup",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["user"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.modify-current-user-nick"), {
+      guildId: "456",
+      nick: "Display",
+      auditLogReason: "nick update",
+    }), {
+      method: "PATCH",
+      endpoint: "guilds/456/members/@me/nick",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "nick update",
+      },
+      body: {
+        nick: "Display",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["nick"],
       },
     });
 
