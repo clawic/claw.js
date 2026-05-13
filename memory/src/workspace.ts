@@ -16,7 +16,7 @@ export function getWorkspacePaths(root: string): WorkspacePaths {
     entitiesDir: path.join(notesDir, "entities"),
     memoriesDir: path.join(notesDir, "memories"),
     capturesDir: path.join(memoryDir, "captures"),
-    indexDbPath: path.join(memoryDir, "index.db")
+    indexDbPath: path.join(memoryDir, "search.sqlite")
   };
 }
 
