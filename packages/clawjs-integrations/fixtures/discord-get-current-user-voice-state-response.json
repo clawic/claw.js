@@ -1,0 +1,12 @@
+{
+  "guild_id": "sample",
+  "channel_id": "sample",
+  "user_id": "sample",
+  "session_id": "sample",
+  "deaf": false,
+  "mute": false,
+  "self_deaf": false,
+  "self_mute": false,
+  "self_video": false,
+  "suppress": false
+}

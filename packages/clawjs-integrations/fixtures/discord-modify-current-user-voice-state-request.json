@@ -1,0 +1,14 @@
+{
+  "method": "PATCH",
+  "url": "https://discord.com/api/v10/guilds/sample/voice-states/@me",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "channel_id": "sample",
+    "suppress": false,
+    "request_to_speak_timestamp": "sample"
+  }
+}
