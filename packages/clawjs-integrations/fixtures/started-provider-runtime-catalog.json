@@ -116,6 +116,149 @@
           ]
         },
         {
+          "id": "discord.action.modify-guild",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Modify Guild",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "verificationLevel",
+              "type": "integer",
+              "optional": true,
+              "default": 1
+            },
+            {
+              "name": "defaultMessageNotifications",
+              "type": "integer",
+              "optional": true,
+              "default": 1
+            },
+            {
+              "name": "explicitContentFilter",
+              "type": "integer",
+              "optional": true,
+              "default": 1
+            },
+            {
+              "name": "afkChannelId",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "afkTimeout",
+              "type": "integer",
+              "optional": true,
+              "default": 60
+            },
+            {
+              "name": "icon",
+              "type": "string",
+              "optional": true,
+              "default": "data:image/png;base64,c2FtcGxl"
+            },
+            {
+              "name": "ownerId",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "splash",
+              "type": "string",
+              "optional": true,
+              "default": "data:image/png;base64,c2FtcGxl"
+            },
+            {
+              "name": "discoverySplash",
+              "type": "string",
+              "optional": true,
+              "default": "data:image/png;base64,c2FtcGxl"
+            },
+            {
+              "name": "banner",
+              "type": "string",
+              "optional": true,
+              "default": "data:image/png;base64,c2FtcGxl"
+            },
+            {
+              "name": "systemChannelId",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "systemChannelFlags",
+              "type": "integer",
+              "optional": true,
+              "default": 0
+            },
+            {
+              "name": "rulesChannelId",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "publicUpdatesChannelId",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "preferredLocale",
+              "type": "string",
+              "optional": true,
+              "default": "en-US"
+            },
+            {
+              "name": "features",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "COMMUNITY"
+              ]
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "premiumProgressBarEnabled",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "safetyAlertsChannelId",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.list-guild-channels",
           "appId": "discord",
           "kind": "action",
@@ -152,6 +295,40 @@
               "type": "integer",
               "optional": true,
               "default": 0
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.modify-guild-channel-positions",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Modify Guild Channel Positions",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "positions",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "id": "sample",
+                  "position": 1,
+                  "lock_permissions": false,
+                  "parent_id": "sample"
+                }
+              ]
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": [
