@@ -1,0 +1,13 @@
+{
+  "method": "POST",
+  "url": "https://slack.com/api/calls.participants.remove",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "id": "R123",
+    "users": "U123"
+  }
+}

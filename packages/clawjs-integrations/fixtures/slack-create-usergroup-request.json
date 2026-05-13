@@ -1,0 +1,16 @@
+{
+  "method": "POST",
+  "url": "https://slack.com/api/usergroups.create",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "name": "Sample Group",
+    "handle": "sample-group",
+    "description": "Sample group",
+    "channels": "C123",
+    "include_count": true
+  }
+}

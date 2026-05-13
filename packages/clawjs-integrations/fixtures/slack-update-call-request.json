@@ -1,0 +1,14 @@
+{
+  "method": "POST",
+  "url": "https://slack.com/api/calls.update",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "id": "R123",
+    "title": "Updated call",
+    "join_url": "https://example.invalid/call-updated"
+  }
+}

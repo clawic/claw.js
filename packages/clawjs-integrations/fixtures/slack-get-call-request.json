@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://slack.com/api/calls.info?id=R123",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret"
+  }
+}

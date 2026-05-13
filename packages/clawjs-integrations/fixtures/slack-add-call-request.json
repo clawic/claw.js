@@ -1,0 +1,15 @@
+{
+  "method": "POST",
+  "url": "https://slack.com/api/calls.add",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "external_unique_id": "call-123",
+    "join_url": "https://example.invalid/call",
+    "created_by": "U123",
+    "date_start": "1710000000"
+  }
+}

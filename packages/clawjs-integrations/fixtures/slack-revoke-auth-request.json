@@ -1,0 +1,12 @@
+{
+  "method": "POST",
+  "url": "https://slack.com/api/auth.revoke",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "test": true
+  }
+}

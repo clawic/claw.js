@@ -1,0 +1,17 @@
+{
+  "method": "POST",
+  "url": "https://slack.com/api/usergroups.update",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "usergroup": "S123",
+    "name": "Updated Group",
+    "handle": "updated-group",
+    "description": "Updated group",
+    "channels": "C123",
+    "include_count": true
+  }
+}
