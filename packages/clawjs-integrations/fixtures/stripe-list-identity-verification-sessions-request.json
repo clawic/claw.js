@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://api.stripe.com/v1/identity/verification_sessions?limit=10&client_reference_id=identity_ref_sample&related_customer=cus_sample&related_customer_account=acct_sample&status=verified",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  }
+}

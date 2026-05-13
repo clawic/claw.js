@@ -38105,6 +38105,288 @@
             "usesHttp": true,
             "usesServiceDb": false
           }
+        },
+        {
+          "id": "stripe.action.list-identity-verification-reports",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Identity Verification Reports",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "client_reference_id",
+              "type": "string",
+              "optional": true,
+              "default": "identity_ref_sample"
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": true,
+              "default": "document"
+            },
+            {
+              "name": "verification_session",
+              "type": "string",
+              "optional": true,
+              "default": "vs_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-identity-verification-report",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Identity Verification Report",
+          "fields": [
+            {
+              "name": "report",
+              "type": "string",
+              "optional": false,
+              "default": "vr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-identity-verification-sessions",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Identity Verification Sessions",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "client_reference_id",
+              "type": "string",
+              "optional": true,
+              "default": "identity_ref_sample"
+            },
+            {
+              "name": "related_customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "related_customer_account",
+              "type": "string",
+              "optional": true,
+              "default": "acct_sample"
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "optional": true,
+              "default": "verified"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-identity-verification-session",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Identity Verification Session",
+          "fields": [
+            {
+              "name": "type",
+              "type": "string",
+              "optional": true,
+              "default": "document"
+            },
+            {
+              "name": "client_reference_id",
+              "type": "string",
+              "optional": true,
+              "default": "identity_ref_sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "options",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "document": {
+                  "require_matching_selfie": true
+                }
+              }
+            },
+            {
+              "name": "provided_details",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "email": "person@example.invalid"
+              }
+            },
+            {
+              "name": "related_customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "return_url",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/return"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-identity-verification-session",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Identity Verification Session",
+          "fields": [
+            {
+              "name": "session",
+              "type": "string",
+              "optional": false,
+              "default": "vs_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-identity-verification-session",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Identity Verification Session",
+          "fields": [
+            {
+              "name": "session",
+              "type": "string",
+              "optional": false,
+              "default": "vs_sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "options",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "document": {
+                  "require_matching_selfie": true
+                }
+              }
+            },
+            {
+              "name": "provided_details",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "email": "person@example.invalid"
+              }
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": true,
+              "default": "document"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.cancel-identity-verification-session",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Cancel Identity Verification Session",
+          "fields": [
+            {
+              "name": "session",
+              "type": "string",
+              "optional": false,
+              "default": "vs_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.redact-identity-verification-session",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Redact Identity Verification Session",
+          "fields": [
+            {
+              "name": "session",
+              "type": "string",
+              "optional": false,
+              "default": "vs_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

@@ -979,6 +979,36 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-identity-verification-session"), {
+      type: "document",
+      client_reference_id: "identity_ref_sample",
+      metadata: { order_id: "sample" },
+      options: { document: { require_matching_selfie: true } },
+      provided_details: { email: "person@example.invalid" },
+      related_customer: "cus_sample",
+      return_url: "https://example.invalid/return",
+    }), {
+      method: "POST",
+      endpoint: "identity/verification_sessions",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        type: "document",
+        client_reference_id: "identity_ref_sample",
+        metadata: { order_id: "sample" },
+        options: { document: { require_matching_selfie: true } },
+        provided_details: { email: "person@example.invalid" },
+        related_customer: "cus_sample",
+        return_url: "https://example.invalid/return",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object", "status"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-apple-pay-domain"), {
       domain_name: "pay.example.invalid",
     }), {

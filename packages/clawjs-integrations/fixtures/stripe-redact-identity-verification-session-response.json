@@ -1,0 +1,5 @@
+{
+  "id": "stripe_sample",
+  "object": "stripe_object",
+  "status": "verified"
+}

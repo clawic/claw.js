@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/identity/verification_sessions",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "type=document&client_reference_id=identity_ref_sample&metadata=%7B%22order_id%22%3A%22sample%22%7D&options=%7B%22document%22%3A%7B%22require_matching_selfie%22%3Atrue%7D%7D&provided_details=%7B%22email%22%3A%22person%40example.invalid%22%7D&related_customer=cus_sample&return_url=https%3A%2F%2Fexample.invalid%2Freturn"
+}
