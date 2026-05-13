@@ -1,6 +1,8 @@
 import {
+  arrayField,
   booleanField,
   COMMENT,
+  objectField,
   RECORD,
   recordBodyFields,
   RECORD_LIST_FIELDS,
@@ -51,6 +53,18 @@ export const AIRTABLE_RECORD_ACTION_SPECS = [
   }),
   spec("replace-records", "PUT", "v0/{baseId}/{tableIdOrName}", [...TABLE, ...recordBodyFields({ bulk: true })], {
     body: ["records", "typecast", "returnFieldsByFieldId"],
+    requiredPaths: ["records"],
+  }),
+  spec("upsert-records", "PATCH", "v0/{baseId}/{tableIdOrName}", [
+    ...TABLE,
+    arrayField("records", [{
+      fields: { Name: "Sample", Status: "Open" },
+    }]),
+    objectField("performUpsert", { fieldsToMergeOn: ["Name"] }),
+    booleanField("typecast", { optional: true, default: false }),
+    booleanField("returnFieldsByFieldId", { optional: true, default: false }),
+  ], {
+    body: ["records", "performUpsert", "typecast", "returnFieldsByFieldId"],
     requiredPaths: ["records"],
   }),
   spec("delete-record", "DELETE", "v0/{baseId}/{tableIdOrName}/{recordId}", RECORD, {

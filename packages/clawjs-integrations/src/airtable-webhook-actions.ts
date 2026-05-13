@@ -1,5 +1,6 @@
 import {
   BASE,
+  booleanField,
   spec,
   WEBHOOK,
   webhookBodyFields,
@@ -24,6 +25,12 @@ export const AIRTABLE_WEBHOOK_ACTION_SPECS = [
   }),
   spec("refresh-webhook", "POST", "v0/bases/{baseId}/webhooks/{webhookId}/refresh", WEBHOOK, {
     requiredPaths: ["expirationTime"],
+  }),
+  spec("set-webhook-notifications", "POST", "v0/bases/{baseId}/webhooks/{webhookId}/enableNotifications", [
+    ...WEBHOOK,
+    booleanField("enable", { default: true }),
+  ], {
+    body: ["enable"],
   }),
   spec("delete-webhook", "DELETE", "v0/bases/{baseId}/webhooks/{webhookId}", WEBHOOK),
 ] as const satisfies readonly AirtableOperationSpec[];
