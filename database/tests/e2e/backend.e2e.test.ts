@@ -40,9 +40,9 @@ function authHeaders(token: string) {
   };
 }
 
-test("shared brand assets and fonts are served from repo public and referenced by the admin console html", async () => {
+test("shared brand assets and fonts are served from repo assets and referenced by the admin console html", async () => {
   const server = await boot();
-  const sharedPublicDir = path.resolve(process.cwd(), "..", "public");
+  const sharedAssetsDir = path.resolve(process.cwd(), "..", "assets");
 
   const indexResponse = await fetch(`${server.baseUrl}/`);
   assert.equal(indexResponse.status, 200);
@@ -59,21 +59,21 @@ test("shared brand assets and fonts are served from repo public and referenced b
   assert.equal(logoResponse.status, 200);
   assert.deepEqual(
     Buffer.from(await logoResponse.arrayBuffer()),
-    fs.readFileSync(path.join(sharedPublicDir, "logo.png")),
+    fs.readFileSync(path.join(sharedAssetsDir, "logo.png")),
   );
 
   const faviconResponse = await fetch(`${server.baseUrl}/brand/favicon.ico`);
   assert.equal(faviconResponse.status, 200);
   assert.deepEqual(
     Buffer.from(await faviconResponse.arrayBuffer()),
-    fs.readFileSync(path.join(sharedPublicDir, "favicon.ico")),
+    fs.readFileSync(path.join(sharedAssetsDir, "favicon.ico")),
   );
 
   const fontResponse = await fetch(`${server.baseUrl}/brand/fonts/source-sans-3/source-sans-3-v18-cyrillic_latin_latin-ext-regular.woff2`);
   assert.equal(fontResponse.status, 200);
   assert.deepEqual(
     Buffer.from(await fontResponse.arrayBuffer()),
-    fs.readFileSync(path.join(sharedPublicDir, "fonts", "source-sans-3", "source-sans-3-v18-cyrillic_latin_latin-ext-regular.woff2")),
+    fs.readFileSync(path.join(sharedAssetsDir, "fonts", "source-sans-3", "source-sans-3-v18-cyrillic_latin_latin-ext-regular.woff2")),
   );
 });
 
@@ -86,11 +86,11 @@ test("namespace creation seeds protected built-ins and custom schemas keep index
       ...authHeaders(server.adminToken),
       "content-type": "application/json",
     },
-    body: JSON.stringify({ id: "crm", displayName: "CRM" }),
+    body: JSON.stringify({ id: "test-crm", displayName: "Test CRM" }),
   });
   assert.equal(created.status, 201);
 
-  const collectionsResponse = await fetch(`${server.baseUrl}/v1/namespaces/crm/collections`, {
+  const collectionsResponse = await fetch(`${server.baseUrl}/v1/namespaces/test-crm/collections`, {
     headers: authHeaders(server.adminToken),
   });
   const collectionsPayload = await collectionsResponse.json() as { items: Array<{ name: string; protected: boolean }> };
@@ -118,7 +118,7 @@ test("namespace creation seeds protected built-ins and custom schemas keep index
   assert.equal(collectionsPayload.items.find((item) => item.name === "people")?.protected, true);
   assert.equal(collectionsPayload.items.find((item) => item.name === "portfolios")?.protected, true);
 
-  const goalsCollection = await fetch(`${server.baseUrl}/v1/namespaces/crm/collections/goals`, {
+  const goalsCollection = await fetch(`${server.baseUrl}/v1/namespaces/test-crm/collections/goals`, {
     headers: authHeaders(server.adminToken),
   });
   assert.equal(goalsCollection.status, 200);
@@ -129,7 +129,7 @@ test("namespace creation seeds protected built-ins and custom schemas keep index
   assert.ok(goalsPayload.fields.some((field) => field.name === "portfolioItemId"));
   assert.ok(goalsPayload.fields.some((field) => field.name === "metricKey"));
 
-  const remindersCollection = await fetch(`${server.baseUrl}/v1/namespaces/crm/collections/reminders`, {
+  const remindersCollection = await fetch(`${server.baseUrl}/v1/namespaces/test-crm/collections/reminders`, {
     headers: authHeaders(server.adminToken),
   });
   assert.equal(remindersCollection.status, 200);
@@ -137,7 +137,7 @@ test("namespace creation seeds protected built-ins and custom schemas keep index
   assert.ok(remindersPayload.fields.some((field) => field.name === "triggerAt"));
   assert.ok(remindersPayload.fields.some((field) => field.name === "anchorType"));
 
-  const deadlinesCollection = await fetch(`${server.baseUrl}/v1/namespaces/crm/collections/deadlines`, {
+  const deadlinesCollection = await fetch(`${server.baseUrl}/v1/namespaces/test-crm/collections/deadlines`, {
     headers: authHeaders(server.adminToken),
   });
   assert.equal(deadlinesCollection.status, 200);
@@ -145,30 +145,30 @@ test("namespace creation seeds protected built-ins and custom schemas keep index
   assert.ok(deadlinesPayload.fields.some((field) => field.name === "dueAt"));
   assert.ok(deadlinesPayload.fields.some((field) => field.name === "anchorId"));
 
-  const customCollection = await fetch(`${server.baseUrl}/v1/namespaces/crm/collections`, {
+  const customCollection = await fetch(`${server.baseUrl}/v1/namespaces/test-crm/collections`, {
     method: "POST",
     headers: {
       ...authHeaders(server.adminToken),
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      name: "leads",
-      displayName: "Leads",
+      name: "prospects",
+      displayName: "Prospects",
       fields: [
         { name: "name", type: "text", required: true },
         { name: "status", type: "select", options: ["new", "qualified"] },
         { name: "website", type: "url" },
       ],
       indexes: [
-        { name: "leads_name_idx", fields: ["name"] },
+        { name: "prospects_name_idx", fields: ["name"] },
       ],
     }),
   });
   assert.equal(customCollection.status, 201);
   const collectionPayload = await customCollection.json() as { indexes: Array<{ name: string }> };
-  assert.equal(collectionPayload.indexes[0]?.name, "leads_name_idx");
+  assert.equal(collectionPayload.indexes[0]?.name, "prospects_name_idx");
 
-  const extendBuiltIn = await fetch(`${server.baseUrl}/v1/namespaces/crm/collections/tasks`, {
+  const extendBuiltIn = await fetch(`${server.baseUrl}/v1/namespaces/test-crm/collections/tasks`, {
     method: "PATCH",
     headers: {
       ...authHeaders(server.adminToken),
@@ -187,7 +187,7 @@ test("namespace creation seeds protected built-ins and custom schemas keep index
   });
   assert.equal(extendBuiltIn.status, 200);
 
-  const destructiveBuiltIn = await fetch(`${server.baseUrl}/v1/namespaces/crm/collections/tasks`, {
+  const destructiveBuiltIn = await fetch(`${server.baseUrl}/v1/namespaces/test-crm/collections/tasks`, {
     method: "PATCH",
     headers: {
       ...authHeaders(server.adminToken),
@@ -259,18 +259,18 @@ test("record CRUD, scoped tokens, files, and realtime work together", async () =
       ...authHeaders(server.adminToken),
       "content-type": "application/json",
     },
-    body: JSON.stringify({ id: "crm", displayName: "CRM" }),
+    body: JSON.stringify({ id: "test-crm", displayName: "Test CRM" }),
   });
 
-  await fetch(`${server.baseUrl}/v1/namespaces/crm/collections`, {
+  await fetch(`${server.baseUrl}/v1/namespaces/test-crm/collections`, {
     method: "POST",
     headers: {
       ...authHeaders(server.adminToken),
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      name: "leads",
-      displayName: "Leads",
+      name: "prospects",
+      displayName: "Prospects",
       fields: [
         { name: "name", type: "text", required: true },
         { name: "status", type: "select", options: ["new", "qualified"], required: true },
@@ -279,7 +279,7 @@ test("record CRUD, scoped tokens, files, and realtime work together", async () =
     }),
   });
 
-  const tokenResponse = await fetch(`${server.baseUrl}/v1/namespaces/crm/tokens`, {
+  const tokenResponse = await fetch(`${server.baseUrl}/v1/namespaces/test-crm/tokens`, {
     method: "POST",
     headers: {
       ...authHeaders(server.adminToken),
@@ -287,7 +287,7 @@ test("record CRUD, scoped tokens, files, and realtime work together", async () =
     },
     body: JSON.stringify({
       label: "crm-worker",
-      collectionName: "leads",
+      collectionName: "prospects",
       operations: [
         "schema:read",
         "records:list",
@@ -311,8 +311,8 @@ test("record CRUD, scoped tokens, files, and realtime work together", async () =
     socket.on("open", () => {
       socket.send(JSON.stringify({
         type: "subscribe",
-        namespaceId: "crm",
-        collectionName: "leads",
+        namespaceId: "test-crm",
+        collectionName: "prospects",
       }));
     });
     socket.on("message", (buffer) => {
@@ -331,8 +331,8 @@ test("record CRUD, scoped tokens, files, and realtime work together", async () =
     socket.on("open", () => {
       socket.send(JSON.stringify({
         type: "subscribe",
-        namespaceId: "crm",
-        collectionName: "leads",
+        namespaceId: "test-crm",
+        collectionName: "prospects",
       }));
     });
     socket.on("message", (buffer) => {
@@ -347,7 +347,7 @@ test("record CRUD, scoped tokens, files, and realtime work together", async () =
 
   await subscriptionReady;
 
-  const createdRecordResponse = await fetch(`${server.baseUrl}/v1/namespaces/crm/collections/leads/records`, {
+  const createdRecordResponse = await fetch(`${server.baseUrl}/v1/namespaces/test-crm/collections/prospects/records`, {
     method: "POST",
     headers: {
       ...scopedHeaders,
@@ -361,9 +361,9 @@ test("record CRUD, scoped tokens, files, and realtime work together", async () =
 
   const event = await realtimeEvent;
   assert.equal(event.type, "record.created");
-  assert.equal(event.collectionName, "leads");
+  assert.equal(event.collectionName, "prospects");
 
-  await fetch(`${server.baseUrl}/v1/namespaces/crm/collections/leads/records/${createdRecord.id}`, {
+  await fetch(`${server.baseUrl}/v1/namespaces/test-crm/collections/prospects/records/${createdRecord.id}`, {
     method: "PATCH",
     headers: {
       ...scopedHeaders,
@@ -372,7 +372,7 @@ test("record CRUD, scoped tokens, files, and realtime work together", async () =
     body: JSON.stringify({ status: "qualified" }),
   });
 
-  const listed = await fetch(`${server.baseUrl}/v1/namespaces/crm/collections/leads/records?filter=${encodeURIComponent(JSON.stringify({ status: "qualified" }))}&sort=-name`, {
+  const listed = await fetch(`${server.baseUrl}/v1/namespaces/test-crm/collections/prospects/records?filter=${encodeURIComponent(JSON.stringify({ status: "qualified" }))}&sort=-name`, {
     headers: scopedHeaders,
   });
   assert.equal(listed.status, 200);
@@ -386,8 +386,8 @@ test("record CRUD, scoped tokens, files, and realtime work together", async () =
   assert.equal(forbiddenNamespace.status, 403);
 
   const form = new FormData();
-  form.set("namespaceId", "crm");
-  form.set("collectionName", "leads");
+  form.set("namespaceId", "test-crm");
+  form.set("collectionName", "prospects");
   form.set("recordId", createdRecord.id);
   form.set("file", new Blob(["hello file"]), "hello.txt");
   const uploaded = await fetch(`${server.baseUrl}/v1/files`, {
@@ -410,19 +410,19 @@ test("record CRUD, scoped tokens, files, and realtime work together", async () =
   });
   assert.equal(deletedFile.status, 200);
 
-  const deletedRecord = await fetch(`${server.baseUrl}/v1/namespaces/crm/collections/leads/records/${createdRecord.id}`, {
+  const deletedRecord = await fetch(`${server.baseUrl}/v1/namespaces/test-crm/collections/prospects/records/${createdRecord.id}`, {
     method: "DELETE",
     headers: scopedHeaders,
   });
   assert.equal(deletedRecord.status, 200);
 
-  const tokenList = await fetch(`${server.baseUrl}/v1/namespaces/crm/tokens`, {
+  const tokenList = await fetch(`${server.baseUrl}/v1/namespaces/test-crm/tokens`, {
     headers: authHeaders(server.adminToken),
   });
   const tokenListPayload = await tokenList.json() as { items: Array<{ id: string }> };
   assert.equal(tokenListPayload.items[0]?.id, tokenPayload.record.id);
 
-  const revoke = await fetch(`${server.baseUrl}/v1/namespaces/crm/tokens/${tokenPayload.record.id}/revoke`, {
+  const revoke = await fetch(`${server.baseUrl}/v1/namespaces/test-crm/tokens/${tokenPayload.record.id}/revoke`, {
     method: "POST",
     headers: {
       ...authHeaders(server.adminToken),
@@ -430,7 +430,7 @@ test("record CRUD, scoped tokens, files, and realtime work together", async () =
   });
   assert.equal(revoke.status, 200);
 
-  const deniedAfterRevoke = await fetch(`${server.baseUrl}/v1/namespaces/crm/collections/leads/records`, {
+  const deniedAfterRevoke = await fetch(`${server.baseUrl}/v1/namespaces/test-crm/collections/prospects/records`, {
     headers: scopedHeaders,
   });
   assert.equal(deniedAfterRevoke.status, 401);
