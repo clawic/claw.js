@@ -1,0 +1,11 @@
+{
+  "method": "POST",
+  "url": "https://discord.com/api/v10/webhooks/sample/sample/github?wait=false&thread_id=sample",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json"
+  },
+  "body": {
+    "ref": "refs/heads/main"
+  }
+}

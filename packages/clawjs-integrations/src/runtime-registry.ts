@@ -565,6 +565,8 @@ const DISCORD_ACTION_FIXTURE_NAMES = [
   "update-webhook-with-token",
   "delete-webhook-with-token",
   "execute-webhook",
+  "execute-slack-compatible-webhook",
+  "execute-github-compatible-webhook",
   "get-webhook-message",
   "edit-webhook-message",
   "delete-webhook-message",
