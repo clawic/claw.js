@@ -1,0 +1,19 @@
+{
+  "method": "PATCH",
+  "url": "https://discord.com/api/v10/guilds/sample/scheduled-events/sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "channel_id": "sample",
+    "name": "sample",
+    "privacy_level": 2,
+    "scheduled_start_time": "2026-05-13T10:00:00.000Z",
+    "scheduled_end_time": "2026-05-13T11:00:00.000Z",
+    "description": "sample",
+    "entity_type": 2,
+    "status": 2
+  }
+}
