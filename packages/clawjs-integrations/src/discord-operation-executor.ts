@@ -60,6 +60,10 @@ export type DiscordRuntimeOperation =
   | "get-lobby"
   | "modify-lobby"
   | "delete-lobby"
+  | "add-lobby-member"
+  | "bulk-update-lobby-members"
+  | "remove-lobby-member"
+  | "leave-lobby"
   | "get-channel"
   | "update-channel"
   | "set-voice-channel-status"
@@ -325,6 +329,22 @@ export function buildDiscordOperationRequest(
       return bodyPlan("PATCH", `lobbies/${lobbyId(values)}`, auth, headers, lobbyBody(values), { type: "object", requiredPaths: ["id", "application_id", "members"] });
     case "delete-lobby":
       return deletePlan(`lobbies/${lobbyId(values)}`, auth, headers, { type: "object" });
+    case "add-lobby-member":
+      return bodyPlan("PUT", `lobbies/${lobbyId(values)}/members/${userId(values)}`, auth, headers, lobbyMemberBody(values), { type: "object", requiredPaths: ["id"] });
+    case "bulk-update-lobby-members":
+      return {
+        method: "PUT",
+        endpoint: `lobbies/${lobbyId(values)}/members`,
+        auth,
+        headers,
+        body: {},
+        bodyValue: requiredJsonArray(values.members, "members"),
+        responseSchema: { type: "array" },
+      };
+    case "remove-lobby-member":
+      return deletePlan(`lobbies/${lobbyId(values)}/members/${userId(values)}`, auth, headers, { type: "object" });
+    case "leave-lobby":
+      return deletePlan(`lobbies/${lobbyId(values)}/members/@me`, auth, headers, { type: "object" });
     case "update-channel":
       return bodyPlan("PATCH", `channels/${channelId(values)}`, auth, headers, channelBody(values), { type: "object", requiredPaths: ["id", "type"] });
     case "set-voice-channel-status":
@@ -626,6 +646,10 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "get-lobby",
   "modify-lobby",
   "delete-lobby",
+  "add-lobby-member",
+  "bulk-update-lobby-members",
+  "remove-lobby-member",
+  "leave-lobby",
   "get-channel",
   "update-channel",
   "set-voice-channel-status",
@@ -846,6 +870,13 @@ function lobbyBody(values: Record<string, IntegrationJson>): Record<string, Inte
     metadata: optionalJsonObject(values.metadata),
     members: optionalJsonArray(values.members),
     idle_timeout_seconds: optionalNumber(values.idleTimeoutSeconds),
+  });
+}
+
+function lobbyMemberBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    metadata: optionalJsonObject(values.metadata),
+    flags: optionalNumber(values.flags),
   });
 }
 
