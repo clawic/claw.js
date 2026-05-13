@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, test } from "vitest";
 type NodeStyleContext = {
   after?: (callback: () => void | Promise<void>) => void;
   before?: (callback: () => void | Promise<void>) => void;
+  diagnostic?: (message: string) => void;
   test?: (name: string, callback: (context: NodeStyleContext) => void | Promise<void>) => Promise<void>;
   onTestFinished?: (callback: () => void | Promise<void>) => void;
 };
@@ -21,6 +22,9 @@ beforeEach((context) => {
   };
   nodeContext.test = async (_name, callback) => {
     await callback(nodeContext);
+  };
+  nodeContext.diagnostic = (message) => {
+    console.info(`# ${message}`);
   };
 });
 

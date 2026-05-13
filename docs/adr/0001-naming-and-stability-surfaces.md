@@ -142,7 +142,7 @@ updating this ADR or adding a successor ADR.
   - `company` becomes `board`.
   - `hub` becomes `channels`.
   - `day` becomes `agenda`.
-  - `examples/demo` becomes `showcase`.
+  - `examples/showcase` becomes `showcase`.
   - `notify` remains `notify`.
 - `signals` replaces `life` as the technical and public domain.
 - Personal signal domains such as health, sleep, finance, journal, workouts,

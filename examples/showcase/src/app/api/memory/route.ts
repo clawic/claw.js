@@ -64,7 +64,7 @@ function searchResultToEntry(r: any, i: number): MemoryEntry {
 }
 
 const SEED_NOTES = [
-  { title: "Project Architecture Overview", content: "The project uses an npm-managed monorepo. Core contracts live in packages/clawjs-core, the SDK in packages/clawjs-node, the CLI in packages/clawjs, and the demo app in examples/demo/.", tags: ["architecture", "monorepo"] },
+  { title: "Project Architecture Overview", content: "The project uses an npm-managed monorepo. Core contracts live in packages/clawjs-core, the SDK in packages/clawjs-node, the CLI in packages/clawjs, and the demo app in examples/showcase/.", tags: ["architecture", "monorepo"] },
   { title: "API Authentication Flow", content: "Authentication uses short-lived access credentials with rotation and local secret storage. Sensitive values should never be returned by public configuration endpoints.", tags: ["auth", "security"] },
   { title: "Debug: worker pool cleanup", content: "Root cause: event listeners were not removed when workers were recycled. The remediation was to unregister listeners during shutdown and add regression coverage for repeated restarts.", tags: ["debug", "memory"] },
   { title: "Notification system design", content: "Multi-channel support uses a provider pattern. Adapters for email, Slack, and Telegram share a common queue for reliable delivery.", tags: ["planning", "notifications"] },

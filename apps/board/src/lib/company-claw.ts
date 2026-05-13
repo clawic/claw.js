@@ -1,7 +1,7 @@
 /**
  * ClawJS bridge for the Company app.
  *
- * Owns its own `createClaw()` instance rooted at `~/.claw/apps/company`, so
+ * Owns its own `createClaw()` instance rooted at `~/.claw/apps/board`, so
  * company sessions never mix with the demo's chat workspace. Every employee
  * maps to a unique conversation session inside this workspace, and the
  * agent's AGENTS.md (instructions) is supplied as the systemPrompt on every
@@ -70,7 +70,7 @@ export function resolveCompanyOpenClawAgentId(): string {
  *
  * The openclaw runtime is shared with the demo (we borrow its configured
  * agent so model + provider auth Just Work), but conversations are stored
- * in a dedicated workspace at `~/.claw/apps/company/workspace` so company
+ * in a dedicated workspace at `~/.claw/apps/board/workspace` so company
  * sessions never mix with the chat's conversation store.
  */
 export async function getCompanyClaw(): Promise<ClawInstance> {

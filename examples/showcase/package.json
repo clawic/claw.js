@@ -1,8 +1,8 @@
 {
-  "name": "@clawjs/demo",
+  "name": "@clawjs/showcase",
   "version": "0.1.0",
   "private": true,
-  "description": "ClawJS demo — local-first connected assistant with WhatsApp, email, and calendar.",
+  "description": "ClawJS showcase — local-first connected assistant with WhatsApp, email, and calendar.",
   "type": "module",
   "engines": {
     "node": ">=20.9.0"

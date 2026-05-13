@@ -5,7 +5,7 @@ description: Private visual planning app for ClawJS projects, goals, tasks, time
 
 # Claw Day
 
-`apps/day/` is the private visual planning app for ClawJS.
+`apps/agenda/` is the private visual planning app for ClawJS.
 
 It uses the workspace productivity layer directly, so the browser UI renders
 the same local project, goal, task, milestone, cycle, and note records exposed
@@ -23,7 +23,7 @@ by `@clawjs/workspace` and the main `claw` CLI.
 ## Local Run
 
 ```bash
-npm --prefix apps/day run dashboard
+npm --prefix apps/agenda run dashboard
 ```
 
 Default local URL:
@@ -35,7 +35,7 @@ http://127.0.0.1:3737
 Use `--root` to point the app at a different ClawJS workspace:
 
 ```bash
-npm --prefix apps/day run dashboard -- --root /tmp/claw-day --port 3737
+npm --prefix apps/agenda run dashboard -- --root /tmp/claw-day --port 3737
 ```
 
 ## CLI
@@ -43,6 +43,6 @@ npm --prefix apps/day run dashboard -- --root /tmp/claw-day --port 3737
 Use the main ClawJS CLI against the same workspace data:
 
 ```bash
-npm --prefix apps/day run claw -- tasks list --json
-npm --prefix apps/day run claw -- timeline week --start 2026-04-21T00:00:00Z --json
+npm --prefix apps/agenda run claw -- tasks list --json
+npm --prefix apps/agenda run claw -- timeline week --start 2026-04-21T00:00:00Z --json
 ```

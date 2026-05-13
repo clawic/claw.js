@@ -14,7 +14,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-DEMO_DIR="$ROOT_DIR/demo"
+DEMO_DIR="$ROOT_DIR/showcase"
 
 # ── Create isolated temp directory ────────────────────────────────────────────
 MOCK_ROOT="/tmp/clawjs-mock-$$"
@@ -22,8 +22,8 @@ MOCK_DATA_DIR="$MOCK_ROOT/data"
 MOCK_WORKSPACE_DIR="$MOCK_ROOT/workspace"
 MOCK_CONFIG_DIR="$MOCK_ROOT/config"
 MOCK_STATE_DIR="$MOCK_ROOT/state"
-MOCK_AGENT_DIR="$MOCK_STATE_DIR/agents/clawjs-demo/agent"
-MOCK_SESSIONS_DIR="$MOCK_STATE_DIR/agents/clawjs-demo/sessions"
+MOCK_AGENT_DIR="$MOCK_STATE_DIR/agents/clawjs-showcase/agent"
+MOCK_SESSIONS_DIR="$MOCK_STATE_DIR/agents/clawjs-showcase/sessions"
 
 mkdir -p "$MOCK_DATA_DIR" "$MOCK_WORKSPACE_DIR" "$MOCK_CONFIG_DIR" \
          "$MOCK_STATE_DIR" "$MOCK_AGENT_DIR" "$MOCK_SESSIONS_DIR"

@@ -1,6 +1,6 @@
 # Company Cockpit Frontend Spec
 
-This document defines the frontend contract for the general organization cockpit backed by `apps/company`.
+This document defines the frontend contract for the general organization cockpit backed by `apps/board`.
 The storage layer still uses `companies`, but the UI language should treat each record as an organization.
 
 ## Ground Rules

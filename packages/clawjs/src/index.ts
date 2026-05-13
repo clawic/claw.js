@@ -449,7 +449,7 @@ function normalizePublicCliArgv(argv: string[], stderr: NodeJS.WritableStream, b
 
 const CLI_TEMPLATE_ROOT = fileURLToPath(new URL("../templates", import.meta.url));
 
-type OpenSurfaceKind = "internal-database" | "internal-storage" | "cli-serve" | "server-script" | "memory" | "day" | "next";
+type OpenSurfaceKind = "internal-database" | "internal-storage" | "cli-serve" | "server-script" | "memory" | "agenda" | "next";
 
 interface OpenSurface {
   id: string;
@@ -491,7 +491,7 @@ const OPEN_SURFACES: OpenSurface[] = [
   { id: "publishing", label: "Publishing", port: clawCorePorts.publishing, kind: "cli-serve", dir: "publishing", buildCheck: "dist/cli.js" },
   { id: "erp", label: "ERP", port: 24147, kind: "cli-serve", dir: "modules/erp", buildCheck: "dist/cli.js" },
   { id: "iot", label: "IoT", port: 24148, kind: "cli-serve", dir: "iot", buildCheck: "dist/cli.js" },
-  { id: "agenda", label: "Agenda", port: clawAppPorts.agenda, kind: "day", dir: "apps/agenda", buildCheck: "dist/serve-dashboard.js" },
+  { id: "agenda", label: "Agenda", port: clawAppPorts.agenda, kind: "agenda", dir: "apps/agenda", buildCheck: "dist/serve-dashboard.js" },
   { id: "board", label: "Board", port: clawAppPorts.board, kind: "next", dir: "apps/board", buildCheck: ".next" },
   { id: "channels", label: "Channels", port: clawAppPorts.channels, kind: "next", dir: "apps/channels", buildCheck: ".next" },
   { id: "user", label: "User", port: 24149, kind: "cli-serve", dir: "modules/user", buildCheck: "dist/cli.js" },
@@ -1342,7 +1342,7 @@ function buildSurfaceCommand(surface: OpenSurface, input: { host: string; port: 
     };
   }
 
-  if (surface.kind === "day") {
+  if (surface.kind === "agenda") {
     return {
       command: process.execPath,
       args: [path.join(surfaceDir, "dist", "serve-dashboard.js"), "--port", String(input.port), "--root", input.workspace],

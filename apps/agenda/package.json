@@ -1,14 +1,14 @@
 {
-  "name": "@clawjs/app-day",
+  "name": "@clawjs/app-agenda",
   "version": "0.1.0",
   "private": true,
-  "description": "Claw Day app — visual planning UI powered by the ClawJS workspace layer.",
+  "description": "Claw Agenda app — visual planning UI powered by the ClawJS workspace layer.",
   "type": "module",
   "scripts": {
     "build": "tsup src/serve-dashboard.ts --format esm --target node20 --out-dir dist --clean && cp src/app.html dist/app.html",
     "start": "node dist/serve-dashboard.js",
     "dashboard": "tsx src/serve-dashboard.ts",
-    "claw": "claw --runtime demo --workspace . --app-id claw-day --workspace-id claw-day --agent-id claw-day",
+    "claw": "claw --runtime demo --workspace . --app-id claw-agenda --workspace-id claw-agenda --agent-id claw-agenda",
     "test": "playwright test -c playwright.config.ts",
     "test:e2e": "playwright test -c playwright.config.ts"
   },

@@ -101,7 +101,7 @@ function release() {
   npmRun("test:pack");
   for (const script of [
     "database:test:e2e",
-    "day:test:e2e",
+    "agenda:test:e2e",
     "time:test:e2e",
     "erp:test:e2e",
     "content:test:e2e",
