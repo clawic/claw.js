@@ -10,7 +10,7 @@ export async function bootTestApp() {
   const built = await buildApp({
     config: {
       dataDir,
-      dbPath: path.join(dataDir, "badger.sqlite"),
+      dbPath: path.join(dataDir, "clawjs.sqlite"),
       tokenStorePath,
       host: "127.0.0.1",
       port: 0,

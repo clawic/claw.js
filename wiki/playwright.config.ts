@@ -27,7 +27,7 @@ export default defineConfig({
       WIKI_HOST: "127.0.0.1",
       WIKI_PORT: "4520",
       WIKI_DATA_DIR: path.join(tmpRoot, "data"),
-      WIKI_DB_PATH: path.join(tmpRoot, "data", "wiki.sqlite"),
+      WIKI_DB_PATH: path.join(tmpRoot, "data", "clawjs.sqlite"),
       WIKI_JWT_SECRET: "wiki-playwright-secret",
     },
   },

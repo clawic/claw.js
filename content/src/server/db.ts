@@ -51,6 +51,51 @@ function stringJson(value: unknown): string {
   return JSON.stringify(value ?? {});
 }
 
+const CONTENT_TABLES = [
+  "admins",
+  "brands",
+  "destinations",
+  "campaigns",
+  "entries",
+  "revisions",
+  "assets",
+  "variants",
+  "approvals",
+  "plans",
+  "publication_runs",
+  "scoped_tokens",
+];
+
+type SqliteDatabase = ReturnType<typeof Database>;
+
+class PrefixedContentDatabase {
+  constructor(private readonly db: SqliteDatabase) {}
+
+  prepare(sql: string) {
+    return this.db.prepare(rewriteContentSql(sql));
+  }
+
+  exec(sql: string) {
+    return this.db.exec(rewriteContentSql(sql));
+  }
+
+  pragma(source: string, options?: Parameters<SqliteDatabase["pragma"]>[1]) {
+    return this.db.pragma(source, options);
+  }
+
+  close() {
+    return this.db.close();
+  }
+}
+
+function rewriteContentSql(sql: string): string {
+  let rewritten = sql;
+  for (const table of CONTENT_TABLES) {
+    rewritten = rewritten.replace(new RegExp(`\\b${table}\\b`, "g"), `content_${table}`);
+  }
+  return rewritten;
+}
+
 interface AdminRow {
   id: string;
   email: string;
@@ -385,13 +430,13 @@ function serializeToken(row: TokenRow): ContentScopedTokenRecord {
 }
 
 export class ContentStore {
-  private readonly sqlite: ReturnType<typeof Database>;
+  private readonly sqlite: PrefixedContentDatabase;
 
   constructor(
     dbPath: string,
     options: { adminEmail: string; adminPassword: string },
   ) {
-    this.sqlite = new Database(dbPath);
+    this.sqlite = new PrefixedContentDatabase(new Database(dbPath));
     this.sqlite.pragma("journal_mode = WAL");
     this.sqlite.pragma("foreign_keys = ON");
     this.init();

@@ -40,7 +40,7 @@ export async function startContentServer(prefix = "content-e2e") {
       host: "127.0.0.1",
       port: 0,
       dataDir: path.join(rootDir, ".data"),
-      dbPath: path.join(rootDir, ".data", "content.sqlite"),
+      dbPath: path.join(rootDir, ".data", "clawjs.sqlite"),
       jwtSecret: "content-test-secret",
       adminEmail: "admin@content.local",
       adminPassword: "content-admin",

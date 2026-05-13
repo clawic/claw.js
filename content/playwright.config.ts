@@ -27,7 +27,7 @@ export default defineConfig({
       CONTENT_HOST: "127.0.0.1",
       CONTENT_PORT: "4650",
       CONTENT_DATA_DIR: path.join(outputRoot, "data"),
-      CONTENT_DB_PATH: path.join(outputRoot, "data", "content.sqlite"),
+      CONTENT_DB_PATH: path.join(outputRoot, "data", "clawjs.sqlite"),
       CONTENT_JWT_SECRET: "content-playwright-secret",
       CONTENT_ADMIN_EMAIL: "admin@content.local",
       CONTENT_ADMIN_PASSWORD: "content-admin",

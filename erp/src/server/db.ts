@@ -51,7 +51,65 @@ type LedgerLineSpec = {
   dimensions?: Record<string, unknown>;
 };
 
-type TransactionDatabase = Database.Database;
+const ERP_TABLES = [
+  "admins",
+  "tenants",
+  "legal_entities",
+  "branches",
+  "warehouses",
+  "fiscal_periods",
+  "accounts",
+  "items",
+  "employees",
+  "projects",
+  "localizations",
+  "counters",
+  "documents",
+  "journal_entries",
+  "journal_lines",
+  "inventory_balances",
+  "approvals",
+  "jobs",
+  "audit_events",
+];
+
+type NativeDatabase = Database.Database;
+type TransactionDatabase = {
+  prepare(sql: string): any;
+  transaction<T extends (...args: any[]) => any>(fn: T): T;
+};
+
+class PrefixedErpDatabase {
+  constructor(private readonly db: NativeDatabase) {}
+
+  prepare(sql: string): any {
+    return this.db.prepare(rewriteErpSql(sql));
+  }
+
+  exec(sql: string) {
+    return this.db.exec(rewriteErpSql(sql));
+  }
+
+  pragma(source: string, options?: Parameters<NativeDatabase["pragma"]>[1]) {
+    return this.db.pragma(source, options);
+  }
+
+  transaction<T extends (...args: any[]) => any>(fn: T): T {
+    return this.db.transaction((...args: Parameters<T>) => fn(...args)) as unknown as T;
+  }
+
+  close() {
+    return this.db.close();
+  }
+}
+
+function rewriteErpSql(sql: string): string {
+  let rewritten = sql;
+  for (const table of ERP_TABLES) {
+    rewritten = rewritten.replace(new RegExp(`\\b${table}\\b`, "g"), `erp_${table}`);
+  }
+  return rewritten;
+}
 
 const DEFAULT_ACCOUNTS: Array<{ code: string; name: string; category: AccountRecord["category"] }> = [
   { code: "1000", name: "Cash", category: "asset" },
@@ -73,11 +131,11 @@ export interface ErpStoreOptions {
 }
 
 export class ErpStore {
-  private readonly db: Database.Database;
+  private readonly db: PrefixedErpDatabase;
   private readonly onEvent?: (event: ErpRealtimeEvent) => void;
 
   constructor(dbPath: string, options: ErpStoreOptions) {
-    this.db = new Database(dbPath);
+    this.db = new PrefixedErpDatabase(new Database(dbPath));
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("foreign_keys = ON");
     this.onEvent = options.onEvent;
