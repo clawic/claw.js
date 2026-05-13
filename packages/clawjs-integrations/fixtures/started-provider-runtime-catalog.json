@@ -4430,6 +4430,1296 @@
           ]
         },
         {
+          "id": "gitlab.action.list-commit-comments",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "List Commit Comments",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "sha",
+              "type": "string",
+              "optional": false,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.create-commit-comment",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Create Commit Comment",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "sha",
+              "type": "string",
+              "optional": false,
+              "default": "sample"
+            },
+            {
+              "name": "note",
+              "type": "string",
+              "optional": false,
+              "default": "Looks good"
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "optional": true,
+              "default": "README.md"
+            },
+            {
+              "name": "line",
+              "type": "integer",
+              "optional": true,
+              "min": 1,
+              "default": 1
+            },
+            {
+              "name": "lineType",
+              "type": "string",
+              "optional": true,
+              "default": "new"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.list-commit-statuses",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "List Commit Statuses",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "sha",
+              "type": "string",
+              "optional": false,
+              "default": "sample"
+            },
+            {
+              "name": "ref",
+              "type": "string",
+              "optional": true,
+              "default": "main"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "ci"
+            },
+            {
+              "name": "stage",
+              "type": "string",
+              "optional": true,
+              "default": "test"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.create-commit-status",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Create Commit Status",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "sha",
+              "type": "string",
+              "optional": false,
+              "default": "sample"
+            },
+            {
+              "name": "state",
+              "type": "string",
+              "optional": false,
+              "default": "success"
+            },
+            {
+              "name": "ref",
+              "type": "string",
+              "optional": true,
+              "default": "main"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "ci"
+            },
+            {
+              "name": "targetUrl",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/build"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Build passed"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.compare-refs",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Compare Refs",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "from",
+              "type": "string",
+              "optional": false,
+              "default": "main"
+            },
+            {
+              "name": "to",
+              "type": "string",
+              "optional": false,
+              "default": "feature"
+            },
+            {
+              "name": "straight",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.list-repository-contributors",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "List Repository Contributors",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.get-repository-blob",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Get Repository Blob",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "sha",
+              "type": "string",
+              "optional": false,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.get-raw-blob",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Get Raw Blob",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "sha",
+              "type": "string",
+              "optional": false,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.search-project-blobs",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Search Project Blobs",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "search",
+              "type": "string",
+              "optional": false,
+              "default": "runtime"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.search-project-commits",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Search Project Commits",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "search",
+              "type": "string",
+              "optional": false,
+              "default": "runtime"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.search-project-issues",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Search Project Issues",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "search",
+              "type": "string",
+              "optional": false,
+              "default": "runtime"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.search-project-merge-requests",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Search Project Merge Requests",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "search",
+              "type": "string",
+              "optional": false,
+              "default": "runtime"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.search-project-users",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Search Project Users",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "search",
+              "type": "string",
+              "optional": false,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.list-issue-discussions",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "List Issue Discussions",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "issueIid",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.create-issue-discussion",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Create Issue Discussion",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "issueIid",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            },
+            {
+              "name": "body",
+              "type": "string",
+              "optional": false,
+              "default": "Discussion body"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.update-issue-discussion-note",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Update Issue Discussion Note",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "issueIid",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            },
+            {
+              "name": "discussionId",
+              "type": "string",
+              "optional": false,
+              "default": "discussion_1"
+            },
+            {
+              "name": "noteId",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            },
+            {
+              "name": "body",
+              "type": "string",
+              "optional": false,
+              "default": "Updated discussion"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.delete-issue-discussion-note",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Delete Issue Discussion Note",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "issueIid",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            },
+            {
+              "name": "discussionId",
+              "type": "string",
+              "optional": false,
+              "default": "discussion_1"
+            },
+            {
+              "name": "noteId",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.list-merge-request-discussions",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "List Merge Request Discussions",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "mergeRequestIid",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.create-merge-request-discussion",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Create Merge Request Discussion",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "mergeRequestIid",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            },
+            {
+              "name": "body",
+              "type": "string",
+              "optional": false,
+              "default": "Discussion body"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.update-merge-request-discussion-note",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Update Merge Request Discussion Note",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "mergeRequestIid",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            },
+            {
+              "name": "discussionId",
+              "type": "string",
+              "optional": false,
+              "default": "discussion_1"
+            },
+            {
+              "name": "noteId",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            },
+            {
+              "name": "body",
+              "type": "string",
+              "optional": false,
+              "default": "Updated discussion"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.delete-merge-request-discussion-note",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Delete Merge Request Discussion Note",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "mergeRequestIid",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            },
+            {
+              "name": "discussionId",
+              "type": "string",
+              "optional": false,
+              "default": "discussion_1"
+            },
+            {
+              "name": "noteId",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.get-merge-request-approvals",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Get Merge Request Approvals",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "mergeRequestIid",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.approve-merge-request",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Approve Merge Request",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "mergeRequestIid",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            },
+            {
+              "name": "sha",
+              "type": "string",
+              "optional": true,
+              "default": "abc123"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.unapprove-merge-request",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Unapprove Merge Request",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "mergeRequestIid",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.update-merge-request-approvals",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Update Merge Request Approvals",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "mergeRequestIid",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            },
+            {
+              "name": "approvalsRequired",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.list-environments",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "List Environments",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "search",
+              "type": "string",
+              "optional": true,
+              "default": "production"
+            },
+            {
+              "name": "states",
+              "type": "string",
+              "optional": true,
+              "default": "available"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.get-environment",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Get Environment",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "environmentId",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.create-environment",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Create Environment",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "production"
+            },
+            {
+              "name": "externalUrl",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/env"
+            },
+            {
+              "name": "tier",
+              "type": "string",
+              "optional": true,
+              "default": "production"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.update-environment",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Update Environment",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "environmentId",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "production"
+            },
+            {
+              "name": "externalUrl",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/env"
+            },
+            {
+              "name": "tier",
+              "type": "string",
+              "optional": true,
+              "default": "production"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.delete-environment",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Delete Environment",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "environmentId",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.stop-environment",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Stop Environment",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "environmentId",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.list-deployments",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "List Deployments",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "environment",
+              "type": "string",
+              "optional": true,
+              "default": "production"
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "optional": true,
+              "default": "success"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.get-deployment",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Get Deployment",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "deploymentId",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.create-deployment",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Create Deployment",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "environment",
+              "type": "string",
+              "optional": false,
+              "default": "production"
+            },
+            {
+              "name": "sha",
+              "type": "string",
+              "optional": false,
+              "default": "abc123"
+            },
+            {
+              "name": "ref",
+              "type": "string",
+              "optional": true,
+              "default": "main"
+            },
+            {
+              "name": "tag",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.delete-deployment",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Delete Deployment",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "deploymentId",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.list-group-members",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "List Group Members",
+          "fields": [
+            {
+              "name": "groupId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "query",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.add-group-member",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Add Group Member",
+          "fields": [
+            {
+              "name": "groupId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            },
+            {
+              "name": "accessLevel",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 30
+            },
+            {
+              "name": "expiresAt",
+              "type": "string",
+              "optional": true,
+              "default": "2026-12-31"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.update-group-member",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Update Group Member",
+          "fields": [
+            {
+              "name": "groupId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            },
+            {
+              "name": "accessLevel",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 30
+            },
+            {
+              "name": "expiresAt",
+              "type": "string",
+              "optional": true,
+              "default": "2026-12-31"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.remove-group-member",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Remove Group Member",
+          "fields": [
+            {
+              "name": "groupId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "userId",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.list-project-badges",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "List Project Badges",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.add-project-badge",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Add Project Badge",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "linkUrl",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/badge"
+            },
+            {
+              "name": "imageUrl",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/badge.svg"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "coverage"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.update-project-badge",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Update Project Badge",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "badgeId",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            },
+            {
+              "name": "linkUrl",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/badge"
+            },
+            {
+              "name": "imageUrl",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/badge.svg"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "coverage"
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
+          "id": "gitlab.action.delete-project-badge",
+          "appId": "gitlab",
+          "kind": "action",
+          "name": "Delete Project Badge",
+          "fields": [
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false,
+              "default": "group/project"
+            },
+            {
+              "name": "badgeId",
+              "type": "integer",
+              "optional": false,
+              "min": 1,
+              "default": 1
+            }
+          ],
+          "authFieldNames": [
+            "gitlabToken"
+          ]
+        },
+        {
           "id": "gitlab.source.event",
           "appId": "gitlab",
           "kind": "source",
@@ -4623,6 +5913,111 @@
           "appId": "gitlab",
           "kind": "source",
           "name": "Release",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "object_id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "gitlab.source.deployment",
+          "appId": "gitlab",
+          "kind": "source",
+          "name": "Deployment",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "object_id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "gitlab.source.feature-flag",
+          "appId": "gitlab",
+          "kind": "source",
+          "name": "Feature Flag",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "object_id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "gitlab.source.member",
+          "appId": "gitlab",
+          "kind": "source",
+          "name": "Member",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "object_id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "gitlab.source.subgroup",
+          "appId": "gitlab",
+          "kind": "source",
+          "name": "Subgroup",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "object_id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "gitlab.source.emoji",
+          "appId": "gitlab",
+          "kind": "source",
+          "name": "Emoji",
           "fields": [],
           "authFieldNames": [],
           "runtime": {
