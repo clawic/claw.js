@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/billing/meters",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "customer_mapping=%7B%22type%22%3A%22by_id%22%2C%22event_payload_key%22%3A%22stripe_customer_id%22%7D&default_aggregation=%7B%22formula%22%3A%22sum%22%7D&display_name=Sample+billing+meter&event_name=sample_meter_event&event_time_window=hour&value_settings=%7B%22event_payload_key%22%3A%22value%22%7D"
+}

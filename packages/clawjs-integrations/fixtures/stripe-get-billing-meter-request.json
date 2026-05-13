@@ -1,0 +1,9 @@
+{
+  "method": "GET",
+  "url": "https://api.stripe.com/v1/billing/meters/mtr_sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  },
+  "body": null
+}

@@ -41645,6 +41645,137 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.list-billing-meters",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Billing Meters",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "optional": true,
+              "default": "active"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-billing-meter",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Billing Meter",
+          "fields": [
+            {
+              "name": "customer_mapping",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "type": "by_id",
+                "event_payload_key": "stripe_customer_id"
+              }
+            },
+            {
+              "name": "default_aggregation",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "formula": "sum"
+              }
+            },
+            {
+              "name": "display_name",
+              "type": "string",
+              "optional": false,
+              "default": "Sample billing meter"
+            },
+            {
+              "name": "event_name",
+              "type": "string",
+              "optional": false,
+              "default": "sample_meter_event"
+            },
+            {
+              "name": "event_time_window",
+              "type": "string",
+              "optional": true,
+              "default": "hour"
+            },
+            {
+              "name": "value_settings",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "event_payload_key": "value"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-billing-meter",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Billing Meter",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "mtr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-billing-meter",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Billing Meter",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "mtr_sample"
+            },
+            {
+              "name": "display_name",
+              "type": "string",
+              "optional": true,
+              "default": "Updated billing meter"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

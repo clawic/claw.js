@@ -1022,6 +1022,34 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-billing-meter"), {
+      customer_mapping: { type: "by_id", event_payload_key: "stripe_customer_id" },
+      default_aggregation: { formula: "sum" },
+      display_name: "Sample billing meter",
+      event_name: "sample_meter_event",
+      event_time_window: "hour",
+      value_settings: { event_payload_key: "value" },
+    }), {
+      method: "POST",
+      endpoint: "billing/meters",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        customer_mapping: { type: "by_id", event_payload_key: "stripe_customer_id" },
+        default_aggregation: { formula: "sum" },
+        display_name: "Sample billing meter",
+        event_name: "sample_meter_event",
+        event_time_window: "hour",
+        value_settings: { event_payload_key: "value" },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.process-terminal-reader-setup-intent"), {
       reader: "tmr_sample",
       setup_intent: "seti_sample",
