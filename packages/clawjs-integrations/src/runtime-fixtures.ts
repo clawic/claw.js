@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -26,6 +27,15 @@ interface ConnectorRuntimeRequestFixtureBody {
   url?: string;
   headers?: Record<string, string>;
   body?: IntegrationJson;
+}
+
+interface ConnectorRuntimeResponseFixtureBody {
+  runtimeResponse: {
+    status?: number;
+    headers?: Record<string, string>;
+    body?: IntegrationJson;
+    bodyEncoding?: "json" | "text" | "base64";
+  };
 }
 
 export function loadConnectorRuntimeFixture(
@@ -72,11 +82,30 @@ export function createConnectorRuntimeFixtureFetch(
       throw new Error("Connector runtime fixture fetch requires at least one response fixture");
     }
     nextResponse += 1;
-    return Response.json(fixture.body, {
+    return responseFromFixture(fixture.body, options);
+  }) as typeof fetch;
+}
+
+function responseFromFixture(
+  body: IntegrationJson,
+  options: ConnectorRuntimeFixtureFetchOptions,
+): Response {
+  if (!isRuntimeResponseFixtureBody(body)) {
+    return Response.json(body, {
       status: options.status ?? 200,
       headers: options.headers,
     });
-  }) as typeof fetch;
+  }
+  const fixture = body.runtimeResponse;
+  const status = fixture.status ?? options.status ?? 200;
+  const headers = { ...(options.headers ?? {}), ...(fixture.headers ?? {}) };
+  if (fixture.bodyEncoding === "base64") {
+    return new Response(Buffer.from(String(fixture.body ?? ""), "base64"), { status, headers });
+  }
+  if (fixture.bodyEncoding === "text") {
+    return new Response(String(fixture.body ?? ""), { status, headers });
+  }
+  return Response.json(fixture.body ?? null, { status, headers });
 }
 
 async function assertRequestFixture(
@@ -146,6 +175,26 @@ function sortJson(value: IntegrationJson): IntegrationJson {
     return Object.fromEntries(Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, sortJson(entry)]));
   }
   return value;
+}
+
+function isRuntimeResponseFixtureBody(
+  value: IntegrationJson,
+): value is IntegrationJson & ConnectorRuntimeResponseFixtureBody {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const runtimeResponse = value.runtimeResponse;
+  if (!runtimeResponse || typeof runtimeResponse !== "object" || Array.isArray(runtimeResponse)) return false;
+  return (runtimeResponse.status === undefined || typeof runtimeResponse.status === "number")
+    && isOptionalStringRecord(runtimeResponse.headers)
+    && (runtimeResponse.bodyEncoding === undefined
+      || runtimeResponse.bodyEncoding === "json"
+      || runtimeResponse.bodyEncoding === "text"
+      || runtimeResponse.bodyEncoding === "base64");
+}
+
+function isOptionalStringRecord(value: IntegrationJson | undefined): value is Record<string, string> | undefined {
+  if (value === undefined) return true;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return Object.values(value).every((entry) => typeof entry === "string");
 }
 
 function isResponseFixtureKind(kind: ConnectorRuntimeFixtureKind): boolean {

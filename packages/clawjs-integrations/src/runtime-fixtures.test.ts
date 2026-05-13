@@ -91,6 +91,22 @@ describe("connector runtime fixtures", () => {
     assert.deepEqual(await response.json(), { ok: true, id: "fixture_result" });
   });
 
+  it("builds encoded response mocks from runtime response metadata", async () => {
+    const fixtures = loadConnectorRuntimeFixtures([
+      {
+        kind: "response",
+        path: "packages/clawjs-integrations/fixtures/fixture-binary-response.json",
+      },
+    ]);
+    const fetchImpl = createConnectorRuntimeFixtureFetch(fixtures);
+
+    const response = await fetchImpl("https://example.invalid/image");
+
+    assert.equal(response.status, 203);
+    assert.equal(response.headers.get("content-type"), "image/png");
+    assert.deepEqual([...new Uint8Array(await response.arrayBuffer())], [137, 80, 78, 71]);
+  });
+
   it("rejects outgoing request fixture mismatches", async () => {
     const fixtures = loadConnectorRuntimeFixtures([
       {
