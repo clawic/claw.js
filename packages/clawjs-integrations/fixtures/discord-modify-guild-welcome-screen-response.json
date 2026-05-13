@@ -1,0 +1,9 @@
+{
+  "description": "sample",
+  "welcome_channels": [
+    {
+      "channel_id": "sample",
+      "description": "sample"
+    }
+  ]
+}
