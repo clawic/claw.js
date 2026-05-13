@@ -1,6 +1,6 @@
 // Tests for the marketplace/2.0.0 identity layer: BIP-39 recovery + handles.
 
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 
 import { ed25519 } from "@noble/curves/ed25519";

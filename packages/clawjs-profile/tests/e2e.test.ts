@@ -18,7 +18,7 @@
 //   7. A and B exchange two messages over the v2 mailbox (Double Ratchet);
 //      message keys differ across messages.
 
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

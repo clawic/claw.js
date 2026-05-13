@@ -9,7 +9,7 @@
 //  6. Both nodes sign a MatchReceipt and verify it.
 //  7. Re-decoding a serialized receipt and intent round-trips.
 
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 
 import { encodeCanonicalCbor, decodeCanonicalCbor } from "../src/cbor.ts";

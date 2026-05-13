@@ -1,7 +1,7 @@
 // Integration test for the Profile / Feed / Chat / Marketplace routes against
 // a real Fastify app, with stub deps that simulate a daemon-side ProfileStore.
 
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 
 import Fastify from "fastify";

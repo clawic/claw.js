@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 
 import { buildAgentInstructions, buildIssuePrompt } from "./company-claw.ts";
 import type { CompanyAgent, Issue, IssueComment } from "./company-types.ts";

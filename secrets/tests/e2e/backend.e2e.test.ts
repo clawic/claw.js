@@ -75,11 +75,11 @@ test("secrets resolves the built UI path for the packaged server entrypoint", ()
   const resolved = resolveUiRoot(
     {
       host: "127.0.0.1",
-      port: 4610,
+      port: 24103,
       dataDir: path.join(process.cwd(), ".data"),
       dbPath: path.join(process.cwd(), ".data", "vault.sqlite"),
       jwtSecret: "secrets-test-secret",
-      publicBaseUrl: "http://127.0.0.1:4610",
+      publicBaseUrl: "http://127.0.0.1:24103",
       uiDistDir: path.join(process.cwd(), ".missing-ui"),
     },
     new URL(`file://${path.join(process.cwd(), "dist", "server.js")}`).href,
@@ -346,9 +346,9 @@ test("secrets sidecar stays compatible with request/list/describe and supports p
 
     const env = {
       ...process.env,
-      SECRETS_BASE_URL: secrets.baseUrl,
-      SECRETS_TOKEN: principal.principal.token,
-      SECRETS_TENANT_ID: "demo-tenant",
+      CLAW_SECRETS_BASE_URL: secrets.baseUrl,
+      CLAW_SECRETS_TOKEN: principal.principal.token,
+      CLAW_SECRETS_TENANT_ID: "demo-tenant",
     };
     const list = await execFileAsync(process.execPath, [path.join(process.cwd(), "dist", "sidecar.js"), "list-secrets"], { env, encoding: "utf8" });
     const listed = JSON.parse(list.stdout) as Array<{ name: string }>;

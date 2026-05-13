@@ -1,6 +1,6 @@
 // X3DH + Double Ratchet tests.
 
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 
 import { generateEd25519Keypair } from "../src/identity.ts";

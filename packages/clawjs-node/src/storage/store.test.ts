@@ -1,9 +1,9 @@
-import test from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import type { TestContext } from "node:test";
+import type { TestContext } from "vitest";
 
 import { createLocalStorageStore } from "./store.ts";
 

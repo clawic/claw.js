@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 
 import { vehiclePlugin, validateVehicleOffer, vehicleOfferToCbor, VEHICLE_VERTICAL_ID } from "../src/index.ts";
