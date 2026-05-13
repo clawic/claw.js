@@ -1,6 +1,12 @@
-[
-  {
-    "id": "list-pinned-messages-sample",
-    "channel_id": "sample"
-  }
-]
+{
+  "items": [
+    {
+      "pinned_at": "2026-05-13T00:00:00.000Z",
+      "message": {
+        "id": "list-pinned-messages-sample",
+        "channel_id": "sample"
+      }
+    }
+  ],
+  "has_more": false
+}

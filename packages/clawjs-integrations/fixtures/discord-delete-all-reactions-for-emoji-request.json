@@ -1,6 +1,6 @@
 {
-  "method": "PUT",
-  "url": "https://discord.com/api/v10/channels/sample/messages/pins/sample",
+  "method": "DELETE",
+  "url": "https://discord.com/api/v10/channels/sample/messages/sample/reactions/thumbsup",
   "headers": {
     "accept": "application/json",
     "authorization": "Bot offline-discordBotToken-secret"

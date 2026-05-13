@@ -1,6 +1,6 @@
 {
   "method": "GET",
-  "url": "https://discord.com/api/v10/channels/sample/pins",
+  "url": "https://discord.com/api/v10/channels/sample/messages/pins?limit=1",
   "headers": {
     "accept": "application/json",
     "authorization": "Bot offline-discordBotToken-secret"
