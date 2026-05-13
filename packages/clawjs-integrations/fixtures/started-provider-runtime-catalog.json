@@ -39100,6 +39100,55 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.update-external-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update External Account",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "ba_sample"
+            },
+            {
+              "name": "account_holder_name",
+              "type": "string",
+              "optional": true,
+              "default": "Sample Person"
+            },
+            {
+              "name": "account_holder_type",
+              "type": "string",
+              "optional": true,
+              "default": "individual"
+            },
+            {
+              "name": "account_type",
+              "type": "string",
+              "optional": true,
+              "default": "checking"
+            },
+            {
+              "name": "default_for_currency",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

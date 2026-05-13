@@ -796,6 +796,33 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.update-external-account"), {
+      id: "ba_sample",
+      account_holder_name: "Sample Person",
+      account_holder_type: "individual",
+      account_type: "checking",
+      default_for_currency: true,
+      metadata: { order_id: "sample" },
+    }), {
+      method: "POST",
+      endpoint: "external_accounts/ba_sample",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        account_holder_name: "Sample Person",
+        account_holder_type: "individual",
+        account_type: "checking",
+        default_for_currency: true,
+        metadata: { order_id: "sample" },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.process-terminal-reader-setup-intent"), {
       reader: "tmr_sample",
       setup_intent: "seti_sample",
