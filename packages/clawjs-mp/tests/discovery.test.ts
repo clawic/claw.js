@@ -60,7 +60,7 @@ test("Federation: RemoteBrokerClient round-trips publish + query against a real 
       const { discoveryKey, limit } = decodeBrokerQueryRequest(buf);
       const intents = local.query({ discoveryKey, limit });
       const out = encodeBrokerQueryResponse(intents);
-      return new Response(out, { status: 200, headers: { "Content-Type": "application/cbor" } });
+      return new Response(out as BodyInit, { status: 200, headers: { "Content-Type": "application/cbor" } });
     }
     return new Response("not found", { status: 404 });
   };
@@ -81,7 +81,7 @@ test("Federation: FederatedBrokerClient unions local and remote results without 
   publishIntent(local, intent);
   // remote returns the SAME intent.
   const fetchImpl: typeof fetch = async (_url, _init) => {
-    return new Response(encodeBrokerQueryResponse([intent]), {
+    return new Response(encodeBrokerQueryResponse([intent]) as BodyInit, {
       status: 200, headers: { "Content-Type": "application/cbor" },
     });
   };
