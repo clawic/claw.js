@@ -1122,6 +1122,232 @@
           ]
         },
         {
+          "appId": "discord",
+          "kind": "action",
+          "authFieldNames": [
+            "discordBotToken"
+          ],
+          "id": "discord.action.list-guild-scheduled-events",
+          "name": "List Guild Scheduled Events",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "withUserCount",
+              "type": "boolean",
+              "optional": true
+            }
+          ]
+        },
+        {
+          "appId": "discord",
+          "kind": "action",
+          "authFieldNames": [
+            "discordBotToken"
+          ],
+          "id": "discord.action.create-guild-scheduled-event",
+          "name": "Create Guild Scheduled Event",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "privacyLevel",
+              "type": "integer",
+              "optional": false,
+              "default": 2
+            },
+            {
+              "name": "scheduledStartTime",
+              "type": "string",
+              "optional": false,
+              "default": "2026-05-13T10:00:00.000Z"
+            },
+            {
+              "name": "scheduledEndTime",
+              "type": "string",
+              "optional": true,
+              "default": "2026-05-13T11:00:00.000Z"
+            },
+            {
+              "name": "entityType",
+              "type": "integer",
+              "optional": false,
+              "default": 2
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ]
+        },
+        {
+          "appId": "discord",
+          "kind": "action",
+          "authFieldNames": [
+            "discordBotToken"
+          ],
+          "id": "discord.action.get-guild-scheduled-event",
+          "name": "Get Guild Scheduled Event",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "guildScheduledEventId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "withUserCount",
+              "type": "boolean",
+              "optional": true
+            }
+          ]
+        },
+        {
+          "appId": "discord",
+          "kind": "action",
+          "authFieldNames": [
+            "discordBotToken"
+          ],
+          "id": "discord.action.update-guild-scheduled-event",
+          "name": "Update Guild Scheduled Event",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "guildScheduledEventId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "privacyLevel",
+              "type": "integer",
+              "optional": true,
+              "default": 2
+            },
+            {
+              "name": "scheduledStartTime",
+              "type": "string",
+              "optional": true,
+              "default": "2026-05-13T10:00:00.000Z"
+            },
+            {
+              "name": "scheduledEndTime",
+              "type": "string",
+              "optional": true,
+              "default": "2026-05-13T11:00:00.000Z"
+            },
+            {
+              "name": "entityType",
+              "type": "integer",
+              "optional": true,
+              "default": 2
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "status",
+              "type": "integer",
+              "optional": true,
+              "default": 2
+            }
+          ]
+        },
+        {
+          "appId": "discord",
+          "kind": "action",
+          "authFieldNames": [
+            "discordBotToken"
+          ],
+          "id": "discord.action.delete-guild-scheduled-event",
+          "name": "Delete Guild Scheduled Event",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "guildScheduledEventId",
+              "type": "string",
+              "optional": false
+            }
+          ]
+        },
+        {
+          "appId": "discord",
+          "kind": "action",
+          "authFieldNames": [
+            "discordBotToken"
+          ],
+          "id": "discord.action.list-guild-scheduled-event-users",
+          "name": "List Guild Scheduled Event Users",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "guildScheduledEventId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "withMember",
+              "type": "boolean",
+              "optional": true
+            }
+          ]
+        },
+        {
           "id": "discord.action.get-invite",
           "appId": "discord",
           "kind": "action",
@@ -1746,6 +1972,69 @@
           "appId": "discord",
           "kind": "source",
           "name": "Guild Member Remove",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.guild-scheduled-event-create",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Guild Scheduled Event Create",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.guild-scheduled-event-update",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Guild Scheduled Event Update",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.guild-scheduled-event-delete",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Guild Scheduled Event Delete",
           "fields": [],
           "authFieldNames": [],
           "runtime": {
