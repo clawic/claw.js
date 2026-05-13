@@ -4,7 +4,9 @@
     {
       "id": "discord",
       "name": "Discord",
-      "authFieldNames": ["discordBotToken"],
+      "authFieldNames": [
+        "discordBotToken"
+      ],
       "fields": [
         {
           "name": "discordBotToken",
@@ -15,14 +17,96 @@
       ],
       "operations": [
         {
-          "id": "discord.action.get-channel",
+          "id": "discord.action.get-current-user",
           "appId": "discord",
           "kind": "action",
-          "name": "Get Channel",
+          "name": "Get Current User",
+          "fields": [],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-user",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get User",
           "fields": [
-            { "name": "channelId", "type": "string", "optional": false }
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["discordBotToken"]
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-current-user-guilds",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Current User Guilds",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "before",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-guild",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "withCounts",
+              "type": "boolean",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-guild-preview",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Preview",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
         },
         {
           "id": "discord.action.list-guild-channels",
@@ -30,9 +114,141 @@
           "kind": "action",
           "name": "List Guild Channels",
           "fields": [
-            { "name": "guildId", "type": "string", "optional": false }
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["discordBotToken"]
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.create-guild-channel",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Guild Channel",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "type",
+              "type": "integer",
+              "optional": true,
+              "default": 0
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-channel",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Channel",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.update-channel",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Update Channel",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-channel",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Channel",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-messages",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Messages",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-message",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Message",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
         },
         {
           "id": "discord.action.send-message",
@@ -40,19 +256,1583 @@
           "kind": "action",
           "name": "Send Message",
           "fields": [
-            { "name": "channelId", "type": "string", "optional": false },
-            { "name": "content", "type": "string", "optional": false },
-            { "name": "guildId", "type": "string", "optional": true },
-            { "name": "messageId", "type": "string", "optional": true }
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "content",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": true
+            }
           ],
-          "authFieldNames": ["discordBotToken"]
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.edit-message",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Edit Message",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "content",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-message",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Message",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.bulk-delete-messages",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Bulk Delete Messages",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messages",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "sample"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.crosspost-message",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Crosspost Message",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-pinned-messages",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Pinned Messages",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.pin-message",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Pin Message",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.unpin-message",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Unpin Message",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.create-reaction",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Reaction",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "emoji",
+              "type": "string",
+              "optional": false,
+              "default": "thumbsup"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-own-reaction",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Own Reaction",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "emoji",
+              "type": "string",
+              "optional": false,
+              "default": "thumbsup"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-user-reaction",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete User Reaction",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "emoji",
+              "type": "string",
+              "optional": false,
+              "default": "thumbsup"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-reactions",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Reactions",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "emoji",
+              "type": "string",
+              "optional": false,
+              "default": "thumbsup"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.start-thread-from-message",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Start Thread From Message",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.start-thread-without-message",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Start Thread Without Message",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "type",
+              "type": "integer",
+              "optional": true,
+              "default": 11
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-active-threads",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Active Threads",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.join-thread",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Join Thread",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.leave-thread",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Leave Thread",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.add-thread-member",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Add Thread Member",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.remove-thread-member",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Remove Thread Member",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-thread-member",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Thread Member",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "withMember",
+              "type": "boolean",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-thread-members",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Thread Members",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "withMember",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-guild-members",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Guild Members",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-guild-member",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Member",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.search-guild-members",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Search Guild Members",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "query",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.modify-guild-member",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Modify Guild Member",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "nick",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.remove-guild-member",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Remove Guild Member",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-guild-roles",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Guild Roles",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.create-guild-role",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Guild Role",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.update-guild-role",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Update Guild Role",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "roleId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-guild-role",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Guild Role",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "roleId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.add-guild-member-role",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Add Guild Member Role",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "roleId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.remove-guild-member-role",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Remove Guild Member Role",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "roleId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-guild-bans",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Guild Bans",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-guild-ban",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Ban",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.create-guild-ban",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Guild Ban",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "deleteMessageSeconds",
+              "type": "integer",
+              "optional": true,
+              "default": 0,
+              "min": 0
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.remove-guild-ban",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Remove Guild Ban",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-guild-invites",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Guild Invites",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-invite",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Invite",
+          "fields": [
+            {
+              "name": "inviteCode",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "withCounts",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "withExpiration",
+              "type": "boolean",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-invite",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Invite",
+          "fields": [
+            {
+              "name": "inviteCode",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-channel-webhooks",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Channel Webhooks",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-guild-webhooks",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Guild Webhooks",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.create-webhook",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Webhook",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-webhook",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Webhook",
+          "fields": [
+            {
+              "name": "webhookId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.update-webhook",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Update Webhook",
+          "fields": [
+            {
+              "name": "webhookId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-webhook",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Webhook",
+          "fields": [
+            {
+              "name": "webhookId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.execute-webhook",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Execute Webhook",
+          "fields": [
+            {
+              "name": "webhookId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "webhookToken",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "content",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "wait",
+              "type": "boolean",
+              "optional": true
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
+          "id": "discord.action.get-webhook-message",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Webhook Message",
+          "fields": [
+            {
+              "name": "webhookId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "webhookToken",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
+          "id": "discord.action.edit-webhook-message",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Edit Webhook Message",
+          "fields": [
+            {
+              "name": "webhookId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "webhookToken",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "content",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
+          "id": "discord.action.delete-webhook-message",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Webhook Message",
+          "fields": [
+            {
+              "name": "webhookId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "webhookToken",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
+          "id": "discord.action.list-global-application-commands",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Global Application Commands",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.create-global-application-command",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Global Application Command",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-global-application-command",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Global Application Command",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "commandId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.update-global-application-command",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Update Global Application Command",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "commandId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-global-application-command",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Global Application Command",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "commandId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-guild-application-commands",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Guild Application Commands",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.create-guild-application-command",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Guild Application Command",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-guild-application-command",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Application Command",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "commandId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.update-guild-application-command",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Update Guild Application Command",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "commandId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-guild-application-command",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Guild Application Command",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "commandId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.source.event",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.message-create",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Message Create",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.message-update",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Message Update",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.message-delete",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Message Delete",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.guild-member-add",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Guild Member Add",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.guild-member-remove",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Guild Member Remove",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.interaction-create",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Interaction Create",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.thread-create",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Thread Create",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.reaction-add",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Reaction Add",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
         }
       ]
     },
     {
       "id": "gitlab",
       "name": "GitLab",
-      "authFieldNames": ["gitlabToken"],
+      "authFieldNames": [
+        "gitlabToken"
+      ],
       "fields": [
         {
           "name": "gitlabToken",
@@ -68,11 +1848,25 @@
           "kind": "action",
           "name": "Create Issue",
           "fields": [
-            { "name": "description", "type": "string", "optional": true },
-            { "name": "projectId", "type": "string", "optional": false },
-            { "name": "title", "type": "string", "optional": false }
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["gitlabToken"]
+          "authFieldNames": [
+            "gitlabToken"
+          ]
         },
         {
           "id": "gitlab.action.create-issue-note",
@@ -80,12 +1874,31 @@
           "kind": "action",
           "name": "Create Issue Note",
           "fields": [
-            { "name": "body", "type": "string", "optional": false },
-            { "name": "internal", "type": "boolean", "optional": true },
-            { "name": "issueIid", "type": "integer", "optional": false, "min": 1 },
-            { "name": "projectId", "type": "string", "optional": false }
+            {
+              "name": "body",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "internal",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "issueIid",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            },
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["gitlabToken"]
+          "authFieldNames": [
+            "gitlabToken"
+          ]
         },
         {
           "id": "gitlab.action.get-project-issue",
@@ -93,10 +1906,21 @@
           "kind": "action",
           "name": "Get Project Issue",
           "fields": [
-            { "name": "issueIid", "type": "integer", "optional": false, "min": 1 },
-            { "name": "projectId", "type": "string", "optional": false }
+            {
+              "name": "issueIid",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            },
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["gitlabToken"]
+          "authFieldNames": [
+            "gitlabToken"
+          ]
         },
         {
           "id": "gitlab.action.list-project-issues",
@@ -104,12 +1928,35 @@
           "kind": "action",
           "name": "List Project Issues",
           "fields": [
-            { "name": "page", "type": "integer", "optional": true, "default": 1, "min": 1 },
-            { "name": "perPage", "type": "integer", "optional": true, "default": 20, "min": 1 },
-            { "name": "projectId", "type": "string", "optional": false },
-            { "name": "state", "type": "string", "optional": true, "default": "opened" }
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 20,
+              "min": 1
+            },
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "state",
+              "type": "string",
+              "optional": true,
+              "default": "opened"
+            }
           ],
-          "authFieldNames": ["gitlabToken"]
+          "authFieldNames": [
+            "gitlabToken"
+          ]
         },
         {
           "id": "gitlab.action.update-issue",
@@ -117,12 +1964,31 @@
           "kind": "action",
           "name": "Update Issue",
           "fields": [
-            { "name": "issueIid", "type": "integer", "optional": false, "min": 1 },
-            { "name": "projectId", "type": "string", "optional": false },
-            { "name": "stateEvent", "type": "string", "optional": true },
-            { "name": "title", "type": "string", "optional": true }
+            {
+              "name": "issueIid",
+              "type": "integer",
+              "optional": false,
+              "min": 1
+            },
+            {
+              "name": "projectId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "stateEvent",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": true
+            }
           ],
-          "authFieldNames": ["gitlabToken"]
+          "authFieldNames": [
+            "gitlabToken"
+          ]
         }
       ]
     },
@@ -2050,7 +3916,9 @@
     {
       "id": "stripe",
       "name": "Stripe",
-      "authFieldNames": ["stripeSecretKey"],
+      "authFieldNames": [
+        "stripeSecretKey"
+      ],
       "fields": [
         {
           "name": "stripeSecretKey",
@@ -2066,10 +3934,20 @@
           "kind": "action",
           "name": "Create Customer",
           "fields": [
-            { "name": "email", "type": "string", "optional": true },
-            { "name": "name", "type": "string", "optional": true }
+            {
+              "name": "email",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.create-payment-intent",
@@ -2077,11 +3955,25 @@
           "kind": "action",
           "name": "Create Payment Intent",
           "fields": [
-            { "name": "amount", "type": "integer", "optional": false },
-            { "name": "currency", "type": "string", "optional": false },
-            { "name": "customerId", "type": "string", "optional": true }
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": false
+            },
+            {
+              "name": "currency",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "customerId",
+              "type": "string",
+              "optional": true
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.get-customer",
@@ -2089,9 +3981,15 @@
           "kind": "action",
           "name": "Get Customer",
           "fields": [
-            { "name": "customerId", "type": "string", "optional": false }
+            {
+              "name": "customerId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.get-payment-intent",
@@ -2099,9 +3997,15 @@
           "kind": "action",
           "name": "Get Payment Intent",
           "fields": [
-            { "name": "paymentIntentId", "type": "string", "optional": false }
+            {
+              "name": "paymentIntentId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.list-customers",
@@ -2109,9 +4013,17 @@
           "kind": "action",
           "name": "List Customers",
           "fields": [
-            { "name": "limit", "type": "integer", "optional": true, "default": 10, "min": 1 }
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.list-payment-intents",
@@ -2119,9 +4031,17 @@
           "kind": "action",
           "name": "List Payment Intents",
           "fields": [
-            { "name": "limit", "type": "integer", "optional": true, "default": 10, "min": 1 }
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.list-products",
@@ -2129,9 +4049,17 @@
           "kind": "action",
           "name": "List Products",
           "fields": [
-            { "name": "limit", "type": "integer", "optional": true, "default": 10, "min": 1 }
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.get-product",
@@ -2139,9 +4067,15 @@
           "kind": "action",
           "name": "Get Product",
           "fields": [
-            { "name": "productId", "type": "string", "optional": false }
+            {
+              "name": "productId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.create-product",
@@ -2149,9 +4083,15 @@
           "kind": "action",
           "name": "Create Product",
           "fields": [
-            { "name": "name", "type": "string", "optional": false }
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.update-product",
@@ -2159,10 +4099,20 @@
           "kind": "action",
           "name": "Update Product",
           "fields": [
-            { "name": "name", "type": "string", "optional": true },
-            { "name": "productId", "type": "string", "optional": false }
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "productId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.delete-product",
@@ -2170,9 +4120,15 @@
           "kind": "action",
           "name": "Delete Product",
           "fields": [
-            { "name": "productId", "type": "string", "optional": false }
+            {
+              "name": "productId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.search-products",
@@ -2180,9 +4136,15 @@
           "kind": "action",
           "name": "Search Products",
           "fields": [
-            { "name": "query", "type": "string", "optional": false }
+            {
+              "name": "query",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.list-prices",
@@ -2190,9 +4152,17 @@
           "kind": "action",
           "name": "List Prices",
           "fields": [
-            { "name": "limit", "type": "integer", "optional": true, "default": 10, "min": 1 }
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.get-price",
@@ -2200,9 +4170,15 @@
           "kind": "action",
           "name": "Get Price",
           "fields": [
-            { "name": "priceId", "type": "string", "optional": false }
+            {
+              "name": "priceId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.create-price",
@@ -2210,11 +4186,25 @@
           "kind": "action",
           "name": "Create Price",
           "fields": [
-            { "name": "currency", "type": "string", "optional": false },
-            { "name": "productId", "type": "string", "optional": false },
-            { "name": "unitAmount", "type": "integer", "optional": false }
+            {
+              "name": "currency",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "productId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "unitAmount",
+              "type": "integer",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.update-price",
@@ -2222,10 +4212,20 @@
           "kind": "action",
           "name": "Update Price",
           "fields": [
-            { "name": "nickname", "type": "string", "optional": true },
-            { "name": "priceId", "type": "string", "optional": false }
+            {
+              "name": "nickname",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "priceId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.search-prices",
@@ -2233,9 +4233,15 @@
           "kind": "action",
           "name": "Search Prices",
           "fields": [
-            { "name": "query", "type": "string", "optional": false }
+            {
+              "name": "query",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.list-subscriptions",
@@ -2243,9 +4249,17 @@
           "kind": "action",
           "name": "List Subscriptions",
           "fields": [
-            { "name": "limit", "type": "integer", "optional": true, "default": 10, "min": 1 }
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.get-subscription",
@@ -2253,9 +4267,15 @@
           "kind": "action",
           "name": "Get Subscription",
           "fields": [
-            { "name": "subscriptionId", "type": "string", "optional": false }
+            {
+              "name": "subscriptionId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.create-subscription",
@@ -2263,10 +4283,25 @@
           "kind": "action",
           "name": "Create Subscription",
           "fields": [
-            { "name": "customerId", "type": "string", "optional": false },
-            { "name": "items", "type": "array", "optional": false, "default": [{ "price": "price_sample" }] }
+            {
+              "name": "customerId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "items",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "price": "price_sample"
+                }
+              ]
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.update-subscription",
@@ -2274,10 +4309,26 @@
           "kind": "action",
           "name": "Update Subscription",
           "fields": [
-            { "name": "items", "type": "array", "optional": true, "default": [{ "id": "si_sample", "price": "price_sample" }] },
-            { "name": "subscriptionId", "type": "string", "optional": false }
+            {
+              "name": "items",
+              "type": "array",
+              "optional": true,
+              "default": [
+                {
+                  "id": "si_sample",
+                  "price": "price_sample"
+                }
+              ]
+            },
+            {
+              "name": "subscriptionId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.cancel-subscription",
@@ -2285,9 +4336,15 @@
           "kind": "action",
           "name": "Cancel Subscription",
           "fields": [
-            { "name": "subscriptionId", "type": "string", "optional": false }
+            {
+              "name": "subscriptionId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.resume-subscription",
@@ -2295,9 +4352,15 @@
           "kind": "action",
           "name": "Resume Subscription",
           "fields": [
-            { "name": "subscriptionId", "type": "string", "optional": false }
+            {
+              "name": "subscriptionId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.search-subscriptions",
@@ -2305,9 +4368,15 @@
           "kind": "action",
           "name": "Search Subscriptions",
           "fields": [
-            { "name": "query", "type": "string", "optional": false }
+            {
+              "name": "query",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.list-checkout-sessions",
@@ -2315,9 +4384,17 @@
           "kind": "action",
           "name": "List Checkout Sessions",
           "fields": [
-            { "name": "limit", "type": "integer", "optional": true, "default": 10, "min": 1 }
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.get-checkout-session",
@@ -2325,9 +4402,15 @@
           "kind": "action",
           "name": "Get Checkout Session",
           "fields": [
-            { "name": "sessionId", "type": "string", "optional": false }
+            {
+              "name": "sessionId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.create-checkout-session",
@@ -2335,11 +4418,33 @@
           "kind": "action",
           "name": "Create Checkout Session",
           "fields": [
-            { "name": "lineItems", "type": "array", "optional": true, "default": [{ "price": "price_sample", "quantity": 1 }] },
-            { "name": "mode", "type": "string", "optional": false, "default": "payment" },
-            { "name": "successUrl", "type": "string", "optional": false, "default": "https://example.invalid/success" }
+            {
+              "name": "lineItems",
+              "type": "array",
+              "optional": true,
+              "default": [
+                {
+                  "price": "price_sample",
+                  "quantity": 1
+                }
+              ]
+            },
+            {
+              "name": "mode",
+              "type": "string",
+              "optional": false,
+              "default": "payment"
+            },
+            {
+              "name": "successUrl",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/success"
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.expire-checkout-session",
@@ -2347,9 +4452,15 @@
           "kind": "action",
           "name": "Expire Checkout Session",
           "fields": [
-            { "name": "sessionId", "type": "string", "optional": false }
+            {
+              "name": "sessionId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.list-checkout-session-line-items",
@@ -2357,10 +4468,22 @@
           "kind": "action",
           "name": "List Checkout Session Line Items",
           "fields": [
-            { "name": "limit", "type": "integer", "optional": true, "default": 10, "min": 1 },
-            { "name": "sessionId", "type": "string", "optional": false }
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            },
+            {
+              "name": "sessionId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.list-refunds",
@@ -2368,9 +4491,17 @@
           "kind": "action",
           "name": "List Refunds",
           "fields": [
-            { "name": "limit", "type": "integer", "optional": true, "default": 10, "min": 1 }
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.get-refund",
@@ -2378,9 +4509,15 @@
           "kind": "action",
           "name": "Get Refund",
           "fields": [
-            { "name": "refundId", "type": "string", "optional": false }
+            {
+              "name": "refundId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.create-refund",
@@ -2388,10 +4525,20 @@
           "kind": "action",
           "name": "Create Refund",
           "fields": [
-            { "name": "amount", "type": "integer", "optional": true },
-            { "name": "paymentIntentId", "type": "string", "optional": false }
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true
+            },
+            {
+              "name": "paymentIntentId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.update-refund",
@@ -2399,10 +4546,23 @@
           "kind": "action",
           "name": "Update Refund",
           "fields": [
-            { "name": "metadata", "type": "object", "optional": true, "default": { "order_id": "sample" } },
-            { "name": "refundId", "type": "string", "optional": false }
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "refundId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.list-charges",
@@ -2410,9 +4570,17 @@
           "kind": "action",
           "name": "List Charges",
           "fields": [
-            { "name": "limit", "type": "integer", "optional": true, "default": 10, "min": 1 }
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.get-charge",
@@ -2420,9 +4588,15 @@
           "kind": "action",
           "name": "Get Charge",
           "fields": [
-            { "name": "chargeId", "type": "string", "optional": false }
+            {
+              "name": "chargeId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.action.capture-charge",
@@ -2430,10 +4604,20 @@
           "kind": "action",
           "name": "Capture Charge",
           "fields": [
-            { "name": "amount", "type": "integer", "optional": true },
-            { "name": "chargeId", "type": "string", "optional": false }
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true
+            },
+            {
+              "name": "chargeId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["stripeSecretKey"]
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         },
         {
           "id": "stripe.source.event",
@@ -2461,7 +4645,9 @@
     {
       "id": "notion",
       "name": "Notion",
-      "authFieldNames": ["notionToken"],
+      "authFieldNames": [
+        "notionToken"
+      ],
       "fields": [
         {
           "name": "notionToken",
@@ -2477,9 +4663,15 @@
           "kind": "action",
           "name": "Get Block",
           "fields": [
-            { "name": "blockId", "type": "string", "optional": false }
+            {
+              "name": "blockId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.list-block-children",
@@ -2487,10 +4679,22 @@
           "kind": "action",
           "name": "List Block Children",
           "fields": [
-            { "name": "blockId", "type": "string", "optional": false },
-            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 }
+            {
+              "name": "blockId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.append-block-children",
@@ -2498,10 +4702,29 @@
           "kind": "action",
           "name": "Append Block Children",
           "fields": [
-            { "name": "blockId", "type": "string", "optional": false },
-            { "name": "children", "type": "array", "optional": false, "default": [{ "object": "block", "type": "paragraph", "paragraph": { "rich_text": [] } }] }
+            {
+              "name": "blockId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "children",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "object": "block",
+                  "type": "paragraph",
+                  "paragraph": {
+                    "rich_text": []
+                  }
+                }
+              ]
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.update-block",
@@ -2509,11 +4732,35 @@
           "kind": "action",
           "name": "Update Block",
           "fields": [
-            { "name": "blockId", "type": "string", "optional": false },
-            { "name": "type", "type": "string", "optional": false, "default": "paragraph" },
-            { "name": "paragraph", "type": "object", "optional": false, "default": { "rich_text": [{ "text": { "content": "sample" } }] } }
+            {
+              "name": "blockId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false,
+              "default": "paragraph"
+            },
+            {
+              "name": "paragraph",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "rich_text": [
+                  {
+                    "text": {
+                      "content": "sample"
+                    }
+                  }
+                ]
+              }
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.delete-block",
@@ -2521,9 +4768,15 @@
           "kind": "action",
           "name": "Delete Block",
           "fields": [
-            { "name": "blockId", "type": "string", "optional": false }
+            {
+              "name": "blockId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.create-page",
@@ -2531,11 +4784,25 @@
           "kind": "action",
           "name": "Create Page",
           "fields": [
-            { "name": "markdown", "type": "string", "optional": true },
-            { "name": "parentPageId", "type": "string", "optional": false },
-            { "name": "title", "type": "string", "optional": false }
+            {
+              "name": "markdown",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "parentPageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.get-page",
@@ -2543,9 +4810,15 @@
           "kind": "action",
           "name": "Get Page",
           "fields": [
-            { "name": "pageId", "type": "string", "optional": false }
+            {
+              "name": "pageId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.get-page-property",
@@ -2553,10 +4826,20 @@
           "kind": "action",
           "name": "Get Page Property",
           "fields": [
-            { "name": "pageId", "type": "string", "optional": false },
-            { "name": "propertyId", "type": "string", "optional": false }
+            {
+              "name": "pageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "propertyId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.get-database",
@@ -2564,9 +4847,15 @@
           "kind": "action",
           "name": "Get Database",
           "fields": [
-            { "name": "databaseId", "type": "string", "optional": false }
+            {
+              "name": "databaseId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.create-database",
@@ -2574,11 +4863,30 @@
           "kind": "action",
           "name": "Create Database",
           "fields": [
-            { "name": "pageId", "type": "string", "optional": false },
-            { "name": "properties", "type": "object", "optional": false, "default": { "Name": { "title": {} } } },
-            { "name": "title", "type": "string", "optional": false }
+            {
+              "name": "pageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": {
+                  "title": {}
+                }
+              }
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.update-database",
@@ -2586,10 +4894,20 @@
           "kind": "action",
           "name": "Update Database",
           "fields": [
-            { "name": "databaseId", "type": "string", "optional": false },
-            { "name": "title", "type": "string", "optional": true }
+            {
+              "name": "databaseId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": true
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.get-data-source",
@@ -2597,9 +4915,15 @@
           "kind": "action",
           "name": "Get Data Source",
           "fields": [
-            { "name": "dataSourceId", "type": "string", "optional": false }
+            {
+              "name": "dataSourceId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.create-data-source",
@@ -2607,11 +4931,30 @@
           "kind": "action",
           "name": "Create Data Source",
           "fields": [
-            { "name": "databaseId", "type": "string", "optional": false },
-            { "name": "properties", "type": "object", "optional": false, "default": { "Name": { "title": {} } } },
-            { "name": "title", "type": "string", "optional": false }
+            {
+              "name": "databaseId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": {
+                  "title": {}
+                }
+              }
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.update-data-source",
@@ -2619,10 +4962,20 @@
           "kind": "action",
           "name": "Update Data Source",
           "fields": [
-            { "name": "dataSourceId", "type": "string", "optional": false },
-            { "name": "title", "type": "string", "optional": true }
+            {
+              "name": "dataSourceId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": true
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.query-data-source",
@@ -2630,10 +4983,22 @@
           "kind": "action",
           "name": "Query Data Source",
           "fields": [
-            { "name": "dataSourceId", "type": "string", "optional": false },
-            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 }
+            {
+              "name": "dataSourceId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.list-data-source-templates",
@@ -2641,10 +5006,22 @@
           "kind": "action",
           "name": "List Data Source Templates",
           "fields": [
-            { "name": "dataSourceId", "type": "string", "optional": false },
-            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 }
+            {
+              "name": "dataSourceId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.search",
@@ -2652,10 +5029,22 @@
           "kind": "action",
           "name": "Search",
           "fields": [
-            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 },
-            { "name": "query", "type": "string", "optional": true }
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            },
+            {
+              "name": "query",
+              "type": "string",
+              "optional": true
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.get-comment",
@@ -2663,9 +5052,15 @@
           "kind": "action",
           "name": "Get Comment",
           "fields": [
-            { "name": "commentId", "type": "string", "optional": false }
+            {
+              "name": "commentId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.list-comments",
@@ -2673,10 +5068,22 @@
           "kind": "action",
           "name": "List Comments",
           "fields": [
-            { "name": "blockId", "type": "string", "optional": false },
-            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 }
+            {
+              "name": "blockId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.create-comment",
@@ -2684,10 +5091,20 @@
           "kind": "action",
           "name": "Create Comment",
           "fields": [
-            { "name": "pageId", "type": "string", "optional": false },
-            { "name": "text", "type": "string", "optional": false }
+            {
+              "name": "pageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.update-comment",
@@ -2695,10 +5112,20 @@
           "kind": "action",
           "name": "Update Comment",
           "fields": [
-            { "name": "commentId", "type": "string", "optional": false },
-            { "name": "text", "type": "string", "optional": false }
+            {
+              "name": "commentId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.delete-comment",
@@ -2706,9 +5133,15 @@
           "kind": "action",
           "name": "Delete Comment",
           "fields": [
-            { "name": "commentId", "type": "string", "optional": false }
+            {
+              "name": "commentId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.list-users",
@@ -2716,9 +5149,17 @@
           "kind": "action",
           "name": "List Users",
           "fields": [
-            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 }
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.get-user",
@@ -2726,9 +5167,15 @@
           "kind": "action",
           "name": "Get User",
           "fields": [
-            { "name": "userId", "type": "string", "optional": false }
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.get-self",
@@ -2736,7 +5183,9 @@
           "kind": "action",
           "name": "Get Self",
           "fields": [],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.list-views",
@@ -2744,10 +5193,22 @@
           "kind": "action",
           "name": "List Views",
           "fields": [
-            { "name": "databaseId", "type": "string", "optional": false },
-            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 }
+            {
+              "name": "databaseId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.get-view",
@@ -2755,9 +5216,15 @@
           "kind": "action",
           "name": "Get View",
           "fields": [
-            { "name": "viewId", "type": "string", "optional": false }
+            {
+              "name": "viewId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.create-view",
@@ -2765,12 +5232,31 @@
           "kind": "action",
           "name": "Create View",
           "fields": [
-            { "name": "databaseId", "type": "string", "optional": false },
-            { "name": "dataSourceId", "type": "string", "optional": false },
-            { "name": "name", "type": "string", "optional": false },
-            { "name": "type", "type": "string", "optional": false, "default": "table" }
+            {
+              "name": "databaseId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "dataSourceId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false,
+              "default": "table"
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.update-view",
@@ -2778,10 +5264,20 @@
           "kind": "action",
           "name": "Update View",
           "fields": [
-            { "name": "name", "type": "string", "optional": true },
-            { "name": "viewId", "type": "string", "optional": false }
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "viewId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.delete-view",
@@ -2789,9 +5285,15 @@
           "kind": "action",
           "name": "Delete View",
           "fields": [
-            { "name": "viewId", "type": "string", "optional": false }
+            {
+              "name": "viewId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.create-view-query",
@@ -2799,10 +5301,22 @@
           "kind": "action",
           "name": "Create View Query",
           "fields": [
-            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 },
-            { "name": "viewId", "type": "string", "optional": false }
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            },
+            {
+              "name": "viewId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.get-view-query-results",
@@ -2810,11 +5324,27 @@
           "kind": "action",
           "name": "Get View Query Results",
           "fields": [
-            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 },
-            { "name": "queryId", "type": "string", "optional": false },
-            { "name": "viewId", "type": "string", "optional": false }
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            },
+            {
+              "name": "queryId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "viewId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.delete-view-query",
@@ -2822,10 +5352,20 @@
           "kind": "action",
           "name": "Delete View Query",
           "fields": [
-            { "name": "queryId", "type": "string", "optional": false },
-            { "name": "viewId", "type": "string", "optional": false }
+            {
+              "name": "queryId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "viewId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.create-file-upload",
@@ -2833,11 +5373,27 @@
           "kind": "action",
           "name": "Create File Upload",
           "fields": [
-            { "name": "contentType", "type": "string", "optional": true, "default": "text/plain" },
-            { "name": "filename", "type": "string", "optional": true },
-            { "name": "mode", "type": "string", "optional": true, "default": "single_part" }
+            {
+              "name": "contentType",
+              "type": "string",
+              "optional": true,
+              "default": "text/plain"
+            },
+            {
+              "name": "filename",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "mode",
+              "type": "string",
+              "optional": true,
+              "default": "single_part"
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.send-file-upload",
@@ -2845,11 +5401,27 @@
           "kind": "action",
           "name": "Send File Upload",
           "fields": [
-            { "name": "file", "type": "string", "optional": false },
-            { "name": "fileUploadId", "type": "string", "optional": false },
-            { "name": "partNumber", "type": "integer", "optional": true, "default": 1, "min": 1 }
+            {
+              "name": "file",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "fileUploadId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "partNumber",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.complete-file-upload",
@@ -2857,9 +5429,15 @@
           "kind": "action",
           "name": "Complete File Upload",
           "fields": [
-            { "name": "fileUploadId", "type": "string", "optional": false }
+            {
+              "name": "fileUploadId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.get-file-upload",
@@ -2867,9 +5445,15 @@
           "kind": "action",
           "name": "Get File Upload",
           "fields": [
-            { "name": "fileUploadId", "type": "string", "optional": false }
+            {
+              "name": "fileUploadId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.list-file-uploads",
@@ -2877,9 +5461,17 @@
           "kind": "action",
           "name": "List File Uploads",
           "fields": [
-            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 }
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.list-custom-emojis",
@@ -2887,9 +5479,17 @@
           "kind": "action",
           "name": "List Custom Emojis",
           "fields": [
-            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 }
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.action.update-page",
@@ -2897,11 +5497,25 @@
           "kind": "action",
           "name": "Update Page",
           "fields": [
-            { "name": "archived", "type": "boolean", "optional": true },
-            { "name": "pageId", "type": "string", "optional": false },
-            { "name": "title", "type": "string", "optional": true }
+            {
+              "name": "archived",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "pageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": true
+            }
           ],
-          "authFieldNames": ["notionToken"]
+          "authFieldNames": [
+            "notionToken"
+          ]
         },
         {
           "id": "notion.source.page-event",
@@ -4125,7 +6739,9 @@
     {
       "id": "telegram_bot_api",
       "name": "Telegram Bot",
-      "authFieldNames": ["telegramBotApi"],
+      "authFieldNames": [
+        "telegramBotApi"
+      ],
       "fields": [
         {
           "name": "telegramBotApi",
@@ -4142,10 +6758,20 @@
           "kind": "action",
           "name": "Send Text Message",
           "fields": [
-            { "name": "chatId", "type": "string", "optional": false },
-            { "name": "text", "type": "string", "optional": false }
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["telegramBotApi"],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
           "runtime": {
             "hasRun": true,
             "hasHooks": false,
@@ -4161,14 +6787,27 @@
           "kind": "source",
           "name": "New Bot Command Received",
           "fields": [
-            { "name": "commands", "type": "string", "optional": true },
-            { "name": "timer", "type": "$.interface.timer", "optional": false, "managed": true }
+            {
+              "name": "commands",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "timer",
+              "type": "$.interface.timer",
+              "optional": false,
+              "managed": true
+            }
           ],
-          "authFieldNames": ["telegramBotApi"],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
           "runtime": {
             "hasRun": false,
             "hasHooks": true,
-            "hookNames": ["deploy"],
+            "hookNames": [
+              "deploy"
+            ],
             "hasAdditionalProps": false,
             "hasMethods": false,
             "methodNames": [],
@@ -4186,7 +6825,9 @@
     {
       "id": "whatsapp",
       "name": "WhatsApp",
-      "authFieldNames": ["whatsAppAccessToken"],
+      "authFieldNames": [
+        "whatsAppAccessToken"
+      ],
       "fields": [
         {
           "name": "whatsAppAccessToken",
@@ -4202,12 +6843,30 @@
           "kind": "action",
           "name": "Send Message",
           "fields": [
-            { "name": "phoneNumberId", "type": "string", "optional": false },
-            { "name": "quotedMessageId", "type": "string", "optional": true },
-            { "name": "text", "type": "string", "optional": false },
-            { "name": "to", "type": "string", "optional": false }
+            {
+              "name": "phoneNumberId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "quotedMessageId",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "to",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["whatsAppAccessToken"]
+          "authFieldNames": [
+            "whatsAppAccessToken"
+          ]
         },
         {
           "id": "whatsapp.action.verify-phone-number",
@@ -4215,9 +6874,15 @@
           "kind": "action",
           "name": "Verify Phone Number",
           "fields": [
-            { "name": "phoneNumberId", "type": "string", "optional": false }
+            {
+              "name": "phoneNumberId",
+              "type": "string",
+              "optional": false
+            }
           ],
-          "authFieldNames": ["whatsAppAccessToken"]
+          "authFieldNames": [
+            "whatsAppAccessToken"
+          ]
         },
         {
           "id": "whatsapp.source.message-status",
