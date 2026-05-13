@@ -87,6 +87,10 @@ const DISCORD_ACTIONS = [
   action("get-lobby", "Get Lobby", [LOBBY_FIELD]),
   action("modify-lobby", "Modify Lobby", [LOBBY_FIELD, field("metadata", "object", true, { default: { topic: "sample" } }), field("members", "array", true, { default: [{ id: "sample" }] }), field("idleTimeoutSeconds", "integer", true, { default: 5, min: 5, max: 604800 })]),
   action("delete-lobby", "Delete Lobby", [LOBBY_FIELD]),
+  action("add-lobby-member", "Add Lobby Member", [LOBBY_FIELD, USER_FIELD, field("metadata", "object", true, { default: { role: "sample" } }), field("flags", "integer", true, { default: 1 })]),
+  action("bulk-update-lobby-members", "Bulk Update Lobby Members", [LOBBY_FIELD, field("members", "array", false, { default: [{ id: "sample", metadata: { role: "sample" }, flags: 1, remove_member: false }] })]),
+  action("remove-lobby-member", "Remove Lobby Member", [LOBBY_FIELD, USER_FIELD]),
+  action("leave-lobby", "Leave Lobby", [LOBBY_FIELD]),
   action("get-channel", "Get Channel", [CHANNEL_FIELD]),
   action("update-channel", "Update Channel", [CHANNEL_FIELD, field("name", "string", true, { default: "sample" })]),
   action("set-voice-channel-status", "Set Voice Channel Status", [CHANNEL_FIELD, field("status", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
@@ -447,6 +451,68 @@ describe("discord operation runtime", () => {
     }), {
       method: "DELETE",
       endpoint: "lobbies/lobby-123",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.add-lobby-member"), {
+      lobbyId: "lobby-123",
+      userId: "user-123",
+      metadata: { role: "captain" },
+      flags: 1,
+    }), {
+      method: "PUT",
+      endpoint: "lobbies/lobby-123/members/user-123",
+      auth,
+      headers,
+      body: {
+        metadata: { role: "captain" },
+        flags: 1,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.bulk-update-lobby-members"), {
+      lobbyId: "lobby-123",
+      members: [{ id: "user-123", metadata: { role: "captain" }, flags: 1, remove_member: false }],
+    }), {
+      method: "PUT",
+      endpoint: "lobbies/lobby-123/members",
+      auth,
+      headers,
+      body: {},
+      bodyValue: [{ id: "user-123", metadata: { role: "captain" }, flags: 1, remove_member: false }],
+      responseSchema: {
+        type: "array",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.remove-lobby-member"), {
+      lobbyId: "lobby-123",
+      userId: "user-123",
+    }), {
+      method: "DELETE",
+      endpoint: "lobbies/lobby-123/members/user-123",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.leave-lobby"), {
+      lobbyId: "lobby-123",
+    }), {
+      method: "DELETE",
+      endpoint: "lobbies/lobby-123/members/@me",
       auth,
       headers,
       body: {},
