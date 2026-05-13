@@ -1,7 +1,7 @@
 {
   "name": "@clawjs/agents",
   "version": "0.1.2",
-  "description": "Agent identity, composition, and lifecycle for ClawJS. Reads/writes ~/.clawjs/agents/<id>/ as the source of truth and resolves the runtime system prompt by composing personalities + free-text instructions.",
+  "description": "Agent identity, composition, and lifecycle for ClawJS. Reads/writes ~/.claw/agents/<id>/ as the source of truth and resolves the runtime system prompt by composing personalities + free-text instructions.",
   "type": "module",
   "license": "MIT",
   "author": {

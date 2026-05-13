@@ -16,7 +16,7 @@ const manager = new IntegrationManager({
 await manager.startAll();
 ```
 
-Auth tokens never leave `~/.clawjs/connections/<id>/auth.encrypted`; the manager reads them through `AgentStoreFS.readConnectionAuth` so they stay encapsulated in one place.
+Auth tokens never leave `~/.claw/connections/<id>/auth.encrypted`; the manager reads them through `AgentStoreFS.readConnectionAuth` so they stay encapsulated in one place.
 
 ## Connector catalogs
 

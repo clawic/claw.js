@@ -121,7 +121,7 @@ export interface SkillClawjsMetadata {
   lastUsedAt?: string;
 }
 
-/** Active skill assignment per scope, persisted in ~/.clawjs/state.json. */
+/** Active skill assignment per scope, persisted in ~/.claw/state.json. */
 export interface SkillAssignment {
   slug: string;
   scope: SkillScope;
@@ -219,7 +219,7 @@ export interface SkillResolveContext {
   tags?: string[];
 }
 
-/** Top-level Clawjs config persisted in ~/.clawjs/config.yaml. */
+/** Top-level Clawjs config persisted in ~/.claw/config.yaml. */
 export interface ClawjsSkillsConfig {
   external_dirs?: string[];
   sync_targets?: SkillSyncTarget[];

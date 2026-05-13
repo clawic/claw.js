@@ -615,7 +615,7 @@ function builtInCollections(): Array<{
         // company_agents rows keep working — they describe an agent's
         // composition (personalities, skill subscriptions, secret tags,
         // integrations, delegation policy) the way the macOS UI now
-        // models it under `~/.clawjs/agents/<id>/`. The filesystem
+        // models it under `~/.claw/agents/<id>/`. The filesystem
         // version is the source of truth; this table is a cache for
         // SQL joins (e.g. issue.assigneeAgentId → agent.name).
         { name: "runtime", type: "select", options: ["codex", "openclaude", "hermes", "claw", "demo"] },
@@ -643,7 +643,7 @@ function builtInCollections(): Array<{
       // Reusable personality fragments. Each row is a markdown prompt
       // snippet plugged into one or more agents via
       // `company_agents.personalityIds`. The macOS app mirrors these
-      // on the filesystem under `~/.clawjs/personalities/<id>/`;
+      // on the filesystem under `~/.claw/personalities/<id>/`;
       // ClawJS uses this collection as the SQL index so listings and
       // joins don't have to fan out over the filesystem.
       name: "personalities",
@@ -660,7 +660,7 @@ function builtInCollections(): Array<{
     {
       // Tag-based bundles of skills an agent can subscribe to.
       // Members are resolved at runtime by matching `includedTags`
-      // against the frontmatter of `~/.clawjs/skills/<id>/SKILL.md`.
+      // against the frontmatter of `~/.claw/skills/<id>/SKILL.md`.
       name: "skill_collections",
       displayName: "Skill Collections",
       coreFieldNames: ["id", "name"],
@@ -674,7 +674,7 @@ function builtInCollections(): Array<{
     {
       // Auth handles for third-party services (Telegram bots, Slack
       // workspaces, etc.). Bot tokens / OAuth refresh tokens are
-      // stored encrypted at `~/.clawjs/connections/<id>/auth.encrypted`,
+      // stored encrypted at `~/.claw/connections/<id>/auth.encrypted`,
       // never in this table.
       name: "connections",
       displayName: "Connections",
@@ -714,7 +714,7 @@ function builtInCollections(): Array<{
       // Append-only audit trail. One row per delegated invocation,
       // approval prompt, or denied action. The macOS app surfaces
       // this on the agent detail surface ("Audit log" section). The
-      // filesystem mirror is `~/.clawjs/agents/<id>/audit.log`
+      // filesystem mirror is `~/.claw/agents/<id>/audit.log`
       // (JSONL); this table is the SQL index.
       name: "agent_audit_log",
       displayName: "Agent Audit Log",

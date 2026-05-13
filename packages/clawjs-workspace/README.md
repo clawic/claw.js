@@ -35,7 +35,7 @@ It extends a Claw instance with:
 - `context`
 - `ui`
 
-It stores data in the local workspace under `.clawjs/data` and can add hybrid search with optional semantic embeddings.
+It stores data in the local workspace under `.claw/data` and can add hybrid search with optional semantic embeddings.
 
-See the root docs workspace guide for the stable `.clawjs/` layout and
+See the root docs workspace guide for the stable `.claw/` layout and
 the CLI productivity commands.
