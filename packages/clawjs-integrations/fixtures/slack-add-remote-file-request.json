@@ -1,0 +1,16 @@
+{
+  "method": "POST",
+  "url": "https://slack.com/api/files.remote.add",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "external_id": "external-123",
+    "external_url": "https://example.invalid/file",
+    "title": "Sample file",
+    "filetype": "text",
+    "indexable_file_contents": "sample"
+  }
+}

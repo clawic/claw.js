@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "files": [
+    {
+      "id": "files_sample"
+    }
+  ],
+  "response_metadata": {
+    "next_cursor": ""
+  }
+}

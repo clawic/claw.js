@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://slack.com/api/files.remote.list?channel=C123&limit=100&cursor=cursor_sample&ts_from=1710000000.000000&ts_to=1710003600.000000",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret"
+  }
+}
