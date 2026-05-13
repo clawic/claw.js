@@ -605,7 +605,7 @@
               "name": "description",
               "type": "string",
               "optional": true,
-              "default": "sample"
+              "default": null
             }
           ],
           "authFieldNames": [
@@ -659,7 +659,7 @@
               "name": "description",
               "type": "string",
               "optional": true,
-              "default": "sample"
+              "default": null
             }
           ],
           "authFieldNames": [

@@ -48,7 +48,7 @@ ClawJS gives you one place to solve the hard parts that show up across runtimes:
 | `@clawjs/runtime` | Shared runtime loops for distillation, nudges, and profile refresh. |
 | `@clawjs/node` | Compatibility wrapper that reexports the primary SDK surface for existing integrations that still import `@clawjs/node`. |
 | `@clawjs/ssh-client` | Audited SSH client for mesh hosts with TOFU known-host handling, exec, SFTP, and bridge installation helpers. |
-| `@clawjs/cli` | Official CLI with `claw` and `clawjs` binaries for scaffolding, runtime management, workspace ops, productivity commands, sessions, media, and package-aware project generation. |
+| `@clawjs/cli` | Official CLI with `claw` as the public binary and `clawjs` as a deprecated compatibility alias for scaffolding, runtime management, workspace ops, productivity commands, sessions, media, and package-aware project generation. |
 | `@clawjs/openclaw-plugin` | OpenClaw bridge plugin for gateway RPC methods, observability hooks, and managed tooling. |
 | `@clawjs/openclaw-context-engine` | Experimental OpenClaw context engine package for runtime-side context selection. |
 | `create-claw-*` packages | Compatibility wrappers around the same scaffolding engine used by `claw new`. |
@@ -70,9 +70,9 @@ A workspace is the isolated operational context. An agent is the identity operat
 
 Every runtime status includes a typed `capabilityMap`. Capabilities are not implicit. They are marked as supported, degraded, or unsupported with a concrete strategy such as `cli`, `gateway`, `config`, `native`, or `bridge`.
 
-### Stable `.clawjs/` layer
+### Stable `.claw/` layer
 
-ClawJS keeps a stable internal layer under `.clawjs/` even when runtimes disagree on file names or directory structure. Adapter-specific files are managed alongside that stable layer, not mixed into it.
+ClawJS writes new canonical workspace state under `.claw/` even when runtimes disagree on file names or directory structure. Legacy `.clawjs/` paths are compatibility-only until they are removed.
 
 ## Start Here
 
@@ -114,4 +114,5 @@ ClawJS keeps a stable internal layer under `.clawjs/` even when runtimes disagre
 - [CLI](/cli) for the command surface.
 - [API Reference](/api) for the instance namespaces and runtime-facing methods.
 - [Public Surface](/surface) for the package export inventory.
+- [Host Ownership](/host-ownership) for the ClawJS, `Claw.app`, and Clawix architecture boundary.
 - [Terminology](/terminology) for canonical product vocabulary.
