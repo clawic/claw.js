@@ -14,6 +14,12 @@ export type DiscordRuntimeOperation =
   | "get-guild-preview"
   | "list-guild-channels"
   | "create-guild-channel"
+  | "get-guild-template"
+  | "list-guild-templates"
+  | "create-guild-template"
+  | "sync-guild-template"
+  | "update-guild-template"
+  | "delete-guild-template"
   | "list-guild-emojis"
   | "get-guild-emoji"
   | "create-guild-emoji"
@@ -151,6 +157,18 @@ export function buildDiscordOperationRequest(
       return getPlan(`guilds/${guildId(values)}/channels`, auth, headers, { type: "array" });
     case "create-guild-channel":
       return bodyPlan("POST", `guilds/${guildId(values)}/channels`, auth, headers, channelBody(values), { type: "object", requiredPaths: ["id", "type", "name"] });
+    case "get-guild-template":
+      return getPlan(`guilds/templates/${templateCode(values)}`, auth, headers, { type: "object", requiredPaths: ["code", "name", "source_guild_id"] });
+    case "list-guild-templates":
+      return getPlan(`guilds/${guildId(values)}/templates`, auth, headers, { type: "array" });
+    case "create-guild-template":
+      return bodyPlan("POST", `guilds/${guildId(values)}/templates`, auth, headers, guildTemplateBody(values, true), { type: "object", requiredPaths: ["code", "name", "source_guild_id"] });
+    case "sync-guild-template":
+      return putPlan(`guilds/${guildId(values)}/templates/${templateCode(values)}`, auth, headers, { type: "object", requiredPaths: ["code", "name", "source_guild_id"] });
+    case "update-guild-template":
+      return bodyPlan("PATCH", `guilds/${guildId(values)}/templates/${templateCode(values)}`, auth, headers, guildTemplateBody(values, false), { type: "object", requiredPaths: ["code", "name", "source_guild_id"] });
+    case "delete-guild-template":
+      return deletePlan(`guilds/${guildId(values)}/templates/${templateCode(values)}`, auth, headers, { type: "object", requiredPaths: ["code", "name", "source_guild_id"] });
     case "list-guild-emojis":
       return getPlan(`guilds/${guildId(values)}/emojis`, auth, headers, { type: "array" });
     case "get-guild-emoji":
@@ -411,6 +429,12 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "get-guild-preview",
   "list-guild-channels",
   "create-guild-channel",
+  "get-guild-template",
+  "list-guild-templates",
+  "create-guild-template",
+  "sync-guild-template",
+  "update-guild-template",
+  "delete-guild-template",
   "list-guild-emojis",
   "get-guild-emoji",
   "create-guild-emoji",
@@ -611,6 +635,13 @@ function channelBody(values: Record<string, IntegrationJson>): Record<string, In
   });
 }
 
+function guildTemplateBody(values: Record<string, IntegrationJson>, requireCreateFields: boolean): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    name: requireCreateFields ? requiredString(values.name, "name") : optionalString(values.name),
+    description: optionalString(values.description),
+  });
+}
+
 function emojiBody(
   values: Record<string, IntegrationJson>,
   requireCreateFields: boolean,
@@ -795,6 +826,10 @@ function stickerId(values: Record<string, IntegrationJson>): string {
 
 function stickerPackId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.stickerPackId, values.stickerPack), "stickerPackId"));
+}
+
+function templateCode(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.templateCode, values.template), "templateCode"));
 }
 
 function guildScheduledEventId(values: Record<string, IntegrationJson>): string {
