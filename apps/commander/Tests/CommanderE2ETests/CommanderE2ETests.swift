@@ -173,9 +173,9 @@ final class CommanderE2ETests: XCTestCase {
 
         let installed = try context.runCLI(["system", "install", "cli", "--json"])
         XCTAssertTrue(installed.ok)
-        XCTAssertTrue(FileManager.default.fileExists(atPath: context.binDir.appendingPathComponent("commander").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: context.binDir.appendingPathComponent("claw-host").path))
 
-        let daemonBinary = context.binary(named: "commanderd")
+        let daemonBinary = context.binary(named: "claw-hostd")
         _ = try RuntimeInstaller.installLaunchAgent(daemonBinaryPath: daemonBinary, environment: context.environment)
 
         let statusAfter = try context.runCLI(["system", "install", "status", "--json"])
@@ -194,7 +194,7 @@ final class CommanderE2ETests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let absoluteBinary = context.binary(named: "commander")
+        let absoluteBinary = context.binary(named: "claw-host")
         let relativeBinary = absoluteBinary.replacingOccurrences(of: packageRoot.path + "/", with: "")
 
         let process = Process()
@@ -213,7 +213,7 @@ final class CommanderE2ETests: XCTestCase {
         let response = try CLIJSON.decodeResponse(stdout.fileHandleForReading.readDataToEndOfFile())
         XCTAssertTrue(response.ok)
 
-        let installedPath = context.binDir.appendingPathComponent("commander").path
+        let installedPath = context.binDir.appendingPathComponent("claw-host").path
         let installedTarget = try FileManager.default.destinationOfSymbolicLink(atPath: installedPath)
         XCTAssertEqual(URL(fileURLWithPath: installedTarget).standardizedFileURL.path, absoluteBinary)
     }
@@ -384,9 +384,9 @@ final class CommanderE2ETests: XCTestCase {
         packageProcess.waitUntilExit()
         XCTAssertEqual(packageProcess.terminationStatus, 0)
 
-        let installedCLI = context.binDir.appendingPathComponent("commander")
+        let installedCLI = context.binDir.appendingPathComponent("claw-host")
         try FileManager.default.createDirectory(at: context.binDir, withIntermediateDirectories: true)
-        try FileManager.default.createSymbolicLink(at: installedCLI, withDestinationURL: URL(fileURLWithPath: context.binary(named: "commander")))
+        try FileManager.default.createSymbolicLink(at: installedCLI, withDestinationURL: URL(fileURLWithPath: context.binary(named: "claw-host")))
 
         let process = Process()
         process.currentDirectoryURL = packageRoot
@@ -992,7 +992,7 @@ final class CommanderE2ETests: XCTestCase {
         try context.grant("contacts.read")
         try context.grant("contacts.write")
 
-        let marker = "commander-host-\(UUID().uuidString.prefix(8))"
+        let marker = "claw-host-\(UUID().uuidString.prefix(8))"
         var createdID: String?
         defer {
             if let createdID {
@@ -1127,7 +1127,7 @@ final class CommanderE2ETests: XCTestCase {
         try context.grant("safari.read")
         try context.grant("safari.write")
 
-        let url = "https://example.com/commander-host-\(UUID().uuidString.prefix(8))"
+        let url = "https://example.com/claw-host-\(UUID().uuidString.prefix(8))"
         let opened = try context.runCLI([
             "safari", "tabs", "open",
             "--url", url,
@@ -1348,7 +1348,7 @@ private struct TestContext {
     let environment: [String: String]
 
     init(testMode: Bool = true, hostSafe: Bool = false) throws {
-        tmp = URL(fileURLWithPath: "/tmp/commander-tests-\(UUID().uuidString.prefix(8))", isDirectory: true)
+        tmp = URL(fileURLWithPath: "/tmp/claw-host-tests-\(UUID().uuidString.prefix(8))", isDirectory: true)
         try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
         binDir = tmp.appendingPathComponent("bin", isDirectory: true)
         launchAgentsDir = tmp.appendingPathComponent("LaunchAgents", isDirectory: true)
@@ -1383,7 +1383,7 @@ private struct TestContext {
 
     func runCLI(_ arguments: [String], expectSuccess: Bool = true, environmentOverride: [String: String] = [:]) throws -> CommandResponse {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: binary(named: "commander"))
+        process.executableURL = URL(fileURLWithPath: binary(named: "claw-host"))
         process.arguments = arguments
         process.environment = environment.merging(environmentOverride) { _, new in new }
 
@@ -1408,7 +1408,7 @@ private struct TestContext {
 
     func runCLIUnchecked(_ arguments: [String], environmentOverride: [String: String] = [:]) throws -> CommandResponse {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: binary(named: "commander"))
+        process.executableURL = URL(fileURLWithPath: binary(named: "claw-host"))
         process.arguments = arguments
         process.environment = environment.merging(environmentOverride) { _, new in new }
         let stdout = Pipe()

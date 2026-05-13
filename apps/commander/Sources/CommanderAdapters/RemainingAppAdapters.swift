@@ -1150,7 +1150,7 @@ public struct SafariAdapter: CommanderAdapter {
         let existing = try store.list(collection: collection)
         if !existing.isEmpty { return existing }
         let seeded: [[String: JSONValue]] = [
-            ["id": .string("1:1"), "title": .string("Commander"), "url": .string("https://example.com/commander"), "window": .integer(1), "active": .bool(true), "source": .string("test_fixture")],
+            ["id": .string("1:1"), "title": .string("Commander"), "url": .string("https://example.com/claw-host"), "window": .integer(1), "active": .bool(true), "source": .string("test_fixture")],
             ["id": .string("1:2"), "title": .string("Docs"), "url": .string("https://example.com/docs"), "window": .integer(1), "active": .bool(false), "source": .string("test_fixture")],
         ]
         try store.replace(collection: collection, with: seeded)
@@ -1161,7 +1161,7 @@ public struct SafariAdapter: CommanderAdapter {
         let existing = try store.list(collection: collection)
         if !existing.isEmpty { return existing }
         let seeded: [[String: JSONValue]] = [
-            ["id": .string("favorites|Commander"), "title": .string("Commander"), "url": .string("https://example.com/commander"), "source": .string("test_fixture")],
+            ["id": .string("favorites|Commander"), "title": .string("Commander"), "url": .string("https://example.com/claw-host"), "source": .string("test_fixture")],
             ["id": .string("favorites|Docs"), "title": .string("Docs"), "url": .string("https://example.com/docs"), "source": .string("test_fixture")],
         ]
         try store.replace(collection: collection, with: seeded)
