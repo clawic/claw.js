@@ -691,13 +691,13 @@ export function buildDiscordOperationRequest(
         with_user_count: values.withUserCount,
       }));
     case "create-guild-scheduled-event":
-      return bodyPlan("POST", `guilds/${guildId(values)}/scheduled-events`, auth, headers, scheduledEventBody(values, true), { type: "object", requiredPaths: ["id", "guild_id", "name"] });
+      return bodyPlan("POST", `guilds/${guildId(values)}/scheduled-events`, auth, auditHeaders(headers, values), scheduledEventBody(values, true), { type: "object", requiredPaths: ["id", "guild_id", "name"] });
     case "get-guild-scheduled-event":
       return getPlan(`guilds/${guildId(values)}/scheduled-events/${guildScheduledEventId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "guild_id", "name"] }, removeEmptyValues({
         with_user_count: values.withUserCount,
       }));
     case "update-guild-scheduled-event":
-      return bodyPlan("PATCH", `guilds/${guildId(values)}/scheduled-events/${guildScheduledEventId(values)}`, auth, headers, scheduledEventBody(values, false), { type: "object", requiredPaths: ["id", "guild_id", "name"] });
+      return bodyPlan("PATCH", `guilds/${guildId(values)}/scheduled-events/${guildScheduledEventId(values)}`, auth, auditHeaders(headers, values), scheduledEventBody(values, false), { type: "object", requiredPaths: ["id", "guild_id", "name"] });
     case "delete-guild-scheduled-event":
       return deletePlan(`guilds/${guildId(values)}/scheduled-events/${guildScheduledEventId(values)}`, auth, headers, { type: "object" });
     case "list-guild-scheduled-event-users":
