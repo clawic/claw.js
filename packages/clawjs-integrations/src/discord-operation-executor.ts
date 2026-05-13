@@ -175,6 +175,14 @@ export type DiscordRuntimeOperation =
   | "get-webhook-message"
   | "edit-webhook-message"
   | "delete-webhook-message"
+  | "create-interaction-response"
+  | "get-original-interaction-response"
+  | "edit-original-interaction-response"
+  | "delete-original-interaction-response"
+  | "create-followup-message"
+  | "get-followup-message"
+  | "edit-followup-message"
+  | "delete-followup-message"
   | "list-global-application-commands"
   | "create-global-application-command"
   | "get-global-application-command"
@@ -658,6 +666,22 @@ export function buildDiscordOperationRequest(
       return bodyPlan("PATCH", `webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, messageBody(values, false), { type: "object", requiredPaths: ["id"] }, removeEmptyValues({ thread_id: optionalString(values.threadId) }));
     case "delete-webhook-message":
       return deletePlan(`webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, { type: "object" }, removeEmptyValues({ thread_id: optionalString(values.threadId) }));
+    case "create-interaction-response":
+      return bodyPlan("POST", `interactions/${interactionId(values)}/${interactionToken(values)}/callback`, [], headers, interactionResponseBody(values), { type: "object", requiredPaths: ["interaction"] }, removeEmptyValues({ with_response: values.withResponse }));
+    case "get-original-interaction-response":
+      return getPlan(`webhooks/${applicationId(values)}/${interactionToken(values)}/messages/@original`, [], headers, { type: "object", requiredPaths: ["id"] });
+    case "edit-original-interaction-response":
+      return bodyPlan("PATCH", `webhooks/${applicationId(values)}/${interactionToken(values)}/messages/@original`, [], headers, messageBody(values, false), { type: "object", requiredPaths: ["id"] });
+    case "delete-original-interaction-response":
+      return deletePlan(`webhooks/${applicationId(values)}/${interactionToken(values)}/messages/@original`, [], headers, { type: "object" });
+    case "create-followup-message":
+      return bodyPlan("POST", `webhooks/${applicationId(values)}/${interactionToken(values)}`, [], headers, messageBody(values, true), { type: "object", requiredPaths: ["id"] });
+    case "get-followup-message":
+      return getPlan(`webhooks/${applicationId(values)}/${interactionToken(values)}/messages/${messageId(values)}`, [], headers, { type: "object", requiredPaths: ["id"] });
+    case "edit-followup-message":
+      return bodyPlan("PATCH", `webhooks/${applicationId(values)}/${interactionToken(values)}/messages/${messageId(values)}`, [], headers, messageBody(values, false), { type: "object", requiredPaths: ["id"] });
+    case "delete-followup-message":
+      return deletePlan(`webhooks/${applicationId(values)}/${interactionToken(values)}/messages/${messageId(values)}`, [], headers, { type: "object" });
     case "list-global-application-commands":
       return getPlan(`applications/${applicationId(values)}/commands`, auth, headers, { type: "array" }, removeEmptyValues({ with_localizations: values.withLocalizations }));
     case "create-global-application-command":
@@ -869,6 +893,14 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "get-webhook-message",
   "edit-webhook-message",
   "delete-webhook-message",
+  "create-interaction-response",
+  "get-original-interaction-response",
+  "edit-original-interaction-response",
+  "delete-original-interaction-response",
+  "create-followup-message",
+  "get-followup-message",
+  "edit-followup-message",
+  "delete-followup-message",
   "list-global-application-commands",
   "create-global-application-command",
   "get-global-application-command",
@@ -1133,6 +1165,13 @@ function messageReference(values: Record<string, IntegrationJson>): IntegrationJ
     channel_id: optionalString(firstValue(values.referenceChannelId, values.channelId, values.channel)),
     guild_id: optionalString(firstValue(values.guildId, values.guild)),
     fail_if_not_exists: values.failIfNotExists,
+  });
+}
+
+function interactionResponseBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    type: requiredNumber(firstValue(values.responseType, values.type), "responseType"),
+    data: optionalJsonObject(firstValue(values.responseData, values.data)),
   });
 }
 
@@ -1407,6 +1446,14 @@ function webhookId(values: Record<string, IntegrationJson>): string {
 
 function applicationId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.applicationId, values.application), "applicationId"));
+}
+
+function interactionId(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.interactionId, values.interaction), "interactionId"));
+}
+
+function interactionToken(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.interactionToken, values.token), "interactionToken"));
 }
 
 function instanceId(values: Record<string, IntegrationJson>): string {
