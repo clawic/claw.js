@@ -3,11 +3,25 @@ import assert from "node:assert/strict";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import type { TestContext } from "node:test";
 
 import { createLocalStorageStore } from "./store.ts";
 
-test("local storage scopes objects by agent prefix and rejects unsafe keys", () => {
+function useIsolatedStorageDataDir(t: TestContext, workspaceDir: string): void {
+  const previous = process.env.CLAWJS_MAIN_DATA_DIR;
+  process.env.CLAWJS_MAIN_DATA_DIR = path.join(workspaceDir, ".data");
+  t.after(() => {
+    if (previous === undefined) {
+      delete process.env.CLAWJS_MAIN_DATA_DIR;
+    } else {
+      process.env.CLAWJS_MAIN_DATA_DIR = previous;
+    }
+  });
+}
+
+test("local storage scopes objects by agent prefix and rejects unsafe keys", (t) => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-storage-"));
+  useIsolatedStorageDataDir(t, workspaceDir);
   const storage = createLocalStorageStore({ workspaceDir, agentId: "agent-a" });
 
   const object = storage.writeText({ key: "notes/plan.txt", content: "ship storage" });
@@ -19,8 +33,9 @@ test("local storage scopes objects by agent prefix and rejects unsafe keys", () 
   assert.throws(() => storage.writeText({ key: "../escape.txt", content: "no" }), /Invalid storage key/);
 });
 
-test("local storage enforces grants between agents and supports tokens", () => {
+test("local storage enforces grants between agents and supports tokens", (t) => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-storage-grants-"));
+  useIsolatedStorageDataDir(t, workspaceDir);
   const agentA = createLocalStorageStore({ workspaceDir, agentId: "agent-a" });
   const agentB = createLocalStorageStore({ workspaceDir, agentId: "agent-b" });
 
@@ -42,8 +57,9 @@ test("local storage enforces grants between agents and supports tokens", () => {
   assert.equal(agentA.revokeToken(issued.record.id), true);
 });
 
-test("local storage shares through a configured adapter", async () => {
+test("local storage shares through a configured adapter", async (t) => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-storage-share-"));
+  useIsolatedStorageDataDir(t, workspaceDir);
   const storage = createLocalStorageStore({
     workspaceDir,
     agentId: "agent-a",
