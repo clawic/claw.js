@@ -1882,6 +1882,7 @@ describe("discord operation runtime", () => {
       unique: true,
       targetType: 2,
       targetApplicationId: "app-123",
+      targetUsersFile: "user_id\n123",
       roleIds: ["role-123"],
       auditLogReason: "temporary invite",
     }), {
@@ -1899,11 +1900,67 @@ describe("discord operation runtime", () => {
         unique: true,
         target_type: 2,
         target_application_id: "app-123",
+        target_users_file: "user_id\n123",
         role_ids: ["role-123"],
       },
+      bodyEncoding: "multipart",
       responseSchema: {
         type: "object",
         requiredPaths: ["code"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(action("get-invite-target-users", "Get Invite Target Users", [
+      field("inviteCode", "string"),
+    ]), {
+      inviteCode: "abc123",
+    }), {
+      method: "GET",
+      endpoint: "invites/abc123/target-users",
+      auth,
+      headers: { accept: "text/csv" },
+      query: {},
+      body: {},
+      responseBodyEncoding: "text",
+      responseSchema: {
+        type: "string",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(action("update-invite-target-users", "Update Invite Target Users", [
+      field("inviteCode", "string"),
+      field("targetUsersFile", "string"),
+    ]), {
+      inviteCode: "abc123",
+      targetUsersFile: "user_id\n123",
+    }), {
+      method: "PUT",
+      endpoint: "invites/abc123/target-users",
+      auth,
+      headers,
+      body: {
+        target_users_file: "user_id\n123",
+      },
+      bodyEncoding: "multipart",
+      responseSchema: {
+        type: "null",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(action("get-invite-target-users-job-status", "Get Invite Target Users Job Status", [
+      field("inviteCode", "string"),
+    ]), {
+      inviteCode: "abc123",
+    }), {
+      method: "GET",
+      endpoint: "invites/abc123/target-users/job-status",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["status", "total_users", "processed_users", "created_at"],
       },
     });
 
