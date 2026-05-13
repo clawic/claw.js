@@ -96,6 +96,7 @@ export type DiscordRuntimeOperation =
   | "group-dm-add-recipient"
   | "group-dm-remove-recipient"
   | "list-messages"
+  | "search-guild-messages"
   | "get-message"
   | "send-message"
   | "edit-message"
@@ -492,6 +493,8 @@ export function buildDiscordOperationRequest(
         after: optionalString(values.after),
         limit: optionalNumber(values.limit),
       }));
+    case "search-guild-messages":
+      return getPlan(`guilds/${guildId(values)}/messages/search`, auth, headers, { type: "object", requiredPaths: ["doing_deep_historical_index", "total_results", "messages"] }, searchGuildMessagesQuery(values));
     case "get-message":
       return getPlan(`channels/${channelId(values)}/messages/${messageId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "channel_id"] });
     case "send-message":
@@ -943,6 +946,7 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "group-dm-add-recipient",
   "group-dm-remove-recipient",
   "list-messages",
+  "search-guild-messages",
   "get-message",
   "send-message",
   "edit-message",
@@ -1331,6 +1335,35 @@ function messageReference(values: Record<string, IntegrationJson>): IntegrationJ
     channel_id: optionalString(firstValue(values.referenceChannelId, values.channelId, values.channel)),
     guild_id: optionalString(firstValue(values.guildId, values.guild)),
     fail_if_not_exists: values.failIfNotExists,
+  });
+}
+
+function searchGuildMessagesQuery(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    limit: optionalNumber(values.limit),
+    offset: optionalNumber(values.offset),
+    max_id: optionalString(firstValue(values.maxId, values.max_id)),
+    min_id: optionalString(firstValue(values.minId, values.min_id)),
+    slop: optionalNumber(values.slop),
+    content: optionalString(values.content),
+    channel_id: optionalArrayQuery(firstValue(values.channelIds, values.channel_id)),
+    author_type: optionalArrayQuery(firstValue(values.authorTypes, values.author_type)),
+    author_id: optionalArrayQuery(firstValue(values.authorIds, values.author_id)),
+    mentions: optionalArrayQuery(values.mentions),
+    mentions_role_id: optionalArrayQuery(firstValue(values.mentionRoleIds, values.mentions_role_id)),
+    mention_everyone: values.mentionEveryone,
+    replied_to_user_id: optionalArrayQuery(firstValue(values.repliedToUserIds, values.replied_to_user_id)),
+    replied_to_message_id: optionalArrayQuery(firstValue(values.repliedToMessageIds, values.replied_to_message_id)),
+    pinned: values.pinned,
+    has: optionalArrayQuery(values.has),
+    embed_type: optionalArrayQuery(firstValue(values.embedTypes, values.embed_type)),
+    embed_provider: optionalArrayQuery(firstValue(values.embedProviders, values.embed_provider)),
+    link_hostname: optionalArrayQuery(firstValue(values.linkHostnames, values.link_hostname)),
+    attachment_filename: optionalArrayQuery(firstValue(values.attachmentFilenames, values.attachment_filename)),
+    attachment_extension: optionalArrayQuery(firstValue(values.attachmentExtensions, values.attachment_extension)),
+    sort_by: optionalString(firstValue(values.sortBy, values.sort_by)),
+    sort_order: optionalString(firstValue(values.sortOrder, values.sort_order)),
+    include_nsfw: values.includeNsfw,
   });
 }
 
@@ -1775,6 +1808,10 @@ function optionalNumber(value: IntegrationJson): number | undefined {
 
 function optionalJsonArray(value: IntegrationJson): IntegrationJson[] | undefined {
   return Array.isArray(value) ? value : undefined;
+}
+
+function optionalArrayQuery(value: IntegrationJson): IntegrationJson | undefined {
+  return optionalJsonArray(value) ?? optionalString(value);
 }
 
 function optionalCommaDelimited(value: IntegrationJson): string | undefined {
