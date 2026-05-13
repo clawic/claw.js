@@ -2267,6 +2267,56 @@ describe("discord operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildDiscordOperationRequest(action("execute-slack-compatible-webhook", "Execute Slack-Compatible Webhook", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD], []), {
+      webhookId: "999",
+      webhookToken: "offline-token",
+      payload: {
+        text: "hello",
+      },
+      wait: true,
+      threadId: "thread-123",
+    }), {
+      method: "POST",
+      endpoint: "webhooks/999/offline-token/slack",
+      auth: [],
+      headers,
+      query: {
+        wait: true,
+        thread_id: "thread-123",
+      },
+      body: {
+        text: "hello",
+      },
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(action("execute-github-compatible-webhook", "Execute GitHub-Compatible Webhook", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD], []), {
+      webhookId: "999",
+      webhookToken: "offline-token",
+      payload: {
+        ref: "refs/heads/main",
+      },
+      wait: true,
+      threadId: "thread-123",
+    }), {
+      method: "POST",
+      endpoint: "webhooks/999/offline-token/github",
+      auth: [],
+      headers,
+      query: {
+        wait: true,
+        thread_id: "thread-123",
+      },
+      body: {
+        ref: "refs/heads/main",
+      },
+      responseSchema: {
+        type: "object",
+      },
+    });
+
     assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-interaction-response"), {
       interactionId: "interaction-123",
       interactionToken: "interaction-token",
