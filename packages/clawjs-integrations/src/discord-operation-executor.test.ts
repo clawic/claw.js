@@ -151,6 +151,9 @@ const DISCORD_ACTIONS = [
   action("get-guild-ban", "Get Guild Ban", [GUILD_FIELD, USER_FIELD]),
   action("create-guild-ban", "Create Guild Ban", [GUILD_FIELD, USER_FIELD, field("deleteMessageSeconds", "integer", true, { default: 0, min: 0 })]),
   action("remove-guild-ban", "Remove Guild Ban", [GUILD_FIELD, USER_FIELD]),
+  action("bulk-ban-guild-users", "Bulk Ban Guild Users", [GUILD_FIELD, field("userIds", "array", false, { default: ["sample"] }), field("deleteMessageSeconds", "integer", true, { default: 0, min: 0 }), field("auditLogReason", "string", true)]),
+  action("get-guild-prune-count", "Get Guild Prune Count", [GUILD_FIELD, field("days", "integer", true, { default: 7, min: 1 }), field("includeRoles", "array", true, { default: ["sample"] })]),
+  action("begin-guild-prune", "Begin Guild Prune", [GUILD_FIELD, field("days", "integer", true, { default: 7, min: 1 }), field("computePruneCount", "boolean", true, { default: true }), field("includeRoles", "array", true, { default: ["sample"] }), field("auditLogReason", "string", true)]),
   action("list-auto-moderation-rules", "List Auto Moderation Rules", [GUILD_FIELD]),
   action("get-auto-moderation-rule", "Get Auto Moderation Rule", [GUILD_FIELD, AUTO_MODERATION_RULE_FIELD]),
   action("create-auto-moderation-rule", "Create Auto Moderation Rule", [GUILD_FIELD, field("name", "string"), field("eventType", "integer", false, { default: 1 }), field("triggerType", "integer", false, { default: 1 }), AUTO_MODERATION_TRIGGER_METADATA_FIELD, AUTO_MODERATION_ACTIONS_FIELD, field("enabled", "boolean", true), field("exemptRoles", "array", true, { default: ["sample"] }), field("exemptChannels", "array", true, { default: ["sample"] }), field("auditLogReason", "string", true)]),
@@ -833,6 +836,74 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["nick"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.bulk-ban-guild-users"), {
+      guildId: "456",
+      userIds: ["123", "789"],
+      deleteMessageSeconds: 60,
+      auditLogReason: "raid cleanup",
+    }), {
+      method: "POST",
+      endpoint: "guilds/456/bulk-ban",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "raid cleanup",
+      },
+      body: {
+        user_ids: ["123", "789"],
+        delete_message_seconds: 60,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["banned_users", "failed_users"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-guild-prune-count"), {
+      guildId: "456",
+      days: 14,
+      includeRoles: ["123", "789"],
+    }), {
+      method: "GET",
+      endpoint: "guilds/456/prune",
+      auth,
+      headers,
+      query: {
+        days: 14,
+        include_roles: "123,789",
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["pruned"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.begin-guild-prune"), {
+      guildId: "456",
+      days: 14,
+      computePruneCount: false,
+      includeRoles: ["123"],
+      auditLogReason: "inactive cleanup",
+    }), {
+      method: "POST",
+      endpoint: "guilds/456/prune",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "inactive cleanup",
+      },
+      body: {
+        days: 14,
+        compute_prune_count: false,
+        include_roles: ["123"],
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["pruned"],
       },
     });
 
