@@ -398,6 +398,8 @@ const DISCORD_ACTION_FIXTURE_NAMES = [
   "create-guild-soundboard-sound",
   "update-guild-soundboard-sound",
   "delete-guild-soundboard-sound",
+  "get-application-role-connection-metadata",
+  "update-application-role-connection-metadata",
   "list-guild-emojis",
   "get-guild-emoji",
   "create-guild-emoji",
