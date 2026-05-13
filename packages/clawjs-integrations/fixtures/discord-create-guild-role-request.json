@@ -4,9 +4,21 @@
   "headers": {
     "accept": "application/json",
     "authorization": "Bot offline-discordBotToken-secret",
-    "content-type": "application/json"
+    "content-type": "application/json",
+    "X-Audit-Log-Reason": "sample"
   },
   "body": {
-    "name": "sample"
+    "name": "sample",
+    "permissions": "0",
+    "color": 1,
+    "colors": {
+      "primary_color": 1,
+      "secondary_color": null,
+      "tertiary_color": null
+    },
+    "hoist": false,
+    "icon": "data:image/png;base64,c2FtcGxl",
+    "unicode_emoji": "sample",
+    "mentionable": false
   }
 }

@@ -3,6 +3,7 @@
   "url": "https://discord.com/api/v10/guilds/sample/roles/sample",
   "headers": {
     "accept": "application/json",
-    "authorization": "Bot offline-discordBotToken-secret"
+    "authorization": "Bot offline-discordBotToken-secret",
+    "X-Audit-Log-Reason": "sample"
   }
 }

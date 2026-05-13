@@ -73,6 +73,28 @@ const WEBHOOK_EDIT_MESSAGE_FIELDS = [
   field("flags", "integer", true, { default: null }),
   field("poll", "object", true, { default: null }),
 ];
+const ROLE_CREATE_FIELDS = [
+  field("name", "string", true, { default: "sample" }),
+  field("permissions", "string", true, { default: "0" }),
+  field("color", "integer", true, { default: 1 }),
+  field("colors", "object", true, { default: { primary_color: 1, secondary_color: null, tertiary_color: null } }),
+  field("hoist", "boolean", true, { default: false }),
+  field("icon", "string", true, { default: "data:image/png;base64,c2FtcGxl" }),
+  field("unicodeEmoji", "string", true, { default: "sample" }),
+  field("mentionable", "boolean", true, { default: false }),
+  field("auditLogReason", "string", true),
+];
+const ROLE_UPDATE_FIELDS = [
+  field("name", "string", true, { default: null }),
+  field("permissions", "string", true, { default: null }),
+  field("color", "integer", true, { default: null }),
+  field("colors", "object", true, { default: null }),
+  field("hoist", "boolean", true, { default: null }),
+  field("icon", "string", true, { default: null }),
+  field("unicodeEmoji", "string", true, { default: null }),
+  field("mentionable", "boolean", true, { default: null }),
+  field("auditLogReason", "string", true),
+];
 
 const DISCORD_ACTIONS = [
   action("get-current-user", "Get Current User", []),
@@ -259,10 +281,10 @@ const DISCORD_ACTIONS = [
   action("list-guild-roles", "List Guild Roles", [GUILD_FIELD]),
   action("get-guild-role", "Get Guild Role", [GUILD_FIELD, ROLE_FIELD]),
   action("get-guild-role-member-counts", "Get Guild Role Member Counts", [GUILD_FIELD]),
-  action("create-guild-role", "Create Guild Role", [GUILD_FIELD, field("name", "string", true, { default: "sample" })]),
+  action("create-guild-role", "Create Guild Role", [GUILD_FIELD, ...ROLE_CREATE_FIELDS]),
   action("modify-guild-role-positions", "Modify Guild Role Positions", [GUILD_FIELD, field("positions", "array", false, { default: [{ id: "sample", position: 1 }] }), field("auditLogReason", "string", true)]),
-  action("update-guild-role", "Update Guild Role", [GUILD_FIELD, ROLE_FIELD, field("name", "string", true, { default: "sample" })]),
-  action("delete-guild-role", "Delete Guild Role", [GUILD_FIELD, ROLE_FIELD]),
+  action("update-guild-role", "Update Guild Role", [GUILD_FIELD, ROLE_FIELD, ...ROLE_UPDATE_FIELDS]),
+  action("delete-guild-role", "Delete Guild Role", [GUILD_FIELD, ROLE_FIELD, field("auditLogReason", "string", true)]),
   action("add-guild-member-role", "Add Guild Member Role", [GUILD_FIELD, USER_FIELD, ROLE_FIELD, field("auditLogReason", "string", true)]),
   action("remove-guild-member-role", "Remove Guild Member Role", [GUILD_FIELD, USER_FIELD, ROLE_FIELD, field("auditLogReason", "string", true)]),
   action("list-guild-bans", "List Guild Bans", [GUILD_FIELD, field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
@@ -2014,20 +2036,96 @@ describe("discord operation runtime", () => {
       guildId: "456",
       name: "Operators",
       permissions: "0",
+      color: 1,
+      colors: {
+        primary_color: 1,
+        secondary_color: null,
+        tertiary_color: null,
+      },
+      hoist: true,
+      icon: "data:image/png;base64,c2FtcGxl",
+      unicodeEmoji: "sample",
       mentionable: true,
+      auditLogReason: "role create",
     }), {
       method: "POST",
       endpoint: "guilds/456/roles",
       auth,
-      headers,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "role create",
+      },
       body: {
         name: "Operators",
         permissions: "0",
+        color: 1,
+        colors: {
+          primary_color: 1,
+          secondary_color: null,
+          tertiary_color: null,
+        },
+        hoist: true,
+        icon: "data:image/png;base64,c2FtcGxl",
+        unicode_emoji: "sample",
         mentionable: true,
       },
       responseSchema: {
         type: "object",
         requiredPaths: ["id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.update-guild-role"), {
+      guildId: "456",
+      roleId: "role-123",
+      name: null,
+      permissions: null,
+      color: null,
+      colors: null,
+      hoist: null,
+      icon: null,
+      unicodeEmoji: null,
+      mentionable: false,
+      auditLogReason: "role update",
+    }), {
+      method: "PATCH",
+      endpoint: "guilds/456/roles/role-123",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "role update",
+      },
+      body: {
+        name: null,
+        permissions: null,
+        color: null,
+        colors: null,
+        hoist: null,
+        icon: null,
+        unicode_emoji: null,
+        mentionable: false,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-guild-role"), {
+      guildId: "456",
+      roleId: "role-123",
+      auditLogReason: "role delete",
+    }), {
+      method: "DELETE",
+      endpoint: "guilds/456/roles/role-123",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "role delete",
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
       },
     });
 
