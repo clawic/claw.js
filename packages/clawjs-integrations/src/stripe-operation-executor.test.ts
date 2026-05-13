@@ -3,6 +3,10 @@ import { describe, it } from "node:test";
 
 import { normalizeConnectorCatalog } from "./catalog.ts";
 import {
+  verifyConnectorRuntimeCoverage,
+  verifyConnectorRuntimeOfflineExecutions,
+} from "./runtime-coverage.ts";
+import {
   buildStripeOperationRequest,
 } from "./stripe-operation-executor.ts";
 
@@ -188,6 +192,22 @@ describe("stripe operation runtime", () => {
         requiredPaths: ["id", "object", "status"],
       },
     });
+  });
+
+  it("covers Stripe payment operations with operation-scoped offline fixtures", async () => {
+    const coverage = verifyConnectorRuntimeCoverage(STRIPE_CATALOG);
+    assert.equal(coverage.summary.missing, 0);
+    assert.equal(coverage.summary.implemented, 6);
+
+    const offline = await verifyConnectorRuntimeOfflineExecutions(STRIPE_CATALOG);
+    assert.deepEqual(offline.results.map((result) => result.operationId).sort(), [
+      "stripe.action.create-customer",
+      "stripe.action.create-payment-intent",
+      "stripe.action.get-customer",
+      "stripe.action.get-payment-intent",
+      "stripe.action.list-customers",
+      "stripe.action.list-payment-intents",
+    ]);
   });
 });
 

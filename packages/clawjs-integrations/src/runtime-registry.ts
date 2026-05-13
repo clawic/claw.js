@@ -20,6 +20,10 @@ import {
   isGitLabActionOperationSupported,
 } from "./gitlab-operation-executor.ts";
 import {
+  buildStripeOperationRequest,
+  isStripeActionOperationSupported,
+} from "./stripe-operation-executor.ts";
+import {
   buildDiscordOperationRequest,
   isDiscordActionOperationSupported,
 } from "./discord-operation-executor.ts";
@@ -357,6 +361,73 @@ const GITLAB_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
   },
 ];
 
+const STRIPE_ACTION_EVIDENCE = [
+  "packages/clawjs-integrations/src/stripe-operation-executor.test.ts",
+];
+
+const STRIPE_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
+  {
+    kind: "request",
+    operationId: "stripe.action.list-customers",
+    path: "packages/clawjs-integrations/fixtures/stripe-list-customers-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "stripe.action.list-customers",
+    path: "packages/clawjs-integrations/fixtures/stripe-list-customers-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "stripe.action.get-customer",
+    path: "packages/clawjs-integrations/fixtures/stripe-get-customer-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "stripe.action.get-customer",
+    path: "packages/clawjs-integrations/fixtures/stripe-get-customer-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "stripe.action.create-customer",
+    path: "packages/clawjs-integrations/fixtures/stripe-create-customer-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "stripe.action.create-customer",
+    path: "packages/clawjs-integrations/fixtures/stripe-create-customer-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "stripe.action.list-payment-intents",
+    path: "packages/clawjs-integrations/fixtures/stripe-list-payment-intents-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "stripe.action.list-payment-intents",
+    path: "packages/clawjs-integrations/fixtures/stripe-list-payment-intents-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "stripe.action.get-payment-intent",
+    path: "packages/clawjs-integrations/fixtures/stripe-get-payment-intent-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "stripe.action.get-payment-intent",
+    path: "packages/clawjs-integrations/fixtures/stripe-get-payment-intent-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "stripe.action.create-payment-intent",
+    path: "packages/clawjs-integrations/fixtures/stripe-create-payment-intent-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "stripe.action.create-payment-intent",
+    path: "packages/clawjs-integrations/fixtures/stripe-create-payment-intent-response.json",
+  },
+];
+
 const WHATSAPP_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/whatsapp-operation-executor.test.ts",
 ];
@@ -442,6 +513,20 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     supports: (operation) => isGitLabActionOperationSupported(operation.id),
     buildPlan: (operation, values) => ({
       requestPlan: buildGitLabOperationRequest(operation, values),
+    }),
+  },
+  {
+    appId: "stripe",
+    kind: "action",
+    executorId: "stripe.core-api.http",
+    baseUrl: "https://api.stripe.com/v1/",
+    offlineValidated: true,
+    evidence: STRIPE_ACTION_EVIDENCE,
+    fixtures: STRIPE_ACTION_FIXTURES,
+    planKinds: ["request"],
+    supports: (operation) => isStripeActionOperationSupported(operation.id),
+    buildPlan: (operation, values) => ({
+      requestPlan: buildStripeOperationRequest(operation, values),
     }),
   },
   {
