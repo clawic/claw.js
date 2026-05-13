@@ -43,7 +43,7 @@ export async function buildDelegationPlaneApp(options: BuildDelegationPlaneAppOp
 
   app.get("/v1/health", async () => ({
     ok: true,
-    service: "delegation-plane",
+    service: "delegation",
     host: config.host,
     port: config.port,
   }));

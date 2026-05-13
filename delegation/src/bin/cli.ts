@@ -71,7 +71,7 @@ async function run(argv: string[]): Promise<CliResult> {
 
   if (group === "graph" && command === "create") {
     const objective = String(flags.objective ?? id ?? "").trim();
-    if (!objective) throw new Error("Usage: delegation-plane graph create --objective TEXT [--creator NAME]");
+    if (!objective) throw new Error("Usage: delegation graph create --objective TEXT [--creator NAME]");
     const output = await request(`${url}/v1/graphs`, "POST", {
       objective,
       creator: String(flags.creator ?? "operator"),
@@ -88,19 +88,19 @@ async function run(argv: string[]): Promise<CliResult> {
   }
 
   if (group === "graph" && command === "inspect") {
-    if (!id) throw new Error("Usage: delegation-plane graph inspect <graphId>");
+    if (!id) throw new Error("Usage: delegation graph inspect <graphId>");
     const output = await request(`${url}/v1/graphs/${id}`);
     if (flags.tree) return { status: 0, text: printTree(output) };
     return { status: 0, output };
   }
 
   if (group === "node" && command === "retry") {
-    if (!id) throw new Error("Usage: delegation-plane node retry <nodeId>");
+    if (!id) throw new Error("Usage: delegation node retry <nodeId>");
     return { status: 0, output: await request(`${url}/v1/nodes/${id}/retry`, "POST", {}) };
   }
 
   if (group === "node" && command === "cancel") {
-    if (!id) throw new Error("Usage: delegation-plane node cancel <nodeId>");
+    if (!id) throw new Error("Usage: delegation node cancel <nodeId>");
     return { status: 0, output: await request(`${url}/v1/nodes/${id}/cancel`, "POST", {}) };
   }
 
@@ -115,7 +115,7 @@ async function run(argv: string[]): Promise<CliResult> {
   }
 
   if (group === "worker" && command === "claim") {
-    if (!id) throw new Error("Usage: delegation-plane worker claim <workerId>");
+    if (!id) throw new Error("Usage: delegation worker claim <workerId>");
     return { status: 0, output: await request(`${url}/v1/workers/${id}/claim`, "POST", {}) };
   }
 
@@ -131,14 +131,14 @@ async function run(argv: string[]): Promise<CliResult> {
 
   throw new Error([
     "Usage:",
-    "  delegation-plane graph create --objective TEXT",
-    "  delegation-plane graph list",
-    "  delegation-plane graph inspect <graphId> [--tree]",
-    "  delegation-plane node retry <nodeId>",
-    "  delegation-plane node cancel <nodeId>",
-    "  delegation-plane worker register [--workerId ID]",
-    "  delegation-plane worker claim <workerId>",
-    "  delegation-plane stuck",
+    "  delegation graph create --objective TEXT",
+    "  delegation graph list",
+    "  delegation graph inspect <graphId> [--tree]",
+    "  delegation node retry <nodeId>",
+    "  delegation node cancel <nodeId>",
+    "  delegation worker register [--workerId ID]",
+    "  delegation worker claim <workerId>",
+    "  delegation stuck",
   ].join("\n"));
 }
 

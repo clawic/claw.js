@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { buildDelegationPlaneApp } from "../../src/server/app.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-const cliPath = path.join(repoRoot, "delegation-plane", "src", "bin", "cli.ts");
+const cliPath = path.join(repoRoot, "delegation", "src", "bin", "cli.ts");
 const execFileAsync = promisify(execFile);
 
 const state: {
@@ -30,9 +30,9 @@ async function cli(args: string[]): Promise<string> {
   return result.stdout;
 }
 
-describe("delegation-plane cli e2e", () => {
+describe("delegation cli e2e", () => {
   beforeEach(async () => {
-    state.tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "delegation-plane-cli-e2e-"));
+    state.tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "delegation-cli-e2e-"));
     const built = await buildDelegationPlaneApp({
       config: {
         host: "127.0.0.1",

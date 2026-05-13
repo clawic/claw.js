@@ -222,9 +222,9 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-describe("delegation-plane backend e2e", () => {
+describe("delegation backend e2e", () => {
   beforeEach(async () => {
-    state.tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "delegation-plane-e2e-"));
+    state.tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "delegation-e2e-"));
     const built = await buildDelegationPlaneApp({
       config: {
         host: "127.0.0.1",
