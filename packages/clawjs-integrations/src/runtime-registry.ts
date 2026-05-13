@@ -34,6 +34,16 @@ import {
   isGoogleSourceOperationSupported,
 } from "./google-source.ts";
 import {
+  buildAirtableOperationRequest,
+  AIRTABLE_ACTION_SLUGS,
+  isAirtableActionOperationSupported,
+} from "./airtable-operation-executor.ts";
+import {
+  buildAirtableSourcePlan,
+  AIRTABLE_SOURCE_SLUGS,
+  isAirtableSourceOperationSupported,
+} from "./airtable-source.ts";
+import {
   buildGitLabOperationRequest,
   isGitLabActionOperationSupported,
 } from "./gitlab-operation-executor.ts";
@@ -453,6 +463,33 @@ const GOOGLE_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = GOOGLE_SOURCE_SLUGS.ma
   kind: "source_event" as const,
   operationId: `google.source.${name}`,
   path: `packages/clawjs-integrations/fixtures/google-source-${name}.json`,
+}));
+
+const AIRTABLE_ACTION_EVIDENCE = [
+  "packages/clawjs-integrations/src/airtable-operation-executor.test.ts",
+];
+
+const AIRTABLE_ACTION_FIXTURES: ConnectorRuntimeFixture[] = AIRTABLE_ACTION_SLUGS.flatMap((name) => [
+  {
+    kind: "request" as const,
+    operationId: `airtable.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/airtable-${name}-request.json`,
+  },
+  {
+    kind: "response" as const,
+    operationId: `airtable.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/airtable-${name}-response.json`,
+  },
+]);
+
+const AIRTABLE_SOURCE_EVIDENCE = [
+  "packages/clawjs-integrations/src/airtable-source.test.ts",
+];
+
+const AIRTABLE_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = AIRTABLE_SOURCE_SLUGS.map((name) => ({
+  kind: "source_event" as const,
+  operationId: `airtable.source.${name}`,
+  path: `packages/clawjs-integrations/fixtures/airtable-source-${name}.json`,
 }));
 
 const DISCORD_ACTION_EVIDENCE = [
@@ -1033,6 +1070,33 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     supports: (operation) => isGoogleSourceOperationSupported(operation.id),
     buildPlan: (operation) => ({
       sourcePlan: buildGoogleSourcePlan(operation),
+    }),
+  },
+  {
+    appId: "airtable",
+    kind: "action",
+    executorId: "airtable.web-api.http",
+    baseUrl: "https://api.airtable.com/",
+    offlineValidated: true,
+    evidence: AIRTABLE_ACTION_EVIDENCE,
+    fixtures: AIRTABLE_ACTION_FIXTURES,
+    planKinds: ["request"],
+    supports: (operation) => isAirtableActionOperationSupported(operation.id),
+    buildPlan: (operation, values) => ({
+      requestPlan: buildAirtableOperationRequest(operation, values),
+    }),
+  },
+  {
+    appId: "airtable",
+    kind: "source",
+    executorId: "airtable.webhook",
+    offlineValidated: true,
+    evidence: AIRTABLE_SOURCE_EVIDENCE,
+    fixtures: AIRTABLE_SOURCE_FIXTURES,
+    planKinds: ["source"],
+    supports: (operation) => isAirtableSourceOperationSupported(operation.id),
+    buildPlan: (operation) => ({
+      sourcePlan: buildAirtableSourcePlan(operation),
     }),
   },
   {
