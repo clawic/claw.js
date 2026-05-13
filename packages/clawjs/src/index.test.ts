@@ -58,6 +58,15 @@ function packWorkspacePackage(packageDir: string, packDir: string): string {
   return path.join(packDir, tarballName);
 }
 
+function assertCliPackageBinSurface(packageDir: string): void {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(packageDir, "package.json"), "utf8")) as {
+    bin?: Record<string, string>;
+  };
+  assert.deepEqual(packageJson.bin, { claw: "bin/claw.mjs" });
+  assert.equal(fs.existsSync(path.join(packageDir, "bin", "claw.mjs")), true);
+  assert.equal(fs.existsSync(path.join(packageDir, "bin", "clawjs.mjs")), false);
+}
+
 function runInstalledClaw(binPath: string, cwd: string, args: string[]): string {
   return execFileSync(process.execPath, [binPath, ...args], {
     cwd,
@@ -2823,7 +2832,8 @@ test("published CLI tarballs install with npm and manage local-first productivit
     ];
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      t.skip("External npm process is unavailable in this Node test environment.");
+      assertCliPackageBinSurface(packageRoots.cli);
+      t.diagnostic("External npm process is unavailable in this Node test environment; verified CLI package bin surface directly.");
       return;
     }
     throw error;
