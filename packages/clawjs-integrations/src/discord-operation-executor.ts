@@ -153,6 +153,7 @@ export type DiscordRuntimeOperation =
   | "get-guild-widget-settings"
   | "modify-guild-widget"
   | "get-guild-widget"
+  | "get-guild-widget-image"
   | "get-guild-vanity-url"
   | "get-guild-welcome-screen"
   | "modify-guild-welcome-screen"
@@ -628,6 +629,13 @@ export function buildDiscordOperationRequest(
       return bodyPlan("PATCH", `guilds/${guildId(values)}/widget`, auth, auditHeaders(headers, values), guildWidgetBody(values), { type: "object", requiredPaths: ["enabled", "channel_id"] });
     case "get-guild-widget":
       return getPlan(`guilds/${guildId(values)}/widget.json`, auth, headers, { type: "object", requiredPaths: ["id", "name", "channels", "members", "presence_count"] });
+    case "get-guild-widget-image":
+      return {
+        ...getPlan(`guilds/${guildId(values)}/widget.png`, [], { accept: "image/png" }, { type: "string" }, removeEmptyValues({
+          style: optionalString(values.style),
+        })),
+        responseBodyEncoding: "base64",
+      };
     case "get-guild-vanity-url":
       return getPlan(`guilds/${guildId(values)}/vanity-url`, auth, headers, { type: "object", requiredPaths: ["code", "uses"] });
     case "get-guild-welcome-screen":
@@ -944,6 +952,7 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "get-guild-widget-settings",
   "modify-guild-widget",
   "get-guild-widget",
+  "get-guild-widget-image",
   "get-guild-vanity-url",
   "get-guild-welcome-screen",
   "modify-guild-welcome-screen",
