@@ -24,6 +24,16 @@ import {
   isGitHubSourceOperationSupported,
 } from "./github-source.ts";
 import {
+  buildGoogleOperationRequest,
+  GOOGLE_ACTION_SLUGS,
+  isGoogleActionOperationSupported,
+} from "./google-operation-executor.ts";
+import {
+  buildGoogleSourcePlan,
+  GOOGLE_SOURCE_SLUGS,
+  isGoogleSourceOperationSupported,
+} from "./google-source.ts";
+import {
   buildGitLabOperationRequest,
   isGitLabActionOperationSupported,
 } from "./gitlab-operation-executor.ts";
@@ -416,6 +426,33 @@ const GITHUB_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = GITHUB_SOURCE_FIXTURE_
   kind: "source_event",
   operationId: `github.source.${name}`,
   path: `packages/clawjs-integrations/fixtures/github-source-${name}.json`,
+}));
+
+const GOOGLE_ACTION_EVIDENCE = [
+  "packages/clawjs-integrations/src/google-operation-executor.test.ts",
+];
+
+const GOOGLE_ACTION_FIXTURES: ConnectorRuntimeFixture[] = GOOGLE_ACTION_SLUGS.flatMap((name) => [
+  {
+    kind: "request" as const,
+    operationId: `google.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/google-${name}-request.json`,
+  },
+  {
+    kind: "response" as const,
+    operationId: `google.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/google-${name}-response.json`,
+  },
+]);
+
+const GOOGLE_SOURCE_EVIDENCE = [
+  "packages/clawjs-integrations/src/google-source.test.ts",
+];
+
+const GOOGLE_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = GOOGLE_SOURCE_SLUGS.map((name) => ({
+  kind: "source_event" as const,
+  operationId: `google.source.${name}`,
+  path: `packages/clawjs-integrations/fixtures/google-source-${name}.json`,
 }));
 
 const DISCORD_ACTION_EVIDENCE = [
@@ -969,6 +1006,33 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     supports: (operation) => isGitHubSourceOperationSupported(operation.id),
     buildPlan: (operation) => ({
       sourcePlan: buildGitHubSourcePlan(operation),
+    }),
+  },
+  {
+    appId: "google",
+    kind: "action",
+    executorId: "google.workspace-api.http",
+    baseUrl: "https://www.googleapis.com/",
+    offlineValidated: true,
+    evidence: GOOGLE_ACTION_EVIDENCE,
+    fixtures: GOOGLE_ACTION_FIXTURES,
+    planKinds: ["request"],
+    supports: (operation) => isGoogleActionOperationSupported(operation.id),
+    buildPlan: (operation, values) => ({
+      requestPlan: buildGoogleOperationRequest(operation, values),
+    }),
+  },
+  {
+    appId: "google",
+    kind: "source",
+    executorId: "google.workspace-events",
+    offlineValidated: true,
+    evidence: GOOGLE_SOURCE_EVIDENCE,
+    fixtures: GOOGLE_SOURCE_FIXTURES,
+    planKinds: ["source"],
+    supports: (operation) => isGoogleSourceOperationSupported(operation.id),
+    buildPlan: (operation) => ({
+      sourcePlan: buildGoogleSourcePlan(operation),
     }),
   },
   {
