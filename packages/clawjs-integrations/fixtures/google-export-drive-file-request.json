@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://www.googleapis.com/drive/v3/files/file-123/export?mimeType=text%2Fplain",
+  "headers": {
+    "accept": "text/plain",
+    "authorization": "Bearer offline-googleAccessToken-secret"
+  }
+}

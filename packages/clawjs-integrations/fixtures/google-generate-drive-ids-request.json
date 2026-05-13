@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://www.googleapis.com/drive/v3/files/generateIds?count=1",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret"
+  }
+}

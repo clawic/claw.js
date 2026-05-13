@@ -1,0 +1,16 @@
+{
+  "method": "PATCH",
+  "url": "https://www.googleapis.com/drive/v3/files/file-123/permissions/perm-123",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "type": "user",
+    "role": "reader",
+    "emailAddress": "person@example.invalid",
+    "domain": "example.invalid",
+    "allowFileDiscovery": false
+  }
+}

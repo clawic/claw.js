@@ -1,0 +1,12 @@
+{
+  "method": "POST",
+  "url": "https://www.googleapis.com/drive/v3/drives?requestId=request-123",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "name": "Shared Drive"
+  }
+}

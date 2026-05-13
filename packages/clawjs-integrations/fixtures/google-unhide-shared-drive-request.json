@@ -1,0 +1,8 @@
+{
+  "method": "POST",
+  "url": "https://www.googleapis.com/drive/v3/drives/drive-123/unhide",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret"
+  }
+}

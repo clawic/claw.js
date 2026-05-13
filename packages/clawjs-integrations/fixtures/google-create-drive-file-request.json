@@ -1,0 +1,17 @@
+{
+  "method": "POST",
+  "url": "https://www.googleapis.com/drive/v3/files",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "name": "Sample",
+    "mimeType": "text/plain",
+    "parents": [
+      "folder-123"
+    ],
+    "description": "Sample file"
+  }
+}
