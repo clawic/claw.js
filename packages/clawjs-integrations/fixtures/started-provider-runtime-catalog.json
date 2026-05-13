@@ -39023,6 +39023,23 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.cancel-refund",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Cancel Refund",
+          "fields": [
+            {
+              "name": "refund",
+              "type": "string",
+              "optional": false,
+              "default": "re_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

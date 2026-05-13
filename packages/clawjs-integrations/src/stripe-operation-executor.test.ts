@@ -498,6 +498,22 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.cancel-refund"), {
+      refund: "re_sample",
+    }), {
+      method: "POST",
+      endpoint: "refunds/re_sample/cancel",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-topup"), {
       amount: 1200,
       currency: "usd",
