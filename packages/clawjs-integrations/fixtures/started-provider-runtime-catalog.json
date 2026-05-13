@@ -2087,6 +2087,93 @@
           ]
         },
         {
+          "id": "discord.action.list-channel-invites",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Channel Invites",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.create-channel-invite",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Channel Invite",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "maxAge",
+              "type": "integer",
+              "optional": true,
+              "default": 86400,
+              "min": 0,
+              "max": 604800
+            },
+            {
+              "name": "maxUses",
+              "type": "integer",
+              "optional": true,
+              "default": 0,
+              "min": 0,
+              "max": 100
+            },
+            {
+              "name": "temporary",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "unique",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "targetType",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "targetUserId",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "targetApplicationId",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "roleIds",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "appId": "discord",
           "kind": "action",
           "authFieldNames": [
