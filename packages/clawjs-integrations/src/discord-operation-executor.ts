@@ -27,6 +27,8 @@ export type DiscordRuntimeOperation =
   | "create-guild-soundboard-sound"
   | "update-guild-soundboard-sound"
   | "delete-guild-soundboard-sound"
+  | "get-application-role-connection-metadata"
+  | "update-application-role-connection-metadata"
   | "list-guild-emojis"
   | "get-guild-emoji"
   | "create-guild-emoji"
@@ -190,6 +192,18 @@ export function buildDiscordOperationRequest(
       return bodyPlan("PATCH", `guilds/${guildId(values)}/soundboard-sounds/${soundboardSoundId(values)}`, auth, auditHeaders(headers, values), soundboardSoundBody(values, false), { type: "object", requiredPaths: ["sound_id", "name"] });
     case "delete-guild-soundboard-sound":
       return deletePlan(`guilds/${guildId(values)}/soundboard-sounds/${soundboardSoundId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+    case "get-application-role-connection-metadata":
+      return getPlan(`applications/${applicationId(values)}/role-connections/metadata`, auth, headers, { type: "array" });
+    case "update-application-role-connection-metadata":
+      return {
+        method: "PUT",
+        endpoint: `applications/${applicationId(values)}/role-connections/metadata`,
+        auth,
+        headers,
+        body: {},
+        bodyValue: requiredJsonArray(firstValue(values.records, values.metadataRecords), "records"),
+        responseSchema: { type: "array" },
+      };
     case "list-guild-emojis":
       return getPlan(`guilds/${guildId(values)}/emojis`, auth, headers, { type: "array" });
     case "get-guild-emoji":
@@ -463,6 +477,8 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "create-guild-soundboard-sound",
   "update-guild-soundboard-sound",
   "delete-guild-soundboard-sound",
+  "get-application-role-connection-metadata",
+  "update-application-role-connection-metadata",
   "list-guild-emojis",
   "get-guild-emoji",
   "create-guild-emoji",
