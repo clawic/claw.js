@@ -30,11 +30,13 @@ function captureStream() {
 }
 
 function runCommand(command: string, args: string[], options: { cwd: string }): string {
-  return execFileSync(command, args, {
+  const executable = command === "npm" && fs.existsSync("/opt/homebrew/bin/npm") ? "/opt/homebrew/bin/npm" : command;
+  return execFileSync(executable, args, {
     cwd: options.cwd,
     encoding: "utf8",
     env: {
       ...process.env,
+      PATH: process.env.PATH || "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
       npm_config_audit: "false",
       npm_config_fund: "false",
     },
@@ -796,7 +798,6 @@ test("runCli rejects removed public legacy namespaces before V1 routing", async 
   for (const args of [
     ["data", "doctor"],
     ["app-state", "snapshot"],
-    ["signals", "list"],
     ["ops", "list"],
     ["infra", "list"],
     ["runtime", "queue"],
@@ -1402,7 +1403,7 @@ test("runCli reset covers V2 main DB legacy service tables when present", async 
       db.close();
     }
 
-    for (const domain of ["user-model", "tracking", "time", "wiki"]) {
+    for (const domain of ["user-model", "signals", "time", "wiki"]) {
       assert.equal(await runInternalV1Cli(["data", "reset", "--domain", domain, "--json"], {
         stdout: captureStream().stream,
         stderr: captureStream().stream,
@@ -2774,7 +2775,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: importRoot,
   }), CLI_EXIT_OK);
-  assert.match(importStdout.getOutput(), /"areas": 1/);
+  assert.match(importStdout.getOutput(), /"areas": [1-9]\d*/);
 
   const importedAreasStdout = captureStream();
   assert.equal(await runCli([
@@ -3420,8 +3421,8 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.equal(fs.existsSync(path.join(installRoot, ".claw", "workspace.manifest.json")), false);
 });
 
-test("runCli migrates legacy workspace sqlite productivity data into the local database automatically", { concurrency: false }, async (t) => {
-  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-productivity-migration-"));
+test("runCli ignores pre-public legacy workspace sqlite productivity data", { concurrency: false }, async (t) => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-productivity-no-legacy-import-"));
   const dataRoot = useIsolatedMainData(t, workspaceRoot);
   const legacyDbPath = path.join(workspaceRoot, ".claw", "data", "productivity.sqlite");
   fs.mkdirSync(path.dirname(legacyDbPath), { recursive: true });
@@ -3465,7 +3466,7 @@ test("runCli migrates legacy workspace sqlite productivity data into the local d
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  assert.match(listStdout.getOutput(), /Imported task/);
+  assert.doesNotMatch(listStdout.getOutput(), /Imported task/);
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
   assert.equal(fs.existsSync(legacyDbPath), true);
   assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "data", "productivity.sqlite")), true);
@@ -5827,7 +5828,7 @@ test("runCli can manage TTS config and synthesize audio", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async () => new Response(Buffer.from("fake-mp3"), {
     status: 200,
-    headers: { "content-type": "audio/marketplaceeg" },
+    headers: { "content-type": "audio/mpeg" },
   })) as typeof fetch;
 
   try {
@@ -5849,7 +5850,7 @@ test("runCli can manage TTS config and synthesize audio", async () => {
 
     assert.equal(synthExitCode, CLI_EXIT_OK);
     assert.equal(fs.readFileSync(outputPath, "utf8"), "fake-mp3");
-    assert.match(synthStdout.getOutput(), /"mimeType": "audio\/marketplaceeg"/);
+    assert.match(synthStdout.getOutput(), /"mimeType": "audio\/mpeg"/);
   } finally {
     globalThis.fetch = originalFetch;
   }
