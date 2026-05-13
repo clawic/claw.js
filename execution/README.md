@@ -1,6 +1,6 @@
-# Agent Execution Plane
+# Agent Execution
 
-`execution-plane/` defines a standalone product surface for agent-authored code execution, versioned changes, artifacts, and deployments.
+`execution/` defines a standalone product surface for agent-authored code execution, versioned changes, artifacts, and deployments.
 
 It is intentionally separate from:
 

@@ -12,7 +12,7 @@ Deliverables:
 
 Acceptance:
 
-- the top-level execution-plane surface exists in the repo
+- the top-level execution surface exists in the repo
 - the spec covers scripts, notebooks, workers, revisions, artifacts, and deployments
 - the spec explicitly defines the Git-native and Vault-compatible boundaries
 

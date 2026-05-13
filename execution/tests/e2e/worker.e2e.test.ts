@@ -65,9 +65,9 @@ async function waitForRun(baseUrl: string, token: string, runId: string) {
   throw new Error("Run did not finish in time");
 }
 
-describe("execution-plane worker e2e", () => {
+describe("execution worker e2e", () => {
   before(async () => {
-    state.tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "execution-plane-worker-e2e-"));
+    state.tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "execution-worker-e2e-"));
     const built = await buildExecutionPlaneApp({
       config: {
         host: "127.0.0.1",
@@ -85,7 +85,7 @@ describe("execution-plane worker e2e", () => {
       "--tenant-id", "demo-tenant",
       "--worker-id", "e2e-worker",
       "--workspace-root", path.join(state.tmpDir, "worker-root"),
-      "--secret", "execution-plane-worker-secret",
+      "--secret", "execution-worker-secret",
     ], { signal: state.workerAbort.signal }).catch(() => {});
     state.stop = async () => {
       state.workerAbort?.abort();
@@ -125,7 +125,7 @@ describe("execution-plane worker e2e", () => {
       "import path from 'node:path';",
       "const artifactDir = process.env.EP_ARTIFACT_DIR;",
       "fs.mkdirSync(path.join(artifactDir, 'static-site'), { recursive: true });",
-      "fs.writeFileSync(path.join(artifactDir, 'static-site', 'index.html'), '<html><body><h1>Execution Plane</h1></body></html>');",
+      "fs.writeFileSync(path.join(artifactDir, 'static-site', 'index.html'), '<html><body><h1>Execution</h1></body></html>');",
       "console.log('built site');",
     ].join("\n");
     const revisionRes = await fetch(`${state.baseUrl}/v1/assets/${asset.id}/revisions`, {

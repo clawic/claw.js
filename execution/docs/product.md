@@ -2,7 +2,7 @@
 
 ## Position
 
-The Agent Execution Plane is a standalone product that manages agent-authored code as an execution system, not as a chat wrapper.
+The Agent Execution is a standalone product that manages agent-authored code as an execution system, not as a chat wrapper.
 
 It exists to unify four concerns that currently fragment across tools:
 
@@ -53,7 +53,7 @@ The product does not replace Git.
 Instead, every agent-authored change is represented as:
 
 - a Git branch, commit, or patch
-- plus execution-plane metadata for provenance, review, and merge state
+- plus execution metadata for provenance, review, and merge state
 
 ### 4. Deploy as a product outcome
 
@@ -69,7 +69,7 @@ Deploy is therefore not a separate product. It is a downstream state transition 
 - no UI scaffold
 - no replacement for Git hosting
 - no coupling to the existing `database/` service
-- no attempt to make `relay/` absorb execution-plane semantics
+- no attempt to make `relay/` absorb execution semantics
 
 ## Primary User Journeys
 

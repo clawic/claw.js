@@ -3,10 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import { spawn, execFileSync } from "node:child_process";
 
-const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "execution-plane-ui-"));
+const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "execution-ui-"));
 const repoDir = path.join(tmpDir, "repo");
 fs.mkdirSync(repoDir, { recursive: true });
-fs.writeFileSync(path.join(repoDir, "README.md"), "# execution-plane ui\n");
+fs.writeFileSync(path.join(repoDir, "README.md"), "# execution ui\n");
 execFileSync("git", ["init", "-b", "main"], { cwd: repoDir });
 execFileSync("git", ["config", "user.email", "tests@local"], { cwd: repoDir });
 execFileSync("git", ["config", "user.name", "Execution UI Tests"], { cwd: repoDir });
@@ -22,7 +22,7 @@ const commonEnv = {
   EXECUTION_PLANE_DB_FILE: path.join(tmpDir, "data", "infra.sqlite"),
   EXECUTION_PLANE_DEPLOYMENTS_DIR: path.join(tmpDir, "deployments"),
   EXECUTION_PLANE_DEMO_REPO: repoDir,
-  EXECUTION_PLANE_WORKER_SECRET: "execution-plane-worker-secret",
+  EXECUTION_PLANE_WORKER_SECRET: "execution-worker-secret",
 };
 
 const server = spawn(process.execPath, ["dist/server.js"], {

@@ -66,7 +66,7 @@ Lists the artifacts emitted by a run, including metadata, retention, and downloa
 
 ### `createRevision`
 
-Creates execution-plane revision metadata over a Git commit, branch head, or tracked patch set.
+Creates execution revision metadata over a Git commit, branch head, or tracked patch set.
 
 ### `openChangeRequest`
 
@@ -111,7 +111,7 @@ Rolls a deployment back to a prior artifact-backed release.
 - every `Run` points to a `Revision`
 - every `Artifact` comes from one `Run`
 - every `Deployment` points to one `Artifact`
-- every agent-authored change becomes a Git branch or patch plus execution-plane metadata
+- every agent-authored change becomes a Git branch or patch plus execution metadata
 - every worker run is tied to one materialized local workspace
 
 ## Reference Scenarios

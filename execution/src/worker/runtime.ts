@@ -115,7 +115,7 @@ async function runNotebook(repoDir: string, payload: WorkerInvokePayload, onLog:
     }
     cumulative += `\n${cell.code}\n`;
     const extension = cell.runtime === "python" ? "py" : "mjs";
-    const tempFile = path.join(repoDir, `.execution-plane-cell-${index}.${extension}`);
+    const tempFile = path.join(repoDir, `.execution-cell-${index}.${extension}`);
     fs.writeFileSync(tempFile, cumulative);
     const command = cell.runtime === "python" ? "python3" : process.execPath;
     const childResult = await new Promise<{ exitCode: number; stdout: string; stderr: string }>((resolve) => {
@@ -174,7 +174,7 @@ export async function executeRun(payload: WorkerInvokePayload, onLog: (stream: "
   artifacts: WorkerArtifactPayload[];
   notebookSnapshot?: { cells: Array<{ id: string; status: "succeeded" | "failed" | "stale"; output: string }> };
 }> {
-  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "execution-plane-run-"));
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "execution-run-"));
   ensureDir(payload.artifactDir);
   onLog("system", `materializing ${payload.repository.remoteUrl}`);
   const repoDir = await materializeRepository(workspaceDir, payload);

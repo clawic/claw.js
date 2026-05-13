@@ -41,7 +41,7 @@ function AppShell() {
     <div className="layout">
       <aside className="rail">
         <div>
-          <p className="eyebrow">Agent Execution Plane</p>
+          <p className="eyebrow">Agent Execution</p>
           <h1 className="brand-title">Local workers, versioned code, deployable runs.</h1>
         </div>
         <nav className="nav-list">
@@ -90,7 +90,7 @@ function PageFrame(props: { title: string; body: string; children: ReactNode }) 
     <section className="page-card">
       <header className="page-header">
         <div>
-          <p className="eyebrow">Execution Plane</p>
+          <p className="eyebrow">Execution</p>
           <h2>{props.title}</h2>
         </div>
         <p className="page-copy">{props.body}</p>
@@ -114,7 +114,7 @@ function LoginPage() {
     <div className="login-screen">
       <div className="login-card">
         <p className="eyebrow">Control Plane</p>
-        <h1>Execution Plane</h1>
+        <h1>Execution</h1>
         <p className="page-copy">Auth, workers, assets, runs, artifacts and deployments in one surface.</p>
         <label>
           <span>Email</span>
@@ -267,7 +267,7 @@ function ScriptsPage() {
     "import path from 'node:path';",
     "const artifactDir = process.env.EP_ARTIFACT_DIR;",
     "fs.mkdirSync(path.join(artifactDir, 'static-site'), { recursive: true });",
-    "fs.writeFileSync(path.join(artifactDir, 'static-site', 'index.html'), '<html><body><h1>Execution Plane UI</h1></body></html>');",
+    "fs.writeFileSync(path.join(artifactDir, 'static-site', 'index.html'), '<html><body><h1>Execution UI</h1></body></html>');",
     "console.log('ui build complete');",
   ].join("\n"));
   const [revisions, setRevisions] = useState<Revision[]>([]);

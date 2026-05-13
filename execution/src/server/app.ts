@@ -448,8 +448,8 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     execFileSync("git", ["-C", workDir, "checkout", bundle.revision.baseRef], { stdio: "ignore" });
     ensureDir(path.join(workDir, path.dirname(bundle.asset.path)));
     fs.writeFileSync(path.join(workDir, bundle.asset.path), bundle.revision.content);
-    execFileSync("git", ["-C", workDir, "config", "user.email", "execution-plane@local"], { stdio: "ignore" });
-    execFileSync("git", ["-C", workDir, "config", "user.name", "Execution Plane"], { stdio: "ignore" });
+    execFileSync("git", ["-C", workDir, "config", "user.email", "execution@local"], { stdio: "ignore" });
+    execFileSync("git", ["-C", workDir, "config", "user.name", "Execution"], { stdio: "ignore" });
     execFileSync("git", ["-C", workDir, "checkout", "-B", changeRequest.targetBranch], { stdio: "ignore" });
     execFileSync("git", ["-C", workDir, "add", bundle.asset.path], { stdio: "ignore" });
     execFileSync("git", ["-C", workDir, "commit", "-m", `merge(${bundle.asset.name}): ${changeRequest.title}`], { stdio: "ignore" });

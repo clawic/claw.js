@@ -47,10 +47,10 @@ function parseArgs(argv: string[]): ExecutionWorkerOptions {
     tenantId: values.get("tenant-id") ?? process.env.EXECUTION_PLANE_TENANT_ID ?? "demo-tenant",
     workerId: values.get("worker-id") ?? process.env.EXECUTION_PLANE_WORKER_ID ?? "local-worker",
     label: values.get("label") ?? process.env.EXECUTION_PLANE_WORKER_LABEL ?? "Local Worker",
-    workspaceRoot: values.get("workspace-root") ?? process.env.EXECUTION_PLANE_WORKSPACE_ROOT ?? "./execution-plane-worker",
+    workspaceRoot: values.get("workspace-root") ?? process.env.EXECUTION_PLANE_WORKSPACE_ROOT ?? "./execution-worker",
     runtimes: ((values.get("runtimes") ?? process.env.EXECUTION_PLANE_RUNTIMES ?? "node,python").split(",").map((value) => value.trim()).filter(Boolean) as Array<"node" | "python">),
     deployKinds: ((values.get("deploy-kinds") ?? process.env.EXECUTION_PLANE_DEPLOY_KINDS ?? "static,node-web").split(",").map((value) => value.trim()).filter(Boolean) as Array<"static" | "node-web">),
-    secret: values.get("secret") ?? process.env.EXECUTION_PLANE_WORKER_SECRET ?? "execution-plane-worker-secret",
+    secret: values.get("secret") ?? process.env.EXECUTION_PLANE_WORKER_SECRET ?? "execution-worker-secret",
   };
 }
 

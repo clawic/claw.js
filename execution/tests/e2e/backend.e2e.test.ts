@@ -43,7 +43,7 @@ function authHeaders(token: string) {
 function createLocalGitRepo(root: string): string {
   const repoDir = path.join(root, "repo");
   fs.mkdirSync(repoDir, { recursive: true });
-  fs.writeFileSync(path.join(repoDir, "README.md"), "# execution-plane test\n");
+  fs.writeFileSync(path.join(repoDir, "README.md"), "# execution test\n");
   execFileSync("git", ["init", "-b", "main"], { cwd: repoDir });
   execFileSync("git", ["config", "user.email", "tests@local"], { cwd: repoDir });
   execFileSync("git", ["config", "user.name", "Execution Tests"], { cwd: repoDir });
@@ -52,9 +52,9 @@ function createLocalGitRepo(root: string): string {
   return repoDir;
 }
 
-describe("execution-plane backend e2e", () => {
+describe("execution backend e2e", () => {
   before(async () => {
-    state.tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "execution-plane-e2e-"));
+    state.tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "execution-e2e-"));
     const built = await buildExecutionPlaneApp({
       config: {
         host: "127.0.0.1",
@@ -82,7 +82,7 @@ describe("execution-plane backend e2e", () => {
     const projectResponse = await fetch(`${state.baseUrl}/v1/projects`, {
       method: "POST",
       headers: authHeaders(tokens.accessToken),
-      body: JSON.stringify({ name: "Execution Plane", description: "backend flow" }),
+      body: JSON.stringify({ name: "Execution", description: "backend flow" }),
     });
     const { project } = await projectResponse.json() as { project: { id: string } };
     const repositoryResponse = await fetch(`${state.baseUrl}/v1/projects/${project.id}/repositories`, {

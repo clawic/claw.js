@@ -26,7 +26,7 @@ test("execution plane UI supports login, project setup, run, and deployment", as
   const outputDir = path.join(process.cwd(), "artifacts", "ui");
   fs.mkdirSync(outputDir, { recursive: true });
   await page.screenshot({
-    path: path.join(outputDir, "execution-plane-dashboard.png"),
+    path: path.join(outputDir, "execution-dashboard.png"),
     fullPage: true,
   });
 });

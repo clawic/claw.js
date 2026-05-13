@@ -1,5 +1,5 @@
 {
-  "name": "@clawjs/execution-plane-ui",
+  "name": "@clawjs/execution-ui",
   "private": true,
   "type": "module",
   "scripts": {
