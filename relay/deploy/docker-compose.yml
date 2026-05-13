@@ -11,7 +11,7 @@ services:
       RELAY_PUBLIC_BASE_URL: "https://${DOMAIN:?DOMAIN is required}"
       RELAY_HOST: "0.0.0.0"
       PORT: "4410"
-      RELAY_DB_PATH: "/var/lib/clawix-relay/relay.sqlite"
+      RELAY_DB_PATH: "/var/lib/clawix-relay/infra.sqlite"
       RELAY_JWT_SECRETS: "${RELAY_JWT_SECRETS:?RELAY_JWT_SECRETS is required}"
       RELAY_MAGIC_LINK_FROM: "relay@${DOMAIN}"
       RELAY_MAGIC_LINK_DRIVER: "${RELAY_MAGIC_LINK_DRIVER:-console}"

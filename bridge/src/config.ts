@@ -40,6 +40,10 @@ export interface BridgeConfigEnv {
   CLAWJS_BRIDGE_COORDINATOR_HEARTBEAT_MS?: string;
   CLAWJS_BRIDGE_IROH_DISABLE?: string;
   CLAWJS_BRIDGE_IROH_RELAY_URL?: string;
+  CLAWJS_MAIN_DATA_DIR?: string;
+  CLAWIX_CLAWJS_DATA_DIR?: string;
+  APPDATA?: string;
+  XDG_DATA_HOME?: string;
   HOME?: string;
 }
 
@@ -70,7 +74,7 @@ export function loadConfig(
     httpPort: parsePort(env.CLAWJS_BRIDGE_HTTP_PORT, 7779),
     bindAddress: env.CLAWJS_BRIDGE_BIND ?? "127.0.0.1",
     dbPath:
-      env.CLAWJS_BRIDGE_DB ?? join(home, ".clawix", "clawjs", "storage.sqlite"),
+      env.CLAWJS_BRIDGE_DB ?? join(resolveClawjsDataRoot(env, home), "runtime.sqlite"),
     statusPath:
       env.CLAWJS_BRIDGE_STATUS ??
       join(home, ".clawix", "state", "bridge-status.json"),
@@ -86,6 +90,22 @@ export function loadConfig(
         : {}),
     },
   };
+}
+
+function resolveClawjsDataRoot(env: BridgeConfigEnv, home: string): string {
+  if (env.CLAWJS_MAIN_DATA_DIR) return expandHome(env.CLAWJS_MAIN_DATA_DIR, home);
+  if (env.CLAWIX_CLAWJS_DATA_DIR) return expandHome(env.CLAWIX_CLAWJS_DATA_DIR, home);
+  if (process.platform === "darwin") {
+    return join(home, "Library", "Application Support", "Clawix", "clawjs");
+  }
+  if (process.platform === "win32") {
+    return join(env.APPDATA ?? join(home, "AppData", "Roaming"), "Clawix", "clawjs");
+  }
+  return join(env.XDG_DATA_HOME ?? join(home, ".local", "share"), "Clawix", "clawjs");
+}
+
+function expandHome(value: string, home: string): string {
+  return value.startsWith("~/") ? join(home, value.slice(2)) : value;
 }
 
 function parsePort(raw: string | undefined, fallback: number): number {

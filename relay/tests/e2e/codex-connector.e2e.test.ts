@@ -15,7 +15,7 @@ import type { CancelEnvelope, ConnectorInboundEnvelope, InvokeEnvelope } from ".
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-relay-codex-e2e-"));
 const codexHome = path.join(tempDir, "codex-home");
 const workspaceRoot = path.join(tempDir, "workspaces");
-const dbPath = path.join(tempDir, "relay.sqlite");
+const dbPath = path.join(tempDir, "infra.sqlite");
 const codexBin = path.join(tempDir, "codex");
 
 let appRef: Awaited<ReturnType<typeof buildRelayApp>> | null = null;

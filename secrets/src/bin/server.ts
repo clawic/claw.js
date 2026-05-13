@@ -16,7 +16,7 @@ const overrides: Parameters<typeof startSecretsServer>[0] = {};
 if (flags.port) overrides.config = { ...(overrides.config ?? {}), port: Number(flags.port) };
 if (flags.host) overrides.config = { ...(overrides.config ?? {}), host: flags.host };
 if (flags.workspace) {
-  overrides.config = { ...(overrides.config ?? {}), dataDir: flags.workspace, dbPath: `${flags.workspace}/secrets.sqlite` };
+  overrides.config = { ...(overrides.config ?? {}), dataDir: flags.workspace, dbPath: `${flags.workspace}/vault.sqlite` };
 }
 if (flags["status-file"]) overrides.statusFile = flags["status-file"];
 

@@ -38,7 +38,7 @@ describe("delegation-plane cli e2e", () => {
         host: "127.0.0.1",
         port: 0,
         dataDir: path.join(state.tmpDir, "data"),
-        databaseFile: path.join(state.tmpDir, "data", "delegation.sqlite"),
+        databaseFile: path.join(state.tmpDir, "data", "runtime.sqlite"),
         startScheduler: false,
       },
     });

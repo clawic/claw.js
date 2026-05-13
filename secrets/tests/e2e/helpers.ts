@@ -15,7 +15,7 @@ export async function startSecretsServer(prefix = "secrets-e2e") {
       host: "127.0.0.1",
       port: 0,
       dataDir: path.join(rootDir, ".data"),
-      dbPath: path.join(rootDir, ".data", "secrets.sqlite"),
+      dbPath: path.join(rootDir, ".data", "vault.sqlite"),
       jwtSecret: "secrets-test-secret",
       publicBaseUrl: "http://127.0.0.1:0",
       uiDistDir: path.join(process.cwd(), "ui", "dist"),

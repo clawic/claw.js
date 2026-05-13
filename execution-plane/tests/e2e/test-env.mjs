@@ -19,7 +19,7 @@ const commonEnv = {
   EXECUTION_PLANE_PORT: "4710",
   EXECUTION_PLANE_PUBLIC_BASE_URL: "http://127.0.0.1:4710",
   EXECUTION_PLANE_DATA_DIR: path.join(tmpDir, "data"),
-  EXECUTION_PLANE_DB_FILE: path.join(tmpDir, "data", "ui.sqlite"),
+  EXECUTION_PLANE_DB_FILE: path.join(tmpDir, "data", "infra.sqlite"),
   EXECUTION_PLANE_DEPLOYMENTS_DIR: path.join(tmpDir, "deployments"),
   EXECUTION_PLANE_DEMO_REPO: repoDir,
   EXECUTION_PLANE_WORKER_SECRET: "execution-plane-worker-secret",

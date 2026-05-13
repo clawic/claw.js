@@ -1,4 +1,5 @@
 import path from "node:path";
+import os from "node:os";
 
 export type MonitorMode = "local" | "relay" | "hybrid";
 
@@ -22,7 +23,6 @@ export interface MonitorConfig {
 }
 
 export function loadMonitorConfig(overrides: Partial<MonitorConfig> = {}): MonitorConfig {
-  const cwd = process.cwd();
   const cors = process.env.MONITOR_CORS_ORIGINS?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
   const scanPorts = process.env.MONITOR_LOCAL_SCAN_PORTS?.split(",").map((s) => Number(s.trim())).filter((n) => !Number.isNaN(n) && n > 0) ?? [];
 
@@ -34,7 +34,7 @@ export function loadMonitorConfig(overrides: Partial<MonitorConfig> = {}): Monit
   return {
     host: overrides.host ?? process.env.MONITOR_HOST ?? "127.0.0.1",
     port: overrides.port ?? Number(process.env.MONITOR_PORT ?? "4420"),
-    dbPath: overrides.dbPath ?? process.env.MONITOR_DB_PATH ?? path.join(cwd, "monitor.sqlite"),
+    dbPath: overrides.dbPath ?? process.env.MONITOR_DB_PATH ?? path.join(defaultClawjsDataRoot(), "monitor.sqlite"),
     mode,
     relayUrl: relayUrl || "http://127.0.0.1:4410",
     relayToken: overrides.relayToken ?? process.env.MONITOR_RELAY_TOKEN ?? "",
@@ -44,4 +44,16 @@ export function loadMonitorConfig(overrides: Partial<MonitorConfig> = {}): Monit
     retentionDays: overrides.retentionDays ?? Number(process.env.MONITOR_RETENTION_DAYS ?? "30"),
     corsOrigins: overrides.corsOrigins ?? cors,
   };
+}
+
+function defaultClawjsDataRoot(): string {
+  if (process.env.CLAWJS_MAIN_DATA_DIR) return expandHome(process.env.CLAWJS_MAIN_DATA_DIR);
+  if (process.env.CLAWIX_CLAWJS_DATA_DIR) return expandHome(process.env.CLAWIX_CLAWJS_DATA_DIR);
+  if (process.platform === "darwin") return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
+  if (process.platform === "win32") return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
+  return path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
+}
+
+function expandHome(value: string): string {
+  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
 }

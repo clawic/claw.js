@@ -27,7 +27,7 @@ export default defineConfig({
       SECRETS_HOST: "127.0.0.1",
       SECRETS_PORT: "4610",
       SECRETS_DATA_DIR: path.join(outputRoot, "data"),
-      SECRETS_DB_PATH: path.join(outputRoot, "data", "secrets.sqlite"),
+      SECRETS_DB_PATH: path.join(outputRoot, "data", "vault.sqlite"),
       SECRETS_JWT_SECRET: "secrets-playwright-secret",
       SECRETS_UI_DIST_DIR: path.join(process.cwd(), "ui", "dist"),
     },

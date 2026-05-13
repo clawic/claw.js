@@ -171,11 +171,11 @@ bash dev.sh
 If the `BackgroundBridgeService.swift` resolver edit already shipped,
 revert that file too.
 
-The on-disk state of the Node daemon (`~/.clawix/clawjs/storage.sqlite`,
-`~/.clawix/state/bridge-status.json`) is independent from the Swift
-helper's state. Removing the bundle does not delete it; that lets a
-second pass restore the daemon without losing host records or audit
-logs.
+The on-disk state of the Node daemon now lives with the Clawix/ClawJS
+data root (`~/Library/Application Support/Clawix/clawjs/runtime.sqlite`)
+while bridge status remains at `~/.clawix/state/bridge-status.json`.
+Removing the bundle does not delete it; that lets a second pass restore
+the daemon without losing host records or audit logs.
 
 ## 8. After the cutover is durable
 

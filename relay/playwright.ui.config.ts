@@ -28,7 +28,7 @@ export default defineConfig({
     env: {
       RELAY_HOST: "127.0.0.1",
       PORT: "4410",
-      RELAY_DB_PATH: path.join(tmpRoot, "relay.sqlite"),
+      RELAY_DB_PATH: path.join(tmpRoot, "infra.sqlite"),
       RELAY_JWT_SECRET: "relay-playwright-ui-secret",
       RELAY_PUBLIC_BASE_URL: "http://127.0.0.1:4410",
     },

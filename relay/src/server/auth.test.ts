@@ -10,7 +10,7 @@ import { loadRelayConfig } from "./config.ts";
 
 function createDb(): RelayDatabase {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-relay-auth-"));
-  return new RelayDatabase(path.join(dir, "relay.sqlite"));
+  return new RelayDatabase(path.join(dir, "infra.sqlite"));
 }
 
 test("access tokens preserve device claims and support key rotation on verify", async () => {

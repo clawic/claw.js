@@ -7,7 +7,7 @@ import path from "node:path";
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "secrets-cli-"));
 process.env.SECRETS_DATA_DIR = tmpDir;
-process.env.SECRETS_DB_PATH = path.join(tmpDir, "secrets.sqlite");
+process.env.SECRETS_DB_PATH = path.join(tmpDir, "vault.sqlite");
 process.env.SECRETS_PORT = "0";
 
 const { startSecretsServer } = await import("../src/server/app.ts");

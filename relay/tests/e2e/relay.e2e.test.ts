@@ -1066,7 +1066,7 @@ before(async () => {
     config: {
       port: 0,
       host: "127.0.0.1",
-      dbPath: path.join(tempDir, "relay.sqlite"),
+      dbPath: path.join(tempDir, "infra.sqlite"),
       jwtSecrets: ["relay-e2e-secret"],
       publicBaseUrl: "http://127.0.0.1:4410",
       loginRateLimitMax: 100,
@@ -2394,7 +2394,7 @@ describe("relay e2e", () => {
       config: {
         port: 0,
         host: "127.0.0.1",
-        dbPath: path.join(isolatedDir, "relay.sqlite"),
+        dbPath: path.join(isolatedDir, "infra.sqlite"),
         jwtSecrets: ["relay-rate-limit-secret"],
         publicBaseUrl: "http://127.0.0.1:4410",
         loginRateLimitMax: 3,

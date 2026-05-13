@@ -11,7 +11,7 @@ import { TenantStore, SecretsMetaStore } from "../src/server/stores.ts";
 import { AuditStore } from "../src/server/audit.ts";
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "secrets-audit-"));
-const dbPath = path.join(tmpDir, "secrets.sqlite");
+const dbPath = path.join(tmpDir, "vault.sqlite");
 const db = openDatabase(dbPath);
 
 let pass = 0;

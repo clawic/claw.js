@@ -1,4 +1,5 @@
 import path from "node:path";
+import os from "node:os";
 
 export interface ExecutionPlaneConfig {
   host: string;
@@ -16,8 +17,7 @@ export interface ExecutionPlaneConfig {
 }
 
 export function loadExecutionPlaneConfig(overrides: Partial<ExecutionPlaneConfig> = {}): ExecutionPlaneConfig {
-  const cwd = process.cwd();
-  const dataDir = overrides.dataDir ?? process.env.EXECUTION_PLANE_DATA_DIR ?? path.join(cwd, "execution-plane", ".data");
+  const dataDir = overrides.dataDir ?? process.env.EXECUTION_PLANE_DATA_DIR ?? defaultClawjsDataRoot();
   const host = overrides.host ?? process.env.EXECUTION_PLANE_HOST ?? "127.0.0.1";
   const port = overrides.port ?? Number(process.env.EXECUTION_PLANE_PORT ?? "4710");
   const publicBaseUrl = overrides.publicBaseUrl ?? process.env.EXECUTION_PLANE_PUBLIC_BASE_URL ?? `http://${host}:${port}`;
@@ -27,7 +27,7 @@ export function loadExecutionPlaneConfig(overrides: Partial<ExecutionPlaneConfig
     publicBaseUrl,
     dataDir,
     deploymentsDir: overrides.deploymentsDir ?? process.env.EXECUTION_PLANE_DEPLOYMENTS_DIR ?? path.join(dataDir, "deployments"),
-    databaseFile: overrides.databaseFile ?? process.env.EXECUTION_PLANE_DB_FILE ?? path.join(dataDir, "execution-plane.sqlite"),
+    databaseFile: overrides.databaseFile ?? process.env.EXECUTION_PLANE_DB_FILE ?? path.join(dataDir, "infra.sqlite"),
     workerSharedSecret: overrides.workerSharedSecret ?? process.env.EXECUTION_PLANE_WORKER_SECRET ?? "execution-plane-worker-secret",
     jwtSecrets: overrides.jwtSecrets ?? (process.env.EXECUTION_PLANE_JWT_SECRETS?.split(",").map((value) => value.trim()).filter(Boolean) ?? ["execution-plane-jwt-secret"]),
     jwtIssuer: overrides.jwtIssuer ?? "execution-plane",
@@ -35,4 +35,16 @@ export function loadExecutionPlaneConfig(overrides: Partial<ExecutionPlaneConfig
     accessTokenTtlSec: overrides.accessTokenTtlSec ?? 900,
     refreshTokenTtlSec: overrides.refreshTokenTtlSec ?? 60 * 60 * 24 * 30,
   };
+}
+
+function defaultClawjsDataRoot(): string {
+  if (process.env.CLAWJS_MAIN_DATA_DIR) return expandHome(process.env.CLAWJS_MAIN_DATA_DIR);
+  if (process.env.CLAWIX_CLAWJS_DATA_DIR) return expandHome(process.env.CLAWIX_CLAWJS_DATA_DIR);
+  if (process.platform === "darwin") return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
+  if (process.platform === "win32") return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
+  return path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
+}
+
+function expandHome(value: string): string {
+  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
 }

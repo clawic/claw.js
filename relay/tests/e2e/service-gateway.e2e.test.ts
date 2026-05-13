@@ -14,7 +14,7 @@ import { startRelayServiceProxy } from "../../src/service-proxy/local.ts";
 import type { CancelEnvelope, ConnectorInboundEnvelope, InvokeEnvelope } from "../../src/shared/protocol.ts";
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-relay-service-e2e-"));
-const dbPath = path.join(tempDir, "relay.sqlite");
+const dbPath = path.join(tempDir, "infra.sqlite");
 const workspaceRoot = path.join(tempDir, "workspaces");
 
 let appRef: Awaited<ReturnType<typeof buildRelayApp>> | null = null;

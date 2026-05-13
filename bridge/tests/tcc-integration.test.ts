@@ -35,7 +35,7 @@ async function withRuntime(opts: {
     bridgePort,
     httpPort,
     bindAddress: "127.0.0.1",
-    dbPath: join(workdir, "storage.sqlite"),
+    dbPath: join(workdir, "runtime.sqlite"),
     statusPath: join(workdir, "state", "bridge-status.json"),
     displayName: "TCC Mac",
     bonjourEnabled: false,

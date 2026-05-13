@@ -77,7 +77,7 @@ test("secrets resolves the built UI path for the packaged server entrypoint", ()
       host: "127.0.0.1",
       port: 4610,
       dataDir: path.join(process.cwd(), ".data"),
-      dbPath: path.join(process.cwd(), ".data", "secrets.sqlite"),
+      dbPath: path.join(process.cwd(), ".data", "vault.sqlite"),
       jwtSecret: "secrets-test-secret",
       publicBaseUrl: "http://127.0.0.1:4610",
       uiDistDir: path.join(process.cwd(), ".missing-ui"),

@@ -94,7 +94,7 @@ const initCommand: Command = {
       `RELAY_IROH_RELAY_BIN=/usr/local/bin/iroh-relay`,
       `RELAY_IROH_RELAY_PUBLIC_URL=https://${publicHost}/v1/iroh-relay`,
       `RELAY_OWNER_EMAIL=${adminEmail}`,
-      `RELAY_DB_PATH=/var/lib/clawix-relay/relay.sqlite`,
+      `RELAY_DB_PATH=/var/lib/clawix-relay/infra.sqlite`,
     ];
     writeFileSync(target, lines.join("\n") + "\n");
     console.log(`Wrote starter env to ${target}`);

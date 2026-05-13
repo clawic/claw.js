@@ -12,7 +12,7 @@ import { SecretsResolver } from "../src/server/resolver.ts";
 import { evaluateGovernance } from "../src/server/governance.ts";
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "secrets-secrets-"));
-const dbPath = path.join(tmpDir, "secrets.sqlite");
+const dbPath = path.join(tmpDir, "vault.sqlite");
 const db = openDatabase(dbPath);
 
 let pass = 0; let fail = 0;

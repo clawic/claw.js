@@ -30,7 +30,7 @@ async function withRuntime(): Promise<{
     bridgePort,
     httpPort,
     bindAddress: "127.0.0.1",
-    dbPath: join(workdir, "storage.sqlite"),
+    dbPath: join(workdir, "runtime.sqlite"),
     statusPath: join(workdir, "state", "bridge-status.json"),
     displayName: "SSH Mac",
     bonjourEnabled: false,

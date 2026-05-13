@@ -146,7 +146,7 @@ Default server settings:
 
 - host: `127.0.0.1`
 - port: `4410`
-- database: `relay/relay.sqlite`
+- database: `relay/infra.sqlite`
 
 For local development, the SQLite seed includes two demo accounts:
 
@@ -596,7 +596,7 @@ Server environment variables:
 | --- | --- | --- |
 | `RELAY_HOST` | `127.0.0.1` | bind host |
 | `PORT` | `4410` | HTTP port |
-| `RELAY_DB_PATH` | `relay.sqlite` in `relay/` | SQLite file |
+| `RELAY_DB_PATH` | `infra.sqlite` in `relay/` | SQLite file |
 | `RELAY_JWT_SECRET` | `relay-dev-secret-change-me` | JWT signing key |
 | `RELAY_ACCESS_TTL_SEC` | `900` | access-token TTL |
 | `RELAY_REFRESH_TTL_SEC` | `2592000` | refresh-token TTL |

@@ -46,7 +46,7 @@ write_files:
             RELAY_PUBLIC_BASE_URL: "https://${DOMAIN}"
             RELAY_HOST: "0.0.0.0"
             PORT: "4410"
-            RELAY_DB_PATH: "/var/lib/clawix-relay/relay.sqlite"
+            RELAY_DB_PATH: "/var/lib/clawix-relay/infra.sqlite"
             RELAY_MAGIC_LINK_URL_TEMPLATE: "https://${DOMAIN}/v1/auth/magic-link/callback?token={{token}}"
             RELAY_MAGIC_LINK_FROM: "relay@${DOMAIN}"
             RELAY_IROH_RELAY_PUBLIC_URL: "https://${DOMAIN}/v1/iroh-relay"

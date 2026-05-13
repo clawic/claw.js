@@ -46,7 +46,7 @@ COPY --from=builder /workspace/node_modules ./node_modules
 
 ENV PORT=4410 \
     RELAY_HOST=0.0.0.0 \
-    RELAY_DB_PATH=/var/lib/clawix-relay/relay.sqlite \
+    RELAY_DB_PATH=/var/lib/clawix-relay/infra.sqlite \
     RELAY_IROH_RELAY_BIN=/usr/local/bin/iroh-relay
 RUN mkdir -p /var/lib/clawix-relay
 

@@ -1,4 +1,4 @@
-import { networkInterfaces } from "node:os";
+import { homedir, networkInterfaces } from "node:os";
 import path from "node:path";
 
 export interface RelayConfig {
@@ -26,7 +26,6 @@ export interface RelayConfig {
 }
 
 export function loadRelayConfig(overrides: Partial<RelayConfig> = {}): RelayConfig {
-  const cwd = process.cwd();
   const cors = process.env.RELAY_CORS_ORIGINS?.split(",").map((entry) => entry.trim()).filter(Boolean) ?? [];
   const jwtSecrets = (process.env.RELAY_JWT_SECRETS ?? process.env.RELAY_JWT_SECRET ?? "relay-dev-secret-change-me")
     .split(",")
@@ -38,7 +37,7 @@ export function loadRelayConfig(overrides: Partial<RelayConfig> = {}): RelayConf
   return {
     host: overrides.host ?? process.env.RELAY_HOST ?? "0.0.0.0",
     port: overrides.port ?? Number(process.env.PORT ?? "4410"),
-    dbPath: overrides.dbPath ?? process.env.RELAY_DB_PATH ?? path.join(cwd, "relay.sqlite"),
+    dbPath: overrides.dbPath ?? process.env.RELAY_DB_PATH ?? path.join(defaultClawjsDataRoot(), "infra.sqlite"),
     jwtSecrets: overrides.jwtSecrets ?? jwtSecrets,
     jwtIssuer: overrides.jwtIssuer ?? process.env.RELAY_JWT_ISSUER ?? "clawjs-relay",
     jwtAudience: overrides.jwtAudience ?? process.env.RELAY_JWT_AUDIENCE ?? "clawjs-relay-clients",
@@ -58,6 +57,18 @@ export function loadRelayConfig(overrides: Partial<RelayConfig> = {}): RelayConf
     publicBaseUrl: overrides.publicBaseUrl ?? publicBaseUrl,
     iotBaseUrl: overrides.iotBaseUrl ?? process.env.RELAY_IOT_BASE_URL ?? process.env.CLAWJS_IOT_BASE_URL,
   };
+}
+
+function defaultClawjsDataRoot(): string {
+  if (process.env.CLAWJS_MAIN_DATA_DIR) return expandHome(process.env.CLAWJS_MAIN_DATA_DIR);
+  if (process.env.CLAWIX_CLAWJS_DATA_DIR) return expandHome(process.env.CLAWIX_CLAWJS_DATA_DIR);
+  if (process.platform === "darwin") return path.join(homedir(), "Library", "Application Support", "Clawix", "clawjs");
+  if (process.platform === "win32") return path.join(process.env.APPDATA ?? path.join(homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
+  return path.join(process.env.XDG_DATA_HOME ?? path.join(homedir(), ".local", "share"), "Clawix", "clawjs");
+}
+
+function expandHome(value: string): string {
+  return value.startsWith("~/") ? path.join(homedir(), value.slice(2)) : value;
 }
 
 function localIPv4(): string | null {

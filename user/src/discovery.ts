@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 export interface SourceLocation {
@@ -16,8 +17,25 @@ function firstExisting(candidates: string[]): string | null {
   return null;
 }
 
+function resolveClawjsDataRoot(): string {
+  if (process.env.CLAWJS_MAIN_DATA_DIR) return expandHome(process.env.CLAWJS_MAIN_DATA_DIR);
+  if (process.env.CLAWIX_CLAWJS_DATA_DIR) return expandHome(process.env.CLAWIX_CLAWJS_DATA_DIR);
+  if (process.platform === "darwin") {
+    return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
+  }
+  if (process.platform === "win32") {
+    return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
+  }
+  return path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
+}
+
+function expandHome(value: string): string {
+  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
+}
+
 export function discoverSources(workspace: string): SourceLocation[] {
   const dataDir = path.join(workspace, ".data");
+  const clawjsMainDb = process.env.CLAWJS_MAIN_DB_PATH ?? path.join(resolveClawjsDataRoot(), "clawjs.sqlite");
   const definitions: Array<Omit<SourceLocation, "path">> = [
     {
       id: "relay",
@@ -25,9 +43,9 @@ export function discoverSources(workspace: string): SourceLocation[] {
       kind: "sqlite",
       candidates: [
         process.env.RELAY_DB_PATH,
-        path.join(workspace, "relay.sqlite"),
-        path.join(dataDir, "relay.sqlite"),
-        path.join(workspace, "relay", "relay.sqlite"),
+        path.join(workspace, "infra.sqlite"),
+        path.join(dataDir, "infra.sqlite"),
+        path.join(workspace, "relay", "infra.sqlite"),
       ].filter(Boolean) as string[],
     },
     {
@@ -36,8 +54,8 @@ export function discoverSources(workspace: string): SourceLocation[] {
       kind: "sqlite",
       candidates: [
         process.env.EXECUTION_PLANE_DB_FILE,
-        path.join(workspace, "execution-plane", ".data", "execution-plane.sqlite"),
-        path.join(dataDir, "execution-plane.sqlite"),
+        path.join(workspace, "execution-plane", ".data", "infra.sqlite"),
+        path.join(dataDir, "infra.sqlite"),
       ].filter(Boolean) as string[],
     },
     {
@@ -57,7 +75,7 @@ export function discoverSources(workspace: string): SourceLocation[] {
       candidates: [
         process.env.FEED_DB_PATH,
         path.join(dataDir, "feed.sqlite"),
-        path.join(workspace, "feed.sqlite"),
+        path.join(resolveClawjsDataRoot(), "feed.sqlite"),
       ].filter(Boolean) as string[],
     },
     {
@@ -66,8 +84,7 @@ export function discoverSources(workspace: string): SourceLocation[] {
       kind: "sqlite",
       candidates: [
         process.env.WIKI_DB_PATH,
-        path.join(dataDir, "wiki.sqlite"),
-        path.join(workspace, "wiki.sqlite"),
+        clawjsMainDb,
       ].filter(Boolean) as string[],
     },
     {
@@ -76,8 +93,7 @@ export function discoverSources(workspace: string): SourceLocation[] {
       kind: "sqlite",
       candidates: [
         process.env.CONTENT_DB_PATH,
-        path.join(dataDir, "content.sqlite"),
-        path.join(workspace, "content.sqlite"),
+        clawjsMainDb,
       ].filter(Boolean) as string[],
     },
     {
@@ -86,8 +102,7 @@ export function discoverSources(workspace: string): SourceLocation[] {
       kind: "sqlite",
       candidates: [
         process.env.ERP_DB_PATH,
-        path.join(dataDir, "erp.sqlite"),
-        path.join(workspace, "erp.sqlite"),
+        clawjsMainDb,
       ].filter(Boolean) as string[],
     },
     {
@@ -96,8 +111,7 @@ export function discoverSources(workspace: string): SourceLocation[] {
       kind: "sqlite",
       candidates: [
         process.env.DELEGATION_PLANE_DATABASE_FILE,
-        path.join(dataDir, "delegation.sqlite"),
-        path.join(workspace, "delegation.sqlite"),
+        path.join(resolveClawjsDataRoot(), "runtime.sqlite"),
       ].filter(Boolean) as string[],
     },
     {
