@@ -1,0 +1,10 @@
+{
+  "runtimeResponse": {
+    "status": 200,
+    "headers": {
+      "content-type": "image/png"
+    },
+    "body": "iVBORw==",
+    "bodyEncoding": "base64"
+  }
+}

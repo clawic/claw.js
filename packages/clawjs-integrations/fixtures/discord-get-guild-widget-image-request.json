@@ -1,0 +1,7 @@
+{
+  "method": "GET",
+  "url": "https://discord.com/api/v10/guilds/sample/widget.png?style=shield",
+  "headers": {
+    "accept": "image/png"
+  }
+}

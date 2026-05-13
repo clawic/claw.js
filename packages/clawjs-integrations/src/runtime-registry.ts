@@ -525,6 +525,7 @@ const DISCORD_ACTION_FIXTURE_NAMES = [
   "get-guild-widget-settings",
   "modify-guild-widget",
   "get-guild-widget",
+  "get-guild-widget-image",
   "get-guild-vanity-url",
   "get-guild-welcome-screen",
   "modify-guild-welcome-screen",
