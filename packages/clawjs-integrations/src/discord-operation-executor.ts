@@ -19,6 +19,14 @@ export type DiscordRuntimeOperation =
   | "create-guild-emoji"
   | "update-guild-emoji"
   | "delete-guild-emoji"
+  | "get-sticker"
+  | "list-sticker-packs"
+  | "get-sticker-pack"
+  | "list-guild-stickers"
+  | "get-guild-sticker"
+  | "create-guild-sticker"
+  | "update-guild-sticker"
+  | "delete-guild-sticker"
   | "get-channel"
   | "update-channel"
   | "delete-channel"
@@ -153,6 +161,30 @@ export function buildDiscordOperationRequest(
       return bodyPlan("PATCH", `guilds/${guildId(values)}/emojis/${emojiId(values)}`, auth, headers, emojiBody(values, false, true), { type: "object", requiredPaths: ["id", "name"] });
     case "delete-guild-emoji":
       return deletePlan(`guilds/${guildId(values)}/emojis/${emojiId(values)}`, auth, headers, { type: "object" });
+    case "get-sticker":
+      return getPlan(`stickers/${stickerId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "name"] });
+    case "list-sticker-packs":
+      return getPlan("sticker-packs", auth, headers, { type: "object", requiredPaths: ["sticker_packs"] });
+    case "get-sticker-pack":
+      return getPlan(`sticker-packs/${stickerPackId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "stickers", "name"] });
+    case "list-guild-stickers":
+      return getPlan(`guilds/${guildId(values)}/stickers`, auth, headers, { type: "array" });
+    case "get-guild-sticker":
+      return getPlan(`guilds/${guildId(values)}/stickers/${stickerId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "name"] });
+    case "create-guild-sticker":
+      return {
+        method: "POST",
+        endpoint: `guilds/${guildId(values)}/stickers`,
+        auth,
+        headers: auditHeaders(headers, values),
+        bodyEncoding: "multipart",
+        body: stickerBody(values, true),
+        responseSchema: { type: "object", requiredPaths: ["id", "name"] },
+      };
+    case "update-guild-sticker":
+      return bodyPlan("PATCH", `guilds/${guildId(values)}/stickers/${stickerId(values)}`, auth, auditHeaders(headers, values), stickerBody(values, false), { type: "object", requiredPaths: ["id", "name"] });
+    case "delete-guild-sticker":
+      return deletePlan(`guilds/${guildId(values)}/stickers/${stickerId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "update-channel":
       return bodyPlan("PATCH", `channels/${channelId(values)}`, auth, headers, channelBody(values), { type: "object", requiredPaths: ["id", "type"] });
     case "delete-channel":
@@ -384,6 +416,14 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "create-guild-emoji",
   "update-guild-emoji",
   "delete-guild-emoji",
+  "get-sticker",
+  "list-sticker-packs",
+  "get-sticker-pack",
+  "list-guild-stickers",
+  "get-guild-sticker",
+  "create-guild-sticker",
+  "update-guild-sticker",
+  "delete-guild-sticker",
   "get-channel",
   "update-channel",
   "delete-channel",
@@ -583,6 +623,15 @@ function emojiBody(
   });
 }
 
+function stickerBody(values: Record<string, IntegrationJson>, requireCreateFields: boolean): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    name: requireCreateFields ? requiredString(values.name, "name") : optionalString(values.name),
+    description: requireCreateFields ? requiredString(values.description, "description") : optionalString(values.description),
+    tags: requireCreateFields ? requiredString(values.tags, "tags") : optionalString(values.tags),
+    file: requireCreateFields ? requiredString(values.file, "file") : undefined,
+  });
+}
+
 function messageBody(values: Record<string, IntegrationJson>, requireContent: boolean): Record<string, IntegrationJson> {
   const content = firstValue(values.content, values.text);
   return removeEmptyValues({
@@ -738,6 +787,14 @@ function commandId(values: Record<string, IntegrationJson>): string {
 
 function emojiId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.emojiId, values.emoji), "emojiId"));
+}
+
+function stickerId(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.stickerId, values.sticker), "stickerId"));
+}
+
+function stickerPackId(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.stickerPackId, values.stickerPack), "stickerPackId"));
 }
 
 function guildScheduledEventId(values: Record<string, IntegrationJson>): string {

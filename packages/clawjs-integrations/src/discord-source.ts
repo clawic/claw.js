@@ -15,6 +15,7 @@ export type DiscordSourceOperation =
   | "auto-moderation-rule-delete"
   | "auto-moderation-action-execution"
   | "guild-emojis-update"
+  | "guild-stickers-update"
   | "guild-member-add"
   | "guild-member-remove"
   | "guild-scheduled-event-create"
@@ -37,6 +38,7 @@ const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "auto-moderation-rule-delete",
   "auto-moderation-action-execution",
   "guild-emojis-update",
+  "guild-stickers-update",
   "guild-member-add",
   "guild-member-remove",
   "guild-scheduled-event-create",
