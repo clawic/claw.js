@@ -1,0 +1,10 @@
+{
+  "status": "ahead",
+  "ahead_by": 1,
+  "behind_by": 1,
+  "commits": [
+    {
+      "id": "compare-commits_commits_sample"
+    }
+  ]
+}

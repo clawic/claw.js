@@ -1,0 +1,15 @@
+{
+  "method": "POST",
+  "url": "https://api.github.com/repos/octocat/Hello-World/commits/abc123/comments",
+  "headers": {
+    "accept": "application/vnd.github+json",
+    "authorization": "Bearer offline-githubToken-secret",
+    "content-type": "application/json",
+    "x-github-api-version": "2026-03-10"
+  },
+  "body": {
+    "body": "Looks good",
+    "path": "README.md",
+    "position": 1
+  }
+}

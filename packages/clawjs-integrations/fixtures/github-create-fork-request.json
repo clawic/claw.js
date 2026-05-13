@@ -1,0 +1,15 @@
+{
+  "method": "POST",
+  "url": "https://api.github.com/repos/octocat/Hello-World/forks",
+  "headers": {
+    "accept": "application/vnd.github+json",
+    "authorization": "Bearer offline-githubToken-secret",
+    "content-type": "application/json",
+    "x-github-api-version": "2026-03-10"
+  },
+  "body": {
+    "organization": "octo-org",
+    "name": "Hello-World-fork",
+    "default_branch_only": true
+  }
+}

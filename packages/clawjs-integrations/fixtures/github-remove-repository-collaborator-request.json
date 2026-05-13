@@ -1,0 +1,9 @@
+{
+  "method": "DELETE",
+  "url": "https://api.github.com/repos/octocat/Hello-World/collaborators/hubot",
+  "headers": {
+    "accept": "application/vnd.github+json",
+    "authorization": "Bearer offline-githubToken-secret",
+    "x-github-api-version": "2026-03-10"
+  }
+}
