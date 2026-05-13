@@ -5003,6 +5003,11 @@
               "name": "guildScheduledEventId",
               "type": "string",
               "optional": true
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": [
