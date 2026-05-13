@@ -1,0 +1,11 @@
+{
+  "method": "PATCH",
+  "url": "https://discord.com/api/v10/webhooks/sample/sample",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json"
+  },
+  "body": {
+    "name": "sample"
+  }
+}
