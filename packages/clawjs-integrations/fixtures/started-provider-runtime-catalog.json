@@ -1476,6 +1476,113 @@
           ]
         },
         {
+          "id": "discord.action.create-stage-instance",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Stage Instance",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "topic",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "privacyLevel",
+              "type": "integer",
+              "optional": true,
+              "default": 2
+            },
+            {
+              "name": "sendStartNotification",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "guildScheduledEventId",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-stage-instance",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Stage Instance",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.update-stage-instance",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Update Stage Instance",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "topic",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "privacyLevel",
+              "type": "integer",
+              "optional": true,
+              "default": 2
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-stage-instance",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Stage Instance",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.get-invite",
           "appId": "discord",
           "kind": "action",
@@ -2296,6 +2403,69 @@
           "appId": "discord",
           "kind": "source",
           "name": "Guild Scheduled Event Delete",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.stage-instance-create",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Stage Instance Create",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.stage-instance-update",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Stage Instance Update",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.stage-instance-delete",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Stage Instance Delete",
           "fields": [],
           "authFieldNames": [],
           "runtime": {
