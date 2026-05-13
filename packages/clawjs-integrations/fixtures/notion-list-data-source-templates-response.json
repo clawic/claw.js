@@ -1,0 +1,11 @@
+{
+  "templates": [
+    {
+      "id": "template_sample",
+      "name": "sample",
+      "is_default": true
+    }
+  ],
+  "has_more": false,
+  "next_cursor": null
+}

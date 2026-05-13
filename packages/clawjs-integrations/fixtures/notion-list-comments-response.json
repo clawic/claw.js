@@ -1,0 +1,11 @@
+{
+  "object": "list",
+  "results": [
+    {
+      "object": "comment",
+      "id": "comment_sample"
+    }
+  ],
+  "next_cursor": null,
+  "has_more": false
+}

@@ -1,0 +1,12 @@
+{
+  "object": "list",
+  "results": [
+    {
+      "object": "user",
+      "id": "user_sample",
+      "type": "bot"
+    }
+  ],
+  "next_cursor": null,
+  "has_more": false
+}

@@ -1,0 +1,20 @@
+{
+  "method": "PATCH",
+  "url": "https://api.notion.com/v1/blocks/sample/children",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-notionToken-secret",
+    "notion-version": "2026-03-11"
+  },
+  "body": {
+    "children": [
+      {
+        "object": "block",
+        "type": "paragraph",
+        "paragraph": {
+          "rich_text": []
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "object": "block",
+  "id": "sample",
+  "type": "paragraph",
+  "paragraph": {
+    "rich_text": []
+  }
+}

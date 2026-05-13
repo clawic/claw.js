@@ -1,0 +1,9 @@
+{
+  "object": "data_source",
+  "id": "sample",
+  "properties": {
+    "Name": {
+      "title": {}
+    }
+  }
+}

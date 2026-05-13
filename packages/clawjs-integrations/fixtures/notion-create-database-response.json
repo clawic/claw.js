@@ -1,0 +1,10 @@
+{
+  "object": "database",
+  "id": "database_created_sample",
+  "data_sources": [
+    {
+      "id": "data_source_created_sample",
+      "name": "sample"
+    }
+  ]
+}
