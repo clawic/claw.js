@@ -315,7 +315,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
       return reply.sendFile("index.html");
     }
     return reply.code(404).type("text/plain").send(
-      "Telegram UI build not found. Run `npm --prefix telegram/ui run build`.",
+      "Telegram UI build not found. Run `npm --prefix integrations/telegram/ui run build`.",
     );
   });
 
