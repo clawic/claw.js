@@ -1,0 +1,10 @@
+{
+  "events": [
+    {
+      "eventId": "offline-task-change-event",
+      "resourceId": "offline-task-change-resource",
+      "resourceState": "exists",
+      "kind": "tasks#task"
+    }
+  ]
+}

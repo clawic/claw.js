@@ -1,0 +1,10 @@
+{
+  "events": [
+    {
+      "eventId": "offline-sheets-change-event",
+      "resourceId": "offline-sheets-change-resource",
+      "resourceState": "exists",
+      "kind": "google#event"
+    }
+  ]
+}

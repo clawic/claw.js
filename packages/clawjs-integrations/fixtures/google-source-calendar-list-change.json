@@ -1,0 +1,10 @@
+{
+  "events": [
+    {
+      "eventId": "offline-calendar-list-change-event",
+      "resourceId": "offline-calendar-list-change-resource",
+      "resourceState": "exists",
+      "kind": "calendar#event"
+    }
+  ]
+}

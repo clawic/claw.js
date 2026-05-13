@@ -1,0 +1,10 @@
+{
+  "events": [
+    {
+      "eventId": "offline-drive-change-event",
+      "resourceId": "offline-drive-change-resource",
+      "resourceState": "exists",
+      "kind": "drive#change"
+    }
+  ]
+}

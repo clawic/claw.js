@@ -1,0 +1,10 @@
+{
+  "events": [
+    {
+      "eventId": "offline-calendar-event-event",
+      "resourceId": "offline-calendar-event-resource",
+      "resourceState": "exists",
+      "kind": "calendar#event"
+    }
+  ]
+}

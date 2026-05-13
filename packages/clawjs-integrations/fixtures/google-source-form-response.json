@@ -1,0 +1,12 @@
+{
+  "events": [
+    {
+      "eventId": "offline-form-response-event",
+      "resourceId": "offline-form-response-resource",
+      "resourceState": "exists",
+      "kind": "forms#response"
+    }
+  ],
+  "role": "reader",
+  "content": "Looks good"
+}
