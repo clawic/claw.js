@@ -93,7 +93,7 @@ test("identity advertises ssh capabilities when ssh is enabled", async () => {
   const h = await withRuntime();
   try {
     const res = await fetch(
-      `http://127.0.0.1:${h.config.httpPort}/mesh/identity`,
+      `http://127.0.0.1:${h.config.httpPort}/v1/mesh/identity`,
       { headers: { authorization: `Bearer ${h.runtime.identity.bearerToken}` } },
     );
     const body = (await res.json()) as { capabilities: string[] };
@@ -105,7 +105,7 @@ test("identity advertises ssh capabilities when ssh is enabled", async () => {
   }
 });
 
-test("POST /mesh/hosts upserts host + ssh secret, then ssh.exec works via WS", async () => {
+test("POST /v1/mesh/hosts upserts host + ssh secret, then ssh.exec works via WS", async () => {
   const fakeServer = await startFakeSshServer({
     acceptPassword: "topsecret",
     execHandlers: {
@@ -119,7 +119,7 @@ test("POST /mesh/hosts upserts host + ssh secret, then ssh.exec works via WS", a
   const h = await withRuntime();
   try {
     const upsertRes = await fetch(
-      `http://127.0.0.1:${h.config.httpPort}/mesh/hosts`,
+      `http://127.0.0.1:${h.config.httpPort}/v1/mesh/hosts`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -203,11 +203,11 @@ test("POST /mesh/hosts upserts host + ssh secret, then ssh.exec works via WS", a
   }
 });
 
-test("POST /mesh/hosts without ssh secret store still works for non-ssh hosts", async () => {
+test("POST /v1/mesh/hosts without ssh secret store still works for non-ssh hosts", async () => {
   const h = await withRuntime();
   try {
     const res = await fetch(
-      `http://127.0.0.1:${h.config.httpPort}/mesh/hosts`,
+      `http://127.0.0.1:${h.config.httpPort}/v1/mesh/hosts`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -234,7 +234,7 @@ test("ssh.exec via WS surfaces auth failure as ok:false", async () => {
   const fakeServer = await startFakeSshServer({ acceptPassword: "the-truth" });
   const h = await withRuntime();
   try {
-    await fetch(`http://127.0.0.1:${h.config.httpPort}/mesh/hosts`, {
+    await fetch(`http://127.0.0.1:${h.config.httpPort}/v1/mesh/hosts`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -285,11 +285,11 @@ test("ssh.exec via WS surfaces auth failure as ok:false", async () => {
   }
 });
 
-test("DELETE /mesh/hosts/:id removes a host", async () => {
+test("DELETE /v1/mesh/hosts/:id removes a host", async () => {
   const h = await withRuntime();
   try {
     const create = await fetch(
-      `http://127.0.0.1:${h.config.httpPort}/mesh/hosts`,
+      `http://127.0.0.1:${h.config.httpPort}/v1/mesh/hosts`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -306,7 +306,7 @@ test("DELETE /mesh/hosts/:id removes a host", async () => {
     );
     assert.equal(create.status, 200);
     const del = await fetch(
-      `http://127.0.0.1:${h.config.httpPort}/mesh/hosts/tmp-host`,
+      `http://127.0.0.1:${h.config.httpPort}/v1/mesh/hosts/tmp-host`,
       { method: "DELETE" },
     );
     assert.equal(del.status, 200);
@@ -316,10 +316,10 @@ test("DELETE /mesh/hosts/:id removes a host", async () => {
   }
 });
 
-test("POST /mesh/hosts/:id/revoke marks a host as revoked", async () => {
+test("POST /v1/mesh/hosts/:id/revoke marks a host as revoked", async () => {
   const h = await withRuntime();
   try {
-    await fetch(`http://127.0.0.1:${h.config.httpPort}/mesh/hosts`, {
+    await fetch(`http://127.0.0.1:${h.config.httpPort}/v1/mesh/hosts`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -333,7 +333,7 @@ test("POST /mesh/hosts/:id/revoke marks a host as revoked", async () => {
       }),
     });
     const res = await fetch(
-      `http://127.0.0.1:${h.config.httpPort}/mesh/hosts/h-rev/revoke`,
+      `http://127.0.0.1:${h.config.httpPort}/v1/mesh/hosts/h-rev/revoke`,
       { method: "POST" },
     );
     assert.equal(res.status, 200);

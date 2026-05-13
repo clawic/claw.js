@@ -70,7 +70,7 @@ async function withRuntime(
 test("identity advertises 'codex' capability when codex is enabled", async () => {
   const h = await withRuntime();
   const res = await fetch(
-    `http://127.0.0.1:${h.config.httpPort}/mesh/identity`,
+    `http://127.0.0.1:${h.config.httpPort}/v1/mesh/identity`,
     { headers: { authorization: `Bearer ${h.runtime.identity.bearerToken}` } },
   );
   const body = (await res.json()) as { capabilities: string[] };

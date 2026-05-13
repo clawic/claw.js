@@ -2,7 +2,7 @@
 
 End-to-end migration recipe for the Clawix Mac app. The Node daemon
 (`claw-remote`) replaces the Swift helper without changing the wire
-protocol seen by the GUI (`/mesh/*` on loopback port 24113,
+protocol seen by the GUI (`/v1/mesh/*` on loopback port 24113,
 `/bridge` WebSocket on 24112, Bonjour `_clawix-bridge._tcp`). The Mac
 app, the iOS client, the menu bar and the npm CLI keep talking to
 exactly the same surfaces.
@@ -15,7 +15,7 @@ Accessibility / Screen Recording / Automation permissions.
 The Mac UI plumbing is already done in F8: `MeshStore` exposes
 `upsertSshHost`, `revokePeer`, `unrevokePeer`, `removeHost`. The
 `Hosts` settings page calls them from the SSH form and the host
-detail sheet. They hit `POST /mesh/hosts`, `POST /mesh/hosts/:id/revoke`,
+detail sheet. They hit `POST /v1/mesh/hosts`, `POST /v1/mesh/hosts/:id/revoke`,
 etc. — endpoints that **only the Node daemon exposes**. Until the
 process is switched, those calls return 404 and the banner reports
 "HTTP 404". That is the signal to run this migration.
@@ -152,7 +152,7 @@ If the prompt does not appear:
 | Identity | Settings → Hosts → "This Mac" shows the same node id as before. |
 | Pairing (legacy) | `Add host` → Pair a Mac with another box — round-trip succeeds. |
 | Pairing (iOS) | Existing iPhone reconnects without re-pairing (same bearer in UserDefaults). |
-| `POST /mesh/hosts` | `Add host` → Add SSH server form completes and the new row shows in `Hosts`. |
+| `POST /v1/mesh/hosts` | `Add host` → Add SSH server form completes and the new row shows in `Hosts`. |
 | Revoke | Open a host's detail sheet → Revoke → the row gets the `Revoked` pill and `Unrevoke` becomes available. |
 | Remote jobs | Composer → run a prompt against a paired peer; status card cycles `queued → running → completed`. |
 | Codex | Send a chat — it goes through the embedded daemon, which now spawns Codex as a runtime adapter. |

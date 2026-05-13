@@ -62,10 +62,10 @@ async function makeHarness(): Promise<IntegrationHarness> {
   };
 }
 
-test("bridge runtime exposes /mesh/identity over HTTP", async () => {
+test("bridge runtime exposes /v1/mesh/identity over HTTP", async () => {
   const h = await makeHarness();
   const res = await fetch(
-    `http://127.0.0.1:${h.config.httpPort}/mesh/identity`,
+    `http://127.0.0.1:${h.config.httpPort}/v1/mesh/identity`,
     {
       headers: { authorization: `Bearer ${h.runtime.identity.bearerToken}` },
     },
@@ -137,7 +137,7 @@ test("link client end-to-end pairs two bridge runtimes", async () => {
   const b = await makeHarness();
 
   const linkRes = await fetch(
-    `http://127.0.0.1:${a.config.httpPort}/mesh/link`,
+    `http://127.0.0.1:${a.config.httpPort}/v1/mesh/link`,
     {
       method: "POST",
       headers: { "content-type": "application/json" },

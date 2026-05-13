@@ -52,18 +52,18 @@ async function makeHarness(
   return { app, identity, deps, hostStore, workspaceStore, auditStore };
 }
 
-test("GET /mesh/identity rejects without bearer", async () => {
+test("GET /v1/mesh/identity rejects without bearer", async () => {
   const { app } = await makeHarness();
-  const res = await app.inject({ method: "GET", url: "/mesh/identity" });
+  const res = await app.inject({ method: "GET", url: "/v1/mesh/identity" });
   assert.equal(res.statusCode, 401);
   await app.close();
 });
 
-test("GET /mesh/identity returns identity with valid bearer", async () => {
+test("GET /v1/mesh/identity returns identity with valid bearer", async () => {
   const { app, identity } = await makeHarness();
   const res = await app.inject({
     method: "GET",
-    url: "/mesh/identity",
+    url: "/v1/mesh/identity",
     headers: { authorization: `Bearer ${identity.bearerToken}` },
   });
   assert.equal(res.statusCode, 200);
@@ -76,7 +76,7 @@ test("GET /mesh/identity returns identity with valid bearer", async () => {
   await app.close();
 });
 
-test("GET /mesh/peers is loopback only", async () => {
+test("GET /v1/mesh/peers is loopback only", async () => {
   const { app, hostStore } = await makeHarness();
   hostStore.upsert({
     id: "ios-1",
@@ -87,14 +87,14 @@ test("GET /mesh/peers is loopback only", async () => {
   });
   const remote = await app.inject({
     method: "GET",
-    url: "/mesh/peers",
+    url: "/v1/mesh/peers",
     remoteAddress: "10.0.0.5",
   });
   assert.equal(remote.statusCode, 403);
 
   const local = await app.inject({
     method: "GET",
-    url: "/mesh/peers",
+    url: "/v1/mesh/peers",
     remoteAddress: "127.0.0.1",
   });
   assert.equal(local.statusCode, 200);
@@ -102,12 +102,12 @@ test("GET /mesh/peers is loopback only", async () => {
   await app.close();
 });
 
-test("GET /mesh/workspaces is loopback only", async () => {
+test("GET /v1/mesh/workspaces is loopback only", async () => {
   const { app, workspaceStore } = await makeHarness();
   workspaceStore.upsert({ path: "/Users/me/projects", label: "Projects" });
   const local = await app.inject({
     method: "GET",
-    url: "/mesh/workspaces",
+    url: "/v1/mesh/workspaces",
     remoteAddress: "127.0.0.1",
   });
   assert.equal(local.statusCode, 200);
@@ -115,13 +115,13 @@ test("GET /mesh/workspaces is loopback only", async () => {
   await app.close();
 });
 
-test("POST /mesh/hosts upserts a host and stores SSH secret metadata", async () => {
+test("POST /v1/mesh/hosts upserts a host and stores SSH secret metadata", async () => {
   const db = new Database(":memory:");
   const sshSecretStore = new SshSecretStore(db);
   const { app, hostStore } = await makeHarness({ sshSecretStore });
   const remote = await app.inject({
     method: "POST",
-    url: "/mesh/hosts",
+    url: "/v1/mesh/hosts",
     remoteAddress: "10.0.0.5",
     payload: {
       host: {
@@ -134,7 +134,7 @@ test("POST /mesh/hosts upserts a host and stores SSH secret metadata", async () 
 
   const local = await app.inject({
     method: "POST",
-    url: "/mesh/hosts",
+    url: "/v1/mesh/hosts",
     remoteAddress: "127.0.0.1",
     payload: {
       host: {
@@ -170,7 +170,7 @@ test("POST /mesh/hosts upserts a host and stores SSH secret metadata", async () 
   }
   const listedSecrets = await app.inject({
     method: "GET",
-    url: "/mesh/ssh/secrets",
+    url: "/v1/mesh/ssh/secrets",
     remoteAddress: "127.0.0.1",
   });
   assert.equal(listedSecrets.statusCode, 200);
@@ -178,7 +178,7 @@ test("POST /mesh/hosts upserts a host and stores SSH secret metadata", async () 
 
   const revoke = await app.inject({
     method: "POST",
-    url: "/mesh/hosts/server-1/revoke",
+    url: "/v1/mesh/hosts/server-1/revoke",
     remoteAddress: "127.0.0.1",
   });
   assert.equal(revoke.statusCode, 200);
@@ -187,7 +187,7 @@ test("POST /mesh/hosts upserts a host and stores SSH secret metadata", async () 
 
   const unrevoke = await app.inject({
     method: "POST",
-    url: "/mesh/hosts/server-1/unrevoke",
+    url: "/v1/mesh/hosts/server-1/unrevoke",
     remoteAddress: "127.0.0.1",
   });
   assert.equal(unrevoke.statusCode, 200);
@@ -196,7 +196,7 @@ test("POST /mesh/hosts upserts a host and stores SSH secret metadata", async () 
 
   const deleteSecret = await app.inject({
     method: "DELETE",
-    url: "/mesh/ssh/secrets/secret-1",
+    url: "/v1/mesh/ssh/secrets/secret-1",
     remoteAddress: "127.0.0.1",
   });
   assert.equal(deleteSecret.statusCode, 200);
@@ -204,7 +204,7 @@ test("POST /mesh/hosts upserts a host and stores SSH secret metadata", async () 
 
   const deleteHost = await app.inject({
     method: "DELETE",
-    url: "/mesh/hosts/server-1",
+    url: "/v1/mesh/hosts/server-1",
     remoteAddress: "127.0.0.1",
   });
   assert.equal(deleteHost.statusCode, 200);
@@ -212,11 +212,11 @@ test("POST /mesh/hosts upserts a host and stores SSH secret metadata", async () 
   await app.close();
 });
 
-test("POST /mesh/pair rejects bad token", async () => {
+test("POST /v1/mesh/pair rejects bad token", async () => {
   const { app } = await makeHarness();
   const res = await app.inject({
     method: "POST",
-    url: "/mesh/pair",
+    url: "/v1/mesh/pair",
     payload: {
       v: 1,
       token: "wrong",
@@ -231,11 +231,11 @@ test("POST /mesh/pair rejects bad token", async () => {
   await app.close();
 });
 
-test("POST /mesh/pair persists peer and returns host identity on success", async () => {
+test("POST /v1/mesh/pair persists peer and returns host identity on success", async () => {
   const { app, identity, hostStore, auditStore } = await makeHarness();
   const res = await app.inject({
     method: "POST",
-    url: "/mesh/pair",
+    url: "/v1/mesh/pair",
     payload: {
       v: 1,
       token: identity.bearerToken,
@@ -258,7 +258,7 @@ test("POST /mesh/pair persists peer and returns host identity on success", async
   await app.close();
 });
 
-test("POST /mesh/jobs rejects unknown sender", async () => {
+test("POST /v1/mesh/jobs rejects unknown sender", async () => {
   const { app, identity } = await makeHarness();
   const ghost = generateSigningKeypair();
   const recipientPubAsArray = identity.agreementPublicKey;
@@ -271,14 +271,14 @@ test("POST /mesh/jobs rejects unknown sender", async () => {
   });
   const res = await app.inject({
     method: "POST",
-    url: "/mesh/jobs",
+    url: "/v1/mesh/jobs",
     payload: env,
   });
   assert.equal(res.statusCode, 403);
   await app.close();
 });
 
-test("POST /mesh/jobs accepts envelope from a known peer and runs handler", async () => {
+test("POST /v1/mesh/jobs accepts envelope from a known peer and runs handler", async () => {
   let handlerCalls = 0;
   const peerSign = generateSigningKeypair();
   const peerAgree = generateAgreementKeypair();
@@ -313,7 +313,7 @@ test("POST /mesh/jobs accepts envelope from a known peer and runs handler", asyn
 
   const res = await harness.app.inject({
     method: "POST",
-    url: "/mesh/jobs",
+    url: "/v1/mesh/jobs",
     payload: env,
   });
   assert.equal(res.statusCode, 200);
@@ -327,7 +327,7 @@ test("POST /mesh/jobs accepts envelope from a known peer and runs handler", asyn
   await harness.app.close();
 });
 
-test("POST /mesh/link is loopback only and uses linkClient", async () => {
+test("POST /v1/mesh/link is loopback only and uses linkClient", async () => {
   const peerSign = generateSigningKeypair();
   const peerAgree = generateAgreementKeypair();
   const linkClient = async () => ({
@@ -340,7 +340,7 @@ test("POST /mesh/link is loopback only and uses linkClient", async () => {
 
   const remote = await app.inject({
     method: "POST",
-    url: "/mesh/link",
+    url: "/v1/mesh/link",
     remoteAddress: "10.0.0.5",
     payload: { remoteHost: "h", remotePort: 7779, remoteToken: "t" },
   });
@@ -348,7 +348,7 @@ test("POST /mesh/link is loopback only and uses linkClient", async () => {
 
   const ok = await app.inject({
     method: "POST",
-    url: "/mesh/link",
+    url: "/v1/mesh/link",
     remoteAddress: "127.0.0.1",
     payload: { remoteHost: "remote.local", remotePort: 7779, remoteToken: "t" },
   });

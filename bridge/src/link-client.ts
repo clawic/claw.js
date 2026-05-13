@@ -10,7 +10,7 @@ export const httpLinkClient: MeshLinkClient = async (
   selfIdentity: NodeIdentity,
   selfKind,
 ) => {
-  const url = `http://${request.remoteHost}:${request.remotePort}/mesh/pair`;
+  const url = `http://${request.remoteHost}:${request.remotePort}/v1/mesh/pair`;
   const body = {
     v: 1,
     token: request.remoteToken,

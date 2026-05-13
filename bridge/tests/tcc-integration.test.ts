@@ -121,7 +121,7 @@ test("identity advertises tcc capabilities when surfaces are configured", async 
   const h = await withRuntime({ computerUse: cu, terminal: tm });
   try {
     const res = await fetch(
-      `http://127.0.0.1:${h.config.httpPort}/mesh/identity`,
+      `http://127.0.0.1:${h.config.httpPort}/v1/mesh/identity`,
       { headers: { authorization: `Bearer ${h.runtime.identity.bearerToken}` } },
     );
     const body = (await res.json()) as { capabilities: string[] };
