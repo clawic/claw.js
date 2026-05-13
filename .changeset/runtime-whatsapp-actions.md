@@ -2,4 +2,4 @@
 "@clawjs/integrations": patch
 ---
 
-Add offline-validable WhatsApp Business API request plans for phone verification and text sends.
+Expand offline-validable WhatsApp Business API request plans across text, media, location, contacts, template, read receipt, and phone verification actions.
