@@ -62,8 +62,8 @@ test("V2 data configs route canonical domains to main DB and sidecars under the 
     FEED_DB_PATH: undefined,
     DELEGATION_PLANE_DATA_DIR: undefined,
     DELEGATION_PLANE_DATABASE_FILE: undefined,
-    CLAWJS_TIME_DATA_DIR: undefined,
-    CLAWJS_TIME_DB_FILE: undefined,
+    CLAW_TIME_DATA_DIR: undefined,
+    CLAW_TIME_DB_FILE: undefined,
     IOT_DATA_DIR: undefined,
     IOT_DB_PATH: undefined,
   }, () => {

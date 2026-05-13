@@ -18,8 +18,8 @@ interface RunOptions {
 async function run(options: RunOptions, args: string[]): Promise<{ stdout: string; stderr: string }> {
   const env = {
     ...process.env,
-    CLAWJS_HOME: options.home,
-    CLAWJS_SKILLS_AUTO_IMPORT: "0",
+    CLAW_HOME: options.home,
+    CLAW_SKILLS_AUTO_IMPORT: "0",
     HOME: options.home,
   };
   return await execFileAsync(process.execPath, [BIN, "--workspace", options.workspace, ...args], { env, cwd: process.cwd() });

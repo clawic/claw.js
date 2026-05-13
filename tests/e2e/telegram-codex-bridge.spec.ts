@@ -491,7 +491,7 @@ test("telegram codex bridge rerenders fallback slide PDFs before attaching", asy
     workspacePath: runtimeWorkspace,
     runtimeWorkspace,
     codexHome,
-    env: { CLAWJS_SLIDES_DISABLE_BROWSER: "1" },
+    env: { CLAW_SLIDES_DISABLE_BROWSER: "1" },
   }) as { rendered: Array<{ format: string; path: string; metadata?: { renderer?: string }; sizeBytes: number }> };
   const fallbackPdf = fallbackRender.rendered.find((entry) => entry.format === "pdf");
   expect(fallbackPdf?.metadata?.renderer).toBe("node-fallback");
@@ -523,7 +523,7 @@ test("telegram codex bridge translates .claw aliases into tokenized mobile links
   fs.mkdirSync(codexHome, { recursive: true });
   writeFakeCodexBinary(tempRoot);
 
-  const env = { CLAWJS_DOMAIN_SHARE_URL: "https://example.local/claw-share" };
+  const env = { CLAW_DOMAIN_SHARE_URL: "https://example.local/claw-share" };
   const alias = await runProcessor(rootDir, {
     event: telegramEvent({ chatId: "501", chatType: "private", senderId: "501", text: "memory.claw" }),
     statePath,
@@ -1000,7 +1000,7 @@ test("channel CLI assigns Telegram to Codex and controls the listener", async ()
   writeFakeCodexBinary(tempRoot);
   const { proxyPath, statePath } = writeFakeTelegramSecretsProxy(tempRoot);
   const env = {
-    CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+    CLAW_SECRETS_PROXY_PATH: proxyPath,
     FAKE_TELEGRAM_PROXY_STATE: statePath,
   };
   const base = { workspacePath, runtimeWorkspace, codexHome, env };

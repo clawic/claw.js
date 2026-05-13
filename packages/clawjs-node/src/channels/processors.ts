@@ -108,7 +108,7 @@ export async function invokeChannelProcessor(
       env: {
         ...process.env,
         ...(options.env ?? {}),
-        CLAWJS_CHANNEL_PROCESSOR_ID: processor.id,
+        CLAW_CHANNEL_PROCESSOR_ID: processor.id,
       },
       stdio: ["pipe", "pipe", "pipe"],
     });

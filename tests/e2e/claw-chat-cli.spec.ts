@@ -82,9 +82,9 @@ process.stderr.write("unsupported");
 process.exit(1);
 `, { mode: 0o755 });
   return {
-    CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+    CLAW_SECRETS_PROXY_PATH: proxyPath,
     FAKE_SECRETS_PROXY_STATE: statePath,
-    CLAWJS_SECRETS_BACKEND: "local_proxy",
+    CLAW_SECRETS_BACKEND: "local_proxy",
   };
 }
 
@@ -137,7 +137,7 @@ test("claw chat streams, persists sessions, handles slash commands, provider log
   const env = {
     ...process.env,
     DEEPSEEK_API_KEY: "test-key",
-    CLAWJS_E2E_DISABLE_EXTERNAL_CALLS: "1",
+    CLAW_E2E_DISABLE_EXTERNAL_CALLS: "1",
   };
   const baseArgs = [
     "--workspace", workspaceDir,

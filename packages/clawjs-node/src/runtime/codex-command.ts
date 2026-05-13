@@ -11,8 +11,8 @@ function readConfiguredValue(value: string | undefined | null): string | undefin
 
 export function resolveCodexBinaryPath(options: CodexCommandOptions = {}): string {
   return readConfiguredValue(options.binaryPath)
-    ?? readConfiguredValue(options.env?.CLAWJS_CODEX_PATH)
-    ?? readConfiguredValue(process.env.CLAWJS_CODEX_PATH)
+    ?? readConfiguredValue(options.env?.CLAW_CODEX_PATH)
+    ?? readConfiguredValue(process.env.CLAW_CODEX_PATH)
     ?? "codex";
 }
 
@@ -30,9 +30,9 @@ export function withCodexCommandEnv(
     commandEnv.CODEX_HOME = resolvedHome;
   }
 
-  const resolvedBinary = readConfiguredValue(options.binaryPath) ?? readConfiguredValue(commandEnv.CLAWJS_CODEX_PATH);
+  const resolvedBinary = readConfiguredValue(options.binaryPath) ?? readConfiguredValue(commandEnv.CLAW_CODEX_PATH);
   if (resolvedBinary) {
-    commandEnv.CLAWJS_CODEX_PATH = resolvedBinary;
+    commandEnv.CLAW_CODEX_PATH = resolvedBinary;
   }
 
   return Object.keys(commandEnv).length > 0 ? commandEnv : undefined;

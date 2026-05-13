@@ -99,7 +99,7 @@ function maskSecretReference(secretName: string): string {
 }
 
 function resolveWacliPath(env?: NodeJS.ProcessEnv): string {
-  return env?.CLAWJS_WACLI_PATH?.trim() || process.env.CLAWJS_WACLI_PATH?.trim() || DEFAULT_WACLI_PATH;
+  return env?.CLAW_WACLI_PATH?.trim() || process.env.CLAW_WACLI_PATH?.trim() || DEFAULT_WACLI_PATH;
 }
 
 function buildRunnerEnv(env?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {

@@ -350,7 +350,7 @@ test("slides pdf fallback remains readable when browser rendering is unavailable
     "--workspace", workspaceDir,
     "--format", "pdf",
     "--json",
-  ], { env: { CLAWJS_SLIDES_DISABLE_BROWSER: "1" } })).stdout);
+  ], { env: { CLAW_SLIDES_DISABLE_BROWSER: "1" } })).stdout);
   const pdf = rendered.rendered.find((entry) => entry.format === "pdf");
   expect(pdf).toBeTruthy();
   expect(pdf?.metadata?.renderer).toBe("node-fallback");
@@ -411,7 +411,7 @@ test("slides fallback PDF keeps image layouts presentable and normalizes escaped
     "--workspace", workspaceDir,
     "--format", "pdf",
     "--json",
-  ], { env: { CLAWJS_SLIDES_DISABLE_BROWSER: "1" } })).stdout);
+  ], { env: { CLAW_SLIDES_DISABLE_BROWSER: "1" } })).stdout);
   const pdf = rendered.rendered.find((entry) => entry.format === "pdf");
   expect(pdf).toBeTruthy();
   expect(pdf?.metadata?.renderer).toBe("node-fallback");

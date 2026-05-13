@@ -10,14 +10,14 @@ export interface SecretsCommandSpec {
 }
 
 function resolveSecretsProxyPath(env?: NodeJS.ProcessEnv): string {
-  return env?.CLAWJS_SECRETS_PROXY_PATH?.trim()
-    || process.env.CLAWJS_SECRETS_PROXY_PATH?.trim()
+  return env?.CLAW_SECRETS_PROXY_PATH?.trim()
+    || process.env.CLAW_SECRETS_PROXY_PATH?.trim()
     || DEFAULT_SECRETS_PROXY_PATH;
 }
 
 function resolveSecretsBackend(env?: NodeJS.ProcessEnv): "local_proxy" | "secrets" {
-  const explicitBackend = env?.CLAWJS_SECRETS_BACKEND?.trim()
-    || process.env.CLAWJS_SECRETS_BACKEND?.trim();
+  const explicitBackend = env?.CLAW_SECRETS_BACKEND?.trim()
+    || process.env.CLAW_SECRETS_BACKEND?.trim();
   if (explicitBackend) {
     return explicitBackend === "secrets" ? "secrets" : "local_proxy";
   }
@@ -41,11 +41,11 @@ export function buildSecretsRunnerEnv(env?: NodeJS.ProcessEnv): NodeJS.ProcessEn
 export function resolveSecretsCommandSpec(env?: NodeJS.ProcessEnv): SecretsCommandSpec {
   const mergedEnv = buildSecretsRunnerEnv(env);
   if (resolveSecretsBackend(env) === "secrets") {
-    const sidecarPath = mergedEnv.CLAWJS_SECRETS_SIDECAR_PATH?.trim();
+    const sidecarPath = mergedEnv.CLAW_SECRETS_SIDECAR_PATH?.trim();
     if (!sidecarPath) {
-      throw new Error("CLAWJS_SECRETS_SIDECAR_PATH is required when CLAWJS_SECRETS_BACKEND=secrets");
+      throw new Error("CLAW_SECRETS_SIDECAR_PATH is required when CLAW_SECRETS_BACKEND=secrets");
     }
-    const nodePath = mergedEnv.CLAWJS_SECRETS_NODE_PATH?.trim() || process.execPath;
+    const nodePath = mergedEnv.CLAW_SECRETS_NODE_PATH?.trim() || process.execPath;
     return {
       command: nodePath,
       argsPrefix: [sidecarPath],

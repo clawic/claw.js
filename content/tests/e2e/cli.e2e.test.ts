@@ -133,7 +133,7 @@ test("dedicated CLI and claw bridge hit the same content service", async () => {
     cwd: path.resolve(process.cwd(), ".."),
     env: {
       ...process.env,
-      CLAWJS_CONTENT_DIR: process.cwd(),
+      CLAW_PUBLISHING_DIR: process.cwd(),
     },
   });
   const planId = (JSON.parse(plan.stdout) as { plan: { id: string } }).plan.id;
@@ -154,7 +154,7 @@ test("dedicated CLI and claw bridge hit the same content service", async () => {
     cwd: path.resolve(process.cwd(), ".."),
     env: {
       ...process.env,
-      CLAWJS_CONTENT_DIR: process.cwd(),
+      CLAW_PUBLISHING_DIR: process.cwd(),
     },
   });
   assert.equal((JSON.parse(run.stdout) as { run: { status: string } }).run.status, "succeeded");

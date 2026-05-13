@@ -53,7 +53,7 @@ export class AgentStoreFS {
 
   constructor(opts: AgentStoreOptions = {}) {
     this.home =
-      opts.home ?? process.env.CLAWIX_CLAWJS_HOME ?? join(homedir(), ".clawjs");
+      opts.home ?? process.env.CLAWIX_CLAW_HOME ?? join(homedir(), ".clawjs");
     this.ensureDirs();
     this.ensureBuiltins();
   }

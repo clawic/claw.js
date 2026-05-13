@@ -110,9 +110,9 @@ The Playwright runner is configured in [playwright.config.ts](../../playwright.c
 
 It starts the demo with:
 
-- `CLAWJS_E2E=1`
-- `CLAWJS_E2E_FIXTURE_MODE=hermetic`
-- `CLAWJS_E2E_DISABLE_EXTERNAL_CALLS=1`
+- `CLAW_E2E=1`
+- `CLAW_E2E_FIXTURE_MODE=hermetic`
+- `CLAW_E2E_DISABLE_EXTERNAL_CALLS=1`
 - a dedicated E2E port: `4317`
 - isolated workspace/config/state/session/data directories
 - `NEXT_DIST_DIR=.next-e2e`
@@ -133,7 +133,7 @@ The test-only API endpoints are:
 - [examples/demo/src/app/api/e2e/seed/route.ts](../../examples/demo/src/app/api/e2e/seed/route.ts)
 - [examples/demo/src/app/api/e2e/status/route.ts](../../examples/demo/src/app/api/e2e/status/route.ts)
 
-They only exist to support `CLAWJS_E2E=1`.
+They only exist to support `CLAW_E2E=1`.
 
 ## Failure policy
 
@@ -188,7 +188,7 @@ Rules:
 
 - Do not point it at production by default.
 - Do not store plaintext credentials in repo-local env files.
-- Use `Secrets` plus the `secrets-proxy` binary exposed through `CLAWJS_SECRETS_PROXY_PATH` for any real secret access.
+- Use `Secrets` plus the `secrets-proxy` binary exposed through `CLAW_SECRETS_PROXY_PATH` for any real secret access.
 - Require explicit user confirmation before running anything with real side effects or paid calls.
 
 If a real smoke test cannot be safely isolated, it must remain manual and advisory.

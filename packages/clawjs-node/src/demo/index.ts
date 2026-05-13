@@ -22,6 +22,6 @@ export function buildDemoRuntimeEnv(
 ): NodeJS.ProcessEnv {
   return {
     ...env,
-    CLAWJS_DEMO_SCENARIO: scenarioId,
+    CLAW_DEMO_SCENARIO: scenarioId,
   };
 }

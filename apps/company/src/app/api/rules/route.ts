@@ -2,7 +2,7 @@ import { createLocalRulesStore } from "@clawjs/claw";
 
 function store() {
   return createLocalRulesStore({
-    rootDir: process.env.CLAWJS_RULES_DIR,
+    rootDir: process.env.CLAW_RULES_DIR,
     env: process.env,
   });
 }

@@ -3,7 +3,7 @@ import path from "path";
 import { defineConfig, devices } from "@playwright/test";
 
 const e2eRoot = path.join(process.cwd(), ".tmp", "e2e");
-const reuseExistingServer = process.env.CLAWJS_E2E_REUSE_SERVER === "1";
+const reuseExistingServer = process.env.CLAW_E2E_REUSE_SERVER === "1";
 
 export default defineConfig({
   testDir: path.join(process.cwd(), "tests", "e2e"),
@@ -33,9 +33,9 @@ export default defineConfig({
     stderr: "pipe",
     timeout: 120_000,
     env: {
-      CLAWJS_E2E: "1",
-      CLAWJS_E2E_FIXTURE_MODE: "hermetic",
-      CLAWJS_E2E_DISABLE_EXTERNAL_CALLS: "1",
+      CLAW_E2E: "1",
+      CLAW_E2E_FIXTURE_MODE: "hermetic",
+      CLAW_E2E_DISABLE_EXTERNAL_CALLS: "1",
       NEXT_DIST_DIR: ".next-e2e",
       CLAWJS_DEMO_DATA_DIR: path.join(e2eRoot, "demo-data"),
       OPENCLAW_STATE_DIR: path.join(e2eRoot, "openclaw-state"),

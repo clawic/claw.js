@@ -114,7 +114,7 @@ Validation fidelity rules:
 - Host-dependent bugs include installation or uninstall flows, OAuth and login flows, PATH or binary resolution, filesystem state under the user home, local process management, SDK or CLI detection, and polling or UI state driven by the local runtime.
 - If the user reports a bug on a specific localhost mode such as `localhost:4300`, the fix must also be validated in that same mode before closing the task.
 - Do not claim a host-dependent bug is fixed if only the hermetic E2E passed. Treat that as partial validation until the real localhost or host-equivalent validation also passes.
-- If fixtures, interceptors, or `CLAWJS_E2E` short-circuit the real runtime behavior, that only validates the UI flow. It does not prove the real bug is fixed.
+- If fixtures, interceptors, or `CLAW_E2E` short-circuit the real runtime behavior, that only validates the UI flow. It does not prove the real bug is fixed.
 - Final screenshots for host-dependent fixes must come from the same mode that was actually validated, not only from the hermetic test server.
 
 Never run real smoke coverage automatically:

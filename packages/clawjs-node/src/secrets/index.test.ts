@@ -79,7 +79,7 @@ process.exit(1);
     proxyPath,
     env: {
       ...process.env,
-      CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+      CLAW_SECRETS_PROXY_PATH: proxyPath,
       FAKE_SECRETS_PROXY_STATE: statePath,
     },
   };

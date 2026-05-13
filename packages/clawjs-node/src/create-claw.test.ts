@@ -966,7 +966,7 @@ test("createClaw exposes app discovery, managed block preservation, and secret r
       gateway: { configPath },
       env: {
         ...process.env,
-        CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+        CLAW_SECRETS_PROXY_PATH: proxyPath,
         FAKE_TELEGRAM_PROXY_STATE: statePath,
       },
     },
@@ -1155,7 +1155,7 @@ test("createClaw can connect a Telegram bot and reflect it through telegram stat
       adapter: "openclaw",
       env: {
         ...process.env,
-        CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+        CLAW_SECRETS_PROXY_PATH: proxyPath,
         FAKE_TELEGRAM_PROXY_STATE: statePath,
       },
     },
@@ -1199,7 +1199,7 @@ test("createClaw telegram API supports commands, chat inspection, sending, and u
       adapter: "openclaw",
       env: {
         ...process.env,
-        CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+        CLAW_SECRETS_PROXY_PATH: proxyPath,
         FAKE_TELEGRAM_PROXY_STATE: statePath,
       },
     },
@@ -1255,7 +1255,7 @@ test("createClaw channels registry supports Telegram accounts, bindings, targets
       adapter: "openclaw",
       env: {
         ...process.env,
-        CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+        CLAW_SECRETS_PROXY_PATH: proxyPath,
         FAKE_TELEGRAM_PROXY_STATE: statePath,
       },
     },
@@ -1352,7 +1352,7 @@ process.stdin.on("end", () => {
       adapter: "openclaw",
       env: {
         ...process.env,
-        CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+        CLAW_SECRETS_PROXY_PATH: proxyPath,
         FAKE_TELEGRAM_PROXY_STATE: statePath,
       },
     },
@@ -1403,7 +1403,7 @@ test("createClaw telegram codex listener refreshes stale command menus", async (
       adapter: "openclaw",
       env: {
         ...process.env,
-        CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+        CLAW_SECRETS_PROXY_PATH: proxyPath,
         FAKE_TELEGRAM_PROXY_STATE: statePath,
       },
     },

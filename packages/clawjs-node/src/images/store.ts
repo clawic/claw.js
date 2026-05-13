@@ -222,8 +222,8 @@ const DEFAULT_OPENAI_MODEL = "gpt-image-1.5";
 const OPENAI_BACKEND_ID = "openai:image";
 
 function defaultImageLibraryRoot(env?: NodeJS.ProcessEnv): string {
-  return env?.CLAWJS_IMAGE_LIBRARY_DIR?.trim()
-    || process.env.CLAWJS_IMAGE_LIBRARY_DIR?.trim()
+  return env?.CLAW_IMAGE_LIBRARY_DIR?.trim()
+    || process.env.CLAW_IMAGE_LIBRARY_DIR?.trim()
     || path.join(os.homedir(), ".claw", "image-library");
 }
 
@@ -401,14 +401,14 @@ function compareImages(left: ImageRecord, right: ImageRecord): number {
 }
 
 function normalizeProfiles(options: CreateImageLibraryStoreOptions, env: NodeJS.ProcessEnv): ImageProviderProfile[] {
-  const configuredSecretRef = env.CLAWJS_OPENAI_IMAGE_SECRET_REF?.trim();
-  const baseUrl = options.openaiBaseUrl?.trim() || env.CLAWJS_OPENAI_IMAGE_BASE_URL?.trim();
+  const configuredSecretRef = env.CLAW_OPENAI_IMAGE_SECRET_REF?.trim();
+  const baseUrl = options.openaiBaseUrl?.trim() || env.CLAW_OPENAI_IMAGE_BASE_URL?.trim();
   const defaultProfile: ImageProviderProfile = {
     id: "openai:default",
     provider: "openai",
     label: "OpenAI default",
     ...(configuredSecretRef ? { secretRef: configuredSecretRef } : {}),
-    allowEnvCredentials: options.allowEnvCredentials === true || env.CLAWJS_IMAGE_ALLOW_ENV_CREDENTIALS === "1",
+    allowEnvCredentials: options.allowEnvCredentials === true || env.CLAW_IMAGE_ALLOW_ENV_CREDENTIALS === "1",
     envVar: "OPENAI_API_KEY",
     ...(baseUrl ? { baseUrl } : {}),
   };

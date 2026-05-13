@@ -57,7 +57,7 @@ const app = start("npx", ["next", "start", "--port", appPort], {
   CLAWJS_DATABASE_URL: `http://127.0.0.1:${databasePort}`,
   CLAWJS_DATABASE_NAMESPACE: "main",
   CLAWJS_COMPANY_FAKE_AGENT_RUNS: "1",
-  CLAWJS_RULES_DIR: rulesDir,
+  CLAW_RULES_DIR: rulesDir,
   NODE_ENV: "production",
 });
 

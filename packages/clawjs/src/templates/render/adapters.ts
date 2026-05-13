@@ -53,7 +53,7 @@ async function renderPdfOutput(req: RenderRequest): Promise<RenderResult> {
   fs.mkdirSync(path.dirname(req.outPath), { recursive: true });
   fs.writeFileSync(tmpHtml, html, "utf8");
   try {
-    if (process.env.CLAWJS_TEMPLATE_DISABLE_BROWSER === "1") {
+    if (process.env.CLAW_TEMPLATE_DISABLE_BROWSER === "1") {
       throw new Error("Template browser renderer disabled.");
     }
     const playwright = await import("playwright");

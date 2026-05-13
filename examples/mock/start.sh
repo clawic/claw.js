@@ -54,9 +54,9 @@ cleanup() {
 trap cleanup EXIT
 
 # ── Export environment variables ──────────────────────────────────────────────
-export CLAWJS_E2E=1
-export CLAWJS_E2E_FIXTURE_MODE=hermetic
-export CLAWJS_E2E_DISABLE_EXTERNAL_CALLS=1
+export CLAW_E2E=1
+export CLAW_E2E_FIXTURE_MODE=hermetic
+export CLAW_E2E_DISABLE_EXTERNAL_CALLS=1
 export CLAWJS_DEMO_DATA_DIR="$MOCK_DATA_DIR"
 export OPENCLAW_STATE_DIR="$MOCK_STATE_DIR"
 export OPENCLAW_WORKSPACE_DIR="$MOCK_WORKSPACE_DIR"

@@ -173,7 +173,7 @@ export function getDemoScenario(id: DemoScenarioId): DemoScenario {
 export function resolveDemoScenarioId(
   env: NodeJS.ProcessEnv | undefined = process.env,
 ): DemoScenarioId {
-  const requested = env?.CLAWJS_DEMO_SCENARIO?.trim();
+  const requested = env?.CLAW_DEMO_SCENARIO?.trim();
   if (requested && requested in DEMO_SCENARIOS) {
     return requested as DemoScenarioId;
   }

@@ -31,7 +31,7 @@ export function loadConfig(overrides: Partial<PublishingConfig> = {}): Publishin
     host,
     port,
     dataDir,
-    dbPath: overrides.dbPath ?? process.env.BADGER_DB_PATH ?? process.env.CLAW_DB_PATH ?? process.env.CLAWJS_MAIN_DB_PATH ?? path.join(dataDir, "core.sqlite"),
+    dbPath: overrides.dbPath ?? process.env.BADGER_DB_PATH ?? process.env.CLAW_DB_PATH ?? process.env.CLAW_DB_PATH ?? path.join(dataDir, "core.sqlite"),
     publicBaseUrl,
     corsOrigins:
       overrides.corsOrigins ??
@@ -53,7 +53,7 @@ export function loadConfig(overrides: Partial<PublishingConfig> = {}): Publishin
 }
 
 function defaultClawjsDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWJS_MAIN_DATA_DIR ?? process.env.CLAWIX_CLAWJS_DATA_DIR;
+  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
   return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
 }

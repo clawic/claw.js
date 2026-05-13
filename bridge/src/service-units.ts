@@ -16,7 +16,7 @@ export function renderSystemdUnit(
     .join(" ");
   const lines: string[] = [
     "[Unit]",
-    `Description=${spec.description ?? "Claw Mesh Bridge (clawjs-bridged)"}`,
+    `Description=${spec.description ?? "Claw Remote (claw-remote)"}`,
     "After=network-online.target",
     "Wants=network-online.target",
     "",
@@ -53,7 +53,7 @@ export function renderLaunchdPlist(
   spec: ServiceUnitSpec,
   opts: LaunchdRenderOptions = {},
 ): string {
-  const label = opts.label ?? `com.clawjs.bridged.${spec.unitName}`;
+  const label = opts.label ?? `com.claw.remote.${spec.unitName}`;
   const argv = [spec.binaryPath, ...(spec.args ?? [])];
   const envEntries = Object.entries(spec.env ?? {});
   const lines: string[] = [
@@ -118,15 +118,15 @@ export function buildBridgeServiceSpec(
   opts: BridgeUnitOptions,
 ): ServiceUnitSpec {
   const env: Record<string, string> = { ...opts.extraEnv };
-  if (opts.bridgePort) env.CLAWJS_BRIDGE_PORT = String(opts.bridgePort);
-  if (opts.httpPort) env.CLAWJS_BRIDGE_HTTP_PORT = String(opts.httpPort);
-  if (opts.bindAddress) env.CLAWJS_BRIDGE_BIND = opts.bindAddress;
-  if (opts.bridgeName) env.CLAWJS_BRIDGE_NAME = opts.bridgeName;
-  if (opts.version) env.CLAWJS_BRIDGE_VERSION = opts.version;
+  if (opts.bridgePort) env.CLAW_REMOTE_PORT = String(opts.bridgePort);
+  if (opts.httpPort) env.CLAW_REMOTE_HTTP_PORT = String(opts.httpPort);
+  if (opts.bindAddress) env.CLAW_REMOTE_BIND = opts.bindAddress;
+  if (opts.bridgeName) env.CLAW_REMOTE_NAME = opts.bridgeName;
+  if (opts.version) env.CLAW_REMOTE_VERSION = opts.version;
   return {
-    unitName: "clawjs-bridged",
+    unitName: "claw-remote",
     binaryPath: opts.binaryPath,
-    description: "Claw Mesh Bridge (clawjs-bridged)",
+    description: "Claw Remote (claw-remote)",
     env,
   };
 }
@@ -148,7 +148,7 @@ export function tarballName(
   target: PlatformTarget,
   version: string,
 ): string {
-  return `clawjs-bridged-${target.os}-${target.arch}-${version}.tar.gz`;
+  return `claw-remote-${target.os}-${target.arch}-${version}.tar.gz`;
 }
 
 export function detectCurrentTarget(): PlatformTarget {

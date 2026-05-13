@@ -229,7 +229,7 @@ const DEFAULT_WORKSPACE_FILES: E2EWorkspaceFile[] = [
   },
   {
     fileName: "TOOLS.md",
-    content: "## Tools\n\nUse deterministic fixtures in `CLAWJS_E2E` mode.",
+    content: "## Tools\n\nUse deterministic fixtures in `CLAW_E2E` mode.",
   },
   {
     fileName: "HEARTBEAT.md",
@@ -1376,7 +1376,7 @@ function buildSeededSession(): void {
 }
 
 export function isE2EEnabled(): boolean {
-  return process.env.CLAWJS_E2E === "1";
+  return process.env.CLAW_E2E === "1";
 }
 
 /**
@@ -1400,16 +1400,16 @@ export function ensureE2ESeeded(): void {
 }
 
 export function getE2EFixtureMode(): string {
-  return process.env.CLAWJS_E2E_FIXTURE_MODE?.trim() || "hermetic";
+  return process.env.CLAW_E2E_FIXTURE_MODE?.trim() || "hermetic";
 }
 
 export function isE2EExternalCallsDisabled(): boolean {
-  return process.env.CLAWJS_E2E_DISABLE_EXTERNAL_CALLS === "1";
+  return process.env.CLAW_E2E_DISABLE_EXTERNAL_CALLS === "1";
 }
 
 export function assertE2EEnabled(): void {
   if (!isE2EEnabled()) {
-    throw new Error("CLAWJS_E2E is not enabled.");
+    throw new Error("CLAW_E2E is not enabled.");
   }
 }
 

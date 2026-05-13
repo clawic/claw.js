@@ -733,7 +733,7 @@ function useIsolatedMainData(t: { after(fn: () => void): void }, workspaceRoot: 
     ["CLAW_DATA_DIR", process.env.CLAW_DATA_DIR],
     ["CLAWIX_CLAW_DATA_DIR", process.env.CLAWIX_CLAW_DATA_DIR],
     ["CLAW_DB_PATH", process.env.CLAW_DB_PATH],
-    ["CLAWJS_DB_PATH", process.env.CLAWJS_DB_PATH],
+    ["CLAW_DB_PATH", process.env.CLAW_DB_PATH],
     ["DATABASE_DB_PATH", process.env.DATABASE_DB_PATH],
     ["DATABASE_FILES_DIR", process.env.DATABASE_FILES_DIR],
   ]);
@@ -741,7 +741,7 @@ function useIsolatedMainData(t: { after(fn: () => void): void }, workspaceRoot: 
   process.env.CLAW_DATA_DIR = dataRoot;
   delete process.env.CLAWIX_CLAW_DATA_DIR;
   delete process.env.CLAW_DB_PATH;
-  delete process.env.CLAWJS_DB_PATH;
+  delete process.env.CLAW_DB_PATH;
   delete process.env.DATABASE_DB_PATH;
   delete process.env.DATABASE_FILES_DIR;
   t.after(() => {
@@ -856,7 +856,7 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     CLAW_DATA_DIR: tempRoot,
     CLAWIX_CLAW_DATA_DIR: undefined,
     CLAW_DB_PATH: undefined,
-    CLAWJS_DB_PATH: undefined,
+    CLAW_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
     DATABASE_FILES_DIR: undefined,
   }, async () => {
@@ -1128,7 +1128,7 @@ test("runCli indexes external Codex session artifacts without owning their raw b
     CLAW_DATA_DIR: path.join(tempRoot, "data"),
     CLAWIX_CLAW_DATA_DIR: undefined,
     CLAW_DB_PATH: undefined,
-    CLAWJS_DB_PATH: undefined,
+    CLAW_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
     DATABASE_FILES_DIR: undefined,
   }, async () => {
@@ -1200,7 +1200,7 @@ test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime
     CLAW_DATA_DIR: path.join(tempRoot, "data"),
     CLAWIX_CLAW_DATA_DIR: undefined,
     CLAW_DB_PATH: undefined,
-    CLAWJS_DB_PATH: undefined,
+    CLAW_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
     DATABASE_FILES_DIR: undefined,
   }, async () => {
@@ -1362,7 +1362,7 @@ test("runCli reset covers V2 main DB legacy service tables when present", async 
     CLAW_DATA_DIR: tempRoot,
     CLAWIX_CLAW_DATA_DIR: undefined,
     CLAW_DB_PATH: undefined,
-    CLAWJS_DB_PATH: undefined,
+    CLAW_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
   }, async () => {
     const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-reset-cwd-"));
@@ -1428,7 +1428,7 @@ test("runCli reset clears V2 sidecar service tables when present", async () => {
     CLAW_DATA_DIR: tempRoot,
     CLAWIX_CLAW_DATA_DIR: undefined,
     CLAW_DB_PATH: undefined,
-    CLAWJS_DB_PATH: undefined,
+    CLAW_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
   }, async () => {
     const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-sidecar-reset-cwd-"));
@@ -1472,7 +1472,7 @@ test("runCli mirrors local memory into V2 knowledge and profile projection", asy
     CLAW_DATA_DIR: tempRoot,
     CLAWIX_CLAW_DATA_DIR: undefined,
     CLAW_DB_PATH: undefined,
-    CLAWJS_DB_PATH: undefined,
+    CLAW_DB_PATH: undefined,
     DATABASE_DB_PATH: undefined,
     DATABASE_FILES_DIR: undefined,
   }, async () => {
@@ -3553,7 +3553,7 @@ test("runCli can connect and inspect telegram state through the CLI", async () =
   const { proxyPath, statePath } = createFakeTelegramSecretsProxy();
 
   await withPatchedEnv({
-    CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+    CLAW_SECRETS_PROXY_PATH: proxyPath,
     FAKE_TELEGRAM_PROXY_STATE: statePath,
   }, async () => {
     const connectStdout = captureStream();
@@ -3598,7 +3598,7 @@ test("runCli exposes structured channel accounts and permissions", async () => {
   const { proxyPath, statePath } = createFakeTelegramSecretsProxy();
 
   await withPatchedEnv({
-    CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+    CLAW_SECRETS_PROXY_PATH: proxyPath,
     FAKE_TELEGRAM_PROXY_STATE: statePath,
   }, async () => {
     const addStdout = captureStream();
@@ -3685,7 +3685,7 @@ process.stdin.on("end", () => {
   const { proxyPath, statePath } = createFakeTelegramSecretsProxy();
 
   await withPatchedEnv({
-    CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+    CLAW_SECRETS_PROXY_PATH: proxyPath,
     FAKE_TELEGRAM_PROXY_STATE: statePath,
   }, async () => {
     const connectExitCode = await runCli([
@@ -3814,7 +3814,7 @@ test("runCli handles Telegram /new session reset without model latency", () => {
     CLAWJS_TEST_WORKSPACE: workspaceRoot,
     CLAW_DATA_DIR: path.join(workspaceRoot, "claw-data"),
   };
-  for (const key of ["CLAWIX_CLAW_DATA_DIR", "CLAW_DB_PATH", "CLAWJS_DB_PATH", "DATABASE_DB_PATH", "DATABASE_FILES_DIR"]) {
+  for (const key of ["CLAWIX_CLAW_DATA_DIR", "CLAW_DB_PATH", "CLAW_DB_PATH", "DATABASE_DB_PATH", "DATABASE_FILES_DIR"]) {
     delete childEnv[key];
   }
   const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
@@ -4490,8 +4490,8 @@ if (process.argv[2] === "logout") process.exit(0);
 process.exit(0);
 `, { mode: 0o755 });
 
-  const previousCodexPath = process.env.CLAWJS_CODEX_PATH;
-  process.env.CLAWJS_CODEX_PATH = fakeCodex;
+  const previousCodexPath = process.env.CLAW_CODEX_PATH;
+  process.env.CLAW_CODEX_PATH = fakeCodex;
   try {
     const stdout = captureStream();
     const exitCode = await runCli(["auth", "login", "--runtime", "codex", "--force", "--workspace", workspaceRoot, "--dry-run", "--json"], {
@@ -4511,8 +4511,8 @@ process.exit(0);
     assert.equal(removeExitCode, CLI_EXIT_OK);
     assert.match(fs.readFileSync(logPath, "utf8"), /logout/);
   } finally {
-    if (previousCodexPath === undefined) delete process.env.CLAWJS_CODEX_PATH;
-    else process.env.CLAWJS_CODEX_PATH = previousCodexPath;
+    if (previousCodexPath === undefined) delete process.env.CLAW_CODEX_PATH;
+    else process.env.CLAW_CODEX_PATH = previousCodexPath;
   }
 });
 

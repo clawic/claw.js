@@ -36,8 +36,8 @@ function readConfiguredValue(value: string | undefined | null): string | undefin
 
 export function resolveOpenClawBinaryPath(options: OpenClawCommandOptions = {}): string {
   return readConfiguredValue(options.binaryPath)
-    ?? readConfiguredValue(options.env?.CLAWJS_OPENCLAW_PATH)
-    ?? readConfiguredValue(process.env.CLAWJS_OPENCLAW_PATH)
+    ?? readConfiguredValue(options.env?.CLAW_OPENCLAW_PATH)
+    ?? readConfiguredValue(process.env.CLAW_OPENCLAW_PATH)
     ?? "openclaw";
 }
 
@@ -45,13 +45,13 @@ export function withOpenClawBinaryEnv(
   env?: NodeJS.ProcessEnv,
   binaryPath?: string,
 ): NodeJS.ProcessEnv | undefined {
-  const resolvedBinaryPath = readConfiguredValue(binaryPath) ?? readConfiguredValue(env?.CLAWJS_OPENCLAW_PATH);
+  const resolvedBinaryPath = readConfiguredValue(binaryPath) ?? readConfiguredValue(env?.CLAW_OPENCLAW_PATH);
   if (!resolvedBinaryPath) {
     return env;
   }
   return {
     ...(env ?? {}),
-    CLAWJS_OPENCLAW_PATH: resolvedBinaryPath,
+    CLAW_OPENCLAW_PATH: resolvedBinaryPath,
   };
 }
 

@@ -18,7 +18,7 @@ export function loadIotConfig(overrides: Partial<IotServiceConfig> = {}): IotSer
     dbPath: overrides.dbPath
       ?? process.env.IOT_DB_PATH
       ?? process.env.CLAW_DB_PATH
-      ?? process.env.CLAWJS_MAIN_DB_PATH
+      ?? process.env.CLAW_DB_PATH
       ?? path.join(dataDir, "core.sqlite"),
     corsOrigins: overrides.corsOrigins ?? (
       process.env.IOT_CORS_ORIGINS?.split(",").map((entry) => entry.trim()).filter(Boolean) ?? []
@@ -27,7 +27,7 @@ export function loadIotConfig(overrides: Partial<IotServiceConfig> = {}): IotSer
 }
 
 function defaultClawjsDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWJS_MAIN_DATA_DIR ?? process.env.CLAWIX_CLAWJS_DATA_DIR;
+  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
   return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
 }

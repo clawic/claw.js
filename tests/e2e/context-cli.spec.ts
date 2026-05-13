@@ -158,7 +158,7 @@ process.exit(1);
     "--json",
   ], {
     cwd: rootDir,
-    env: { ...process.env, CLAWJS_CODEX_PATH: codexPath, PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ""}` },
+    env: { ...process.env, CLAW_CODEX_PATH: codexPath, PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ""}` },
   });
   expect(fs.readFileSync(payloadPath, "utf8")).not.toContain("CONTEXT_PACK_SENTINEL");
 

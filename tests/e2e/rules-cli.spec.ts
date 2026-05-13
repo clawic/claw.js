@@ -130,7 +130,7 @@ process.exit(1);
     cwd: rootDir,
     env: {
       ...process.env,
-      CLAWJS_CODEX_PATH: codexPath,
+      CLAW_CODEX_PATH: codexPath,
       PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ""}`,
     },
   });

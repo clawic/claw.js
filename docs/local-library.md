@@ -74,7 +74,7 @@ claw library resolve --workspace /path/to/workspace --agent ada
 claw library sync --workspace /path/to/workspace --agent ada
 ```
 
-`claw new skill` and `claw generate skill` register generated skills in the local library by default. Pass `--no-library` to skip registration. Use `--library-dir` or `CLAWJS_LIBRARY_DIR` to isolate or move the library root.
+`claw new skill` and `claw generate skill` register generated skills in the local library by default. Pass `--no-library` to skip registration. Use `--library-dir` or `CLAW_LIBRARY_DIR` to isolate or move the library root.
 
 ## SDK
 

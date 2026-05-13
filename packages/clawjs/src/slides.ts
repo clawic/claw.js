@@ -520,7 +520,7 @@ async function renderDeck(
   if (options.formats.includes("pdf") || options.formats.includes("png")) {
     let browser: Awaited<ReturnType<(typeof import("playwright"))["chromium"]["launch"]>> | null = null;
     try {
-      if (process.env.CLAWJS_SLIDES_DISABLE_BROWSER === "1") throw new Error("Browser slide renderer disabled.");
+      if (process.env.CLAW_SLIDES_DISABLE_BROWSER === "1") throw new Error("Browser slide renderer disabled.");
       const playwright = await import("playwright");
       browser = await playwright.chromium.launch({
         headless: true,

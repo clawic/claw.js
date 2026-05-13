@@ -164,10 +164,10 @@ function resolveRuntimeBinaryPath(adapter: string, configured?: string): string 
     for (const candidate of ["/opt/homebrew/bin/codex", "/usr/local/bin/codex"]) {
       if (fs.existsSync(candidate)) return candidate;
     }
-    return process.env.CLAWJS_CODEX_PATH?.trim() || undefined;
+    return process.env.CLAW_CODEX_PATH?.trim() || undefined;
   }
   if (adapter === "openclaw") {
-    return process.env.CLAWJS_OPENCLAW_PATH?.trim() || undefined;
+    return process.env.CLAW_OPENCLAW_PATH?.trim() || undefined;
   }
   return undefined;
 }
@@ -186,10 +186,10 @@ function buildRuntimeEnv(adapter: string, configuredBinaryPath?: string): NodeJS
   };
   const binaryPath = resolveRuntimeBinaryPath(adapter, configuredBinaryPath);
   if (adapter === "codex" && binaryPath) {
-    env.CLAWJS_CODEX_PATH = binaryPath;
+    env.CLAW_CODEX_PATH = binaryPath;
   }
   if (adapter === "openclaw" && binaryPath) {
-    env.CLAWJS_OPENCLAW_PATH = binaryPath;
+    env.CLAW_OPENCLAW_PATH = binaryPath;
   }
   return env;
 }
@@ -495,11 +495,11 @@ export class RelayConnectorRuntime {
         materializationVersion: metadata.materializationVersion,
         rootDir: metadata.workspaceDir,
       },
-      ...(process.env.CLAWJS_TIME_URL
+      ...(process.env.CLAW_TIME_URL
         ? {
             time: {
-              baseUrl: process.env.CLAWJS_TIME_URL,
-              token: process.env.CLAWJS_TIME_TOKEN,
+              baseUrl: process.env.CLAW_TIME_URL,
+              token: process.env.CLAW_TIME_TOKEN,
             },
           }
         : {}),

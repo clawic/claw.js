@@ -96,8 +96,8 @@ function parseArgs(argv: string[]): RelayConnectorOptions {
   const runtimeBinaryPath = values.get("runtime-binary-path")
     ?? values.get("codex-path")
     ?? process.env.RELAY_RUNTIME_BINARY_PATH
-    ?? process.env.CLAWJS_CODEX_PATH
-    ?? process.env.CLAWJS_OPENCLAW_PATH;
+    ?? process.env.CLAW_CODEX_PATH
+    ?? process.env.CLAW_OPENCLAW_PATH;
   const credentialPath = values.get("credential-path")
     ?? process.env.RELAY_CONNECTOR_CREDENTIAL_PATH
     ?? path.join(workspaceRoot, ".relay", "connector-credential.json");

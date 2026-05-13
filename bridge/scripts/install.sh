@@ -1,10 +1,10 @@
 #!/bin/sh
-# Install clawjs-bridged on Linux or macOS.
+# Install claw-remote on Linux or macOS.
 #
 # Usage:
 #   ./install.sh --tarball PATH                  # local file
 #   ./install.sh --tarball URL                   # https/http URL
-#   ./install.sh --prefix DIR                    # install root (default ~/.local/clawjs-bridged)
+#   ./install.sh --prefix DIR                    # install root (default ~/.local/claw-remote)
 #   ./install.sh --bin DIR                       # symlink dir (default ~/.local/bin)
 #   ./install.sh --systemd                       # write a systemd --user unit (Linux)
 #   ./install.sh --launchd                       # write a launchd plist (macOS)
@@ -12,11 +12,11 @@
 #   ./install.sh --no-start                      # do not enable+start the unit
 #   ./install.sh --uninstall                     # remove unit + symlink + prefix
 #
-# Environment: NODE (path to node binary), CLAWJS_BRIDGE_NAME (display name).
+# Environment: NODE (path to node binary), CLAW_REMOTE_NAME (display name).
 set -eu
 
 tarball=""
-prefix="${HOME}/.local/clawjs-bridged"
+prefix="${HOME}/.local/claw-remote"
 bin_dir="${HOME}/.local/bin"
 install_systemd=0
 install_launchd=0
@@ -61,18 +61,18 @@ case "$uname_m" in
 esac
 
 if [ "$do_uninstall" -eq 1 ]; then
-  echo "[install] uninstalling clawjs-bridged"
+  echo "[install] uninstalling claw-remote"
   if [ "$host_os" = "linux" ]; then
     if command -v systemctl >/dev/null 2>&1; then
-      systemctl --user disable --now clawjs-bridged.service 2>/dev/null || true
+      systemctl --user disable --now claw-remote.service 2>/dev/null || true
     fi
-    rm -f "${HOME}/.config/systemd/user/clawjs-bridged.service"
+    rm -f "${HOME}/.config/systemd/user/claw-remote.service"
   fi
   if [ "$host_os" = "darwin" ]; then
-    launchctl unload "${HOME}/Library/LaunchAgents/com.clawjs.bridged.plist" 2>/dev/null || true
-    rm -f "${HOME}/Library/LaunchAgents/com.clawjs.bridged.plist"
+    launchctl unload "${HOME}/Library/LaunchAgents/com.claw.remote.plist" 2>/dev/null || true
+    rm -f "${HOME}/Library/LaunchAgents/com.claw.remote.plist"
   fi
-  rm -f "$bin_dir/clawjs-bridged"
+  rm -f "$bin_dir/claw-remote"
   rm -rf "$prefix"
   echo "[install] uninstalled"
   exit 0
@@ -112,9 +112,9 @@ esac
 
 echo "[install] extracting into $prefix"
 tar -xzf "$src" -C "$tmpdir"
-entry="$(ls -d "$tmpdir"/clawjs-bridged-* 2>/dev/null | head -1)"
+entry="$(ls -d "$tmpdir"/claw-remote-* 2>/dev/null | head -1)"
 if [ -z "$entry" ]; then
-  echo "tarball did not contain clawjs-bridged-*/ entry" >&2
+  echo "tarball did not contain claw-remote-*/ entry" >&2
   exit 1
 fi
 
@@ -125,27 +125,27 @@ rm -rf "$prefix.prev"
 mv "$prefix.tmp" "$prefix"
 rm -rf "$prefix.prev"
 
-ln -sf "$prefix/bin/clawjs-bridged" "$bin_dir/clawjs-bridged"
-chmod +x "$prefix/bin/clawjs-bridged"
-echo "[install] installed to $prefix, symlink at $bin_dir/clawjs-bridged"
+ln -sf "$prefix/bin/claw-remote" "$bin_dir/claw-remote"
+chmod +x "$prefix/bin/claw-remote"
+echo "[install] installed to $prefix, symlink at $bin_dir/claw-remote"
 
 write_systemd_unit() {
   unit_dir="${HOME}/.config/systemd/user"
   mkdir -p "$unit_dir"
-  unit_path="$unit_dir/clawjs-bridged.service"
+  unit_path="$unit_dir/claw-remote.service"
   cat > "$unit_path" <<EOF
 [Unit]
-Description=Claw Mesh Bridge (clawjs-bridged)
+Description=Claw Remote (claw-remote)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-ExecStart=$prefix/bin/clawjs-bridged
-Environment=CLAWJS_BRIDGE_PORT=$bridge_port
-Environment=CLAWJS_BRIDGE_HTTP_PORT=$http_port
+ExecStart=$prefix/bin/claw-remote
+Environment=CLAW_REMOTE_PORT=$bridge_port
+Environment=CLAW_REMOTE_HTTP_PORT=$http_port
 EOF
   if [ -n "$bind_addr" ]; then
-    echo "Environment=CLAWJS_BRIDGE_BIND=$bind_addr" >> "$unit_path"
+    echo "Environment=CLAW_REMOTE_BIND=$bind_addr" >> "$unit_path"
   fi
   cat >> "$unit_path" <<'EOF'
 Restart=on-failure
@@ -157,7 +157,7 @@ EOF
   if command -v systemctl >/dev/null 2>&1; then
     systemctl --user daemon-reload
     if [ "$start_service" -eq 1 ]; then
-      systemctl --user enable --now clawjs-bridged.service
+      systemctl --user enable --now claw-remote.service
     fi
     echo "[install] systemd unit installed at $unit_path"
   else
@@ -168,17 +168,17 @@ EOF
 write_launchd_plist() {
   plist_dir="${HOME}/Library/LaunchAgents"
   mkdir -p "$plist_dir"
-  plist_path="$plist_dir/com.clawjs.bridged.plist"
+  plist_path="$plist_dir/com.claw.remote.plist"
   cat > "$plist_path" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.clawjs.bridged</string>
+  <string>com.claw.remote</string>
   <key>ProgramArguments</key>
   <array>
-    <string>$prefix/bin/clawjs-bridged</string>
+    <string>$prefix/bin/claw-remote</string>
   </array>
   <key>RunAtLoad</key>
   <true/>
@@ -186,9 +186,9 @@ write_launchd_plist() {
   <true/>
   <key>EnvironmentVariables</key>
   <dict>
-    <key>CLAWJS_BRIDGE_PORT</key>
+    <key>CLAW_REMOTE_PORT</key>
     <string>$bridge_port</string>
-    <key>CLAWJS_BRIDGE_HTTP_PORT</key>
+    <key>CLAW_REMOTE_HTTP_PORT</key>
     <string>$http_port</string>
   </dict>
 </dict>
@@ -217,4 +217,4 @@ if [ "$install_launchd" -eq 1 ]; then
   write_launchd_plist
 fi
 
-echo "[install] done. test it with: $bin_dir/clawjs-bridged --help (or run directly)"
+echo "[install] done. test it with: $bin_dir/claw-remote --help (or run directly)"

@@ -86,8 +86,8 @@ export const DEFAULT_CLAWJS_OPERATOR_CAPSULE: SkillContextCapsuleEntry = {
 
 export function resolveLibraryRoot(options: LibraryStoreOptions = {}): string {
   const configured = options.rootDir?.trim()
-    || options.env?.CLAWJS_LIBRARY_DIR?.trim()
-    || process.env.CLAWJS_LIBRARY_DIR?.trim();
+    || options.env?.CLAW_LIBRARY_DIR?.trim()
+    || process.env.CLAW_LIBRARY_DIR?.trim();
   if (configured) return resolveHomePath(configured);
   return path.join(os.homedir(), ".claw", "library");
 }

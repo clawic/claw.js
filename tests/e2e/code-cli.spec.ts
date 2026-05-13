@@ -327,7 +327,7 @@ test("code cli coordinates projects, agents, global queue, and project-scoped in
   const projectsRoot = path.join(tempRoot, "projects");
   const appRepo = await createRepo(projectsRoot, "app");
   const apiRepo = await createRepo(projectsRoot, "api");
-  const env = { CLAWJS_CODE_HOME: codeHome };
+  const env = { CLAW_CODE_HOME: codeHome };
 
   const added = parseJson<{ project: { id: string; status: string } }>((await run(rootDir, tempRoot, [
     "code", "projects", "add", appRepo,
@@ -419,7 +419,7 @@ test("code local HTTP API exposes projects, agents, intents, and queue for futur
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-code-api-"));
   const codeHome = path.join(tempRoot, "code-home");
   const repoDir = await createRepo(tempRoot, "app");
-  const env = { CLAWJS_CODE_HOME: codeHome };
+  const env = { CLAW_CODE_HOME: codeHome };
 
   await run(rootDir, tempRoot, ["code", "projects", "add", repoDir, "--id", "app", "--json"], { env });
   await run(rootDir, tempRoot, ["code", "init", "--project", "app", "--json"], { env });

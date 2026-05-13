@@ -25,83 +25,77 @@ export interface BridgeConfig {
 }
 
 export interface BridgeConfigEnv {
-  CLAWJS_BRIDGE_PORT?: string;
-  CLAWJS_BRIDGE_HTTP_PORT?: string;
-  CLAWJS_BRIDGE_BIND?: string;
-  CLAWJS_BRIDGE_DB?: string;
-  CLAWJS_BRIDGE_STATUS?: string;
-  CLAWJS_BRIDGE_NAME?: string;
-  CLAWJS_BRIDGED_DISABLE_BONJOUR?: string;
-  CLAWJS_BRIDGE_VERSION?: string;
-  CLAWJS_BRIDGE_COORDINATOR_URL?: string;
-  CLAWJS_BRIDGE_COORDINATOR_TOKEN?: string;
-  CLAWJS_BRIDGE_COORDINATOR_DEVICE_ID?: string;
-  CLAWJS_BRIDGE_COORDINATOR_TENANT_ID?: string;
-  CLAWJS_BRIDGE_COORDINATOR_HEARTBEAT_MS?: string;
-  CLAWJS_BRIDGE_IROH_DISABLE?: string;
-  CLAWJS_BRIDGE_IROH_RELAY_URL?: string;
-  CLAWJS_MAIN_DATA_DIR?: string;
-  CLAWIX_CLAWJS_DATA_DIR?: string;
+  CLAW_REMOTE_PORT?: string;
+  CLAW_REMOTE_HTTP_PORT?: string;
+  CLAW_REMOTE_BIND?: string;
+  CLAW_REMOTE_DB?: string;
+  CLAW_REMOTE_STATUS?: string;
+  CLAW_REMOTE_NAME?: string;
+  CLAW_REMOTE_DISABLE_BONJOUR?: string;
+  CLAW_REMOTE_VERSION?: string;
+  CLAW_REMOTE_COORDINATOR_URL?: string;
+  CLAW_REMOTE_COORDINATOR_TOKEN?: string;
+  CLAW_REMOTE_COORDINATOR_DEVICE_ID?: string;
+  CLAW_REMOTE_COORDINATOR_TENANT_ID?: string;
+  CLAW_REMOTE_COORDINATOR_HEARTBEAT_MS?: string;
+  CLAW_REMOTE_IROH_DISABLE?: string;
+  CLAW_REMOTE_IROH_RELAY_URL?: string;
+  CLAW_DATA_DIR?: string;
+  CLAWIX_CLAW_DATA_DIR?: string;
   APPDATA?: string;
   XDG_DATA_HOME?: string;
   HOME?: string;
 }
 
-const DEFAULT_CAPABILITIES = ["bridge", "pair", "remote-jobs"];
+const DEFAULT_CAPABILITIES = ["remote", "pair", "jobs"];
 
 export function loadConfig(
   env: BridgeConfigEnv = process.env,
 ): BridgeConfig {
   const home = env.HOME ?? process.env.HOME ?? ".";
-  const coordinatorBaseUrl = env.CLAWJS_BRIDGE_COORDINATOR_URL?.trim();
-  const coordinatorToken = env.CLAWJS_BRIDGE_COORDINATOR_TOKEN?.trim();
-  const coordinatorDevice = env.CLAWJS_BRIDGE_COORDINATOR_DEVICE_ID?.trim();
-  const coordinatorTenant = env.CLAWJS_BRIDGE_COORDINATOR_TENANT_ID?.trim();
+  const coordinatorBaseUrl = env.CLAW_REMOTE_COORDINATOR_URL?.trim();
+  const coordinatorToken = env.CLAW_REMOTE_COORDINATOR_TOKEN?.trim();
+  const coordinatorDevice = env.CLAW_REMOTE_COORDINATOR_DEVICE_ID?.trim();
+  const coordinatorTenant = env.CLAW_REMOTE_COORDINATOR_TENANT_ID?.trim();
   const coordinator = coordinatorBaseUrl && coordinatorToken && coordinatorDevice && coordinatorTenant
     ? {
         baseUrl: coordinatorBaseUrl,
         accessToken: coordinatorToken,
         deviceId: coordinatorDevice,
         tenantId: coordinatorTenant,
-        ...(env.CLAWJS_BRIDGE_COORDINATOR_HEARTBEAT_MS
-          ? { heartbeatIntervalMs: Number(env.CLAWJS_BRIDGE_COORDINATOR_HEARTBEAT_MS) }
+        ...(env.CLAW_REMOTE_COORDINATOR_HEARTBEAT_MS
+          ? { heartbeatIntervalMs: Number(env.CLAW_REMOTE_COORDINATOR_HEARTBEAT_MS) }
           : {}),
       }
     : undefined;
 
   return {
-    bridgePort: parsePort(env.CLAWJS_BRIDGE_PORT, 7778),
-    httpPort: parsePort(env.CLAWJS_BRIDGE_HTTP_PORT, 7779),
-    bindAddress: env.CLAWJS_BRIDGE_BIND ?? "127.0.0.1",
+    bridgePort: parsePort(env.CLAW_REMOTE_PORT, 24112),
+    httpPort: parsePort(env.CLAW_REMOTE_HTTP_PORT, 24113),
+    bindAddress: env.CLAW_REMOTE_BIND ?? "127.0.0.1",
     dbPath:
-      env.CLAWJS_BRIDGE_DB ?? join(resolveClawjsDataRoot(env, home), "runtime.sqlite"),
+      env.CLAW_REMOTE_DB ?? join(resolveClawjsDataRoot(env, home), "core.sqlite"),
     statusPath:
-      env.CLAWJS_BRIDGE_STATUS ??
+      env.CLAW_REMOTE_STATUS ??
       join(home, ".clawix", "state", "bridge-status.json"),
-    displayName: env.CLAWJS_BRIDGE_NAME ?? hostname(),
-    bonjourEnabled: env.CLAWJS_BRIDGED_DISABLE_BONJOUR !== "1",
-    version: env.CLAWJS_BRIDGE_VERSION ?? "0.1.0",
+    displayName: env.CLAW_REMOTE_NAME ?? hostname(),
+    bonjourEnabled: env.CLAW_REMOTE_DISABLE_BONJOUR !== "1",
+    version: env.CLAW_REMOTE_VERSION ?? "0.1.0",
     capabilities: DEFAULT_CAPABILITIES,
     ...(coordinator ? { coordinator } : {}),
     iroh: {
-      enabled: env.CLAWJS_BRIDGE_IROH_DISABLE !== "1",
-      ...(env.CLAWJS_BRIDGE_IROH_RELAY_URL
-        ? { relayUrl: env.CLAWJS_BRIDGE_IROH_RELAY_URL }
+      enabled: env.CLAW_REMOTE_IROH_DISABLE !== "1",
+      ...(env.CLAW_REMOTE_IROH_RELAY_URL
+        ? { relayUrl: env.CLAW_REMOTE_IROH_RELAY_URL }
         : {}),
     },
   };
 }
 
 function resolveClawjsDataRoot(env: BridgeConfigEnv, home: string): string {
-  if (env.CLAWJS_MAIN_DATA_DIR) return expandHome(env.CLAWJS_MAIN_DATA_DIR, home);
-  if (env.CLAWIX_CLAWJS_DATA_DIR) return expandHome(env.CLAWIX_CLAWJS_DATA_DIR, home);
-  if (process.platform === "darwin") {
-    return join(home, "Library", "Application Support", "Clawix", "clawjs");
-  }
-  if (process.platform === "win32") {
-    return join(env.APPDATA ?? join(home, "AppData", "Roaming"), "Clawix", "clawjs");
-  }
-  return join(env.XDG_DATA_HOME ?? join(home, ".local", "share"), "Clawix", "clawjs");
+  if (env.CLAW_DATA_DIR) return expandHome(env.CLAW_DATA_DIR, home);
+  if (env.CLAWIX_CLAW_DATA_DIR) return expandHome(env.CLAWIX_CLAW_DATA_DIR, home);
+  return join(home, ".claw", "data");
 }
 
 function expandHome(value: string, home: string): string {

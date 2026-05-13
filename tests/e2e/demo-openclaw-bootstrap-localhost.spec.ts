@@ -320,9 +320,9 @@ process.exit(0);
       OPENCLAW_SESSIONS_DIR: sessionsDir,
       OPENCLAW_CONFIG_DIR: configDir,
       OPENCLAW_LOCAL_SETTINGS_PATH: settingsPath,
-      CLAWJS_E2E: "",
-      CLAWJS_E2E_FIXTURE_MODE: "",
-      CLAWJS_E2E_DISABLE_EXTERNAL_CALLS: "",
+      CLAW_E2E: "",
+      CLAW_E2E_FIXTURE_MODE: "",
+      CLAW_E2E_DISABLE_EXTERNAL_CALLS: "",
     };
 
     demoProcess = spawn("npm", ["run", "start", "--", "--port", String(port)], {

@@ -59,7 +59,7 @@ test("dedicated CLI and claw bridge hit the same iot service", async () => {
     cwd: path.resolve(process.cwd(), ".."),
     env: {
       ...process.env,
-      CLAWJS_IOT_DIR: process.cwd(),
+      CLAW_IOT_DIR: process.cwd(),
     },
   });
   const listedPayload = JSON.parse(listed.stdout) as {

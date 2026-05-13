@@ -78,9 +78,9 @@ export async function runOpenDatabase(args) {
   const host = flags.host ?? flags.bind ?? process.env.DATABASE_HOST ?? "127.0.0.1";
   const workspace = flags.workspace ?? process.env.CLAWJS_WORKSPACE ?? process.cwd();
   const defaultDataDir = path.join(process.env.CLAW_HOME ?? path.join(process.env.HOME || "", ".claw"), "data");
-  const dataDir = flags["data-dir"] ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWJS_MAIN_DATA_DIR ?? process.env.CLAWIX_CLAWJS_DATA_DIR ?? defaultDataDir;
+  const dataDir = flags["data-dir"] ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? defaultDataDir;
   const filesDir = flags["files-dir"] ?? path.join(dataDir, "files");
-  const dbPath = flags["db-path"] ?? process.env.CLAW_DB_PATH ?? process.env.CLAWJS_MAIN_DB_PATH ?? path.join(dataDir, "core.sqlite");
+  const dbPath = flags["db-path"] ?? process.env.CLAW_DB_PATH ?? process.env.CLAW_DB_PATH ?? path.join(dataDir, "core.sqlite");
   const statusFile = flags["status-file"];
 
   const buildDatabaseApp = await loadBuildDatabaseApp();

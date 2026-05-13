@@ -106,14 +106,14 @@ export function loadChannelConfig(channelName: string, overrides: Partial<Channe
   return {
     host: overrides.host ?? process.env[`${upper}_HOST`] ?? "127.0.0.1",
     port: overrides.port ?? Number(process.env[`${upper}_PORT`] ?? process.env.PORT ?? "0"),
-    dbPath: overrides.dbPath ?? process.env[`${upper}_DB_PATH`] ?? process.env.CLAW_DB_PATH ?? process.env.CLAWJS_MAIN_DB_PATH ?? path.join(dataDir, "core.sqlite"),
+    dbPath: overrides.dbPath ?? process.env[`${upper}_DB_PATH`] ?? process.env.CLAW_DB_PATH ?? process.env.CLAW_DB_PATH ?? path.join(dataDir, "core.sqlite"),
     dataDir,
     sharedSecret: overrides.sharedSecret ?? process.env[`${upper}_SHARED_SECRET`] ?? `${channelName}-dev-secret-change-me`,
   };
 }
 
 function defaultClawjsDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWJS_MAIN_DATA_DIR ?? process.env.CLAWIX_CLAWJS_DATA_DIR;
+  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
   return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
 }

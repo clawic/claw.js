@@ -16,6 +16,8 @@ export const clawCorePorts = {
   notify: 24109,
   signals: 24110,
   publishing: 24111,
+  remote: 24112,
+  remoteStatus: 24113,
 } as const;
 
 export const clawAppPorts = {

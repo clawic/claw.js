@@ -1,7 +1,7 @@
-# clawjs-bridged · install & distribution
+# claw-remote · install & distribution
 
 This document covers how to build a distributable tarball of the
-`clawjs-bridged` daemon and how to install it on a host (server, laptop or
+`claw-remote` daemon and how to install it on a host (server, laptop or
 embedded device). For day-to-day development, use the workspace flow
 (`npm --prefix bridge run dev`) instead.
 
@@ -35,7 +35,7 @@ Steps:
 3. Runs `npm install --omit=dev` inside the staging dir with
    `npm_config_target_platform` / `npm_config_target_arch` set, so
    `prebuild-install` fetches the right `better_sqlite3.node`.
-4. Tars the staging dir into `out/clawjs-bridged-<os>-<arch>-<version>.tar.gz`.
+4. Tars the staging dir into `out/claw-remote-<os>-<arch>-<version>.tar.gz`.
 
 Cross-target builds rely on prebuilts being available upstream. If
 `prebuild-install` falls back to building from source, you need the matching
@@ -48,7 +48,7 @@ A successful run prints:
 [build-tarball] target=linux-x64 version=0.1.0
 [build-tarball] building dist with tsup (externals: better-sqlite3, ssh2)
 [build-tarball] installing runtime deps for linux-x64
-[build-tarball] wrote /path/to/out/clawjs-bridged-linux-x64-0.1.0.tar.gz
+[build-tarball] wrote /path/to/out/claw-remote-linux-x64-0.1.0.tar.gz
 ```
 
 ## Installer
@@ -59,14 +59,14 @@ the macOS shell shipped by Apple. It does not assume `bash`.
 Common flows:
 
 ```sh
-# Local tarball into ~/.local/clawjs-bridged with launchd auto-start (mac)
+# Local tarball into ~/.local/claw-remote with launchd auto-start (mac)
 ./scripts/install.sh \
-  --tarball ./out/clawjs-bridged-darwin-arm64-0.1.0.tar.gz \
+  --tarball ./out/claw-remote-darwin-arm64-0.1.0.tar.gz \
   --launchd
 
 # Remote download + systemd --user unit (Linux VPS)
 curl -fsSL https://example.com/install.sh | sh -s -- \
-  --tarball https://example.com/clawjs-bridged-linux-x64-0.1.0.tar.gz \
+  --tarball https://example.com/claw-remote-linux-x64-0.1.0.tar.gz \
   --systemd
 
 # Custom ports
@@ -82,10 +82,10 @@ curl -fsSL https://example.com/install.sh | sh -s -- \
 
 Defaults:
 
-- prefix: `$HOME/.local/clawjs-bridged`
-- bin symlink: `$HOME/.local/bin/clawjs-bridged`
-- systemd unit: `$HOME/.config/systemd/user/clawjs-bridged.service`
-- launchd plist: `$HOME/Library/LaunchAgents/com.clawjs.bridged.plist`
+- prefix: `$HOME/.local/claw-remote`
+- bin symlink: `$HOME/.local/bin/claw-remote`
+- systemd unit: `$HOME/.config/systemd/user/claw-remote.service`
+- launchd plist: `$HOME/Library/LaunchAgents/com.claw.remote.plist`
 - bridge port: `7778`, http port: `7779`
 
 The install is idempotent: the previous prefix is moved aside and replaced
@@ -105,8 +105,8 @@ WebSocket bridge. The flow:
      "payload": {
        "method": "ssh.installBridge",
        "hostId": "vps-1",
-       "localBinaryPath": "/path/to/clawjs-bridged-linux-x64-0.1.0/bin/clawjs-bridged",
-       "remotePath": "/usr/local/bin/clawjs-bridged",
+       "localBinaryPath": "/path/to/claw-remote-linux-x64-0.1.0/bin/claw-remote",
+       "remotePath": "/usr/local/bin/claw-remote",
        "port": 7778,
        "httpPort": 7779
      }
@@ -135,7 +135,7 @@ call that wraps tarball upload + extraction + service registration.
 |---|---|
 | `node not found in PATH` when running the wrapper | The bundled wrapper assumes `node >= 20`. Install Node or set `NODE=/path/to/node` in the systemd `Environment=` line. |
 | `Cannot find module 'better-sqlite3/build/Release/better_sqlite3.node'` | The prebuilt did not match the host. Re-run `scripts/build-tarball.sh --target <correct-target>` or run `npm rebuild better-sqlite3` inside the install prefix. |
-| `EADDRINUSE 127.0.0.1:7778` | Another `clawjs-bridged` (or `clawix-bridged` legacy Swift) holds the port. Stop it or change `CLAWJS_BRIDGE_PORT`. |
-| systemd unit not autostarting | `systemctl --user status clawjs-bridged.service` — usually missing `loginctl enable-linger $USER` on Linux servers. |
+| `EADDRINUSE 127.0.0.1:7778` | Another `claw-remote` (or `clawix-bridged` legacy Swift) holds the port. Stop it or change `CLAW_REMOTE_PORT`. |
+| systemd unit not autostarting | `systemctl --user status claw-remote.service` — usually missing `loginctl enable-linger $USER` on Linux servers. |
 | install.sh exits with `tarball not found` | Path is wrong or download failed; pass `--tarball` with an absolute path or a reachable URL. |
 | Mac daemon doesn't survive reboot | Make sure `--launchd` ran and the user is logged in at boot; for headless servers use `sudo launchctl` + `/Library/LaunchDaemons/`. |

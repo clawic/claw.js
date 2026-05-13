@@ -16,7 +16,7 @@ test("withOpenClawCommandEnv injects canonical OpenClaw paths when provided", ()
   });
 
   assert.equal(env?.NODE_ENV, "test");
-  assert.equal(env?.CLAWJS_OPENCLAW_PATH, "/usr/local/bin/openclaw");
+  assert.equal(env?.CLAW_OPENCLAW_PATH, "/usr/local/bin/openclaw");
   assert.equal(env?.OPENCLAW_STATE_DIR, "/tmp/openclaw-state");
   assert.equal(env?.OPENCLAW_CONFIG_PATH, "/tmp/openclaw-state/openclaw.json");
   assert.equal(typeof env?.PATH, "string");

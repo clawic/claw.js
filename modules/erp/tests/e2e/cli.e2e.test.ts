@@ -111,7 +111,7 @@ test("dedicated CLI and claw bridge hit the same erp service", async () => {
     cwd: path.resolve(process.cwd(), ".."),
     env: {
       ...process.env,
-      CLAWJS_ERP_DIR: process.cwd(),
+      CLAW_ERP_DIR: process.cwd(),
     },
   });
   const dashboardPayload = JSON.parse(dashboard.stdout) as { metrics: { revenueCents: number } };

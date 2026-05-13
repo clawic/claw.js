@@ -606,11 +606,11 @@ async function describeConfiguredSecretsSecret(secretRef: string, input: ChatCli
     }, {
       env: {
         ...process.env,
-        ...(input.flags["secrets-backend"] ? { CLAWJS_SECRETS_BACKEND: input.flags["secrets-backend"] } : {}),
+        ...(input.flags["secrets-backend"] ? { CLAW_SECRETS_BACKEND: input.flags["secrets-backend"] } : {}),
         ...(input.flags["secrets-url"] ? { SECRETS_BASE_URL: input.flags["secrets-url"] } : {}),
         ...(input.flags["secrets-token"] ? { SECRETS_TOKEN: input.flags["secrets-token"] } : {}),
         ...(input.flags["secrets-tenant-id"] ? { SECRETS_TENANT_ID: input.flags["secrets-tenant-id"] } : {}),
-        ...(input.flags["secrets-sidecar"] ? { CLAWJS_SECRETS_SIDECAR_PATH: input.flags["secrets-sidecar"] } : {}),
+        ...(input.flags["secrets-sidecar"] ? { CLAW_SECRETS_SIDECAR_PATH: input.flags["secrets-sidecar"] } : {}),
       },
     });
     return result.status === "configured" ? "configured" : "missing";
@@ -694,11 +694,11 @@ export async function runProviderCli(input: ChatCliInput): Promise<number> {
       }, {
         env: {
           ...process.env,
-          ...(input.flags["secrets-backend"] ? { CLAWJS_SECRETS_BACKEND: input.flags["secrets-backend"] } : {}),
+          ...(input.flags["secrets-backend"] ? { CLAW_SECRETS_BACKEND: input.flags["secrets-backend"] } : {}),
           ...(input.flags["secrets-url"] ? { SECRETS_BASE_URL: input.flags["secrets-url"] } : {}),
           ...(input.flags["secrets-token"] ? { SECRETS_TOKEN: input.flags["secrets-token"] } : {}),
           ...(input.flags["secrets-tenant-id"] ? { SECRETS_TENANT_ID: input.flags["secrets-tenant-id"] } : {}),
-          ...(input.flags["secrets-sidecar"] ? { CLAWJS_SECRETS_SIDECAR_PATH: input.flags["secrets-sidecar"] } : {}),
+          ...(input.flags["secrets-sidecar"] ? { CLAW_SECRETS_SIDECAR_PATH: input.flags["secrets-sidecar"] } : {}),
         },
       });
       status = result.status;

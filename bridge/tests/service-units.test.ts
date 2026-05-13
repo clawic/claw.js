@@ -12,15 +12,15 @@ import {
 
 test("renderSystemdUnit emits an enabled service with ExecStart and env", () => {
   const spec = buildBridgeServiceSpec({
-    binaryPath: "/usr/local/bin/clawjs-bridged",
+    binaryPath: "/usr/local/bin/claw-remote",
     bridgePort: 7778,
     httpPort: 7779,
   });
   const unit = renderSystemdUnit(spec);
   assert.match(unit, /\[Unit\]/);
-  assert.match(unit, /ExecStart=\/usr\/local\/bin\/clawjs-bridged/);
-  assert.match(unit, /Environment=CLAWJS_BRIDGE_PORT=7778/);
-  assert.match(unit, /Environment=CLAWJS_BRIDGE_HTTP_PORT=7779/);
+  assert.match(unit, /ExecStart=\/usr\/local\/bin\/claw-remote/);
+  assert.match(unit, /Environment=CLAW_REMOTE_PORT=7778/);
+  assert.match(unit, /Environment=CLAW_REMOTE_HTTP_PORT=7779/);
   assert.match(unit, /Restart=on-failure/);
   assert.match(unit, /WantedBy=default\.target/);
 });
@@ -36,12 +36,12 @@ test("renderSystemdUnit shell-quotes args with whitespace", () => {
 
 test("renderLaunchdPlist emits a valid plist with ProgramArguments", () => {
   const spec = buildBridgeServiceSpec({
-    binaryPath: "/usr/local/bin/clawjs-bridged",
+    binaryPath: "/usr/local/bin/claw-remote",
     bridgePort: 7778,
     httpPort: 7779,
   });
   const plist = renderLaunchdPlist(spec, {
-    label: "com.clawjs.bridged.user",
+    label: "com.claw.remote.user",
     runAtLoad: true,
     keepAlive: true,
     stdoutLogPath: "/tmp/clawjs.out",
@@ -50,7 +50,7 @@ test("renderLaunchdPlist emits a valid plist with ProgramArguments", () => {
   assert.match(plist, /<key>Label<\/key>/);
   assert.match(plist, /<string>com\.clawjs\.bridged\.user<\/string>/);
   assert.match(plist, /<key>ProgramArguments<\/key>/);
-  assert.match(plist, /<string>\/usr\/local\/bin\/clawjs-bridged<\/string>/);
+  assert.match(plist, /<string>\/usr\/local\/bin\/claw-remote<\/string>/);
   assert.match(plist, /<key>EnvironmentVariables<\/key>/);
   assert.match(plist, /<string>7778<\/string>/);
   assert.match(plist, /<key>StandardErrorPath<\/key>/);
@@ -80,7 +80,7 @@ test("SUPPORTED_TARGETS covers Mac, Linux and Windows", () => {
 test("tarballName has a predictable shape", () => {
   assert.equal(
     tarballName({ os: "linux", arch: "x64" }, "0.1.0"),
-    "clawjs-bridged-linux-x64-0.1.0.tar.gz",
+    "claw-remote-linux-x64-0.1.0.tar.gz",
   );
 });
 

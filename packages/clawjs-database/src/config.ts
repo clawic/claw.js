@@ -16,9 +16,9 @@ export function loadDatabaseConfig(overrides: Partial<DatabaseServiceConfig> = {
   return {
     host: overrides.host ?? process.env.DATABASE_HOST ?? "127.0.0.1",
     port: overrides.port ?? Number(process.env.DATABASE_PORT ?? process.env.PORT ?? "4510"),
-    dbPath: overrides.dbPath ?? process.env.DATABASE_DB_PATH ?? process.env.CLAW_DB_PATH ?? process.env.CLAWJS_MAIN_DB_PATH ?? path.join(dataDir, "core.sqlite"),
+    dbPath: overrides.dbPath ?? process.env.DATABASE_DB_PATH ?? process.env.CLAW_DB_PATH ?? process.env.CLAW_DB_PATH ?? path.join(dataDir, "core.sqlite"),
     dataDir,
-    filesDir: overrides.filesDir ?? process.env.DATABASE_FILES_DIR ?? process.env.CLAW_FILES_DIR ?? process.env.CLAWJS_MAIN_FILES_DIR ?? path.join(dataDir, "files"),
+    filesDir: overrides.filesDir ?? process.env.DATABASE_FILES_DIR ?? process.env.CLAW_FILES_DIR ?? process.env.CLAW_FILES_DIR ?? path.join(dataDir, "files"),
     jwtSecret: overrides.jwtSecret ?? process.env.DATABASE_JWT_SECRET ?? "database-dev-secret-change-me",
     corsOrigins: overrides.corsOrigins ?? (process.env.DATABASE_CORS_ORIGINS ?? "")
       .split(",")
@@ -28,7 +28,7 @@ export function loadDatabaseConfig(overrides: Partial<DatabaseServiceConfig> = {
 }
 
 function defaultDataDir(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWJS_MAIN_DATA_DIR ?? process.env.CLAWIX_CLAWJS_DATA_DIR;
+  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
   return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
 }

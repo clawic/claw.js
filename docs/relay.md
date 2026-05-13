@@ -614,7 +614,7 @@ Connector flags or env vars:
 | `--workspace-root` | `RELAY_WORKSPACE_ROOT` | `./relay-workspaces` |
 | `--runtime-adapter` | `RELAY_RUNTIME_ADAPTER` | `openclaw` |
 | `--runtime-binary-path` | `RELAY_RUNTIME_BINARY_PATH` | auto-detected |
-| `--codex-path` | `CLAWJS_CODEX_PATH` | auto-detected |
+| `--codex-path` | `CLAW_CODEX_PATH` | auto-detected |
 | `--credential-path` | `RELAY_CONNECTOR_CREDENTIAL_PATH` | `<workspace-root>/.relay/connector-credential.json` |
 | `--services-config` | `RELAY_SERVICES_CONFIG_PATH` | none |
 | `--services` | `RELAY_SERVICES` | none |
@@ -629,7 +629,7 @@ When the runtime adapter is `openclaw`, the connector also passes through these 
 
 When the runtime adapter is `codex`, the connector passes a stable service-safe `PATH`, auto-detects Homebrew Codex binaries when possible, and honors:
 
-- `CLAWJS_CODEX_PATH`
+- `CLAW_CODEX_PATH`
 - `CODEX_HOME`
 - `CODEX_CONFIG_PATH`
 - `CODEX_AUTH_STORE_PATH`

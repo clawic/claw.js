@@ -133,7 +133,7 @@ test("preview share reports optional tunnel providers without real external serv
     ], {
       cwd: rootDir,
       stdio: ["ignore", "pipe", "pipe"],
-      env: { ...process.env, CLAWJS_PREVIEW_CLOUDFLARE_URL: "https://preview-test.trycloudflare.com" },
+      env: { ...process.env, CLAW_PREVIEW_CLOUDFLARE_URL: "https://preview-test.trycloudflare.com" },
     });
     const cloudflarePayload = await waitForJsonLine(cloudflare);
     expect(cloudflarePayload.shareUrl).toContain("https://preview-test.trycloudflare.com/");

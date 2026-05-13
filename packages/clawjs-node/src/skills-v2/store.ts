@@ -56,8 +56,8 @@ function expandHome(value: string): string {
 
 export function resolveSkillsHome(options: SkillsStoreOptions = {}): string {
   const configured = options.homeDir?.trim()
-    || options.env?.CLAWJS_HOME?.trim()
-    || process.env.CLAWJS_HOME?.trim();
+    || options.env?.CLAW_HOME?.trim()
+    || process.env.CLAW_HOME?.trim();
   if (configured) return expandHome(configured);
   return path.join(os.homedir(), SKILLS_HOME_DIR);
 }

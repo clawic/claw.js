@@ -9,7 +9,7 @@ test("loadConfig defaults bridge storage to the canonical runtime sidecar", () =
   const root = join(home, "Library", "Application Support", "Clawix", "clawjs");
   const config = loadConfig({
     HOME: home,
-    CLAWJS_MAIN_DATA_DIR: root,
+    CLAW_DATA_DIR: root,
   });
 
   assert.equal(config.dbPath, join(root, "runtime.sqlite"));

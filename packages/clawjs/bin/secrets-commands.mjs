@@ -4,8 +4,8 @@
 import readline from "node:readline/promises";
 import process from "node:process";
 
-const DEFAULT_BASE = process.env.SECRETS_BASE_URL ?? process.env.CLAWJS_SECRETS_BASE ?? "http://127.0.0.1:7793";
-const DEFAULT_TENANT = process.env.SECRETS_TENANT_ID ?? process.env.CLAWJS_SECRETS_TENANT ?? "clawix-local";
+const DEFAULT_BASE = process.env.SECRETS_BASE_URL ?? process.env.CLAW_SECRETS_BASE ?? "http://127.0.0.1:7793";
+const DEFAULT_TENANT = process.env.SECRETS_TENANT_ID ?? process.env.CLAW_SECRETS_TENANT ?? "clawix-local";
 
 function parseFlags(args) {
   const out = { _: [], flags: {} };
@@ -35,7 +35,7 @@ function parseFlags(args) {
 async function fetchJson(path, init = {}) {
   const headers = { ...(init.headers ?? {}) };
   if (init.body !== undefined) headers["Content-Type"] = "application/json";
-  const token = process.env.SECRETS_TOKEN ?? process.env.SECRETS_ADMIN_TOKEN ?? process.env.CLAWJS_SECRETS_TOKEN;
+  const token = process.env.SECRETS_TOKEN ?? process.env.SECRETS_ADMIN_TOKEN ?? process.env.CLAW_SECRETS_TOKEN;
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${DEFAULT_BASE}${path}`, { ...init, headers });
   let body;

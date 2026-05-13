@@ -480,7 +480,7 @@ const OPEN_SURFACES: OpenSurface[] = [
   { id: "storage", label: "Storage", port: 18419, kind: "internal-storage", dir: "storage/ui", buildCheck: "dist/index.html" },
   { id: "database", label: "Database", port: 18647, aliases: ["db"], kind: "internal-database" },
   { id: "secrets", label: "Secrets", port: 18853, kind: "server-script", dir: "secrets", script: "dist/server.js", envHost: "SECRETS_HOST", envPort: "SECRETS_PORT", buildCheck: "dist/server.js" },
-  { id: "time", label: "Time", port: 19121, kind: "server-script", dir: "time", script: "dist/server.js", envHost: "CLAWJS_TIME_HOST", envPort: "CLAWJS_TIME_PORT", buildCheck: "dist/server.js" },
+  { id: "time", label: "Time", port: 19121, kind: "server-script", dir: "time", script: "dist/server.js", envHost: "CLAW_TIME_HOST", envPort: "CLAW_TIME_PORT", buildCheck: "dist/server.js" },
   { id: "feed", label: "Feed", port: 19337, kind: "cli-serve", dir: "modules/feed", buildCheck: "dist/cli.js" },
   { id: "relay", label: "Relay", port: 19543, kind: "server-script", dir: "relay", script: "dist/server.js", envHost: "HOST", envPort: "PORT", buildCheck: "dist/server.js" },
   { id: "monitor", label: "Monitor", port: 19759, kind: "server-script", dir: "monitor", script: "dist/main.js", envHost: "MONITOR_HOST", envPort: "MONITOR_PORT", buildCheck: "dist/main.js" },
@@ -542,8 +542,8 @@ function parseClawHostSurface(hostHeader: string | undefined): OpenSurface | nul
 }
 
 function isClawDomainConfigured(flags: Record<string, string>): boolean {
-  if (process.env.CLAWJS_DOMAINS_ACTIVE === "1") return true;
-  if (process.env.CLAWJS_DOMAINS_ACTIVE === "0") return false;
+  if (process.env.CLAW_DOMAINS_ACTIVE === "1") return true;
+  if (process.env.CLAW_DOMAINS_ACTIVE === "0") return false;
   const hostsFile = flags["domains-hosts-file"] || flags["hosts-file"] || "/etc/hosts";
   try {
     const content = fs.readFileSync(hostsFile, "utf8");
@@ -727,7 +727,7 @@ async function ensureSurface(surface) {
     "USER=" + config.username,
     "LOGNAME=" + config.username,
     "PATH=/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
-    "CLAWJS_DOMAINS_ACTIVE=0",
+    "CLAW_DOMAINS_ACTIVE=0",
   ];
   const command = process.platform === "darwin"
     ? ["/bin/launchctl", ["asuser", String(config.uid), "/usr/bin/sudo", "-u", config.username, "/usr/bin/env", ...envArgs, config.nodePath, ...openArgs]]
@@ -981,7 +981,7 @@ async function ensureDomainSurfaceRunning(surface: OpenSurface, flags: Record<st
     encoding: "utf8",
     env: {
       ...process.env,
-      CLAWJS_DOMAINS_ACTIVE: "0",
+      CLAW_DOMAINS_ACTIVE: "0",
     },
   });
   if (result.status !== 0) {
@@ -3212,7 +3212,7 @@ function maybeRerenderSlidesPdfMedia(media: unknown): string | null {
     maxBuffer: 20 * 1024 * 1024,
     env: {
       ...process.env,
-      CLAWJS_SLIDES_DISABLE_BROWSER: "0",
+      CLAW_SLIDES_DISABLE_BROWSER: "0",
     },
   });
   if (result.status !== 0 || !result.stdout.trim()) return null;
@@ -3464,7 +3464,7 @@ function resolveTelegramClawDomainRequest(text: string): OpenSurface | null {
 }
 
 function buildTelegramClawDomainReply(surface: OpenSurface, flags: Record<string, string>): string {
-  const baseUrl = flags["domain-share-url"] || process.env.CLAWJS_DOMAIN_SHARE_URL || process.env.CLAWJS_TELEGRAM_DOMAIN_SHARE_URL;
+  const baseUrl = flags["domain-share-url"] || process.env.CLAW_DOMAIN_SHARE_URL || process.env.CLAW_TELEGRAM_DOMAIN_SHARE_URL;
   const alias = `${surface.id}.claw`;
   if (!baseUrl?.trim()) {
     return `${alias} is local to the ClawJS Mac. Configure a relay/share URL to send a reachable mobile link.`;
@@ -4186,16 +4186,16 @@ async function createCliClaw(
       || flags["secrets-url"]
       || flags["secrets-token"]
       || flags["secrets-tenant-id"]
-      || process.env.CLAWJS_SECRETS_BACKEND
+      || process.env.CLAW_SECRETS_BACKEND
       || process.env.SECRETS_BASE_URL
       || process.env.SECRETS_TOKEN
       || process.env.SECRETS_TENANT_ID
     ) ? {
-      backend: (flags["secrets-backend"] || explicitSecretsBackend || process.env.CLAWJS_SECRETS_BACKEND) as "local_proxy" | "secrets" | undefined,
+      backend: (flags["secrets-backend"] || explicitSecretsBackend || process.env.CLAW_SECRETS_BACKEND) as "local_proxy" | "secrets" | undefined,
       baseUrl: flags["secrets-url"] || process.env.SECRETS_BASE_URL,
       credential: flags["secrets-token"] || process.env.SECRETS_TOKEN,
       tenantId: flags["secrets-tenant-id"] || process.env.SECRETS_TENANT_ID,
-      sidecarPath: flags["secrets-sidecar"] || process.env.CLAWJS_SECRETS_SIDECAR_PATH,
+      sidecarPath: flags["secrets-sidecar"] || process.env.CLAW_SECRETS_SIDECAR_PATH,
     } : undefined,
     templates: {
       pack: flags["template-pack"],
@@ -4210,7 +4210,7 @@ async function createCliClaw(
       homeDir: flags["skills-home"],
       // Default OFF in CLI to avoid surprising user-home filesystem mutations.
       // Use `claw skills import` explicitly to opt in.
-      autoImport: process.env.CLAWJS_SKILLS_AUTO_IMPORT === "1",
+      autoImport: process.env.CLAW_SKILLS_AUTO_IMPORT === "1",
     },
     images: {
       rootDir: flags["image-library"],
@@ -4218,8 +4218,8 @@ async function createCliClaw(
       openaiBaseUrl: flags["openai-base-url"],
       env: {
         ...process.env,
-        ...(flags["secret-ref"] ? { CLAWJS_OPENAI_IMAGE_SECRET_REF: flags["secret-ref"] } : {}),
-        ...(flags["openai-base-url"] ? { CLAWJS_OPENAI_IMAGE_BASE_URL: flags["openai-base-url"] } : {}),
+        ...(flags["secret-ref"] ? { CLAW_OPENAI_IMAGE_SECRET_REF: flags["secret-ref"] } : {}),
+        ...(flags["openai-base-url"] ? { CLAW_OPENAI_IMAGE_BASE_URL: flags["openai-base-url"] } : {}),
       },
     },
     notify: flags["notify-url"]
@@ -4229,10 +4229,10 @@ async function createCliClaw(
         clientToken: flags["notify-client-token"],
       }
       : undefined,
-    time: flags["time-url"] || process.env.CLAWJS_TIME_URL
+    time: flags["time-url"] || process.env.CLAW_TIME_URL
       ? {
-        baseUrl: flags["time-url"] || process.env.CLAWJS_TIME_URL || "",
-        token: flags["time-token"] || process.env.CLAWJS_TIME_TOKEN,
+        baseUrl: flags["time-url"] || process.env.CLAW_TIME_URL || "",
+        token: flags["time-token"] || process.env.CLAW_TIME_TOKEN,
       }
       : undefined,
   });
@@ -4278,10 +4278,10 @@ async function createCliWorkspaceClaw(
     templates: {
       pack: flags["template-pack"],
     },
-    time: flags["time-url"] || process.env.CLAWJS_TIME_URL
+    time: flags["time-url"] || process.env.CLAW_TIME_URL
       ? {
-        baseUrl: flags["time-url"] || process.env.CLAWJS_TIME_URL || "",
-        token: flags["time-token"] || process.env.CLAWJS_TIME_TOKEN,
+        baseUrl: flags["time-url"] || process.env.CLAW_TIME_URL || "",
+        token: flags["time-token"] || process.env.CLAW_TIME_TOKEN,
       }
       : undefined,
   });
@@ -5078,8 +5078,8 @@ function resolveDatabaseDirectory(flags: Record<string, string>, contextCwd: str
   if (flags["database-dir"]) {
     return path.resolve(contextCwd, flags["database-dir"]);
   }
-  if (process.env.CLAWJS_DATABASE_DIR?.trim()) {
-    return path.resolve(process.env.CLAWJS_DATABASE_DIR);
+  if (process.env.CLAW_DATABASE_DIR?.trim()) {
+    return path.resolve(process.env.CLAW_DATABASE_DIR);
   }
   return path.resolve(fileURLToPath(new URL("../../../database", import.meta.url)));
 }
@@ -5088,8 +5088,8 @@ function resolveIotDirectory(flags: Record<string, string>, contextCwd: string):
   if (flags["iot-dir"]) {
     return path.resolve(contextCwd, flags["iot-dir"]);
   }
-  if (process.env.CLAWJS_IOT_DIR?.trim()) {
-    return path.resolve(process.env.CLAWJS_IOT_DIR);
+  if (process.env.CLAW_IOT_DIR?.trim()) {
+    return path.resolve(process.env.CLAW_IOT_DIR);
   }
   return path.resolve(fileURLToPath(new URL("../../../iot", import.meta.url)));
 }
@@ -5098,8 +5098,8 @@ function resolveErpDirectory(flags: Record<string, string>, contextCwd: string):
   if (flags["erp-dir"]) {
     return path.resolve(contextCwd, flags["erp-dir"]);
   }
-  if (process.env.CLAWJS_ERP_DIR?.trim()) {
-    return path.resolve(process.env.CLAWJS_ERP_DIR);
+  if (process.env.CLAW_ERP_DIR?.trim()) {
+    return path.resolve(process.env.CLAW_ERP_DIR);
   }
   return path.resolve(fileURLToPath(new URL("../../../erp", import.meta.url)));
 }
@@ -5108,8 +5108,8 @@ function resolveContentDirectory(flags: Record<string, string>, contextCwd: stri
   if (flags["content-dir"]) {
     return path.resolve(contextCwd, flags["content-dir"]);
   }
-  if (process.env.CLAWJS_CONTENT_DIR?.trim()) {
-    return path.resolve(process.env.CLAWJS_CONTENT_DIR);
+  if (process.env.CLAW_PUBLISHING_DIR?.trim()) {
+    return path.resolve(process.env.CLAW_PUBLISHING_DIR);
   }
   return path.resolve(fileURLToPath(new URL("../../../content", import.meta.url)));
 }
@@ -5119,7 +5119,7 @@ async function runDelegatedDatabaseCli(
   flags: Record<string, string>,
   context: CliContext,
 ): Promise<number> {
-  if (!flags["database-dir"] && !process.env.CLAWJS_DATABASE_DIR?.trim()) {
+  if (!flags["database-dir"] && !process.env.CLAW_DATABASE_DIR?.trim()) {
     return await runEmbeddedDatabaseCli({
       argv: argv.slice(1),
       flags,
@@ -5243,7 +5243,7 @@ async function runDelegatedContentCli(
 }
 
 function resolveRelayBaseUrl(flags: Record<string, string>): string {
-  const raw = flags["relay-url"] ?? process.env.CLAWJS_RELAY_URL ?? process.env.RELAY_URL ?? "";
+  const raw = flags["relay-url"] ?? process.env.CLAW_RELAY_URL ?? process.env.RELAY_URL ?? "";
   if (!raw.trim()) {
     throw new Error("--relay-url is required");
   }
@@ -5258,10 +5258,10 @@ function requireRelayBrowserConfig(flags: Record<string, string>): {
   agentId: string;
   workspaceId: string;
 } {
-  const accessToken = (flags["access-token"] ?? process.env.CLAWJS_RELAY_ACCESS_TOKEN ?? "").trim();
-  const tenantId = (flags["tenant-id"] ?? process.env.CLAWJS_RELAY_TENANT_ID ?? "").trim();
-  const agentId = (flags["agent-id"] ?? process.env.CLAWJS_RELAY_AGENT_ID ?? "").trim();
-  const workspaceId = (flags["workspace-id"] ?? process.env.CLAWJS_RELAY_WORKSPACE_ID ?? "").trim();
+  const accessToken = (flags["access-token"] ?? process.env.CLAW_RELAY_ACCESS_TOKEN ?? "").trim();
+  const tenantId = (flags["tenant-id"] ?? process.env.CLAW_RELAY_TENANT_ID ?? "").trim();
+  const agentId = (flags["agent-id"] ?? process.env.CLAW_RELAY_AGENT_ID ?? "").trim();
+  const workspaceId = (flags["workspace-id"] ?? process.env.CLAW_RELAY_WORKSPACE_ID ?? "").trim();
   if (!accessToken) throw new Error("--access-token is required");
   if (!tenantId) throw new Error("--tenant-id is required");
   if (!agentId) throw new Error("--agent-id is required");
@@ -5593,7 +5593,7 @@ async function runCloudflarePreviewShare(input: {
   const token = input.flags.token || randomBytes(18).toString("base64url");
   const tokenParam = input.flags["token-param"] || "claw_share_token";
   const expiresAt = new Date(Date.now() + resolvePreviewShareTtlMs(input.flags));
-  const mockUrl = process.env.CLAWJS_PREVIEW_CLOUDFLARE_URL || input.flags["share-url"];
+  const mockUrl = process.env.CLAW_PREVIEW_CLOUDFLARE_URL || input.flags["share-url"];
   const cloudflaredBin = input.flags["cloudflared-bin"] || findExecutable("cloudflared");
   const providerCommand = [cloudflaredBin || "cloudflared", "tunnel", "--url", input.targetUrl.toString()];
   if (input.dryRun || mockUrl) {

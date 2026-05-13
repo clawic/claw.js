@@ -167,7 +167,7 @@ const claw = await Claw({
     adapter: "demo",
     env: {
       ...process.env,
-      CLAWJS_SECRETS_PROXY_PATH: ${JSON.stringify(proxyPath)},
+      CLAW_SECRETS_PROXY_PATH: ${JSON.stringify(proxyPath)},
       FAKE_TELEGRAM_PROXY_STATE: ${JSON.stringify(statePath)},
     },
   },
@@ -357,7 +357,7 @@ process.stdin.on("end", () => {
     const cliEnv = {
       ...process.env,
       CI: "1",
-      CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+      CLAW_SECRETS_PROXY_PATH: proxyPath,
       FAKE_TELEGRAM_PROXY_STATE: statePath,
     };
     await execFileAsync(process.execPath, [

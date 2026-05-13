@@ -1,7 +1,7 @@
-# Cutover from `clawix-bridged` (Swift) to `clawjs-bridged` (Node)
+# Cutover from `clawix-bridged` (Swift) to `claw-remote` (Node)
 
 End-to-end migration recipe for the Clawix Mac app. The Node daemon
-(`clawjs-bridged`) replaces the Swift helper without changing the wire
+(`claw-remote`) replaces the Swift helper without changing the wire
 protocol seen by the GUI (`/mesh/*` on loopback port 7779,
 `/bridge` WebSocket on 7778, Bonjour `_clawix-bridge._tcp`). The Mac
 app, the iOS client, the menu bar and the npm CLI keep talking to
@@ -31,18 +31,18 @@ bash scripts/build-tarball.sh                   # host target
 bash scripts/build-tarball.sh --target darwin-x64
 ```
 
-This produces `bridge/out/clawjs-bridged-darwin-<arch>-<version>.tar.gz`
+This produces `bridge/out/claw-remote-darwin-<arch>-<version>.tar.gz`
 with bundled JS, the right `better_sqlite3.node` prebuilt and the
-launcher script under `bin/clawjs-bridged`.
+launcher script under `bin/claw-remote`.
 
 Smoke-test it standalone first:
 
 ```sh
-tar -xzf bridge/out/clawjs-bridged-darwin-arm64-0.1.0.tar.gz -C /tmp
-CLAWJS_BRIDGE_BIND=127.0.0.1 CLAWJS_BRIDGE_DB=/tmp/test.sqlite \
-  CLAWJS_BRIDGE_STATUS=/tmp/test-status.json \
-  CLAWJS_BRIDGED_DISABLE_BONJOUR=1 \
-  /tmp/clawjs-bridged-0.1.0/bin/clawjs-bridged
+tar -xzf bridge/out/claw-remote-darwin-arm64-0.1.0.tar.gz -C /tmp
+CLAW_REMOTE_BIND=127.0.0.1 CLAW_REMOTE_DB=/tmp/test.sqlite \
+  CLAW_REMOTE_STATUS=/tmp/test-status.json \
+  CLAW_REMOTE_DISABLE_BONJOUR=1 \
+  /tmp/claw-remote-0.1.0/bin/claw-remote
 # Expect: "clawjs-bridge ready on http://127.0.0.1:7779 ..."
 ```
 
@@ -59,15 +59,15 @@ bash dev.sh   # produces /Applications/Clawix.app or build/Clawix.app
 # Embed the daemon.
 bash clawix/macos/scripts/bundle_clawjs_bridged.sh \
   --app /Applications/Clawix.app \
-  --tarball /Users/trabajo/Desktop/clawjs/bridge/out/clawjs-bridged-darwin-arm64-0.1.0.tar.gz
+  --tarball /Users/trabajo/Desktop/clawjs/bridge/out/claw-remote-darwin-arm64-0.1.0.tar.gz
 ```
 
 Resulting layout:
 
 ```
 Clawix.app/Contents/Helpers/clawix-bridged                # legacy Swift, untouched
-Clawix.app/Contents/Helpers/clawjs-bridged/               # new Node daemon
-  bin/clawjs-bridged
+Clawix.app/Contents/Helpers/claw-remote/               # new Node daemon
+  bin/claw-remote
   lib/start.cjs
   node_modules/...
   package.json
@@ -88,7 +88,7 @@ codesign --verify --strict --deep /Applications/Clawix.app
 The Helpers tree contains a `.node` native addon and a wrapper sh
 script — both end up in the deep-signed graph. If a future
 `build_app.sh` revision adopts hardened-runtime entitlements for
-`clawjs-bridged`, this is where they'd go.
+`claw-remote`, this is where they'd go.
 
 ## 4. Flip BackgroundBridgeService
 
@@ -105,7 +105,7 @@ present and fall back to the Swift helper:
 
 ```swift
 let nodeHelper = Bundle.main.bundleURL
-    .appendingPathComponent("Contents/Helpers/clawjs-bridged/bin/clawjs-bridged")
+    .appendingPathComponent("Contents/Helpers/claw-remote/bin/claw-remote")
 let legacyHelper = Bundle.main.bundleURL
     .appendingPathComponent("Contents/Helpers/clawix-bridged")
 let helper = FileManager.default.fileExists(atPath: nodeHelper.path)
@@ -135,13 +135,13 @@ The first launch after the flip pops the standard Apple prompts:
 Grant each one. Because the new daemon is signed with the same
 identity as the .app, the grants persist across relaunches. Old
 grants for `clawix-bridged` stay in the database; macOS treats them
-as orphaned and surfaces the new prompt for `clawjs-bridged`.
+as orphaned and surfaces the new prompt for `claw-remote`.
 
 If the prompt does not appear:
 
-- Verify the helper path: `ps -ef | grep clawjs-bridged` should show
-  `Clawix.app/Contents/Helpers/clawjs-bridged/bin/clawjs-bridged`.
-- Verify the signature: `codesign -dvv Clawix.app/Contents/Helpers/clawjs-bridged/bin/clawjs-bridged`
+- Verify the helper path: `ps -ef | grep claw-remote` should show
+  `Clawix.app/Contents/Helpers/claw-remote/bin/claw-remote`.
+- Verify the signature: `codesign -dvv Clawix.app/Contents/Helpers/claw-remote/bin/claw-remote`
   prints the same identity as the .app's `Contents/MacOS/Clawix`.
 - Use the workspace preflight: `bash scripts-dev/clawix-launcher.sh preflight-computer-use`.
 
@@ -164,7 +164,7 @@ Risk-free: remove the Node bundle and the resolver fallback picks the
 Swift helper:
 
 ```sh
-rm -rf /Applications/Clawix.app/Contents/Helpers/clawjs-bridged
+rm -rf /Applications/Clawix.app/Contents/Helpers/claw-remote
 bash dev.sh
 ```
 

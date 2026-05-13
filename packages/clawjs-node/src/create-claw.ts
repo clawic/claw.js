@@ -464,13 +464,13 @@ import {
 } from "./content/index.ts";
 
 function defaultClawjsMainDbPath(): string {
-  const explicit = process.env.CLAW_DB_PATH ?? process.env.CLAWJS_MAIN_DB_PATH;
+  const explicit = process.env.CLAW_DB_PATH ?? process.env.CLAW_DB_PATH;
   if (explicit) return expandHome(explicit);
   return path.join(defaultClawjsDataRoot(), "core.sqlite");
 }
 
 function defaultClawjsDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWJS_MAIN_DATA_DIR ?? process.env.CLAWIX_CLAWJS_DATA_DIR;
+  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
   return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
 }
@@ -537,7 +537,7 @@ export interface CreateClawOptions {
   };
   /**
    * Skills-v2 (unified SKILL.md) configuration. Defaults: ~/.claw as home,
-   * auto-import enabled. Overridable via `CLAWJS_HOME` env var.
+   * auto-import enabled. Overridable via `CLAW_HOME` env var.
    */
   skills?: {
     homeDir?: string;
@@ -1792,11 +1792,11 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   const secretsEnv: NodeJS.ProcessEnv = {
     ...(runtimeEnv ?? {}),
     ...(options.secrets?.env ?? {}),
-    ...(options.secrets?.backend ? { CLAWJS_SECRETS_BACKEND: options.secrets.backend } : {}),
+    ...(options.secrets?.backend ? { CLAW_SECRETS_BACKEND: options.secrets.backend } : {}),
     ...(options.secrets?.baseUrl ? { SECRETS_BASE_URL: options.secrets.baseUrl } : {}),
     ...(options.secrets?.credential ? { SECRETS_TOKEN: options.secrets.credential } : {}),
     ...(options.secrets?.tenantId ? { SECRETS_TENANT_ID: options.secrets.tenantId } : {}),
-    ...(options.secrets?.sidecarPath ? { CLAWJS_SECRETS_SIDECAR_PATH: options.secrets.sidecarPath } : {}),
+    ...(options.secrets?.sidecarPath ? { CLAW_SECRETS_SIDECAR_PATH: options.secrets.sidecarPath } : {}),
   };
   const processHost = adapter.id === "openclaw"
     ? withOpenClawCommandRunner(baseProcessHost, {
@@ -1846,7 +1846,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     workspaceDir,
     filesystem,
   });
-  // Skills-v2: unified central store at ~/.claw/skills (or $CLAWJS_HOME).
+  // Skills-v2: unified central store at ~/.claw/skills (or $CLAW_HOME).
   const skillsV2Store = createSkillsStore({
     homeDir: options.skills?.homeDir,
     env: options.skills?.env ?? runtimeEnv,

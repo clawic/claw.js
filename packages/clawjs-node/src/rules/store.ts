@@ -37,8 +37,8 @@ function resolveHomePath(value: string): string {
 
 export function resolveRulesRoot(options: RulesStoreOptions = {}): string {
   const configured = options.rootDir?.trim()
-    || options.env?.CLAWJS_RULES_DIR?.trim()
-    || process.env.CLAWJS_RULES_DIR?.trim();
+    || options.env?.CLAW_RULES_DIR?.trim()
+    || process.env.CLAW_RULES_DIR?.trim();
   if (configured) return resolveHomePath(configured);
   return path.join(os.homedir(), ".claw", "rules");
 }

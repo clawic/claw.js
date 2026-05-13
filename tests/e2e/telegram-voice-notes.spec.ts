@@ -128,7 +128,7 @@ process.stdin.on("end", () => {
   const { proxyPath, statePath } = writeFakeSecretsProxy(tempRoot);
   const env = {
     ...process.env,
-    CLAWJS_SECRETS_PROXY_PATH: proxyPath,
+    CLAW_SECRETS_PROXY_PATH: proxyPath,
     FAKE_TELEGRAM_PROXY_STATE: statePath,
   };
   const cli = path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs");

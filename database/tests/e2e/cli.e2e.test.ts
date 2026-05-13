@@ -118,7 +118,7 @@ test("dedicated CLI and claw bridge hit the same database service", async () => 
     cwd: path.resolve(process.cwd(), ".."),
     env: {
       ...process.env,
-      CLAWJS_DATABASE_DIR: process.cwd(),
+      CLAW_DATABASE_DIR: process.cwd(),
     },
   });
   const listedPayload = JSON.parse(listed.stdout) as { total: number; items: Array<{ name: string }> };

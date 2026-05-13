@@ -13,7 +13,7 @@ process.env.SECRETS_PORT = "0";
 const { startSecretsServer } = await import("../src/server/app.ts");
 const { app, config } = await startSecretsServer({});
 const port = app.server.address()?.port ?? config.port;
-process.env.CLAWJS_SECRETS_BASE = `http://127.0.0.1:${port}`;
+process.env.CLAW_SECRETS_BASE = `http://127.0.0.1:${port}`;
 
 let pass = 0; let fail = 0;
 function ok(name) { console.log(`  ✓ ${name}`); pass++; }
@@ -21,7 +21,7 @@ function ko(name, e) { console.error(`  ✗ ${name}: ${typeof e === "string" ? e
 
 // Setup secrets directly via HTTP (the CLI prompts for password interactively,
 // which is hard to drive in a smoke test).
-const setupRes = await fetch(`${process.env.CLAWJS_SECRETS_BASE}/v1/secrets/setup`, {
+const setupRes = await fetch(`${process.env.CLAW_SECRETS_BASE}/v1/secrets/setup`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ password: "smoke-test-pw" }),

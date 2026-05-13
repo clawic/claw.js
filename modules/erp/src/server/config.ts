@@ -20,7 +20,7 @@ export function loadErpConfig(overrides: Partial<ErpServiceConfig> = {}): ErpSer
     host: overrides.host ?? process.env.ERP_HOST ?? "127.0.0.1",
     port: overrides.port ?? Number(process.env.ERP_PORT ?? "4530"),
     dataDir,
-    dbPath: overrides.dbPath ?? process.env.ERP_DB_PATH ?? process.env.CLAW_DB_PATH ?? process.env.CLAWJS_MAIN_DB_PATH ?? path.join(dataDir, "core.sqlite"),
+    dbPath: overrides.dbPath ?? process.env.ERP_DB_PATH ?? process.env.CLAW_DB_PATH ?? process.env.CLAW_DB_PATH ?? path.join(dataDir, "core.sqlite"),
     jwtSecret: overrides.jwtSecret ?? process.env.ERP_JWT_SECRET ?? "erp-local-secret",
     corsOrigins: overrides.corsOrigins ?? (process.env.ERP_CORS_ORIGINS?.split(",").map((entry) => entry.trim()).filter(Boolean) ?? []),
     adminEmail: overrides.adminEmail ?? process.env.ERP_ADMIN_EMAIL ?? "admin@erp.local",
@@ -29,7 +29,7 @@ export function loadErpConfig(overrides: Partial<ErpServiceConfig> = {}): ErpSer
 }
 
 function defaultClawjsDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWJS_MAIN_DATA_DIR ?? process.env.CLAWIX_CLAWJS_DATA_DIR;
+  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
   return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
 }
