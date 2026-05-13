@@ -5121,6 +5121,12 @@
               "default": null
             },
             {
+              "name": "payloadJson",
+              "type": "string",
+              "optional": true,
+              "default": "{\"max_age\":3600}"
+            },
+            {
               "name": "roleIds",
               "type": "array",
               "optional": true,
