@@ -229,7 +229,7 @@ const DISCORD_ACTIONS = [
   action("get-channel", "Get Channel", [CHANNEL_FIELD]),
   action("update-channel", "Update Channel", CHANNEL_UPDATE_FIELDS),
   action("set-voice-channel-status", "Set Voice Channel Status", [CHANNEL_FIELD, field("status", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
-  action("delete-channel", "Delete Channel", [CHANNEL_FIELD]),
+  action("delete-channel", "Delete Channel", [CHANNEL_FIELD, field("auditLogReason", "string", true)]),
   action("edit-channel-permissions", "Edit Channel Permissions", [CHANNEL_FIELD, OVERWRITE_FIELD, field("allow", "string", true, { default: "0" }), field("deny", "string", true, { default: "0" }), field("permissionType", "integer", false, { default: 0, min: 0, max: 1 }), field("auditLogReason", "string", true)]),
   action("delete-channel-permission", "Delete Channel Permission", [CHANNEL_FIELD, OVERWRITE_FIELD, field("auditLogReason", "string", true)]),
   action("follow-announcement-channel", "Follow Announcement Channel", [CHANNEL_FIELD, field("webhookChannelId", "string"), field("auditLogReason", "string", true)]),
@@ -558,6 +558,24 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["id", "type"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-channel"), {
+      channelId: "123",
+      auditLogReason: "remove channel",
+    }), {
+      method: "DELETE",
+      endpoint: "channels/123",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "remove channel",
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id"],
       },
     });
 

@@ -3,6 +3,7 @@
   "url": "https://discord.com/api/v10/channels/sample",
   "headers": {
     "accept": "application/json",
-    "authorization": "Bot offline-discordBotToken-secret"
+    "authorization": "Bot offline-discordBotToken-secret",
+    "x-audit-log-reason": "sample"
   }
 }
