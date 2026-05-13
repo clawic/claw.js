@@ -9,20 +9,20 @@ const execFileAsync = promisify(execFile);
 
 const SLACK_SECRET_NAME = "clawjs_slack_bot_token";
 
-function vaultConfig() {
-  const baseUrl = process.env.VAULT_BASE_URL?.trim();
-  const token = process.env.VAULT_TOKEN?.trim();
-  const tenantId = process.env.VAULT_TENANT_ID?.trim();
+function secretsConfig() {
+  const baseUrl = process.env.CLAW_SECRETS_BASE_URL?.trim();
+  const token = process.env.CLAW_SECRETS_TOKEN?.trim();
+  const tenantId = process.env.CLAW_SECRETS_TENANT_ID?.trim();
   return baseUrl && token && tenantId ? { baseUrl, token, tenantId } : null;
 }
 
 async function storeSecret(secretName: string, secretValue: string): Promise<void> {
-  const vault = vaultConfig();
-  if (vault) {
-    const response = await fetch(`${vault.baseUrl.replace(/\/+$/, "")}/v1/tenants/${vault.tenantId}/secrets`, {
+  const secrets = secretsConfig();
+  if (secrets) {
+    const response = await fetch(`${secrets.baseUrl.replace(/\/+$/, "")}/v1/tenants/${secrets.tenantId}/secrets`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${vault.token}`,
+        Authorization: `Bearer ${secrets.token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -68,7 +68,7 @@ async function storeSecret(secretName: string, secretValue: string): Promise<voi
 }
 
 async function removeSecret(secretName: string): Promise<void> {
-  if (vaultConfig()) {
+  if (secretsConfig()) {
     return;
   }
   const serviceName = `secrets-proxy:${secretName}`;

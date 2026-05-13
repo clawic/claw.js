@@ -671,7 +671,7 @@ function buildSecretRefsTemplate(entry: CatalogEntry): Record<string, string> {
   return Object.fromEntries(
     entry.operation.authFieldNames.map((fieldName) => [
       fieldName,
-      `vault://connections/${entry.app.id}/${fieldName}`,
+      `secrets://connections/${entry.app.id}/${fieldName}`,
     ]),
   );
 }

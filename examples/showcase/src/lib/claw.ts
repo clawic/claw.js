@@ -148,13 +148,13 @@ export async function getClaw(): Promise<Awaited<ReturnType<typeof createClaw>>>
         agentId: ids.agentId,
         rootDir: resolveClawJSWorkspaceDir(),
       },
-      secrets: readConfiguredEnv("VAULT_BASE_URL") && readConfiguredEnv("VAULT_TOKEN") && readConfiguredEnv("VAULT_TENANT_ID")
+      secrets: readConfiguredEnv("CLAW_SECRETS_BASE_URL") && readConfiguredEnv("CLAW_SECRETS_TOKEN") && readConfiguredEnv("CLAW_SECRETS_TENANT_ID")
         ? {
-          backend: "vault",
-          baseUrl: readConfiguredEnv("VAULT_BASE_URL") || undefined,
-          credential: readConfiguredEnv("VAULT_TOKEN") || undefined,
-          tenantId: readConfiguredEnv("VAULT_TENANT_ID") || undefined,
-          sidecarPath: readConfiguredEnv("CLAW_VAULT_SIDECAR_PATH") || undefined,
+          backend: "secrets",
+          baseUrl: readConfiguredEnv("CLAW_SECRETS_BASE_URL") || undefined,
+          credential: readConfiguredEnv("CLAW_SECRETS_TOKEN") || undefined,
+          tenantId: readConfiguredEnv("CLAW_SECRETS_TENANT_ID") || undefined,
+          sidecarPath: readConfiguredEnv("CLAW_SECRETS_SIDECAR_PATH") || undefined,
         }
         : undefined,
     });
