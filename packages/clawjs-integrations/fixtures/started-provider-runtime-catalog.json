@@ -512,7 +512,108 @@
               "name": "type",
               "type": "integer",
               "optional": true,
-              "default": 0
+              "default": null
+            },
+            {
+              "name": "topic",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "bitrate",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "userLimit",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "rateLimitPerUser",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "position",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "permissionOverwrites",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "parentId",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "nsfw",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "rtcRegion",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "videoQualityMode",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "defaultAutoArchiveDuration",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "defaultReactionEmoji",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "availableTags",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "defaultSortOrder",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "defaultForumLayout",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "defaultThreadRateLimitPerUser",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": [
