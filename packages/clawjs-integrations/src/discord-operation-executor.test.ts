@@ -21,6 +21,8 @@ const INTEGRATION_FIELD = field("integrationId", "string");
 const WEBHOOK_FIELD = field("webhookId", "string");
 const WEBHOOK_TOKEN_FIELD = field("webhookToken", "string");
 const APPLICATION_FIELD = field("applicationId", "string");
+const INTERACTION_FIELD = field("interactionId", "string");
+const INTERACTION_TOKEN_FIELD = field("interactionToken", "string");
 const INSTANCE_FIELD = field("instanceId", "string");
 const COMMAND_FIELD = field("commandId", "string");
 const ENTITLEMENT_FIELD = field("entitlementId", "string");
@@ -224,6 +226,14 @@ const DISCORD_ACTIONS = [
   action("get-webhook-message", "Get Webhook Message", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, MESSAGE_FIELD], []),
   action("edit-webhook-message", "Edit Webhook Message", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, MESSAGE_FIELD, field("content", "string", true, { default: "sample" })], []),
   action("delete-webhook-message", "Delete Webhook Message", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, MESSAGE_FIELD], []),
+  action("create-interaction-response", "Create Interaction Response", [INTERACTION_FIELD, INTERACTION_TOKEN_FIELD, field("responseType", "integer", false, { default: 4 }), field("responseData", "object", true, { default: { content: "sample" } }), field("withResponse", "boolean", true)], []),
+  action("get-original-interaction-response", "Get Original Interaction Response", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD], []),
+  action("edit-original-interaction-response", "Edit Original Interaction Response", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD, field("content", "string", true, { default: "sample" })], []),
+  action("delete-original-interaction-response", "Delete Original Interaction Response", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD], []),
+  action("create-followup-message", "Create Followup Message", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD, field("content", "string")], []),
+  action("get-followup-message", "Get Followup Message", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD, MESSAGE_FIELD], []),
+  action("edit-followup-message", "Edit Followup Message", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD, MESSAGE_FIELD, field("content", "string", true, { default: "sample" })], []),
+  action("delete-followup-message", "Delete Followup Message", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD, MESSAGE_FIELD], []),
   action("list-global-application-commands", "List Global Application Commands", [APPLICATION_FIELD]),
   action("create-global-application-command", "Create Global Application Command", [APPLICATION_FIELD, field("name", "string"), field("description", "string", true, { default: "sample" })]),
   action("get-global-application-command", "Get Global Application Command", [APPLICATION_FIELD, COMMAND_FIELD]),
@@ -1877,6 +1887,154 @@ describe("discord operation runtime", () => {
       body: {
         content: "hello",
       },
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-interaction-response"), {
+      interactionId: "interaction-123",
+      interactionToken: "interaction-token",
+      responseType: 4,
+      responseData: {
+        content: "hello",
+      },
+      withResponse: true,
+    }), {
+      method: "POST",
+      endpoint: "interactions/interaction-123/interaction-token/callback",
+      auth: [],
+      headers,
+      query: {
+        with_response: true,
+      },
+      body: {
+        type: 4,
+        data: {
+          content: "hello",
+        },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["interaction"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-original-interaction-response"), {
+      applicationId: "app-123",
+      interactionToken: "interaction-token",
+    }), {
+      method: "GET",
+      endpoint: "webhooks/app-123/interaction-token/messages/@original",
+      auth: [],
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.edit-original-interaction-response"), {
+      applicationId: "app-123",
+      interactionToken: "interaction-token",
+      content: "updated",
+    }), {
+      method: "PATCH",
+      endpoint: "webhooks/app-123/interaction-token/messages/@original",
+      auth: [],
+      headers,
+      body: {
+        content: "updated",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-original-interaction-response"), {
+      applicationId: "app-123",
+      interactionToken: "interaction-token",
+    }), {
+      method: "DELETE",
+      endpoint: "webhooks/app-123/interaction-token/messages/@original",
+      auth: [],
+      headers,
+      body: {},
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-followup-message"), {
+      applicationId: "app-123",
+      interactionToken: "interaction-token",
+      content: "followup",
+    }), {
+      method: "POST",
+      endpoint: "webhooks/app-123/interaction-token",
+      auth: [],
+      headers,
+      body: {
+        content: "followup",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-followup-message"), {
+      applicationId: "app-123",
+      interactionToken: "interaction-token",
+      messageId: "message-123",
+    }), {
+      method: "GET",
+      endpoint: "webhooks/app-123/interaction-token/messages/message-123",
+      auth: [],
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.edit-followup-message"), {
+      applicationId: "app-123",
+      interactionToken: "interaction-token",
+      messageId: "message-123",
+      content: "updated followup",
+    }), {
+      method: "PATCH",
+      endpoint: "webhooks/app-123/interaction-token/messages/message-123",
+      auth: [],
+      headers,
+      body: {
+        content: "updated followup",
+        message_reference: {
+          message_id: "message-123",
+        },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-followup-message"), {
+      applicationId: "app-123",
+      interactionToken: "interaction-token",
+      messageId: "message-123",
+    }), {
+      method: "DELETE",
+      endpoint: "webhooks/app-123/interaction-token/messages/message-123",
+      auth: [],
+      headers,
+      body: {},
       responseSchema: {
         type: "object",
       },
