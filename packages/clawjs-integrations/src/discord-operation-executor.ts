@@ -498,9 +498,9 @@ export function buildDiscordOperationRequest(
     case "get-message":
       return getPlan(`channels/${channelId(values)}/messages/${messageId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "channel_id"] });
     case "send-message":
-      return bodyPlan("POST", `channels/${channelId(values)}/messages`, auth, headers, messageBody(values, true), { type: "object", requiredPaths: ["id", "channel_id"] });
+      return bodyPlan("POST", `channels/${channelId(values)}/messages`, auth, headers, messageBody(values, true, true), { type: "object", requiredPaths: ["id", "channel_id"] });
     case "edit-message":
-      return bodyPlan("PATCH", `channels/${channelId(values)}/messages/${messageId(values)}`, auth, headers, messageBody(values, false), { type: "object", requiredPaths: ["id", "channel_id"] });
+      return bodyPlan("PATCH", `channels/${channelId(values)}/messages/${messageId(values)}`, auth, headers, messageBody(values, false, false), { type: "object", requiredPaths: ["id", "channel_id"] });
     case "delete-message":
       return deletePlan(`channels/${channelId(values)}/messages/${messageId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "bulk-delete-messages":
@@ -1314,16 +1314,22 @@ function stickerBody(values: Record<string, IntegrationJson>, requireCreateField
   });
 }
 
-function messageBody(values: Record<string, IntegrationJson>, requireContent: boolean): Record<string, IntegrationJson> {
+function messageBody(values: Record<string, IntegrationJson>, requireContent: boolean, includeReference: boolean): Record<string, IntegrationJson> {
   const content = firstValue(values.content, values.text);
   return removeEmptyValues({
     content: requireContent ? requiredString(content, "content") : optionalString(content),
+    nonce: optionalString(values.nonce),
     tts: values.tts,
     embeds: optionalJsonArray(values.embeds),
     components: optionalJsonArray(values.components),
     allowed_mentions: optionalJsonObject(values.allowedMentions),
+    sticker_ids: requireContent ? optionalJsonArray(firstValue(values.stickerIds, values.sticker_ids)) : undefined,
+    attachments: optionalJsonArray(values.attachments),
     flags: optionalNumber(values.flags),
-    message_reference: messageReference(values),
+    enforce_nonce: requireContent ? values.enforceNonce : undefined,
+    poll: requireContent ? optionalJsonObject(values.poll) : undefined,
+    shared_client_theme: requireContent ? optionalJsonObject(firstValue(values.sharedClientTheme, values.shared_client_theme)) : undefined,
+    message_reference: includeReference ? messageReference(values) : undefined,
   });
 }
 
