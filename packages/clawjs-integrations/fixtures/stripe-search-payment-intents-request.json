@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://api.stripe.com/v1/payment_intents/search?query=metadata%5B%27order_id%27%5D%3A%27sample%27&limit=10&page=next_page",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  }
+}
