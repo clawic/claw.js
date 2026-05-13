@@ -45,7 +45,12 @@ export type DiscordRuntimeOperation =
   | "delete-guild-sticker"
   | "get-channel"
   | "update-channel"
+  | "set-voice-channel-status"
   | "delete-channel"
+  | "edit-channel-permissions"
+  | "delete-channel-permission"
+  | "follow-announcement-channel"
+  | "trigger-typing-indicator"
   | "list-messages"
   | "get-message"
   | "send-message"
@@ -251,8 +256,18 @@ export function buildDiscordOperationRequest(
       return deletePlan(`guilds/${guildId(values)}/stickers/${stickerId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "update-channel":
       return bodyPlan("PATCH", `channels/${channelId(values)}`, auth, headers, channelBody(values), { type: "object", requiredPaths: ["id", "type"] });
+    case "set-voice-channel-status":
+      return bodyPlan("PUT", `channels/${channelId(values)}/voice-status`, auth, auditHeaders(headers, values), voiceChannelStatusBody(values), { type: "object" });
     case "delete-channel":
       return deletePlan(`channels/${channelId(values)}`, auth, headers, { type: "object", requiredPaths: ["id"] });
+    case "edit-channel-permissions":
+      return bodyPlan("PUT", `channels/${channelId(values)}/permissions/${overwriteId(values)}`, auth, auditHeaders(headers, values), channelPermissionBody(values), { type: "object" });
+    case "delete-channel-permission":
+      return deletePlan(`channels/${channelId(values)}/permissions/${overwriteId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+    case "follow-announcement-channel":
+      return bodyPlan("POST", `channels/${channelId(values)}/followers`, auth, auditHeaders(headers, values), followAnnouncementChannelBody(values), { type: "object", requiredPaths: ["channel_id", "webhook_id"] });
+    case "trigger-typing-indicator":
+      return bodyPlan("POST", `channels/${channelId(values)}/typing`, auth, headers, {}, { type: "object" });
     case "list-messages":
       return getPlan(`channels/${channelId(values)}/messages`, auth, headers, { type: "array" }, removeEmptyValues({
         around: optionalString(values.around),
@@ -510,7 +525,12 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "delete-guild-sticker",
   "get-channel",
   "update-channel",
+  "set-voice-channel-status",
   "delete-channel",
+  "edit-channel-permissions",
+  "delete-channel-permission",
+  "follow-announcement-channel",
+  "trigger-typing-indicator",
   "list-messages",
   "get-message",
   "send-message",
@@ -695,6 +715,27 @@ function channelBody(values: Record<string, IntegrationJson>): Record<string, In
     nsfw: values.nsfw,
     permission_overwrites: optionalJsonArray(values.permissionOverwrites),
   });
+}
+
+function voiceChannelStatusBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  if (Object.prototype.hasOwnProperty.call(values, "status") && values.status === null) return { status: null };
+  return removeEmptyValues({
+    status: optionalString(values.status),
+  });
+}
+
+function channelPermissionBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    allow: optionalString(values.allow),
+    deny: optionalString(values.deny),
+    type: optionalNumber(values.permissionType),
+  });
+}
+
+function followAnnouncementChannelBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return {
+    webhook_channel_id: requiredString(firstValue(values.webhookChannelId, values.targetChannelId), "webhookChannelId"),
+  };
 }
 
 function guildTemplateBody(values: Record<string, IntegrationJson>, requireCreateFields: boolean): Record<string, IntegrationJson> {
@@ -883,6 +924,10 @@ function guildId(values: Record<string, IntegrationJson>): string {
 
 function channelId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.channelId, values.channel), "channelId"));
+}
+
+function overwriteId(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.overwriteId, values.permissionOverwriteId, values.targetId), "overwriteId"));
 }
 
 function messageId(values: Record<string, IntegrationJson>): string {
