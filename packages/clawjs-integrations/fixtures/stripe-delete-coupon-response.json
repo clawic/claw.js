@@ -1,0 +1,21 @@
+{
+  "id": "stripe_sample",
+  "object": "stripe_object",
+  "status": "succeeded",
+  "deleted": true,
+  "data": [
+    {
+      "id": "stripe_sample",
+      "object": "stripe_object",
+      "status": "succeeded"
+    }
+  ],
+  "has_more": false,
+  "available": [
+    {
+      "amount": 1200,
+      "currency": "usd"
+    }
+  ],
+  "pending": []
+}
