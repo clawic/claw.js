@@ -35,31 +35,31 @@ export const CHANNELS_STATE_FILE = "channels.json";
 export const TELEGRAM_STATE_FILE = CHANNELS_STATE_FILE;
 
 export function resolveCapabilityReportPath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "compat", CAPABILITY_REPORT_FILE);
+  return path.join(workspaceDir, ".claw", "compat", CAPABILITY_REPORT_FILE);
 }
 
 export function resolveWorkspaceStatePath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "observed", WORKSPACE_STATE_FILE);
+  return path.join(workspaceDir, ".claw", "observed", WORKSPACE_STATE_FILE);
 }
 
 export function resolveProviderStatePath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "observed", PROVIDER_STATE_FILE);
+  return path.join(workspaceDir, ".claw", "observed", PROVIDER_STATE_FILE);
 }
 
 export function resolveSchedulerStatePath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "observed", SCHEDULER_STATE_FILE);
+  return path.join(workspaceDir, ".claw", "observed", SCHEDULER_STATE_FILE);
 }
 
 export function resolveMemoryStatePath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "observed", MEMORY_STATE_FILE);
+  return path.join(workspaceDir, ".claw", "observed", MEMORY_STATE_FILE);
 }
 
 export function resolveSkillsStatePath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "observed", SKILLS_STATE_FILE);
+  return path.join(workspaceDir, ".claw", "observed", SKILLS_STATE_FILE);
 }
 
 export function resolveChannelsStatePath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "observed", CHANNELS_STATE_FILE);
+  return path.join(workspaceDir, ".claw", "observed", CHANNELS_STATE_FILE);
 }
 
 export function resolveTelegramStatePath(workspaceDir: string): string {

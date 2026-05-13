@@ -6,7 +6,7 @@ import path from "path";
 
 import { initializeWorkspaceManifest, readWorkspaceManifest, resolveManifestPath } from "./manifest.ts";
 
-test("initializeWorkspaceManifest writes a manifest inside .clawjs", () => {
+test("initializeWorkspaceManifest writes a manifest inside .claw", () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-workspace-"));
   const manifest = initializeWorkspaceManifest({
     appId: "demo",

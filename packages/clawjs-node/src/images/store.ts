@@ -224,7 +224,7 @@ const OPENAI_BACKEND_ID = "openai:image";
 function defaultImageLibraryRoot(env?: NodeJS.ProcessEnv): string {
   return env?.CLAWJS_IMAGE_LIBRARY_DIR?.trim()
     || process.env.CLAWJS_IMAGE_LIBRARY_DIR?.trim()
-    || path.join(os.homedir(), ".clawjs", "image-library");
+    || path.join(os.homedir(), ".claw", "image-library");
 }
 
 function normalizeText(value: string | undefined, fallback = ""): string {

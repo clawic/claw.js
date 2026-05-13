@@ -506,7 +506,7 @@ const OPEN_SURFACE_BY_NAME = new Map<string, OpenSurface>(
 
 const CLAW_DOMAINS_BEGIN = "# BEGIN CLAWJS DOMAINS";
 const CLAW_DOMAINS_END = "# END CLAWJS DOMAINS";
-const CLAW_DOMAINS_LABEL = "com.clawjs.domains";
+const CLAW_DOMAINS_LABEL = "com.claw.domains";
 const CLAW_DOMAINS_INDEX_HOST = "dashboard.claw";
 const CLAW_DOMAINS_SERVICE_DIR = "/Library/Application Support/ClawJS/domains";
 
@@ -1478,7 +1478,7 @@ async function runOpenServerCommand(input: { positionals: string[]; flags: Recor
       config: {
         host,
         port,
-        dataDir: path.join(workspace, ".clawjs", "dashboard-database"),
+        dataDir: path.join(workspace, ".claw", "dashboard-database"),
       },
     });
     await app.listen({ host, port });
@@ -2339,7 +2339,7 @@ function channelListenerId(provider: string, accountId?: string): string {
 
 function channelListenerPaths(workspaceRoot: string, provider: string, accountId?: string): { runDir: string; pidPath: string; stopPath: string; logPath: string } {
   const safeId = channelListenerId(provider, accountId).replace(/[^A-Za-z0-9._-]+/g, "_");
-  const runDir = path.join(workspaceRoot, ".clawjs", "run", "channels");
+  const runDir = path.join(workspaceRoot, ".claw", "run", "channels");
   return {
     runDir,
     pidPath: path.join(runDir, `${safeId}.pid`),
@@ -2737,7 +2737,7 @@ function nowIso(): string {
 }
 
 function planStatePath(workspaceRoot: string): string {
-  return path.join(workspaceRoot, ".clawjs", "data", "agent-plans.json");
+  return path.join(workspaceRoot, ".claw", "data", "agent-plans.json");
 }
 
 function readAgentPlanState(workspaceRoot: string): AgentPlanState {
@@ -3131,7 +3131,7 @@ function normalizeTelegramCodexReplyPolicy(value?: string): TelegramCodexReplyPo
 }
 
 function telegramCodexStatePath(workspaceRoot: string, flags: Record<string, string>): string {
-  return path.resolve(flags["bridge-state"] || path.join(workspaceRoot, ".clawjs", "telegram-codex-bridge.json"));
+  return path.resolve(flags["bridge-state"] || path.join(workspaceRoot, ".claw", "telegram-codex-bridge.json"));
 }
 
 const CODEX_AGENT_ID = "codex";
@@ -3175,13 +3175,13 @@ function currentCliEntryPath(): string {
 
 function maybeRerenderSlidesPdfMedia(media: unknown): string | null {
   if (typeof media !== "string" || !media.endsWith(".pdf") || /^(https?:|file:)/i.test(media)) return null;
-  const marker = `${path.sep}.clawjs${path.sep}slides${path.sep}outputs${path.sep}`;
+  const marker = `${path.sep}.claw${path.sep}slides${path.sep}outputs${path.sep}`;
   const markerIndex = media.indexOf(marker);
   if (markerIndex < 0) return null;
   const workspaceRoot = media.slice(0, markerIndex);
   const [deckId] = media.slice(markerIndex + marker.length).split(path.sep);
   if (!workspaceRoot || !deckId) return null;
-  const manifestPath = path.join(workspaceRoot, ".clawjs", "slides", "decks", `${deckId}.json`);
+  const manifestPath = path.join(workspaceRoot, ".claw", "slides", "decks", `${deckId}.json`);
   if (!fs.existsSync(manifestPath)) return null;
   let deck: { slides?: Array<{ image?: { src?: string } }>; outputs?: Array<Record<string, unknown>> };
   try {

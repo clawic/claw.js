@@ -55,9 +55,9 @@ export function buildCombinedDoctorReport(input: {
       : []),
     ...((input.missingProvidersInUse ?? []).length > 0 ? ["Authenticate the providers currently required by the runtime model selection."] : []),
     ...((input.managedBlockProblems ?? []).length > 0 ? ["Repair malformed managed blocks before the next sync or rerender the affected bindings."] : []),
-    ...(input.workspace.manifest ? [] : ["Initialize the workspace to create .clawjs/manifest.json."]),
+    ...(input.workspace.manifest ? [] : ["Initialize the workspace to create .claw/manifest.json."]),
     ...(input.workspace.missingFiles.length > 0 ? [`Restore missing runtime files: ${input.workspace.missingFiles.join(", ")}.`] : []),
-    ...(input.workspace.missingDirectories.length > 0 ? ["Recreate missing .clawjs directories via workspace init or repair."] : []),
+    ...(input.workspace.missingDirectories.length > 0 ? ["Recreate missing .claw directories via workspace init or repair."] : []),
   ];
 
   const uniqueIssues = issues.filter((issue, index, all) => index === all.findIndex((candidate) => candidate.capability === issue.capability && candidate.message === issue.message));

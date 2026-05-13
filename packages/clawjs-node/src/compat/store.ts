@@ -176,7 +176,7 @@ function normalizeCompatSnapshotRecord(value: Record<string, unknown>): CompatSn
 }
 
 export function resolveCompatSnapshotPath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "compat", COMPAT_SNAPSHOT_FILE);
+  return path.join(workspaceDir, ".claw", "compat", COMPAT_SNAPSHOT_FILE);
 }
 
 function serializeCompatSnapshot(snapshot: CompatSnapshot): string {

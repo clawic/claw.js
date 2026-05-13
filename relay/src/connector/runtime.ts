@@ -1074,7 +1074,7 @@ export class RelayConnectorRuntime {
       }
       case "sessions.delete-all": {
         const metadata = this.resolveWorkspaceMaterialization(targetWorkspaceId);
-        const sessionsDir = path.join(metadata.workspaceDir, ".clawjs", "sessions");
+        const sessionsDir = path.join(metadata.workspaceDir, ".claw", "sessions");
         let deleted = 0;
         if (fs.existsSync(sessionsDir)) {
           for (const entry of fs.readdirSync(sessionsDir)) {

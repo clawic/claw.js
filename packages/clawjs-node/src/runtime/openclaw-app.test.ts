@@ -37,7 +37,7 @@ test("detachOpenClawAppContext unregisters agent ids and removes requested paths
   const configPath = path.join(stateDir, "openclaw.json");
   const workspaceDir = path.join(stateDir, "workspaces", "clawjs-demo");
   const agentDir = path.join(stateDir, "agents", "clawjs-demo", "agent");
-  const sessionsDir = path.join(workspaceDir, ".clawjs", "sessions");
+  const sessionsDir = path.join(workspaceDir, ".claw", "sessions");
 
   fs.mkdirSync(workspaceDir, { recursive: true });
   fs.mkdirSync(agentDir, { recursive: true });

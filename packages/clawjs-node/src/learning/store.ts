@@ -20,7 +20,7 @@ import {
 } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
-import { CLAWJS_DIR } from "../workspace/manifest.ts";
+import { CLAW_DIR } from "../workspace/manifest.ts";
 
 export const LEARNING_STATE_FILE = "learning.json";
 
@@ -178,7 +178,7 @@ export class LearningStore {
   }
 
   get statePath(): string {
-    return path.join(this.workspaceDir, CLAWJS_DIR, LEARNING_STATE_FILE);
+    return path.join(this.workspaceDir, CLAW_DIR, LEARNING_STATE_FILE);
   }
 
   readState(): LearningState {

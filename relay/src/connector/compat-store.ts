@@ -5,7 +5,7 @@ export class WorkspaceCompatStore {
   private readonly rootDir: string;
 
   constructor(workspaceDir: string) {
-    this.rootDir = path.join(workspaceDir, ".clawjs", "relay-compat");
+    this.rootDir = path.join(workspaceDir, ".claw", "relay-compat");
     fs.mkdirSync(this.rootDir, { recursive: true });
   }
 

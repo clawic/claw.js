@@ -536,7 +536,7 @@ export interface CreateClawOptions {
     env?: NodeJS.ProcessEnv;
   };
   /**
-   * Skills-v2 (unified SKILL.md) configuration. Defaults: ~/.clawjs as home,
+   * Skills-v2 (unified SKILL.md) configuration. Defaults: ~/.claw as home,
    * auto-import enabled. Overridable via `CLAWJS_HOME` env var.
    */
   skills?: {
@@ -720,6 +720,35 @@ export interface ClawInstance {
         actions: string[];
         status: object;
       }>;
+      claw: {
+        status: () => Promise<unknown>;
+        events: {
+          list: (input?: { limit?: number; kind?: string; name?: string; sessionKey?: string; runId?: string }) => Promise<unknown>;
+        };
+        sessions: {
+          inspect: (input: { sessionKey: string }) => Promise<unknown>;
+        };
+        subagent: {
+          run: (input: {
+            sessionKey: string;
+            message: string;
+            extraSystemPrompt?: string;
+            lane?: string;
+            deliver?: boolean;
+            idempotencyKey?: string;
+          }) => Promise<unknown>;
+          wait: (input: { runId: string; timeoutMs?: number }) => Promise<unknown>;
+          messages: (input: { sessionKey: string; limit?: number }) => Promise<unknown>;
+        };
+        hooks: {
+          status: () => Promise<unknown>;
+          list: () => Promise<unknown>;
+        };
+        context: {
+          status: () => Promise<unknown>;
+        };
+        doctor: () => Promise<unknown>;
+      };
       clawjs: {
         status: () => Promise<unknown>;
         events: {
@@ -1091,7 +1120,7 @@ export interface ClawInstance {
     install: (ref: string, options?: { source?: string }) => Promise<SkillInstallResult & { syncedSkills?: SkillDescriptor[] }>;
 
     // ───── Skills v2 (unified SKILL.md / agentskills.io) ──────────────────
-    /** List all skills under ~/.clawjs/skills (skills-v2 unified model). */
+    /** List all skills under ~/.claw/skills (skills-v2 unified model). */
     listV2: (filter?: SkillsV2ListFilter) => SkillsV2Spec[];
     /** Get a single skill by slug. */
     get: (slug: string) => SkillsV2Spec | null;
@@ -1817,7 +1846,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     workspaceDir,
     filesystem,
   });
-  // Skills-v2: unified central store at ~/.clawjs/skills (or $CLAWJS_HOME).
+  // Skills-v2: unified central store at ~/.claw/skills (or $CLAWJS_HOME).
   const skillsV2Store = createSkillsStore({
     homeDir: options.skills?.homeDir,
     env: options.skills?.env ?? runtimeEnv,
@@ -4941,7 +4970,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           await refreshObservedDomain("plugins");
           return result;
         },
-        clawjs: {
+        claw: {
           status: async () => callManagedClawJsBridge("clawjs.status"),
           events: {
             list: async (input = {}) => callManagedClawJsBridge("clawjs.events.list", input),
@@ -4965,6 +4994,9 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
             status: async () => callManagedClawJsBridge("clawjs.context.status"),
           },
           doctor: async () => callManagedClawJsBridge("clawjs.doctor"),
+        },
+        get clawjs() {
+          return this.claw;
         },
       },
       openclaw: {
@@ -5202,7 +5234,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         if (!templatePackPath) {
           throw new Error("templatePackPath is required");
         }
-        const backupDir = path.join(workspaceDir, ".clawjs", "backups");
+        const backupDir = path.join(workspaceDir, ".claw", "backups");
         const result = applyTemplatePack(templatePackPath, {
           workspaceDir,
           backupDir,
@@ -5231,7 +5263,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           settings,
           render,
           filesystem,
-          backupDir: path.join(workspaceDir, ".clawjs", "backups"),
+          backupDir: path.join(workspaceDir, ".claw", "backups"),
         });
         appendAuditEvent("files.binding_synced", "file_sync", {
           bindingId: binding.id,

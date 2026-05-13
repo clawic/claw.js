@@ -126,7 +126,7 @@ export class ChannelRunStore {
   }
 
   private statePath(): string {
-    return path.join(this.workspaceDir, ".clawjs", "channel-runs.json");
+    return path.join(this.workspaceDir, ".claw", "channel-runs.json");
   }
 
   private readState(): ChannelRunState {

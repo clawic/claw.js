@@ -6,7 +6,7 @@ import type { DiffPreview, ManagedBlockInspection, MergeManagedBlocksOptions } f
 import { inspectManagedBlock, listManagedBlocks, mergeManagedBlocks, previewDiff } from "../files/managed-blocks.ts";
 import { NodeFileSystemHost } from "../host/filesystem.ts";
 import { migrateCompatSnapshot } from "../compat/store.ts";
-import { CLAWJS_DIR, initializeWorkspaceManifest, readWorkspaceManifest, resolveManifestPath } from "./manifest.ts";
+import { CLAW_DIR, initializeWorkspaceManifest, readWorkspaceManifest, resolveManifestPath } from "./manifest.ts";
 import type { CompatSnapshot, WorkspaceConfig, ClawManifest, RuntimeFileDescriptor } from "@clawjs/core";
 
 export const DEFAULT_RUNTIME_FILE_DESCRIPTORS: RuntimeFileDescriptor[] = [
@@ -103,13 +103,13 @@ export function resolveWorkspaceFilePath(workspaceDir: string, relativePath: str
 }
 
 export function resolveWorkspaceLockPath(workspaceDir: string): string {
-  return path.join(workspaceDir, CLAWJS_DIR, "locks", ".workspace-mutation.lock");
+  return path.join(workspaceDir, CLAW_DIR, "locks", ".workspace-mutation.lock");
 }
 
 export function resolveWorkspaceFileLockPath(workspaceDir: string, relativePath: string): string {
   const normalized = relativePath.replace(/\\/g, "/");
   const digest = crypto.createHash("sha1").update(normalized).digest("hex").slice(0, 12);
-  return path.join(workspaceDir, CLAWJS_DIR, "locks", "files", `${digest}.lock`);
+  return path.join(workspaceDir, CLAW_DIR, "locks", "files", `${digest}.lock`);
 }
 
 export function listManagedFiles(workspaceDir: string, runtimeFiles: RuntimeFileDescriptor[] = DEFAULT_RUNTIME_FILE_DESCRIPTORS): string[] {
@@ -191,12 +191,12 @@ export function validateWorkspace(
     .map((descriptor) => descriptor.path)
     .filter((fileName) => !filesystem.exists(resolveRuntimeFilePath(workspaceDir, fileName)));
   const missingDirectories = [
-    path.join(workspaceDir, CLAWJS_DIR),
-    path.join(workspaceDir, CLAWJS_DIR, "compat"),
-    path.join(workspaceDir, CLAWJS_DIR, "projections"),
-    path.join(workspaceDir, CLAWJS_DIR, "intents"),
-    path.join(workspaceDir, CLAWJS_DIR, "audit"),
-    path.join(workspaceDir, CLAWJS_DIR, "observed"),
+    path.join(workspaceDir, CLAW_DIR),
+    path.join(workspaceDir, CLAW_DIR, "compat"),
+    path.join(workspaceDir, CLAW_DIR, "projections"),
+    path.join(workspaceDir, CLAW_DIR, "intents"),
+    path.join(workspaceDir, CLAW_DIR, "audit"),
+    path.join(workspaceDir, CLAW_DIR, "observed"),
   ].filter((dirPath) => !filesystem.exists(dirPath));
 
   return {
@@ -216,14 +216,14 @@ export function initializeWorkspace(
 ): ClawManifest {
   return filesystem.withLock(resolveWorkspaceLockPath(config.rootDir), () => {
     const manifest = initializeWorkspaceManifest(config, runtimeAdapter, filesystem, templatePackPath);
-    filesystem.ensureDir(path.join(config.rootDir, CLAWJS_DIR, "compat"));
-    filesystem.ensureDir(path.join(config.rootDir, CLAWJS_DIR, "projections"));
-    filesystem.ensureDir(path.join(config.rootDir, CLAWJS_DIR, "intents"));
-    filesystem.ensureDir(path.join(config.rootDir, CLAWJS_DIR, "audit"));
-    filesystem.ensureDir(path.join(config.rootDir, CLAWJS_DIR, "observed"));
-    filesystem.ensureDir(path.join(config.rootDir, CLAWJS_DIR, "backups"));
-    filesystem.ensureDir(path.join(config.rootDir, CLAWJS_DIR, "locks"));
-    filesystem.ensureDir(path.join(config.rootDir, CLAWJS_DIR, "sessions"));
+    filesystem.ensureDir(path.join(config.rootDir, CLAW_DIR, "compat"));
+    filesystem.ensureDir(path.join(config.rootDir, CLAW_DIR, "projections"));
+    filesystem.ensureDir(path.join(config.rootDir, CLAW_DIR, "intents"));
+    filesystem.ensureDir(path.join(config.rootDir, CLAW_DIR, "audit"));
+    filesystem.ensureDir(path.join(config.rootDir, CLAW_DIR, "observed"));
+    filesystem.ensureDir(path.join(config.rootDir, CLAW_DIR, "backups"));
+    filesystem.ensureDir(path.join(config.rootDir, CLAW_DIR, "locks"));
+    filesystem.ensureDir(path.join(config.rootDir, CLAW_DIR, "sessions"));
     for (const descriptor of normalizeRuntimeDescriptors(runtimeFiles)) {
       if (descriptor.seedPolicy === "never") continue;
       const filePath = resolveRuntimeFilePath(config.rootDir, descriptor.path);
@@ -253,15 +253,15 @@ export function repairWorkspace(
     const createdDirectories: string[] = [];
     const createdRuntimeFiles: string[] = [];
 
-    ensureDir(filesystem, path.join(config.rootDir, CLAWJS_DIR), createdDirectories);
-    ensureDir(filesystem, path.join(config.rootDir, CLAWJS_DIR, "compat"), createdDirectories);
-    ensureDir(filesystem, path.join(config.rootDir, CLAWJS_DIR, "projections"), createdDirectories);
-    ensureDir(filesystem, path.join(config.rootDir, CLAWJS_DIR, "intents"), createdDirectories);
-    ensureDir(filesystem, path.join(config.rootDir, CLAWJS_DIR, "audit"), createdDirectories);
-    ensureDir(filesystem, path.join(config.rootDir, CLAWJS_DIR, "observed"), createdDirectories);
-    ensureDir(filesystem, path.join(config.rootDir, CLAWJS_DIR, "backups"), createdDirectories);
-    ensureDir(filesystem, path.join(config.rootDir, CLAWJS_DIR, "locks"), createdDirectories);
-    ensureDir(filesystem, path.join(config.rootDir, CLAWJS_DIR, "sessions"), createdDirectories);
+    ensureDir(filesystem, path.join(config.rootDir, CLAW_DIR), createdDirectories);
+    ensureDir(filesystem, path.join(config.rootDir, CLAW_DIR, "compat"), createdDirectories);
+    ensureDir(filesystem, path.join(config.rootDir, CLAW_DIR, "projections"), createdDirectories);
+    ensureDir(filesystem, path.join(config.rootDir, CLAW_DIR, "intents"), createdDirectories);
+    ensureDir(filesystem, path.join(config.rootDir, CLAW_DIR, "audit"), createdDirectories);
+    ensureDir(filesystem, path.join(config.rootDir, CLAW_DIR, "observed"), createdDirectories);
+    ensureDir(filesystem, path.join(config.rootDir, CLAW_DIR, "backups"), createdDirectories);
+    ensureDir(filesystem, path.join(config.rootDir, CLAW_DIR, "locks"), createdDirectories);
+    ensureDir(filesystem, path.join(config.rootDir, CLAW_DIR, "sessions"), createdDirectories);
 
     const manifest = readWorkspaceManifest(config.rootDir, filesystem) ?? initializeWorkspaceManifest(config, runtimeAdapter, filesystem, templatePackPath);
 
@@ -313,35 +313,35 @@ export function buildWorkspaceResetPlan(
     targets.push({ path: targetPath, category: "manifest", exists: filesystem.exists(targetPath) });
   }
   if (effective.removeCompat) {
-    const targetPath = path.join(workspaceDir, CLAWJS_DIR, "compat");
+    const targetPath = path.join(workspaceDir, CLAW_DIR, "compat");
     targets.push({ path: targetPath, category: "compat", exists: filesystem.exists(targetPath) });
   }
   if (effective.removeProjections) {
-    const targetPath = path.join(workspaceDir, CLAWJS_DIR, "projections");
+    const targetPath = path.join(workspaceDir, CLAW_DIR, "projections");
     targets.push({ path: targetPath, category: "projections", exists: filesystem.exists(targetPath) });
   }
   if (effective.removeObserved) {
-    const targetPath = path.join(workspaceDir, CLAWJS_DIR, "observed");
+    const targetPath = path.join(workspaceDir, CLAW_DIR, "observed");
     targets.push({ path: targetPath, category: "observed", exists: filesystem.exists(targetPath) });
   }
   if (effective.removeIntents) {
-    const targetPath = path.join(workspaceDir, CLAWJS_DIR, "intents");
+    const targetPath = path.join(workspaceDir, CLAW_DIR, "intents");
     targets.push({ path: targetPath, category: "intents", exists: filesystem.exists(targetPath) });
   }
   if (effective.removeSessions) {
-    const targetPath = path.join(workspaceDir, CLAWJS_DIR, "sessions");
+    const targetPath = path.join(workspaceDir, CLAW_DIR, "sessions");
     targets.push({ path: targetPath, category: "sessions", exists: filesystem.exists(targetPath) });
   }
   if (effective.removeAudit) {
-    const targetPath = path.join(workspaceDir, CLAWJS_DIR, "audit");
+    const targetPath = path.join(workspaceDir, CLAW_DIR, "audit");
     targets.push({ path: targetPath, category: "audit", exists: filesystem.exists(targetPath) });
   }
   if (effective.removeBackups) {
-    const targetPath = path.join(workspaceDir, CLAWJS_DIR, "backups");
+    const targetPath = path.join(workspaceDir, CLAW_DIR, "backups");
     targets.push({ path: targetPath, category: "backups", exists: filesystem.exists(targetPath) });
   }
   if (effective.removeLocks) {
-    const targetPath = path.join(workspaceDir, CLAWJS_DIR, "locks");
+    const targetPath = path.join(workspaceDir, CLAW_DIR, "locks");
     targets.push({ path: targetPath, category: "locks", exists: filesystem.exists(targetPath) });
   }
   if (effective.removeRuntimeFiles) {

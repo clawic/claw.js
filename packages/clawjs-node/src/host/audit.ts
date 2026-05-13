@@ -26,7 +26,7 @@ export class WorkspaceAuditLog {
   }
 
   append(workspaceDir: string, record: AuditRecord): string {
-    const auditDir = path.join(workspaceDir, ".clawjs", "audit");
+    const auditDir = path.join(workspaceDir, ".claw", "audit");
     const auditPath = path.join(auditDir, "audit.jsonl");
     this.filesystem.ensureDir(auditDir);
     const line = JSON.stringify(record);
@@ -37,7 +37,7 @@ export class WorkspaceAuditLog {
   }
 
   list(workspaceDir: string): AuditRecord[] {
-    const auditPath = path.join(workspaceDir, ".clawjs", "audit", "audit.jsonl");
+    const auditPath = path.join(workspaceDir, ".claw", "audit", "audit.jsonl");
     if (!this.filesystem.exists(auditPath)) return [];
     return this.filesystem.readText(auditPath)
       .split("\n")

@@ -95,7 +95,7 @@ function normalizeWorkspacePath(filePath: string): string {
 }
 
 function documentsRoot(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "documents");
+  return path.join(workspaceDir, ".claw", "documents");
 }
 
 function manifestsDir(workspaceDir: string): string {

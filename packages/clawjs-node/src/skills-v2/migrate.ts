@@ -8,7 +8,7 @@ import type { SoulSpec } from "@clawjs/core";
 
 import type { NodeFileSystemHost } from "../host/filesystem.ts";
 import type { SkillsStore } from "./store.ts";
-import { CLAWJS_DIR } from "../workspace/manifest.ts";
+import { CLAW_DIR } from "../workspace/manifest.ts";
 
 export interface MigrateOptions {
   workspaceDir: string;
@@ -29,7 +29,7 @@ const MIGRATED_MARKER = ".skills-v2.migrated";
 
 export function migrateLegacyState(options: MigrateOptions): MigrationReport {
   const report: MigrationReport = { souls: 0, library: 0, intentSkills: 0, warnings: [] };
-  const stateDir = path.join(options.workspaceDir, CLAWJS_DIR);
+  const stateDir = path.join(options.workspaceDir, CLAW_DIR);
   const marker = path.join(stateDir, MIGRATED_MARKER);
   if (fs.existsSync(marker)) return report;
 
@@ -59,7 +59,7 @@ export function migrateLegacyState(options: MigrateOptions): MigrationReport {
 }
 
 function migrateSouls(options: MigrateOptions): number {
-  const soulsPath = path.join(options.workspaceDir, CLAWJS_DIR, "souls.json");
+  const soulsPath = path.join(options.workspaceDir, CLAW_DIR, "souls.json");
   if (!fs.existsSync(soulsPath)) return 0;
   let parsed: { specs?: SoulSpec[] };
   try {
@@ -92,7 +92,7 @@ function migrateSouls(options: MigrateOptions): number {
 function migrateLibrary(options: MigrateOptions): number {
   // Best-effort: don't fail if library asset shape varies.
   const libraryStateCandidates = [
-    path.join(options.workspaceDir, CLAWJS_DIR, "library", "library.json"),
+    path.join(options.workspaceDir, CLAW_DIR, "library", "library.json"),
   ];
   let migrated = 0;
   for (const candidate of libraryStateCandidates) {
@@ -124,7 +124,7 @@ function migrateLibrary(options: MigrateOptions): number {
 }
 
 function migrateSkillsIntent(options: MigrateOptions): number {
-  const skillsPath = path.join(options.workspaceDir, CLAWJS_DIR, "skills.json");
+  const skillsPath = path.join(options.workspaceDir, CLAW_DIR, "skills.json");
   if (!fs.existsSync(skillsPath)) return 0;
   // The legacy intent file is a record of preferences, not skill content.
   // We don't need to materialize it as skills; assignments are migrated only

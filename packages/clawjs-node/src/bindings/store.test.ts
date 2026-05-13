@@ -17,7 +17,7 @@ import {
   writeSettingsValuesRecord,
 } from "./store.ts";
 
-test("binding projections and file intents round-trip in .clawjs/projections and .clawjs/intents", () => {
+test("binding projections and file intents round-trip in .claw/projections and .claw/intents", () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-bindings-store-"));
 
   writeBindingStore(workspaceDir, [{
@@ -39,9 +39,9 @@ test("binding projections and file intents round-trip in .clawjs/projections and
   assert.equal(fs.existsSync(resolveBindingsPath(workspaceDir)), true);
   assert.equal(fs.existsSync(resolveSettingsSchemaPath(workspaceDir)), true);
   assert.equal(fs.existsSync(resolveSettingsValuesPath(workspaceDir)), true);
-  assert.match(resolveBindingsPath(workspaceDir), /\.clawjs\/projections\/file-bindings\.json$/);
-  assert.match(resolveSettingsSchemaPath(workspaceDir), /\.clawjs\/projections\/settings-schema\.json$/);
-  assert.match(resolveSettingsValuesPath(workspaceDir), /\.clawjs\/intents\/files\.json$/);
+  assert.match(resolveBindingsPath(workspaceDir), /\.claw\/projections\/file-bindings\.json$/);
+  assert.match(resolveSettingsSchemaPath(workspaceDir), /\.claw\/projections\/settings-schema\.json$/);
+  assert.match(resolveSettingsValuesPath(workspaceDir), /\.claw\/intents\/files\.json$/);
   assert.equal(readBindingStore(workspaceDir).bindings.length, 1);
   assert.equal((readSettingsSchemaRecord(workspaceDir).settingsSchema.tone as { type: string }).type, "string");
   assert.equal((readSettingsValuesRecord(workspaceDir).values.nested as { enabled: boolean }).enabled, true);

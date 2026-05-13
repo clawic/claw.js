@@ -8,7 +8,7 @@ const FRONTMATTER_OPEN = "---json";
 const FRONTMATTER_CLOSE = "---";
 
 export function referencesRootDir(workspaceRoot: string): string {
-  return path.join(workspaceRoot, ".clawjs", "references");
+  return path.join(workspaceRoot, ".claw", "references");
 }
 
 export function referenceDir(workspaceRoot: string, referenceId: string): string {

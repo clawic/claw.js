@@ -8,7 +8,7 @@
 "@clawjs/runtime": patch
 "@clawjs/sandbox": patch
 "@clawjs/sessions": patch
-"@clawjs/tracking-runtime": patch
+"@clawjs/signals": patch
 "@clawjs/user-model": patch
 "@clawjs/voice": patch
 "@clawjs/workspace": patch

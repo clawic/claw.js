@@ -419,7 +419,7 @@ export async function addProjectIntegration(
 export async function collectProjectInfo(projectRoot: string): Promise<Record<string, unknown>> {
   const project = readProjectConfig(projectRoot);
   const packageJson = loadPackageJson(projectRoot);
-  const manifestPath = path.join(projectRoot, ".clawjs", "manifest.json");
+  const manifestPath = path.join(projectRoot, ".claw", "manifest.json");
   const manifest = safeReadJson<Record<string, unknown>>(manifestPath);
   const nodeModulesPackage = safeReadJson<{ version?: string }>(path.join(projectRoot, "node_modules", "@clawjs", "claw", "package.json"));
   const rootPackage = safeReadJson<{ version?: string }>(path.join(projectRoot, "package.json"));

@@ -40,7 +40,7 @@ export function resolveRulesRoot(options: RulesStoreOptions = {}): string {
     || options.env?.CLAWJS_RULES_DIR?.trim()
     || process.env.CLAWJS_RULES_DIR?.trim();
   if (configured) return resolveHomePath(configured);
-  return path.join(os.homedir(), ".clawjs", "rules");
+  return path.join(os.homedir(), ".claw", "rules");
 }
 
 export function normalizeRuleId(value: string, fallback = "rule"): string {

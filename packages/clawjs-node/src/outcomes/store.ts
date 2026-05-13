@@ -18,7 +18,7 @@ import {
 } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
-import { CLAWJS_DIR } from "../workspace/manifest.ts";
+import { CLAW_DIR } from "../workspace/manifest.ts";
 
 export const OUTCOME_STATE_FILE = "outcomes.json";
 
@@ -195,7 +195,7 @@ export class OutcomeStore {
   }
 
   get statePath(): string {
-    return path.join(this.workspaceDir, CLAWJS_DIR, OUTCOME_STATE_FILE);
+    return path.join(this.workspaceDir, CLAW_DIR, OUTCOME_STATE_FILE);
   }
 
   readState(): OutcomeState {

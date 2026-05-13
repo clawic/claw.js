@@ -80,7 +80,7 @@ function writeJsonFile(filesystem: NodeFileSystemHost, filePath: string, value: 
 }
 
 function resolveDataRoot(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "data");
+  return path.join(workspaceDir, ".claw", "data");
 }
 
 function resolveDocumentsDir(workspaceDir: string): string {

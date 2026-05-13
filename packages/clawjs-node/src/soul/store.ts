@@ -15,7 +15,7 @@ import {
 
 import { applyTextMutation } from "../files/managed-blocks.ts";
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
-import { CLAWJS_DIR } from "../workspace/manifest.ts";
+import { CLAW_DIR } from "../workspace/manifest.ts";
 import { readWorkspaceFile, writeWorkspaceFile } from "../workspace/manager.ts";
 
 export const SOUL_STATE_FILE = "souls.json";
@@ -153,7 +153,7 @@ export class SoulStore {
   readonly workspaceDir: string;
   private readonly filesystem: NodeFileSystemHost;
   constructor(options: SoulStoreOptions) { this.workspaceDir = options.workspaceDir; this.filesystem = options.filesystem ?? new NodeFileSystemHost(); }
-  get statePath(): string { return path.join(this.workspaceDir, CLAWJS_DIR, SOUL_STATE_FILE); }
+  get statePath(): string { return path.join(this.workspaceDir, CLAW_DIR, SOUL_STATE_FILE); }
   readState(): SoulState {
     if (!this.filesystem.exists(this.statePath)) return { schemaVersion: 1, specs: [baseBalanced(DEFAULT_SOUL_ID, "Default Soul")], assignments: [], updatedAt: nowIso() };
     const state = normalizeState(JSON.parse(this.filesystem.readText(this.statePath)) as unknown);

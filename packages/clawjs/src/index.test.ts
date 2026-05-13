@@ -2157,9 +2157,9 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   assert.equal(schema.collection.fields.some((field) => field.name === "title"), true);
 
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "data", "database.sqlite")), false);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "data", "productivity.sqlite")), false);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "workspace.manifest.json")), false);
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "data", "database.sqlite")), false);
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "data", "productivity.sqlite")), false);
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "workspace.manifest.json")), false);
 
   const areaStdout = captureStream();
   assert.equal(await runCli([
@@ -2841,8 +2841,8 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
   assert.deepEqual(repairedTask.dependsOnTaskIds, []);
 
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "data", "productivity.sqlite")), false);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "workspace.manifest.json")), false);
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "data", "productivity.sqlite")), false);
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "workspace.manifest.json")), false);
   assert.ok(note.id);
 });
 
@@ -2931,9 +2931,9 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.equal(magicSchema.collection.name, "leads");
 
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
-  assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "data", "database.sqlite")), false);
-  assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "data", "productivity.sqlite")), false);
-  assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "workspace.manifest.json")), false);
+  assert.equal(fs.existsSync(path.join(installRoot, ".claw", "data", "database.sqlite")), false);
+  assert.equal(fs.existsSync(path.join(installRoot, ".claw", "data", "productivity.sqlite")), false);
+  assert.equal(fs.existsSync(path.join(installRoot, ".claw", "workspace.manifest.json")), false);
 
   const area = JSON.parse(runInstalledClaw(binPath, installRoot, [
     "areas",
@@ -3415,15 +3415,15 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.match(dbTask.stdout, /Created task \S+ "Magic fallback"/);
 
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
-  assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "data", "database.sqlite")), false);
-  assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "data", "productivity.sqlite")), false);
-  assert.equal(fs.existsSync(path.join(installRoot, ".clawjs", "workspace.manifest.json")), false);
+  assert.equal(fs.existsSync(path.join(installRoot, ".claw", "data", "database.sqlite")), false);
+  assert.equal(fs.existsSync(path.join(installRoot, ".claw", "data", "productivity.sqlite")), false);
+  assert.equal(fs.existsSync(path.join(installRoot, ".claw", "workspace.manifest.json")), false);
 });
 
 test("runCli migrates legacy workspace sqlite productivity data into the local database automatically", { concurrency: false }, async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-productivity-migration-"));
   const dataRoot = useIsolatedMainData(t, workspaceRoot);
-  const legacyDbPath = path.join(workspaceRoot, ".clawjs", "data", "productivity.sqlite");
+  const legacyDbPath = path.join(workspaceRoot, ".claw", "data", "productivity.sqlite");
   fs.mkdirSync(path.dirname(legacyDbPath), { recursive: true });
   const legacyDb = new Database(legacyDbPath);
   legacyDb.exec(`
@@ -3468,7 +3468,7 @@ test("runCli migrates legacy workspace sqlite productivity data into the local d
   assert.match(listStdout.getOutput(), /Imported task/);
   assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
   assert.equal(fs.existsSync(legacyDbPath), true);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "data", "productivity.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "data", "productivity.sqlite")), true);
 });
 
 test("runCli exposes explicit exit codes for success, degraded, failure, and usage states", async () => {
@@ -3805,7 +3805,7 @@ test("runCli handles Telegram /new session reset without model latency", () => {
     "import { runCli } from './packages/clawjs/src/index.ts';",
     "const code = await runCli([",
     "'channels','codex-processor','run','--runtime','demo','--workspace',process.env.CLAWJS_TEST_WORKSPACE,",
-    "'--bridge-state',process.env.CLAWJS_TEST_WORKSPACE + '/.clawjs/telegram-codex-bridge.json','--reply-policy','all','--json'",
+    "'--bridge-state',process.env.CLAWJS_TEST_WORKSPACE + '/.claw/telegram-codex-bridge.json','--reply-policy','all','--json'",
     "], { stdout: process.stdout, stderr: process.stderr, cwd: process.cwd() });",
     "process.exit(code);",
   ].join(" ");
@@ -4141,8 +4141,8 @@ test("runCli compat can refresh and persist a snapshot", async () => {
 
   assert.ok(exitCode === CLI_EXIT_OK || exitCode === CLI_EXIT_DEGRADED);
   assert.match(stdout.getOutput(), /"compat"/);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "compat", "runtime-snapshot.json")), true);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "compat", "capability-report.json")), true);
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "compat", "runtime-snapshot.json")), true);
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "compat", "capability-report.json")), true);
 });
 
 test("runCli can execute runtime install, uninstall, setup-workspace, and repair against a fake toolchain", async () => {
@@ -4518,8 +4518,8 @@ process.exit(0);
 
 test("runCli can repair a workspace and normalize compat snapshots", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-repair-"));
-  fs.mkdirSync(path.join(workspaceRoot, ".clawjs", "compat"), { recursive: true });
-  fs.writeFileSync(path.join(workspaceRoot, ".clawjs", "compat", "runtime-snapshot.json"), JSON.stringify({
+  fs.mkdirSync(path.join(workspaceRoot, ".claw", "compat"), { recursive: true });
+  fs.writeFileSync(path.join(workspaceRoot, ".claw", "compat", "runtime-snapshot.json"), JSON.stringify({
     runtimeAdapter: "openclaw",
     runtimeVersion: "1.2.3",
     probedAt: "2026-03-20T00:00:00.000Z",
@@ -4540,7 +4540,7 @@ test("runCli can repair a workspace and normalize compat snapshots", async () =>
 
   assert.equal(exitCode, CLI_EXIT_OK);
   assert.match(stdout.getOutput(), /compatSnapshotMigrated/);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".clawjs", "compat", "runtime-snapshot.json")), true);
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "compat", "runtime-snapshot.json")), true);
 });
 
 test("runCli supports workspace reset dry-run and execution results", async () => {

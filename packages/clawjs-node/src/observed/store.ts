@@ -55,7 +55,7 @@ function readJsonFile<T>(filePath: string, filesystem = new NodeFileSystemHost()
 }
 
 export function resolveObservedDir(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "observed");
+  return path.join(workspaceDir, ".claw", "observed");
 }
 
 export function resolveObservedDomainPath(workspaceDir: string, domain: ObservedDomain): string {

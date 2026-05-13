@@ -44,7 +44,7 @@ export function resolveRoot(flags: CliFlags) {
 export function ensureWorkspace(rootDir: string) {
   mkdirSync(rootDir, { recursive: true });
 
-  const manifestPath = path.join(rootDir, ".clawjs", "manifest.json");
+  const manifestPath = path.join(rootDir, ".claw", "manifest.json");
   if (existsSync(manifestPath)) return;
 
   initializeWorkspace(

@@ -53,15 +53,15 @@ export interface SettingsValidationIssue {
 }
 
 export function resolveBindingsPath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "projections", "file-bindings.json");
+  return path.join(workspaceDir, ".claw", "projections", "file-bindings.json");
 }
 
 export function resolveSettingsSchemaPath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "projections", "settings-schema.json");
+  return path.join(workspaceDir, ".claw", "projections", "settings-schema.json");
 }
 
 export function resolveSettingsValuesPath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "intents", "files.json");
+  return path.join(workspaceDir, ".claw", "intents", "files.json");
 }
 
 export function readBindingStore(workspaceDir: string, filesystem = new NodeFileSystemHost()): BindingStoreRecord {

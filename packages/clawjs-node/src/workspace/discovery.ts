@@ -3,7 +3,7 @@ import path from "path";
 
 import type { ClawManifest } from "@clawjs/core";
 
-import { CLAWJS_DIR, readWorkspaceManifest, resolveManifestPath } from "./manifest.ts";
+import { CLAW_DIR, readWorkspaceManifest, resolveManifestPath } from "./manifest.ts";
 import { NodeFileSystemHost } from "../host/filesystem.ts";
 
 export interface DiscoveredWorkspace {
@@ -44,7 +44,7 @@ function scanDirectory(
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     if (entry.name === "node_modules" || entry.name === ".git") continue;
-    if (entry.name === CLAWJS_DIR && root !== path.dirname(root)) continue;
+    if (entry.name === CLAW_DIR && root !== path.dirname(root)) continue;
     scanDirectory(path.join(root, entry.name), currentDepth + 1, maxDepth, filesystem, seen, found);
   }
 }

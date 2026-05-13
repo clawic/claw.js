@@ -35,7 +35,7 @@ export interface SessionStoreSearchOptions {
 }
 
 export function resolveSessionsDir(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "sessions");
+  return path.join(workspaceDir, ".claw", "sessions");
 }
 
 export function resolveSessionPath(workspaceDir: string, sessionId: string): string {

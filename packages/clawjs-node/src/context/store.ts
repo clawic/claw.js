@@ -25,7 +25,7 @@ import {
 } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
-import { CLAWJS_DIR } from "../workspace/manifest.ts";
+import { CLAW_DIR } from "../workspace/manifest.ts";
 
 export const CONTEXT_STATE_FILE = "context.json";
 
@@ -244,7 +244,7 @@ export class ContextStore {
   }
 
   get statePath(): string {
-    return path.join(this.workspaceDir, CLAWJS_DIR, CONTEXT_STATE_FILE);
+    return path.join(this.workspaceDir, CLAW_DIR, CONTEXT_STATE_FILE);
   }
 
   readState(): ContextPackState {
@@ -402,7 +402,7 @@ export class ContextStore {
   }
 
   private readLegacyMemoryCandidates(): MemoryCandidate[] {
-    const dbPath = path.join(this.workspaceDir, CLAWJS_DIR, "data", "database.sqlite");
+    const dbPath = path.join(this.workspaceDir, CLAW_DIR, "data", "database.sqlite");
     if (!fs.existsSync(dbPath)) return [];
     let db: Database.Database | null = null;
     try {

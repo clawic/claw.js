@@ -37,9 +37,9 @@ test("initializeWorkspace creates manifest, runtime files and internal directori
   assert.equal(validateWorkspace(workspaceDir).missingFiles.length, 0);
   assert.equal(validateWorkspace(workspaceDir).missingDirectories.length, 0);
   assert.equal(validateWorkspace(workspaceDir).ok, true);
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "observed")), true);
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "projections")), true);
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "intents")), true);
+  assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "observed")), true);
+  assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "projections")), true);
+  assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "intents")), true);
 });
 
 test("listManagedFiles and resetWorkspace only target ClawJS-managed paths", () => {
@@ -63,7 +63,7 @@ test("listManagedFiles and resetWorkspace only target ClawJS-managed paths", () 
 
   const resetResult = resetWorkspace(workspaceDir, { removeRuntimeFiles: true });
   assert.equal(resetResult.removedPaths.includes(soulPath), true);
-  assert.equal(resetResult.preservedPaths.includes(path.join(workspaceDir, ".clawjs", "compat")), false);
+  assert.equal(resetResult.preservedPaths.includes(path.join(workspaceDir, ".claw", "compat")), false);
   assert.equal(fs.existsSync(soulPath), false);
   assert.equal(fs.existsSync(userNotesPath), true);
 });
@@ -77,8 +77,8 @@ test("resetWorkspace can fully clear managed state and repairWorkspace rebuilds 
     rootDir: workspaceDir,
   }, "openclaw");
 
-  const backupPath = path.join(workspaceDir, ".clawjs", "backups", "snapshot.txt");
-  const lockPath = path.join(workspaceDir, ".clawjs", "locks", "workspace.lock");
+  const backupPath = path.join(workspaceDir, ".claw", "backups", "snapshot.txt");
+  const lockPath = path.join(workspaceDir, ".claw", "locks", "workspace.lock");
   fs.mkdirSync(path.dirname(backupPath), { recursive: true });
   fs.mkdirSync(path.dirname(lockPath), { recursive: true });
   fs.writeFileSync(backupPath, "backup\n");
@@ -93,9 +93,9 @@ test("resetWorkspace can fully clear managed state and repairWorkspace rebuilds 
     removeLocks: true,
   });
 
-  assert.equal(resetResult.removedPaths.includes(path.join(workspaceDir, ".clawjs", "projections")), true);
-  assert.equal(resetResult.removedPaths.includes(path.join(workspaceDir, ".clawjs", "observed")), true);
-  assert.equal(resetResult.removedPaths.includes(path.join(workspaceDir, ".clawjs", "intents")), true);
+  assert.equal(resetResult.removedPaths.includes(path.join(workspaceDir, ".claw", "projections")), true);
+  assert.equal(resetResult.removedPaths.includes(path.join(workspaceDir, ".claw", "observed")), true);
+  assert.equal(resetResult.removedPaths.includes(path.join(workspaceDir, ".claw", "intents")), true);
   assert.equal(fs.existsSync(resolveRuntimeFilePath(workspaceDir, "SOUL.md")), false);
   assert.equal(fs.existsSync(backupPath), false);
   assert.equal(fs.existsSync(lockPath), false);
@@ -114,7 +114,7 @@ test("resetWorkspace can fully clear managed state and repairWorkspace rebuilds 
 
 test("repairWorkspace restores missing workspace layout and normalizes compat snapshots", () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-workspace-repair-"));
-  const snapshotPath = path.join(workspaceDir, ".clawjs", "compat", "runtime-snapshot.json");
+  const snapshotPath = path.join(workspaceDir, ".claw", "compat", "runtime-snapshot.json");
   fs.mkdirSync(path.dirname(snapshotPath), { recursive: true });
   fs.writeFileSync(snapshotPath, JSON.stringify({
     runtimeAdapter: "openclaw",
@@ -144,7 +144,7 @@ test("repairWorkspace restores missing workspace layout and normalizes compat sn
   assert.equal(result.compatSnapshotSourcePath, snapshotPath);
   assert.equal(fs.existsSync(resolveCompatSnapshotPath(workspaceDir)), true);
   assert.equal(readCompatSnapshot(workspaceDir)?.runtimeVersion, "1.2.3");
-  assert.equal(result.createdDirectories.includes(path.join(workspaceDir, ".clawjs", "sessions")), true);
+  assert.equal(result.createdDirectories.includes(path.join(workspaceDir, ".claw", "sessions")), true);
 });
 
 test("workspace mutations respect the workspace lock", () => {
@@ -171,7 +171,7 @@ test("workspace mutations respect the workspace lock", () => {
 
 test("workspace file helpers read, preview, write and inspect managed blocks", () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-workspace-files-"));
-  const relativePath = path.join(".clawjs", "notes.md");
+  const relativePath = path.join(".claw", "notes.md");
   const filePath = path.join(workspaceDir, relativePath);
 
   assert.equal(readWorkspaceFile(workspaceDir, relativePath), null);
@@ -208,7 +208,7 @@ test("workspace file helpers read, preview, write and inspect managed blocks", (
   const managedBlock = inspectManagedWorkspaceFile(workspaceDir, relativePath, "persona");
   assert.equal(managedBlock.exists, true);
   assert.equal(managedBlock.innerContent, "alpha");
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "observed")), false);
+  assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "observed")), false);
 });
 
 test("writeWorkspaceFilePreservingManagedBlocks keeps original managed blocks intact", () => {

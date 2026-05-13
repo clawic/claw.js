@@ -57,7 +57,7 @@ const canonicalSources = [
   "packages/clawjs-database/src/config.ts",
   "packages/clawjs-mcp/src/config.ts",
   "packages/clawjs-channel-base/src/index.ts",
-  "packages/clawjs-tracking-runtime/src/config.ts",
+  "packages/signals/src/config.ts",
   "packages/clawjs-runtime/src/config.ts",
   "packages/clawjs-sandbox/src/config.ts",
   "packages/clawjs-sessions/src/config.ts",

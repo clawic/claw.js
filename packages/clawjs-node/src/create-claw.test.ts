@@ -1143,7 +1143,7 @@ test("createClaw embeds the time engine by default", async () => {
     assert.equal(signalled.items[0]?.status, "cancelled");
 
     assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
-    assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite")), false);
+    assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "data", "productivity.sqlite")), false);
   });
 });
 
@@ -1943,8 +1943,8 @@ test("createClaw instances keep separate workspaces and sessions isolated", asyn
   assert.equal(clawB.sessions.getSession(sessionA.sessionId), null);
   assert.equal(clawA.files.readWorkspaceFile("notes.md"), "workspace-a\n");
   assert.equal(clawB.files.readWorkspaceFile("notes.md"), "workspace-b\n");
-  assert.equal(fs.existsSync(path.join(workspaceA, ".clawjs", "sessions", `${sessionB.sessionId}.jsonl`)), false);
-  assert.equal(fs.existsSync(path.join(workspaceB, ".clawjs", "sessions", `${sessionA.sessionId}.jsonl`)), false);
+  assert.equal(fs.existsSync(path.join(workspaceA, ".claw", "sessions", `${sessionB.sessionId}.jsonl`)), false);
+  assert.equal(fs.existsSync(path.join(workspaceB, ".claw", "sessions", `${sessionA.sessionId}.jsonl`)), false);
 });
 
 test("createClaw instances can share a workspace and initialize it in parallel", async () => {
@@ -1991,8 +1991,8 @@ test("createClaw instances can share a workspace and initialize it in parallel",
   assert.equal(clawA.files.readWorkspaceFile("notes-b.md"), "workspace-b\n");
   assert.equal(clawB.files.readWorkspaceFile("notes-a.md"), "workspace-a\n");
   assert.equal(clawB.files.readWorkspaceFile("notes-b.md"), "workspace-b\n");
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "sessions", `${sessionA.sessionId}.jsonl`)), true);
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "sessions", `${sessionB.sessionId}.jsonl`)), true);
+  assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "sessions", `${sessionA.sessionId}.jsonl`)), true);
+  assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "sessions", `${sessionB.sessionId}.jsonl`)), true);
 });
 
 test("createClaw exposes workspace validation and binding persistence", async () => {
@@ -2065,8 +2065,8 @@ test("createClaw exposes intent, observed, and feature APIs for declarative mode
 
 test("createClaw can repair workspace layout and normalize compat snapshots", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-repair-"));
-  fs.mkdirSync(path.join(workspaceDir, ".clawjs", "compat"), { recursive: true });
-  fs.writeFileSync(path.join(workspaceDir, ".clawjs", "compat", "runtime-snapshot.json"), JSON.stringify({
+  fs.mkdirSync(path.join(workspaceDir, ".claw", "compat"), { recursive: true });
+  fs.writeFileSync(path.join(workspaceDir, ".claw", "compat", "runtime-snapshot.json"), JSON.stringify({
     runtimeAdapter: "openclaw",
     runtimeVersion: "1.2.3",
     probedAt: "2026-03-20T00:00:00.000Z",
@@ -2155,7 +2155,7 @@ test("createClaw emits domain events and supports auth key storage", async () =>
     "auth.progress",
   ]);
 
-  const auditLog = fs.readFileSync(path.join(workspaceDir, ".clawjs", "audit", "audit.jsonl"), "utf8");
+  const auditLog = fs.readFileSync(path.join(workspaceDir, ".claw", "audit", "audit.jsonl"), "utf8");
   assert.equal(auditLog.includes("sk-ant-secret-12345678"), false);
 });
 
@@ -2297,8 +2297,8 @@ test("createClaw doctor report includes workspace diagnostics", async () => {
 
 test("createClaw doctor report surfaces compat snapshot drift", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-doctor-drift-"));
-  fs.mkdirSync(path.join(workspaceDir, ".clawjs", "compat"), { recursive: true });
-  fs.writeFileSync(path.join(workspaceDir, ".clawjs", "compat", "runtime-snapshot.json"), JSON.stringify({
+  fs.mkdirSync(path.join(workspaceDir, ".claw", "compat"), { recursive: true });
+  fs.writeFileSync(path.join(workspaceDir, ".claw", "compat", "runtime-snapshot.json"), JSON.stringify({
     schemaVersion: 1,
     runtimeAdapter: "openclaw",
     runtimeVersion: "0.9.0",
@@ -2946,37 +2946,37 @@ test("createClaw managed OpenClaw plugin bridge auto-installs and exposes ClawJS
       basePlugin: { installed: boolean; enabled: boolean; loaded: boolean };
       contextPlugin: { installed: boolean; enabled: boolean; selected: boolean; selectedEngineId: string | null };
     };
-    const status = await claw.runtime.plugins.clawjs.status() as {
+    const status = await claw.runtime.plugins.claw.status() as {
       pluginId: string;
       features: { observability: boolean };
     };
-    const events = await claw.runtime.plugins.clawjs.events.list({ kind: "tool", limit: 3 }) as {
+    const events = await claw.runtime.plugins.claw.events.list({ kind: "tool", limit: 3 }) as {
       items: Array<{ kind: string }>;
     };
-    const inspect = await claw.runtime.plugins.clawjs.sessions.inspect({ sessionKey: "alpha" }) as {
+    const inspect = await claw.runtime.plugins.claw.sessions.inspect({ sessionKey: "alpha" }) as {
       found: boolean;
       session: { sessionKey: string };
     };
-    const run = await claw.runtime.plugins.clawjs.subagent.run({ sessionKey: "alpha", message: "hello" }) as {
+    const run = await claw.runtime.plugins.claw.subagent.run({ sessionKey: "alpha", message: "hello" }) as {
       runId: string;
     };
-    const wait = await claw.runtime.plugins.clawjs.subagent.wait({ runId: run.runId, timeoutMs: 500 }) as {
+    const wait = await claw.runtime.plugins.claw.subagent.wait({ runId: run.runId, timeoutMs: 500 }) as {
       status: string;
     };
-    const messages = await claw.runtime.plugins.clawjs.subagent.messages({ sessionKey: "alpha", limit: 5 }) as {
+    const messages = await claw.runtime.plugins.claw.subagent.messages({ sessionKey: "alpha", limit: 5 }) as {
       messages: Array<{ role: string; content: string }>;
     };
-    const hooks = await claw.runtime.plugins.clawjs.hooks.list() as {
+    const hooks = await claw.runtime.plugins.claw.hooks.list() as {
       hooks: Array<{ name: string }>;
     };
-    const hookStatus = await claw.runtime.plugins.clawjs.hooks.status() as {
+    const hookStatus = await claw.runtime.plugins.claw.hooks.status() as {
       allowPromptInjection: boolean;
     };
-    const context = await claw.runtime.plugins.clawjs.context.status() as {
+    const context = await claw.runtime.plugins.claw.context.status() as {
       installed: boolean;
       selected: boolean;
     };
-    const doctor = await claw.runtime.plugins.clawjs.doctor() as {
+    const doctor = await claw.runtime.plugins.claw.doctor() as {
       ok: boolean;
     };
     const runtimeStatus = await claw.runtime.status();

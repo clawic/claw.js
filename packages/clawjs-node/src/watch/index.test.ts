@@ -30,9 +30,9 @@ test("watchWorkspaceFile emits a callback when the file changes", async () => {
 
 test("watchWorkspaceFile can observe creation of a missing file inside an existing directory", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-watch-create-"));
-  const nestedDir = path.join(workspaceDir, ".clawjs", "sessions");
+  const nestedDir = path.join(workspaceDir, ".claw", "sessions");
   fs.mkdirSync(nestedDir, { recursive: true });
-  const fileName = path.join(".clawjs", "sessions", "session-1.jsonl");
+  const fileName = path.join(".claw", "sessions", "session-1.jsonl");
   const filePath = path.join(workspaceDir, fileName);
 
   const event = await new Promise<{ eventType: string; filePath: string }>((resolve) => {

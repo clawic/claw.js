@@ -6,5 +6,5 @@ export function watchSessionTranscript(
   callback: WatchCallback,
   options?: WatchOptions,
 ): () => void {
-  return watchWorkspaceFile(workspaceDir, `.clawjs/sessions/${sessionId}.jsonl`, callback, options);
+  return watchWorkspaceFile(workspaceDir, `.claw/sessions/${sessionId}.jsonl`, callback, options);
 }

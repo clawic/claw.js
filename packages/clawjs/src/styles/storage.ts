@@ -6,7 +6,7 @@ import { parseStyleMd, serializeStyleMd } from "./serializer.ts";
 import type { StyleManifest } from "./schema.ts";
 
 export function stylesRootDir(workspaceRoot: string): string {
-  return path.join(workspaceRoot, ".clawjs", "styles");
+  return path.join(workspaceRoot, ".claw", "styles");
 }
 
 export function styleDir(workspaceRoot: string, styleId: string): string {

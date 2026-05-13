@@ -20,7 +20,7 @@ import {
 } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
-import { CLAWJS_DIR } from "../workspace/manifest.ts";
+import { CLAW_DIR } from "../workspace/manifest.ts";
 
 export const COMMITMENT_STATE_FILE = "commitments.json";
 
@@ -119,7 +119,7 @@ export class CommitmentStore {
   }
 
   get statePath(): string {
-    return path.join(this.workspaceDir, CLAWJS_DIR, COMMITMENT_STATE_FILE);
+    return path.join(this.workspaceDir, CLAW_DIR, COMMITMENT_STATE_FILE);
   }
 
   readState(): CommitmentState {

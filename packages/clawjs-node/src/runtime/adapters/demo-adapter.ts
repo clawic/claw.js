@@ -72,7 +72,7 @@ const DEMO_WORKSPACE_FILES: RuntimeFileDescriptor[] = [
 function resolveDemoLocations(options: RuntimeAdapterOptions) {
   const scenarioId = resolveDemoScenarioId(options.env);
   const homeDir = options.homeDir?.trim()
-    || path.join(resolveHomeDir(undefined), ".clawjs-demo", scenarioId);
+    || path.join(resolveHomeDir(undefined), ".claw-demo", scenarioId);
   return {
     homeDir,
     configPath: options.configPath?.trim() || path.join(homeDir, "config.json"),

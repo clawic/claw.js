@@ -1488,9 +1488,9 @@ export class CodeLedger {
     try {
       const current = fs.existsSync(excludePath) ? fs.readFileSync(excludePath, "utf8") : "";
       const lines = current.split(/\r?\n/);
-      if (lines.includes(".clawjs/")) return;
+      if (lines.includes(".claw/")) return;
       fs.mkdirSync(path.dirname(excludePath), { recursive: true });
-      fs.writeFileSync(excludePath, `${current.replace(/\s*$/, "")}\n.clawjs/\n`);
+      fs.writeFileSync(excludePath, `${current.replace(/\s*$/, "")}\n.claw/\n`);
     } catch {
       // A missing local exclude should not block use in unusual Git layouts.
     }

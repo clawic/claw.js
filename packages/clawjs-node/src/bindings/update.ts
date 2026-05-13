@@ -42,7 +42,7 @@ export function updateBindingSettings(options: UpdateBindingSettingsOptions): Up
     };
   }
 
-  const backupDir = path.join(options.workspaceDir, ".clawjs", "backups");
+  const backupDir = path.join(options.workspaceDir, ".claw", "backups");
   const syncResults = options.bindings.flatMap((binding) => {
     const render = options.renderers[binding.id];
     if (!render) return [];

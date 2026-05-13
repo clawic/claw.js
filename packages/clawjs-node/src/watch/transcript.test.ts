@@ -8,7 +8,7 @@ import { watchSessionTranscript } from "./transcript.ts";
 
 test("watchSessionTranscript observes transcript changes", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-watch-transcript-"));
-  const transcriptDir = path.join(workspaceDir, ".clawjs", "sessions");
+  const transcriptDir = path.join(workspaceDir, ".claw", "sessions");
   fs.mkdirSync(transcriptDir, { recursive: true });
   const sessionId = "session-1";
   const transcriptPath = path.join(transcriptDir, `${sessionId}.jsonl`);

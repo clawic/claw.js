@@ -58,7 +58,7 @@ function readJsonFile<T>(filePath: string, filesystem = new NodeFileSystemHost()
 }
 
 export function resolveIntentsDir(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "intents");
+  return path.join(workspaceDir, ".claw", "intents");
 }
 
 export function resolveIntentDomainPath(workspaceDir: string, domain: IntentDomain): string {

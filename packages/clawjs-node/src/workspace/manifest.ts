@@ -4,10 +4,10 @@ import { createManifest } from "@clawjs/core";
 
 import { NodeFileSystemHost } from "../host/filesystem.ts";
 
-export const CLAWJS_DIR = ".clawjs";
+export const CLAW_DIR = ".claw";
 
 export function resolveManifestPath(workspaceDir: string): string {
-  return path.join(workspaceDir, CLAWJS_DIR, "manifest.json");
+  return path.join(workspaceDir, CLAW_DIR, "manifest.json");
 }
 
 export function initializeWorkspaceManifest(

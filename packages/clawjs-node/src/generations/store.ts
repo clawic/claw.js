@@ -854,7 +854,7 @@ export function createGenerationStore(options: {
       const mimeType = resolveMimeType(kind, extension, input.mimeType || backend.mimeType);
       const outputRelativePath = buildAssetRelativePath(kind, id, extension);
       const outputPath = storage
-        ? path.join(options.workspaceDir, ".clawjs", "tmp", "generations", kind, `${id}.${extension}`)
+        ? path.join(options.workspaceDir, ".claw", "tmp", "generations", kind, `${id}.${extension}`)
         : dataStore.asset(outputRelativePath).path();
       filesystem.ensureDir(path.dirname(outputPath));
 

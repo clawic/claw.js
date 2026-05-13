@@ -63,7 +63,7 @@ test("audit log keeps every line under cross-process contention", async () => {
     })),
   );
 
-  const auditPath = path.join(workspaceDir, ".clawjs", "audit", "audit.jsonl");
+  const auditPath = path.join(workspaceDir, ".claw", "audit", "audit.jsonl");
   const lines = fs.readFileSync(auditPath, "utf8").trim().split("\n");
   assert.equal(lines.length, totalChildren);
   const indexes = lines.map((line) => Number((JSON.parse(line) as { detail?: { index?: number } }).detail?.index)).sort((a, b) => a - b);

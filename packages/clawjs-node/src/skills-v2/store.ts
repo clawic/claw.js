@@ -22,7 +22,7 @@ import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
 import { buildSkillMd, stringifyYaml } from "./yaml.ts";
 import { splitFrontmatter } from "./yaml-parse.ts";
 
-export const SKILLS_HOME_DIR = ".clawjs";
+export const SKILLS_HOME_DIR = ".claw";
 export const SKILLS_DIR = "skills";
 export const SKILLS_V2_STATE_FILE = "state.json";
 export const SKILLS_CONFIG_FILE = "config.yaml";
@@ -31,7 +31,7 @@ export const SKILLS_INSTANCES_KIND = "_instances";
 const SKILL_KINDS: readonly SkillKind[] = ["personality", "procedure", "snippet", "role"];
 
 export interface SkillsStoreOptions {
-  /** Override the central skills root (defaults to ~/.clawjs). */
+  /** Override the central skills root (defaults to ~/.claw). */
   homeDir?: string;
   filesystem?: NodeFileSystemHost;
   env?: NodeJS.ProcessEnv;

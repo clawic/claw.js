@@ -24,7 +24,7 @@ import {
 } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
-import { CLAWJS_DIR } from "../workspace/manifest.ts";
+import { CLAW_DIR } from "../workspace/manifest.ts";
 
 export const JUDGMENT_STATE_FILE = "judgment.json";
 
@@ -257,7 +257,7 @@ export class JudgmentStore {
   }
 
   get statePath(): string {
-    return path.join(this.workspaceDir, CLAWJS_DIR, JUDGMENT_STATE_FILE);
+    return path.join(this.workspaceDir, CLAW_DIR, JUDGMENT_STATE_FILE);
   }
 
   readState(): JudgmentState {

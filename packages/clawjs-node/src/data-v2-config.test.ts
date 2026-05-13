@@ -13,7 +13,7 @@ import { loadMCPConfig } from "../../clawjs-mcp/src/config.ts";
 import { loadRuntimeConfig } from "../../clawjs-runtime/src/config.ts";
 import { loadSandboxConfig } from "../../clawjs-sandbox/src/config.ts";
 import { loadSessionsConfig } from "../../clawjs-sessions/src/config.ts";
-import { loadTrackingServiceConfig } from "../../clawjs-tracking-runtime/src/config.ts";
+import { loadSignalsServiceConfig } from "../../signals/src/config.ts";
 import { loadUserModelConfig } from "../../clawjs-user-model/src/config.ts";
 import { loadVoiceConfig } from "../../clawjs-voice/src/config.ts";
 import { createSqliteWorkspaceCollectionStore } from "../../clawjs-workspace/src/sqlite-store.ts";
@@ -70,7 +70,7 @@ test("V2 data configs route canonical domains to main DB and sidecars under the 
     assert.equal(loadUserModelConfig().dataDir, root);
     assert.equal(loadUserModelConfig().dbPath, path.join(root, "core.sqlite"));
 
-    const tracking = loadTrackingServiceConfig({ domain: "sleep", defaultPort: 4701 });
+    const tracking = loadSignalsServiceConfig({ domain: "sleep", defaultPort: 4701 });
     assert.equal(tracking.dataDir, root);
     assert.equal(tracking.dbPath, path.join(root, "core.sqlite"));
 
@@ -177,10 +177,10 @@ test("V2 workspace collections and context memory use the main DB", () => {
     appsSqlite.close();
     assert.equal(fs.existsSync(path.join(root, "apps", "v2-app", "index.html")), true);
 
-    assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "database.sqlite")), false);
-    assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite")), false);
-    assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "storage.sqlite")), false);
-    assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "code", "code.sqlite")), false);
+    assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "data", "database.sqlite")), false);
+    assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "data", "productivity.sqlite")), false);
+    assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "data", "storage.sqlite")), false);
+    assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "code", "code.sqlite")), false);
   });
 });
 

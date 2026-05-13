@@ -619,7 +619,7 @@ function migrateLegacyWorkspaceData(runtime: LocalDbRuntime, namespaceId: string
   const migrationKey = localMigrationKey(namespaceId);
   if (runtime.store.getMeta(migrationKey)) return;
 
-  const legacyPath = path.join(runtime.workspaceRoot, ".clawjs", "data", "productivity.sqlite");
+  const legacyPath = path.join(runtime.workspaceRoot, ".claw", "data", "productivity.sqlite");
   if (!fs.existsSync(legacyPath)) {
     runtime.store.setMeta(migrationKey, new Date().toISOString());
     return;

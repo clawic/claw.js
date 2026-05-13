@@ -14,4 +14,4 @@ Repository ownership and review routing live under [`@clawic`](https://github.co
 
 - ClawJS masks common secret fields in logs and CLI JSON output, but callers should still avoid printing raw credentials.
 - `auth.setApiKey()` and `auth.saveApiKey()` are low-level APIs. Prefer provider login flows, environment injection, or external secret stores when possible.
-- Workspace audit logs are persisted under `.clawjs/audit/`. Review retention and redaction expectations before shipping ClawJS into regulated environments.
+- Workspace audit logs are persisted under `.claw/audit/`. Review retention and redaction expectations before shipping ClawJS into regulated environments.

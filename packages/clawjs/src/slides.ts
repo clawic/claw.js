@@ -1198,11 +1198,11 @@ function writeOutput(options: SlidesCliOptions, payload: unknown, text: string):
 }
 
 function deckManifestPath(workspaceRoot: string, deckId: string): string {
-  return path.join(workspaceRoot, ".clawjs", "slides", "decks", `${deckId}.json`);
+  return path.join(workspaceRoot, ".claw", "slides", "decks", `${deckId}.json`);
 }
 
 function deckOutputDir(workspaceRoot: string, deckId: string): string {
-  return path.join(workspaceRoot, ".clawjs", "slides", "outputs", deckId);
+  return path.join(workspaceRoot, ".claw", "slides", "outputs", deckId);
 }
 
 function writeDeck(filePath: string, deck: SlideDeckManifest): void {

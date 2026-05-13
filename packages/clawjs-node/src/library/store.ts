@@ -89,7 +89,7 @@ export function resolveLibraryRoot(options: LibraryStoreOptions = {}): string {
     || options.env?.CLAWJS_LIBRARY_DIR?.trim()
     || process.env.CLAWJS_LIBRARY_DIR?.trim();
   if (configured) return resolveHomePath(configured);
-  return path.join(os.homedir(), ".clawjs", "library");
+  return path.join(os.homedir(), ".claw", "library");
 }
 
 export function normalizeLibraryId(value: string, fallback = "asset"): string {
@@ -250,8 +250,8 @@ export function libraryProjectionTargetFile(target: LibraryInstructionProjection
 /**
  * @deprecated LocalLibraryStore is a compatibility shim. Skills, instructions,
  * and bundles are unified under skills-v2 (kind: procedure | snippet | role).
- * Capsules → `metadata.clawjs.capsule`. Projections → resolved at compile time.
- * Bundles → composite skills with kind=role and `metadata.clawjs.children`.
+ * Capsules → `metadata.claw.capsule`. Projections → resolved at compile time.
+ * Bundles → composite skills with kind=role and `metadata.claw.children`.
  * Use `claw.skills.create / compile / activate` for new code.
  */
 export class LocalLibraryStore {

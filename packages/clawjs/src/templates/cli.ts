@@ -149,7 +149,7 @@ export async function runTemplateCli(options: TemplateCliOptions): Promise<numbe
           outPath = path.join(dir, `${base}.${ext}`);
         }
       } else {
-        outPath = path.join(workspaceRoot, ".clawjs", "templates", template.id, "outputs", `${flags.style}-${flags.variant ?? "default"}.${ext}`);
+        outPath = path.join(workspaceRoot, ".claw", "templates", template.id, "outputs", `${flags.style}-${flags.variant ?? "default"}.${ext}`);
       }
       const result = await renderTemplate({ template, style, data, variantId: flags.variant, outPath, format });
       results.push({ format: result.format, outputPath: result.outPath, renderer: result.renderer, width: result.width, height: result.height });

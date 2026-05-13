@@ -75,7 +75,7 @@ test("buildCombinedDoctorReport merges runtime and workspace issues", () => {
       ok: false,
       manifest: null,
       missingFiles: ["SOUL.md"],
-      missingDirectories: ["/tmp/demo/.clawjs/compat"],
+      missingDirectories: ["/tmp/demo/.claw/compat"],
     },
     compatSnapshot: null,
     compatDrift: {

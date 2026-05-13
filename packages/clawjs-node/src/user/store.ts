@@ -34,7 +34,7 @@ import {
 
 import { applyTextMutation } from "../files/managed-blocks.ts";
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
-import { CLAWJS_DIR } from "../workspace/manifest.ts";
+import { CLAW_DIR } from "../workspace/manifest.ts";
 import { readWorkspaceFile, writeWorkspaceFile } from "../workspace/manager.ts";
 
 export const USER_STATE_FILE = "users.json";
@@ -436,7 +436,7 @@ export class UserStore {
     this.filesystem = options.filesystem ?? new NodeFileSystemHost();
   }
 
-  get statePath(): string { return path.join(this.workspaceDir, CLAWJS_DIR, USER_STATE_FILE); }
+  get statePath(): string { return path.join(this.workspaceDir, CLAW_DIR, USER_STATE_FILE); }
 
   readState(): UserState {
     if (!this.filesystem.exists(this.statePath)) return { schemaVersion: 1, specs: [defaultSpec()], assignments: [], updatedAt: nowIso() };
