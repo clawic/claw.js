@@ -31,7 +31,7 @@ struct CommanderDaemon {
 
             try server.serve()
         } catch {
-            fputs("commanderd failed: \(error.localizedDescription)\n", stderr)
+            fputs("claw-hostd failed: \(error.localizedDescription)\n", stderr)
             exit(1)
         }
     }

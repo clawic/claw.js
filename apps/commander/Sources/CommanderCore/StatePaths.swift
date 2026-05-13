@@ -5,10 +5,6 @@ public enum StatePaths {
         if let override = environment["CLAW_HOST_HOME"], !override.isEmpty {
             return URL(fileURLWithPath: override, isDirectory: true)
         }
-        if let override = environment["CLAW_HOST_HOME"], !override.isEmpty {
-            return URL(fileURLWithPath: override, isDirectory: true)
-        }
-
         let host = HostConfiguration.current(environment: environment)
         return FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library", isDirectory: true)
@@ -46,10 +42,6 @@ public enum StatePaths {
         if let override = environment["CLAW_HOST_BIN_DIR"], !override.isEmpty {
             return URL(fileURLWithPath: override, isDirectory: true).appendingPathComponent(HostConfiguration.current(environment: environment).cliExecutableName)
         }
-        if let override = environment["CLAW_HOST_BIN_DIR"], !override.isEmpty {
-            return URL(fileURLWithPath: override, isDirectory: true).appendingPathComponent("commander")
-        }
-
         let host = HostConfiguration.current(environment: environment)
         return FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".local", isDirectory: true)
@@ -61,10 +53,6 @@ public enum StatePaths {
         if let override = environment["CLAW_HOST_LAUNCH_AGENTS_DIR"], !override.isEmpty {
             return URL(fileURLWithPath: override, isDirectory: true).appendingPathComponent("\(RuntimeInstaller.launchAgentLabel(environment: environment)).plist")
         }
-        if let override = environment["CLAW_HOST_LAUNCH_AGENTS_DIR"], !override.isEmpty {
-            return URL(fileURLWithPath: override, isDirectory: true).appendingPathComponent("\(RuntimeInstaller.launchAgentLabel(environment: environment)).plist")
-        }
-
         return FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library", isDirectory: true)
             .appendingPathComponent("LaunchAgents", isDirectory: true)
