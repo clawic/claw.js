@@ -86,7 +86,7 @@ Defaults:
 - bin symlink: `$HOME/.local/bin/claw-remote`
 - systemd unit: `$HOME/.config/systemd/user/claw-remote.service`
 - launchd plist: `$HOME/Library/LaunchAgents/com.claw.remote.plist`
-- bridge port: `7778`, http port: `7779`
+- bridge port: `24112`, http port: `24113`
 
 The install is idempotent: the previous prefix is moved aside and replaced
 atomically (`<prefix>.prev`), and the symlink is overwritten.
@@ -107,8 +107,8 @@ WebSocket bridge. The flow:
        "hostId": "vps-1",
        "localBinaryPath": "/path/to/claw-remote-linux-x64-0.1.0/bin/claw-remote",
        "remotePath": "/usr/local/bin/claw-remote",
-       "port": 7778,
-       "httpPort": 7779
+       "port": 24112,
+       "httpPort": 24113
      }
    }
    ```
@@ -135,7 +135,7 @@ call that wraps tarball upload + extraction + service registration.
 |---|---|
 | `node not found in PATH` when running the wrapper | The bundled wrapper assumes `node >= 20`. Install Node or set `NODE=/path/to/node` in the systemd `Environment=` line. |
 | `Cannot find module 'better-sqlite3/build/Release/better_sqlite3.node'` | The prebuilt did not match the host. Re-run `scripts/build-tarball.sh --target <correct-target>` or run `npm rebuild better-sqlite3` inside the install prefix. |
-| `EADDRINUSE 127.0.0.1:7778` | Another `claw-remote` (or `clawix-bridged` legacy Swift) holds the port. Stop it or change `CLAW_REMOTE_PORT`. |
+| `EADDRINUSE 127.0.0.1:24112` | Another `claw-remote` (or `clawix-bridged` legacy Swift) holds the port. Stop it or change `CLAW_REMOTE_PORT`. |
 | systemd unit not autostarting | `systemctl --user status claw-remote.service` — usually missing `loginctl enable-linger $USER` on Linux servers. |
 | install.sh exits with `tarball not found` | Path is wrong or download failed; pass `--tarball` with an absolute path or a reachable URL. |
 | Mac daemon doesn't survive reboot | Make sure `--launchd` ran and the user is logged in at boot; for headless servers use `sudo launchctl` + `/Library/LaunchDaemons/`. |

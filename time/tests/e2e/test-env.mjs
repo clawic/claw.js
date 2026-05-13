@@ -11,7 +11,7 @@ const server = spawn(process.execPath, ["dist/server.js"], {
     CLAW_TIME_HOST: "127.0.0.1",
     CLAW_TIME_PORT: "4730",
     CLAW_TIME_DATA_DIR: path.join(tmpDir, "data"),
-    CLAW_TIME_DB_FILE: path.join(tmpDir, "data", "clawjs.sqlite"),
+    CLAW_TIME_DB_FILE: path.join(tmpDir, "data", "core.sqlite"),
     CLAW_TIME_DEFAULT_TIMEZONE: "UTC",
     CLAW_TIME_SCHEDULER_INTERVAL_MS: "100",
   },

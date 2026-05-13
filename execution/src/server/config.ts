@@ -40,7 +40,7 @@ export function loadExecutionPlaneConfig(overrides: Partial<ExecutionPlaneConfig
 function defaultClawjsDataRoot(): string {
   if (process.env.CLAW_DATA_DIR) return expandHome(process.env.CLAW_DATA_DIR);
   if (process.env.CLAWIX_CLAW_DATA_DIR) return expandHome(process.env.CLAWIX_CLAW_DATA_DIR);
-  if (process.platform === "darwin") return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
+  if (process.platform === "darwin") return path.join(os.homedir(), ".claw", "data");
   if (process.platform === "win32") return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
   return path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
 }

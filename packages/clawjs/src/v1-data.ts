@@ -206,7 +206,7 @@ export function resolveClawjsDataRoot(env: NodeJS.ProcessEnv = process.env): str
 }
 
 export function resolveClawjsMainDbPath(env: NodeJS.ProcessEnv = process.env): string {
-  const explicit = env.CLAW_DB_PATH || env.CLAW_DB_PATH || env.CLAW_DB_PATH;
+  const explicit = env.CLAW_DB_PATH;
   if (explicit) return path.resolve(expandHome(explicit));
   return path.join(resolveClawjsDataRoot(env), "core.sqlite");
 }

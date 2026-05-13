@@ -21,7 +21,7 @@ function resolveClawjsDataRoot(): string {
   if (process.env.CLAW_DATA_DIR) return expandHome(process.env.CLAW_DATA_DIR);
   if (process.env.CLAWIX_CLAW_DATA_DIR) return expandHome(process.env.CLAWIX_CLAW_DATA_DIR);
   if (process.platform === "darwin") {
-    return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
+    return path.join(os.homedir(), ".claw", "data");
   }
   if (process.platform === "win32") {
     return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
@@ -35,7 +35,7 @@ function expandHome(value: string): string {
 
 export function discoverSources(workspace: string): SourceLocation[] {
   const dataDir = path.join(workspace, ".data");
-  const clawjsMainDb = process.env.CLAW_DB_PATH ?? path.join(resolveClawjsDataRoot(), "clawjs.sqlite");
+  const clawjsMainDb = process.env.CLAW_DB_PATH ?? path.join(resolveClawjsDataRoot(), "core.sqlite");
   const definitions: Array<Omit<SourceLocation, "path">> = [
     {
       id: "relay",

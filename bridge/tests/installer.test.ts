@@ -150,9 +150,9 @@ test("install.sh --launchd writes a plist on macOS", async () => {
         h.binDir,
         "--launchd",
         "--bridge-port",
-        "7778",
+        "24112",
         "--http-port",
-        "7779",
+        "24113",
         "--no-start",
       ],
       h.home,
@@ -165,7 +165,7 @@ test("install.sh --launchd writes a plist on macOS", async () => {
     const plist = await readFile(plistPath, "utf8");
     assert.match(plist, /com\.claw\.remote/);
     assert.match(plist, /CLAW_REMOTE_PORT/);
-    assert.match(plist, /7779/);
+    assert.match(plist, /24113/);
   } finally {
     await h.cleanup();
   }

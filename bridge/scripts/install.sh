@@ -8,7 +8,7 @@
 #   ./install.sh --bin DIR                       # symlink dir (default ~/.local/bin)
 #   ./install.sh --systemd                       # write a systemd --user unit (Linux)
 #   ./install.sh --launchd                       # write a launchd plist (macOS)
-#   ./install.sh --bridge-port 7778 --http-port 7779
+#   ./install.sh --bridge-port 24112 --http-port 24113
 #   ./install.sh --no-start                      # do not enable+start the unit
 #   ./install.sh --uninstall                     # remove unit + symlink + prefix
 #
@@ -20,8 +20,8 @@ prefix="${HOME}/.local/claw-remote"
 bin_dir="${HOME}/.local/bin"
 install_systemd=0
 install_launchd=0
-bridge_port=7778
-http_port=7779
+bridge_port=24112
+http_port=24113
 bind_addr=""
 do_uninstall=0
 start_service=1

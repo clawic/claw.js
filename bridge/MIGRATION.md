@@ -2,8 +2,8 @@
 
 End-to-end migration recipe for the Clawix Mac app. The Node daemon
 (`claw-remote`) replaces the Swift helper without changing the wire
-protocol seen by the GUI (`/mesh/*` on loopback port 7779,
-`/bridge` WebSocket on 7778, Bonjour `_clawix-bridge._tcp`). The Mac
+protocol seen by the GUI (`/mesh/*` on loopback port 24113,
+`/bridge` WebSocket on 24112, Bonjour `_clawix-bridge._tcp`). The Mac
 app, the iOS client, the menu bar and the npm CLI keep talking to
 exactly the same surfaces.
 
@@ -43,7 +43,7 @@ CLAW_REMOTE_BIND=127.0.0.1 CLAW_REMOTE_DB=/tmp/test.sqlite \
   CLAW_REMOTE_STATUS=/tmp/test-status.json \
   CLAW_REMOTE_DISABLE_BONJOUR=1 \
   /tmp/claw-remote-0.1.0/bin/claw-remote
-# Expect: "clawjs-bridge ready on http://127.0.0.1:7779 ..."
+# Expect: "clawjs-bridge ready on http://127.0.0.1:24113 ..."
 ```
 
 Send `Ctrl-C` to stop.

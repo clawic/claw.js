@@ -161,8 +161,8 @@ Or use the canonical installer from the source tree:
   ./scripts/install.sh --tarball ./claw-remote-$target_os-$target_arch-$version.tar.gz
 
 Configuration via env vars (see bridge/src/config.ts):
-  CLAW_REMOTE_PORT (default 7778)
-  CLAW_REMOTE_HTTP_PORT (default 7779)
+  CLAW_REMOTE_PORT (default 24112)
+  CLAW_REMOTE_HTTP_PORT (default 24113)
   CLAW_REMOTE_BIND (default 127.0.0.1)
   CLAW_REMOTE_DB
   CLAW_REMOTE_STATUS
