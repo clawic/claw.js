@@ -3784,6 +3784,26 @@
           ]
         },
         {
+          "id": "discord.action.get-guild-widget-image",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Widget Image",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "style",
+              "type": "string",
+              "optional": true,
+              "default": "shield"
+            }
+          ],
+          "authFieldNames": []
+        },
+        {
           "id": "discord.action.get-guild-vanity-url",
           "appId": "discord",
           "kind": "action",
