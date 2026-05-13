@@ -6,7 +6,7 @@ import {
   DATING_VERTICAL_ID, DATING_MUTUAL_MATCH_CAPABILITY,
 } from "../src/index.ts";
 
-test("dating/v1: rejects under-18 profiles", () => {
+test("modules/dating/v1: rejects under-18 profiles", () => {
   const thisYear = new Date().getUTCFullYear();
   assert.throws(() => validateDatingOffer({
     display_name: "alex", birth_year: thisYear - 17, bio: "hi", looking_for: ["friends"],
@@ -15,7 +15,7 @@ test("dating/v1: rejects under-18 profiles", () => {
   }), /18\+/);
 });
 
-test("dating/v1: want needs at least one looking_for and age_min ≥ 18", () => {
+test("modules/dating/v1: want needs at least one looking_for and age_min ≥ 18", () => {
   assert.throws(() => validateDatingWant({
     geo_zone: "u4pr", age_min: 17, age_max: 30, looking_for: ["friends"],
   }), /age_min must be ≥ 18/);
@@ -24,7 +24,7 @@ test("dating/v1: want needs at least one looking_for and age_min ≥ 18", () => 
   }), /looking_for required/);
 });
 
-test("dating/v1: cbor and uiHints", () => {
+test("modules/dating/v1: cbor and uiHints", () => {
   const cbor = datingOfferToCbor({
     display_name: "alex", birth_year: 1995, bio: "hi", looking_for: ["long-term"],
     geo_zone: "u4pr",

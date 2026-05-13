@@ -1,4 +1,4 @@
-// `dating/v1` plugin for the Clawix mp/* protocol.
+// `modules/dating/v1` plugin for the Clawix mp/* protocol.
 //
 // Two key differences from other verticals:
 //   1. Mutual-match flow: an Offer is only shown to a Want that both sides
@@ -13,7 +13,7 @@ import type { CborValue } from "@clawjs/mp/cbor";
 import { discoveryKey } from "@clawjs/mp";
 import type { MpVerticalPlugin } from "@clawjs/mp/verticals/plugin";
 
-export const DATING_VERTICAL_ID = "dating/v1";
+export const DATING_VERTICAL_ID = "modules/dating/v1";
 export const DATING_MUTUAL_MATCH_CAPABILITY = "mutual-match";
 
 export type LookingFor = "long-term" | "short-term" | "casual" | "friends" | "open-to-anything";

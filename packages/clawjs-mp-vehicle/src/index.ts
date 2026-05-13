@@ -1,4 +1,4 @@
-// `vehicle/v1` plugin for the Clawix mp/* protocol.
+// `modules/vehicle/v1` plugin for the Clawix mp/* protocol.
 //
 // Second-hand vehicle listings: make/model/year/km/fuel/VIN/condition/photos/
 // price/geo_zone, with a partial VIN visible to the public and the full VIN
@@ -10,7 +10,7 @@ import type { CborValue } from "@clawjs/mp/cbor";
 import { discoveryKey } from "@clawjs/mp";
 import type { MpVerticalPlugin } from "@clawjs/mp/verticals/plugin";
 
-export const VEHICLE_VERTICAL_ID = "vehicle/v1";
+export const VEHICLE_VERTICAL_ID = "modules/vehicle/v1";
 
 export type VehicleCondition = "new" | "like-new" | "good" | "fair" | "for-parts";
 export type VehicleFuelType = "gasoline" | "diesel" | "hybrid" | "plug-in-hybrid" | "electric" | "lpg" | "cng" | "other";

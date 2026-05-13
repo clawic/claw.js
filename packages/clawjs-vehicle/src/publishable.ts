@@ -1,6 +1,6 @@
 // Publishable mapping for the `vehicle` tracking module.
 //
-// A `tracked-block` of vertical `vehicle/v1` (and/or `real-estate/v1` for
+// A `tracked-block` of vertical `modules/vehicle/v1` (and/or `real-estate/v1` for
 // vehicle-as-asset listings) can reference a vehicle record by its id and
 // pull these fields out of the user's tracking observations.
 

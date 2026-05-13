@@ -3,12 +3,12 @@ import assert from "node:assert/strict";
 
 import { vehiclePlugin, validateVehicleOffer, vehicleOfferToCbor, VEHICLE_VERTICAL_ID } from "../src/index.ts";
 
-test("vehicle/v1: plugin id and archetype", () => {
+test("modules/vehicle/v1: plugin id and archetype", () => {
   assert.equal(vehiclePlugin.id, VEHICLE_VERTICAL_ID);
   assert.equal(vehiclePlugin.archetype, "both");
 });
 
-test("vehicle/v1: VIN length enforcement", () => {
+test("modules/vehicle/v1: VIN length enforcement", () => {
   assert.throws(() => validateVehicleOffer({
     transaction: "sale", title: "Civic", make: "Honda", model: "Civic", year: 2018,
     km: 90000, fuel_type: "gasoline", condition: "good", geo_zone: "u4pr",
@@ -17,7 +17,7 @@ test("vehicle/v1: VIN length enforcement", () => {
   }), /vin_full must be exactly 17/);
 });
 
-test("vehicle/v1: matchExtractor returns geo, transaction, priceBand", () => {
+test("modules/vehicle/v1: matchExtractor returns geo, transaction, priceBand", () => {
   const cbor = vehicleOfferToCbor({
     transaction: "sale", title: "Civic", make: "Honda", model: "Civic", year: 2018,
     km: 90000, fuel_type: "gasoline", condition: "good", geo_zone: "u4pr",
