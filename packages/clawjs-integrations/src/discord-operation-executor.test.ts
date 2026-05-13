@@ -36,6 +36,18 @@ const LOBBY_FIELD = field("lobbyId", "string");
 const AUTO_MODERATION_RULE_FIELD = field("autoModerationRuleId", "string");
 const AUTO_MODERATION_ACTIONS_FIELD = field("actions", "array", false, { default: [{ type: 1, metadata: { custom_message: "sample" } }] });
 const AUTO_MODERATION_TRIGGER_METADATA_FIELD = field("triggerMetadata", "object", true, { default: { keyword_filter: ["sample"] } });
+const APPLICATION_COMMAND_METADATA_FIELDS = [
+  field("nameLocalizations", "object", true, { default: null }),
+  field("descriptionLocalizations", "object", true, { default: null }),
+  field("defaultMemberPermissions", "string", true, { default: null }),
+  field("defaultPermission", "boolean", true, { default: null }),
+  field("dmPermission", "boolean", true, { default: null }),
+  field("integrationTypes", "array", true, { default: null }),
+  field("contexts", "array", true, { default: null }),
+  field("type", "integer", true, { default: null }),
+  field("nsfw", "boolean", true, { default: null }),
+  field("handler", "integer", true, { default: null }),
+];
 
 const DISCORD_ACTIONS = [
   action("get-current-user", "Get Current User", []),
@@ -257,9 +269,9 @@ const DISCORD_ACTIONS = [
   action("edit-followup-message", "Edit Followup Message", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD, MESSAGE_FIELD, field("content", "string", true, { default: "sample" })], []),
   action("delete-followup-message", "Delete Followup Message", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD, MESSAGE_FIELD], []),
   action("list-global-application-commands", "List Global Application Commands", [APPLICATION_FIELD]),
-  action("create-global-application-command", "Create Global Application Command", [APPLICATION_FIELD, field("name", "string"), field("description", "string", true, { default: "sample" })]),
+  action("create-global-application-command", "Create Global Application Command", [APPLICATION_FIELD, field("name", "string"), field("description", "string", true, { default: "sample" }), ...APPLICATION_COMMAND_METADATA_FIELDS]),
   action("get-global-application-command", "Get Global Application Command", [APPLICATION_FIELD, COMMAND_FIELD]),
-  action("update-global-application-command", "Update Global Application Command", [APPLICATION_FIELD, COMMAND_FIELD, field("name", "string"), field("description", "string", true, { default: "sample" })]),
+  action("update-global-application-command", "Update Global Application Command", [APPLICATION_FIELD, COMMAND_FIELD, field("name", "string"), field("description", "string", true, { default: "sample" }), ...APPLICATION_COMMAND_METADATA_FIELDS]),
   action("delete-global-application-command", "Delete Global Application Command", [APPLICATION_FIELD, COMMAND_FIELD]),
   action("bulk-overwrite-global-application-commands", "Bulk Overwrite Global Application Commands", [APPLICATION_FIELD, field("commands", "array", false, { default: [{ name: "sample", description: "sample", type: 1 }] })]),
   action("list-application-emojis", "List Application Emojis", [APPLICATION_FIELD]),
@@ -268,9 +280,9 @@ const DISCORD_ACTIONS = [
   action("update-application-emoji", "Update Application Emoji", [APPLICATION_FIELD, field("emojiId", "string"), field("name", "string", true, { default: "sample" })]),
   action("delete-application-emoji", "Delete Application Emoji", [APPLICATION_FIELD, field("emojiId", "string")]),
   action("list-guild-application-commands", "List Guild Application Commands", [APPLICATION_FIELD, GUILD_FIELD]),
-  action("create-guild-application-command", "Create Guild Application Command", [APPLICATION_FIELD, GUILD_FIELD, field("name", "string"), field("description", "string", true, { default: "sample" })]),
+  action("create-guild-application-command", "Create Guild Application Command", [APPLICATION_FIELD, GUILD_FIELD, field("name", "string"), field("description", "string", true, { default: "sample" }), ...APPLICATION_COMMAND_METADATA_FIELDS]),
   action("get-guild-application-command", "Get Guild Application Command", [APPLICATION_FIELD, GUILD_FIELD, COMMAND_FIELD]),
-  action("update-guild-application-command", "Update Guild Application Command", [APPLICATION_FIELD, GUILD_FIELD, COMMAND_FIELD, field("name", "string"), field("description", "string", true, { default: "sample" })]),
+  action("update-guild-application-command", "Update Guild Application Command", [APPLICATION_FIELD, GUILD_FIELD, COMMAND_FIELD, field("name", "string"), field("description", "string", true, { default: "sample" }), ...APPLICATION_COMMAND_METADATA_FIELDS]),
   action("delete-guild-application-command", "Delete Guild Application Command", [APPLICATION_FIELD, GUILD_FIELD, COMMAND_FIELD]),
   action("bulk-overwrite-guild-application-commands", "Bulk Overwrite Guild Application Commands", [APPLICATION_FIELD, GUILD_FIELD, field("commands", "array", false, { default: [{ name: "sample", description: "sample", type: 1 }] })]),
   action("get-guild-application-command-permissions", "Get Guild Application Command Permissions", [APPLICATION_FIELD, GUILD_FIELD], ["discordBearerToken"]),
@@ -2492,6 +2504,53 @@ describe("discord operation runtime", () => {
       body: {},
       responseSchema: {
         type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-global-application-command"), {
+      applicationId: "app-123",
+      name: "launch",
+      nameLocalizations: {
+        "en-US": "Launch",
+      },
+      description: "Launch the activity",
+      descriptionLocalizations: {
+        "en-US": "Launch the activity",
+      },
+      type: 4,
+      defaultMemberPermissions: "0",
+      defaultPermission: true,
+      dmPermission: true,
+      integrationTypes: [0, 1],
+      contexts: [0, 1, 2],
+      nsfw: false,
+      handler: 2,
+    }), {
+      method: "POST",
+      endpoint: "applications/app-123/commands",
+      auth,
+      headers,
+      body: {
+        name: "launch",
+        name_localizations: {
+          "en-US": "Launch",
+        },
+        description: "Launch the activity",
+        description_localizations: {
+          "en-US": "Launch the activity",
+        },
+        type: 4,
+        default_member_permissions: "0",
+        dm_permission: true,
+        default_permission: true,
+        nsfw: false,
+        integration_types: [0, 1],
+        contexts: [0, 1, 2],
+        handler: 2,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "name"],
       },
     });
 
