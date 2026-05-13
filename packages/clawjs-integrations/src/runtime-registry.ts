@@ -2,10 +2,12 @@ import {
   buildTelegramOperationRequest,
   createTelegramOperationExecutor,
   isTelegramActionOperationSupported,
+  TELEGRAM_ACTION_SLUGS,
 } from "./telegram-operation-executor.ts";
 import {
   isTelegramSourceOperationSupported,
   TELEGRAM_POLL_UPDATE_TYPES,
+  TELEGRAM_SOURCE_KINDS,
 } from "./telegram-source.ts";
 import {
   buildSlackOperationRequest,
@@ -232,31 +234,35 @@ const TELEGRAM_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/telegram-operation-executor.test.ts",
 ];
 
-const TELEGRAM_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
+const TELEGRAM_ACTION_FIXTURES: ConnectorRuntimeFixture[] = TELEGRAM_ACTION_SLUGS.flatMap((name) => [
   {
-    kind: "request",
-    path: "packages/clawjs-integrations/fixtures/telegram-send-message-request.json",
+    kind: "request" as const,
+    operationId: `telegram_bot_api.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/telegram-${name}-request.json`,
   },
   {
-    kind: "response",
-    path: "packages/clawjs-integrations/fixtures/telegram-send-message-response.json",
+    kind: "response" as const,
+    operationId: `telegram_bot_api.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/telegram-${name}-response.json`,
   },
-];
+]);
 
 const TELEGRAM_SOURCE_EVIDENCE = [
   "packages/clawjs-integrations/src/telegram-source.test.ts",
 ];
 
-const TELEGRAM_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = [
+const TELEGRAM_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = TELEGRAM_SOURCE_KINDS.flatMap((name) => [
   {
-    kind: "request",
-    path: "packages/clawjs-integrations/fixtures/telegram-get-updates-request.json",
+    kind: "request" as const,
+    operationId: `telegram_bot_api.source.${name}`,
+    path: `packages/clawjs-integrations/fixtures/telegram-source-${name}-request.json`,
   },
   {
-    kind: "source_event",
-    path: "packages/clawjs-integrations/fixtures/telegram-get-updates-response.json",
+    kind: "source_event" as const,
+    operationId: `telegram_bot_api.source.${name}`,
+    path: `packages/clawjs-integrations/fixtures/telegram-source-${name}.json`,
   },
-];
+]);
 
 const SLACK_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/slack-operation-executor.test.ts",
