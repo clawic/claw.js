@@ -6559,6 +6559,2564 @@
             "usesHttp": true,
             "usesServiceDb": false
           }
+        },
+        {
+          "id": "github.action.list-commits",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Commits",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "sha",
+              "type": "string",
+              "optional": false,
+              "default": "abc123"
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "optional": true,
+              "default": "README.md"
+            },
+            {
+              "name": "author",
+              "type": "string",
+              "optional": true,
+              "default": "octocat"
+            },
+            {
+              "name": "since",
+              "type": "string",
+              "optional": true,
+              "default": "2026-01-01T00:00:00Z"
+            },
+            {
+              "name": "until",
+              "type": "string",
+              "optional": true,
+              "default": "2026-01-02T00:00:00Z"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.get-commit",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Commit",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "ref",
+              "type": "string",
+              "optional": false,
+              "default": "abc123"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.compare-commits",
+          "appId": "github",
+          "kind": "action",
+          "name": "Compare Commits",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "base",
+              "type": "string",
+              "optional": false,
+              "default": "main"
+            },
+            {
+              "name": "head",
+              "type": "string",
+              "optional": false,
+              "default": "feature"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-commit-comments",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Commit Comments",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "ref",
+              "type": "string",
+              "optional": false,
+              "default": "abc123"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-commit-comment",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Commit Comment",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "ref",
+              "type": "string",
+              "optional": false,
+              "default": "abc123"
+            },
+            {
+              "name": "body",
+              "type": "string",
+              "optional": false,
+              "default": "Looks good"
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "optional": true,
+              "default": "README.md"
+            },
+            {
+              "name": "position",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-commit-status",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Commit Status",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "sha",
+              "type": "string",
+              "optional": false,
+              "default": "abc123"
+            },
+            {
+              "name": "state",
+              "type": "string",
+              "optional": false,
+              "default": "success"
+            },
+            {
+              "name": "targetUrl",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/build"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Build passed"
+            },
+            {
+              "name": "context",
+              "type": "string",
+              "optional": true,
+              "default": "ci/clawjs"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-commit-statuses",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Commit Statuses",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "ref",
+              "type": "string",
+              "optional": false,
+              "default": "abc123"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.get-combined-status",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Combined Status",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "ref",
+              "type": "string",
+              "optional": false,
+              "default": "abc123"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-repository-tags",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Repository Tags",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-repository-contributors",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Repository Contributors",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "anonymous",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-repository-languages",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Repository Languages",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-repository-topics",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Repository Topics",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.replace-repository-topics",
+          "appId": "github",
+          "kind": "action",
+          "name": "Replace Repository Topics",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "names",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "clawjs",
+                "integrations"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-repository-collaborators",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Repository Collaborators",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "affiliation",
+              "type": "string",
+              "optional": true,
+              "default": "all"
+            },
+            {
+              "name": "permission",
+              "type": "string",
+              "optional": true,
+              "default": "pull"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.add-repository-collaborator",
+          "appId": "github",
+          "kind": "action",
+          "name": "Add Repository Collaborator",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "username",
+              "type": "string",
+              "optional": false,
+              "default": "hubot"
+            },
+            {
+              "name": "permission",
+              "type": "string",
+              "optional": true,
+              "default": "push"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.remove-repository-collaborator",
+          "appId": "github",
+          "kind": "action",
+          "name": "Remove Repository Collaborator",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "username",
+              "type": "string",
+              "optional": false,
+              "default": "hubot"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-repository-teams",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Repository Teams",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-forks",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Forks",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "sort",
+              "type": "string",
+              "optional": true,
+              "default": "newest"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-fork",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Fork",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "organization",
+              "type": "string",
+              "optional": true,
+              "default": "octo-org"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Hello-World-fork"
+            },
+            {
+              "name": "defaultBranchOnly",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-pull-request-reviews",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Pull Request Reviews",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "pullNumber",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.get-pull-request-review",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Pull Request Review",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "pullNumber",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "reviewId",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-pull-request-review",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Pull Request Review",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "pullNumber",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "body",
+              "type": "string",
+              "optional": true,
+              "default": "Reviewed offline"
+            },
+            {
+              "name": "event",
+              "type": "string",
+              "optional": true,
+              "default": "COMMENT"
+            },
+            {
+              "name": "comments",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "path": "README.md",
+                  "position": 1,
+                  "body": "Looks good"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.submit-pull-request-review",
+          "appId": "github",
+          "kind": "action",
+          "name": "Submit Pull Request Review",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "pullNumber",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "reviewId",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "event",
+              "type": "string",
+              "optional": false,
+              "default": "APPROVE"
+            },
+            {
+              "name": "body",
+              "type": "string",
+              "optional": true,
+              "default": "Approved"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.dismiss-pull-request-review",
+          "appId": "github",
+          "kind": "action",
+          "name": "Dismiss Pull Request Review",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "pullNumber",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "reviewId",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "message",
+              "type": "string",
+              "optional": false,
+              "default": "Stale review"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-review-comments",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Review Comments",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "sort",
+              "type": "string",
+              "optional": true,
+              "default": "created"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "optional": true,
+              "default": "asc"
+            },
+            {
+              "name": "since",
+              "type": "string",
+              "optional": true,
+              "default": "2026-01-01T00:00:00Z"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-review-comment",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Review Comment",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "pullNumber",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "body",
+              "type": "string",
+              "optional": false,
+              "default": "Review comment"
+            },
+            {
+              "name": "commitId",
+              "type": "string",
+              "optional": false,
+              "default": "abc123"
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "optional": false,
+              "default": "README.md"
+            },
+            {
+              "name": "line",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "side",
+              "type": "string",
+              "optional": true,
+              "default": "RIGHT"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.update-review-comment",
+          "appId": "github",
+          "kind": "action",
+          "name": "Update Review Comment",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "commentId",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "body",
+              "type": "string",
+              "optional": false,
+              "default": "Updated review comment"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.delete-review-comment",
+          "appId": "github",
+          "kind": "action",
+          "name": "Delete Review Comment",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "commentId",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.request-reviewers",
+          "appId": "github",
+          "kind": "action",
+          "name": "Request Reviewers",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "pullNumber",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "reviewers",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "hubot"
+              ]
+            },
+            {
+              "name": "teamReviewers",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "octo-team"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.remove-requested-reviewers",
+          "appId": "github",
+          "kind": "action",
+          "name": "Remove Requested Reviewers",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "pullNumber",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "reviewers",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "hubot"
+              ]
+            },
+            {
+              "name": "teamReviewers",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "octo-team"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-deployments",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Deployments",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "sha",
+              "type": "string",
+              "optional": false,
+              "default": "abc123"
+            },
+            {
+              "name": "ref",
+              "type": "string",
+              "optional": true,
+              "default": "main"
+            },
+            {
+              "name": "task",
+              "type": "string",
+              "optional": true,
+              "default": "deploy"
+            },
+            {
+              "name": "environment",
+              "type": "string",
+              "optional": true,
+              "default": "production"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-deployment",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Deployment",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "ref",
+              "type": "string",
+              "optional": false,
+              "default": "main"
+            },
+            {
+              "name": "task",
+              "type": "string",
+              "optional": true,
+              "default": "deploy"
+            },
+            {
+              "name": "autoMerge",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            },
+            {
+              "name": "requiredContexts",
+              "type": "array",
+              "optional": true,
+              "default": []
+            },
+            {
+              "name": "payload",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "environment": "production"
+              }
+            },
+            {
+              "name": "environment",
+              "type": "string",
+              "optional": true,
+              "default": "production"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Deploy request"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.get-deployment",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Deployment",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "deploymentId",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.delete-deployment",
+          "appId": "github",
+          "kind": "action",
+          "name": "Delete Deployment",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "deploymentId",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-deployment-statuses",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Deployment Statuses",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "deploymentId",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-deployment-status",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Deployment Status",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "deploymentId",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "state",
+              "type": "string",
+              "optional": false,
+              "default": "success"
+            },
+            {
+              "name": "targetUrl",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/deploy"
+            },
+            {
+              "name": "logUrl",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/deploy/log"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Deployment finished"
+            },
+            {
+              "name": "environment",
+              "type": "string",
+              "optional": true,
+              "default": "production"
+            },
+            {
+              "name": "autoInactive",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-run-jobs",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Run Jobs",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "runId",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "filter",
+              "type": "string",
+              "optional": true,
+              "default": "latest"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-run-artifacts",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Run Artifacts",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "runId",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.get-artifact",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Artifact",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "artifactId",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.delete-artifact",
+          "appId": "github",
+          "kind": "action",
+          "name": "Delete Artifact",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "artifactId",
+              "type": "integer",
+              "optional": false,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.get-repository-public-key",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Repository Public Key",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-repository-secrets",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Repository Secrets",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.get-organization",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Organization",
+          "fields": [
+            {
+              "name": "org",
+              "type": "string",
+              "optional": false,
+              "default": "octo-org"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-organization-members",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Organization Members",
+          "fields": [
+            {
+              "name": "org",
+              "type": "string",
+              "optional": false,
+              "default": "octo-org"
+            },
+            {
+              "name": "filter",
+              "type": "string",
+              "optional": true,
+              "default": "all"
+            },
+            {
+              "name": "role",
+              "type": "string",
+              "optional": true,
+              "default": "all"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-user-organizations",
+          "appId": "github",
+          "kind": "action",
+          "name": "List User Organizations",
+          "fields": [
+            {
+              "name": "username",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.search-repositories",
+          "appId": "github",
+          "kind": "action",
+          "name": "Search Repositories",
+          "fields": [
+            {
+              "name": "q",
+              "type": "string",
+              "optional": false,
+              "default": "topic:integrations"
+            },
+            {
+              "name": "sort",
+              "type": "string",
+              "optional": true,
+              "default": "stars"
+            },
+            {
+              "name": "order",
+              "type": "string",
+              "optional": true,
+              "default": "desc"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.search-issues",
+          "appId": "github",
+          "kind": "action",
+          "name": "Search Issues",
+          "fields": [
+            {
+              "name": "q",
+              "type": "string",
+              "optional": false,
+              "default": "repo:octocat/Hello-World is:issue"
+            },
+            {
+              "name": "sort",
+              "type": "string",
+              "optional": true,
+              "default": "created"
+            },
+            {
+              "name": "order",
+              "type": "string",
+              "optional": true,
+              "default": "desc"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.search-code",
+          "appId": "github",
+          "kind": "action",
+          "name": "Search Code",
+          "fields": [
+            {
+              "name": "q",
+              "type": "string",
+              "optional": false,
+              "default": "addClass in:file language:js repo:octocat/Hello-World"
+            },
+            {
+              "name": "sort",
+              "type": "string",
+              "optional": true,
+              "default": "indexed"
+            },
+            {
+              "name": "order",
+              "type": "string",
+              "optional": true,
+              "default": "desc"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.search-users",
+          "appId": "github",
+          "kind": "action",
+          "name": "Search Users",
+          "fields": [
+            {
+              "name": "q",
+              "type": "string",
+              "optional": false,
+              "default": "octocat in:login"
+            },
+            {
+              "name": "sort",
+              "type": "string",
+              "optional": true,
+              "default": "repositories"
+            },
+            {
+              "name": "order",
+              "type": "string",
+              "optional": true,
+              "default": "desc"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.search-commits",
+          "appId": "github",
+          "kind": "action",
+          "name": "Search Commits",
+          "fields": [
+            {
+              "name": "q",
+              "type": "string",
+              "optional": false,
+              "default": "repo:octocat/Hello-World fix"
+            },
+            {
+              "name": "sort",
+              "type": "string",
+              "optional": true,
+              "default": "author-date"
+            },
+            {
+              "name": "order",
+              "type": "string",
+              "optional": true,
+              "default": "desc"
+            },
+            {
+              "name": "perPage",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "page",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.list-matching-refs",
+          "appId": "github",
+          "kind": "action",
+          "name": "List Matching Refs",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "ref",
+              "type": "string",
+              "optional": false,
+              "default": "heads"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.get-reference",
+          "appId": "github",
+          "kind": "action",
+          "name": "Get Reference",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "ref",
+              "type": "string",
+              "optional": false,
+              "default": "heads/main"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.create-reference",
+          "appId": "github",
+          "kind": "action",
+          "name": "Create Reference",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "ref",
+              "type": "string",
+              "optional": false,
+              "default": "refs/heads/feature"
+            },
+            {
+              "name": "sha",
+              "type": "string",
+              "optional": false,
+              "default": "abc123"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.update-reference",
+          "appId": "github",
+          "kind": "action",
+          "name": "Update Reference",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "ref",
+              "type": "string",
+              "optional": false,
+              "default": "heads/feature"
+            },
+            {
+              "name": "sha",
+              "type": "string",
+              "optional": false,
+              "default": "abc123"
+            },
+            {
+              "name": "force",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.action.delete-reference",
+          "appId": "github",
+          "kind": "action",
+          "name": "Delete Reference",
+          "fields": [
+            {
+              "name": "owner",
+              "type": "string",
+              "optional": false,
+              "default": "octocat"
+            },
+            {
+              "name": "repo",
+              "type": "string",
+              "optional": false,
+              "default": "Hello-World"
+            },
+            {
+              "name": "ref",
+              "type": "string",
+              "optional": false,
+              "default": "heads/feature"
+            }
+          ],
+          "authFieldNames": [
+            "githubToken"
+          ]
+        },
+        {
+          "id": "github.source.issue-comment",
+          "appId": "github",
+          "kind": "source",
+          "name": "Issue Comment",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.pull-request-review",
+          "appId": "github",
+          "kind": "source",
+          "name": "Pull Request Review",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.pull-request-review-comment",
+          "appId": "github",
+          "kind": "source",
+          "name": "Pull Request Review Comment",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.workflow-job",
+          "appId": "github",
+          "kind": "source",
+          "name": "Workflow Job",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.deployment",
+          "appId": "github",
+          "kind": "source",
+          "name": "Deployment",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.deployment-status",
+          "appId": "github",
+          "kind": "source",
+          "name": "Deployment Status",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.check-run",
+          "appId": "github",
+          "kind": "source",
+          "name": "Check Run",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.check-suite",
+          "appId": "github",
+          "kind": "source",
+          "name": "Check Suite",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.create",
+          "appId": "github",
+          "kind": "source",
+          "name": "Create",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.delete",
+          "appId": "github",
+          "kind": "source",
+          "name": "Delete",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.fork",
+          "appId": "github",
+          "kind": "source",
+          "name": "Fork",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.star",
+          "appId": "github",
+          "kind": "source",
+          "name": "Star",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.watch",
+          "appId": "github",
+          "kind": "source",
+          "name": "Watch",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.repository",
+          "appId": "github",
+          "kind": "source",
+          "name": "Repository",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "github.source.member",
+          "appId": "github",
+          "kind": "source",
+          "name": "Member",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "delivery"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
         }
       ]
     },
