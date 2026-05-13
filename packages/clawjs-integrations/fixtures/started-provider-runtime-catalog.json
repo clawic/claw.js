@@ -38806,6 +38806,112 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.list-product-features",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Product Features",
+          "fields": [
+            {
+              "name": "product",
+              "type": "string",
+              "optional": false,
+              "default": "prod_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.attach-product-feature",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Attach Product Feature",
+          "fields": [
+            {
+              "name": "product",
+              "type": "string",
+              "optional": false,
+              "default": "prod_sample"
+            },
+            {
+              "name": "entitlement_feature",
+              "type": "string",
+              "optional": false,
+              "default": "feat_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-product-feature",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Product Feature",
+          "fields": [
+            {
+              "name": "product",
+              "type": "string",
+              "optional": false,
+              "default": "prod_sample"
+            },
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "prodfeat_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.remove-product-feature",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Remove Product Feature",
+          "fields": [
+            {
+              "name": "product",
+              "type": "string",
+              "optional": false,
+              "default": "prod_sample"
+            },
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "prodfeat_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },
