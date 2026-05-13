@@ -6,7 +6,7 @@ import fs from "node:fs";
 import readline from "node:readline/promises";
 import process from "node:process";
 
-const DEFAULT_BASE = process.env.CLAWJS_DRIVE_BASE ?? "http://127.0.0.1:7792";
+const DEFAULT_BASE = process.env.CLAW_DRIVE_BASE ?? "http://127.0.0.1:7792";
 
 export const DRIVE_GROUPS = new Set(["drive"]);
 
@@ -35,7 +35,7 @@ async function fetchJson(p, init = {}) {
   if (init.body !== undefined && !(init.body instanceof FormData) && !(init.body instanceof Buffer)) {
     headers["Content-Type"] = "application/json";
   }
-  if (process.env.CLAWJS_DRIVE_TOKEN) headers["Authorization"] = `Bearer ${process.env.CLAWJS_DRIVE_TOKEN}`;
+  if (process.env.CLAW_DRIVE_TOKEN) headers["Authorization"] = `Bearer ${process.env.CLAW_DRIVE_TOKEN}`;
   const res = await fetch(`${DEFAULT_BASE}${p}`, { ...init, headers });
   let body;
   try { body = await res.json(); } catch { body = null; }
@@ -46,7 +46,7 @@ function fmt(value) { return JSON.stringify(value, null, 2); }
 
 const HELP = `claw drive
 
-  drive login --email <e> --password <p>      get an admin JWT (exports as CLAWJS_DRIVE_TOKEN)
+  drive login --email <e> --password <p>      get an admin JWT (exports as CLAW_DRIVE_TOKEN)
   drive items list [--view <v>] [--parent <id>] [--query <q>]
   drive items show <id>
   drive items move <id> --parent <id>
@@ -89,8 +89,8 @@ const HELP = `claw drive
 
 async function login(args) {
   const { flags } = parseFlags(args);
-  const email = flags.email ?? process.env.CLAWJS_DRIVE_EMAIL ?? "clawix@local";
-  const password = flags.password ?? process.env.CLAWJS_DRIVE_PASSWORD;
+  const email = flags.email ?? process.env.CLAW_DRIVE_EMAIL ?? "clawix@local";
+  const password = flags.password ?? process.env.CLAW_DRIVE_PASSWORD;
   if (!password) {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     const value = await rl.question("password: ");
@@ -106,7 +106,7 @@ async function loginWith(email, password) {
     body: JSON.stringify({ email, password }),
   });
   if (!res.ok) { console.error(fmt(res.body)); return 1; }
-  console.log(`export CLAWJS_DRIVE_TOKEN=${res.body.accessToken}`);
+  console.log(`export CLAW_DRIVE_TOKEN=${res.body.accessToken}`);
   return 0;
 }
 
@@ -219,7 +219,7 @@ async function downloadCmd(args) {
   const id = positional[0];
   const out = flags.out ?? `${id}.bin`;
   const headers = {};
-  if (process.env.CLAWJS_DRIVE_TOKEN) headers["Authorization"] = `Bearer ${process.env.CLAWJS_DRIVE_TOKEN}`;
+  if (process.env.CLAW_DRIVE_TOKEN) headers["Authorization"] = `Bearer ${process.env.CLAW_DRIVE_TOKEN}`;
   const res = await fetch(`${DEFAULT_BASE}/v1/items/${id}/download`, { headers });
   if (!res.ok) { console.error("status", res.status); return 1; }
   const buf = Buffer.from(await res.arrayBuffer());
@@ -251,7 +251,7 @@ async function thumbnailCmd(args) {
   const out = flags.out ?? `${id}-thumb.jpg`;
   const sz = flags.size === "512" ? 512 : 256;
   const headers = {};
-  if (process.env.CLAWJS_DRIVE_TOKEN) headers["Authorization"] = `Bearer ${process.env.CLAWJS_DRIVE_TOKEN}`;
+  if (process.env.CLAW_DRIVE_TOKEN) headers["Authorization"] = `Bearer ${process.env.CLAW_DRIVE_TOKEN}`;
   const res = await fetch(`${DEFAULT_BASE}/v1/items/${id}/thumbnail?size=${sz}`, { headers });
   if (!res.ok) { console.error("status", res.status); return 1; }
   fs.writeFileSync(out, Buffer.from(await res.arrayBuffer()));

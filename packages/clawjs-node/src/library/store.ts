@@ -73,9 +73,9 @@ export interface LibraryResolveInput {
 }
 
 export const SKILL_CONTEXT_CAPSULE_MAX_CHARS = 300;
-export const DEFAULT_CLAWJS_OPERATOR_SKILL_ID = "clawjs-operator";
-export const DEFAULT_CLAWJS_OPERATOR_CAPSULE: SkillContextCapsuleEntry = {
-  assetId: DEFAULT_CLAWJS_OPERATOR_SKILL_ID,
+export const DEFAULT_CLAW_OPERATOR_SKILL_ID = "clawjs-operator";
+export const DEFAULT_CLAW_OPERATOR_CAPSULE: SkillContextCapsuleEntry = {
+  assetId: DEFAULT_CLAW_OPERATOR_SKILL_ID,
   title: "ClawJS Operator",
   capsule: "Use ClawJS as the operating layer: create/update tasks for actionable work; save durable findings as notes; search workspace context before asking; use secrets by reference only.",
   priority: 0,
@@ -556,7 +556,7 @@ export class LocalLibraryStore {
     const warnings: string[] = [];
 
     if (input.includeDefault !== false) {
-      capsules.push(DEFAULT_CLAWJS_OPERATOR_CAPSULE);
+      capsules.push(DEFAULT_CLAW_OPERATOR_CAPSULE);
     }
 
     for (const asset of resolved.assets) {

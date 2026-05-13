@@ -33,7 +33,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
   const config: TelegramSurfaceConfig = { ...baseConfig, ...options.config };
 
   const app = Fastify({
-    logger: { level: process.env.CLAWJS_TELEGRAM_LOG_LEVEL ?? "info" },
+    logger: { level: process.env.CLAW_TELEGRAM_LOG_LEVEL ?? "info" },
   });
 
   await app.register(cors, { origin: true });

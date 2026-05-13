@@ -51,7 +51,7 @@ interface OpenClawTranscriptEvent {
   contextChips?: Array<{ type: string; id: string; label: string; emoji?: string }>;
 }
 
-const CLAWJS_SESSION_PREFIX = "clawjs-";
+const CLAW_SESSION_PREFIX = "clawjs-";
 function summarizeTitle(text: string): string {
   const normalized = text.replace(/\s+/g, " ").trim();
   if (!normalized) return "New chat";
@@ -257,7 +257,7 @@ export function appendSessionMessage(
 }
 
 export function sessionExists(sessionId: string): boolean {
-  if (!sessionId.startsWith(CLAWJS_SESSION_PREFIX) && !sessionId.startsWith("clawjs-")) {
+  if (!sessionId.startsWith(CLAW_SESSION_PREFIX) && !sessionId.startsWith("clawjs-")) {
     return false;
   }
   return getSession(sessionId) !== null;

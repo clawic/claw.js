@@ -91,7 +91,7 @@ export interface CreateAppsStoreOptions {
 export function createAppsStore(options: CreateAppsStoreOptions = {}): AppsStore {
   const dataRoot = defaultDataRoot();
   const rootDir = options.rootDir ?? path.join(dataRoot, "apps");
-  const dbPath = options.dbPath ?? process.env.CLAW_DB_PATH ?? process.env.CLAW_DB_PATH ?? path.join(dataRoot, "core.sqlite");
+  const dbPath = options.dbPath ?? process.env.CLAW_DB_PATH ?? path.join(dataRoot, "core.sqlite");
   ensureDir(rootDir);
   ensureDir(path.dirname(dbPath));
   const sqlite = new Database(dbPath);
@@ -318,7 +318,7 @@ export function defaultRootDir(): string {
 }
 
 function defaultDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
+  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
   return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
 }

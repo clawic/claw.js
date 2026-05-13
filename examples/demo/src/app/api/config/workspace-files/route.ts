@@ -4,10 +4,10 @@ import { getClaw } from "@/lib/claw";
 import { getE2EWorkspaceFiles, isE2EEnabled, updateE2EWorkspaceFile } from "@/lib/e2e";
 import { SOUL_MANAGED_BLOCK_ID, USER_MANAGED_BLOCK_ID } from "@/lib/profile-context";
 
-const SOUL_MANAGED_START = "<!-- OPEN_CLAWJS_SOUL_CONTEXT:START -->";
-const SOUL_MANAGED_END = "<!-- OPEN_CLAWJS_SOUL_CONTEXT:END -->";
-const USER_MANAGED_START = "<!-- OPEN_CLAWJS_USER_CONTEXT:START -->";
-const USER_MANAGED_END = "<!-- OPEN_CLAWJS_USER_CONTEXT:END -->";
+const SOUL_MANAGED_START = "<!-- OPEN_CLAW_SOUL_CONTEXT:START -->";
+const SOUL_MANAGED_END = "<!-- OPEN_CLAW_SOUL_CONTEXT:END -->";
+const USER_MANAGED_START = "<!-- OPEN_CLAW_USER_CONTEXT:START -->";
+const USER_MANAGED_END = "<!-- OPEN_CLAW_USER_CONTEXT:END -->";
 
 /**
  * Extract the managed block from a file's content.

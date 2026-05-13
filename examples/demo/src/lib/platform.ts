@@ -100,7 +100,7 @@ function resolveCommandFreshUnix(cmd: string): Promise<string | null> {
     return Promise.resolve(fromPath);
   }
 
-  if (process.env.CLAWJS_FIND_COMMAND_STRICT_PATH === "1") {
+  if (process.env.CLAW_FIND_COMMAND_STRICT_PATH === "1") {
     return Promise.resolve(null);
   }
 
@@ -115,7 +115,7 @@ function resolveCommandFreshWindows(cmd: string): Promise<string | null> {
         resolve(stdout.trim().split(/\r?\n/)[0]);
         return;
       }
-      if (process.env.CLAWJS_FIND_COMMAND_STRICT_PATH === "1") {
+      if (process.env.CLAW_FIND_COMMAND_STRICT_PATH === "1") {
         resolve(null);
         return;
       }

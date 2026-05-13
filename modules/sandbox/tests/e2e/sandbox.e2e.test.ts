@@ -109,10 +109,10 @@ test("local: env vars are passed through and respected by /usr/bin/env", async (
     const result = await ctx.client.run({
       backend: "local",
       command: "/usr/bin/env",
-      env: { CLAWJS_TEST_FLAG: "marker-1234" },
+      env: { CLAW_TEST_FLAG: "marker-1234" },
     });
     assert.equal(result.status, "completed");
-    assert.match(result.stdout, /CLAWJS_TEST_FLAG=marker-1234/);
+    assert.match(result.stdout, /CLAW_TEST_FLAG=marker-1234/);
   } finally {
     await ctx.close();
   }

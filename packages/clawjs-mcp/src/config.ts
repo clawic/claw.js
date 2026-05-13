@@ -15,7 +15,7 @@ export function loadMCPConfig(overrides: Partial<MCPServiceConfig> = {}): MCPSer
   return {
     host: overrides.host ?? process.env.MCP_HOST ?? "127.0.0.1",
     port: overrides.port ?? Number(process.env.MCP_PORT ?? process.env.PORT ?? "4680"),
-    dbPath: overrides.dbPath ?? process.env.MCP_DB_PATH ?? process.env.CLAW_DB_PATH ?? process.env.CLAW_DB_PATH ?? path.join(dataDir, "core.sqlite"),
+    dbPath: overrides.dbPath ?? process.env.MCP_DB_PATH ?? process.env.CLAW_DB_PATH ?? path.join(dataDir, "core.sqlite"),
     dataDir,
     sharedSecret: overrides.sharedSecret ?? process.env.MCP_SHARED_SECRET ?? "mcp-dev-secret-change-me",
     exposePort: overrides.exposePort ?? Number(process.env.MCP_EXPOSE_PORT ?? "9090"),
@@ -23,7 +23,7 @@ export function loadMCPConfig(overrides: Partial<MCPServiceConfig> = {}): MCPSer
 }
 
 function defaultClawjsDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
+  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
   return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
 }

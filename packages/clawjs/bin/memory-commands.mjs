@@ -3,7 +3,7 @@
 
 import process from "node:process";
 
-const DEFAULT_BASE = process.env.CLAWJS_MEMORY_BASE ?? "http://127.0.0.1:7791";
+const DEFAULT_BASE = process.env.CLAW_MEMORY_BASE ?? "http://127.0.0.1:7791";
 
 function parseFlags(args) {
   const out = { _: [], flags: {} };
@@ -28,7 +28,7 @@ function parseFlags(args) {
 async function fetchJson(pathname, init = {}) {
   const headers = { ...(init.headers ?? {}) };
   if (init.body !== undefined) headers["Content-Type"] = "application/json";
-  const editor = process.env.CLAWJS_MEMORY_EDITOR;
+  const editor = process.env.CLAW_MEMORY_EDITOR;
   if (editor) headers["X-Memory-Editor"] = editor;
   const res = await fetch(`${DEFAULT_BASE}${pathname}`, { ...init, headers });
   let body;
@@ -54,7 +54,7 @@ const HELP = `claw memory
   memory doctor
   memory conclude --content <text>
 
-Env: CLAWJS_MEMORY_BASE (${DEFAULT_BASE}), CLAWJS_MEMORY_EDITOR (user|agent|system)
+Env: CLAW_MEMORY_BASE (${DEFAULT_BASE}), CLAW_MEMORY_EDITOR (user|agent|system)
 `;
 
 async function memoryList(flags) {

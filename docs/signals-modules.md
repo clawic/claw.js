@@ -183,7 +183,7 @@ Per the existing RELEASING.md rules:
 3. `npm run publish:dry-run` from the repo root.
 4. Real publish requires explicit user authorization (see the
    workspace-private `CLAUDE.md` for the approval gate). The user
-   then bumps `clawix/macos/CLAWJS_VERSION` to the new tag.
+   then bumps `clawix/macos/CLAW_VERSION` to the new tag.
 
 ## See also
 

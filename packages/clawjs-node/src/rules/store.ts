@@ -15,7 +15,7 @@ import {
 } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
-import { BUILTIN_CLAWJS_RULE_SCOPES, BUILTIN_CLAWJS_RULES, isBuiltinClawJSRule } from "./builtin.ts";
+import { BUILTIN_CLAW_RULE_SCOPES, BUILTIN_CLAW_RULES, isBuiltinClawJSRule } from "./builtin.ts";
 
 export const RULES_STATE_FILE = "rules.json";
 
@@ -176,8 +176,8 @@ export class LocalRulesStore {
     const local = this.readState();
     return {
       schemaVersion: 1,
-      scopes: mergeById(BUILTIN_CLAWJS_RULE_SCOPES, local.scopes),
-      rules: mergeById(BUILTIN_CLAWJS_RULES, local.rules),
+      scopes: mergeById(BUILTIN_CLAW_RULE_SCOPES, local.scopes),
+      rules: mergeById(BUILTIN_CLAW_RULES, local.rules),
       updatedAt: local.updatedAt,
     };
   }

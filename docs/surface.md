@@ -254,7 +254,7 @@ The docs check script validates that every current export from
     ClawEventBus
     ClawFactory
     ClawInstance
-    CLAWJS_DIR
+    CLAW_DIR
     ClawRuntimeAppServer
     ClawRuntimeAppServerOptions
     ClawRuntimeAuthSource
@@ -395,8 +395,8 @@ The docs check script validates that every current export from
     DataAssetHandle
     DataCollectionHandle
     DataDocumentHandle
-    DEFAULT_CLAWJS_OPERATOR_CAPSULE
-    DEFAULT_CLAWJS_OPERATOR_SKILL_ID
+    DEFAULT_CLAW_OPERATOR_CAPSULE
+    DEFAULT_CLAW_OPERATOR_SKILL_ID
     DEFAULT_DEMO_SCENARIO_ID
     DEFAULT_OPENAI_MODEL
     DEFAULT_RUNTIME_FILE_DESCRIPTORS
@@ -1149,9 +1149,9 @@ The docs check script validates that every current export from
     clawHostRegistryFixtureV1
     clawHostRegistrySchema
     clawHostTransportSchema
-    CLAWJS_CANONICAL_HIERARCHY
-    CLAWJS_CANONICAL_TERMS
-    CLAWJS_NON_SYNONYMS
+    CLAW_CANONICAL_HIERARCHY
+    CLAW_CANONICAL_TERMS
+    CLAW_NON_SYNONYMS
     clawJsonSchemasV1
     ClawjsSkillsConfig
     clawjsSkillsConfigSchema

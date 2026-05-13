@@ -7,7 +7,7 @@ import path from "path";
 import os from "os";
 
 export function resolveDemoDataDir(): string {
-  const configured = process.env.CLAWJS_DEMO_DATA_DIR?.trim();
+  const configured = process.env.CLAW_DEMO_DATA_DIR?.trim();
   if (!configured) {
     return path.join(os.homedir(), ".clawjs-demo", "data");
   }

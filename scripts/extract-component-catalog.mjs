@@ -4,7 +4,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 
 const args = parseArgs(process.argv.slice(2));
-const sourceRoot = path.resolve(args.source ?? process.env.CLAWJS_COMPONENTS_SOURCE_DIR ?? "");
+const sourceRoot = path.resolve(args.source ?? process.env.CLAW_COMPONENTS_SOURCE_DIR ?? "");
 const outPath = args.out ? path.resolve(args.out) : "";
 
 if (!sourceRoot || !fs.existsSync(sourceRoot)) {

@@ -464,13 +464,13 @@ import {
 } from "./content/index.ts";
 
 function defaultClawjsMainDbPath(): string {
-  const explicit = process.env.CLAW_DB_PATH ?? process.env.CLAW_DB_PATH;
+  const explicit = process.env.CLAW_DB_PATH;
   if (explicit) return expandHome(explicit);
   return path.join(defaultClawjsDataRoot(), "core.sqlite");
 }
 
 function defaultClawjsDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
+  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
   return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
 }

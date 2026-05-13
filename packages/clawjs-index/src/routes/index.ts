@@ -19,10 +19,10 @@ export interface ProfileSurfaceDeps {
   enabled: boolean;
 }
 
-export const CLAWJS_PROFILE_FLAG_ENV = "CLAWJS_PROFILE_ENABLED";
+export const CLAW_PROFILE_FLAG_ENV = "CLAW_PROFILE_ENABLED";
 
 export function profileFlagFromEnv(env: NodeJS.ProcessEnv = process.env): boolean {
-  const raw = env[CLAWJS_PROFILE_FLAG_ENV];
+  const raw = env[CLAW_PROFILE_FLAG_ENV];
   if (raw === undefined) return false;
   return raw !== "0" && raw.toLowerCase() !== "false";
 }

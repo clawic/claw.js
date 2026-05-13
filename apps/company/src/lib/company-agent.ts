@@ -53,7 +53,7 @@ import type {
 import { LOCAL_BOARD_USER_ID } from "./company-types";
 
 function shouldUseFakeAgentRuntime(): boolean {
-  return process.env.CLAWJS_COMPANY_FAKE_AGENT_RUNS === "1";
+  return process.env.CLAW_COMPANY_FAKE_AGENT_RUNS === "1";
 }
 
 function nowIso(): string {
@@ -164,7 +164,7 @@ export interface RunIssueResult {
 
 /**
  * Run an issue with its assigned agent. The E2E suite can force a local fake
- * path via `CLAWJS_COMPANY_FAKE_AGENT_RUNS=1` to keep the flow hermetic.
+ * path via `CLAW_COMPANY_FAKE_AGENT_RUNS=1` to keep the flow hermetic.
  */
 export async function runIssue(input: {
   issueId: string;

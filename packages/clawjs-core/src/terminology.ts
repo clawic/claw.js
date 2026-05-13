@@ -1,4 +1,4 @@
-export const CLAWJS_CANONICAL_TERMS = {
+export const CLAW_CANONICAL_TERMS = {
   runtimeAdapter: "runtime adapter",
   workspace: "workspace",
   agent: "agent",
@@ -8,10 +8,10 @@ export const CLAWJS_CANONICAL_TERMS = {
   gateway: "gateway",
 } as const;
 
-export type ClawCanonicalTermKey = keyof typeof CLAWJS_CANONICAL_TERMS;
-export type ClawCanonicalTerm = typeof CLAWJS_CANONICAL_TERMS[ClawCanonicalTermKey];
+export type ClawCanonicalTermKey = keyof typeof CLAW_CANONICAL_TERMS;
+export type ClawCanonicalTerm = typeof CLAW_CANONICAL_TERMS[ClawCanonicalTermKey];
 
-export const CLAWJS_CANONICAL_HIERARCHY = [
+export const CLAW_CANONICAL_HIERARCHY = [
   "runtimeAdapter",
   "workspace",
   "agent",
@@ -21,7 +21,7 @@ export const CLAWJS_CANONICAL_HIERARCHY = [
   "gateway",
 ] as const satisfies readonly ClawCanonicalTermKey[];
 
-export const CLAWJS_NON_SYNONYMS = {
+export const CLAW_NON_SYNONYMS = {
   gateway: ["runtime adapter"],
   workspace: ["agent"],
   provider: ["model"],

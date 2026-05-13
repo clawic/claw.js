@@ -11,8 +11,8 @@
  * Requires the database service running (default: http://127.0.0.1:4510).
  */
 
-const BASE = (process.env.CLAWJS_DATABASE_URL ?? "http://127.0.0.1:4510").replace(/\/$/, "");
-const NS = process.env.CLAWJS_DATABASE_NAMESPACE || "main";
+const BASE = (process.env.CLAW_DATABASE_URL ?? "http://127.0.0.1:4510").replace(/\/$/, "");
+const NS = process.env.CLAW_DATABASE_NAMESPACE || "main";
 const RESET = process.argv.includes("--reset");
 
 let token = null;
@@ -23,8 +23,8 @@ async function login() {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      email: process.env.CLAWJS_DATABASE_ADMIN_EMAIL || "admin@database.local",
-      password: process.env.CLAWJS_DATABASE_ADMIN_PASSWORD || "database-admin",
+      email: process.env.CLAW_DATABASE_ADMIN_EMAIL || "admin@database.local",
+      password: process.env.CLAW_DATABASE_ADMIN_PASSWORD || "database-admin",
     }),
   });
   token = (await res.json()).accessToken;

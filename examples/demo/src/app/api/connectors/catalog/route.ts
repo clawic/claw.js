@@ -14,7 +14,7 @@ import type { IntegrationJson } from "@clawjs/integrations";
 import { NextRequest } from "next/server";
 
 function catalogPath(): string {
-  return process.env.CLAWJS_CONNECTOR_CATALOG_PATH
+  return process.env.CLAW_CONNECTOR_CATALOG_PATH
     || path.join(process.cwd(), ".clawjs", "connector-catalog.json");
 }
 

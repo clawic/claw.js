@@ -26,7 +26,7 @@ import {
 
 export { resolveClawJSWorkspaceDir, resolveClawJSAgentDir, resolveClawJSSessionsDir };
 import {
-  DEFAULT_CLAWJS_OPENCLAW_AGENT_ID,
+  DEFAULT_CLAW_OPENCLAW_AGENT_ID,
   defaultClawJsTranscriptionDbPath,
 } from "./openclaw-defaults.ts";
 import { findCommand, findCommandFresh } from "./platform.ts";
@@ -97,7 +97,7 @@ export function openClawConfigPath(): string {
 }
 
 export function getClawJSOpenClawAgentId(): string {
-  return getClawJSRuntimeIds().agentId || DEFAULT_CLAWJS_OPENCLAW_AGENT_ID;
+  return getClawJSRuntimeIds().agentId || DEFAULT_CLAW_OPENCLAW_AGENT_ID;
 }
 
 function getConfiguredAgent(agentId = getClawJSOpenClawAgentId()): OpenClawAgentConfig | null {

@@ -135,5 +135,5 @@ export function discoverSources(workspace: string): SourceLocation[] {
 }
 
 export function workspaceFromCwd(): string {
-  return process.env.CLAWJS_OPEN_WORKSPACE || process.cwd();
+  return process.env.CLAW_OPEN_WORKSPACE || process.cwd();
 }

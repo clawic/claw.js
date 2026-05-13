@@ -1,12 +1,12 @@
 import type { RuleRecord, RuleScope } from "@clawjs/core";
 
-export const BUILTIN_CLAWJS_RULE_SOURCE = "builtin:clawjs-agent-rules";
-export const BUILTIN_CLAWJS_SCOPE_ID = "clawjs";
+export const BUILTIN_CLAW_RULE_SOURCE = "builtin:clawjs-agent-rules";
+export const BUILTIN_CLAW_SCOPE_ID = "clawjs";
 
 const BUILTIN_TIMESTAMP = "2026-04-27T00:00:00.000Z";
 
-export const BUILTIN_CLAWJS_RULE_SCOPES: RuleScope[] = [{
-  id: BUILTIN_CLAWJS_SCOPE_ID,
+export const BUILTIN_CLAW_RULE_SCOPES: RuleScope[] = [{
+  id: BUILTIN_CLAW_SCOPE_ID,
   kind: "user",
   name: "global",
   aliases: ["ClawJS", "claw", "clawjs", "default"],
@@ -34,7 +34,7 @@ function rule(input: {
     title: input.title,
     kind: "directive",
     status: "active",
-    scopeId: BUILTIN_CLAWJS_SCOPE_ID,
+    scopeId: BUILTIN_CLAW_SCOPE_ID,
     content: input.content,
     aliases: [],
     priority: input.priority ?? 100,
@@ -43,14 +43,14 @@ function rule(input: {
     ...(input.applyWhen ? { applyWhen: input.applyWhen } : {}),
     ...(input.agentIds ? { agentIds: input.agentIds } : {}),
     ...(input.channelIds ? { channelIds: input.channelIds } : {}),
-    source: BUILTIN_CLAWJS_RULE_SOURCE,
+    source: BUILTIN_CLAW_RULE_SOURCE,
     createdAt: BUILTIN_TIMESTAMP,
     updatedAt: BUILTIN_TIMESTAMP,
     approvedAt: BUILTIN_TIMESTAMP,
   };
 }
 
-export const BUILTIN_CLAWJS_RULES: RuleRecord[] = [
+export const BUILTIN_CLAW_RULES: RuleRecord[] = [
   rule({
     id: "clawjs-operating-layer",
     title: "ClawJS operating layer",
@@ -149,5 +149,5 @@ export const BUILTIN_CLAWJS_RULES: RuleRecord[] = [
 ];
 
 export function isBuiltinClawJSRule(rule: Pick<RuleRecord, "source">): boolean {
-  return rule.source === BUILTIN_CLAWJS_RULE_SOURCE;
+  return rule.source === BUILTIN_CLAW_RULE_SOURCE;
 }

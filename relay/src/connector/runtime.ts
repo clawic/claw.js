@@ -503,11 +503,11 @@ export class RelayConnectorRuntime {
             },
           }
         : {}),
-      ...(process.env.CLAWJS_CONTENT_URL
+      ...(process.env.CLAW_CONTENT_URL
         ? {
             content: {
-              baseUrl: process.env.CLAWJS_CONTENT_URL,
-              token: process.env.CLAWJS_CONTENT_TOKEN,
+              baseUrl: process.env.CLAW_CONTENT_URL,
+              token: process.env.CLAW_CONTENT_TOKEN,
             },
           }
         : {}),

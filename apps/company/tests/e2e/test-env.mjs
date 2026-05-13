@@ -54,9 +54,9 @@ const database = start("npx", ["tsx", "../../database/src/bin/server.ts"], {
 await waitFor(`http://127.0.0.1:${databasePort}/v1/health`, "database");
 
 const app = start("npx", ["next", "start", "--port", appPort], {
-  CLAWJS_DATABASE_URL: `http://127.0.0.1:${databasePort}`,
-  CLAWJS_DATABASE_NAMESPACE: "main",
-  CLAWJS_COMPANY_FAKE_AGENT_RUNS: "1",
+  CLAW_DATABASE_URL: `http://127.0.0.1:${databasePort}`,
+  CLAW_DATABASE_NAMESPACE: "main",
+  CLAW_COMPANY_FAKE_AGENT_RUNS: "1",
   CLAW_RULES_DIR: rulesDir,
   NODE_ENV: "production",
 });

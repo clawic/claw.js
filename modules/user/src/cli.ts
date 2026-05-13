@@ -59,7 +59,7 @@ function printHelp(): void {
 
 function workspaceFromFlags(flags: Record<string, string>): string {
   if (flags.workspace) return path.resolve(flags.workspace);
-  if (process.env.CLAWJS_OPEN_WORKSPACE) return process.env.CLAWJS_OPEN_WORKSPACE;
+  if (process.env.CLAW_OPEN_WORKSPACE) return process.env.CLAW_OPEN_WORKSPACE;
   const markers = [".memory", ".clawjs", "infra.sqlite", "AGENTS.md", ".data"];
   let dir = process.cwd();
   for (let i = 0; i < 6; i += 1) {

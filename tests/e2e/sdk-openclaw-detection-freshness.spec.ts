@@ -56,7 +56,7 @@ import fs from "fs";
 import path from "path";
 
 process.env.PATH = ${JSON.stringify(`${preferredNpmDir}:${binDir}:/usr/bin:/bin`)};
-process.env.CLAWJS_FIND_COMMAND_STRICT_PATH = "1";
+process.env.CLAW_FIND_COMMAND_STRICT_PATH = "1";
 process.env.OPENCLAW_STATE_DIR = ${JSON.stringify(stateDir)};
 process.env.OPENCLAW_WORKSPACE_DIR = ${JSON.stringify(workspaceDir)};
 process.env.OPENCLAW_AGENT_DIR = ${JSON.stringify(agentDir)};

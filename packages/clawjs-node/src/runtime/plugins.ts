@@ -98,10 +98,10 @@ export interface OpenClawPluginEnsureResult {
   status: OpenClawPluginBridgeStatus;
 }
 
-const CLAWJS_PLUGIN_ID = "clawjs";
-const CLAWJS_CONTEXT_PLUGIN_ID = "clawjs-context";
-const DEFAULT_CLAWJS_PACKAGE_SPEC = "@clawjs/openclaw-plugin";
-const DEFAULT_CLAWJS_CONTEXT_PACKAGE_SPEC = "@clawjs/openclaw-context-engine";
+const CLAW_PLUGIN_ID = "clawjs";
+const CLAW_CONTEXT_PLUGIN_ID = "clawjs-context";
+const DEFAULT_CLAW_PACKAGE_SPEC = "@clawjs/openclaw-plugin";
+const DEFAULT_CLAW_CONTEXT_PACKAGE_SPEC = "@clawjs/openclaw-context-engine";
 const DEFAULT_PLUGIN_OPTIONS: RuntimeAdapterOptions = { adapter: "openclaw" };
 
 function parseJson<T>(input: string): T {
@@ -162,8 +162,8 @@ export function resolveOpenClawPluginBridgePolicy(
 ): OpenClawPluginBridgePolicy {
   return {
     mode: input?.mode ?? (adapter === "openclaw" ? "managed" : "off"),
-    packageSpec: input?.packageSpec?.trim() || DEFAULT_CLAWJS_PACKAGE_SPEC,
-    contextEnginePackageSpec: input?.contextEnginePackageSpec?.trim() || DEFAULT_CLAWJS_CONTEXT_PACKAGE_SPEC,
+    packageSpec: input?.packageSpec?.trim() || DEFAULT_CLAW_PACKAGE_SPEC,
+    contextEnginePackageSpec: input?.contextEnginePackageSpec?.trim() || DEFAULT_CLAW_CONTEXT_PACKAGE_SPEC,
     installSource: input?.installSource ?? "npm",
     enableContextEngine: input?.enableContextEngine === true,
   };
@@ -306,9 +306,9 @@ export async function getOpenClawPluginBridgeStatus(
       installSource: policy.installSource,
       diagnostics: [`Plugin bridge requires the openclaw adapter, received ${options.adapter}`],
       plugins: [],
-      basePlugin: normalizePluginRecord(undefined, CLAWJS_PLUGIN_ID, policy.packageSpec),
+      basePlugin: normalizePluginRecord(undefined, CLAW_PLUGIN_ID, policy.packageSpec),
       contextPlugin: {
-        ...normalizePluginRecord(undefined, CLAWJS_CONTEXT_PLUGIN_ID, policy.contextEnginePackageSpec),
+        ...normalizePluginRecord(undefined, CLAW_CONTEXT_PLUGIN_ID, policy.contextEnginePackageSpec),
         selected: false,
         selectedEngineId: null,
       },
@@ -317,8 +317,8 @@ export async function getOpenClawPluginBridgeStatus(
 
   try {
     const list = await listOpenClawPlugins(runner, options);
-    const base = list.plugins.find((plugin) => plugin.id === CLAWJS_PLUGIN_ID);
-    const context = list.plugins.find((plugin) => plugin.id === CLAWJS_CONTEXT_PLUGIN_ID);
+    const base = list.plugins.find((plugin) => plugin.id === CLAW_PLUGIN_ID);
+    const context = list.plugins.find((plugin) => plugin.id === CLAW_CONTEXT_PLUGIN_ID);
     const selectedEngineId = readSelectedContextEngine(options);
 
     for (const diagnostic of list.diagnostics) {
@@ -332,10 +332,10 @@ export async function getOpenClawPluginBridgeStatus(
       configPath: options.gateway?.configPath ?? options.configPath,
       diagnostics,
       plugins: list.plugins,
-      basePlugin: normalizePluginRecord(base, CLAWJS_PLUGIN_ID, policy.packageSpec),
+      basePlugin: normalizePluginRecord(base, CLAW_PLUGIN_ID, policy.packageSpec),
       contextPlugin: {
-        ...normalizePluginRecord(context, CLAWJS_CONTEXT_PLUGIN_ID, policy.contextEnginePackageSpec),
-        selected: selectedEngineId === CLAWJS_CONTEXT_PLUGIN_ID,
+        ...normalizePluginRecord(context, CLAW_CONTEXT_PLUGIN_ID, policy.contextEnginePackageSpec),
+        selected: selectedEngineId === CLAW_CONTEXT_PLUGIN_ID,
         selectedEngineId,
       },
     };
@@ -348,9 +348,9 @@ export async function getOpenClawPluginBridgeStatus(
       configPath: options.gateway?.configPath ?? options.configPath,
       diagnostics,
       plugins: [],
-      basePlugin: normalizePluginRecord(undefined, CLAWJS_PLUGIN_ID, policy.packageSpec),
+      basePlugin: normalizePluginRecord(undefined, CLAW_PLUGIN_ID, policy.packageSpec),
       contextPlugin: {
-        ...normalizePluginRecord(undefined, CLAWJS_CONTEXT_PLUGIN_ID, policy.contextEnginePackageSpec),
+        ...normalizePluginRecord(undefined, CLAW_CONTEXT_PLUGIN_ID, policy.contextEnginePackageSpec),
         selected: false,
         selectedEngineId: readSelectedContextEngine(options),
       },
@@ -399,8 +399,8 @@ export async function ensureOpenClawPluginBridge(
   status = await getOpenClawPluginBridgeStatus(runner, options, policy);
 
   if (status.basePlugin.installed && !status.basePlugin.enabled) {
-    await enableOpenClawPlugin(CLAWJS_PLUGIN_ID, runner, options);
-    actions.push(`enable:${CLAWJS_PLUGIN_ID}`);
+    await enableOpenClawPlugin(CLAW_PLUGIN_ID, runner, options);
+    actions.push(`enable:${CLAW_PLUGIN_ID}`);
     changed = true;
   }
 
@@ -416,14 +416,14 @@ export async function ensureOpenClawPluginBridge(
     status = await getOpenClawPluginBridgeStatus(runner, options, policy);
 
     if (status.contextPlugin.installed && !status.contextPlugin.enabled) {
-      await enableOpenClawPlugin(CLAWJS_CONTEXT_PLUGIN_ID, runner, options);
-      actions.push(`enable:${CLAWJS_CONTEXT_PLUGIN_ID}`);
+      await enableOpenClawPlugin(CLAW_CONTEXT_PLUGIN_ID, runner, options);
+      actions.push(`enable:${CLAW_CONTEXT_PLUGIN_ID}`);
       changed = true;
     }
 
-    if (status.contextPlugin.selectedEngineId !== CLAWJS_CONTEXT_PLUGIN_ID) {
-      setSelectedContextEngine(CLAWJS_CONTEXT_PLUGIN_ID, options);
-      actions.push(`select-context:${CLAWJS_CONTEXT_PLUGIN_ID}`);
+    if (status.contextPlugin.selectedEngineId !== CLAW_CONTEXT_PLUGIN_ID) {
+      setSelectedContextEngine(CLAW_CONTEXT_PLUGIN_ID, options);
+      actions.push(`select-context:${CLAW_CONTEXT_PLUGIN_ID}`);
       changed = true;
     }
   }
@@ -480,15 +480,15 @@ export async function enableManagedOpenClawPlugins(
 
   for (const item of resolveTargets(target)) {
     if (item === "clawjs") {
-      await enableOpenClawPlugin(CLAWJS_PLUGIN_ID, runner, options);
-      actions.push(`enable:${CLAWJS_PLUGIN_ID}`);
+      await enableOpenClawPlugin(CLAW_PLUGIN_ID, runner, options);
+      actions.push(`enable:${CLAW_PLUGIN_ID}`);
       changed = true;
     } else {
-      await enableOpenClawPlugin(CLAWJS_CONTEXT_PLUGIN_ID, runner, options);
-      actions.push(`enable:${CLAWJS_CONTEXT_PLUGIN_ID}`);
-      if (readSelectedContextEngine(options) !== CLAWJS_CONTEXT_PLUGIN_ID) {
-        setSelectedContextEngine(CLAWJS_CONTEXT_PLUGIN_ID, options);
-        actions.push(`select-context:${CLAWJS_CONTEXT_PLUGIN_ID}`);
+      await enableOpenClawPlugin(CLAW_CONTEXT_PLUGIN_ID, runner, options);
+      actions.push(`enable:${CLAW_CONTEXT_PLUGIN_ID}`);
+      if (readSelectedContextEngine(options) !== CLAW_CONTEXT_PLUGIN_ID) {
+        setSelectedContextEngine(CLAW_CONTEXT_PLUGIN_ID, options);
+        actions.push(`select-context:${CLAW_CONTEXT_PLUGIN_ID}`);
       }
       changed = true;
     }
@@ -510,12 +510,12 @@ export async function disableManagedOpenClawPlugins(
 
   for (const item of resolveTargets(target)) {
     if (item === "clawjs") {
-      await disableOpenClawPlugin(CLAWJS_PLUGIN_ID, runner, options);
-      actions.push(`disable:${CLAWJS_PLUGIN_ID}`);
+      await disableOpenClawPlugin(CLAW_PLUGIN_ID, runner, options);
+      actions.push(`disable:${CLAW_PLUGIN_ID}`);
     } else {
-      await disableOpenClawPlugin(CLAWJS_CONTEXT_PLUGIN_ID, runner, options);
-      actions.push(`disable:${CLAWJS_CONTEXT_PLUGIN_ID}`);
-      if (readSelectedContextEngine(options) === CLAWJS_CONTEXT_PLUGIN_ID) {
+      await disableOpenClawPlugin(CLAW_CONTEXT_PLUGIN_ID, runner, options);
+      actions.push(`disable:${CLAW_CONTEXT_PLUGIN_ID}`);
+      if (readSelectedContextEngine(options) === CLAW_CONTEXT_PLUGIN_ID) {
         setSelectedContextEngine("legacy", options);
         actions.push("select-context:legacy");
       }
@@ -538,7 +538,7 @@ export async function updateManagedOpenClawPlugins(
   let changed = false;
 
   for (const item of resolveTargets(target)) {
-    const id = item === "clawjs" ? CLAWJS_PLUGIN_ID : CLAWJS_CONTEXT_PLUGIN_ID;
+    const id = item === "clawjs" ? CLAW_PLUGIN_ID : CLAW_CONTEXT_PLUGIN_ID;
     await updateOpenClawPlugin(id, runner, options);
     actions.push(`update:${id}`);
     changed = true;

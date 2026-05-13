@@ -11,11 +11,11 @@ import { NextRequest, NextResponse } from "next/server";
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1"]);
 
 /**
- * Extra allowed origins from CLAWJS_ALLOWED_ORIGINS (comma-separated hostnames
+ * Extra allowed origins from CLAW_ALLOWED_ORIGINS (comma-separated hostnames
  * or full origins, e.g. "demo.clawjs.ai,staging.clawjs.ai").
  */
 function getAllowedHosts(): Set<string> {
-  const extra = process.env.CLAWJS_ALLOWED_ORIGINS?.trim();
+  const extra = process.env.CLAW_ALLOWED_ORIGINS?.trim();
   if (!extra) return LOCAL_HOSTS;
   const hosts = new Set(LOCAL_HOSTS);
   for (const entry of extra.split(",")) {

@@ -66,7 +66,7 @@ function expandHome(value) {
 }
 
 function defaultClawjsDataRoot(flags) {
-  const explicit = flags["data-dir"] ?? process.env.INDEX_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
+  const explicit = flags["data-dir"] ?? process.env.INDEX_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return path.resolve(expandHome(explicit));
   return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
 }
@@ -75,7 +75,7 @@ export async function runOpenIndex(args) {
   const flags = parseFlags(args);
   const port = flags.port ? Number(flags.port) : Number(process.env.INDEX_PORT ?? 7796);
   const host = flags.host ?? flags.bind ?? process.env.INDEX_HOST ?? "127.0.0.1";
-  const workspace = flags.workspace ?? process.env.CLAWJS_WORKSPACE ?? process.cwd();
+  const workspace = flags.workspace ?? process.env.CLAW_WORKSPACE ?? process.cwd();
   const dataDir = defaultClawjsDataRoot(flags);
   const dbPath = flags["db-path"] ?? process.env.INDEX_DB_PATH ?? path.join(dataDir, "search.sqlite");
   const statusFile = flags["status-file"];

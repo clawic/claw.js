@@ -46,7 +46,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const NO_STORE_HEADERS = { "Cache-Control": "no-store, max-age=0" };
-const ENABLE_CHAT_PERF_LOGS = process.env.CLAWJS_DEBUG_CHAT_PERF === "1";
+const ENABLE_CHAT_PERF_LOGS = process.env.CLAW_DEBUG_CHAT_PERF === "1";
 
 function logChatPerf(message: string): void {
   if (ENABLE_CHAT_PERF_LOGS) {

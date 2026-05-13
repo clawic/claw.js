@@ -282,7 +282,7 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
 
   const ephemeralAdminToken = loadEphemeralAdminToken({
     dataDir: config.dataDir,
-    envVarName: "CLAWJS_DRIVE_ADMIN_TOKEN",
+    envVarName: "CLAW_DRIVE_ADMIN_TOKEN",
   });
 
   const app = Fastify({ logger: false });

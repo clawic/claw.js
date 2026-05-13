@@ -7,7 +7,7 @@ import {
   resolveOpenClawContext,
 } from "@clawjs/claw";
 
-import { DEFAULT_CLAWJS_OPENCLAW_AGENT_ID } from "./openclaw-defaults.ts";
+import { DEFAULT_CLAW_OPENCLAW_AGENT_ID } from "./openclaw-defaults.ts";
 
 export interface ClawJSRuntimeIds {
   appId: string;
@@ -15,7 +15,7 @@ export interface ClawJSRuntimeIds {
   agentId: string;
 }
 
-const CLAWJS_RUNTIME_IDS: ClawJSRuntimeIds = {
+const CLAW_RUNTIME_IDS: ClawJSRuntimeIds = {
   appId: "clawjs-demo",
   workspaceId: "clawjs-demo",
   agentId: "clawjs-demo",
@@ -80,7 +80,7 @@ export function readOpenClawConfig(): OpenClawConfig | null {
 
 export function getClawJSRuntimeIds(): ClawJSRuntimeIds {
   const configuredAgentId = readConfiguredEnv("OPENCLAW_AGENT_ID");
-  if (!configuredAgentId) return CLAWJS_RUNTIME_IDS;
+  if (!configuredAgentId) return CLAW_RUNTIME_IDS;
   return {
     appId: "clawjs-demo",
     workspaceId: configuredAgentId,
@@ -154,7 +154,7 @@ export async function getClaw(): Promise<Awaited<ReturnType<typeof createClaw>>>
           baseUrl: readConfiguredEnv("VAULT_BASE_URL") || undefined,
           credential: readConfiguredEnv("VAULT_TOKEN") || undefined,
           tenantId: readConfiguredEnv("VAULT_TENANT_ID") || undefined,
-          sidecarPath: readConfiguredEnv("CLAWJS_VAULT_SIDECAR_PATH") || undefined,
+          sidecarPath: readConfiguredEnv("CLAW_VAULT_SIDECAR_PATH") || undefined,
         }
         : undefined,
     });

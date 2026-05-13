@@ -13,7 +13,7 @@ import {
 
 const args = parseArgs(process.argv.slice(2));
 const rootDir = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
-const catalogPath = path.resolve(args.catalog ?? process.env.CLAWJS_CONNECTOR_CATALOG_PATH ?? "");
+const catalogPath = path.resolve(args.catalog ?? process.env.CLAW_CONNECTOR_CATALOG_PATH ?? "");
 const allowUnsupportedReasons = args["allow-unsupported-runtime"] === true || args["allow-unsupported-runtime"] === "true";
 const executeOffline = args["execute-offline"] === true || args["execute-offline"] === "true";
 

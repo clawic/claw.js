@@ -57,7 +57,7 @@ trap cleanup EXIT
 export CLAW_E2E=1
 export CLAW_E2E_FIXTURE_MODE=hermetic
 export CLAW_E2E_DISABLE_EXTERNAL_CALLS=1
-export CLAWJS_DEMO_DATA_DIR="$MOCK_DATA_DIR"
+export CLAW_DEMO_DATA_DIR="$MOCK_DATA_DIR"
 export OPENCLAW_STATE_DIR="$MOCK_STATE_DIR"
 export OPENCLAW_WORKSPACE_DIR="$MOCK_WORKSPACE_DIR"
 export OPENCLAW_WORKSPACE_DIR="$MOCK_WORKSPACE_DIR"
@@ -65,7 +65,7 @@ export OPENCLAW_AGENT_DIR="$MOCK_AGENT_DIR"
 export OPENCLAW_CONVERSATIONS_DIR="$MOCK_SESSIONS_DIR"
 
 # Config dir override (if the demo reads from a shared config location)
-export CLAWJS_CONFIG_DIR="$MOCK_CONFIG_DIR"
+export CLAW_CONFIG_DIR="$MOCK_CONFIG_DIR"
 
 # Use a separate .next build directory to avoid lock conflicts with the normal demo
 export NEXT_DIST_DIR=".next-mock"

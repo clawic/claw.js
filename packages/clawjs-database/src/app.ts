@@ -188,7 +188,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
 
   const ephemeralAdminToken = loadEphemeralAdminToken({
     dataDir: config.dataDir,
-    envVarName: "CLAWJS_DATABASE_ADMIN_TOKEN",
+    envVarName: "CLAW_DATABASE_ADMIN_TOKEN",
   });
 
   const app = Fastify({ logger: false });

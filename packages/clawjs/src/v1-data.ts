@@ -199,7 +199,7 @@ const SIGNALS_CATALOG_COLLECTION_INDEXES: IndexDefinition[] = [
 ];
 
 export function resolveClawjsDataRoot(env: NodeJS.ProcessEnv = process.env): string {
-  const explicitData = env.CLAW_DATA_DIR || env.CLAWIX_CLAW_DATA_DIR || env.CLAW_DATA_DIR || env.CLAWIX_CLAW_DATA_DIR;
+  const explicitData = env.CLAW_DATA_DIR || env.CLAWIX_CLAW_DATA_DIR;
   if (explicitData) return path.resolve(expandHome(explicitData));
   const home = path.resolve(expandHome(env.CLAW_HOME || path.join(os.homedir(), ".claw")));
   return path.join(home, "data");
@@ -212,7 +212,7 @@ export function resolveClawjsMainDbPath(env: NodeJS.ProcessEnv = process.env): s
 }
 
 export function resolveClawjsFilesDir(env: NodeJS.ProcessEnv = process.env): string {
-  const explicit = env.CLAW_FILES_DIR || env.CLAW_FILES_DIR;
+  const explicit = env.CLAW_FILES_DIR;
   if (explicit) return path.resolve(expandHome(explicit));
   return path.join(resolveClawjsDataRoot(env), "files");
 }

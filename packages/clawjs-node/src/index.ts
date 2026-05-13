@@ -6,9 +6,9 @@ export type {
   RuntimeAdapterSupportLevel,
 } from "@clawjs/core";
 export {
-  CLAWJS_CANONICAL_HIERARCHY,
-  CLAWJS_CANONICAL_TERMS,
-  CLAWJS_NON_SYNONYMS,
+  CLAW_CANONICAL_HIERARCHY,
+  CLAW_CANONICAL_TERMS,
+  CLAW_NON_SYNONYMS,
   createTtsPlaybackPlan,
   segmentTextForTts,
   stripMarkdownForTts,

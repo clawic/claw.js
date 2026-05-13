@@ -22,7 +22,7 @@ export function loadContentConfig(overrides: Partial<ContentServiceConfig> = {})
     host: overrides.host ?? process.env.CONTENT_HOST ?? "127.0.0.1",
     port: overrides.port ?? Number(process.env.CONTENT_PORT ?? "4650"),
     dataDir,
-    dbPath: overrides.dbPath ?? process.env.CONTENT_DB_PATH ?? process.env.CLAW_DB_PATH ?? process.env.CLAW_DB_PATH ?? path.join(dataDir, "core.sqlite"),
+    dbPath: overrides.dbPath ?? process.env.CONTENT_DB_PATH ?? process.env.CLAW_DB_PATH ?? path.join(dataDir, "core.sqlite"),
     jwtSecret: overrides.jwtSecret ?? process.env.CONTENT_JWT_SECRET ?? "content-local-secret",
     corsOrigins: overrides.corsOrigins ?? (process.env.CONTENT_CORS_ORIGINS?.split(",").map((entry) => entry.trim()).filter(Boolean) ?? []),
     adminEmail: overrides.adminEmail ?? process.env.CONTENT_ADMIN_EMAIL ?? "admin@content.local",
@@ -33,7 +33,7 @@ export function loadContentConfig(overrides: Partial<ContentServiceConfig> = {})
 }
 
 function defaultClawjsDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
+  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
   return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
 }

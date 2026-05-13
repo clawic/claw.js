@@ -2,7 +2,7 @@
 // connection records. Mirrors `AgentStore.swift` so both the daemon and
 // the macOS app read/write the same bytes when running side by side.
 //
-// Layout (under `home`, default `~/.clawjs`):
+// Layout (under `home`, default `~/.claw`):
 //
 // ```
 // agents/<id>/
@@ -44,7 +44,7 @@ import {
 } from "./yaml.js";
 
 export interface AgentStoreOptions {
-  /** Override `~/.clawjs/` (used by tests and the daemon test rig). */
+  /** Override `~/.claw/` (used by tests and the daemon test rig). */
   home?: string;
 }
 
@@ -53,7 +53,7 @@ export class AgentStoreFS {
 
   constructor(opts: AgentStoreOptions = {}) {
     this.home =
-      opts.home ?? process.env.CLAWIX_CLAW_HOME ?? join(homedir(), ".clawjs");
+      opts.home ?? process.env.CLAW_HOME ?? process.env.CLAWIX_CLAW_HOME ?? join(homedir(), ".claw");
     this.ensureDirs();
     this.ensureBuiltins();
   }

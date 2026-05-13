@@ -13,7 +13,7 @@ export interface InstallBridgeInput {
   installSystemd?: boolean;
   /**
    * If provided, used verbatim as the systemd unit body. Otherwise a default
-   * unit is rendered (binaryPath, CLAWJS_BRIDGE_PORT, CLAWJS_BRIDGE_HTTP_PORT).
+   * unit is rendered (binaryPath, CLAW_BRIDGE_PORT, CLAW_BRIDGE_HTTP_PORT).
    * Callers that need richer units (extra Environment lines, WorkingDirectory,
    * etc.) should render via `@clawjs/mesh` or the bridge daemon helpers.
    */
@@ -115,8 +115,8 @@ function defaultSystemdUnit(input: DefaultUnitInput): string {
     "",
     "[Service]",
     `ExecStart=${input.binaryPath}`,
-    `Environment=CLAWJS_BRIDGE_PORT=${input.port}`,
-    `Environment=CLAWJS_BRIDGE_HTTP_PORT=${input.httpPort}`,
+    `Environment=CLAW_BRIDGE_PORT=${input.port}`,
+    `Environment=CLAW_BRIDGE_HTTP_PORT=${input.httpPort}`,
     "Restart=on-failure",
     "RestartSec=5",
     "",

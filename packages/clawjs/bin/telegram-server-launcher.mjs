@@ -31,8 +31,8 @@ async function loadBuildTelegramApp() {
     // Source tree: <repo>/packages/clawjs/bin/ → <repo>/telegram/dist/
     path.join(HERE, "../../../telegram/dist/server/app.js"),
     path.join(HERE, "../../../telegram/src/server/app.ts"),
-    // Bundled with dev overlay: <CLAWJS_DEST>/node_modules/@clawjs/cli/bin/
-    // → <CLAWJS_DEST>/telegram/dist/
+    // Bundled with dev overlay: <CLAW_DEST>/node_modules/@clawjs/cli/bin/
+    // → <CLAW_DEST>/telegram/dist/
     path.join(HERE, "../../../../telegram/dist/server/app.js"),
     path.join(HERE, "../../../../telegram/src/server/app.ts"),
   ];
@@ -80,9 +80,9 @@ function writeStatusFile(filePath, payload) {
 export async function runOpenTelegram(args) {
   const flags = parseFlags(args);
 
-  const port = flags.port ? Number(flags.port) : Number(process.env.CLAWJS_TELEGRAM_PORT ?? 22011);
-  const host = flags.host ?? flags.bind ?? process.env.CLAWJS_TELEGRAM_HOST ?? "127.0.0.1";
-  const workspace = flags.workspace ?? process.env.CLAWJS_TELEGRAM_WORKSPACE ?? process.env.CLAWJS_WORKSPACE ?? process.cwd();
+  const port = flags.port ? Number(flags.port) : Number(process.env.CLAW_TELEGRAM_PORT ?? 22011);
+  const host = flags.host ?? flags.bind ?? process.env.CLAW_TELEGRAM_HOST ?? "127.0.0.1";
+  const workspace = flags.workspace ?? process.env.CLAW_TELEGRAM_WORKSPACE ?? process.env.CLAW_WORKSPACE ?? process.cwd();
   const statusFile = flags["status-file"];
 
   // Forward the path to this very CLI as CLAW_BIN so the Telegram

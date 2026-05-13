@@ -55,7 +55,7 @@ export function loadRelayConfig(overrides: Partial<RelayConfig> = {}): RelayConf
     pairingExpiresSec: overrides.pairingExpiresSec ?? Number(process.env.RELAY_PAIRING_EXPIRES_SEC ?? "900"),
     pairingPollIntervalSec: overrides.pairingPollIntervalSec ?? Number(process.env.RELAY_PAIRING_POLL_INTERVAL_SEC ?? "5"),
     publicBaseUrl: overrides.publicBaseUrl ?? publicBaseUrl,
-    iotBaseUrl: overrides.iotBaseUrl ?? process.env.RELAY_IOT_BASE_URL ?? process.env.CLAWJS_IOT_BASE_URL,
+    iotBaseUrl: overrides.iotBaseUrl ?? process.env.RELAY_IOT_BASE_URL ?? process.env.CLAW_IOT_BASE_URL,
   };
 }
 

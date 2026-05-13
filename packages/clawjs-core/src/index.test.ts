@@ -2,9 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  CLAWJS_CANONICAL_HIERARCHY,
-  CLAWJS_CANONICAL_TERMS,
-  CLAWJS_NON_SYNONYMS,
+  CLAW_CANONICAL_HIERARCHY,
+  CLAW_CANONICAL_TERMS,
+  CLAW_NON_SYNONYMS,
   ClawError,
   PRODUCTIVITY_COLLECTION_DEFINITIONS,
   activityEntryRecordSchema,
@@ -852,9 +852,9 @@ test("productivity collection definitions expose the unified local and remote co
 });
 
 test("canonical terminology exports the agreed product vocabulary", () => {
-  assert.equal(CLAWJS_CANONICAL_TERMS.runtimeAdapter, "runtime adapter");
-  assert.equal(CLAWJS_CANONICAL_TERMS.agentProfile, "agent profile");
-  assert.deepEqual(CLAWJS_CANONICAL_HIERARCHY, [
+  assert.equal(CLAW_CANONICAL_TERMS.runtimeAdapter, "runtime adapter");
+  assert.equal(CLAW_CANONICAL_TERMS.agentProfile, "agent profile");
+  assert.deepEqual(CLAW_CANONICAL_HIERARCHY, [
     "runtimeAdapter",
     "workspace",
     "agent",
@@ -863,9 +863,9 @@ test("canonical terminology exports the agreed product vocabulary", () => {
     "model",
     "gateway",
   ]);
-  assert.deepEqual(CLAWJS_NON_SYNONYMS.gateway, ["runtime adapter"]);
-  assert.deepEqual(CLAWJS_NON_SYNONYMS.workspace, ["agent"]);
-  assert.deepEqual(CLAWJS_NON_SYNONYMS.provider, ["model"]);
+  assert.deepEqual(CLAW_NON_SYNONYMS.gateway, ["runtime adapter"]);
+  assert.deepEqual(CLAW_NON_SYNONYMS.workspace, ["agent"]);
+  assert.deepEqual(CLAW_NON_SYNONYMS.provider, ["model"]);
 });
 
 test("tts helpers strip markdown and build a stable playback plan", () => {

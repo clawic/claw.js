@@ -3804,14 +3804,14 @@ test("runCli handles Telegram /new session reset without model latency", () => {
   const script = [
     "import { runCli } from './packages/clawjs/src/index.ts';",
     "const code = await runCli([",
-    "'channels','codex-processor','run','--runtime','demo','--workspace',process.env.CLAWJS_TEST_WORKSPACE,",
-    "'--bridge-state',process.env.CLAWJS_TEST_WORKSPACE + '/.claw/telegram-codex-bridge.json','--reply-policy','all','--json'",
+    "'channels','codex-processor','run','--runtime','demo','--workspace',process.env.CLAW_TEST_WORKSPACE,",
+    "'--bridge-state',process.env.CLAW_TEST_WORKSPACE + '/.claw/telegram-codex-bridge.json','--reply-policy','all','--json'",
     "], { stdout: process.stdout, stderr: process.stderr, cwd: process.cwd() });",
     "process.exit(code);",
   ].join(" ");
   const childEnv: Record<string, string | undefined> = {
     ...process.env,
-    CLAWJS_TEST_WORKSPACE: workspaceRoot,
+    CLAW_TEST_WORKSPACE: workspaceRoot,
     CLAW_DATA_DIR: path.join(workspaceRoot, "claw-data"),
   };
   for (const key of ["CLAWIX_CLAW_DATA_DIR", "CLAW_DB_PATH", "CLAW_DB_PATH", "DATABASE_DB_PATH", "DATABASE_FILES_DIR"]) {

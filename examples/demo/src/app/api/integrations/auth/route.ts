@@ -66,7 +66,7 @@ const PROVIDER_DEFAULT_MODELS: Record<string, string> = {
 const OPENCLAW_CALLBACK_PORT = 1455;
 const NO_STORE_HEADERS = { "Cache-Control": "no-store, max-age=0" };
 let currentAuthPid: number | null = null;
-const OPENCLAW_ENV_PREFIXES = ["OPENCLAW_", "CLAWJS_"] as const;
+const OPENCLAW_ENV_PREFIXES = ["OPENCLAW_", "CLAW_"] as const;
 
 function emptyProvider(provider: string, providerIntents = {}): ProviderAuthInfo {
   return {

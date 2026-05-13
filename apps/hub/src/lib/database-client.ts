@@ -3,10 +3,10 @@
  *
  * Uses the admin login (admin@database.local / database-admin) to mint a JWT
  * which is cached in-process for roughly 11h. Override by setting:
- *   CLAWJS_DATABASE_URL          (default: http://127.0.0.1:4510)
- *   CLAWJS_DATABASE_NAMESPACE    (default: main)
- *   CLAWJS_DATABASE_ADMIN_EMAIL  (default: admin@database.local)
- *   CLAWJS_DATABASE_ADMIN_PASSWORD (default: database-admin)
+ *   CLAW_DATABASE_URL          (default: http://127.0.0.1:4510)
+ *   CLAW_DATABASE_NAMESPACE    (default: main)
+ *   CLAW_DATABASE_ADMIN_EMAIL  (default: admin@database.local)
+ *   CLAW_DATABASE_ADMIN_PASSWORD (default: database-admin)
  */
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:4510";
@@ -32,18 +32,18 @@ let cachedToken: { token: string; expiresAt: number } | null = null;
 let inflightLogin: Promise<string> | null = null;
 
 function baseUrl(): string {
-  return process.env.CLAWJS_DATABASE_URL?.trim() || DEFAULT_BASE_URL;
+  return process.env.CLAW_DATABASE_URL?.trim() || DEFAULT_BASE_URL;
 }
 
 export function databaseNamespace(): string {
-  return process.env.CLAWJS_DATABASE_NAMESPACE?.trim() || DEFAULT_NAMESPACE;
+  return process.env.CLAW_DATABASE_NAMESPACE?.trim() || DEFAULT_NAMESPACE;
 }
 
 async function login(): Promise<string> {
   if (inflightLogin) return inflightLogin;
   inflightLogin = (async () => {
-    const email = process.env.CLAWJS_DATABASE_ADMIN_EMAIL?.trim() || DEFAULT_ADMIN_EMAIL;
-    const password = process.env.CLAWJS_DATABASE_ADMIN_PASSWORD?.trim() || DEFAULT_ADMIN_PASSWORD;
+    const email = process.env.CLAW_DATABASE_ADMIN_EMAIL?.trim() || DEFAULT_ADMIN_EMAIL;
+    const password = process.env.CLAW_DATABASE_ADMIN_PASSWORD?.trim() || DEFAULT_ADMIN_PASSWORD;
     const res = await fetch(`${baseUrl()}/v1/auth/admin/login`, {
       method: "POST",
       headers: { "content-type": "application/json" },

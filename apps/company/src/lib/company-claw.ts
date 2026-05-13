@@ -42,7 +42,7 @@ function envPath(name: string, fallback: string): string {
 
 export function resolveCompanyWorkspaceDir(): string {
   return envPath(
-    "CLAWJS_COMPANY_WORKSPACE_DIR",
+    "CLAW_COMPANY_WORKSPACE_DIR",
     path.join(os.homedir(), ".claw", "apps", "company", "workspace"),
   );
 }
@@ -59,10 +59,10 @@ export function resolveOpenClawConfigPath(): string {
  * Which openclaw agent entry (from `~/.openclaw/openclaw.json`) the Company
  * app borrows at runtime. Defaults to `clawjs-demo` because that agent ships
  * with a usable model config out of the box; override with
- * CLAWJS_COMPANY_OPENCLAW_AGENT_ID to point at a dedicated openclaw agent.
+ * CLAW_COMPANY_OPENCLAW_AGENT_ID to point at a dedicated openclaw agent.
  */
 export function resolveCompanyOpenClawAgentId(): string {
-  return process.env.CLAWJS_COMPANY_OPENCLAW_AGENT_ID?.trim() || "clawjs-demo";
+  return process.env.CLAW_COMPANY_OPENCLAW_AGENT_ID?.trim() || "clawjs-demo";
 }
 
 /**

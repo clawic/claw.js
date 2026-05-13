@@ -48,10 +48,10 @@ test("findCommandFresh respects the current PATH order on unix", async () => {
 test("findCommandFresh can disable fallback probes and use PATH only", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-platform-strict-path-"));
   const previousPath = process.env.PATH;
-  const previousFlag = process.env.CLAWJS_FIND_COMMAND_STRICT_PATH;
+  const previousFlag = process.env.CLAW_FIND_COMMAND_STRICT_PATH;
 
   process.env.PATH = `${tempRoot}:/usr/bin:/bin`;
-  process.env.CLAWJS_FIND_COMMAND_STRICT_PATH = "1";
+  process.env.CLAW_FIND_COMMAND_STRICT_PATH = "1";
 
   try {
     const resolved = await findCommandFresh("openclaw");
@@ -63,9 +63,9 @@ test("findCommandFresh can disable fallback probes and use PATH only", async () 
       process.env.PATH = previousPath;
     }
     if (previousFlag === undefined) {
-      delete process.env.CLAWJS_FIND_COMMAND_STRICT_PATH;
+      delete process.env.CLAW_FIND_COMMAND_STRICT_PATH;
     } else {
-      process.env.CLAWJS_FIND_COMMAND_STRICT_PATH = previousFlag;
+      process.env.CLAW_FIND_COMMAND_STRICT_PATH = previousFlag;
     }
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

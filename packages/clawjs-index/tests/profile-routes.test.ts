@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import Fastify from "fastify";
 
 import {
-  registerProfileSurfaces, profileFlagFromEnv, CLAWJS_PROFILE_FLAG_ENV,
+  registerProfileSurfaces, profileFlagFromEnv, CLAW_PROFILE_FLAG_ENV,
 } from "../src/routes/index.ts";
 import type {
   ProfileDeps, FeedDeps, ChatDeps, MarketplaceDeps,
@@ -99,9 +99,9 @@ function makeStubDeps() {
 }
 
 test("feature flag: profileFlagFromEnv reads the env var", () => {
-  assert.equal(profileFlagFromEnv({ [CLAWJS_PROFILE_FLAG_ENV]: "1" } as never), true);
-  assert.equal(profileFlagFromEnv({ [CLAWJS_PROFILE_FLAG_ENV]: "0" } as never), false);
-  assert.equal(profileFlagFromEnv({ [CLAWJS_PROFILE_FLAG_ENV]: "false" } as never), false);
+  assert.equal(profileFlagFromEnv({ [CLAW_PROFILE_FLAG_ENV]: "1" } as never), true);
+  assert.equal(profileFlagFromEnv({ [CLAW_PROFILE_FLAG_ENV]: "0" } as never), false);
+  assert.equal(profileFlagFromEnv({ [CLAW_PROFILE_FLAG_ENV]: "false" } as never), false);
   assert.equal(profileFlagFromEnv({} as never), false);
 });
 

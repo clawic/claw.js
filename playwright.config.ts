@@ -37,7 +37,7 @@ export default defineConfig({
       CLAW_E2E_FIXTURE_MODE: "hermetic",
       CLAW_E2E_DISABLE_EXTERNAL_CALLS: "1",
       NEXT_DIST_DIR: ".next-e2e",
-      CLAWJS_DEMO_DATA_DIR: path.join(e2eRoot, "demo-data"),
+      CLAW_DEMO_DATA_DIR: path.join(e2eRoot, "demo-data"),
       OPENCLAW_STATE_DIR: path.join(e2eRoot, "openclaw-state"),
       OPENCLAW_WORKSPACE_DIR: path.join(e2eRoot, "workspace"),
       OPENCLAW_AGENT_DIR: path.join(e2eRoot, "agent"),
