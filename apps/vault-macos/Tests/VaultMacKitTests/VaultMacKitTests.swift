@@ -10,7 +10,7 @@ struct VaultMacKitTests {
         transport.enqueue(path: "/v1/auth/login", method: "POST", status: 200, body: """
         {"accessToken":"token-123","tenantId":"demo-tenant","email":"admin@vault.local","role":"tenant_admin"}
         """)
-        let client = VaultClient(baseURL: URL(string: "http://127.0.0.1:4610")!, session: transport.session)
+        let client = VaultClient(baseURL: URL(string: "http://127.0.0.1:24112")!, session: transport.session)
 
         let session = try await client.login(tenantId: "demo-tenant", email: "admin@vault.local", password: "vault-admin")
 
@@ -25,7 +25,7 @@ struct VaultMacKitTests {
         transport.enqueue(path: "/v1/tenants/demo-tenant/secrets", method: "POST", status: 201, body: """
         {"secret":{"secretName":"revenuecat_primary","allowedHosts":[],"allowedHeaderNames":[],"allowInURL":false,"allowInRequestBody":false,"allowLocalNetwork":false,"readOnly":true,"exportable":false,"leaseModes":["process"],"maskedFingerprint":"sha256:demo","version":1,"updatedAt":"2026-04-14T00:00:00.000Z"}}
         """)
-        let client = VaultClient(baseURL: URL(string: "http://127.0.0.1:4610")!, session: transport.session)
+        let client = VaultClient(baseURL: URL(string: "http://127.0.0.1:24112")!, session: transport.session)
         let session = VaultSession(accessToken: "token-123", tenantId: "demo-tenant", email: "admin@vault.local", role: "tenant_admin")
 
         _ = try await client.createSecret(session: session, input: VaultCreateSecretInput(

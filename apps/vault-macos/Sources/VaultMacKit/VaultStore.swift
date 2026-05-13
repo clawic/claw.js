@@ -34,7 +34,7 @@ public final class VaultStore: ObservableObject {
     public var clientFactory: (URL) -> VaultClient
 
     public init(
-        baseURLString: String = ProcessInfo.processInfo.environment["VAULT_APP_BASE_URL"] ?? "http://127.0.0.1:4610",
+        baseURLString: String = ProcessInfo.processInfo.environment["VAULT_APP_BASE_URL"] ?? "http://127.0.0.1:24112",
         tenantId: String = "demo-tenant",
         email: String = "admin@vault.local",
         password: String = "vault-admin",

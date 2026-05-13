@@ -10,7 +10,7 @@ interface NotifyServerConfig {
 
 function getConfig(): NotifyServerConfig {
   return {
-    baseUrl: (process.env.NOTIFY_BASE_URL ?? "http://127.0.0.1:4610").replace(/\/$/, ""),
+    baseUrl: (process.env.NOTIFY_BASE_URL ?? "http://127.0.0.1:24112").replace(/\/$/, ""),
     adminEmail: process.env.NOTIFY_ADMIN_EMAIL ?? "admin@notify.local",
     adminPassword: process.env.NOTIFY_ADMIN_PASSWORD ?? "notify-admin",
     tenantId: process.env.NOTIFY_TENANT_ID ?? "demo-tenant",
