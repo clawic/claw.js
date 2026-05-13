@@ -24,6 +24,10 @@ import {
   isStripeActionOperationSupported,
 } from "./stripe-operation-executor.ts";
 import {
+  buildNotionOperationRequest,
+  isNotionActionOperationSupported,
+} from "./notion-operation-executor.ts";
+import {
   buildDiscordOperationRequest,
   isDiscordActionOperationSupported,
 } from "./discord-operation-executor.ts";
@@ -428,6 +432,63 @@ const STRIPE_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
   },
 ];
 
+const NOTION_ACTION_EVIDENCE = [
+  "packages/clawjs-integrations/src/notion-operation-executor.test.ts",
+];
+
+const NOTION_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
+  {
+    kind: "request",
+    operationId: "notion.action.search",
+    path: "packages/clawjs-integrations/fixtures/notion-search-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "notion.action.search",
+    path: "packages/clawjs-integrations/fixtures/notion-search-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "notion.action.get-page",
+    path: "packages/clawjs-integrations/fixtures/notion-get-page-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "notion.action.get-page",
+    path: "packages/clawjs-integrations/fixtures/notion-get-page-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "notion.action.create-page",
+    path: "packages/clawjs-integrations/fixtures/notion-create-page-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "notion.action.create-page",
+    path: "packages/clawjs-integrations/fixtures/notion-create-page-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "notion.action.update-page",
+    path: "packages/clawjs-integrations/fixtures/notion-update-page-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "notion.action.update-page",
+    path: "packages/clawjs-integrations/fixtures/notion-update-page-response.json",
+  },
+  {
+    kind: "request",
+    operationId: "notion.action.query-data-source",
+    path: "packages/clawjs-integrations/fixtures/notion-query-data-source-request.json",
+  },
+  {
+    kind: "response",
+    operationId: "notion.action.query-data-source",
+    path: "packages/clawjs-integrations/fixtures/notion-query-data-source-response.json",
+  },
+];
+
 const WHATSAPP_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/whatsapp-operation-executor.test.ts",
 ];
@@ -527,6 +588,20 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     supports: (operation) => isStripeActionOperationSupported(operation.id),
     buildPlan: (operation, values) => ({
       requestPlan: buildStripeOperationRequest(operation, values),
+    }),
+  },
+  {
+    appId: "notion",
+    kind: "action",
+    executorId: "notion.core-api.http",
+    baseUrl: "https://api.notion.com/v1/",
+    offlineValidated: true,
+    evidence: NOTION_ACTION_EVIDENCE,
+    fixtures: NOTION_ACTION_FIXTURES,
+    planKinds: ["request"],
+    supports: (operation) => isNotionActionOperationSupported(operation.id),
+    buildPlan: (operation, values) => ({
+      requestPlan: buildNotionOperationRequest(operation, values),
     }),
   },
   {

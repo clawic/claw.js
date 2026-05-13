@@ -3,6 +3,10 @@ import { describe, it } from "node:test";
 
 import { normalizeConnectorCatalog } from "./catalog.ts";
 import {
+  verifyConnectorRuntimeCoverage,
+  verifyConnectorRuntimeOfflineExecutions,
+} from "./runtime-coverage.ts";
+import {
   buildNotionOperationRequest,
 } from "./notion-operation-executor.ts";
 
@@ -184,6 +188,21 @@ describe("notion operation runtime", () => {
         requiredPaths: ["object", "results"],
       },
     });
+  });
+
+  it("covers Notion page operations with operation-scoped offline fixtures", async () => {
+    const coverage = verifyConnectorRuntimeCoverage(NOTION_CATALOG);
+    assert.equal(coverage.summary.missing, 0);
+    assert.equal(coverage.summary.implemented, 5);
+
+    const offline = await verifyConnectorRuntimeOfflineExecutions(NOTION_CATALOG);
+    assert.deepEqual(offline.results.map((result) => result.operationId).sort(), [
+      "notion.action.create-page",
+      "notion.action.get-page",
+      "notion.action.query-data-source",
+      "notion.action.search",
+      "notion.action.update-page",
+    ]);
   });
 });
 
