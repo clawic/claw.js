@@ -1,0 +1,12 @@
+{
+  "doing_deep_historical_index": false,
+  "total_results": 1,
+  "messages": [
+    [
+      {
+        "id": "search-guild-messages-sample",
+        "channel_id": "sample"
+      }
+    ]
+  ]
+}

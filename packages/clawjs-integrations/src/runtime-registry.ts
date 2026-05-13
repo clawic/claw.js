@@ -468,6 +468,7 @@ const DISCORD_ACTION_FIXTURE_NAMES = [
   "group-dm-add-recipient",
   "group-dm-remove-recipient",
   "list-messages",
+  "search-guild-messages",
   "get-message",
   "send-message",
   "edit-message",
