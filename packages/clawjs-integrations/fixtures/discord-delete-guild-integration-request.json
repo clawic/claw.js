@@ -1,0 +1,9 @@
+{
+  "method": "DELETE",
+  "url": "https://discord.com/api/v10/guilds/sample/integrations/sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "x-audit-log-reason": "sample"
+  }
+}
