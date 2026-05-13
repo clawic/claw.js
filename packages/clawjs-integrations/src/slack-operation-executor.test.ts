@@ -8,6 +8,7 @@ import {
 } from "./runtime-coverage.ts";
 import {
   buildSlackOperationRequest,
+  SLACK_EXTRA_ACTION_SPECS,
 } from "./slack-operation-executor.ts";
 
 const SLACK_ACTIONS = [
@@ -167,6 +168,7 @@ const SLACK_ACTIONS = [
     { name: "view", type: "object", optional: false, default: { type: "modal", title: { type: "plain_text", text: "Sample" }, blocks: [], close: { type: "plain_text", text: "Close" } } },
   ]),
   action("slack.action.test-auth", "Test Auth", []),
+  ...SLACK_EXTRA_ACTION_SPECS.map((spec) => action(`slack.action.${spec.slug}`, titleize(spec.slug), spec.fields)),
 ];
 
 const SLACK_CATALOG = normalizeConnectorCatalog({
@@ -192,6 +194,9 @@ describe("slack operation runtime", () => {
     const history = operation("slack.action.conversation-history");
     const update = operation("slack.action.update-message");
     const view = operation("slack.action.open-view");
+    const permalink = operation("slack.action.get-message-permalink");
+    const bookmark = operation("slack.action.add-bookmark");
+    const remoteFile = operation("slack.action.add-remote-file");
 
     assert.deepEqual(buildSlackOperationRequest(send, {
       channelId: "C123",
@@ -312,6 +317,73 @@ describe("slack operation runtime", () => {
         requiredPaths: ["ok", "view"],
       },
     });
+
+    assert.deepEqual(buildSlackOperationRequest(permalink, {
+      channelId: "C123",
+      messageTs: "1710000000.000000",
+    }), {
+      method: "GET",
+      endpoint: "chat.getPermalink",
+      auth: [{ type: "secret", field: "slackBotToken", placement: "bearer" }],
+      headers: { accept: "application/json" },
+      query: {
+        channel: "C123",
+        message_ts: "1710000000.000000",
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["ok", "permalink"],
+      },
+    });
+
+    assert.deepEqual(buildSlackOperationRequest(bookmark, {
+      channelId: "C123",
+      title: "Sample bookmark",
+      type: "link",
+      link: "https://example.invalid",
+      emoji: ":bookmark:",
+    }), {
+      method: "POST",
+      endpoint: "bookmarks.add",
+      auth: [{ type: "secret", field: "slackBotToken", placement: "bearer" }],
+      headers: { accept: "application/json" },
+      body: {
+        channel_id: "C123",
+        title: "Sample bookmark",
+        type: "link",
+        link: "https://example.invalid",
+        emoji: ":bookmark:",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["ok", "bookmark"],
+      },
+    });
+
+    assert.deepEqual(buildSlackOperationRequest(remoteFile, {
+      externalId: "external-123",
+      externalUrl: "https://example.invalid/file",
+      title: "Sample file",
+      filetype: "text",
+      indexableFileContents: "sample",
+    }), {
+      method: "POST",
+      endpoint: "files.remote.add",
+      auth: [{ type: "secret", field: "slackBotToken", placement: "bearer" }],
+      headers: { accept: "application/json" },
+      body: {
+        external_id: "external-123",
+        external_url: "https://example.invalid/file",
+        title: "Sample file",
+        filetype: "text",
+        indexable_file_contents: "sample",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["ok", "file"],
+      },
+    });
   });
 
   it("covers Slack operations with operation-scoped offline fixtures", async () => {
@@ -339,6 +411,7 @@ function action(id: string, name: string, fields: Array<{
   optional: boolean;
   default?: unknown;
   min?: number;
+  max?: number;
 }>) {
   return {
     id,
@@ -348,6 +421,10 @@ function action(id: string, name: string, fields: Array<{
     fields,
     authFieldNames: ["slackBotToken"],
   };
+}
+
+function titleize(slug: string): string {
+  return slug.split("-").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
 }
 
 function reactionFields() {
