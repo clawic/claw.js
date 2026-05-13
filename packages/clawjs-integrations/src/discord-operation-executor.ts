@@ -188,6 +188,7 @@ export type DiscordRuntimeOperation =
   | "get-global-application-command"
   | "update-global-application-command"
   | "delete-global-application-command"
+  | "bulk-overwrite-global-application-commands"
   | "list-application-emojis"
   | "get-application-emoji"
   | "create-application-emoji"
@@ -197,7 +198,11 @@ export type DiscordRuntimeOperation =
   | "create-guild-application-command"
   | "get-guild-application-command"
   | "update-guild-application-command"
-  | "delete-guild-application-command";
+  | "delete-guild-application-command"
+  | "bulk-overwrite-guild-application-commands"
+  | "get-guild-application-command-permissions"
+  | "get-application-command-permissions"
+  | "edit-application-command-permissions";
 
 export function isDiscordActionOperationSupported(operationId: string): boolean {
   return discordRuntimeOperation(operationId) !== null;
@@ -692,6 +697,16 @@ export function buildDiscordOperationRequest(
       return bodyPlan("PATCH", `applications/${applicationId(values)}/commands/${commandId(values)}`, auth, headers, applicationCommandBody(values), { type: "object", requiredPaths: ["id", "name"] });
     case "delete-global-application-command":
       return deletePlan(`applications/${applicationId(values)}/commands/${commandId(values)}`, auth, headers, { type: "object" });
+    case "bulk-overwrite-global-application-commands":
+      return {
+        method: "PUT",
+        endpoint: `applications/${applicationId(values)}/commands`,
+        auth,
+        headers,
+        body: {},
+        bodyValue: requiredJsonArray(values.commands, "commands"),
+        responseSchema: { type: "array" },
+      };
     case "list-application-emojis":
       return getPlan(`applications/${applicationId(values)}/emojis`, auth, headers, { type: "object", requiredPaths: ["items"] });
     case "get-application-emoji":
@@ -712,6 +727,22 @@ export function buildDiscordOperationRequest(
       return bodyPlan("PATCH", `applications/${applicationId(values)}/guilds/${guildId(values)}/commands/${commandId(values)}`, auth, headers, applicationCommandBody(values), { type: "object", requiredPaths: ["id", "name"] });
     case "delete-guild-application-command":
       return deletePlan(`applications/${applicationId(values)}/guilds/${guildId(values)}/commands/${commandId(values)}`, auth, headers, { type: "object" });
+    case "bulk-overwrite-guild-application-commands":
+      return {
+        method: "PUT",
+        endpoint: `applications/${applicationId(values)}/guilds/${guildId(values)}/commands`,
+        auth,
+        headers,
+        body: {},
+        bodyValue: requiredJsonArray(values.commands, "commands"),
+        responseSchema: { type: "array" },
+      };
+    case "get-guild-application-command-permissions":
+      return getPlan(`applications/${applicationId(values)}/guilds/${guildId(values)}/commands/permissions`, bearerAuth, headers, { type: "array" });
+    case "get-application-command-permissions":
+      return getPlan(`applications/${applicationId(values)}/guilds/${guildId(values)}/commands/${commandId(values)}/permissions`, bearerAuth, headers, { type: "object", requiredPaths: ["id", "application_id", "guild_id", "permissions"] });
+    case "edit-application-command-permissions":
+      return bodyPlan("PUT", `applications/${applicationId(values)}/guilds/${guildId(values)}/commands/${commandId(values)}/permissions`, bearerAuth, headers, commandPermissionsBody(values), { type: "object", requiredPaths: ["id", "application_id", "guild_id", "permissions"] });
   }
 }
 
@@ -906,6 +937,7 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "get-global-application-command",
   "update-global-application-command",
   "delete-global-application-command",
+  "bulk-overwrite-global-application-commands",
   "list-application-emojis",
   "get-application-emoji",
   "create-application-emoji",
@@ -916,6 +948,10 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "get-guild-application-command",
   "update-guild-application-command",
   "delete-guild-application-command",
+  "bulk-overwrite-guild-application-commands",
+  "get-guild-application-command-permissions",
+  "get-application-command-permissions",
+  "edit-application-command-permissions",
 ]);
 
 type ResponseSchema = NonNullable<ConnectorRuntimeRequestPlan["responseSchema"]>;
@@ -1339,6 +1375,12 @@ function applicationCommandBody(values: Record<string, IntegrationJson>): Record
     integration_types: optionalJsonArray(values.integrationTypes),
     contexts: optionalJsonArray(values.contexts),
   });
+}
+
+function commandPermissionsBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return {
+    permissions: requiredJsonArray(values.permissions, "permissions"),
+  };
 }
 
 function currentApplicationBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
