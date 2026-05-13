@@ -245,7 +245,7 @@ Example connector service config:
 ```json
 {
   "storage": "http://127.0.0.1:47632",
-  "database": "http://127.0.0.1:4510"
+  "database": "http://127.0.0.1:24102"
 }
 ```
 

@@ -24,7 +24,7 @@ export interface SharingActor {
 export interface ServiceConfig {
   /** Absolute path to the cloudflared binary (bundled in the macOS .app helpers). */
   cloudflaredPath?: string;
-  /** Hostname of the local Drive endpoint, e.g. "127.0.0.1:7792". */
+  /** Hostname of the local Drive endpoint, e.g. "127.0.0.1:24104". */
   localOrigin: string;
   /** Optional override of the bridge daemon path that registers MagicDNS. */
   bridgeDaemonPath?: string;
@@ -36,7 +36,7 @@ export class DriveSharingService {
   constructor(
     private readonly store: DriveStore,
     private readonly bus: DriveEventBus,
-    private readonly config: ServiceConfig = { localOrigin: "127.0.0.1:7792" },
+    private readonly config: ServiceConfig = { localOrigin: "127.0.0.1:24104" },
   ) {}
 
   shutdown(): void {

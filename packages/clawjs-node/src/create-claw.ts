@@ -1793,9 +1793,9 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
     ...(runtimeEnv ?? {}),
     ...(options.secrets?.env ?? {}),
     ...(options.secrets?.backend ? { CLAW_SECRETS_BACKEND: options.secrets.backend } : {}),
-    ...(options.secrets?.baseUrl ? { SECRETS_BASE_URL: options.secrets.baseUrl } : {}),
-    ...(options.secrets?.credential ? { SECRETS_TOKEN: options.secrets.credential } : {}),
-    ...(options.secrets?.tenantId ? { SECRETS_TENANT_ID: options.secrets.tenantId } : {}),
+    ...(options.secrets?.baseUrl ? { CLAW_SECRETS_BASE_URL: options.secrets.baseUrl } : {}),
+    ...(options.secrets?.credential ? { CLAW_SECRETS_TOKEN: options.secrets.credential } : {}),
+    ...(options.secrets?.tenantId ? { CLAW_SECRETS_TENANT_ID: options.secrets.tenantId } : {}),
     ...(options.secrets?.sidecarPath ? { CLAW_SECRETS_SIDECAR_PATH: options.secrets.sidecarPath } : {}),
   };
   const processHost = adapter.id === "openclaw"

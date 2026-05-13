@@ -38,9 +38,9 @@ export async function runOpenMemory(args) {
     }
   }
 
-  if (flags.port) process.env.MEMORY_PORT = flags.port;
-  if (flags.host) process.env.MEMORY_HOST = flags.host;
-  if (flags.workspace) process.env.MEMORY_WORKSPACE = flags.workspace;
+  if (flags.port) process.env.CLAW_MEMORY_PORT = flags.port;
+  if (flags.host) process.env.CLAW_MEMORY_HOST = flags.host;
+  if (flags.workspace) process.env.CLAW_MEMORY_WORKSPACE = flags.workspace;
 
   const entry = findServerEntry();
   if (!entry) {

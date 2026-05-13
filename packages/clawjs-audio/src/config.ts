@@ -11,14 +11,14 @@ export interface AudioServiceConfig {
 }
 
 export function loadAudioConfig(overrides: Partial<AudioServiceConfig> = {}): AudioServiceConfig {
-  const dataDir = overrides.dataDir ?? process.env.AUDIO_DATA_DIR ?? defaultClawjsDataRoot();
+  const dataDir = overrides.dataDir ?? process.env.CLAW_AUDIO_DATA_DIR ?? defaultClawjsDataRoot();
   return {
-    host: overrides.host ?? process.env.AUDIO_HOST ?? "127.0.0.1",
-    port: overrides.port ?? Number(process.env.AUDIO_PORT ?? process.env.PORT ?? "4630"),
-    dbPath: overrides.dbPath ?? process.env.AUDIO_DB_PATH ?? path.join(dataDir, "audio.sqlite"),
+    host: overrides.host ?? process.env.CLAW_AUDIO_HOST ?? "127.0.0.1",
+    port: overrides.port ?? Number(process.env.CLAW_AUDIO_PORT ?? process.env.PORT ?? "24151"),
+    dbPath: overrides.dbPath ?? process.env.CLAW_AUDIO_DB_PATH ?? path.join(dataDir, "audio.sqlite"),
     dataDir,
-    blobsDir: overrides.blobsDir ?? process.env.AUDIO_BLOBS_DIR ?? path.join(dataDir, "blobs"),
-    sharedSecret: overrides.sharedSecret ?? process.env.AUDIO_SHARED_SECRET ?? "audio-dev-secret-change-me",
+    blobsDir: overrides.blobsDir ?? process.env.CLAW_AUDIO_BLOBS_DIR ?? path.join(dataDir, "blobs"),
+    sharedSecret: overrides.sharedSecret ?? process.env.CLAW_AUDIO_SHARED_SECRET ?? "audio-dev-secret-change-me",
   };
 }
 

@@ -29,7 +29,7 @@ function expandHome(value) {
 }
 
 function defaultClawjsDataRoot(flags) {
-  const explicit = flags["data-dir"] ?? process.env.DRIVE_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
+  const explicit = flags["data-dir"] ?? process.env.CLAW_DRIVE_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return path.resolve(expandHome(explicit));
   return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
 }
@@ -50,15 +50,15 @@ export async function runOpenDrive(args) {
     }
   }
 
-  if (flags.port) process.env.DRIVE_PORT = flags.port;
-  if (flags.host) process.env.DRIVE_HOST = flags.host;
+  if (flags.port) process.env.CLAW_DRIVE_PORT = flags.port;
+  if (flags.host) process.env.CLAW_DRIVE_HOST = flags.host;
   const dataDir = defaultClawjsDataRoot(flags);
-  process.env.DRIVE_DATA_DIR = dataDir;
-  process.env.DRIVE_DB_PATH = flags["db-path"] ?? process.env.DRIVE_DB_PATH ?? path.join(dataDir, "drive.sqlite");
-  if (flags["status-file"]) process.env.DRIVE_STATUS_FILE = flags["status-file"];
-  if (flags["ocr-sidecar"]) process.env.DRIVE_OCR_SIDECAR = flags["ocr-sidecar"];
-  if (flags["embed-sidecar"]) process.env.DRIVE_EMBED_SIDECAR = flags["embed-sidecar"];
-  if (flags["cloudflared"]) process.env.DRIVE_CLOUDFLARED = flags["cloudflared"];
+  process.env.CLAW_DRIVE_DATA_DIR = dataDir;
+  process.env.CLAW_DRIVE_DB_PATH = flags["db-path"] ?? process.env.CLAW_DRIVE_DB_PATH ?? path.join(dataDir, "drive.sqlite");
+  if (flags["status-file"]) process.env.CLAW_DRIVE_STATUS_FILE = flags["status-file"];
+  if (flags["ocr-sidecar"]) process.env.CLAW_DRIVE_OCR_SIDECAR = flags["ocr-sidecar"];
+  if (flags["embed-sidecar"]) process.env.CLAW_DRIVE_EMBED_SIDECAR = flags["embed-sidecar"];
+  if (flags["cloudflared"]) process.env.CLAW_DRIVE_CLOUDFLARED = flags["cloudflared"];
 
   const entry = findServerEntry();
   if (!entry) {
@@ -88,7 +88,7 @@ export async function runOpenDrive(args) {
     overrides.config = {
       ...(overrides.config ?? {}),
       dataDir,
-      dbPath: process.env.DRIVE_DB_PATH,
+      dbPath: process.env.CLAW_DRIVE_DB_PATH,
     };
     if (flags["status-file"]) overrides.statusFile = flags["status-file"];
     if (flags["ocr-sidecar"]) overrides.ocrSidecarPath = flags["ocr-sidecar"];

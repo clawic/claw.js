@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-const BACKEND = process.env.SECRETS_BACKEND ?? "http://127.0.0.1:4610";
+const BACKEND = process.env.CLAW_SECRETS_BACKEND ?? "http://127.0.0.1:24103";
 
 export default defineConfig({
   base: "/static/",

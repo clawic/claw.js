@@ -34,18 +34,18 @@ export async function startDriveServer(options: StartDriveServerOptions = {}) {
 // the launcher mjs sets and start the server.
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith("server.ts") || process.argv[1]?.endsWith("server.js")) {
   const overrides: BuildDriveAppOptions & { config?: Partial<DriveServiceConfig> } = {
-    ocrSidecarPath: process.env.DRIVE_OCR_SIDECAR,
-    embedSidecarPath: process.env.DRIVE_EMBED_SIDECAR,
-    cloudflaredPath: process.env.DRIVE_CLOUDFLARED,
+    ocrSidecarPath: process.env.CLAW_DRIVE_OCR_SIDECAR,
+    embedSidecarPath: process.env.CLAW_DRIVE_EMBED_SIDECAR,
+    cloudflaredPath: process.env.CLAW_DRIVE_CLOUDFLARED,
   };
   const cfg: Partial<DriveServiceConfig> = {};
-  if (process.env.DRIVE_PORT) cfg.port = Number(process.env.DRIVE_PORT);
-  if (process.env.DRIVE_HOST) cfg.host = process.env.DRIVE_HOST;
-  if (process.env.DRIVE_DATA_DIR) cfg.dataDir = process.env.DRIVE_DATA_DIR;
-  if (process.env.DRIVE_DB_PATH) cfg.dbPath = process.env.DRIVE_DB_PATH;
+  if (process.env.CLAW_DRIVE_PORT) cfg.port = Number(process.env.CLAW_DRIVE_PORT);
+  if (process.env.CLAW_DRIVE_HOST) cfg.host = process.env.CLAW_DRIVE_HOST;
+  if (process.env.CLAW_DRIVE_DATA_DIR) cfg.dataDir = process.env.CLAW_DRIVE_DATA_DIR;
+  if (process.env.CLAW_DRIVE_DB_PATH) cfg.dbPath = process.env.CLAW_DRIVE_DB_PATH;
   if (Object.keys(cfg).length > 0) overrides.config = cfg;
 
-  const statusFile = process.env.DRIVE_STATUS_FILE;
+  const statusFile = process.env.CLAW_DRIVE_STATUS_FILE;
   const { config } = await startDriveServer({ ...overrides, statusFile });
   process.stdout.write(`drive listening on http://${config.host}:${config.port}\n`);
 }

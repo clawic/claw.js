@@ -75,7 +75,7 @@ function expandHome(value) {
 }
 
 function defaultClawjsDataRoot(flags) {
-  const explicit = flags["data-dir"] ?? process.env.AUDIO_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
+  const explicit = flags["data-dir"] ?? process.env.CLAW_AUDIO_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return path.resolve(expandHome(explicit));
   return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
 }
@@ -83,14 +83,14 @@ function defaultClawjsDataRoot(flags) {
 export async function runOpenAudio(args) {
   const flags = parseFlags(args);
 
-  const port = flags.port ? Number(flags.port) : Number(process.env.AUDIO_PORT ?? 7794);
-  const host = flags.host ?? flags.bind ?? process.env.AUDIO_HOST ?? "127.0.0.1";
+  const port = flags.port ? Number(flags.port) : Number(process.env.CLAW_AUDIO_PORT ?? 24151);
+  const host = flags.host ?? flags.bind ?? process.env.CLAW_AUDIO_HOST ?? "127.0.0.1";
   const workspace = flags.workspace ?? process.env.CLAW_WORKSPACE ?? process.cwd();
   const dataDir = defaultClawjsDataRoot(flags);
-  const blobsDir = flags["blobs-dir"] ?? process.env.AUDIO_BLOBS_DIR ?? path.join(dataDir, "audio");
-  const dbPath = flags["db-path"] ?? process.env.AUDIO_DB_PATH ?? path.join(dataDir, "audio.sqlite");
+  const blobsDir = flags["blobs-dir"] ?? process.env.CLAW_AUDIO_BLOBS_DIR ?? path.join(dataDir, "audio");
+  const dbPath = flags["db-path"] ?? process.env.CLAW_AUDIO_DB_PATH ?? path.join(dataDir, "audio.sqlite");
   const statusFile = flags["status-file"];
-  const sharedSecret = flags.secret ?? process.env.AUDIO_SHARED_SECRET;
+  const sharedSecret = flags.secret ?? process.env.CLAW_AUDIO_SHARED_SECRET;
 
   const buildAudioApp = await loadBuildAudioApp();
   if (!buildAudioApp) {

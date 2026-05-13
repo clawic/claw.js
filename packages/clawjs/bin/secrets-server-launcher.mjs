@@ -29,7 +29,7 @@ function expandHome(value) {
 }
 
 function defaultClawjsDataRoot(flags) {
-  const explicit = flags["data-dir"] ?? process.env.SECRETS_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
+  const explicit = flags["data-dir"] ?? process.env.CLAW_SECRETS_DATA_DIR ?? process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return path.resolve(expandHome(explicit));
   return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
 }
@@ -50,11 +50,11 @@ export async function runOpenSecrets(args) {
     }
   }
 
-  if (flags.port) process.env.SECRETS_PORT = flags.port;
-  if (flags.host) process.env.SECRETS_HOST = flags.host;
+  if (flags.port) process.env.CLAW_SECRETS_PORT = flags.port;
+  if (flags.host) process.env.CLAW_SECRETS_HOST = flags.host;
   const dataDir = defaultClawjsDataRoot(flags);
-  process.env.SECRETS_DATA_DIR = dataDir;
-  process.env.SECRETS_DB_PATH = flags["db-path"] ?? process.env.SECRETS_DB_PATH ?? path.join(dataDir, "vault.sqlite");
+  process.env.CLAW_SECRETS_DATA_DIR = dataDir;
+  process.env.CLAW_SECRETS_DB_PATH = flags["db-path"] ?? process.env.CLAW_SECRETS_DB_PATH ?? path.join(dataDir, "vault.sqlite");
 
   const entry = findServerEntry();
   if (!entry) {
@@ -94,7 +94,7 @@ export async function runOpenSecrets(args) {
     overrides.config = {
       ...(overrides.config ?? {}),
       dataDir,
-      dbPath: process.env.SECRETS_DB_PATH,
+      dbPath: process.env.CLAW_SECRETS_DB_PATH,
     };
     if (flags["status-file"]) overrides.statusFile = flags["status-file"];
     const { config } = await mod.startSecretsServer(overrides);

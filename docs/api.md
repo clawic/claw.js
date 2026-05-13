@@ -54,7 +54,7 @@ const same = await createClaw({
 | `workspace.agentId` | Stable agent id for runtime-specific state. |
 | `workspace.rootDir` | Workspace root on disk. |
 | `templates.pack` | Optional template-pack path applied during workspace initialization. |
-| `secrets.backend` | Optional secrets backend. Defaults to `secrets` when `SECRETS_BASE_URL`, `SECRETS_TOKEN`, and `SECRETS_TENANT_ID` are configured, otherwise `local_proxy`. |
+| `secrets.backend` | Optional secrets backend. Defaults to `secrets` when `CLAW_SECRETS_BASE_URL`, `CLAW_SECRETS_TOKEN`, and `CLAW_SECRETS_TENANT_ID` are configured, otherwise `local_proxy`. |
 | `secrets.baseUrl`, `secrets.credential`, `secrets.tenantId` | Secrets connection used by `claw.secrets`, typed actions, and brokered HTTP execution. |
 | `secrets.sidecarPath` | Optional Secrets sidecar path used for proxy-compatible `{{secretName}}` flows and lease-backed process/browser injection. |
 | `notify.baseUrl`, `sourceToken`, `clientToken` | Optional Notify service endpoint and source/client credentials for `claw.notify`. |
@@ -277,7 +277,7 @@ const claw = await createClaw({
     rootDir: "./workspace",
   },
   notify: {
-    baseUrl: "http://127.0.0.1:4610",
+    baseUrl: "http://127.0.0.1:24103",
     sourceToken: "<local-source-token>",
     clientToken: "<local-client-token>",
   },
@@ -380,7 +380,7 @@ an interactive flow starts.
 
 For real secrets, prefer the `claw.secrets` helpers plus brokered
 execution rather than hardcoding credentials in source. Secrets is now the
-default backend whenever its `SECRETS_*` connection settings are present.
+default backend whenever its `CLAW_SECRETS_*` connection settings are present.
 
 ## Speech / TTS
 
@@ -632,7 +632,7 @@ const claw = await createClaw({
   },
   secrets: {
     backend: "secrets",
-    baseUrl: "http://127.0.0.1:4610",
+    baseUrl: "http://127.0.0.1:24103",
     credential: "<sidecar-principal-token>",
     tenantId: "demo-tenant",
     sidecarPath: "/absolute/path/to/secrets/dist/sidecar.js",

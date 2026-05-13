@@ -23,7 +23,7 @@ export async function startSecretsServer(prefix = "secrets-e2e") {
   });
   await app.listen({ host: "127.0.0.1", port: 0 });
   const address = app.server.address();
-  const port = typeof address === "object" && address ? address.port : 4610;
+  const port = typeof address === "object" && address ? address.port : 24103;
   return {
     rootDir,
     baseUrl: `http://127.0.0.1:${port}`,

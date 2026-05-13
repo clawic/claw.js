@@ -14,7 +14,7 @@ Use it when you need:
 - subscription-based delivery by `project`, `agent`, `workspace`, `eventType`, or severity
 - critical alerts with receipts and acknowledgement
 - syncable notification history and glance/state updates instead of relying on push transport as source-of-truth
-- an operational inbox/admin UI in `apps/hub` backed by the same API
+- an operational inbox/admin UI in `apps/channels` backed by the same API
 
 ## What v1 includes
 
@@ -36,8 +36,8 @@ Use it when you need:
 npm --prefix notify install
 npm --prefix notify run build
 npm --prefix notify run start
-npm --prefix apps/hub run build
-npm --prefix apps/hub run start
+npm --prefix apps/channels run build
+npm --prefix apps/channels run start
 ```
 
 Default local credentials:
@@ -47,7 +47,7 @@ Default local credentials:
 
 Default local URL:
 
-- [http://127.0.0.1:4610](http://127.0.0.1:4610)
+- [http://127.0.0.1:24103](http://127.0.0.1:24103)
 - Hub UI: [http://127.0.0.1:4360](http://127.0.0.1:4360)
 
 These credentials, URLs, mock push providers, and example tokens are
@@ -94,7 +94,7 @@ production notification delivery.
 
 ## Hub UI
 
-`apps/hub` now acts as the full web surface for `notify`:
+`apps/channels` now acts as the full web surface for `notify`:
 
 - user inbox with feed detail, read flow, and receipt acknowledgement
 - preference editing for `criticalOnly` and quiet hours
@@ -112,10 +112,10 @@ The Node SDK exposes a `NotifyClient` under `@clawjs/claw`, and `createClaw()` c
 The CLI exposes:
 
 ```bash
-claw notify send --notify-url http://127.0.0.1:4610 --notify-source-token <token> --context-json '{"tenantId":"demo"}' --delivery-json '{"mode":"alert","title":"hello"}'
-claw notify cancel <notification-id> --notify-url http://127.0.0.1:4610 --notify-source-token <token>
-claw notify subscriptions upsert --notify-url http://127.0.0.1:4610 --notify-client-token <token> --source-app-id ops-center --agent-id deployer
-claw notify subscriptions delete <subscription-id> --notify-url http://127.0.0.1:4610 --notify-client-token <token>
+claw notify send --notify-url http://127.0.0.1:24103 --notify-source-token <token> --context-json '{"tenantId":"demo"}' --delivery-json '{"mode":"alert","title":"hello"}'
+claw notify cancel <notification-id> --notify-url http://127.0.0.1:24103 --notify-source-token <token>
+claw notify subscriptions upsert --notify-url http://127.0.0.1:24103 --notify-client-token <token> --source-app-id ops-center --agent-id deployer
+claw notify subscriptions delete <subscription-id> --notify-url http://127.0.0.1:24103 --notify-client-token <token>
 ```
 
 ## Test coverage
@@ -133,4 +133,4 @@ The service ships with hermetic backend E2E coverage for:
 - admin feeds, device listing, metrics, and unregister flows
 - tenant isolation
 
-`apps/hub` ships with its own Playwright E2E that boots the real `notify` backend locally and validates inbox, preferences, apps, operations, and final visual state from the web UI.
+`apps/channels` ships with its own Playwright E2E that boots the real `notify` backend locally and validates inbox, preferences, apps, operations, and final visual state from the web UI.

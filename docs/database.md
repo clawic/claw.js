@@ -45,7 +45,7 @@ Default local credentials:
 
 Default local URL:
 
-- [http://127.0.0.1:4510](http://127.0.0.1:4510)
+- [http://127.0.0.1:24102](http://127.0.0.1:24102)
 
 These credentials and the default URL are disposable local-development
 defaults. Do not reuse them for shared, staging, or production services.
@@ -67,13 +67,13 @@ should target a running database service.
 The app ships its own CLI:
 
 ```bash
-npm --prefix database run cli -- login --url http://127.0.0.1:4510 --email admin@database.local --password database-admin
+npm --prefix database run cli -- login --url http://127.0.0.1:24102 --email admin@database.local --password database-admin
 ```
 
 The main `claw` CLI also exposes the same surface through a thin bridge:
 
 ```bash
-claw database namespace list --url http://127.0.0.1:4510 --token <admin-token>
+claw database namespace list --url http://127.0.0.1:24102 --token <admin-token>
 ```
 
 Use the bridge for admin/operator operations: serving the database app,

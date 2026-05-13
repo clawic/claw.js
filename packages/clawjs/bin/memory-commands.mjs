@@ -1,9 +1,9 @@
 // Memory subcommands for the Clawix CLI. HTTP client against the local
-// Memory server (default 127.0.0.1:7791).
+// Memory server (default 127.0.0.1:24105).
 
 import process from "node:process";
 
-const DEFAULT_BASE = process.env.CLAW_MEMORY_BASE ?? "http://127.0.0.1:7791";
+const DEFAULT_BASE = process.env.CLAW_MEMORY_BASE ?? "http://127.0.0.1:24105";
 
 function parseFlags(args) {
   const out = { _: [], flags: {} };
@@ -221,4 +221,4 @@ export async function runMemoryCli(rawArgs) {
   }
 }
 
-export const MEMORY_GROUPS = new Set(["memory"]);
+export const CLAW_MEMORY_GROUPS = new Set(["memory"]);

@@ -1,6 +1,6 @@
 // Two orthogonal capability dimensions on the Secrets:
 //
-// 1. SecretsCapability  — what an agent can do WITH the secrets system itself
+// 1. ClawSecretsCapability  — what an agent can do WITH the secrets system itself
 //    (read metadata, rotate, broker HTTP, mint leases, read audit log).
 //    These are flat string identifiers, the same set ClawJS Secrets already
 //    exposed.
@@ -12,10 +12,10 @@
 //    register more via the "custom" variant.
 //
 // Both dimensions are stored on every agent_grant: secrets_capabilities is
-// a JSON array of SecretsCapability strings, capability_kind +
+// a JSON array of ClawSecretsCapability strings, capability_kind +
 // capability_scope_json store the BusinessCapability discriminated union.
 
-export const SECRETS_CAPABILITIES = [
+export const CLAW_SECRETS_CAPABILITIES = [
   "metadata.read",
   "secret.rotate",
   "broker.http",
@@ -24,10 +24,10 @@ export const SECRETS_CAPABILITIES = [
   "audit.read",
 ] as const;
 
-export type SecretsCapability = (typeof SECRETS_CAPABILITIES)[number];
+export type ClawSecretsCapability = (typeof CLAW_SECRETS_CAPABILITIES)[number];
 
-export function isSecretsCapability(value: unknown): value is SecretsCapability {
-  return typeof value === "string" && (SECRETS_CAPABILITIES as readonly string[]).includes(value);
+export function isClawSecretsCapability(value: unknown): value is ClawSecretsCapability {
+  return typeof value === "string" && (CLAW_SECRETS_CAPABILITIES as readonly string[]).includes(value);
 }
 
 // ---------- BusinessCapability (discriminated union) ----------
@@ -61,7 +61,7 @@ export function deserializeBusinessCapability(kind: string, scopeJson: string | 
 export interface CapabilityCheck {
   expectedKind?: BusinessCapability["kind"];
   expectedScope?: Partial<Record<string, unknown>>;
-  requiredSecretsCapabilities?: SecretsCapability[];
+  requiredSecretsCapabilities?: ClawSecretsCapability[];
 }
 
 export function matchesScope(stored: BusinessCapability, expected: Partial<Record<string, unknown>>): boolean {

@@ -1,11 +1,11 @@
 // Secrets subcommands for the Clawix CLI. Implemented as a small HTTP
-// client against the local Secrets server (default 127.0.0.1:7793).
+// client against the local Secrets server (default 127.0.0.1:24103).
 
 import readline from "node:readline/promises";
 import process from "node:process";
 
-const DEFAULT_BASE = process.env.SECRETS_BASE_URL ?? process.env.CLAW_SECRETS_BASE ?? "http://127.0.0.1:7793";
-const DEFAULT_TENANT = process.env.SECRETS_TENANT_ID ?? process.env.CLAW_SECRETS_TENANT ?? "clawix-local";
+const DEFAULT_BASE = process.env.CLAW_SECRETS_BASE_URL ?? process.env.CLAW_SECRETS_BASE ?? "http://127.0.0.1:24103";
+const DEFAULT_TENANT = process.env.CLAW_SECRETS_TENANT_ID ?? process.env.CLAW_SECRETS_TENANT ?? "clawix-local";
 
 function parseFlags(args) {
   const out = { _: [], flags: {} };
@@ -35,7 +35,7 @@ function parseFlags(args) {
 async function fetchJson(path, init = {}) {
   const headers = { ...(init.headers ?? {}) };
   if (init.body !== undefined) headers["Content-Type"] = "application/json";
-  const token = process.env.SECRETS_TOKEN ?? process.env.SECRETS_ADMIN_TOKEN ?? process.env.CLAW_SECRETS_TOKEN;
+  const token = process.env.CLAW_SECRETS_TOKEN ?? process.env.CLAW_SECRETS_ADMIN_TOKEN;
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${DEFAULT_BASE}${path}`, { ...init, headers });
   let body;
@@ -124,7 +124,7 @@ const HELP = `claw secrets <command>
   secrets audit query [--kinds <csv>] [--since <iso>] [--limit <n>]
   secrets audit verify-integrity
 
-Env: SECRETS_BASE_URL (${DEFAULT_BASE}), SECRETS_TENANT_ID (${DEFAULT_TENANT}), SECRETS_TOKEN
+Env: CLAW_SECRETS_BASE_URL (${DEFAULT_BASE}), CLAW_SECRETS_TENANT_ID (${DEFAULT_TENANT}), CLAW_SECRETS_TOKEN
 `;
 
 async function secretsSetup() {
@@ -597,4 +597,4 @@ export async function runSecretsCli(rawArgs) {
   }
 }
 
-export const SECRETS_GROUPS = new Set(["secrets"]);
+export const CLAW_SECRETS_GROUPS = new Set(["secrets"]);

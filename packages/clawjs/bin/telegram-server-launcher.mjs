@@ -80,7 +80,7 @@ function writeStatusFile(filePath, payload) {
 export async function runOpenTelegram(args) {
   const flags = parseFlags(args);
 
-  const port = flags.port ? Number(flags.port) : Number(process.env.CLAW_TELEGRAM_PORT ?? 22011);
+  const port = flags.port ? Number(flags.port) : Number(process.env.CLAW_TELEGRAM_PORT ?? 24150);
   const host = flags.host ?? flags.bind ?? process.env.CLAW_TELEGRAM_HOST ?? "127.0.0.1";
   const workspace = flags.workspace ?? process.env.CLAW_TELEGRAM_WORKSPACE ?? process.env.CLAW_WORKSPACE ?? process.cwd();
   const statusFile = flags["status-file"];

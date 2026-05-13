@@ -44,7 +44,7 @@ import {
 } from "./stores.ts";
 import { SecretsResolver } from "./resolver.ts";
 import { AuditStore } from "./audit.ts";
-import { SECRETS_CAPABILITIES } from "./capabilities.ts";
+import { CLAW_SECRETS_CAPABILITIES } from "./capabilities.ts";
 import { evaluateGovernance } from "./governance.ts";
 import { SecretsSession } from "./session.ts";
 import { bootPluginRegistry } from "../plugins/loader.ts";
@@ -52,7 +52,7 @@ import { redactString } from "../plugins/redaction.ts";
 import type { PluginRegistry } from "../plugins/registry.ts";
 import type { ExecutorContext } from "../plugins/types.ts";
 import { LockableSecret } from "./lockable-secret.ts";
-import { decryptBackup, encryptBackup, restoreLogicalBackup, SECRETS_BACKUP_FORMAT } from "./backup.ts";
+import { decryptBackup, encryptBackup, restoreLogicalBackup, CLAW_SECRETS_BACKUP_FORMAT } from "./backup.ts";
 
 const DEFAULT_TENANT_ID = "clawix-local";
 
@@ -417,7 +417,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       const backup = encryptBackup(db, body.passphrase);
       return {
         ok: true,
-        format: SECRETS_BACKUP_FORMAT,
+        format: CLAW_SECRETS_BACKUP_FORMAT,
         exportedAt: backup.exportedAt,
         backup,
       };
@@ -435,7 +435,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       const logical = decryptBackup(body.backup, body.passphrase);
       const result = restoreLogicalBackup(db, logical);
       session.lock();
-      return { ok: true, format: SECRETS_BACKUP_FORMAT, imported: result, state: { unlocked: false } };
+      return { ok: true, format: CLAW_SECRETS_BACKUP_FORMAT, imported: result, state: { unlocked: false } };
     } catch (err) {
       return reply.code(400).send({ error: (err as Error).message });
     }
@@ -565,7 +565,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     if (!row) return reply.code(404).send({ error: "Not found" });
     return {
       secret: resolver.describeSecret(row),
-      capabilities: SECRETS_CAPABILITIES.map((capability) => ({
+      capabilities: CLAW_SECRETS_CAPABILITIES.map((capability) => ({
         capability,
         allowed: isCapabilityAllowed(actor, tenantId, name, capability),
       })),
@@ -1087,7 +1087,7 @@ export async function startSecretsServer(input: { config?: Partial<SecretsConfig
 }> {
   const config = loadSecretsConfig(input.config ?? {});
   const db = openDatabase(config.dbPath);
-  const externalDir = process.env.SECRETS_PLUGINS_DIR;
+  const externalDir = process.env.CLAW_SECRETS_PLUGINS_DIR;
   const registry = await bootPluginRegistry(externalDir ? { externalPluginsDir: externalDir } : {});
   const app = await buildSecretsApp({ config, db, registry });
   await app.listen({ host: config.host, port: config.port });

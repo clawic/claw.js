@@ -23,9 +23,9 @@ function resolveSecretsBackend(env?: NodeJS.ProcessEnv): "local_proxy" | "secret
   }
   const mergedEnv = buildSecretsRunnerEnv(env);
   const hasSecretsConfig = !!(
-    mergedEnv.SECRETS_BASE_URL?.trim()
-    && mergedEnv.SECRETS_TOKEN?.trim()
-    && mergedEnv.SECRETS_TENANT_ID?.trim()
+    (mergedEnv.CLAW_SECRETS_BASE_URL?.trim() || mergedEnv.SECRETS_BASE_URL?.trim())
+    && (mergedEnv.CLAW_SECRETS_TOKEN?.trim() || mergedEnv.SECRETS_TOKEN?.trim())
+    && (mergedEnv.CLAW_SECRETS_TENANT_ID?.trim() || mergedEnv.SECRETS_TENANT_ID?.trim())
   );
   const backend = hasSecretsConfig ? "secrets" : "local_proxy";
   return backend === "secrets" ? "secrets" : "local_proxy";

@@ -1,14 +1,14 @@
 // Drive subcommands for the Clawix CLI. Implemented as a small HTTP
-// client against the local Drive server (default 127.0.0.1:7792).
+// client against the local Drive server (default 127.0.0.1:24104).
 
 import path from "node:path";
 import fs from "node:fs";
 import readline from "node:readline/promises";
 import process from "node:process";
 
-const DEFAULT_BASE = process.env.CLAW_DRIVE_BASE ?? "http://127.0.0.1:7792";
+const DEFAULT_BASE = process.env.CLAW_DRIVE_BASE ?? "http://127.0.0.1:24104";
 
-export const DRIVE_GROUPS = new Set(["drive"]);
+export const CLAW_DRIVE_GROUPS = new Set(["drive"]);
 
 function parseFlags(args) {
   const out = { _: [], flags: {} };

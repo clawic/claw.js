@@ -180,11 +180,11 @@ function normalizeSecretMetadata(raw: Record<string, unknown>): SecretProxyMetad
 
 function resolveSecretsConfig(env?: NodeJS.ProcessEnv): { baseUrl: string; token: string; tenantId: string } {
   const mergedEnv = buildRunnerEnv(env);
-  const baseUrl = mergedEnv.SECRETS_BASE_URL?.trim();
-  const token = mergedEnv.SECRETS_TOKEN?.trim();
-  const tenantId = mergedEnv.SECRETS_TENANT_ID?.trim();
+  const baseUrl = (mergedEnv.CLAW_SECRETS_BASE_URL ?? mergedEnv.SECRETS_BASE_URL)?.trim();
+  const token = (mergedEnv.CLAW_SECRETS_TOKEN ?? mergedEnv.SECRETS_TOKEN)?.trim();
+  const tenantId = (mergedEnv.CLAW_SECRETS_TENANT_ID ?? mergedEnv.SECRETS_TENANT_ID)?.trim();
   if (!baseUrl || !token || !tenantId) {
-    throw new Error("SECRETS_BASE_URL, SECRETS_TOKEN, and SECRETS_TENANT_ID are required for the secrets backend.");
+    throw new Error("CLAW_SECRETS_BASE_URL, CLAW_SECRETS_TOKEN, and CLAW_SECRETS_TENANT_ID are required for the secrets backend.");
   }
   return {
     baseUrl: baseUrl.replace(/\/+$/, ""),

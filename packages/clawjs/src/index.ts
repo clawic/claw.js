@@ -491,9 +491,9 @@ const OPEN_SURFACES: OpenSurface[] = [
   { id: "publishing", label: "Publishing", port: clawCorePorts.publishing, kind: "cli-serve", dir: "publishing", buildCheck: "dist/cli.js" },
   { id: "erp", label: "ERP", port: 24147, kind: "cli-serve", dir: "modules/erp", buildCheck: "dist/cli.js" },
   { id: "iot", label: "IoT", port: 24148, kind: "cli-serve", dir: "iot", buildCheck: "dist/cli.js" },
-  { id: "agenda", label: "Agenda", port: clawAppPorts.agenda, kind: "day", dir: "apps/day", buildCheck: "dist/serve-dashboard.js" },
-  { id: "board", label: "Board", port: clawAppPorts.board, kind: "next", dir: "apps/company", buildCheck: ".next" },
-  { id: "channels", label: "Channels", port: clawAppPorts.channels, kind: "next", dir: "apps/hub", buildCheck: ".next" },
+  { id: "agenda", label: "Agenda", port: clawAppPorts.agenda, kind: "day", dir: "apps/agenda", buildCheck: "dist/serve-dashboard.js" },
+  { id: "board", label: "Board", port: clawAppPorts.board, kind: "next", dir: "apps/board", buildCheck: ".next" },
+  { id: "channels", label: "Channels", port: clawAppPorts.channels, kind: "next", dir: "apps/channels", buildCheck: ".next" },
   { id: "user", label: "User", port: 24149, kind: "cli-serve", dir: "modules/user", buildCheck: "dist/cli.js" },
 ];
 
@@ -4187,14 +4187,17 @@ async function createCliClaw(
       || flags["secrets-token"]
       || flags["secrets-tenant-id"]
       || process.env.CLAW_SECRETS_BACKEND
+      || process.env.CLAW_SECRETS_BASE_URL
+      || process.env.CLAW_SECRETS_TOKEN
+      || process.env.CLAW_SECRETS_TENANT_ID
       || process.env.SECRETS_BASE_URL
       || process.env.SECRETS_TOKEN
       || process.env.SECRETS_TENANT_ID
     ) ? {
       backend: (flags["secrets-backend"] || explicitSecretsBackend || process.env.CLAW_SECRETS_BACKEND) as "local_proxy" | "secrets" | undefined,
-      baseUrl: flags["secrets-url"] || process.env.SECRETS_BASE_URL,
-      credential: flags["secrets-token"] || process.env.SECRETS_TOKEN,
-      tenantId: flags["secrets-tenant-id"] || process.env.SECRETS_TENANT_ID,
+      baseUrl: flags["secrets-url"] || process.env.CLAW_SECRETS_BASE_URL || process.env.SECRETS_BASE_URL,
+      credential: flags["secrets-token"] || process.env.CLAW_SECRETS_TOKEN || process.env.SECRETS_TOKEN,
+      tenantId: flags["secrets-tenant-id"] || process.env.CLAW_SECRETS_TENANT_ID || process.env.SECRETS_TENANT_ID,
       sidecarPath: flags["secrets-sidecar"] || process.env.CLAW_SECRETS_SIDECAR_PATH,
     } : undefined,
     templates: {

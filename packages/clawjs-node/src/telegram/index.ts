@@ -221,11 +221,11 @@ export async function downloadTelegramFile(
   timeoutMs = 30_000,
 ): Promise<Buffer> {
   if (resolveSecretsBackend(env) === "secrets") {
-    const baseUrl = (env?.SECRETS_BASE_URL ?? process.env.SECRETS_BASE_URL)?.trim()?.replace(/\/+$/, "");
-    const token = (env?.SECRETS_TOKEN ?? process.env.SECRETS_TOKEN)?.trim();
-    const tenantId = (env?.SECRETS_TENANT_ID ?? process.env.SECRETS_TENANT_ID)?.trim();
+    const baseUrl = (env?.CLAW_SECRETS_BASE_URL ?? process.env.CLAW_SECRETS_BASE_URL ?? env?.SECRETS_BASE_URL ?? process.env.SECRETS_BASE_URL)?.trim()?.replace(/\/+$/, "");
+    const token = (env?.CLAW_SECRETS_TOKEN ?? process.env.CLAW_SECRETS_TOKEN ?? env?.SECRETS_TOKEN ?? process.env.SECRETS_TOKEN)?.trim();
+    const tenantId = (env?.CLAW_SECRETS_TENANT_ID ?? process.env.CLAW_SECRETS_TENANT_ID ?? env?.SECRETS_TENANT_ID ?? process.env.SECRETS_TENANT_ID)?.trim();
     if (!baseUrl || !token || !tenantId) {
-      throw new Error("SECRETS_BASE_URL, SECRETS_TOKEN, and SECRETS_TENANT_ID are required to download Telegram files.");
+      throw new Error("CLAW_SECRETS_BASE_URL, CLAW_SECRETS_TOKEN, and CLAW_SECRETS_TENANT_ID are required to download Telegram files.");
     }
     const normalizedBase = normalizeApiBaseUrl(apiBaseUrl);
     const fileBase = normalizedBase.replace(/\/api\/?$/, "");

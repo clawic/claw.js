@@ -43,7 +43,7 @@ npm --prefix drive run start
 Default local URL:
 
 ```text
-http://127.0.0.1:4620
+http://127.0.0.1:24104
 ```
 
 Default local admin credentials:
@@ -61,7 +61,7 @@ defaults. Do not use them against shared or production Drive services.
 Examples:
 
 ```bash
-node drive/dist/cli.js auth login --url http://127.0.0.1:4620 --email admin@localhost --password admin
+node drive/dist/cli.js auth login --url http://127.0.0.1:24104 --email admin@localhost --password admin
 node drive/dist/cli.js doc create --token <token> --name "Launch brief"
 node drive/dist/cli.js upload --token <token> --file ./notes.txt
 node drive/dist/cli.js search --token <token> --query launch
@@ -69,6 +69,6 @@ node drive/dist/cli.js search --token <token> --query launch
 
 ## Conversion Mode
 
-Automated tests run with `DRIVE_CONVERTER_MODE=mock` so browser and backend E2E stay hermetic.
+Automated tests run with `CLAW_DRIVE_CONVERTER_MODE=mock` so browser and backend E2E stay hermetic.
 
 In normal runtime the service can use host-side conversion and inspection tools when available, while keeping a safe fallback path when they are not.

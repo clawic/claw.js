@@ -23,8 +23,8 @@ npm --prefix audio run build
 npm --prefix audio run start
 ```
 
-By default the service listens on `127.0.0.1:4630`, stores data in
-`audio/.data`, and uses `AUDIO_SHARED_SECRET` for bearer-token auth.
+By default the service listens on `127.0.0.1:24151`, stores data in
+`audio/.data`, and uses `CLAW_AUDIO_SHARED_SECRET` for bearer-token auth.
 
 ## API Shape
 
@@ -35,8 +35,8 @@ lists, and deletes require the same `appId` that registered the asset.
 import { AudioApiClient } from "@clawjs/audio";
 
 const audio = new AudioApiClient({
-  baseUrl: "http://127.0.0.1:4630",
-  token: process.env.AUDIO_SHARED_SECRET ?? "",
+  baseUrl: "http://127.0.0.1:24151",
+  token: process.env.CLAW_AUDIO_SHARED_SECRET ?? "",
 });
 
 const asset = await audio.register({
@@ -57,9 +57,9 @@ const bytes = await audio.getBytes(asset.asset.id, "my-app");
 The private service wrapper includes a small local CLI:
 
 ```bash
-npm --prefix audio run cli -- serve --port 4630 --secret dev-secret
-npm --prefix audio run cli -- list --url http://127.0.0.1:4630 --token dev-secret --app my-app
-npm --prefix audio run cli -- get --url http://127.0.0.1:4630 --token dev-secret --app my-app --id <audio-id>
+npm --prefix audio run cli -- serve --port 24151 --secret dev-secret
+npm --prefix audio run cli -- list --url http://127.0.0.1:24151 --token dev-secret --app my-app
+npm --prefix audio run cli -- get --url http://127.0.0.1:24151 --token dev-secret --app my-app --id <audio-id>
 ```
 
 Use the package client for application code and the local CLI for service

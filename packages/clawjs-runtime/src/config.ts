@@ -23,7 +23,7 @@ export function loadRuntimeConfig(overrides: Partial<RuntimeServiceConfig> = {})
     dataDir,
     sharedSecret: overrides.sharedSecret ?? process.env.RUNTIME_SHARED_SECRET ?? "runtime-dev-secret-change-me",
     skillsOutputDir: overrides.skillsOutputDir ?? process.env.RUNTIME_SKILLS_DIR ?? path.join(dataDir, "skills-distilled"),
-    sessionsBaseUrl: overrides.sessionsBaseUrl ?? process.env.RUNTIME_SESSIONS_URL ?? "http://127.0.0.1:4640",
+    sessionsBaseUrl: overrides.sessionsBaseUrl ?? process.env.CLAW_RUNTIME_SESSIONS_URL ?? "http://127.0.0.1:24101",
     sessionsToken: overrides.sessionsToken ?? process.env.RUNTIME_SESSIONS_TOKEN ?? "",
     userModelBaseUrl: overrides.userModelBaseUrl ?? process.env.RUNTIME_USER_MODEL_URL ?? "http://127.0.0.1:4650",
     userModelToken: overrides.userModelToken ?? process.env.RUNTIME_USER_MODEL_TOKEN ?? "",

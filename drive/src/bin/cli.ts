@@ -102,7 +102,7 @@ async function main() {
     return;
   }
 
-  const baseUrl = flags.url ?? "http://127.0.0.1:4620";
+  const baseUrl = flags.url ?? "http://127.0.0.1:24104";
   const client = new DriveApiClient({ baseUrl, token: flags.token });
 
   if (group === "auth" && command === "login") {

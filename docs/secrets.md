@@ -51,7 +51,7 @@ npm --prefix secrets run start
 
 Default local URL:
 
-- [http://127.0.0.1:4610](http://127.0.0.1:4610)
+- [http://127.0.0.1:24103](http://127.0.0.1:24103)
 
 Default local credentials:
 
@@ -75,7 +75,7 @@ issuance, active leases, and audit review.
 
 ## SDK and CLI
 
-When `SECRETS_BASE_URL`, `SECRETS_TOKEN`, and `SECRETS_TENANT_ID` are set,
+When `CLAW_SECRETS_BASE_URL`, `CLAW_SECRETS_TOKEN`, and `CLAW_SECRETS_TENANT_ID` are set,
 `claw.secrets` and `claw secrets ...` default to Secrets instead of the
 legacy local proxy.
 
@@ -93,18 +93,18 @@ Secrets-backed surfaces include:
 The local sidecar preserves the current proxy-style workflow:
 
 ```bash
-SECRETS_BASE_URL=http://127.0.0.1:4610 \
-SECRETS_TOKEN=<sidecar-principal-token> \
-SECRETS_TENANT_ID=demo-tenant \
+CLAW_SECRETS_BASE_URL=http://127.0.0.1:24103 \
+CLAW_SECRETS_TOKEN=<sidecar-principal-token> \
+CLAW_SECRETS_TENANT_ID=demo-tenant \
 node secrets/dist/sidecar.js list-secrets
 ```
 
 The same sidecar can execute brokered HTTP requests:
 
 ```bash
-SECRETS_BASE_URL=http://127.0.0.1:4610 \
-SECRETS_TOKEN=<sidecar-principal-token> \
-SECRETS_TENANT_ID=demo-tenant \
+CLAW_SECRETS_BASE_URL=http://127.0.0.1:24103 \
+CLAW_SECRETS_TOKEN=<sidecar-principal-token> \
+CLAW_SECRETS_TENANT_ID=demo-tenant \
 node secrets/dist/sidecar.js request \
   --method POST \
   --url https://slack.com/api/auth.test \
@@ -114,9 +114,9 @@ node secrets/dist/sidecar.js request \
 And it can request host-bound leases:
 
 ```bash
-SECRETS_BASE_URL=http://127.0.0.1:4610 \
-SECRETS_TOKEN=<sidecar-principal-token> \
-SECRETS_TENANT_ID=demo-tenant \
+CLAW_SECRETS_BASE_URL=http://127.0.0.1:24103 \
+CLAW_SECRETS_TOKEN=<sidecar-principal-token> \
+CLAW_SECRETS_TENANT_ID=demo-tenant \
 node secrets/dist/sidecar.js spawn-process \
   --secret-name my_login_password \
   --command node \

@@ -16,24 +16,24 @@ export interface DriveServiceConfig {
 }
 
 export function loadDriveConfig(overrides: Partial<DriveServiceConfig> = {}): DriveServiceConfig {
-  const dataDir = overrides.dataDir ?? process.env.DRIVE_DATA_DIR ?? defaultClawjsDataRoot();
-  const host = overrides.host ?? process.env.DRIVE_HOST ?? "127.0.0.1";
-  const port = overrides.port ?? Number(process.env.DRIVE_PORT ?? process.env.PORT ?? "4620");
-  const publicBaseUrl = overrides.publicBaseUrl ?? process.env.DRIVE_PUBLIC_BASE_URL ?? `http://${host}:${port}`;
-  const converterMode = overrides.converterMode ?? (process.env.DRIVE_CONVERTER_MODE === "mock" ? "mock" : "auto");
+  const dataDir = overrides.dataDir ?? process.env.CLAW_DRIVE_DATA_DIR ?? defaultClawjsDataRoot();
+  const host = overrides.host ?? process.env.CLAW_DRIVE_HOST ?? "127.0.0.1";
+  const port = overrides.port ?? Number(process.env.CLAW_DRIVE_PORT ?? process.env.PORT ?? "24104");
+  const publicBaseUrl = overrides.publicBaseUrl ?? process.env.CLAW_DRIVE_PUBLIC_BASE_URL ?? `http://${host}:${port}`;
+  const converterMode = overrides.converterMode ?? (process.env.CLAW_DRIVE_CONVERTER_MODE === "mock" ? "mock" : "auto");
 
   return {
     host,
     port,
     dataDir,
-    dbPath: overrides.dbPath ?? process.env.DRIVE_DB_PATH ?? path.join(dataDir, "drive.sqlite"),
-    jwtSecret: overrides.jwtSecret ?? process.env.DRIVE_JWT_SECRET ?? "drive-dev-secret-change-me",
-    corsOrigins: overrides.corsOrigins ?? (process.env.DRIVE_CORS_ORIGINS ?? "")
+    dbPath: overrides.dbPath ?? process.env.CLAW_DRIVE_DB_PATH ?? path.join(dataDir, "drive.sqlite"),
+    jwtSecret: overrides.jwtSecret ?? process.env.CLAW_DRIVE_JWT_SECRET ?? "drive-dev-secret-change-me",
+    corsOrigins: overrides.corsOrigins ?? (process.env.CLAW_DRIVE_CORS_ORIGINS ?? "")
       .split(",")
       .map((entry) => entry.trim())
       .filter(Boolean),
     publicBaseUrl,
-    uiDistDir: overrides.uiDistDir ?? process.env.DRIVE_UI_DIST_DIR,
+    uiDistDir: overrides.uiDistDir ?? process.env.CLAW_DRIVE_UI_DIST_DIR,
     converterMode,
   };
 }

@@ -197,4 +197,4 @@ export function decryptBackup(payload: unknown, passphrase: string): LogicalBack
   }
 }
 
-export const SECRETS_BACKUP_FORMAT = BACKUP_FORMAT;
+export const CLAW_SECRETS_BACKUP_FORMAT = BACKUP_FORMAT;

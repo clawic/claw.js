@@ -17,7 +17,7 @@ function defaultWorkspace(): string {
 
 export function loadTelegramConfig(): TelegramSurfaceConfig {
   const host = process.env.CLAW_TELEGRAM_HOST?.trim() || "127.0.0.1";
-  const portRaw = process.env.CLAW_TELEGRAM_PORT?.trim() || "22011";
+  const portRaw = process.env.CLAW_TELEGRAM_PORT?.trim() || "24150";
   const port = Number.parseInt(portRaw, 10);
   if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
     throw new Error(`invalid CLAW_TELEGRAM_PORT: ${portRaw}`);

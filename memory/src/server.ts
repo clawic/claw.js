@@ -504,10 +504,10 @@ export interface StartMemoryServerResult {
 }
 
 export function startMemoryServer(options: StartMemoryServerOptions = {}): StartMemoryServerResult {
-  const port = Number(options.port ?? process.env.MEMORY_PORT ?? 7791);
-  const host = options.host ?? process.env.MEMORY_HOST ?? "127.0.0.1";
+  const port = Number(options.port ?? process.env.CLAW_MEMORY_PORT ?? 24105);
+  const host = options.host ?? process.env.CLAW_MEMORY_HOST ?? "127.0.0.1";
   const workspace = path.resolve(
-    options.workspace ?? process.env.MEMORY_WORKSPACE ?? process.cwd()
+    options.workspace ?? process.env.CLAW_MEMORY_WORKSPACE ?? process.cwd()
   );
   initWorkspace(workspace);
   const service = MemoryService.fromCwd(workspace);
