@@ -498,9 +498,9 @@ export function buildDiscordOperationRequest(
     case "get-message":
       return getPlan(`channels/${channelId(values)}/messages/${messageId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "channel_id"] });
     case "send-message":
-      return bodyPlan("POST", `channels/${channelId(values)}/messages`, auth, headers, messageBody(values, true, true), { type: "object", requiredPaths: ["id", "channel_id"] });
+      return messagePlan("POST", `channels/${channelId(values)}/messages`, auth, headers, values, true, true, { type: "object", requiredPaths: ["id", "channel_id"] });
     case "edit-message":
-      return bodyPlan("PATCH", `channels/${channelId(values)}/messages/${messageId(values)}`, auth, headers, messageBody(values, false, false), { type: "object", requiredPaths: ["id", "channel_id"] });
+      return messagePlan("PATCH", `channels/${channelId(values)}/messages/${messageId(values)}`, auth, headers, values, false, false, { type: "object", requiredPaths: ["id", "channel_id"] });
     case "delete-message":
       return deletePlan(`channels/${channelId(values)}/messages/${messageId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "bulk-delete-messages":
@@ -1147,6 +1147,30 @@ function bodyPlan(
   };
 }
 
+function messagePlan(
+  method: string,
+  endpoint: string,
+  auth: ConnectorRuntimeRequestPlan["auth"],
+  headers: Record<string, string>,
+  values: Record<string, IntegrationJson>,
+  requireContent: boolean,
+  includeReference: boolean,
+  responseSchema: ResponseSchema,
+): ConnectorRuntimeRequestPlan {
+  const body = messageBody(values, requireContent, includeReference);
+  const files = optionalFileArray(values.files);
+  if (!files) return bodyPlan(method, endpoint, auth, headers, body, responseSchema);
+  return {
+    method,
+    endpoint,
+    auth,
+    headers,
+    bodyEncoding: "multipart",
+    body: messageMultipartBody(body, files),
+    responseSchema,
+  };
+}
+
 function putPlan(
   endpoint: string,
   auth: ConnectorRuntimeRequestPlan["auth"],
@@ -1331,6 +1355,16 @@ function messageBody(values: Record<string, IntegrationJson>, requireContent: bo
     shared_client_theme: requireContent ? optionalJsonObject(firstValue(values.sharedClientTheme, values.shared_client_theme)) : undefined,
     message_reference: includeReference ? messageReference(values) : undefined,
   });
+}
+
+function messageMultipartBody(body: Record<string, IntegrationJson>, files: IntegrationJson[]): Record<string, IntegrationJson> {
+  const formBody: Record<string, IntegrationJson> = {
+    payload_json: JSON.stringify(body),
+  };
+  files.forEach((file, index) => {
+    formBody[`files[${index}]`] = file;
+  });
+  return formBody;
 }
 
 function messageReference(values: Record<string, IntegrationJson>): IntegrationJson | undefined {
@@ -1814,6 +1848,12 @@ function optionalNumber(value: IntegrationJson): number | undefined {
 
 function optionalJsonArray(value: IntegrationJson): IntegrationJson[] | undefined {
   return Array.isArray(value) ? value : undefined;
+}
+
+function optionalFileArray(value: IntegrationJson): IntegrationJson[] | undefined {
+  if (Array.isArray(value) && value.length) return value;
+  const file = optionalString(value);
+  return file ? [file] : undefined;
 }
 
 function optionalArrayQuery(value: IntegrationJson): IntegrationJson | undefined {
