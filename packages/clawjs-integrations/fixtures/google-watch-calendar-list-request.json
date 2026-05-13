@@ -1,0 +1,16 @@
+{
+  "method": "POST",
+  "url": "https://www.googleapis.com/calendar/v3/users/me/calendarList/watch",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "id": "channel-123",
+    "type": "web_hook",
+    "address": "https://example.invalid/google/webhook",
+    "token": "offline-token",
+    "expiration": "1893456000000"
+  }
+}

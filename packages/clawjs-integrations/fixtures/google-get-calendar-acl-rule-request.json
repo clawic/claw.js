@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://www.googleapis.com/calendar/v3/calendars/primary/acl/user%3Areader%40example.invalid",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret"
+  }
+}

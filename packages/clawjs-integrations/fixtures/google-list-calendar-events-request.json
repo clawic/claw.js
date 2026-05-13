@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=100&pageToken=offline-page-token&timeMin=2026-05-01T00%3A00%3A00Z",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret"
+  }
+}

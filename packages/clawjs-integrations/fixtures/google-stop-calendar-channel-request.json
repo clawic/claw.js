@@ -1,0 +1,13 @@
+{
+  "method": "POST",
+  "url": "https://www.googleapis.com/calendar/v3/channels/stop",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "id": "channel-123",
+    "resourceId": "resource-123"
+  }
+}

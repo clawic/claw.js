@@ -1,0 +1,8 @@
+{
+  "method": "DELETE",
+  "url": "https://www.googleapis.com/calendar/v3/users/me/calendarList/primary",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret"
+  }
+}

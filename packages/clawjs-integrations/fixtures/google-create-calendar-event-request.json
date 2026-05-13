@@ -1,0 +1,25 @@
+{
+  "method": "POST",
+  "url": "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "summary": "Planning",
+    "description": "Sample event",
+    "start": {
+      "dateTime": "2026-05-13T09:00:00Z"
+    },
+    "end": {
+      "dateTime": "2026-05-13T10:00:00Z"
+    },
+    "attendees": [
+      {
+        "email": "person@example.invalid"
+      }
+    ],
+    "location": "Online"
+  }
+}

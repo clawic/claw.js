@@ -1,0 +1,18 @@
+{
+  "method": "POST",
+  "url": "https://www.googleapis.com/calendar/v3/freeBusy",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-googleAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "items": [
+      {
+        "id": "primary"
+      }
+    ],
+    "timeMin": "2026-05-01T00:00:00Z",
+    "timeMax": "2026-05-02T00:00:00Z"
+  }
+}
