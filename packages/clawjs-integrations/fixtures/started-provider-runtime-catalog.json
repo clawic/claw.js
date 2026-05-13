@@ -272,6 +272,77 @@
       ]
     },
     {
+      "id": "notion",
+      "name": "Notion",
+      "authFieldNames": ["notionToken"],
+      "fields": [
+        {
+          "name": "notionToken",
+          "type": "app",
+          "optional": false,
+          "secret": true
+        }
+      ],
+      "operations": [
+        {
+          "id": "notion.action.create-page",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Create Page",
+          "fields": [
+            { "name": "markdown", "type": "string", "optional": true },
+            { "name": "parentPageId", "type": "string", "optional": false },
+            { "name": "title", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.get-page",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Get Page",
+          "fields": [
+            { "name": "pageId", "type": "string", "optional": false }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.query-data-source",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Query Data Source",
+          "fields": [
+            { "name": "dataSourceId", "type": "string", "optional": false },
+            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.search",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Search",
+          "fields": [
+            { "name": "pageSize", "type": "integer", "optional": true, "default": 10, "min": 1 },
+            { "name": "query", "type": "string", "optional": true }
+          ],
+          "authFieldNames": ["notionToken"]
+        },
+        {
+          "id": "notion.action.update-page",
+          "appId": "notion",
+          "kind": "action",
+          "name": "Update Page",
+          "fields": [
+            { "name": "archived", "type": "boolean", "optional": true },
+            { "name": "pageId", "type": "string", "optional": false },
+            { "name": "title", "type": "string", "optional": true }
+          ],
+          "authFieldNames": ["notionToken"]
+        }
+      ]
+    },
+    {
       "id": "slack",
       "name": "Slack",
       "authFieldNames": ["slackBotToken"],
