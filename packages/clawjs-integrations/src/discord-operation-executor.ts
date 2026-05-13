@@ -60,6 +60,11 @@ export type DiscordRuntimeOperation =
   | "get-guild-ban"
   | "create-guild-ban"
   | "remove-guild-ban"
+  | "list-auto-moderation-rules"
+  | "get-auto-moderation-rule"
+  | "create-auto-moderation-rule"
+  | "update-auto-moderation-rule"
+  | "delete-auto-moderation-rule"
   | "list-guild-invites"
   | "list-guild-scheduled-events"
   | "create-guild-scheduled-event"
@@ -255,6 +260,16 @@ export function buildDiscordOperationRequest(
       }));
     case "remove-guild-ban":
       return deletePlan(`guilds/${guildId(values)}/bans/${userId(values)}`, auth, headers, { type: "object" });
+    case "list-auto-moderation-rules":
+      return getPlan(`guilds/${guildId(values)}/auto-moderation/rules`, auth, headers, { type: "array" });
+    case "get-auto-moderation-rule":
+      return getPlan(`guilds/${guildId(values)}/auto-moderation/rules/${autoModerationRuleId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "guild_id", "name"] });
+    case "create-auto-moderation-rule":
+      return bodyPlan("POST", `guilds/${guildId(values)}/auto-moderation/rules`, auth, auditHeaders(headers, values), autoModerationRuleBody(values, true), { type: "object", requiredPaths: ["id", "guild_id", "name"] });
+    case "update-auto-moderation-rule":
+      return bodyPlan("PATCH", `guilds/${guildId(values)}/auto-moderation/rules/${autoModerationRuleId(values)}`, auth, auditHeaders(headers, values), autoModerationRuleBody(values, false), { type: "object", requiredPaths: ["id", "guild_id", "name"] });
+    case "delete-auto-moderation-rule":
+      return deletePlan(`guilds/${guildId(values)}/auto-moderation/rules/${autoModerationRuleId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "list-guild-invites":
       return getPlan(`guilds/${guildId(values)}/invites`, auth, headers, { type: "array" });
     case "list-guild-scheduled-events":
@@ -410,6 +425,11 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "get-guild-ban",
   "create-guild-ban",
   "remove-guild-ban",
+  "list-auto-moderation-rules",
+  "get-auto-moderation-rule",
+  "create-auto-moderation-rule",
+  "update-auto-moderation-rule",
+  "delete-auto-moderation-rule",
   "list-guild-invites",
   "list-guild-scheduled-events",
   "create-guild-scheduled-event",
@@ -661,6 +681,19 @@ function scheduledEventBody(values: Record<string, IntegrationJson>, requireCrea
   });
 }
 
+function autoModerationRuleBody(values: Record<string, IntegrationJson>, requireCreateFields: boolean): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    name: requireCreateFields ? requiredString(values.name, "name") : optionalString(values.name),
+    event_type: requireCreateFields ? optionalNumber(values.eventType) ?? 1 : optionalNumber(values.eventType),
+    trigger_type: requireCreateFields ? optionalNumber(values.triggerType) ?? 1 : undefined,
+    trigger_metadata: optionalJsonObject(values.triggerMetadata),
+    actions: requireCreateFields ? requiredJsonArray(values.actions, "actions") : optionalJsonArray(values.actions),
+    enabled: values.enabled,
+    exempt_roles: optionalJsonArray(values.exemptRoles),
+    exempt_channels: optionalJsonArray(values.exemptChannels),
+  });
+}
+
 function stageInstanceBody(values: Record<string, IntegrationJson>, requireCreateFields: boolean): Record<string, IntegrationJson> {
   return removeEmptyValues({
     channel_id: requireCreateFields ? requiredString(values.channelId, "channelId") : undefined,
@@ -709,6 +742,10 @@ function emojiId(values: Record<string, IntegrationJson>): string {
 
 function guildScheduledEventId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.guildScheduledEventId, values.scheduledEventId, values.eventId), "guildScheduledEventId"));
+}
+
+function autoModerationRuleId(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.autoModerationRuleId, values.ruleId), "autoModerationRuleId"));
 }
 
 function firstValue(...values: IntegrationJson[]): IntegrationJson {

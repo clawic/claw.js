@@ -10,6 +10,10 @@ export type DiscordSourceOperation =
   | "message-create"
   | "message-update"
   | "message-delete"
+  | "auto-moderation-rule-create"
+  | "auto-moderation-rule-update"
+  | "auto-moderation-rule-delete"
+  | "auto-moderation-action-execution"
   | "guild-emojis-update"
   | "guild-member-add"
   | "guild-member-remove"
@@ -28,6 +32,10 @@ const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "message-create",
   "message-update",
   "message-delete",
+  "auto-moderation-rule-create",
+  "auto-moderation-rule-update",
+  "auto-moderation-rule-delete",
+  "auto-moderation-action-execution",
   "guild-emojis-update",
   "guild-member-add",
   "guild-member-remove",
