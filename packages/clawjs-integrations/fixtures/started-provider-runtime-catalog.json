@@ -286,6 +286,201 @@
           ]
         },
         {
+          "id": "discord.action.send-soundboard-sound",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Send Soundboard Sound",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "soundboardSoundId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "sourceGuildId",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-default-soundboard-sounds",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Default Soundboard Sounds",
+          "fields": [],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.list-guild-soundboard-sounds",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Guild Soundboard Sounds",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-guild-soundboard-sound",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Soundboard Sound",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "soundboardSoundId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.create-guild-soundboard-sound",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Guild Soundboard Sound",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "sound",
+              "type": "string",
+              "optional": false,
+              "default": "data:audio/mpeg;base64,c2FtcGxl"
+            },
+            {
+              "name": "volume",
+              "type": "number",
+              "optional": true,
+              "default": 1
+            },
+            {
+              "name": "emojiId",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "emojiName",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.update-guild-soundboard-sound",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Update Guild Soundboard Sound",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "soundboardSoundId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "volume",
+              "type": "number",
+              "optional": true,
+              "default": 1
+            },
+            {
+              "name": "emojiId",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "emojiName",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-guild-soundboard-sound",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Guild Soundboard Sound",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "soundboardSoundId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.list-guild-emojis",
           "appId": "discord",
           "kind": "action",
@@ -3060,6 +3255,132 @@
           "appId": "discord",
           "kind": "source",
           "name": "Guild Scheduled Event Delete",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.guild-soundboard-sound-create",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Guild Soundboard Sound Create",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.guild-soundboard-sound-update",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Guild Soundboard Sound Update",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.guild-soundboard-sound-delete",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Guild Soundboard Sound Delete",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.guild-soundboard-sounds-update",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Guild Soundboard Sounds Update",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.soundboard-sounds",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Soundboard Sounds",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.voice-channel-effect-send",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Voice Channel Effect Send",
           "fields": [],
           "authFieldNames": [],
           "runtime": {
