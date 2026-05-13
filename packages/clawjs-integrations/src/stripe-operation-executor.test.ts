@@ -712,6 +712,30 @@ describe("stripe operation runtime", () => {
         requiredPaths: ["id", "object", "status"],
       },
     });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-account-link"), {
+      account: "acct_sample",
+      refresh_url: "https://example.invalid/refresh",
+      return_url: "https://example.invalid/return",
+      type: "account_onboarding",
+    }), {
+      method: "POST",
+      endpoint: "account_links",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        account: "acct_sample",
+        refresh_url: "https://example.invalid/refresh",
+        return_url: "https://example.invalid/return",
+        type: "account_onboarding",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["object", "url"],
+      },
+    });
   });
 
   it("covers Stripe payment operations with operation-scoped offline fixtures", async () => {

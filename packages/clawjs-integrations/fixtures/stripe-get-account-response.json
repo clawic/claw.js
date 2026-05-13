@@ -1,0 +1,15 @@
+{
+  "id": "stripe_sample",
+  "object": "account",
+  "status": "succeeded",
+  "url": "https://example.invalid/account-link",
+  "client_secret": "acct_session_secret_sample",
+  "data": [
+    {
+      "id": "stripe_sample",
+      "object": "stripe_object",
+      "status": "succeeded"
+    }
+  ],
+  "has_more": false
+}

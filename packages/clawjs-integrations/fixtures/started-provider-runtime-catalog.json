@@ -31899,6 +31899,78 @@
           ]
         },
         {
+          "id": "stripe.action.get-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Account",
+          "fields": [],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-account-link",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Account Link",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "refresh_url",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/refresh"
+            },
+            {
+              "name": "return_url",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/return"
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false,
+              "default": "account_onboarding"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-account-session",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Account Session",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "components",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "account_onboarding": {
+                  "enabled": true
+                }
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-invoices",
           "appId": "stripe",
           "kind": "action",
