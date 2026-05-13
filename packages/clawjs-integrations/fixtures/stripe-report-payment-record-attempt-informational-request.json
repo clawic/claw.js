@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/payment_records/pr_sample/report_payment_attempt_informational",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "description=Informational+attempt&customer_details=%7B%22email%22%3A%22person%40example.invalid%22%7D&metadata=%7B%22order_id%22%3A%22sample%22%7D"
+}

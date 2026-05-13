@@ -40652,6 +40652,302 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.report-payment-record-payment",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Report Payment Record Payment",
+          "fields": [
+            {
+              "name": "amount_requested",
+              "type": "integer",
+              "optional": false,
+              "default": 1200
+            },
+            {
+              "name": "initiated_at",
+              "type": "integer",
+              "optional": false,
+              "default": 1700000000
+            },
+            {
+              "name": "payment_method_details",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "type": "card"
+              }
+            },
+            {
+              "name": "customer_details",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "email": "person@example.invalid"
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-payment-record",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Payment Record",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "pr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.report-payment-record-attempt",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Report Payment Record Attempt",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "pr_sample"
+            },
+            {
+              "name": "initiated_at",
+              "type": "integer",
+              "optional": false,
+              "default": 1700000000
+            },
+            {
+              "name": "payment_method_details",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "type": "card"
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.report-payment-record-attempt-canceled",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Report Payment Record Attempt Canceled",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "pr_sample"
+            },
+            {
+              "name": "canceled_at",
+              "type": "integer",
+              "optional": false,
+              "default": 1700000300
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.report-payment-record-attempt-failed",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Report Payment Record Attempt Failed",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "pr_sample"
+            },
+            {
+              "name": "failed_at",
+              "type": "integer",
+              "optional": false,
+              "default": 1700000300
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.report-payment-record-attempt-guaranteed",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Report Payment Record Attempt Guaranteed",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "pr_sample"
+            },
+            {
+              "name": "guaranteed_at",
+              "type": "integer",
+              "optional": false,
+              "default": 1700000300
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.report-payment-record-attempt-informational",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Report Payment Record Attempt Informational",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "pr_sample"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Informational attempt"
+            },
+            {
+              "name": "customer_details",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "email": "person@example.invalid"
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.report-payment-record-refund",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Report Payment Record Refund",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "pr_sample"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 500
+            },
+            {
+              "name": "initiated_at",
+              "type": "integer",
+              "optional": true,
+              "default": 1700000400
+            },
+            {
+              "name": "outcome",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "type": "approved"
+              }
+            },
+            {
+              "name": "processor_details",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "reference": "processor_sample"
+              }
+            },
+            {
+              "name": "refunded",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "amount": 500
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

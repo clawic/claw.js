@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/payment_records/pr_sample/report_refund",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "amount=500&initiated_at=1700000400&outcome=%7B%22type%22%3A%22approved%22%7D&processor_details=%7B%22reference%22%3A%22processor_sample%22%7D&refunded=%7B%22amount%22%3A500%7D&metadata=%7B%22order_id%22%3A%22sample%22%7D"
+}

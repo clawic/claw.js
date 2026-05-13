@@ -1245,6 +1245,35 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.report-payment-record-refund"), {
+      id: "pr_sample",
+      amount: 500,
+      initiated_at: 1700000400,
+      outcome: { type: "approved" },
+      processor_details: { reference: "processor_sample" },
+      refunded: { amount: 500 },
+      metadata: { order_id: "sample" },
+    }), {
+      method: "POST",
+      endpoint: "payment_records/pr_sample/report_refund",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        amount: 500,
+        initiated_at: 1700000400,
+        outcome: { type: "approved" },
+        processor_details: { reference: "processor_sample" },
+        refunded: { amount: 500 },
+        metadata: { order_id: "sample" },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-identity-verification-session"), {
       type: "document",
       client_reference_id: "identity_ref_sample",
