@@ -409,12 +409,12 @@ const DISCORD_ACTIONS = [
   action("get-invite-target-users-job-status", "Get Invite Target Users Job Status", [field("inviteCode", "string")]),
   action("list-channel-webhooks", "List Channel Webhooks", [CHANNEL_FIELD]),
   action("list-guild-webhooks", "List Guild Webhooks", [GUILD_FIELD]),
-  action("create-webhook", "Create Webhook", [CHANNEL_FIELD, field("name", "string"), field("auditLogReason", "string", true)]),
+  action("create-webhook", "Create Webhook", [CHANNEL_FIELD, field("name", "string"), field("avatar", "string", true), field("auditLogReason", "string", true)]),
   action("get-webhook", "Get Webhook", [WEBHOOK_FIELD]),
-  action("update-webhook", "Update Webhook", [WEBHOOK_FIELD, field("name", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
+  action("update-webhook", "Update Webhook", [WEBHOOK_FIELD, field("name", "string", true, { default: "sample" }), field("avatar", "string", true), field("targetChannelId", "string", true), field("auditLogReason", "string", true)]),
   action("delete-webhook", "Delete Webhook", [WEBHOOK_FIELD, field("auditLogReason", "string", true)]),
   action("get-webhook-with-token", "Get Webhook With Token", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD], []),
-  action("update-webhook-with-token", "Update Webhook With Token", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, field("name", "string", true, { default: "sample" })], []),
+  action("update-webhook-with-token", "Update Webhook With Token", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, field("name", "string", true, { default: "sample" }), field("avatar", "string", true)], []),
   action("delete-webhook-with-token", "Delete Webhook With Token", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD], []),
   action("execute-webhook", "Execute Webhook", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, ...WEBHOOK_CREATE_MESSAGE_FIELDS, field("wait", "boolean", true), field("threadId", "string", true, { default: null }), field("withComponents", "boolean", true)], []),
   action("execute-slack-compatible-webhook", "Execute Slack-Compatible Webhook", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, field("payload", "object", false, { default: { text: "sample" } }), field("wait", "boolean", true), field("threadId", "string", true)], []),
@@ -3114,6 +3114,7 @@ describe("discord operation runtime", () => {
     assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-webhook"), {
       channelId: "123",
       name: "deploys",
+      avatar: "data:image/png;base64,c2FtcGxl",
       auditLogReason: "create deploy hook",
     }), {
       method: "POST",
@@ -3125,6 +3126,7 @@ describe("discord operation runtime", () => {
       },
       body: {
         name: "deploys",
+        avatar: "data:image/png;base64,c2FtcGxl",
       },
       responseSchema: {
         type: "object",
@@ -3135,6 +3137,8 @@ describe("discord operation runtime", () => {
     assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.update-webhook"), {
       webhookId: "999",
       name: "release deploys",
+      avatar: "data:image/png;base64,c2FtcGxl",
+      targetChannelId: "456",
       auditLogReason: "rename deploy hook",
     }), {
       method: "PATCH",
@@ -3146,6 +3150,8 @@ describe("discord operation runtime", () => {
       },
       body: {
         name: "release deploys",
+        avatar: "data:image/png;base64,c2FtcGxl",
+        channel_id: "456",
       },
       responseSchema: {
         type: "object",

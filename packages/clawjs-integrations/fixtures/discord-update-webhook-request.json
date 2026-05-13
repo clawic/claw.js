@@ -8,6 +8,8 @@
     "x-audit-log-reason": "sample"
   },
   "body": {
-    "name": "sample"
+    "name": "sample",
+    "avatar": "sample",
+    "channel_id": "sample"
   }
 }

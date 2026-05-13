@@ -6,6 +6,7 @@
     "content-type": "application/json"
   },
   "body": {
-    "name": "sample"
+    "name": "sample",
+    "avatar": "sample"
   }
 }
