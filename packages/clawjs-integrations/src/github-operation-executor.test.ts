@@ -8,6 +8,7 @@ import {
 } from "./runtime-coverage.ts";
 import {
   buildGitHubOperationRequest,
+  GITHUB_EXTRA_ACTION_SPECS,
 } from "./github-operation-executor.ts";
 
 const REPO_FIELDS = [
@@ -87,6 +88,7 @@ const GITHUB_ACTIONS = [
   action("github.action.create-gist", "Create Gist", [field("files", "object", false, { default: { "sample.txt": { content: "sample" } } })]),
   action("github.action.update-gist", "Update Gist", [field("gistId", "string"), field("files", "object", true, { default: { "sample.txt": { content: "sample" } } })]),
   action("github.action.delete-gist", "Delete Gist", [field("gistId", "string")]),
+  ...GITHUB_EXTRA_ACTION_SPECS.map((spec) => action(`github.action.${spec.slug}`, titleize(spec.slug), spec.fields)),
 ];
 
 const GITHUB_CATALOG = normalizeConnectorCatalog({
@@ -189,6 +191,98 @@ describe("github operation runtime", () => {
         requiredPaths: ["id", "files"],
       },
     });
+
+    assert.deepEqual(buildGitHubOperationRequest(operation("github.action.list-commits"), {
+      owner: "octocat",
+      repo: "Hello-World",
+      sha: "main",
+      path: "README.md",
+      author: "octocat",
+      since: "2026-01-01T00:00:00Z",
+      until: "2026-01-02T00:00:00Z",
+      perPage: 1,
+      page: 1,
+    }), {
+      method: "GET",
+      endpoint: "repos/octocat/Hello-World/commits",
+      auth,
+      headers,
+      query: {
+        sha: "main",
+        path: "README.md",
+        author: "octocat",
+        since: "2026-01-01T00:00:00Z",
+        until: "2026-01-02T00:00:00Z",
+        per_page: 1,
+        page: 1,
+      },
+      body: {},
+      pagination: {
+        mode: "offset",
+        itemsPath: "",
+        offsetParam: "page",
+        limitParam: "per_page",
+        pageSize: 1,
+        maxPages: 1,
+      },
+      responseSchema: {
+        type: "array",
+      },
+    });
+
+    assert.deepEqual(buildGitHubOperationRequest(operation("github.action.create-deployment-status"), {
+      owner: "octocat",
+      repo: "Hello-World",
+      deploymentId: 42,
+      state: "success",
+      targetUrl: "https://example.invalid/deploy",
+      logUrl: "https://example.invalid/deploy/log",
+      description: "Deployment finished",
+      environment: "production",
+      autoInactive: true,
+    }), {
+      method: "POST",
+      endpoint: "repos/octocat/Hello-World/deployments/42/statuses",
+      auth,
+      headers,
+      body: {
+        state: "success",
+        target_url: "https://example.invalid/deploy",
+        log_url: "https://example.invalid/deploy/log",
+        description: "Deployment finished",
+        environment: "production",
+        auto_inactive: true,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "state"],
+      },
+    });
+
+    assert.deepEqual(buildGitHubOperationRequest(operation("github.action.search-repositories"), {
+      q: "topic:integrations",
+      sort: "stars",
+      order: "desc",
+      perPage: 1,
+      page: 1,
+    }), {
+      method: "GET",
+      endpoint: "search/repositories",
+      auth,
+      headers,
+      query: {
+        q: "topic:integrations",
+        sort: "stars",
+        order: "desc",
+        per_page: 1,
+        page: 1,
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["total_count", "items"],
+      },
+    });
   });
 
   it("covers GitHub operations with operation-scoped offline fixtures", async () => {
@@ -241,4 +335,8 @@ function pagingFields() {
     field("perPage", "integer", true, { default: 1, min: 1, max: 100 }),
     field("page", "integer", true, { default: 1, min: 1 }),
   ];
+}
+
+function titleize(slug: string): string {
+  return slug.split("-").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
 }
