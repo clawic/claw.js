@@ -21,13 +21,13 @@ export function defaultClawJsWorkspaceDataPath(
 export function defaultClawJsTranscriptionDbPath(
   agentId: string = DEFAULT_CLAWJS_OPENCLAW_AGENT_ID,
 ): string {
-  return `${defaultClawJsWorkspacePath(agentId)}/transcriptions.sqlite`;
+  return `${defaultClawJsWorkspacePath(agentId)}/audio.sqlite`;
 }
 
 export function defaultClawJsActivityStoreDbPath(
   agentId: string = DEFAULT_CLAWJS_OPENCLAW_AGENT_ID,
 ): string {
-  return `${defaultClawJsWorkspaceDataPath(agentId)}/activity-store.sqlite`;
+  return `${defaultClawJsWorkspaceDataPath(agentId)}/runtime.sqlite`;
 }
 
 export function defaultClawJsLocalSettingsPath(

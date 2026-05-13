@@ -33,7 +33,7 @@ test("resetClawJSWorkspace clears workspace state and forces onboarding again", 
       displayName: "Repo User",
       profileNameKey: "repo_user",
       profileBasics: { age: "", gender: "", location: "", occupation: "" },
-      dataSources: { wacliDbPath: "repo.db", transcriptionDbPath: "repo.sqlite", activityStoreDbPath: "data/activity-store.sqlite" },
+      dataSources: { wacliDbPath: "repo.db", transcriptionDbPath: "repo.sqlite", activityStoreDbPath: "data/runtime.sqlite" },
       emailAccounts: ["__all__"],
       calendarAccounts: ["__all__"],
       closeRelationMatchers: { patterns: ["repo-close"] },
@@ -62,7 +62,7 @@ test("resetClawJSWorkspace clears workspace state and forces onboarding again", 
       displayName: "Legacy Name",
       profileNameKey: "legacy_name",
       profileBasics: { age: "35", gender: "", location: "Madrid", occupation: "Founder" },
-      dataSources: { wacliDbPath: "~/.wacli/wacli.db", transcriptionDbPath: "transcriptions.sqlite", activityStoreDbPath: "data/activity-store.sqlite" },
+      dataSources: { wacliDbPath: "~/.wacli/wacli.db", transcriptionDbPath: "audio.sqlite", activityStoreDbPath: "data/runtime.sqlite" },
       emailAccounts: ["__all__"],
       calendarAccounts: ["__all__"],
       closeRelationMatchers: { patterns: ["legacy-close"] },
@@ -98,7 +98,7 @@ test("resetClawJSWorkspace clears workspace state and forces onboarding again", 
   fs.writeFileSync(path.join(workspaceDir, "config", "context-files", "relationships-notes.md"), "Legacy context\n");
   fs.writeFileSync(path.join(workspaceDir, "USER.md"), "Legacy Name\n");
   fs.writeFileSync(path.join(workspaceDir, "SOUL.md"), "Legacy Soul\n");
-  fs.writeFileSync(path.join(workspaceDir, "data", "activity-store.sqlite"), "legacy-db");
+  fs.writeFileSync(path.join(workspaceDir, "data", "runtime.sqlite"), "legacy-db");
   fs.writeFileSync(path.join(canonicalSessionsDir, "clawjs-reset-test.jsonl"), `${JSON.stringify({
     type: "message",
     timestamp: "2026-03-17T12:00:00.000Z",

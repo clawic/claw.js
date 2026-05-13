@@ -109,7 +109,7 @@ function getConfiguredAgent(agentId = getClawJSOpenClawAgentId()): OpenClawAgent
 export function resolveClawJSTranscriptionDbPath(agentId = getClawJSOpenClawAgentId()): string {
   const explicit = process.env.OPENCLAW_TRANSCRIPTION_DB_PATH?.trim();
   if (explicit) return resolveHomePath(explicit);
-  return path.join(resolveClawJSWorkspaceDir(), "transcriptions.sqlite");
+  return path.join(resolveClawJSWorkspaceDir(), "audio.sqlite");
 }
 
 export function getClawJSOpenClawContext(agentId = getClawJSOpenClawAgentId()): ClawJSOpenClawContext {

@@ -71,7 +71,7 @@ function buildBlankUserConfig(): UserConfig {
     dataSources: {
       wacliDbPath: "",
       transcriptionDbPath: "",
-      activityStoreDbPath: path.join(dataDir, "activity-store.sqlite"),
+      activityStoreDbPath: path.join(dataDir, "runtime.sqlite"),
     },
     emailAccounts: [],
     calendarAccounts: [],

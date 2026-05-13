@@ -39,8 +39,8 @@ test("workspace config initializes from the current OpenClaw workspace only", { 
     profileNameKey: "legacy_name",
     dataSources: {
       wacliDbPath: "",
-      transcriptionDbPath: "transcriptions.sqlite",
-      activityStoreDbPath: "data/activity-store.sqlite",
+      transcriptionDbPath: "audio.sqlite",
+      activityStoreDbPath: "data/runtime.sqlite",
     },
     emailAccounts: [],
     calendarAccounts: [],
@@ -172,7 +172,7 @@ test("saveUserConfig normalizes TTS config using SDK defaults", { concurrency: f
       dataSources: {
         wacliDbPath: "",
         transcriptionDbPath: "",
-        activityStoreDbPath: path.join(workspaceDir, "data", "activity-store.sqlite"),
+        activityStoreDbPath: path.join(workspaceDir, "data", "runtime.sqlite"),
       },
       tts: {
         enabled: true,
@@ -257,7 +257,7 @@ test("saveUserConfig strips persisted integration bot tokens from disk", { concu
       dataSources: {
         wacliDbPath: "",
         transcriptionDbPath: "",
-        activityStoreDbPath: path.join(workspaceDir, "data", "activity-store.sqlite"),
+        activityStoreDbPath: path.join(workspaceDir, "data", "runtime.sqlite"),
       },
       telegram: {
         enabled: true,
@@ -330,7 +330,7 @@ test("redactUserConfigForClient masks API keys without dropping configured state
     dataSources: {
       wacliDbPath: "",
       transcriptionDbPath: "",
-      activityStoreDbPath: "/tmp/activity-store.sqlite",
+      activityStoreDbPath: "/tmp/runtime.sqlite",
     },
     transcription: {
       provider: "openai",

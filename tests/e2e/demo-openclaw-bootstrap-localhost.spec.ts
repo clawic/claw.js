@@ -84,7 +84,7 @@ test("demo bootstrap stays responsive with local OpenClaw chat and disabled mail
       dataSources: {
         wacliDbPath: "",
         transcriptionDbPath: "",
-        activityStoreDbPath: path.join(workspaceDir, "data", "activity-store.sqlite"),
+        activityStoreDbPath: path.join(workspaceDir, "data", "runtime.sqlite"),
       },
       calendarAccounts: [],
       emailAccounts: [],

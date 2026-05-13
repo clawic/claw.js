@@ -307,7 +307,7 @@ function buildBlankUserConfig(): UserConfig {
     dataSources: {
       wacliDbPath: "",
       transcriptionDbPath: "",
-      activityStoreDbPath: path.join(resolveClawJSWorkspaceDir(), "data", "activity-store.sqlite"),
+      activityStoreDbPath: path.join(resolveClawJSWorkspaceDir(), "data", "runtime.sqlite"),
     },
     emailAccounts: [],
     calendarAccounts: [],
@@ -447,7 +447,7 @@ function ensureWorkspaceConfigLayout(): void {
       activityStoreDbPath: typeof parsed.dataSources?.activityStoreDbPath === "string"
         && parsed.dataSources.activityStoreDbPath.trim()
         ? parsed.dataSources.activityStoreDbPath
-        : path.join(resolveClawJSWorkspaceDir(), "data", "activity-store.sqlite"),
+        : path.join(resolveClawJSWorkspaceDir(), "data", "runtime.sqlite"),
     },
     chat: normalizeAssistantConfig((parsed as Partial<UserConfig>).assistant ?? parsed.chat),
   } as UserConfig));
