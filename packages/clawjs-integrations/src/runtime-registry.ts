@@ -48,6 +48,10 @@ import {
   isDiscordActionOperationSupported,
 } from "./discord-operation-executor.ts";
 import {
+  buildDiscordSourcePlan,
+  isDiscordSourceOperationSupported,
+} from "./discord-source.ts";
+import {
   buildWhatsAppOperationRequest,
   isWhatsAppActionOperationSupported,
 } from "./whatsapp-operation-executor.ts";
@@ -394,38 +398,114 @@ const DISCORD_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/discord-operation-executor.test.ts",
 ];
 
-const DISCORD_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
+const DISCORD_ACTION_FIXTURE_NAMES = [
+  "get-current-user",
+  "get-user",
+  "list-current-user-guilds",
+  "get-guild",
+  "get-guild-preview",
+  "list-guild-channels",
+  "create-guild-channel",
+  "get-channel",
+  "update-channel",
+  "delete-channel",
+  "list-messages",
+  "get-message",
+  "send-message",
+  "edit-message",
+  "delete-message",
+  "bulk-delete-messages",
+  "crosspost-message",
+  "list-pinned-messages",
+  "pin-message",
+  "unpin-message",
+  "create-reaction",
+  "delete-own-reaction",
+  "delete-user-reaction",
+  "list-reactions",
+  "start-thread-from-message",
+  "start-thread-without-message",
+  "list-active-threads",
+  "join-thread",
+  "leave-thread",
+  "add-thread-member",
+  "remove-thread-member",
+  "get-thread-member",
+  "list-thread-members",
+  "list-guild-members",
+  "get-guild-member",
+  "search-guild-members",
+  "modify-guild-member",
+  "remove-guild-member",
+  "list-guild-roles",
+  "create-guild-role",
+  "update-guild-role",
+  "delete-guild-role",
+  "add-guild-member-role",
+  "remove-guild-member-role",
+  "list-guild-bans",
+  "get-guild-ban",
+  "create-guild-ban",
+  "remove-guild-ban",
+  "list-guild-invites",
+  "get-invite",
+  "delete-invite",
+  "list-channel-webhooks",
+  "list-guild-webhooks",
+  "create-webhook",
+  "get-webhook",
+  "update-webhook",
+  "delete-webhook",
+  "execute-webhook",
+  "get-webhook-message",
+  "edit-webhook-message",
+  "delete-webhook-message",
+  "list-global-application-commands",
+  "create-global-application-command",
+  "get-global-application-command",
+  "update-global-application-command",
+  "delete-global-application-command",
+  "list-guild-application-commands",
+  "create-guild-application-command",
+  "get-guild-application-command",
+  "update-guild-application-command",
+  "delete-guild-application-command",
+] as const;
+
+const DISCORD_ACTION_FIXTURES: ConnectorRuntimeFixture[] = DISCORD_ACTION_FIXTURE_NAMES.flatMap((name) => [
   {
-    kind: "request",
-    operationId: "discord.action.get-channel",
-    path: "packages/clawjs-integrations/fixtures/discord-get-channel-request.json",
+    kind: "request" as const,
+    operationId: `discord.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/discord-${name}-request.json`,
   },
   {
-    kind: "response",
-    operationId: "discord.action.get-channel",
-    path: "packages/clawjs-integrations/fixtures/discord-get-channel-response.json",
+    kind: "response" as const,
+    operationId: `discord.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/discord-${name}-response.json`,
   },
-  {
-    kind: "request",
-    operationId: "discord.action.list-guild-channels",
-    path: "packages/clawjs-integrations/fixtures/discord-list-guild-channels-request.json",
-  },
-  {
-    kind: "response",
-    operationId: "discord.action.list-guild-channels",
-    path: "packages/clawjs-integrations/fixtures/discord-list-guild-channels-response.json",
-  },
-  {
-    kind: "request",
-    operationId: "discord.action.send-message",
-    path: "packages/clawjs-integrations/fixtures/discord-send-message-request.json",
-  },
-  {
-    kind: "response",
-    operationId: "discord.action.send-message",
-    path: "packages/clawjs-integrations/fixtures/discord-send-message-response.json",
-  },
+]);
+
+const DISCORD_SOURCE_EVIDENCE = [
+  "packages/clawjs-integrations/src/discord-source.test.ts",
 ];
+
+const DISCORD_SOURCE_FIXTURE_NAMES = [
+  "event",
+  "message-create",
+  "message-update",
+  "message-delete",
+  "guild-member-add",
+  "guild-member-remove",
+  "interaction-create",
+  "thread-create",
+  "reaction-add",
+] as const;
+
+const DISCORD_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = DISCORD_SOURCE_FIXTURE_NAMES.map((name) => ({
+  kind: "source_event",
+  operationId: `discord.source.${name}`,
+  path: `packages/clawjs-integrations/fixtures/discord-source-${name}.json`,
+}));
 
 const GITLAB_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/gitlab-operation-executor.test.ts",
@@ -687,6 +767,19 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     supports: (operation) => isDiscordActionOperationSupported(operation.id),
     buildPlan: (operation, values) => ({
       requestPlan: buildDiscordOperationRequest(operation, values),
+    }),
+  },
+  {
+    appId: "discord",
+    kind: "source",
+    executorId: "discord.webhook",
+    offlineValidated: true,
+    evidence: DISCORD_SOURCE_EVIDENCE,
+    fixtures: DISCORD_SOURCE_FIXTURES,
+    planKinds: ["source"],
+    supports: (operation) => isDiscordSourceOperationSupported(operation.id),
+    buildPlan: (operation) => ({
+      sourcePlan: buildDiscordSourcePlan(operation),
     }),
   },
   {
