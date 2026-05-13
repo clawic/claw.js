@@ -11,9 +11,25 @@ import { telegramAdapter } from "./telegram.ts";
 import {
   buildTelegramOperationRequest,
   createTelegramOperationExecutor,
+  TELEGRAM_ACTION_SLUGS,
 } from "./telegram-operation-executor.ts";
+import type { IntegrationJson } from "./types.ts";
 
 describe("telegram operation executor", () => {
+  it("builds Bot API request plans for every exposed action slug", () => {
+    const endpoints = TELEGRAM_ACTION_SLUGS.map((slug) => {
+      const plan = buildTelegramOperationRequest(`telegram_bot_api.action.${slug}`, sampleTelegramValues(slug));
+      assert.equal(plan.method, "POST");
+      assert.ok(plan.endpoint.length > 0);
+      assert.ok(Object.keys(plan.body).length > 0);
+      return plan.endpoint;
+    });
+
+    assert.ok(endpoints.includes("sendMessage"));
+    assert.ok(endpoints.includes("sendPhoto"));
+    assert.ok(endpoints.includes("setChatPermissions"));
+  });
+
   it("maps text message operations to Telegram Bot API JSON payloads", () => {
     const plan = buildTelegramOperationRequest(
       "telegram_bot_api.action.send-text-message-or-reply-send-text-message-or-reply",
@@ -410,3 +426,34 @@ describe("telegram operation executor", () => {
     }]);
   });
 });
+
+function sampleTelegramValues(slug: string): Record<string, IntegrationJson> {
+  const values: Record<string, IntegrationJson> = {
+    chatId: "123",
+    text: "hello",
+    messageId: "456",
+    userId: "789",
+    fromChatId: "321",
+    mediaType: "Document/Image",
+    media: "https://example.invalid/file.pdf",
+    doc: "https://example.invalid/file.pdf",
+    photo: "https://example.invalid/photo.jpg",
+    audio: "https://example.invalid/audio.mp3",
+    video: "https://example.invalid/video.mp4",
+    videoNote: "https://example.invalid/note.mp4",
+    voice: "https://example.invalid/voice.ogg",
+    sticker: "CAACAgIAAxkBAAE",
+    name: "Launch",
+    offset: 1,
+    limit: 50,
+    length: 60,
+    duration: 30,
+    type: "photo",
+    canSendMessages: true,
+    canInviteUsers: false,
+  };
+  if (slug === "send-album") {
+    values.media = "[{\"type\":\"photo\",\"media\":\"https://example.invalid/a.jpg\"}]";
+  }
+  return values;
+}

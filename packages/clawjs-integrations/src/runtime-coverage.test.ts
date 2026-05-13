@@ -77,7 +77,7 @@ describe("connector runtime coverage", () => {
         authFieldNames: ["telegramBotApi"],
         fields: [{ name: "telegramBotApi", type: "app", optional: false, secret: true }],
         operations: [{
-          id: "telegram_bot_api.action.send-text-message-or-reply-send-text-message-or-reply",
+          id: "telegram_bot_api.action.send-text-message-or-reply",
           appId: "telegram_bot_api",
           kind: "action",
           name: "Send Text Message",
@@ -98,7 +98,7 @@ describe("connector runtime coverage", () => {
     assert.ok(operation);
     assert.deepEqual(buildConnectorOperationRuntimePlan(operation, { chatId: "123", text: "hello" }), {
       status: "implemented",
-      operationId: "telegram_bot_api.action.send-text-message-or-reply-send-text-message-or-reply",
+      operationId: "telegram_bot_api.action.send-text-message-or-reply",
       appId: "telegram_bot_api",
       kind: "action",
       executorId: "telegram-bot-api.action.http",
@@ -129,7 +129,7 @@ describe("connector runtime coverage", () => {
         authFieldNames: ["telegramBotApi"],
         fields: [{ name: "telegramBotApi", type: "app", optional: false, secret: true }],
         operations: [{
-          id: "telegram_bot_api.source.new-bot-command-received-new-bot-command-received",
+          id: "telegram_bot_api.source.new-bot-command-received",
           appId: "telegram_bot_api",
           kind: "source",
           name: "New Bot Command",
@@ -162,7 +162,7 @@ describe("connector runtime coverage", () => {
     assert.ok(operation);
     assert.deepEqual(buildConnectorOperationRuntimePlan(operation, { offset: 10 }), {
       status: "implemented",
-      operationId: "telegram_bot_api.source.new-bot-command-received-new-bot-command-received",
+      operationId: "telegram_bot_api.source.new-bot-command-received",
       appId: "telegram_bot_api",
       kind: "source",
       executorId: "telegram-bot-api.source.polling",

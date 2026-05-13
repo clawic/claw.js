@@ -8,11 +8,43 @@ import {
 } from "./runtime-fixtures.ts";
 import { runConnectorSource } from "./source-runner.ts";
 import {
+  TELEGRAM_SOURCE_KINDS,
   telegramInboundMessageFromUpdate,
   telegramSourceEventsForUpdate,
 } from "./telegram-source.ts";
 
 describe("telegram source events", () => {
+  it("keeps every exposed polling source kind supported", () => {
+    const update = {
+      update_id: 100,
+      message: {
+        message_id: 20,
+        date: 1_700_000_000,
+        chat: { id: 123 },
+        from: { id: 1, first_name: "Ada" },
+        text: "/start hello",
+      },
+    };
+    const channelUpdate = {
+      update_id: 101,
+      channel_post: {
+        message_id: 21,
+        date: 1_700_000_100,
+        chat: { id: -100, title: "Builds" },
+        text: "release ready",
+      },
+    };
+    const events = [
+      ...telegramSourceEventsForUpdate(update, { commands: ["/start"] }),
+      ...telegramSourceEventsForUpdate(channelUpdate),
+    ];
+
+    assert.deepEqual(
+      TELEGRAM_SOURCE_KINDS.filter((kind) => events.some((event) => event.kind === kind)),
+      [...TELEGRAM_SOURCE_KINDS],
+    );
+  });
+
   it("emits generic, message, and command source events for matching commands", () => {
     const events = telegramSourceEventsForUpdate(
       {
