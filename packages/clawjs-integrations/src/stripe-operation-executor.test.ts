@@ -1372,6 +1372,27 @@ describe("stripe operation runtime", () => {
         requiredPaths: ["id", "object"],
       },
     });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.update-invoice-lines"), {
+      invoiceId: "in_sample",
+      lines: [{ id: "il_sample", description: "Updated line" }],
+      invoice_metadata: { order_id: "sample" },
+    }), {
+      method: "POST",
+      endpoint: "invoices/in_sample/update_lines",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        lines: [{ id: "il_sample", description: "Updated line" }],
+        invoice_metadata: { order_id: "sample" },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
   });
 
   it("covers Stripe payment operations with operation-scoped offline fixtures", async () => {

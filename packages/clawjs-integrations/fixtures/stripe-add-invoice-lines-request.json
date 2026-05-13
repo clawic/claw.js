@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/invoices/in_sample/add_lines",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "lines=%7B%22amount%22%3A1200%2C%22currency%22%3A%22usd%22%2C%22description%22%3A%22Sample+line%22%7D&invoice_metadata=%7B%22order_id%22%3A%22sample%22%7D"
+}

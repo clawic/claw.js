@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/invoices/create_preview",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "customer=cus_sample&currency=usd&invoice_items=%7B%22amount%22%3A1200%2C%22currency%22%3A%22usd%22%7D&subscription=sub_sample"
+}

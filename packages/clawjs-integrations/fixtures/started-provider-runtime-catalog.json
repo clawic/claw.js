@@ -39532,6 +39532,218 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.create-preview-invoice",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Preview Invoice",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "currency",
+              "type": "string",
+              "optional": true,
+              "default": "usd"
+            },
+            {
+              "name": "invoice_items",
+              "type": "array",
+              "optional": true,
+              "default": [
+                {
+                  "amount": 1200,
+                  "currency": "usd"
+                }
+              ]
+            },
+            {
+              "name": "subscription",
+              "type": "string",
+              "optional": true,
+              "default": "sub_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.add-invoice-lines",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Add Invoice Lines",
+          "fields": [
+            {
+              "name": "invoiceId",
+              "type": "string",
+              "optional": false,
+              "default": "in_sample"
+            },
+            {
+              "name": "lines",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "amount": 1200,
+                  "currency": "usd",
+                  "description": "Sample line"
+                }
+              ]
+            },
+            {
+              "name": "invoice_metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.attach-invoice-payment",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Attach Invoice Payment",
+          "fields": [
+            {
+              "name": "invoiceId",
+              "type": "string",
+              "optional": false,
+              "default": "in_sample"
+            },
+            {
+              "name": "payment_intent",
+              "type": "string",
+              "optional": true,
+              "default": "pi_sample"
+            },
+            {
+              "name": "payment_record",
+              "type": "string",
+              "optional": true,
+              "default": "pr_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-invoice-line-item",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Invoice Line Item",
+          "fields": [
+            {
+              "name": "invoiceId",
+              "type": "string",
+              "optional": false,
+              "default": "in_sample"
+            },
+            {
+              "name": "lineItemId",
+              "type": "string",
+              "optional": false,
+              "default": "il_sample"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Updated line"
+            },
+            {
+              "name": "quantity",
+              "type": "integer",
+              "optional": true,
+              "default": 2
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.remove-invoice-lines",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Remove Invoice Lines",
+          "fields": [
+            {
+              "name": "invoiceId",
+              "type": "string",
+              "optional": false,
+              "default": "in_sample"
+            },
+            {
+              "name": "lines",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "id": "il_sample"
+                }
+              ]
+            },
+            {
+              "name": "invoice_metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-invoice-lines",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Invoice Lines",
+          "fields": [
+            {
+              "name": "invoiceId",
+              "type": "string",
+              "optional": false,
+              "default": "in_sample"
+            },
+            {
+              "name": "lines",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "id": "il_sample",
+                  "description": "Updated line"
+                }
+              ]
+            },
+            {
+              "name": "invoice_metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },
