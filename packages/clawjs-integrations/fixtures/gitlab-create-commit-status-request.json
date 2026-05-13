@@ -1,0 +1,16 @@
+{
+  "method": "POST",
+  "url": "https://gitlab.com/api/v4/projects/group%2Fproject/statuses/sample",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json",
+    "private-token": "offline-gitlabToken-secret"
+  },
+  "body": {
+    "state": "success",
+    "ref": "main",
+    "name": "ci",
+    "target_url": "https://example.invalid/build",
+    "description": "Build passed"
+  }
+}

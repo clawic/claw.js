@@ -1,0 +1,15 @@
+{
+  "method": "POST",
+  "url": "https://gitlab.com/api/v4/projects/group%2Fproject/repository/commits/sample/comments",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json",
+    "private-token": "offline-gitlabToken-secret"
+  },
+  "body": {
+    "note": "Looks good",
+    "path": "README.md",
+    "line": 1,
+    "line_type": "new"
+  }
+}

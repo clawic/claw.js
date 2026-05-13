@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://gitlab.com/api/v4/projects/group%2Fproject/repository/blobs/sample/raw",
+  "headers": {
+    "accept": "application/json",
+    "private-token": "offline-gitlabToken-secret"
+  }
+}
