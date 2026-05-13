@@ -25,28 +25,31 @@ The docs check script validates that every current export from
     AudioServiceStore
     AudioTranscript
     AudioTranscriptRole
+    buildAudioApp
     BuildAudioAppOptions
     ListAudioFilter
     ListAudioResult
     ListGlobalAudioFilter
-    RegisterAudioInput
-    buildAudioApp
     loadAudioConfig
+    RegisterAudioInput
 
 ## @clawjs/database Exports
 
     AccessPolicy
     AdminClaims
     AuthPrincipal
+    BarcodeKind
     buildDatabaseApp
     BuildDatabaseAppOptions
     CollectionDefinition
+    CollectionRule
     DatabaseApiClient
     DatabaseAuthService
     DatabaseCliOptions
     DatabaseOperation
     DatabaseServiceConfig
     DatabaseServiceStore
+    DurationDisplayUnit
     FieldDefinition
     FieldType
     FileAsset
@@ -54,6 +57,7 @@ The docs check script validates that every current export from
     hashSecret
     IndexDefinition
     loadDatabaseConfig
+    loadEphemeralAdminToken
     NamespaceRecord
     RealtimeHub
     RecordChangeEvent
@@ -64,34 +68,45 @@ The docs check script validates that every current export from
 ## @clawjs/sessions Exports
 
     AppendMessageInput
-    BuildSessionsAppOptions
     buildSessionsApp
+    BuildSessionsAppOptions
     CodexImportResult
     CodexScanResult
+    CreateProjectInput
     CreateSessionInput
     ExportTrajectoryOptions
     ImportCodexDirOptions
     ImportCodexFileOptions
     importCodexRolloutFile
     importCodexSessionsDir
+    ListProjectsFilter
+    ListProjectsResult
     ListSessionsFilter
     ListSessionsResult
     loadSessionsConfig
     MessageRole
+    MessageStreamingState
+    normalizeProjectPath
+    ProjectRecord
     SearchSessionsInput
     SessionAgent
-    SessionsApiClient
-    SessionsApiClientOptions
+    SessionEvent
+    SessionEventType
     SessionMessageRecord
     SessionOriginRecord
     SessionRecord
     SessionRuntime
+    SessionsApiClient
+    SessionsApiClientOptions
     SessionSearchHit
     SessionsServiceConfig
     SessionsServiceStore
     SessionStatus
     SessionWithMessages
+    stableProjectIdFromPath
+    StartTurnInput
     TrajectoryRecord
+    UpdateProjectInput
     UpsertOriginInput
 
 ## @clawjs/user-model Exports
@@ -104,6 +119,7 @@ The docs check script validates that every current export from
     loadUserModelConfig
     UpdateItemInput
     UpsertItemInput
+    USER_MODEL_SECTIONS
     UserModelApiClient
     UserModelApiClientOptions
     UserModelSection
@@ -113,12 +129,14 @@ The docs check script validates that every current export from
     UserProfileHistoryRecord
     UserProfileItem
     UserProfileSnapshot
-    USER_MODEL_SECTIONS
 
 ## @clawjs/runtime Exports
 
     buildRuntimeApp
     BuildRuntimeAppOptions
+    ClaimResult
+    CreateKanbanTaskInput
+    DispatcherTickResult
     DistillationRecord
     DistillerOptions
     DistillerSynthesizer
@@ -128,6 +146,14 @@ The docs check script validates that every current export from
     heuristicDistillerSynthesizer
     heuristicNudgeSynthesizer
     heuristicUserModelSynthesizer
+    KanbanBoard
+    KanbanCommentRecord
+    KanbanDispatcherOptions
+    KanbanEventRecord
+    KanbanPriority
+    KanbanStatus
+    KanbanTaskRecord
+    ListKanbanFilter
     loadRuntimeConfig
     NudgeInput
     NudgeOptions
@@ -146,6 +172,7 @@ The docs check script validates that every current export from
     RuntimeServicesContext
     RuntimeServiceStore
     runUserModelRefresh
+    UpdateKanbanTaskInput
     UserModelRefreshInput
     UserModelRefreshOptions
     UserModelRefreshRecord
@@ -155,41 +182,14 @@ The docs check script validates that every current export from
 
 ## @clawjs/claw Exports
 
-    ActionReceipt
-    actionReceiptSchema
-    ActivityEntryRecord
-    activityEntryRecordSchema
-    AgentRecord
-    agentRecordSchema
-    AgentToolCatalog
-    AgentToolDescriptor
-    AgentToolInvocationError
-    AgentToolInvocationRequest
-    AgentToolInvocationResult
-    AgentToolParameters
-    AgentToolRiskLevel
+    AddCodeProjectInput
     AppendMessageInput
     AppliedTemplateMutation
     applyTemplatePack
     ApplyTemplatePackOptions
     applyTextMutation
-    ApprovalRecord
-    approvalRecordSchema
-    AreaDescriptor
-    areaDescriptorSchema
-    AreaRecord
-    areaRecordSchema
-    ArtifactRecord
-    artifactRecordSchema
-    AssignmentRecord
-    assignmentRecordSchema
     AtomicWriteResult
-    Attachment
-    AttachmentRecord
-    attachmentRecordSchema
     attachWorkspace
-    AuditEvent
-    auditEventSchema
     AuditQueryInput
     AuditRecord
     AuthDiagnostics
@@ -197,18 +197,10 @@ The docs check script validates that every current export from
     AuthLoginPlan
     AuthLoginProgressEvent
     AuthLoginResult
-    AuthProfileSummary
-    AuthState
     AuthStoreFilesystem
-    AutomationRecord
-    automationRecordSchema
     BeginDocumentUploadInput
-    BindingDefinition
-    bindingDefinitionSchema
     BindingStoreRecord
     BindingSyncResult
-    BlockerRecord
-    blockerRecordSchema
     brokerSecretHttp
     buildCodexCommand
     buildCombinedDoctorReport
@@ -230,35 +222,18 @@ The docs check script validates that every current export from
     buildOpenClawWorkspaceSetupCommand
     buildOrchestrationSnapshot
     buildSetDefaultModelCommand
+    buildSkillMd
     buildSystemPromptWithContext
     buildTitlePrompt
     buildTitleSessionSnippet
     buildWorkspaceResetPlan
+    BUILTIN_PROCEDURE_SKILLS
+    BUILTIN_SOUL_PRESETS
     callOpenClawGateway
     callTelegramApi
     CANONICAL_RUNTIME_FILES
     CAPABILITY_REPORT_FILE
-    CapabilityDescriptor
-    capabilityDescriptorSchema
-    CapabilityName
-    CapabilityReport
-    capabilityReportSchema
-    CapabilityState
-    CapabilityStatus
-    capabilityStatusSchema
-    CapacityRecord
-    capacityRecordSchema
-    ChannelAccountDescriptor
-    ChannelAgentBinding
-    ChannelCatalog
-    ChannelDescriptor
-    ChannelEventRecord
-    ChannelIntentConfig
-    ChannelListenerDescriptor
-    ChannelMessageRecord
-    ChannelPermission
     ChannelProcessorAction
-    ChannelProcessorDescriptor
     ChannelProcessorEvent
     ChannelProcessorResult
     ChannelRunDeliveryMode
@@ -270,46 +245,87 @@ The docs check script validates that every current export from
     ChannelRunStore
     ChannelRunTarget
     CHANNELS_STATE_FILE
-    ChannelsIntentState
     ChannelsRegistry
-    ChannelsStateSnapshot
-    channelsStateSnapshotSchema
-    ChannelTargetDescriptor
     Claw
-    ClawCanonicalTerm
-    ClawCanonicalTermKey
-    ClawError
-    ClawErrorCode
+    CLAW_RUNTIME_PROVIDERS
+    CLAW_RUNTIME_WORKSPACE_FILES
+    clawAdapter
     ClawEvent
     ClawEventBus
     ClawFactory
     ClawInstance
-    CLAWJS_CANONICAL_HIERARCHY
-    CLAWJS_CANONICAL_TERMS
     CLAWJS_DIR
-    CLAWJS_NON_SYNONYMS
-    ClawManifest
+    ClawRuntimeAppServer
+    ClawRuntimeAppServerOptions
+    ClawRuntimeAuthSource
+    ClawRuntimeJsonRpcMessage
+    ClawRuntimeJsonRpcRequest
+    ClawRuntimeModelMetadata
+    ClawRuntimePermissionMode
+    ClawRuntimeProviderConfig
+    ClawRuntimeWire
     cleanupOpenClawAuthLoginState
     CleanupOpenClawAuthLoginStateOptions
     CleanupOpenClawAuthLoginStateResult
+    CodeAgentRecord
+    CodeAgentStatus
+    CodeChangeKind
+    CodeCheckRecord
+    CodeCheckRecordInput
+    CodeCheckRunInput
+    CodeCheckStatus
+    CodeCommitResult
+    CodeDiffSummary
+    CodeEvidenceInput
+    CodeEvidenceRecord
+    CodeGateRunRecord
+    CodeGateStatus
+    CodeGlobalIndex
+    CodeGlobalIntentRecord
+    CodeGlobalQueueRecord
+    CodeGlobalReservationRecord
+    CodeGlobalStatus
+    CodeHostProvider
+    CodeHostSyncRecord
+    CodeIntegrateResult
+    CodeIntegrationPolicy
+    CodeIntentDetail
+    CodeIntentRecord
+    CodeIntentStatus
+    CodeLedger
+    CodePolicyMode
+    CodePolicyRecord
+    CodeProjectRecord
+    CodeProjectStatus
+    CodeQueueRecord
+    CodeRepositoryRecord
+    CodeReservationRecord
+    CodeReserveInput
+    CodeReviewDecision
+    CodeReviewInput
+    CodeReviewRecord
+    CodeRisk
+    CodeServeOptions
+    CodeServerHandle
+    CodeStartInput
+    CodeSyncGithubInput
     codexAdapter
     CodexCommandOptions
     CombinedDoctorIssue
     CombinedDoctorReport
     CommandGenerationBackendRecord
     CommandRunner
-    CommentRecord
-    commentRecordSchema
+    COMMITMENT_STATE_FILE
+    CommitmentStore
+    CommitmentStoreOptions
     COMPAT_SNAPSHOT_FILE
     CompatDriftIssue
     CompatDriftReport
     CompatReport
-    CompatSnapshot
     compatSnapshotExists
     CompatSnapshotMigrationResult
-    compatSnapshotSchema
-    ConnectorDescriptor
-    connectorDescriptorSchema
+    CompileOptions
+    compileSkills
     ContentApprovalRequest
     ContentAssetRef
     ContentBrand
@@ -331,49 +347,54 @@ The docs check script validates that every current export from
     ContentType
     ContentVariant
     ContentVariantStatus
-    ContextChip
+    CONTEXT_STATE_FILE
+    ContextPrepareSources
+    ContextStore
+    ContextStoreOptions
     createChannelsRegistry
     CreateChannelsRegistryOptions
     createClaw
     CreateClawOptions
+    createCodeGlobalIndex
+    CreateCodeGlobalIndexOptions
+    createCodeLedger
+    CreateCodeLedgerOptions
+    createCommitmentStore
+    createContextStore
     createDocumentStore
     createDriveStorageShareAdapter
     CreateGenerationInput
     createGenerationStore
     createImageLibraryStore
     CreateImageLibraryStoreOptions
+    createJudgmentStore
+    createLearningStore
     createLocalLibraryStore
-    createLocalStorageStore
     createLocalRulesStore
+    createLocalStorageStore
     createMediaStore
-    createManifest
-    createStorageHttpHandler
+    createOutcomeStore
+    createSkillsStore
     createSlackService
     CreateSlackServiceOptions
+    createSoulStore
+    createStorageHttpHandler
     createTelegramService
     CreateTelegramServiceOptions
     createTemplateRenderer
     CreateTemporalItemInput
+    createTemporaryCodeRepository
     createTemporaryDownloadPath
-    createTtsPlaybackPlan
+    createUserStore
     CreateVoiceNoteInput
     createVoiceNoteStore
     createWhatsAppService
     CreateWhatsAppServiceOptions
     CreateWikiPageInput
     createWorkspaceDataStore
-    CredentialSource
-    CustomFieldRecord
-    customFieldRecordSchema
-    CycleRecord
-    cycleRecordSchema
     DataAssetHandle
     DataCollectionHandle
     DataDocumentHandle
-    DeadlineRecord
-    deadlineRecordSchema
-    DecisionRecord
-    decisionRecordSchema
     DEFAULT_CLAWJS_OPERATOR_CAPSULE
     DEFAULT_CLAWJS_OPERATOR_SKILL_ID
     DEFAULT_DEMO_SCENARIO_ID
@@ -381,9 +402,9 @@ The docs check script validates that every current export from
     DEFAULT_RUNTIME_FILE_DESCRIPTORS
     DEFAULT_SECRETS_APP_PATH
     DEFAULT_SESSION_TITLE
+    DEFAULT_SOUL_ID
     DEFAULT_USER_ID
-    DefaultModelRef
-    DeliveryState
+    defaultCodeWorktreeParent
     demoAdapter
     DemoScenario
     DemoScenarioId
@@ -392,7 +413,6 @@ The docs check script validates that every current export from
     describeOpenClawVersion
     describeRuntimeCapabilities
     describeSecret
-    DesiredSkillRecord
     DetachedAuthLauncher
     DetachedPtySpec
     DetachedSpawnResult
@@ -400,8 +420,8 @@ The docs check script validates that every current export from
     DetachOpenClawAppContextOptions
     DetachOpenClawAppContextResult
     detectBinary
-    DeviceInstallation
     DiffPreview
+    DiscoverCodeProjectsInput
     DiscoveredWorkspace
     discoverOpenClawAppContext
     DiscoverOpenClawAppContextOptions
@@ -410,52 +430,32 @@ The docs check script validates that every current export from
     doctorKeychain
     DoctorReport
     DocumentDownloadResult
-    DocumentIndexStatus
-    DocumentOrigin
-    DocumentRecord
-    DocumentRef
     DocumentSearchInput
-    DocumentSearchResult
-    DocumentStorageDescriptor
     DocumentStore
     downloadTelegramFile
-    ensureOwnerTokenFile
-    EffectPreview
-    effectPreviewSchema
-    EffectiveAccessPolicy
     EmbeddedTimeEngine
     EmbeddedTimeEngineOptions
     ensureHttpSecretReference
+    ensureOwnerTokenFile
     ensureSecretReference
     EnsureSecretReferenceInput
     EnsureSecretReferenceResult
     ensureTelegramBotSecretReference
     EnsureTelegramBotSecretReferenceInput
-    EpicRecord
-    epicRecordSchema
     EventListener
-    EventRecord
-    eventRecordSchema
-    EventReminder
-    eventReminderSchema
     ExecOptions
     ExecResult
+    executeClawRuntimeTool
+    extractClawRuntimeChatText
     extractCodexJsonlText
     extractJsonPayloadText
     extractManagedBlock
     extractOpenClawCliText
     extractResponseOutputText
-    FeatureOwnership
-    featureOwnershipSchema
-    FeedbackRecord
-    feedbackRecordSchema
-    FieldValueRecord
-    fieldValueRecordSchema
-    FileMutationMode
-    FilesIntentState
     filterOpenClawProviderAuthByIntent
     formatOpenClawConversation
     GatewayConfigOptions
+    generateBuiltinSkills
     generateRuntimeSessionTitle
     generateRuntimeText
     generateSessionTitle
@@ -474,6 +474,8 @@ The docs check script validates that every current export from
     GenerationRecord
     GenerationRecordStatus
     GenerationStore
+    getClawRuntimeDefaultModel
+    getClawRuntimeProviderAuth
     getDefaultOpenClawModel
     getDemoScenario
     getOpenClawGatewayStatus
@@ -489,16 +491,12 @@ The docs check script validates that every current export from
     getSecretCapabilities
     getSkillSource
     getTtsCatalog
-    GoalRecord
-    goalRecordSchema
     GrantChannelBindingInput
-    HandoffRecord
-    handoffRecordSchema
+    handleClawRuntimeJsonRpcMessage
     hasConfirmedOpenClawOAuthSubscription
     hasOpenClawProviderAuth
+    HeartbeatCodeAgentInput
     hermesAdapter
-    HomeDescriptor
-    homeDescriptorSchema
     ImageAssetRecord
     ImageBackendDescriptor
     ImageCreateInput
@@ -512,11 +510,7 @@ The docs check script validates that every current export from
     ImageRecord
     ImageStatus
     ImageType
-    InboxMessageRecord
-    InboxReplyTarget
-    InboxThreadRecord
-    IncidentRecord
-    incidentRecordSchema
+    ImporterOptions
     initializeWorkspace
     initializeWorkspaceManifest
     inspectManagedBlock
@@ -524,57 +518,30 @@ The docs check script validates that every current export from
     inspectWorkspaceFile
     installOpenClawRuntime
     INTENT_DOMAINS
-    Intent
-    IntentDomain
-    intentSchema
-    intentDomainSchema
     IntentStateByDomain
     invokeChannelProcessor
-    IoTActionRequest
-    iotActionRequestSchema
-    IoTActionResult
-    iotActionResultSchema
     IotClient
     IotClientOptions
-    IoTEventRecord
-    iotEventRecordSchema
-    IoTPolicyEvaluation
-    iotPolicyEvaluationSchema
-    IoTRiskLevel
-    IoTStateSnapshot
-    iotStateSnapshotSchema
-    IoTThingKind
     ironclawAdapter
     isOpenClawProviderEnabled
-    KnownRuntimeAdapterId
+    JUDGMENT_STATE_FILE
+    JudgmentPrepareContext
+    JudgmentStore
+    JudgmentStoreOptions
     launchOpenClawAuthLogin
+    LEARNING_STATE_FILE
+    LearningCaptureResult
+    LearningStore
+    LearningStoreOptions
     LIBRARY_STATE_FILE
-    LibraryAsset
     LibraryAssetInput
-    LibraryAssetKind
-    libraryAssetSchema
     LibraryAssetUpdate
     LibraryAssignInput
-    LibraryAssignment
-    libraryAssignmentSchema
-    LibraryInstructionProjection
-    LibraryInstructionProjectionTarget
-    LibraryMissingSecret
     libraryProjectionTargetFile
-    LibraryRequiredSecret
-    libraryRequiredSecretSchema
-    LibraryResolvedAsset
     LibraryResolveInput
-    LibraryResolveResult
-    libraryResolveResultSchema
-    LibrarySkillSource
-    LibraryState
-    libraryStateSchema
     LibraryStoreOptions
-    LibrarySyncResult
-    LinkedEntityDomain
-    LinkedEntityRef
-    linkedEntityRefSchema
+    listClawRuntimeModels
+    listClawRuntimeProviders
     listDemoScenarios
     listManagedBlockProblems
     listManagedBlocks
@@ -582,8 +549,6 @@ The docs check script validates that every current export from
     listOpenClawAgents
     listOpenClawChannels
     listOpenClawModels
-    ListRecord
-    listRecordSchema
     listRuntimeAdapters
     listSecretActions
     listSecretLeases
@@ -595,6 +560,7 @@ The docs check script validates that every current export from
     loadAuthStore
     loadTemplatePack
     LocalLibraryStore
+    LocalRulesStore
     LocalStorageStore
     LockHandle
     LockRetryOptions
@@ -604,37 +570,15 @@ The docs check script validates that every current export from
     ManagedBlockMarkers
     ManagedBlockPreview
     ManagedBlockProblem
-    manifestSchema
-    maskCredential
-    MEMORY_STATE_FILE
-    MemoryCatalog
-    MemoryDescriptor
-    MemoryStateSnapshot
-    memoryStateSnapshotSchema
-    MemoryStructuredLogSink
-    MediaChannelContext
-    MediaDirection
-    MediaExternalRef
-    MediaGalleryShare
-    MediaKind
-    MediaListInput
-    MediaOrigin
-    MediaRecord
-    MediaSearchResult
     MediaStore
-    MediaStorageRef
+    MEMORY_STATE_FILE
+    MemoryStructuredLogSink
     mergeManagedBlocks
     MergeManagedBlocksOptions
     mergeRuntimeCapabilityMaps
-    Message
     migrateCompatSnapshot
-    MilestoneRecord
-    milestoneRecordSchema
-    ModelCatalog
-    ModelDescriptor
-    ModelsIntentState
-    ModelsObservedState
-    ModelSummary
+    migrateLegacyState
+    MigrateOptions
     nanobotAdapter
     nanoclawAdapter
     nemoclawAdapter
@@ -645,31 +589,20 @@ The docs check script validates that every current export from
     normalizeCompatSnapshot
     normalizeContextChip
     normalizeDocumentRef
-    normalizeRuleId
     normalizeInstallRef
     normalizeLibraryId
     normalizeProviderAuth
+    normalizeRuleId
     normalizeRuntimeSessionAdapter
+    normalizeSlug
     normalizeSttConfig
     normalizeTranscriptEvents
     normalizeTranscriptMessage
     normalizeTtsConfig
-    NoteBlock
-    noteBlockSchema
-    NoteRecord
-    noteRecordSchema
-    NotificationAudience
-    NotificationContext
-    NotificationDeepLink
-    NotificationDeliveryMode
-    NotificationPriority
-    NotificationReceiptPolicy
     NotifyClient
     NotifyClientOptions
     nullclawAdapter
     OBSERVED_DOMAINS
-    ObservedDomain
-    observedDomainSchema
     ObservedStateByDomain
     OPENAI_BACKEND_ID
     OpenAIChatMessage
@@ -714,31 +647,21 @@ The docs check script validates that every current export from
     OpenClawSetupStatus
     OpenClawVersionParseResult
     OpenClawVersionParseStrategy
-    OperationalCheckRecord
-    operationalCheckRecordSchema
-    OrchestrationReadiness
     OrchestrationSnapshot
+    OUTCOME_STATE_FILE
+    OutcomeStore
+    OutcomeStoreOptions
+    OutcomeWriteContext
     parseOpenClawMemorySearch
     parseOpenClawModelsStatus
     parseOpenClawVersion
     parseTranscriptLine
+    parseYaml
     patchIntentDomain
-    PermissionRequirement
-    permissionRequirementSchema
     persistProviderApiKey
     PersistProviderApiKeyOptions
     PersistProviderApiKeyResult
-    PersonIdentity
-    personIdentitySchema
-    PersonRecord
-    personRecordSchema
     picoclawAdapter
-    PluginCatalog
-    PluginIntentConfig
-    PluginsIntentState
-    PluginsObservedState
-    PolicyRecord
-    policyRecordSchema
     PollWatchOptions
     PreserveManagedBlocksWriteOptions
     previewDiff
@@ -746,46 +669,11 @@ The docs check script validates that every current export from
     previewWorkspaceFile
     probeOpenClawCapabilities
     probeRuntimeCapabilities
-    PRODUCTIVITY_COLLECTION_DEFINITIONS
-    ProductivityAgenda
-    ProductivityAgendaItem
-    ProductivityAnchorType
-    ProductivityApprovalRecord
-    productivityApprovalRecordSchema
-    ProductivityCollectionDefinition
-    ProductivityCommentEntityType
-    ProductivityFieldDefinition
-    ProductivityIndexDefinition
-    ProductivityMyWork
-    ProductivityOperationsAgent
-    ProductivityOperationsCockpit
-    ProductivityRelationDefinition
-    ProductivityReview
-    ProductivityTeamWork
-    productivityTemplateRecordSchema
-    ProgressEvent
-    Project
-    ProjectAgentAssignment
-    ProjectRecord
-    projectRecordSchema
-    ProjectResourceRef
-    ProjectSecretRef
-    PromptContextBlock
     PROVIDER_STATE_FILE
-    ProviderAlias
-    ProviderAuthSummary
-    ProviderCatalog
-    ProviderDescriptor
     providerHasApiKey
     providerHasAuth
     providerHasSubscription
-    ProviderIntentConfig
-    ProvidersIntentState
-    ProviderStateSnapshot
-    providerStateSnapshotSchema
     QuietHoursPolicy
-    RawIoTInvocation
-    rawIotInvocationSchema
     readAllIntentDomains
     readAllObservedDomains
     readBindingStore
@@ -813,20 +701,15 @@ The docs check script validates that every current export from
     readWorkspaceManifest
     readWorkspaceStateSnapshot
     RecordChannelEventInput
-    RecurrenceRecord
-    recurrenceRecordSchema
     redactSecrets
     RegisterChannelProcessorInput
     RegisterChannelTargetInput
+    RegisterCodeAgentInput
     RegisterCommandGenerationBackendInput
     RegisterDocumentPathInput
     RegisterMediaInput
     RegisterTelegramBotAccountInput
     RegisterVoiceNotePathInput
-    ReleaseRecord
-    releaseRecordSchema
-    ReminderRecord
-    reminderRecordSchema
     removeAuthProfilesForProvider
     renderManagedBlock
     renderSettingsTemplate
@@ -840,8 +723,11 @@ The docs check script validates that every current export from
     resolveCapabilityReportPath
     resolveChannelRunKey
     resolveChannelsStatePath
+    resolveClawRuntimeConfig
+    resolveClawRuntimeLocations
     resolveCodexBinaryPath
     resolveCompatSnapshotPath
+    ResolvedClawRuntimeConfig
     resolveDemoScenarioId
     ResolvedSessionAsset
     resolveFileLockPath
@@ -861,6 +747,7 @@ The docs check script validates that every current export from
     resolveOpenClawContextWithCli
     resolveOpenClawOAuthProvider
     resolveProviderStatePath
+    resolveRulesRoot
     resolveRuntimeFilePath
     resolveSchedulerStatePath
     resolveSessionLockPath
@@ -869,6 +756,7 @@ The docs check script validates that every current export from
     resolveSessionTitle
     resolveSettingsSchemaPath
     resolveSettingsValuesPath
+    resolveSkillsHome
     resolveSkillSourceFromRef
     resolveSkillsStatePath
     resolveTelegramStatePath
@@ -877,62 +765,19 @@ The docs check script validates that every current export from
     resolveWorkspaceLockPath
     resolveWorkspaceStatePath
     restartOpenClawGateway
-    resolveRulesRoot
+    RULES_STATE_FILE
+    RulesStoreOptions
     runOpenClawMemorySearch
     runSecretAction
-    RuleApplyWhen
-    ruleApplyWhenSchema
-    RuleInput
-    RuleKind
-    ruleKindSchema
-    LocalRulesStore
-    RULES_STATE_FILE
-    RuleRecord
-    ruleRecordSchema
-    RuleReference
-    RuleReferenceKind
-    ruleReferenceSchema
-    RuleScope
-    RuleScopeInput
-    RuleScopeKind
-    ruleScopeKindSchema
-    ruleScopeSchema
-    RuleStatus
-    ruleStatusSchema
-    RulesCompileInput
-    RulesCompileMatch
-    RulesCompileResult
-    RulesState
-    rulesStateSchema
-    RulesStoreOptions
     RuntimeAdapter
-    RuntimeAdapterId
     RuntimeAdapterOptions
     RuntimeAdapterPaths
-    RuntimeAdapterStability
-    RuntimeAdapterSupportLevel
-    RuntimeCapabilityDiagnostics
     RuntimeCapabilityHandlers
-    RuntimeCapabilityKey
-    RuntimeCapabilityMap
-    RuntimeCapabilityStrategy
-    runtimeCapabilityStrategySchema
-    RuntimeCapabilitySupport
-    runtimeCapabilitySupportSchema
     RuntimeCommandSpec
     RuntimeCompatReport
     RuntimeDoctorReport
-    RuntimeFeatureDescriptor
-    runtimeFeatureDescriptorSchema
-    RuntimeFileDescriptor
-    RuntimeFileSeedPolicy
-    RuntimeInfo
-    RuntimeIntentState
-    RuntimeLocations
-    RuntimeObservedState
     RuntimeOperation
     RuntimeOperationHandlers
-    RuntimePluginDescriptor
     RuntimeProbeStatus
     RuntimeProgressEvent
     RuntimeProgressPlan
@@ -944,20 +789,11 @@ The docs check script validates that every current export from
     RuntimeSessionAdapter
     RuntimeSessionHandlers
     RuntimeSetupInput
-    RuntimeWorkspaceContract
     RuntimeWorkspaceHandlers
     SaveApiKeyResult
     saveAuthStore
-    SavedViewRecord
-    savedViewRecordSchema
     saveProviderApiKey
-    SceneRecord
-    sceneRecordSchema
     SCHEDULER_STATE_FILE
-    SchedulerCatalog
-    SchedulerDescriptor
-    SchedulerStateSnapshot
-    schedulerStateSnapshotSchema
     SecretBrokerHttpInput
     SecretBrokerHttpResult
     SecretCapabilityStatus
@@ -967,23 +803,6 @@ The docs check script validates that every current export from
     SecretTypedActionDescriptor
     SecretTypeDescriptor
     SecretTypeFieldDescriptor
-    SectionRecord
-    sectionRecordSchema
-    segmentTextForTts
-    SemanticAction
-    semanticActionSchema
-    SemanticActionKind
-    semanticActionKindSchema
-    SemanticEffectKind
-    semanticEffectKindSchema
-    SemanticObject
-    semanticObjectSchema
-    SemanticObjectKind
-    semanticObjectKindSchema
-    SemanticPlan
-    semanticPlanSchema
-    SemanticRiskLevel
-    semanticRiskLevelSchema
     SendChannelMessageInput
     SendNotificationInput
     SESSION_FILE_EXTENSION
@@ -993,122 +812,52 @@ The docs check script validates that every current export from
     SessionDocumentRef
     SessionGatewayDescriptor
     SessionMessage
-    SessionPolicy
-    sessionPolicySchema
-    SessionRecord
     SessionRecordAlias
-    SessionSearchField
-    SessionSearchInput
     SessionSearchInputAlias
-    SessionSearchResult
     SessionSearchResultAlias
-    SessionSearchStrategy
-    SessionsIntentState
-    SessionsObservedState
     SessionStore
     SessionStoreOptions
     SessionStoreSearchOptions
     SessionStreamEvent
-    SessionSummary
     SessionSummaryAlias
-    SessionTransport
     setDefaultModel
     SetDefaultModelCommand
     SettingsSchemaRecord
     SettingsValidationIssue
     SettingsValuesRecord
     setupOpenClawWorkspace
-    SkillCatalog
-    SkillCatalogEntry
-    skillCatalogEntrySchema
-    SkillContextCapsule
-    skillContextCapsuleSchema
-    SkillContextCapsuleEntry
-    SkillContextResolveResult
-    SkillDescriptor
-    SkillInstallResult
-    skillInstallResultSchema
+    SKILL_CONTEXT_CAPSULE_MAX_CHARS
+    SKILLS_CONFIG_FILE
+    SKILLS_DIR
+    SKILLS_HOME_DIR
+    SKILLS_INSTANCES_KIND
     SKILLS_STATE_FILE
-    SkillSearchResult
-    skillSearchResultSchema
-    SkillsIntentState
+    SKILLS_V2_STATE_FILE
+    SkillsImporter
     SkillSourceAdapter
-    SkillSourceCapabilities
-    skillSourceCapabilitiesSchema
     SkillSourceContext
-    SkillSourceDescriptor
-    skillSourceDescriptorSchema
     SkillSourceId
     SkillSourceInstallResponse
     SkillSourceSearchOptions
     SkillSourceSearchResponse
     SkillSourceStatus
-    SKILL_CONTEXT_CAPSULE_MAX_CHARS
-    SkillsStateSnapshot
-    skillsStateSnapshotSchema
-    SlackBotProfile
-    slackBotProfileSchema
-    SlackChannelSummary
-    slackChannelSummarySchema
+    SkillsStore
+    SkillsStoreOptions
+    SkillsSyncEngine
     SlackConnectBotInput
     SlackSendMessageInput
     SlackService
-    SlackStateSnapshot
-    slackStateSnapshotSchema
     SlackStatusResult
-    SlackTransportStatus
-    slackTransportStatusSchema
-    BUILTIN_SOUL_PRESETS
-    createSoulStore
-    DEFAULT_SOUL_ID
     SOUL_MANAGED_BLOCK_ID
     SOUL_STATE_FILE
     SOUL_TARGET_FILE
-    SoulAskPolicy
-    SoulAssignment
-    soulAssignmentSchema
-    SoulAutonomyModule
-    SoulBoundariesModule
-    SoulCognitionModule
-    SoulCommunicationModule
     SoulCompileOptions
-    SoulCompileResult
-    SoulDomainModule
-    SoulFormality
-    SoulIdentityModule
     SoulInitInput
-    SoulMemoryModule
-    SoulMissionModule
-    SoulModule
-    SoulModuleBase
-    SoulModuleKey
-    soulModuleModeSchema
-    SoulModuleMode
-    SoulModules
-    soulModulesSchema
-    SoulOperationsModule
-    SoulPlanningStyle
-    SoulRiskTolerance
-    SoulSocialModule
-    soulSliderValueSchema
-    SoulSliderValue
-    SoulSpec
-    soulSpecSchema
-    SoulState
-    soulStateSchema
     SoulStore
     SoulStoreOptions
-    SoulTemperamentModule
-    SoulToolsModule
-    SoulTruthStyle
-    SoulUncertaintyPolicy
-    SoulValuesModule
-    SoulValidationIssue
-    SoulValidationResult
-    SoulVerbosity
-    SoulVibeModule
-    SpeechIntentState
+    splitFrontmatter
     splitTextIntoChunks
+    startCodeServer
     startOpenClawGateway
     startStorageHttpServer
     stopOpenClawGateway
@@ -1129,7 +878,7 @@ The docs check script validates that every current export from
     StorageShareAdapter
     StorageStoreOptions
     StorageVisibility
-    StreamChunk
+    streamClawRuntimeGatewayChunks
     streamOpenClawSession
     streamOpenClawSessionEvents
     StreamOptions
@@ -1137,7 +886,7 @@ The docs check script validates that every current export from
     streamRuntimeSessionEvents
     StreamSessionDependencies
     StreamSessionInput
-    stripMarkdownForTts
+    stringifyYaml
     StructuredLogEntry
     StructuredLogger
     StructuredLogSink
@@ -1146,85 +895,33 @@ The docs check script validates that every current export from
     SttProviderDescriptor
     SttTranscribeInput
     SttTranscribeResult
-    SubscriptionFilter
     suggestSessionTitle
     summarizeAuthProfiles
     summarizePreview
-    summarizeReadiness
     summarizeTitle
     supportsOpenAIResponseFileMime
     supportsOpenAIResponseImageMime
     syncBinding
     SyncBindingOptions
+    SyncEngineOptions
     synthesize
-    TaskChecklistItem
-    taskChecklistItemSchema
-    TaskRecord
-    taskRecordSchema
     TELEGRAM_STATE_FILE
     TelegramBanOrRestrictInput
-    TelegramBotProfile
-    telegramBotProfileSchema
-    TelegramChatSummary
-    telegramChatSummarySchema
-    TelegramCommand
-    telegramCommandSchema
     TelegramConnectBotInput
-    TelegramForumReadiness
-    TelegramForumTopic
-    TelegramForumTopicIconSticker
     TelegramInviteLinkOptions
-    TelegramMemberSummary
-    telegramMemberSummarySchema
     TelegramSendMediaInput
     TelegramSendMessageInput
     TelegramService
-    TelegramStateSnapshot
-    telegramStateSnapshotSchema
     TelegramStatusResult
     TelegramSyncUpdatesOptions
-    TelegramTransportStatus
-    telegramTransportStatusSchema
-    TelegramUpdateEnvelope
-    telegramUpdateEnvelopeSchema
     TelegramWebhookConfigInput
-    TelegramWebhookStatus
-    telegramWebhookStatusSchema
-    TemplateMutation
-    templateMutationSchema
-    TemplatePack
-    templatePackSchema
-    TemplateRecord
-    TemporalAction
-    temporalActionSchema
-    TemporalExecution
-    temporalExecutionSchema
-    TemporalHeartbeatAgentResult
     TemporalHeartbeatAgentRunner
     TemporalHeartbeatCheckProvider
-    TemporalHeartbeatMatch
-    TemporalHeartbeatPolicy
-    TemporalHeartbeatState
-    TemporalItem
-    temporalItemSchema
-    TemporalNaturalInput
-    temporalNaturalInputSchema
-    TemporalOccurrenceOverride
-    temporalOccurrenceOverrideSchema
-    TemporalParticipant
-    temporalParticipantSchema
-    TemporalProjection
-    temporalProjectionSchema
-    TemporalSchedule
-    temporalScheduleSchema
     TextMutationInput
-    ThingDescriptor
-    thingDescriptorSchema
     TimeClient
     TimeClientOptions
     TimeServiceLike
     toBase64Payload
-    toClawError
     toDataUrl
     transcribe
     TranscriptEventInput
@@ -1233,9 +930,6 @@ The docs check script validates that every current export from
     TtsConfigFieldDescriptor
     TtsConfigFieldKey
     TtsConfigFieldOption
-    TtsPlaybackPlan
-    TtsPlaybackPlanInput
-    TtsPlaybackSegment
     TtsProvider
     TtsProviderConfig
     TtsProviderDescriptor
@@ -1255,45 +949,17 @@ The docs check script validates that every current export from
     USER_STATE_FILE
     USER_TARGET_FILE
     UserAddRecordInput
-    UserAssignment
-    userAssignmentSchema
+    UserClassificationResult
     UserCompileOptions
-    UserCompileResult
-    UserCustomFact
-    userCustomFactSchema
-    UserFacetKey
-    userFacetKeySchema
-    UserFact
-    userFactMetadataSchema
-    UserFactMetadata
-    userFactSchema
-    UserFactSensitivity
-    userFactSensitivitySchema
-    UserFactStatus
-    userFactStatusSchema
-    UserFactValue
-    userFactValueSchema
-    UserFactVisibility
-    userFactVisibilitySchema
     UserInitInput
     UserNotificationPreferences
-    UserProposal
     UserProposalInput
-    userProposalSchema
-    UserRecord
-    userRecordSchema
-    UserRecordType
-    userRecordTypeSchema
+    UserQueryInput
+    UserQueryResult
     UserSetInput
-    UserSpec
-    userSpecSchema
-    UserState
-    userStateSchema
     UserStore
     UserStoreOptions
-    UserValidationIssue
-    UserValidationResult
-    createUserStore
+    UserWizardInput
     validateSettingsUpdate
     validateWorkspace
     VoiceNoteListInput
@@ -1309,16 +975,10 @@ The docs check script validates that every current export from
     watchRuntimeStatus
     watchSessionTranscript
     watchWorkspaceFile
-    WhatsAppBotProfile
-    whatsappBotProfileSchema
     WhatsAppConnectInput
     WhatsAppSendMessageInput
     WhatsAppService
-    WhatsAppStateSnapshot
-    whatsappStateSnapshotSchema
     WhatsAppStatusResult
-    WhatsAppTransportStatus
-    whatsappTransportStatusSchema
     WikiClient
     WikiClientOptions
     WikiComment
@@ -1332,34 +992,15 @@ The docs check script validates that every current export from
     WikiSearchOptions
     WikiSearchResult
     withCodexCommandEnv
-    WorkSessionRecord
-    workSessionRecordSchema
     WORKSPACE_STATE_FILE
     WorkspaceAuditLog
-    WorkspaceBadgeSummary
-    WorkspaceConfig
-    WorkspaceContextBundle
-    WorkspaceContextRequest
     WorkspaceDataStore
-    WorkspaceDomain
-    WorkspaceEntitySource
-    workspaceEntitySourceSchema
     WorkspaceFileInspection
     WorkspaceFilePreview
-    WorkspaceRecordBase
     WorkspaceRepairResult
     WorkspaceResetPlan
     WorkspaceResetResult
     WorkspaceResetTarget
-    WorkspaceSearchQuery
-    workspaceSearchQuerySchema
-    WorkspaceSearchResult
-    workspaceSearchResultSchema
-    WorkspaceSearchStrategy
-    WorkspaceStateSnapshot
-    workspaceStateSnapshotSchema
-    WorkspaceSurfaceDescriptor
-    WorkspaceToolDescriptor
     WorkspaceValidationResult
     writeBindingStore
     writeCapabilityReport
@@ -1382,3 +1023,811 @@ The docs check script validates that every current export from
     writeWorkspaceFilePreservingManagedBlocks
     writeWorkspaceStateSnapshot
     zeroclawAdapter
+
+## @clawjs/core Exports
+
+    ActionReceipt
+    actionReceiptSchema
+    ActivityEntryRecord
+    activityEntryRecordSchema
+    AgentRecord
+    agentRecordSchema
+    AGENTS_FAMILY
+    AgentToolCatalog
+    AgentToolDescriptor
+    AgentToolInvocationError
+    AgentToolInvocationRequest
+    AgentToolInvocationResult
+    AgentToolParameters
+    AgentToolRiskLevel
+    ANALYTICS_FAMILY
+    ApprovalRecord
+    approvalRecordSchema
+    AreaDescriptor
+    areaDescriptorSchema
+    AreaRecord
+    areaRecordSchema
+    ArtifactRecord
+    artifactRecordSchema
+    assertCodexReadOnlyPath
+    AssignmentRecord
+    assignmentRecordSchema
+    Attachment
+    AttachmentRecord
+    attachmentRecordSchema
+    AUDIT_FAMILY
+    AuditEvent
+    auditEventSchema
+    AuthProfileSummary
+    AuthState
+    AutomationRecord
+    automationRecordSchema
+    BILLING_FAMILY
+    BindingDefinition
+    bindingDefinitionSchema
+    BlockerRecord
+    blockerRecordSchema
+    BOOKMARKS_MISC_FAMILY
+    BUILTIN_COLLECTIONS
+    BUILTIN_COLLECTIONS_BY_ALIAS
+    BUILTIN_COLLECTIONS_BY_NAME
+    BUILTIN_FAMILIES
+    BUILTIN_FAMILY_BY_COLLECTION
+    BuiltinCollectionDefinition
+    BuiltinFamilyDefinition
+    BuiltinFieldDefinition
+    BuiltinIndexDefinition
+    BuiltinRelationDefinition
+    CALENDAR_FAMILY
+    CapabilityDescriptor
+    capabilityDescriptorSchema
+    CapabilityName
+    CapabilityReport
+    capabilityReportSchema
+    CapabilityState
+    CapabilityStatus
+    capabilityStatusSchema
+    CapacityRecord
+    capacityRecordSchema
+    CAREER_FAMILY
+    ChannelAccountDescriptor
+    ChannelAgentBinding
+    ChannelCatalog
+    ChannelDescriptor
+    ChannelEventRecord
+    ChannelIntentConfig
+    ChannelListenerDescriptor
+    ChannelMessageRecord
+    ChannelPermission
+    ChannelProcessorDescriptor
+    ChannelsIntentState
+    ChannelsStateSnapshot
+    channelsStateSnapshotSchema
+    ChannelTargetDescriptor
+    ClawApproval
+    clawApprovalFixtureV1
+    clawApprovalSchema
+    clawApprovalStatusSchema
+    ClawAuditEvent
+    clawAuditEventFixtureV1
+    clawAuditEventSchema
+    ClawCanonicalTerm
+    ClawCanonicalTermKey
+    ClawCapability
+    clawCapabilitySchema
+    clawClientContextSchema
+    clawCommandErrorSchema
+    ClawCommandRequest
+    clawCommandRequestFixtureV1
+    clawCommandRequestSchema
+    ClawCommandResponse
+    clawCommandResponseFixtureV1
+    clawCommandResponseSchema
+    clawContractFixturesV1
+    clawContractFixtureTimestamp
+    clawContractSchemasV1
+    clawContractVersionV1
+    ClawDomain
+    ClawDomainMigrationStatus
+    ClawDomainOwnership
+    clawDomainOwnershipEntriesV1
+    clawDomainOwnershipMatrixV1
+    clawDomainSchema
+    ClawError
+    ClawErrorCode
+    ClawGrant
+    clawGrantFixtureV1
+    clawGrantSchema
+    clawGrantStatusSchema
+    clawHostCapabilityFixturesV1
+    ClawHostDescriptor
+    clawHostDescriptorFixtureV1
+    clawHostDescriptorSchema
+    clawHostEndpointSchema
+    clawHostKindSchema
+    ClawHostRegistry
+    clawHostRegistryFixtureV1
+    clawHostRegistrySchema
+    clawHostTransportSchema
+    CLAWJS_CANONICAL_HIERARCHY
+    CLAWJS_CANONICAL_TERMS
+    CLAWJS_NON_SYNONYMS
+    clawJsonSchemasV1
+    ClawjsSkillsConfig
+    clawjsSkillsConfigSchema
+    ClawManifest
+    clawRiskLevelSchema
+    ClawStoragePlatform
+    ClawStorageRootsInput
+    clawValidationModeSchema
+    CodexPathOperation
+    COLLABORATION_FAMILY
+    CommentRecord
+    commentRecordSchema
+    COMMERCE_FAMILY
+    CommitmentAddInput
+    CommitmentCaptureInput
+    CommitmentCaptureResult
+    CommitmentEvidence
+    commitmentEvidenceSchema
+    CommitmentKind
+    commitmentKindSchema
+    CommitmentLinkInput
+    CommitmentLinks
+    commitmentLinksSchema
+    CommitmentListInput
+    CommitmentOutcomeInput
+    CommitmentParty
+    CommitmentPartyKind
+    commitmentPartyKindSchema
+    commitmentPartySchema
+    CommitmentRecord
+    commitmentRecordSchema
+    CommitmentSource
+    commitmentSourceSchema
+    CommitmentState
+    commitmentStateSchema
+    CommitmentStatus
+    commitmentStatusSchema
+    COMMUNITIES_SPIRITUALITY_FAMILY
+    CompatSnapshot
+    compatSnapshotSchema
+    ConnectorDescriptor
+    connectorDescriptorSchema
+    ContextChip
+    ContextPackBudget
+    contextPackBudgetSchema
+    ContextPackItem
+    contextPackItemSchema
+    ContextPackListInput
+    ContextPackPrepareInput
+    ContextPackPurpose
+    contextPackPurposeSchema
+    ContextPackRecord
+    contextPackRecordSchema
+    ContextPackSensitivity
+    contextPackSensitivitySchema
+    ContextPackSource
+    contextPackSourceSchema
+    ContextPackState
+    contextPackStateSchema
+    ContextPackStatus
+    contextPackStatusSchema
+    COOKING_FAMILY
+    createCodexReadOnlySourceDescriptor
+    createManifest
+    createTtsPlaybackPlan
+    CREATIVITY_FAMILY
+    CredentialSource
+    CRM_FAMILY
+    CUSTOMER_INTAKE_FAMILY
+    CustomFieldRecord
+    customFieldRecordSchema
+    CycleRecord
+    cycleRecordSchema
+    DeadlineRecord
+    deadlineRecordSchema
+    DecisionRecord
+    decisionRecordSchema
+    DefaultModelRef
+    DeliveryState
+    DesiredSkillRecord
+    DeviceInstallation
+    DocumentIndexStatus
+    DocumentOrigin
+    DocumentRecord
+    DocumentRef
+    DocumentSearchResult
+    DocumentStorageDescriptor
+    EDUCATION_SCHOOL_FAMILY
+    EffectiveAccessPolicy
+    EffectPreview
+    effectPreviewSchema
+    EpicRecord
+    epicRecordSchema
+    EventRecord
+    eventRecordSchema
+    EventReminder
+    eventReminderSchema
+    EVENTS_MEMORIES_FAMILY
+    FAMILY_CARE_FAMILY
+    FeatureOwnership
+    featureOwnershipSchema
+    FeedbackRecord
+    feedbackRecordSchema
+    FieldValueRecord
+    fieldValueRecordSchema
+    FileMutationMode
+    FilesIntentState
+    FINANCE_FAMILY
+    FITNESS_FAMILY
+    FLOW_FAMILY
+    FREELANCE_CONSUMER_FAMILY
+    GARDEN_FAMILY
+    getBuiltinCollection
+    GoalRecord
+    goalRecordSchema
+    HABITS_JOURNALING_FAMILY
+    HandoffRecord
+    handoffRecordSchema
+    HEALTH_FAMILY
+    HOBBIES_FAMILY
+    HomeDescriptor
+    homeDescriptorSchema
+    HR_FAMILY
+    IDENTITY_BODY_RELIGIOUS_FINE_FAMILY
+    IDENTITY_FAMILY
+    InboxMessageRecord
+    InboxReplyTarget
+    InboxThreadRecord
+    IncidentRecord
+    incidentRecordSchema
+    INFRA_FAMILY
+    INTEGRATIONS_FAMILY
+    Intent
+    IntentDomain
+    intentDomainSchema
+    intentSchema
+    IoTActionRequest
+    iotActionRequestSchema
+    IoTActionResult
+    iotActionResultSchema
+    IoTEventRecord
+    iotEventRecordSchema
+    IoTPolicyEvaluation
+    iotPolicyEvaluationSchema
+    IoTRiskLevel
+    IoTStateSnapshot
+    iotStateSnapshotSchema
+    IoTThingKind
+    isInsideCodexHome
+    JudgmentContextRefs
+    judgmentContextRefsSchema
+    JudgmentImpact
+    judgmentImpactSchema
+    JudgmentLinkInput
+    JudgmentListInput
+    JudgmentOptionScore
+    judgmentOptionScoreSchema
+    JudgmentPrepareInput
+    JudgmentRecommendation
+    judgmentRecommendationSchema
+    JudgmentRecord
+    JudgmentRecordInput
+    judgmentRecordSchema
+    JudgmentState
+    judgmentStateSchema
+    JudgmentStatus
+    judgmentStatusSchema
+    KnownRuntimeAdapterId
+    LEARNING_FAMILY
+    LearningAddInput
+    LearningEvidence
+    LearningEvidenceInput
+    learningEvidenceSchema
+    LearningEvidenceSentiment
+    learningEvidenceSentimentSchema
+    LearningKind
+    learningKindSchema
+    LearningListInput
+    LearningPromotion
+    LearningPromotionPreview
+    LearningPromotionResult
+    learningPromotionSchema
+    LearningPromotionTarget
+    learningPromotionTargetSchema
+    LearningRecord
+    learningRecordSchema
+    LearningState
+    learningStateSchema
+    LearningStatus
+    learningStatusSchema
+    LearningTarget
+    learningTargetSchema
+    LibraryAsset
+    LibraryAssetKind
+    libraryAssetSchema
+    LibraryAssignment
+    libraryAssignmentSchema
+    LibraryInstructionProjection
+    LibraryInstructionProjectionTarget
+    LibraryMissingSecret
+    LibraryRequiredSecret
+    libraryRequiredSecretSchema
+    LibraryResolvedAsset
+    LibraryResolveResult
+    libraryResolveResultSchema
+    LibrarySkillSource
+    LibraryState
+    libraryStateSchema
+    LibrarySyncResult
+    LinkedEntityDomain
+    LinkedEntityRef
+    linkedEntityRefSchema
+    listBuiltinCollections
+    listBuiltinFamilies
+    ListRecord
+    listRecordSchema
+    LUXURY_AND_COLLECTING_FAMILY
+    manifestSchema
+    MARKETING_FAMILY
+    MARKETPLACE_PRODUCTS_FAMILY
+    MARKETPLACE_REAL_ESTATE_FAMILY
+    MARKETPLACE_SERVICES_RENTALS_FAMILY
+    MARKETPLACE_VEHICLES_FAMILY
+    maskCredential
+    MediaChannelContext
+    MediaDirection
+    MediaExternalRef
+    MediaGalleryShare
+    MediaKind
+    MediaListInput
+    MediaOrigin
+    MediaRecord
+    MediaSearchResult
+    MediaStorageRef
+    MemoryCatalog
+    MemoryDescriptor
+    MemoryStateSnapshot
+    memoryStateSnapshotSchema
+    MENTAL_HEALTH_RECOVERY_FAMILY
+    Message
+    MilestoneRecord
+    milestoneRecordSchema
+    ModelCatalog
+    ModelDescriptor
+    ModelsIntentState
+    ModelsObservedState
+    ModelSummary
+    NoteBlock
+    noteBlockSchema
+    NoteRecord
+    noteRecordSchema
+    NotificationAudience
+    NotificationContext
+    NotificationDeepLink
+    NotificationDeliveryMode
+    NotificationPriority
+    NotificationReceiptPolicy
+    OBSERVABILITY_FAMILY
+    ObservedDomain
+    observedDomainSchema
+    OperationalCheckRecord
+    operationalCheckRecordSchema
+    OrchestrationReadiness
+    OutcomeAddInput
+    OutcomeCaptureInput
+    OutcomeCaptureResult
+    OutcomeLinkInput
+    OutcomeLinks
+    outcomeLinksSchema
+    OutcomeListInput
+    OutcomeRecord
+    outcomeRecordSchema
+    OutcomeResult
+    outcomeResultSchema
+    OutcomeState
+    outcomeStateSchema
+    OutcomeStatus
+    outcomeStatusSchema
+    PermissionRequirement
+    permissionRequirementSchema
+    PERSONAL_CARE_AESTHETICS_FAMILY
+    PERSONAL_DOCUMENTS_FAMILY
+    PersonIdentity
+    personIdentitySchema
+    PersonRecord
+    personRecordSchema
+    PETS_FAMILY
+    PluginCatalog
+    PluginIntentConfig
+    PluginsIntentState
+    PluginsObservedState
+    PolicyRecord
+    policyRecordSchema
+    POSSESSIONS_FAMILY
+    PREGNANCY_EARLY_CHILDHOOD_FAMILY
+    PRODUCTIVITY_COLLECTION_DEFINITIONS
+    ProductivityAgenda
+    ProductivityAgendaItem
+    ProductivityAnchorType
+    ProductivityApprovalRecord
+    productivityApprovalRecordSchema
+    ProductivityCollectionDefinition
+    ProductivityCommentEntityType
+    ProductivityFieldDefinition
+    ProductivityIndexDefinition
+    ProductivityMyWork
+    ProductivityOperationsAgent
+    ProductivityOperationsCockpit
+    ProductivityRelationDefinition
+    ProductivityReview
+    ProductivityTeamWork
+    productivityTemplateRecordSchema
+    ProgressEvent
+    Project
+    ProjectAgentAssignment
+    ProjectRecord
+    projectRecordSchema
+    ProjectResourceRef
+    ProjectSecretRef
+    PromptContextBlock
+    ProviderAlias
+    ProviderAuthSummary
+    ProviderCatalog
+    ProviderDescriptor
+    ProviderIntentConfig
+    ProvidersIntentState
+    ProviderStateSnapshot
+    providerStateSnapshotSchema
+    QuietHoursPolicy
+    RawIoTInvocation
+    rawIotInvocationSchema
+    READING_MEDIA_FAMILY
+    RECIPES
+    RecurrenceRecord
+    recurrenceRecordSchema
+    RELATIONSHIPS_FAMILY
+    ReleaseRecord
+    releaseRecordSchema
+    ReminderRecord
+    reminderRecordSchema
+    REPRODUCTIVE_INTIMATE_FAMILY
+    resolveBuiltinCollectionName
+    resolveClawGlobalDataDir
+    resolveClawHostRegistryPath
+    resolveClawHostStateDir
+    resolveClawWorkspaceDir
+    ROMANCE_FAMILY
+    RuleApplyWhen
+    ruleApplyWhenSchema
+    RuleInput
+    RuleKind
+    ruleKindSchema
+    RuleRecord
+    ruleRecordSchema
+    RuleReference
+    RuleReferenceKind
+    ruleReferenceSchema
+    RulesCompileInput
+    RulesCompileMatch
+    RulesCompileResult
+    RuleScope
+    RuleScopeInput
+    RuleScopeKind
+    ruleScopeKindSchema
+    ruleScopeSchema
+    RulesState
+    rulesStateSchema
+    RuleStatus
+    ruleStatusSchema
+    RuntimeAdapterId
+    RuntimeAdapterStability
+    RuntimeAdapterSupportLevel
+    RuntimeCapabilityDiagnostics
+    RuntimeCapabilityKey
+    RuntimeCapabilityMap
+    RuntimeCapabilityStrategy
+    runtimeCapabilityStrategySchema
+    RuntimeCapabilitySupport
+    runtimeCapabilitySupportSchema
+    RuntimeFeatureDescriptor
+    runtimeFeatureDescriptorSchema
+    RuntimeFileDescriptor
+    RuntimeFileSeedPolicy
+    RuntimeInfo
+    RuntimeIntentState
+    RuntimeLocations
+    RuntimeObservedState
+    RuntimePluginDescriptor
+    RuntimeWorkspaceContract
+    SavedViewRecord
+    savedViewRecordSchema
+    SceneRecord
+    sceneRecordSchema
+    SchedulerCatalog
+    SchedulerDescriptor
+    SchedulerStateSnapshot
+    schedulerStateSnapshotSchema
+    SectionRecord
+    sectionRecordSchema
+    segmentTextForTts
+    SemanticAction
+    SemanticActionKind
+    semanticActionKindSchema
+    semanticActionSchema
+    SemanticEffectKind
+    semanticEffectKindSchema
+    SemanticObject
+    SemanticObjectKind
+    semanticObjectKindSchema
+    semanticObjectSchema
+    SemanticPlan
+    semanticPlanSchema
+    SemanticRiskLevel
+    semanticRiskLevelSchema
+    SessionPolicy
+    sessionPolicySchema
+    SessionRecord
+    SessionSearchField
+    SessionSearchInput
+    SessionSearchResult
+    SessionSearchStrategy
+    SessionsIntentState
+    SessionsObservedState
+    SessionSummary
+    SessionTransport
+    SkillAssignment
+    skillAssignmentSchema
+    SkillCapsule
+    skillCapsuleSchema
+    SkillCatalog
+    SkillCatalogEntry
+    skillCatalogEntrySchema
+    SkillClawjsMetadata
+    skillClawjsMetadataSchema
+    SkillContextCapsule
+    SkillContextCapsuleEntry
+    skillContextCapsuleSchema
+    SkillContextResolveResult
+    SkillCreateInput
+    SkillDescriptor
+    SkillFrontmatter
+    skillFrontmatterSchema
+    SkillImportReport
+    SkillInstallResult
+    skillInstallResultSchema
+    SkillInstanceRef
+    skillInstanceRefSchema
+    SkillKind
+    skillKindSchema
+    SkillLineage
+    skillLineageSchema
+    SkillListFilter
+    SkillParam
+    skillParamSchema
+    SkillPreset
+    skillPresetSchema
+    SkillProvenance
+    skillProvenanceSchema
+    SkillRequiredEnvVar
+    skillRequiredEnvVarSchema
+    SkillResolveContext
+    SkillScope
+    SkillScopeKind
+    skillScopeKindSchema
+    skillScopeSchema
+    SkillSearchResult
+    skillSearchResultSchema
+    SkillsIntentState
+    SkillSoulModules
+    skillSoulModulesSchema
+    SkillSourceCapabilities
+    skillSourceCapabilitiesSchema
+    SkillSourceDescriptor
+    skillSourceDescriptorSchema
+    SkillSpec
+    skillsStateSchema
+    SkillsStateSnapshot
+    skillsStateSnapshotSchema
+    SkillSyncMode
+    skillSyncModeSchema
+    SkillSyncReport
+    SkillSyncTarget
+    skillSyncTargetSchema
+    SkillUpdate
+    SlackBotProfile
+    slackBotProfileSchema
+    SlackChannelSummary
+    slackChannelSummarySchema
+    SlackStateSnapshot
+    slackStateSnapshotSchema
+    SlackTransportStatus
+    slackTransportStatusSchema
+    SOCIAL_CULTURE_FAMILY
+    SoulAskPolicy
+    SoulAssignment
+    soulAssignmentSchema
+    SoulAutonomyModule
+    SoulBoundariesModule
+    SoulCognitionModule
+    SoulCommunicationModule
+    SoulCompileResult
+    SoulDomainModule
+    SoulFormality
+    SoulIdentityModule
+    SoulMemoryModule
+    SoulMissionModule
+    SoulModule
+    SoulModuleBase
+    SoulModuleKey
+    SoulModuleMode
+    soulModuleModeSchema
+    SoulModules
+    soulModulesSchema
+    SoulOperationsModule
+    SoulPlanningStyle
+    SoulRiskTolerance
+    SoulSliderValue
+    soulSliderValueSchema
+    SoulSocialModule
+    SoulSpec
+    soulSpecSchema
+    SoulState
+    soulStateSchema
+    SoulTemperamentModule
+    SoulToolsModule
+    SoulTruthStyle
+    SoulUncertaintyPolicy
+    SoulValidationIssue
+    SoulValidationResult
+    SoulValuesModule
+    SoulVerbosity
+    SoulVibeModule
+    SpeechIntentState
+    StreamChunk
+    stripMarkdownForTts
+    SubscriptionFilter
+    summarizeReadiness
+    SUPPORT_FAMILY
+    TaskChecklistItem
+    taskChecklistItemSchema
+    TaskRecord
+    taskRecordSchema
+    TelegramBotProfile
+    telegramBotProfileSchema
+    TelegramChatSummary
+    telegramChatSummarySchema
+    TelegramCommand
+    telegramCommandSchema
+    TelegramForumReadiness
+    TelegramForumTopic
+    TelegramForumTopicIconSticker
+    TelegramMemberSummary
+    telegramMemberSummarySchema
+    TelegramStateSnapshot
+    telegramStateSnapshotSchema
+    TelegramTransportStatus
+    telegramTransportStatusSchema
+    TelegramUpdateEnvelope
+    telegramUpdateEnvelopeSchema
+    TelegramWebhookStatus
+    telegramWebhookStatusSchema
+    TemplateMutation
+    templateMutationSchema
+    TemplatePack
+    templatePackSchema
+    TemplateRecord
+    TemporalAction
+    temporalActionSchema
+    TemporalExecution
+    temporalExecutionSchema
+    TemporalHeartbeatAgentResult
+    temporalHeartbeatAgentResultSchema
+    TemporalHeartbeatMatch
+    TemporalHeartbeatPolicy
+    temporalHeartbeatPolicySchema
+    TemporalHeartbeatState
+    temporalHeartbeatUsageSchema
+    TemporalItem
+    temporalItemSchema
+    TemporalNaturalInput
+    temporalNaturalInputSchema
+    TemporalOccurrenceOverride
+    temporalOccurrenceOverrideSchema
+    TemporalParticipant
+    temporalParticipantSchema
+    TemporalProjection
+    temporalProjectionSchema
+    TemporalRunLogEntry
+    temporalRunLogEntrySchema
+    TemporalRuntimeState
+    TemporalSchedule
+    temporalScheduleSchema
+    ThingDescriptor
+    thingDescriptorSchema
+    toClawError
+    TRAVEL_FAMILY
+    TtsPlaybackPlan
+    TtsPlaybackPlanInput
+    TtsPlaybackSegment
+    UserAssignment
+    userAssignmentSchema
+    UserCompileProfile
+    userCompileProfileSchema
+    UserCompileResult
+    UserCustomFact
+    userCustomFactSchema
+    UserDomainId
+    userDomainIdSchema
+    UserDomainState
+    userDomainStateSchema
+    UserEntity
+    userEntitySchema
+    UserEntityType
+    userEntityTypeSchema
+    UserFacetKey
+    userFacetKeySchema
+    UserFact
+    UserFactMetadata
+    userFactMetadataSchema
+    userFactSchema
+    UserFactSensitivity
+    userFactSensitivitySchema
+    UserFactStatus
+    userFactStatusSchema
+    UserFactValue
+    userFactValueSchema
+    UserFactVisibility
+    userFactVisibilitySchema
+    UserLink
+    userLinkSchema
+    UserMergeProposal
+    userMergeProposalSchema
+    UserNotificationPreferences
+    UserPackId
+    userPackIdSchema
+    UserPackState
+    userPackStateSchema
+    UserProposal
+    userProposalSchema
+    UserRecord
+    userRecordSchema
+    UserRecordType
+    userRecordTypeSchema
+    UserSpec
+    userSpecSchema
+    UserState
+    userStateSchema
+    UserTombstone
+    userTombstoneSchema
+    UserValidationIssue
+    UserValidationResult
+    VEHICLES_FAMILY
+    WARDROBE_FAMILY
+    WhatsAppBotProfile
+    whatsappBotProfileSchema
+    WhatsAppStateSnapshot
+    whatsappStateSnapshotSchema
+    WhatsAppTransportStatus
+    whatsappTransportStatusSchema
+    WORK_FAMILY
+    WorkSessionRecord
+    workSessionRecordSchema
+    WorkspaceBadgeSummary
+    WorkspaceConfig
+    WorkspaceContextBundle
+    WorkspaceContextRequest
+    WorkspaceDomain
+    WorkspaceEntitySource
+    workspaceEntitySourceSchema
+    WorkspaceRecordBase
+    WorkspaceSearchQuery
+    workspaceSearchQuerySchema
+    WorkspaceSearchResult
+    workspaceSearchResultSchema
+    WorkspaceSearchStrategy
+    WorkspaceStateSnapshot
+    workspaceStateSnapshotSchema
+    WorkspaceSurfaceDescriptor
+    WorkspaceToolDescriptor
