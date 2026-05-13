@@ -55,7 +55,7 @@ async function spinUp(): Promise<TestContext> {
       host: "127.0.0.1",
       port: 0,
       dataDir: path.join(tmpDir, "user-model"),
-      dbPath: path.join(tmpDir, "user-model", "user-model.sqlite"),
+      dbPath: path.join(tmpDir, "user-model", "clawjs.sqlite"),
       sharedSecret: SECRET,
     },
   }).app;

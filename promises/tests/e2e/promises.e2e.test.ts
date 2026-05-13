@@ -8,7 +8,7 @@ import { buildPromisesApp, PromisesClient } from "@clawjs/promises";
 
 test("promises CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "promises-e2e-"));
-  const dbPath = path.join(tmpDir, "promises.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildPromisesApp({

@@ -8,7 +8,7 @@ import { buildSkyApp, SkyClient } from "@clawjs/sky";
 
 test("sky CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "sky-e2e-"));
-  const dbPath = path.join(tmpDir, "sky.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildSkyApp({

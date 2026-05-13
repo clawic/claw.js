@@ -26,7 +26,7 @@ function injectFetch(app: FastifyInstance): typeof fetch {
 
 async function spinUp() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "webhooks-e2e-"));
-  const built = buildWebhooksApp({ config: { host: "127.0.0.1", port: 0, dataDir: tmpDir, dbPath: path.join(tmpDir, "webhooks.sqlite"), sharedSecret: SECRET } });
+  const built = buildWebhooksApp({ config: { host: "127.0.0.1", port: 0, dataDir: tmpDir, dbPath: path.join(tmpDir, "clawjs.sqlite"), sharedSecret: SECRET } });
   const client = new ChannelApiClient({ channel: "webhooks", baseUrl: "http://webhooks.test", token: SECRET, fetchImpl: injectFetch(built.app) });
   return { client, tmpDir, close: async () => { await built.app.close(); fs.rmSync(tmpDir, { recursive: true, force: true }); } };
 }

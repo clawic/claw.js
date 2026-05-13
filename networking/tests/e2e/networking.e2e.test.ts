@@ -8,7 +8,7 @@ import { buildNetworkingApp, NetworkingClient } from "@clawjs/networking";
 
 test("networking CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "networking-e2e-"));
-  const dbPath = path.join(tmpDir, "networking.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildNetworkingApp({

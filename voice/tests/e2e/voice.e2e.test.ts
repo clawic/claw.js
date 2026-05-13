@@ -28,7 +28,7 @@ async function spinUp() {
   const built = buildVoiceApp({
     config: {
       host: "127.0.0.1", port: 0, dataDir: tmpDir,
-      dbPath: path.join(tmpDir, "voice.sqlite"),
+      dbPath: path.join(tmpDir, "audio.sqlite"),
       outputDir: path.join(tmpDir, "out"),
       sharedSecret: SECRET, defaultSttProvider: "openai-stt",
     },

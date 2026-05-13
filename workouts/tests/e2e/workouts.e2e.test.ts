@@ -8,7 +8,7 @@ import { buildWorkoutsApp, WorkoutsClient } from "@clawjs/workouts";
 
 test("workouts CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "workouts-e2e-"));
-  const dbPath = path.join(tmpDir, "workouts.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildWorkoutsApp({

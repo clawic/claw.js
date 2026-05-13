@@ -8,7 +8,7 @@ import { buildYearReviewsApp, YearReviewsClient } from "@clawjs/year-reviews";
 
 test("year-reviews CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "year-reviews-e2e-"));
-  const dbPath = path.join(tmpDir, "year-reviews.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildYearReviewsApp({

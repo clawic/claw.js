@@ -8,7 +8,7 @@ import { buildSubscriptionsApp, SubscriptionsClient } from "@clawjs/subscription
 
 test("subscriptions CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "subscriptions-e2e-"));
-  const dbPath = path.join(tmpDir, "subscriptions.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildSubscriptionsApp({

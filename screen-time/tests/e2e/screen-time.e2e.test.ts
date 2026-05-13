@@ -8,7 +8,7 @@ import { buildScreenTimeApp, ScreenTimeClient } from "@clawjs/screen-time";
 
 test("screen-time CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "screen-time-e2e-"));
-  const dbPath = path.join(tmpDir, "screen-time.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildScreenTimeApp({

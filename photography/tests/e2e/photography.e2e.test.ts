@@ -8,7 +8,7 @@ import { buildPhotographyApp, PhotographyClient } from "@clawjs/photography";
 
 test("photography CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "photography-e2e-"));
-  const dbPath = path.join(tmpDir, "photography.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildPhotographyApp({

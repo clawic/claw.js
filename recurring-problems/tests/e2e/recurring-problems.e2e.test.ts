@@ -8,7 +8,7 @@ import { buildRecurringProblemsApp, RecurringProblemsClient } from "@clawjs/recu
 
 test("recurring-problems CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recurring-problems-e2e-"));
-  const dbPath = path.join(tmpDir, "recurring-problems.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildRecurringProblemsApp({

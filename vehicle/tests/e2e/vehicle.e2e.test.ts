@@ -8,7 +8,7 @@ import { buildVehicleApp, VehicleClient } from "@clawjs/vehicle";
 
 test("vehicle CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "vehicle-e2e-"));
-  const dbPath = path.join(tmpDir, "vehicle.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildVehicleApp({

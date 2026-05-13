@@ -60,7 +60,7 @@ test("docs site builds and renders core docs navigation publicly", async ({ page
     await page.goto(`http://127.0.0.1:${WEBSITE_PORT}/database.html`, { waitUntil: "networkidle" });
     await expect(page.locator("main h1").first()).toContainText("Database");
     await expect(page.locator("main")).toContainText("@clawjs/database");
-    await expect(page.locator("main")).toContainText(".clawjs/data/database.sqlite");
+    await expect(page.locator("main")).toContainText("Clawix/clawjs/clawjs.sqlite");
 
     await page.goto(`http://127.0.0.1:${WEBSITE_PORT}/plugins.html`, { waitUntil: "networkidle" });
     await expect(page.locator("main h1").first()).toContainText("Plugin Authoring");

@@ -8,7 +8,7 @@ import { buildYesNoApp, YesNoClient } from "@clawjs/yes-no";
 
 test("yes-no CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "yes-no-e2e-"));
-  const dbPath = path.join(tmpDir, "yes-no.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildYesNoApp({

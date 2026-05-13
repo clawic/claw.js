@@ -8,7 +8,7 @@ import { buildPossessionsApp, PossessionsClient } from "@clawjs/possessions";
 
 test("possessions CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "possessions-e2e-"));
-  const dbPath = path.join(tmpDir, "possessions.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildPossessionsApp({

@@ -8,7 +8,7 @@ import { buildSleepApp, SleepClient } from "@clawjs/sleep";
 
 test("sleep CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "sleep-e2e-"));
-  const dbPath = path.join(tmpDir, "sleep.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildSleepApp({

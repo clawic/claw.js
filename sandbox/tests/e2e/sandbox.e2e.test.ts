@@ -40,7 +40,7 @@ async function spinUp(): Promise<TestContext> {
       host: "127.0.0.1",
       port: 0,
       dataDir: tmpDir,
-      dbPath: path.join(tmpDir, "sandbox.sqlite"),
+      dbPath: path.join(tmpDir, "runtime.sqlite"),
       sharedSecret: SECRET,
     },
   });

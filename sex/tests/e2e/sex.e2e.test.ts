@@ -8,7 +8,7 @@ import { buildSexApp, SexClient } from "@clawjs/sex";
 
 test("sex CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "sex-e2e-"));
-  const dbPath = path.join(tmpDir, "sex.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildSexApp({

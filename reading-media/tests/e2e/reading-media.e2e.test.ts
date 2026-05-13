@@ -8,7 +8,7 @@ import { buildReadingMediaApp, ReadingMediaClient } from "@clawjs/reading-media"
 
 test("reading-media CRUD smoke", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "reading-media-e2e-"));
-  const dbPath = path.join(tmpDir, "reading-media.sqlite");
+  const dbPath = path.join(tmpDir, "clawjs.sqlite");
   const sharedSecret = "test-secret";
 
   const { app, config } = buildReadingMediaApp({
