@@ -65,6 +65,8 @@ export type DiscordRuntimeOperation =
   | "delete-own-reaction"
   | "delete-user-reaction"
   | "list-reactions"
+  | "get-answer-voters"
+  | "end-poll"
   | "start-thread-from-message"
   | "start-thread-without-message"
   | "start-thread-in-forum-or-media-channel"
@@ -311,6 +313,13 @@ export function buildDiscordOperationRequest(
         limit: optionalNumber(values.limit),
         type: optionalNumber(values.type),
       }));
+    case "get-answer-voters":
+      return getPlan(`channels/${channelId(values)}/polls/${messageId(values)}/answers/${answerId(values)}`, auth, headers, { type: "object", requiredPaths: ["users"] }, removeEmptyValues({
+        after: optionalString(values.after),
+        limit: optionalNumber(values.limit),
+      }));
+    case "end-poll":
+      return bodyPlan("POST", `channels/${channelId(values)}/polls/${messageId(values)}/expire`, auth, headers, {}, { type: "object", requiredPaths: ["id", "channel_id"] });
     case "start-thread-from-message":
       return bodyPlan("POST", `channels/${channelId(values)}/messages/${messageId(values)}/threads`, auth, headers, threadBody(values), { type: "object", requiredPaths: ["id", "type", "name"] });
     case "start-thread-without-message":
@@ -557,6 +566,8 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "delete-own-reaction",
   "delete-user-reaction",
   "list-reactions",
+  "get-answer-voters",
+  "end-poll",
   "start-thread-from-message",
   "start-thread-without-message",
   "start-thread-in-forum-or-media-channel",
@@ -965,6 +976,10 @@ function overwriteId(values: Record<string, IntegrationJson>): string {
 
 function messageId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.messageId, values.message), "messageId"));
+}
+
+function answerId(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.answerId, values.pollAnswerId), "answerId"));
 }
 
 function userId(values: Record<string, IntegrationJson>): string {
