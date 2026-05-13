@@ -1455,6 +1455,72 @@
           ]
         },
         {
+          "id": "discord.action.link-channel-to-lobby",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Link Channel to Lobby",
+          "fields": [
+            {
+              "name": "lobbyId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBearerToken"
+          ]
+        },
+        {
+          "id": "discord.action.unlink-channel-from-lobby",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Unlink Channel from Lobby",
+          "fields": [
+            {
+              "name": "lobbyId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBearerToken"
+          ]
+        },
+        {
+          "id": "discord.action.update-lobby-message-moderation-metadata",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Update Lobby Message Moderation Metadata",
+          "fields": [
+            {
+              "name": "lobbyId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "action": "show"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.get-channel",
           "appId": "discord",
           "kind": "action",

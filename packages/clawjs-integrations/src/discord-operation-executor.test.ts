@@ -91,6 +91,9 @@ const DISCORD_ACTIONS = [
   action("bulk-update-lobby-members", "Bulk Update Lobby Members", [LOBBY_FIELD, field("members", "array", false, { default: [{ id: "sample", metadata: { role: "sample" }, flags: 1, remove_member: false }] })]),
   action("remove-lobby-member", "Remove Lobby Member", [LOBBY_FIELD, USER_FIELD]),
   action("leave-lobby", "Leave Lobby", [LOBBY_FIELD], ["discordBearerToken"]),
+  action("link-channel-to-lobby", "Link Channel to Lobby", [LOBBY_FIELD, CHANNEL_FIELD], ["discordBearerToken"]),
+  action("unlink-channel-from-lobby", "Unlink Channel from Lobby", [LOBBY_FIELD], ["discordBearerToken"]),
+  action("update-lobby-message-moderation-metadata", "Update Lobby Message Moderation Metadata", [LOBBY_FIELD, MESSAGE_FIELD, field("metadata", "object", false, { default: { action: "show" } })]),
   action("get-channel", "Get Channel", [CHANNEL_FIELD]),
   action("update-channel", "Update Channel", [CHANNEL_FIELD, field("name", "string", true, { default: "sample" })]),
   action("set-voice-channel-status", "Set Voice Channel Status", [CHANNEL_FIELD, field("status", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
@@ -522,6 +525,58 @@ describe("discord operation runtime", () => {
       auth: bearerAuth,
       headers,
       body: {},
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.link-channel-to-lobby"), {
+      lobbyId: "lobby-123",
+      channelId: "channel-123",
+    }), {
+      method: "PATCH",
+      endpoint: "lobbies/lobby-123/channel-linking",
+      auth: bearerAuth,
+      headers,
+      body: {
+        channel_id: "channel-123",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "application_id", "members", "linked_channel"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.unlink-channel-from-lobby"), {
+      lobbyId: "lobby-123",
+    }), {
+      method: "PATCH",
+      endpoint: "lobbies/lobby-123/channel-linking",
+      auth: bearerAuth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "application_id", "members"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.update-lobby-message-moderation-metadata"), {
+      lobbyId: "lobby-123",
+      messageId: "message-123",
+      metadata: {
+        action: "replace",
+        replacement: "Please keep chat respectful.",
+      },
+    }), {
+      method: "PUT",
+      endpoint: "lobbies/lobby-123/messages/message-123/moderation-metadata",
+      auth,
+      headers,
+      body: {
+        action: "replace",
+        replacement: "Please keep chat respectful.",
+      },
       responseSchema: {
         type: "object",
       },
