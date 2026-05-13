@@ -67,7 +67,11 @@ export type DiscordRuntimeOperation =
   | "list-reactions"
   | "start-thread-from-message"
   | "start-thread-without-message"
+  | "start-thread-in-forum-or-media-channel"
   | "list-active-threads"
+  | "list-public-archived-threads"
+  | "list-private-archived-threads"
+  | "list-joined-private-archived-threads"
   | "join-thread"
   | "leave-thread"
   | "add-thread-member"
@@ -311,8 +315,16 @@ export function buildDiscordOperationRequest(
       return bodyPlan("POST", `channels/${channelId(values)}/messages/${messageId(values)}/threads`, auth, headers, threadBody(values), { type: "object", requiredPaths: ["id", "type", "name"] });
     case "start-thread-without-message":
       return bodyPlan("POST", `channels/${channelId(values)}/threads`, auth, headers, threadBody(values), { type: "object", requiredPaths: ["id", "type", "name"] });
+    case "start-thread-in-forum-or-media-channel":
+      return bodyPlan("POST", `channels/${channelId(values)}/threads`, auth, auditHeaders(headers, values), forumThreadBody(values), { type: "object", requiredPaths: ["id", "type", "name", "message"] });
     case "list-active-threads":
       return getPlan(`guilds/${guildId(values)}/threads/active`, auth, headers, { type: "object", requiredPaths: ["threads"] });
+    case "list-public-archived-threads":
+      return getPlan(`channels/${channelId(values)}/threads/archived/public`, auth, headers, { type: "object", requiredPaths: ["threads", "members", "has_more"] }, archivedThreadQuery(values));
+    case "list-private-archived-threads":
+      return getPlan(`channels/${channelId(values)}/threads/archived/private`, auth, headers, { type: "object", requiredPaths: ["threads", "members", "has_more"] }, archivedThreadQuery(values));
+    case "list-joined-private-archived-threads":
+      return getPlan(`channels/${channelId(values)}/users/@me/threads/archived/private`, auth, headers, { type: "object", requiredPaths: ["threads", "members", "has_more"] }, archivedThreadQuery(values));
     case "join-thread":
       return putPlan(`channels/${channelId(values)}/thread-members/@me`, auth, headers, { type: "object" });
     case "leave-thread":
@@ -547,7 +559,11 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "list-reactions",
   "start-thread-from-message",
   "start-thread-without-message",
+  "start-thread-in-forum-or-media-channel",
   "list-active-threads",
+  "list-public-archived-threads",
+  "list-private-archived-threads",
+  "list-joined-private-archived-threads",
   "join-thread",
   "leave-thread",
   "add-thread-member",
@@ -818,6 +834,23 @@ function threadBody(values: Record<string, IntegrationJson>): Record<string, Int
   });
 }
 
+function forumThreadBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    name: requiredString(values.name, "name"),
+    auto_archive_duration: optionalNumber(values.autoArchiveDuration),
+    rate_limit_per_user: optionalNumber(values.rateLimitPerUser),
+    message: requiredJsonObject(values.message, "message"),
+    applied_tags: optionalJsonArray(values.appliedTags),
+  });
+}
+
+function archivedThreadQuery(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    before: optionalString(values.before),
+    limit: optionalNumber(values.limit),
+  });
+}
+
 function memberBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
   return removeEmptyValues({
     nick: optionalString(values.nick),
@@ -1010,6 +1043,12 @@ function optionalJsonArray(value: IntegrationJson): IntegrationJson[] | undefine
 
 function requiredJsonArray(value: IntegrationJson, name: string): IntegrationJson[] {
   const parsed = optionalJsonArray(value);
+  if (!parsed) throw new Error(`Discord ${name} is required`);
+  return parsed;
+}
+
+function requiredJsonObject(value: IntegrationJson, name: string): Record<string, IntegrationJson> {
+  const parsed = optionalJsonObject(value);
   if (!parsed) throw new Error(`Discord ${name} is required`);
   return parsed;
 }
