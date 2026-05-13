@@ -67,6 +67,10 @@ export type DiscordRuntimeOperation =
   | "update-guild-scheduled-event"
   | "delete-guild-scheduled-event"
   | "list-guild-scheduled-event-users"
+  | "create-stage-instance"
+  | "get-stage-instance"
+  | "update-stage-instance"
+  | "delete-stage-instance"
   | "get-invite"
   | "delete-invite"
   | "list-channel-webhooks"
@@ -274,6 +278,14 @@ export function buildDiscordOperationRequest(
         before: optionalString(values.before),
         after: optionalString(values.after),
       }));
+    case "create-stage-instance":
+      return bodyPlan("POST", "stage-instances", auth, headers, stageInstanceBody(values, true), { type: "object", requiredPaths: ["id", "channel_id", "topic"] });
+    case "get-stage-instance":
+      return getPlan(`stage-instances/${channelId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "channel_id", "topic"] });
+    case "update-stage-instance":
+      return bodyPlan("PATCH", `stage-instances/${channelId(values)}`, auth, auditHeaders(headers, values), stageInstanceBody(values, false), { type: "object", requiredPaths: ["id", "channel_id", "topic"] });
+    case "delete-stage-instance":
+      return deletePlan(`stage-instances/${channelId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "get-invite":
       return getPlan(`invites/${pathSegment(requiredString(values.inviteCode, "inviteCode"))}`, auth, headers, { type: "object", requiredPaths: ["code"] }, removeEmptyValues({
         with_counts: values.withCounts,
@@ -405,6 +417,10 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "update-guild-scheduled-event",
   "delete-guild-scheduled-event",
   "list-guild-scheduled-event-users",
+  "create-stage-instance",
+  "get-stage-instance",
+  "update-stage-instance",
+  "delete-stage-instance",
   "get-invite",
   "delete-invite",
   "list-channel-webhooks",
@@ -645,6 +661,16 @@ function scheduledEventBody(values: Record<string, IntegrationJson>, requireCrea
   });
 }
 
+function stageInstanceBody(values: Record<string, IntegrationJson>, requireCreateFields: boolean): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    channel_id: requireCreateFields ? requiredString(values.channelId, "channelId") : undefined,
+    topic: requireCreateFields ? requiredString(values.topic, "topic") : optionalString(values.topic),
+    privacy_level: requireCreateFields ? optionalNumber(values.privacyLevel) ?? 2 : optionalNumber(values.privacyLevel),
+    send_start_notification: values.sendStartNotification,
+    guild_scheduled_event_id: optionalString(values.guildScheduledEventId),
+  });
+}
+
 function guildId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.guildId, values.guild), "guildId"));
 }
@@ -731,4 +757,12 @@ function removeEmptyValues(input: Record<string, IntegrationJson | undefined>): 
   return Object.fromEntries(
     Object.entries(input).filter(([, value]) => value !== undefined && value !== "" && value !== null),
   ) as Record<string, IntegrationJson>;
+}
+
+function auditHeaders(
+  headers: Record<string, string>,
+  values: Record<string, IntegrationJson>,
+): Record<string, string> {
+  const auditLogReason = optionalString(values.auditLogReason);
+  return auditLogReason ? { ...headers, "X-Audit-Log-Reason": auditLogReason } : headers;
 }
