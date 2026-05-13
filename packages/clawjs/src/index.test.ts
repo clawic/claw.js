@@ -3766,7 +3766,7 @@ test("runCli handles Telegram /new session reset without model latency", () => {
     "], { stdout: process.stdout, stderr: process.stderr, cwd: process.cwd() });",
     "process.exit(code);",
   ].join(" ");
-  const childEnv = {
+  const childEnv: Record<string, string | undefined> = {
     ...process.env,
     CLAWJS_TEST_WORKSPACE: workspaceRoot,
     CLAWJS_MAIN_DATA_DIR: path.join(workspaceRoot, "clawjs-data"),
