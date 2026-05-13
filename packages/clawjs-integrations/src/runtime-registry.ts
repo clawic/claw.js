@@ -107,6 +107,7 @@ import {
 import {
   buildWhatsAppOperationRequest,
   isWhatsAppActionOperationSupported,
+  WHATSAPP_ACTION_SLUGS,
 } from "./whatsapp-operation-executor.ts";
 import {
   buildWhatsAppSourcePlan,
@@ -791,28 +792,18 @@ const WHATSAPP_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/whatsapp-operation-executor.test.ts",
 ];
 
-const WHATSAPP_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
+const WHATSAPP_ACTION_FIXTURES: ConnectorRuntimeFixture[] = WHATSAPP_ACTION_SLUGS.flatMap((name) => [
   {
-    kind: "request",
-    operationId: "whatsapp.action.verify-phone-number",
-    path: "packages/clawjs-integrations/fixtures/whatsapp-verify-phone-number-request.json",
+    kind: "request" as const,
+    operationId: `whatsapp.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/whatsapp-${name}-request.json`,
   },
   {
-    kind: "response",
-    operationId: "whatsapp.action.verify-phone-number",
-    path: "packages/clawjs-integrations/fixtures/whatsapp-verify-phone-number-response.json",
+    kind: "response" as const,
+    operationId: `whatsapp.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/whatsapp-${name}-response.json`,
   },
-  {
-    kind: "request",
-    operationId: "whatsapp.action.send-message",
-    path: "packages/clawjs-integrations/fixtures/whatsapp-send-message-request.json",
-  },
-  {
-    kind: "response",
-    operationId: "whatsapp.action.send-message",
-    path: "packages/clawjs-integrations/fixtures/whatsapp-send-message-response.json",
-  },
-];
+]);
 
 const WHATSAPP_SOURCE_EVIDENCE = [
   "packages/clawjs-integrations/src/whatsapp-source.test.ts",
