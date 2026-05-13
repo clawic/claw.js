@@ -4738,7 +4738,13 @@
             {
               "name": "channelId",
               "type": "string",
-              "optional": false
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "entityMetadata",
+              "type": "object",
+              "optional": true
             },
             {
               "name": "name",
@@ -4774,6 +4780,17 @@
               "type": "string",
               "optional": true,
               "default": "sample"
+            },
+            {
+              "name": "image",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "recurrenceRule",
+              "type": "object",
+              "optional": true
             }
           ]
         },
@@ -4825,7 +4842,13 @@
             {
               "name": "channelId",
               "type": "string",
-              "optional": false
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "entityMetadata",
+              "type": "object",
+              "optional": true
             },
             {
               "name": "name",
@@ -4868,6 +4891,17 @@
               "type": "integer",
               "optional": true,
               "default": 2
+            },
+            {
+              "name": "image",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "recurrenceRule",
+              "type": "object",
+              "optional": true
             }
           ]
         },
@@ -4923,6 +4957,18 @@
               "name": "withMember",
               "type": "boolean",
               "optional": true
+            },
+            {
+              "name": "before",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true,
+              "default": null
             }
           ]
         },
@@ -5053,6 +5099,12 @@
               "name": "withExpiration",
               "type": "boolean",
               "optional": true
+            },
+            {
+              "name": "guildScheduledEventId",
+              "type": "string",
+              "optional": true,
+              "default": null
             }
           ],
           "authFieldNames": [
