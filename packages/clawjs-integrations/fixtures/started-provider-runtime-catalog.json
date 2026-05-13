@@ -1433,6 +1433,66 @@
           ]
         },
         {
+          "id": "discord.action.get-answer-voters",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Answer Voters",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "answerId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "after",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.end-poll",
+          "appId": "discord",
+          "kind": "action",
+          "name": "End Poll",
+          "fields": [
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.start-thread-from-message",
           "appId": "discord",
           "kind": "action",
