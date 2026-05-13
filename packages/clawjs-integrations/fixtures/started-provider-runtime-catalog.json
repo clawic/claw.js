@@ -6563,6 +6563,3431 @@
       ]
     },
     {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "authFieldNames": [
+        "salesforceAccessToken"
+      ],
+      "fields": [
+        {
+          "name": "salesforceAccessToken",
+          "type": "app",
+          "optional": false,
+          "secret": true
+        }
+      ],
+      "operations": [
+        {
+          "id": "salesforce.action.list-api-versions",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "List Api Versions",
+          "fields": [],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-api-resources",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Api Resources",
+          "fields": [],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-limits",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Limits",
+          "fields": [],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-record-counts",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Record Counts",
+          "fields": [
+            {
+              "name": "sObjects",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Account",
+                "Contact"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.list-tabs",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "List Tabs",
+          "fields": [],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.list-themes",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "List Themes",
+          "fields": [],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.list-app-menu-items",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "List App Menu Items",
+          "fields": [
+            {
+              "name": "menuType",
+              "type": "string",
+              "optional": true,
+              "default": "AppSwitcher"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.list-recent-items",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "List Recent Items",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 25,
+              "min": 1,
+              "max": 200
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.describe-global",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Describe Global",
+          "fields": [],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.list-sobjects",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "List Sobjects",
+          "fields": [],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.describe-sobject",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Describe Sobject",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-sobject-layouts",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Sobject Layouts",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-sobject-compact-layouts",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Sobject Compact Layouts",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.query",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Query",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": false,
+              "default": "SELECT Id, Name FROM Account LIMIT 10"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.query-all",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Query All",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": false,
+              "default": "SELECT Id, Name FROM Account LIMIT 10"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.query-more",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Query More",
+          "fields": [
+            {
+              "name": "nextRecordsUrl",
+              "type": "string",
+              "optional": false,
+              "default": "/services/data/v66.0/query/01gxx000000001-2000"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.search",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Search",
+          "fields": [
+            {
+              "name": "search",
+              "type": "string",
+              "optional": false,
+              "default": "FIND {Acme}"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.parameterized-search",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Parameterized Search",
+          "fields": [
+            {
+              "name": "search",
+              "type": "string",
+              "optional": false,
+              "default": "FIND {Acme}"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.create-record",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Create Record",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-record",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Record",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            },
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.update-record",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Update Record",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            },
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-record",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete Record",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            },
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.upsert-record",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Upsert Record",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            },
+            {
+              "name": "externalIdField",
+              "type": "string",
+              "optional": false,
+              "default": "External_Id__c"
+            },
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": false,
+              "default": "external-1"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-record-by-external-id",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Record By External Id",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            },
+            {
+              "name": "externalIdField",
+              "type": "string",
+              "optional": false,
+              "default": "External_Id__c"
+            },
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": false,
+              "default": "external-1"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-deleted-records",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Deleted Records",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            },
+            {
+              "name": "start",
+              "type": "string",
+              "optional": false,
+              "default": "2026-05-01T00:00:00+00:00"
+            },
+            {
+              "name": "end",
+              "type": "string",
+              "optional": false,
+              "default": "2026-05-02T00:00:00+00:00"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-updated-records",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Updated Records",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            },
+            {
+              "name": "start",
+              "type": "string",
+              "optional": false,
+              "default": "2026-05-01T00:00:00+00:00"
+            },
+            {
+              "name": "end",
+              "type": "string",
+              "optional": false,
+              "default": "2026-05-02T00:00:00+00:00"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-blob-field",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Blob Field",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Attachment"
+            },
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "00Pxx000000001"
+            },
+            {
+              "name": "fieldName",
+              "type": "string",
+              "optional": false,
+              "default": "Body"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.read-records",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Read Records",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            },
+            {
+              "name": "ids",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "001xx000000001"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.create-records",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Create Records",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            },
+            {
+              "name": "records",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "attributes": {
+                    "type": "Account"
+                  },
+                  "Name": "Acme"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.update-records",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Update Records",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            },
+            {
+              "name": "records",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "attributes": {
+                    "type": "Account"
+                  },
+                  "Name": "Acme"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.upsert-records",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Upsert Records",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            },
+            {
+              "name": "externalIdField",
+              "type": "string",
+              "optional": false,
+              "default": "External_Id__c"
+            },
+            {
+              "name": "records",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "attributes": {
+                    "type": "Account"
+                  },
+                  "External_Id__c": "external-1",
+                  "Name": "Acme"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-records",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete Records",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            },
+            {
+              "name": "ids",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "001xx000000001"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.composite",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Composite",
+          "fields": [
+            {
+              "name": "compositeRequest",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "method": "GET",
+                  "url": "/services/data/v66.0/limits",
+                  "referenceId": "limits"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.composite-batch",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Composite Batch",
+          "fields": [
+            {
+              "name": "batchRequests",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "method": "GET",
+                  "url": "v66.0/limits"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.composite-graph",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Composite Graph",
+          "fields": [
+            {
+              "name": "graphs",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "graphId": "graph1",
+                  "compositeRequest": [
+                    {
+                      "method": "GET",
+                      "url": "/services/data/v66.0/limits",
+                      "referenceId": "limits"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.composite-tree",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Composite Tree",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            },
+            {
+              "name": "records",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "attributes": {
+                    "type": "Account"
+                  },
+                  "Name": "Acme"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.list-ingest-jobs",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "List Ingest Jobs",
+          "fields": [],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.create-ingest-job",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Create Ingest Job",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "Account"
+            },
+            {
+              "name": "operation",
+              "type": "string",
+              "optional": true,
+              "default": "insert"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-ingest-job",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Ingest Job",
+          "fields": [
+            {
+              "name": "jobId",
+              "type": "string",
+              "optional": false,
+              "default": "750xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.upload-ingest-job-data",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Upload Ingest Job Data",
+          "fields": [
+            {
+              "name": "jobId",
+              "type": "string",
+              "optional": false,
+              "default": "750xx000000001"
+            },
+            {
+              "name": "csv",
+              "type": "string",
+              "optional": false,
+              "default": "Name\nAcme"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.close-ingest-job",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Close Ingest Job",
+          "fields": [
+            {
+              "name": "jobId",
+              "type": "string",
+              "optional": false,
+              "default": "750xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.abort-ingest-job",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Abort Ingest Job",
+          "fields": [
+            {
+              "name": "jobId",
+              "type": "string",
+              "optional": false,
+              "default": "750xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-ingest-successful-results",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Ingest Successful Results",
+          "fields": [
+            {
+              "name": "jobId",
+              "type": "string",
+              "optional": false,
+              "default": "750xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-ingest-failed-results",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Ingest Failed Results",
+          "fields": [
+            {
+              "name": "jobId",
+              "type": "string",
+              "optional": false,
+              "default": "750xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-ingest-unprocessed-records",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Ingest Unprocessed Records",
+          "fields": [
+            {
+              "name": "jobId",
+              "type": "string",
+              "optional": false,
+              "default": "750xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.list-query-jobs",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "List Query Jobs",
+          "fields": [],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.create-query-job",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Create Query Job",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": false,
+              "default": "SELECT Id, Name FROM Account"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-query-job",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Query Job",
+          "fields": [
+            {
+              "name": "jobId",
+              "type": "string",
+              "optional": false,
+              "default": "750xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-query-job-results",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Query Job Results",
+          "fields": [
+            {
+              "name": "jobId",
+              "type": "string",
+              "optional": false,
+              "default": "750xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.abort-query-job",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Abort Query Job",
+          "fields": [
+            {
+              "name": "jobId",
+              "type": "string",
+              "optional": false,
+              "default": "750xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-query-job",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete Query Job",
+          "fields": [
+            {
+              "name": "jobId",
+              "type": "string",
+              "optional": false,
+              "default": "750xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.list-reports",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "List Reports",
+          "fields": [],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.describe-report",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Describe Report",
+          "fields": [
+            {
+              "name": "reportId",
+              "type": "string",
+              "optional": false,
+              "default": "00Oxx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.run-report-sync",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Run Report Sync",
+          "fields": [
+            {
+              "name": "reportId",
+              "type": "string",
+              "optional": false,
+              "default": "00Oxx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.run-report-async",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Run Report Async",
+          "fields": [
+            {
+              "name": "reportId",
+              "type": "string",
+              "optional": false,
+              "default": "00Oxx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-report-instance",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Report Instance",
+          "fields": [
+            {
+              "name": "reportId",
+              "type": "string",
+              "optional": false,
+              "default": "00Oxx000000001"
+            },
+            {
+              "name": "instanceId",
+              "type": "string",
+              "optional": false,
+              "default": "0LGxx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-report-instance",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete Report Instance",
+          "fields": [
+            {
+              "name": "reportId",
+              "type": "string",
+              "optional": false,
+              "default": "00Oxx000000001"
+            },
+            {
+              "name": "instanceId",
+              "type": "string",
+              "optional": false,
+              "default": "0LGxx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.list-dashboards",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "List Dashboards",
+          "fields": [],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-dashboard",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Dashboard",
+          "fields": [
+            {
+              "name": "dashboardId",
+              "type": "string",
+              "optional": false,
+              "default": "01Zxx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.refresh-dashboard",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Refresh Dashboard",
+          "fields": [
+            {
+              "name": "dashboardId",
+              "type": "string",
+              "optional": false,
+              "default": "01Zxx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.tooling-query",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Tooling Query",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": false,
+              "default": "SELECT Id, Name FROM Account LIMIT 10"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.tooling-query-all",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Tooling Query All",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "optional": false,
+              "default": "SELECT Id, Name FROM Account LIMIT 10"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.tooling-create-record",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Tooling Create Record",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "ApexClass"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "SampleClass",
+                "Body": "public class SampleClass {}"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.tooling-get-record",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Tooling Get Record",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "ApexClass"
+            },
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "01pxx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.tooling-update-record",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Tooling Update Record",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "ApexClass"
+            },
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "01pxx000000001"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Body": "public class SampleClass {}"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.tooling-delete-record",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Tooling Delete Record",
+          "fields": [
+            {
+              "name": "objectType",
+              "type": "string",
+              "optional": false,
+              "default": "ApexClass"
+            },
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "01pxx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.tooling-execute-anonymous",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Tooling Execute Anonymous",
+          "fields": [
+            {
+              "name": "apex",
+              "type": "string",
+              "optional": false,
+              "default": "System.debug('sample');"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.tooling-run-tests-sync",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Tooling Run Tests Sync",
+          "fields": [
+            {
+              "name": "tests",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "className": "SampleTest"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.list-chatter-feeds",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "List Chatter Feeds",
+          "fields": [
+            {
+              "name": "feedType",
+              "type": "string",
+              "optional": true,
+              "default": "news"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-chatter-feed",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Chatter Feed",
+          "fields": [
+            {
+              "name": "feedType",
+              "type": "string",
+              "optional": false,
+              "default": "news"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.post-feed-item",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Post Feed Item",
+          "fields": [
+            {
+              "name": "subjectId",
+              "type": "string",
+              "optional": false,
+              "default": "005xx000000001"
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "optional": false,
+              "default": "Sample update"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-feed-element",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Feed Element",
+          "fields": [
+            {
+              "name": "feedElementId",
+              "type": "string",
+              "optional": false,
+              "default": "0D5xx000000001"
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "optional": true,
+              "default": "Sample comment"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-feed-element",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete Feed Element",
+          "fields": [
+            {
+              "name": "feedElementId",
+              "type": "string",
+              "optional": false,
+              "default": "0D5xx000000001"
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "optional": true,
+              "default": "Sample comment"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.add-feed-comment",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Add Feed Comment",
+          "fields": [
+            {
+              "name": "feedElementId",
+              "type": "string",
+              "optional": false,
+              "default": "0D5xx000000001"
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "optional": true,
+              "default": "Sample comment"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-feed-comment",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete Feed Comment",
+          "fields": [
+            {
+              "name": "commentId",
+              "type": "string",
+              "optional": false,
+              "default": "0D7xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.like-feed-element",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Like Feed Element",
+          "fields": [
+            {
+              "name": "feedElementId",
+              "type": "string",
+              "optional": false,
+              "default": "0D5xx000000001"
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "optional": true,
+              "default": "Sample comment"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.unlike-feed-element",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Unlike Feed Element",
+          "fields": [
+            {
+              "name": "likeId",
+              "type": "string",
+              "optional": false,
+              "default": "0D8xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-event-schema",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Event Schema",
+          "fields": [
+            {
+              "name": "schemaId",
+              "type": "string",
+              "optional": false,
+              "default": "4d0xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.query-account",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Query Account",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Id",
+                "Name"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 2000
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-account",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Account",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.create-account",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Create Account",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.update-account",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Update Account",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-account",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete Account",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.upsert-account",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Upsert Account",
+          "fields": [
+            {
+              "name": "externalIdField",
+              "type": "string",
+              "optional": false,
+              "default": "External_Id__c"
+            },
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": false,
+              "default": "external-1"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.query-contact",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Query Contact",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Id",
+                "Name"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 2000
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-contact",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Contact",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.create-contact",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Create Contact",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.update-contact",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Update Contact",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-contact",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete Contact",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.upsert-contact",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Upsert Contact",
+          "fields": [
+            {
+              "name": "externalIdField",
+              "type": "string",
+              "optional": false,
+              "default": "External_Id__c"
+            },
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": false,
+              "default": "external-1"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.query-lead",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Query Lead",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Id",
+                "Name"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 2000
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-lead",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Lead",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.create-lead",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Create Lead",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.update-lead",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Update Lead",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-lead",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete Lead",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.upsert-lead",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Upsert Lead",
+          "fields": [
+            {
+              "name": "externalIdField",
+              "type": "string",
+              "optional": false,
+              "default": "External_Id__c"
+            },
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": false,
+              "default": "external-1"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.query-opportunity",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Query Opportunity",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Id",
+                "Name"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 2000
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-opportunity",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Opportunity",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.create-opportunity",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Create Opportunity",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.update-opportunity",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Update Opportunity",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-opportunity",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete Opportunity",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.upsert-opportunity",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Upsert Opportunity",
+          "fields": [
+            {
+              "name": "externalIdField",
+              "type": "string",
+              "optional": false,
+              "default": "External_Id__c"
+            },
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": false,
+              "default": "external-1"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.query-case",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Query Case",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Id",
+                "Name"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 2000
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-case",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Case",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.create-case",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Create Case",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.update-case",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Update Case",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-case",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete Case",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.upsert-case",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Upsert Case",
+          "fields": [
+            {
+              "name": "externalIdField",
+              "type": "string",
+              "optional": false,
+              "default": "External_Id__c"
+            },
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": false,
+              "default": "external-1"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.query-campaign",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Query Campaign",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Id",
+                "Name"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 2000
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-campaign",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Campaign",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.create-campaign",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Create Campaign",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.update-campaign",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Update Campaign",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-campaign",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete Campaign",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.upsert-campaign",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Upsert Campaign",
+          "fields": [
+            {
+              "name": "externalIdField",
+              "type": "string",
+              "optional": false,
+              "default": "External_Id__c"
+            },
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": false,
+              "default": "external-1"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.query-task",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Query Task",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Id",
+                "Name"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 2000
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-task",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Task",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.create-task",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Create Task",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.update-task",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Update Task",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-task",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete Task",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.upsert-task",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Upsert Task",
+          "fields": [
+            {
+              "name": "externalIdField",
+              "type": "string",
+              "optional": false,
+              "default": "External_Id__c"
+            },
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": false,
+              "default": "external-1"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.query-event",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Query Event",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Id",
+                "Name"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 2000
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-event",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Event",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.create-event",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Create Event",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.update-event",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Update Event",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-event",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete Event",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.upsert-event",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Upsert Event",
+          "fields": [
+            {
+              "name": "externalIdField",
+              "type": "string",
+              "optional": false,
+              "default": "External_Id__c"
+            },
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": false,
+              "default": "external-1"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.query-user",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Query User",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Id",
+                "Name"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 2000
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-user",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get User",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.create-user",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Create User",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.update-user",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Update User",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-user",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete User",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.upsert-user",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Upsert User",
+          "fields": [
+            {
+              "name": "externalIdField",
+              "type": "string",
+              "optional": false,
+              "default": "External_Id__c"
+            },
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": false,
+              "default": "external-1"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.query-product",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Query Product",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Id",
+                "Name"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 2000
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-product",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Product",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.create-product",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Create Product",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.update-product",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Update Product",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-product",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete Product",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.upsert-product",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Upsert Product",
+          "fields": [
+            {
+              "name": "externalIdField",
+              "type": "string",
+              "optional": false,
+              "default": "External_Id__c"
+            },
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": false,
+              "default": "external-1"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.query-pricebook",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Query Pricebook",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Id",
+                "Name"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 2000
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-pricebook",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Pricebook",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.create-pricebook",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Create Pricebook",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.update-pricebook",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Update Pricebook",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-pricebook",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete Pricebook",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.upsert-pricebook",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Upsert Pricebook",
+          "fields": [
+            {
+              "name": "externalIdField",
+              "type": "string",
+              "optional": false,
+              "default": "External_Id__c"
+            },
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": false,
+              "default": "external-1"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.query-quote",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Query Quote",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Id",
+                "Name"
+              ]
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 2000
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.get-quote",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Get Quote",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.create-quote",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Create Quote",
+          "fields": [
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.update-quote",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Update Quote",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.delete-quote",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Delete Quote",
+          "fields": [
+            {
+              "name": "recordId",
+              "type": "string",
+              "optional": false,
+              "default": "001xx000000001"
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.action.upsert-quote",
+          "appId": "salesforce",
+          "kind": "action",
+          "name": "Upsert Quote",
+          "fields": [
+            {
+              "name": "externalIdField",
+              "type": "string",
+              "optional": false,
+              "default": "External_Id__c"
+            },
+            {
+              "name": "externalId",
+              "type": "string",
+              "optional": false,
+              "default": "external-1"
+            },
+            {
+              "name": "fields",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "Name": "Acme"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "salesforceAccessToken"
+          ]
+        },
+        {
+          "id": "salesforce.source.platform-event",
+          "appId": "salesforce",
+          "kind": "source",
+          "name": "Platform Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "replayId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "salesforce.source.change-data-capture",
+          "appId": "salesforce",
+          "kind": "source",
+          "name": "Change Data Capture",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "replayId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "salesforce.source.account-change-event",
+          "appId": "salesforce",
+          "kind": "source",
+          "name": "Account Change Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "replayId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "salesforce.source.contact-change-event",
+          "appId": "salesforce",
+          "kind": "source",
+          "name": "Contact Change Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "replayId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "salesforce.source.lead-change-event",
+          "appId": "salesforce",
+          "kind": "source",
+          "name": "Lead Change Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "replayId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "salesforce.source.opportunity-change-event",
+          "appId": "salesforce",
+          "kind": "source",
+          "name": "Opportunity Change Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "replayId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "salesforce.source.case-change-event",
+          "appId": "salesforce",
+          "kind": "source",
+          "name": "Case Change Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "replayId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "salesforce.source.user-change-event",
+          "appId": "salesforce",
+          "kind": "source",
+          "name": "User Change Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "replayId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "salesforce.source.generic-streaming-event",
+          "appId": "salesforce",
+          "kind": "source",
+          "name": "Generic Streaming Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "replayId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "salesforce.source.real-time-event-monitoring",
+          "appId": "salesforce",
+          "kind": "source",
+          "name": "Real Time Event Monitoring",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "replayId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        }
+      ]
+    },
+    {
       "id": "hubspot",
       "name": "HubSpot",
       "authFieldNames": [
