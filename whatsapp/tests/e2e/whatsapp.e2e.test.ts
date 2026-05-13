@@ -26,7 +26,7 @@ function injectFetch(app: FastifyInstance): typeof fetch {
 
 async function spinUp() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "whatsapp-e2e-"));
-  const built = buildWhatsappApp({ config: { host: "127.0.0.1", port: 0, dataDir: tmpDir, dbPath: path.join(tmpDir, "whatsapp.sqlite"), sharedSecret: SECRET } });
+  const built = buildWhatsappApp({ config: { host: "127.0.0.1", port: 0, dataDir: tmpDir, dbPath: path.join(tmpDir, "clawjs.sqlite"), sharedSecret: SECRET } });
   const client = new ChannelApiClient({ channel: "whatsapp", baseUrl: "http://whatsapp.test", token: SECRET, fetchImpl: injectFetch(built.app) });
   return { client, tmpDir, close: async () => { await built.app.close(); fs.rmSync(tmpDir, { recursive: true, force: true }); } };
 }

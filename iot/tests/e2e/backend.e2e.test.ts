@@ -93,7 +93,7 @@ test("iot backend exposes read-only agent tools", async () => {
       host: "127.0.0.1",
       port: 0,
       dataDir: path.join(rootDir, ".data"),
-      dbPath: path.join(rootDir, ".data", "iot.sqlite"),
+      dbPath: path.join(rootDir, ".data", "clawjs.sqlite"),
     },
   });
   try {

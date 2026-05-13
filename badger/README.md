@@ -24,7 +24,7 @@ node dist/cli.js workspaces list  # talks to the same loopback port
 ## Architecture
 
 - Fastify 5 server on a loopback port.
-- SQLite (better-sqlite3) at `<dataDir>/badger.sqlite`.
+- SQLite (better-sqlite3) in the canonical `<dataDir>/clawjs.sqlite`.
 - Bearer-token auth (one ephemeral admin token issued at first boot, persisted at `~/.config/clawjs-badger/token`).
 - Pluggable channel adapters under `src/server/channels/<family>/`.
 - Job pipeline lives inside the same Fastify process by default (worker is a setInterval inside the server).
