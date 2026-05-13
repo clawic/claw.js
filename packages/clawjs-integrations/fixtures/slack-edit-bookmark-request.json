@@ -1,0 +1,16 @@
+{
+  "method": "POST",
+  "url": "https://slack.com/api/bookmarks.edit",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "channel_id": "C123",
+    "bookmark_id": "Bk123",
+    "title": "Updated bookmark",
+    "link": "https://example.invalid/updated",
+    "emoji": ":bookmark:"
+  }
+}

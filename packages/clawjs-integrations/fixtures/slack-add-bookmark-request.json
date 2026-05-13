@@ -1,0 +1,16 @@
+{
+  "method": "POST",
+  "url": "https://slack.com/api/bookmarks.add",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "channel_id": "C123",
+    "title": "Sample bookmark",
+    "type": "link",
+    "link": "https://example.invalid",
+    "emoji": ":bookmark:"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "method": "POST",
+  "url": "https://slack.com/api/dnd.endSnooze",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-slackBotToken-secret"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "users": {
+    "U123": {
+      "dnd_enabled": false
+    }
+  }
+}
