@@ -1,0 +1,19 @@
+{
+  "method": "POST",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/composite",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "allOrNone": false,
+    "compositeRequest": [
+      {
+        "method": "GET",
+        "url": "/services/data/v66.0/limits",
+        "referenceId": "limits"
+      }
+    ]
+  }
+}

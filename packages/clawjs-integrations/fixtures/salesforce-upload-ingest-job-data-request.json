@@ -1,0 +1,10 @@
+{
+  "method": "PUT",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/jobs/ingest/750xx000000001/batches",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret",
+    "content-type": "text/csv"
+  },
+  "body": "Name\nAcme"
+}

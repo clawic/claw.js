@@ -1,0 +1,21 @@
+{
+  "method": "POST",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/chatter/feed-elements",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "subjectId": "005xx000000001",
+    "body": {
+      "messageSegments": [
+        {
+          "type": "Text",
+          "text": "Sample update"
+        }
+      ]
+    },
+    "feedElementType": "FeedItem"
+  }
+}

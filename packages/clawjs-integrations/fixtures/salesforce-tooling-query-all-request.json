@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/tooling/queryAll?q=SELECT+Id%2C+Name+FROM+Account+LIMIT+10",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret"
+  }
+}

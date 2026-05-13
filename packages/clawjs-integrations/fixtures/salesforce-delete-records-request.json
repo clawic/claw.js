@@ -1,0 +1,8 @@
+{
+  "method": "DELETE",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/composite/sobjects?ids=001xx000000001&allOrNone=false",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret"
+  }
+}

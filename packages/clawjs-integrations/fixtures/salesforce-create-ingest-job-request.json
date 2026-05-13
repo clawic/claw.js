@@ -1,0 +1,14 @@
+{
+  "method": "POST",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/jobs/ingest",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "object": "Account",
+    "operation": "insert",
+    "contentType": "CSV"
+  }
+}

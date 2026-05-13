@@ -1,0 +1,8 @@
+{
+  "method": "POST",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/chatter/feed-elements/0D5xx000000001/capabilities/chatterLikes/items",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret"
+  }
+}

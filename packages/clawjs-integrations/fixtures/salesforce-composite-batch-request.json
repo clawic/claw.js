@@ -1,0 +1,18 @@
+{
+  "method": "POST",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/composite/batch",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "haltOnError": false,
+    "batchRequests": [
+      {
+        "method": "GET",
+        "url": "v66.0/limits"
+      }
+    ]
+  }
+}

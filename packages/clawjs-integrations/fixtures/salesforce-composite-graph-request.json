@@ -1,0 +1,23 @@
+{
+  "method": "POST",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/composite/graph",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "graphs": [
+      {
+        "graphId": "graph1",
+        "compositeRequest": [
+          {
+            "method": "GET",
+            "url": "/services/data/v66.0/limits",
+            "referenceId": "limits"
+          }
+        ]
+      }
+    ]
+  }
+}

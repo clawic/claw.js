@@ -1,0 +1,16 @@
+{
+  "method": "POST",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/tooling/runTestsSynchronous",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "tests": [
+      {
+        "className": "SampleTest"
+      }
+    ]
+  }
+}

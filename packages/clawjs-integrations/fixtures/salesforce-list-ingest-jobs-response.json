@@ -1,0 +1,98 @@
+{
+  "id": "001xx000000001",
+  "Id": "001xx000000001",
+  "success": true,
+  "state": "JobComplete",
+  "records": [
+    {
+      "Id": "001xx000000001",
+      "Name": "Acme"
+    }
+  ],
+  "results": [
+    {
+      "id": "001xx000000001",
+      "success": true
+    }
+  ],
+  "sobjects": [
+    {
+      "name": "Account",
+      "label": "Account"
+    }
+  ],
+  "fields": [
+    {
+      "name": "Name",
+      "type": "string"
+    }
+  ],
+  "layouts": [
+    {
+      "id": "layout-1"
+    }
+  ],
+  "searchRecords": [
+    {
+      "Id": "001xx000000001",
+      "Name": "Acme"
+    }
+  ],
+  "deletedRecords": [
+    {
+      "id": "001xx000000001",
+      "deletedDate": "2026-05-01T00:00:00+00:00"
+    }
+  ],
+  "ids": [
+    "001xx000000001"
+  ],
+  "hasErrors": false,
+  "compositeResponse": [
+    {
+      "referenceId": "limits",
+      "httpStatusCode": 200,
+      "body": {}
+    }
+  ],
+  "graphs": [
+    {
+      "graphId": "graph1",
+      "graphResponse": {
+        "compositeResponse": []
+      }
+    }
+  ],
+  "recentItems": [
+    {
+      "id": "00Oxx000000001",
+      "name": "Pipeline Report"
+    }
+  ],
+  "reportMetadata": {
+    "name": "Pipeline Report"
+  },
+  "factMap": {},
+  "status": "Success",
+  "dashboards": [
+    {
+      "id": "01Zxx000000001",
+      "title": "Sales Dashboard"
+    }
+  ],
+  "dashboardMetadata": {
+    "name": "Sales Dashboard"
+  },
+  "summary": {
+    "outcome": "Passed"
+  },
+  "compiled": true,
+  "elements": [
+    {
+      "id": "0D5xx000000001"
+    }
+  ],
+  "event": {
+    "type": "sample"
+  }
+}

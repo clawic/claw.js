@@ -1,0 +1,12 @@
+{
+  "method": "PATCH",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/sobjects/Quote/External_Id__c/external-1",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "Name": "Acme"
+  }
+}

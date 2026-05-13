@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/tabs",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret"
+  }
+}

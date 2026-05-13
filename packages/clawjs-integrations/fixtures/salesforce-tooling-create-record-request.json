@@ -1,0 +1,13 @@
+{
+  "method": "POST",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/tooling/sobjects/ApexClass",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "Name": "SampleClass",
+    "Body": "public class SampleClass {}"
+  }
+}

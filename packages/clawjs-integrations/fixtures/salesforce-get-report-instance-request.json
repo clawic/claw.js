@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/analytics/reports/00Oxx000000001/instances/0LGxx000000001",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret"
+  }
+}

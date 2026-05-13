@@ -1,0 +1,8 @@
+{
+  "method": "PUT",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/analytics/dashboards/01Zxx000000001",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/chatter/feeds/news/feed-elements",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret"
+  }
+}

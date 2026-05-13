@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/tooling/executeAnonymous?anonymousBody=System.debug%28%27sample%27%29%3B",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret"
+  }
+}

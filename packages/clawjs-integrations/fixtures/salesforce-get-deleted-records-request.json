@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/sobjects/Account/deleted?start=2026-05-01T00%3A00%3A00%2B00%3A00&end=2026-05-02T00%3A00%3A00%2B00%3A00",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-salesforceAccessToken-secret"
+  }
+}

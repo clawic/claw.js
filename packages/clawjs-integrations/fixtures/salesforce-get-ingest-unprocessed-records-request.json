@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://example.my.salesforce.com/services/data/v66.0/jobs/ingest/750xx000000001/unprocessedrecords",
+  "headers": {
+    "accept": "text/csv",
+    "authorization": "Bearer offline-salesforceAccessToken-secret"
+  }
+}
