@@ -145,13 +145,15 @@ const DISCORD_ACTIONS = [
   action("delete-message", "Delete Message", [CHANNEL_FIELD, MESSAGE_FIELD]),
   action("bulk-delete-messages", "Bulk Delete Messages", [CHANNEL_FIELD, field("messages", "array", false, { default: ["sample"] })]),
   action("crosspost-message", "Crosspost Message", [CHANNEL_FIELD, MESSAGE_FIELD]),
-  action("list-pinned-messages", "List Pinned Messages", [CHANNEL_FIELD]),
-  action("pin-message", "Pin Message", [CHANNEL_FIELD, MESSAGE_FIELD]),
-  action("unpin-message", "Unpin Message", [CHANNEL_FIELD, MESSAGE_FIELD]),
+  action("list-pinned-messages", "List Pinned Messages", [CHANNEL_FIELD, field("before", "string", true, { default: null }), field("limit", "integer", true, { default: 1, min: 1, max: 50 })]),
+  action("pin-message", "Pin Message", [CHANNEL_FIELD, MESSAGE_FIELD, field("auditLogReason", "string", true)]),
+  action("unpin-message", "Unpin Message", [CHANNEL_FIELD, MESSAGE_FIELD, field("auditLogReason", "string", true)]),
   action("create-reaction", "Create Reaction", [CHANNEL_FIELD, MESSAGE_FIELD, field("emoji", "string", false, { default: "thumbsup" })]),
   action("delete-own-reaction", "Delete Own Reaction", [CHANNEL_FIELD, MESSAGE_FIELD, field("emoji", "string", false, { default: "thumbsup" })]),
   action("delete-user-reaction", "Delete User Reaction", [CHANNEL_FIELD, MESSAGE_FIELD, USER_FIELD, field("emoji", "string", false, { default: "thumbsup" })]),
   action("list-reactions", "List Reactions", [CHANNEL_FIELD, MESSAGE_FIELD, field("emoji", "string", false, { default: "thumbsup" }), field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
+  action("delete-all-reactions", "Delete All Reactions", [CHANNEL_FIELD, MESSAGE_FIELD]),
+  action("delete-all-reactions-for-emoji", "Delete All Reactions For Emoji", [CHANNEL_FIELD, MESSAGE_FIELD, field("emoji", "string", false, { default: "thumbsup" })]),
   action("get-answer-voters", "Get Answer Voters", [CHANNEL_FIELD, MESSAGE_FIELD, ANSWER_FIELD, field("after", "string", true), field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
   action("end-poll", "End Poll", [CHANNEL_FIELD, MESSAGE_FIELD]),
   action("start-thread-from-message", "Start Thread From Message", [CHANNEL_FIELD, MESSAGE_FIELD, field("name", "string")]),
@@ -635,6 +637,91 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["id", "channel_id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.list-pinned-messages"), {
+      channelId: "123",
+      before: "2026-05-01T00:00:00.000Z",
+      limit: 50,
+    }), {
+      method: "GET",
+      endpoint: "channels/123/messages/pins",
+      auth,
+      headers,
+      query: {
+        before: "2026-05-01T00:00:00.000Z",
+        limit: 50,
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["items", "has_more"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.pin-message"), {
+      channelId: "123",
+      messageId: "456",
+      auditLogReason: "pin release note",
+    }), {
+      method: "PUT",
+      endpoint: "channels/123/messages/pins/456",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "pin release note",
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.unpin-message"), {
+      channelId: "123",
+      messageId: "456",
+      auditLogReason: "rotate pins",
+    }), {
+      method: "DELETE",
+      endpoint: "channels/123/messages/pins/456",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "rotate pins",
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-all-reactions"), {
+      channelId: "123",
+      messageId: "456",
+    }), {
+      method: "DELETE",
+      endpoint: "channels/123/messages/456/reactions",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-all-reactions-for-emoji"), {
+      channelId: "123",
+      messageId: "456",
+      emoji: "wave:789",
+    }), {
+      method: "DELETE",
+      endpoint: "channels/123/messages/456/reactions/wave%3A789",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "object",
       },
     });
 
