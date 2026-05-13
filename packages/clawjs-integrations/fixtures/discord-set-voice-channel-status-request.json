@@ -1,0 +1,13 @@
+{
+  "method": "PUT",
+  "url": "https://discord.com/api/v10/channels/sample/voice-status",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json",
+    "x-audit-log-reason": "sample"
+  },
+  "body": {
+    "status": "sample"
+  }
+}
