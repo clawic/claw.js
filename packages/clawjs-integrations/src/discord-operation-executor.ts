@@ -29,6 +29,11 @@ export type DiscordRuntimeOperation =
   | "delete-guild-soundboard-sound"
   | "get-application-role-connection-metadata"
   | "update-application-role-connection-metadata"
+  | "list-entitlements"
+  | "get-entitlement"
+  | "consume-entitlement"
+  | "create-test-entitlement"
+  | "delete-test-entitlement"
   | "get-guild-audit-log"
   | "list-guild-emojis"
   | "get-guild-emoji"
@@ -218,6 +223,25 @@ export function buildDiscordOperationRequest(
         bodyValue: requiredJsonArray(firstValue(values.records, values.metadataRecords), "records"),
         responseSchema: { type: "array" },
       };
+    case "list-entitlements":
+      return getPlan(`applications/${applicationId(values)}/entitlements`, auth, headers, { type: "array" }, removeEmptyValues({
+        user_id: optionalString(values.userId),
+        sku_ids: optionalCommaDelimited(values.skuIds),
+        before: optionalString(values.before),
+        after: optionalString(values.after),
+        limit: optionalNumber(values.limit),
+        guild_id: optionalString(values.guildId),
+        exclude_ended: values.excludeEnded,
+        exclude_deleted: values.excludeDeleted,
+      }));
+    case "get-entitlement":
+      return getPlan(`applications/${applicationId(values)}/entitlements/${entitlementId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "sku_id", "application_id"] });
+    case "consume-entitlement":
+      return bodyPlan("POST", `applications/${applicationId(values)}/entitlements/${entitlementId(values)}/consume`, auth, headers, {}, { type: "object" });
+    case "create-test-entitlement":
+      return bodyPlan("POST", `applications/${applicationId(values)}/entitlements`, auth, headers, testEntitlementBody(values), { type: "object", requiredPaths: ["id", "sku_id"] });
+    case "delete-test-entitlement":
+      return deletePlan(`applications/${applicationId(values)}/entitlements/${entitlementId(values)}`, auth, headers, { type: "object" });
     case "get-guild-audit-log":
       return getPlan(`guilds/${guildId(values)}/audit-logs`, auth, headers, { type: "object", requiredPaths: ["audit_log_entries"] }, removeEmptyValues({
         user_id: optionalString(values.userId),
@@ -530,6 +554,11 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "delete-guild-soundboard-sound",
   "get-application-role-connection-metadata",
   "update-application-role-connection-metadata",
+  "list-entitlements",
+  "get-entitlement",
+  "consume-entitlement",
+  "create-test-entitlement",
+  "delete-test-entitlement",
   "get-guild-audit-log",
   "list-guild-emojis",
   "get-guild-emoji",
@@ -921,6 +950,14 @@ function applicationCommandBody(values: Record<string, IntegrationJson>): Record
   });
 }
 
+function testEntitlementBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return {
+    sku_id: requiredString(firstValue(values.skuId, values.sku), "skuId"),
+    owner_id: requiredString(firstValue(values.ownerId, values.userId, values.guildId), "ownerId"),
+    owner_type: requiredNumber(values.ownerType, "ownerType"),
+  };
+}
+
 function scheduledEventBody(values: Record<string, IntegrationJson>, requireCreateFields: boolean): Record<string, IntegrationJson> {
   return removeEmptyValues({
     channel_id: optionalString(values.channelId),
@@ -1002,6 +1039,10 @@ function commandId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.commandId, values.command), "commandId"));
 }
 
+function entitlementId(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.entitlementId, values.entitlement), "entitlementId"));
+}
+
 function emojiId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.emojiId, values.emoji), "emojiId"));
 }
@@ -1040,6 +1081,12 @@ function requiredString(value: IntegrationJson, name: string): string {
   return parsed;
 }
 
+function requiredNumber(value: IntegrationJson, name: string): number {
+  const parsed = optionalNumber(value);
+  if (parsed == null) throw new Error(`Discord ${name} is required`);
+  return parsed;
+}
+
 function optionalString(value: IntegrationJson): string | undefined {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
@@ -1054,6 +1101,14 @@ function optionalNumber(value: IntegrationJson): number | undefined {
 
 function optionalJsonArray(value: IntegrationJson): IntegrationJson[] | undefined {
   return Array.isArray(value) ? value : undefined;
+}
+
+function optionalCommaDelimited(value: IntegrationJson): string | undefined {
+  if (Array.isArray(value)) {
+    const entries = value.map((entry) => optionalString(entry)).filter((entry): entry is string => Boolean(entry));
+    return entries.length ? entries.join(",") : undefined;
+  }
+  return optionalString(value);
 }
 
 function requiredJsonArray(value: IntegrationJson, name: string): IntegrationJson[] {
