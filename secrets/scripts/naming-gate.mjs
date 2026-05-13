@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 
 const allowed = [
   "secrets/scripts/naming-gate.mjs",
-  "apps/commander/Sources/CommanderAdapters/ObsidianAdapter.swift",
-  "apps/commander/Tests/CommanderE2ETests/CommanderE2ETests.swift",
+  "apps/host/Sources/CommanderAdapters/ObsidianAdapter.swift",
+  "apps/host/Tests/CommanderE2ETests/CommanderE2ETests.swift",
 ];
 
 const pattern = "vault|Vault|VAULT|claw vault|claw open vault|/v1/vault|VAULT_|clawixvault|CLAWIX_VAULT_DIR";
@@ -16,7 +16,7 @@ const roots = [
   "packages/clawjs-node/src/secrets",
   "docs",
   "package.json",
-  "commander",
+  "apps/host",
 ];
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
