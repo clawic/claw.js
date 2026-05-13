@@ -243,6 +243,24 @@
           ]
         },
         {
+          "id": "discord.action.get-gateway",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Gateway",
+          "fields": [],
+          "authFieldNames": []
+        },
+        {
+          "id": "discord.action.get-gateway-bot",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Gateway Bot",
+          "fields": [],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.get-guild",
           "appId": "discord",
           "kind": "action",
