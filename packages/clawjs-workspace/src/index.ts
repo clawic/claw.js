@@ -8317,7 +8317,7 @@ export async function createWorkspaceClaw(options: CreateWorkspaceClawOptions): 
   const claw = await createClaw(baseOptions);
   return createWorkspaceExtension(claw, options.workspace.rootDir, {
     ...productivity,
-    useTimeService: Boolean(baseOptions.time?.baseUrl),
+    useTimeService: claw.time.configured,
   });
 }
 

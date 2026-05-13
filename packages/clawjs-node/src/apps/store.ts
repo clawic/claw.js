@@ -1,11 +1,9 @@
 /**
  * Clawix Apps store · Node side.
  *
- * Thin filesystem-backed CRUD over the same on-disk layout the macOS
- * client (`AppsStore.swift`) reads from. Serves as the agent-facing
- * primitive: `apps.create()` makes a folder + manifest, `apps.write()`
- * drops a single file, and the macOS app picks the change up on its
- * next poll. No bridge frames, no daemon coordination required.
+ * DB-backed metadata plus filesystem-backed assets. ClawJS owns the
+ * canonical app registry in `clawjs.sqlite`; HTML/assets stay on disk and
+ * are referenced from the DB.
  *
  * Mirrors the schema documented in
  * `clawix/macos/Sources/Clawix/Apps/AGENT_CONTRACT.md`.
@@ -15,6 +13,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { randomUUID } from "crypto";
+import Database from "better-sqlite3";
 
 export interface AppPermissions {
   internet: boolean;
@@ -83,35 +82,30 @@ export interface AppsStore {
 }
 
 export interface CreateAppsStoreOptions {
-  /**
-   * Override the on-disk root. Defaults to
-   * `~/Library/Application Support/Clawix/Apps` on macOS, the same path
-   * the Swift `AppsStore` watches. On non-macOS platforms we still
-   * lay out under `~/.local/share/Clawix/Apps` so headless agents on
-   * CI / containers stay happy.
-   */
+  /** Override the on-disk asset root. Defaults to the canonical ClawJS root. */
   rootDir?: string;
+  /** Override the canonical metadata DB. Defaults to `clawjs.sqlite`. */
+  dbPath?: string;
 }
 
 export function createAppsStore(options: CreateAppsStoreOptions = {}): AppsStore {
-  const rootDir = options.rootDir ?? defaultRootDir();
+  const dataRoot = defaultDataRoot();
+  const rootDir = options.rootDir ?? path.join(dataRoot, "apps");
+  const dbPath = options.dbPath ?? process.env.CLAWJS_MAIN_DB_PATH ?? path.join(dataRoot, "clawjs.sqlite");
   ensureDir(rootDir);
+  ensureDir(path.dirname(dbPath));
+  const sqlite = new Database(dbPath);
+  sqlite.pragma("journal_mode = WAL");
+  sqlite.pragma("foreign_keys = ON");
+  ensureAppsSchema(sqlite);
 
-  function listManifests(): AppRecord[] {
-    const out: AppRecord[] = [];
-    const entries = safeReaddir(rootDir);
-    for (const entry of entries) {
-      const slugDir = path.join(rootDir, entry);
-      if (!isDirectory(slugDir)) continue;
-      const manifest = readManifest(slugDir);
-      if (manifest) out.push(manifest);
-    }
-    return out;
+  function listRecords(): AppRecord[] {
+    return (sqlite.prepare("SELECT * FROM apps").all() as AppRow[]).map(rowToRecord);
   }
 
   function findRecord(idOrSlug: string): AppRecord | null {
-    const list = listManifests();
-    return list.find((r) => r.id === idOrSlug || r.slug === idOrSlug) ?? null;
+    const row = sqlite.prepare("SELECT * FROM apps WHERE id = ? OR slug = ?").get(idOrSlug, idOrSlug) as AppRow | undefined;
+    return row ? rowToRecord(row) : null;
   }
 
   function ensureUniqueSlug(preferred: string | undefined, name: string): string {
@@ -119,7 +113,7 @@ export function createAppsStore(options: CreateAppsStoreOptions = {}): AppsStore
     if (!base) {
       throw new Error(`Cannot derive slug from name '${name}'`);
     }
-    const taken = new Set(listManifests().map((r) => r.slug));
+    const taken = new Set(listRecords().map((r) => r.slug));
     if (!taken.has(base)) return base;
     let counter = 2;
     while (taken.has(`${base}-${counter}`)) {
@@ -131,11 +125,40 @@ export function createAppsStore(options: CreateAppsStoreOptions = {}): AppsStore
     return `${base}-${counter}`;
   }
 
-  function persistManifest(record: AppRecord): void {
+  function persistRecord(record: AppRecord): void {
     const dir = path.join(rootDir, record.slug);
     ensureDir(dir);
-    const manifestPath = path.join(dir, "manifest.json");
-    fs.writeFileSync(manifestPath, JSON.stringify(record, null, 2) + "\n", "utf8");
+    sqlite.prepare(`
+      INSERT INTO apps (
+        id, slug, name, description, root_path, manifest_json, permissions_json,
+        pinned, last_opened_at, created_by_chat_id, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        slug = excluded.slug,
+        name = excluded.name,
+        description = excluded.description,
+        root_path = excluded.root_path,
+        manifest_json = excluded.manifest_json,
+        permissions_json = excluded.permissions_json,
+        pinned = excluded.pinned,
+        last_opened_at = excluded.last_opened_at,
+        created_by_chat_id = excluded.created_by_chat_id,
+        updated_at = excluded.updated_at
+    `).run(
+      record.id,
+      record.slug,
+      record.name,
+      record.description,
+      dir,
+      JSON.stringify(record),
+      JSON.stringify(record.permissions),
+      record.pinned ? 1 : 0,
+      record.lastOpenedAt,
+      record.createdByChatId,
+      record.createdAt,
+      record.updatedAt,
+    );
   }
 
   function placeholderIndexHTML(name: string): string {
@@ -157,7 +180,7 @@ export function createAppsStore(options: CreateAppsStoreOptions = {}): AppsStore
     },
 
     list() {
-      return listManifests().sort((a, b) => {
+      return listRecords().sort((a, b) => {
         if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
         const aOpen = a.lastOpenedAt ? Date.parse(a.lastOpenedAt) : 0;
         const bOpen = b.lastOpenedAt ? Date.parse(b.lastOpenedAt) : 0;
@@ -197,7 +220,7 @@ export function createAppsStore(options: CreateAppsStoreOptions = {}): AppsStore
         updatedAt: now,
         createdByChatId: input.createdByChatId ?? null,
       };
-      persistManifest(record);
+      persistRecord(record);
       const indexPath = path.join(rootDir, slug, "index.html");
       if (!fs.existsSync(indexPath)) {
         const body = input.indexHtml ?? placeholderIndexHTML(trimmedName);
@@ -208,7 +231,7 @@ export function createAppsStore(options: CreateAppsStoreOptions = {}): AppsStore
 
     update(record) {
       const updated: AppRecord = { ...record, updatedAt: new Date().toISOString() };
-      persistManifest(updated);
+      persistRecord(updated);
       return updated;
     },
 
@@ -219,6 +242,7 @@ export function createAppsStore(options: CreateAppsStoreOptions = {}): AppsStore
       if (fs.existsSync(dir)) {
         fs.rmSync(dir, { recursive: true, force: true });
       }
+      sqlite.prepare("DELETE FROM apps WHERE id = ?").run(record.id);
       return true;
     },
 
@@ -242,7 +266,7 @@ export function createAppsStore(options: CreateAppsStoreOptions = {}): AppsStore
       fs.writeFileSync(targetPath, data);
       // Bump updatedAt so the manifest mtime tracks file edits.
       const bumped = { ...record, updatedAt: new Date().toISOString() };
-      persistManifest(bumped);
+      persistRecord(bumped);
       return { app: bumped, absolutePath: targetPath };
     },
 
@@ -255,6 +279,7 @@ export function createAppsStore(options: CreateAppsStoreOptions = {}): AppsStore
       const targetPath = path.join(rootDir, record.slug, trimmed);
       if (!fs.existsSync(targetPath)) return false;
       fs.rmSync(targetPath, { recursive: true, force: true });
+      persistRecord({ ...record, updatedAt: new Date().toISOString() });
       return true;
     },
 
@@ -262,7 +287,7 @@ export function createAppsStore(options: CreateAppsStoreOptions = {}): AppsStore
       const record = findRecord(idOrSlug);
       if (!record) return null;
       const updated: AppRecord = { ...record, pinned, updatedAt: new Date().toISOString() };
-      persistManifest(updated);
+      persistRecord(updated);
       return updated;
     },
 
@@ -280,7 +305,7 @@ export function createAppsStore(options: CreateAppsStoreOptions = {}): AppsStore
         },
         updatedAt: new Date().toISOString(),
       };
-      persistManifest(updated);
+      persistRecord(updated);
       return updated;
     },
   };
@@ -289,46 +314,27 @@ export function createAppsStore(options: CreateAppsStoreOptions = {}): AppsStore
 // Helpers ----------------------------------------------------------------
 
 export function defaultRootDir(): string {
+  return path.join(defaultDataRoot(), "apps");
+}
+
+function defaultDataRoot(): string {
+  if (process.env.CLAWJS_MAIN_DATA_DIR) return expandHome(process.env.CLAWJS_MAIN_DATA_DIR);
+  if (process.env.CLAWIX_CLAWJS_DATA_DIR) return expandHome(process.env.CLAWIX_CLAWJS_DATA_DIR);
   if (process.platform === "darwin") {
-    return path.join(os.homedir(), "Library", "Application Support", "Clawix", "Apps");
+    return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
   }
-  // Linux + headless agents: XDG-friendly fallback so an agent running
-  // on a CI box still has a stable root to write to.
-  const xdg = process.env.XDG_DATA_HOME?.trim() || path.join(os.homedir(), ".local", "share");
-  return path.join(xdg, "Clawix", "Apps");
+  if (process.platform === "win32") {
+    return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
+  }
+  return path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
+}
+
+function expandHome(value: string): string {
+  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
 }
 
 function ensureDir(dir: string): void {
   fs.mkdirSync(dir, { recursive: true });
-}
-
-function isDirectory(p: string): boolean {
-  try {
-    return fs.statSync(p).isDirectory();
-  } catch {
-    return false;
-  }
-}
-
-function safeReaddir(p: string): string[] {
-  try {
-    return fs.readdirSync(p);
-  } catch {
-    return [];
-  }
-}
-
-function readManifest(slugDir: string): AppRecord | null {
-  const manifestPath = path.join(slugDir, "manifest.json");
-  try {
-    const raw = fs.readFileSync(manifestPath, "utf8");
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return null;
-    if (typeof parsed.slug !== "string" || typeof parsed.name !== "string") return null;
-    return normalizeRecord(parsed);
-  } catch {
-    return null;
-  }
 }
 
 function normalizeRecord(raw: any): AppRecord {
@@ -355,6 +361,65 @@ function normalizeRecord(raw: any): AppRecord {
     updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : new Date().toISOString(),
     createdByChatId: typeof raw.createdByChatId === "string" ? raw.createdByChatId : null,
   };
+}
+
+interface AppRow {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  root_path: string;
+  manifest_json: string;
+  permissions_json: string;
+  pinned: number;
+  last_opened_at: string | null;
+  created_by_chat_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+function rowToRecord(row: AppRow): AppRecord {
+  const manifest = parseJson(row.manifest_json, {});
+  return normalizeRecord({
+    ...manifest,
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    description: row.description ?? "",
+    permissions: parseJson(row.permissions_json, manifest.permissions ?? {}),
+    pinned: row.pinned === 1,
+    lastOpenedAt: row.last_opened_at,
+    createdByChatId: row.created_by_chat_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  });
+}
+
+function parseJson(raw: string, fallback: any): any {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
+function ensureAppsSchema(sqlite: Database.Database): void {
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS apps (
+      id TEXT PRIMARY KEY,
+      slug TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      description TEXT,
+      root_path TEXT NOT NULL,
+      manifest_json TEXT NOT NULL DEFAULT '{}',
+      permissions_json TEXT NOT NULL DEFAULT '{}',
+      pinned INTEGER NOT NULL DEFAULT 0,
+      last_opened_at TEXT,
+      created_by_chat_id TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
 }
 
 export function normalizeSlug(raw: string): string {

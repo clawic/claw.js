@@ -91,8 +91,9 @@ resources.
 
 The primary productivity and data workflow is `claw db ...`. In any
 directory outside an existing Claw workspace project, it autobootstraps
-a local database at `.clawjs/data/database.sqlite` with no schema setup
-step and no separate workspace install.
+the canonical Clawix/ClawJS main database with no schema setup step and
+no separate workspace install. On macOS that database is
+`~/Library/Application Support/Clawix/clawjs/clawjs.sqlite`.
 
 ```bash
 claw db task "Triage docs drift"

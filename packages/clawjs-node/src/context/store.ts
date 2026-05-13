@@ -1,4 +1,5 @@
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { createHash, randomUUID } from "crypto";
 
@@ -384,31 +385,29 @@ export class ContextStore {
   }
 
   private readMemoryCandidates(): MemoryCandidate[] {
+    const dbPath = resolveMainDbPath();
+    if (!fs.existsSync(dbPath)) return this.readLegacyMemoryCandidates();
+    let db: Database.Database | null = null;
+    try {
+      db = new Database(dbPath, { readonly: true, fileMustExist: true });
+      return [
+        ...readKnowledgeFactCandidates(db),
+        ...readGenericMemoryCandidates(db),
+      ];
+    } catch {
+      return [];
+    } finally {
+      db?.close();
+    }
+  }
+
+  private readLegacyMemoryCandidates(): MemoryCandidate[] {
     const dbPath = path.join(this.workspaceDir, CLAWJS_DIR, "data", "database.sqlite");
     if (!fs.existsSync(dbPath)) return [];
     let db: Database.Database | null = null;
     try {
       db = new Database(dbPath, { readonly: true, fileMustExist: true });
-      const rows = db.prepare(`
-        SELECT id, data_json, created_at, updated_at
-        FROM records
-        WHERE namespace_id = ? AND collection_name = ?
-      `).all("main", "memory") as Array<{ id: string; data_json: string; created_at: string; updated_at: string }>;
-      return rows.map((row) => {
-        const data = JSON.parse(row.data_json) as Record<string, unknown>;
-        const title = normalizeText(data.title) || normalizeText(data.label) || row.id;
-        const content = normalizeText(data.content) || normalizeText(data.summary) || title;
-        return {
-          id: row.id,
-          title,
-          content,
-          confidence: typeof data.confidence === "number" ? clamp01(data.confidence) : 1,
-          ...(typeof data.source === "string" ? { source: data.source } : {}),
-          ...(typeof data.provenance === "string" ? { provenance: data.provenance } : {}),
-          ...(data.metadata && typeof data.metadata === "object" && !Array.isArray(data.metadata) ? { metadata: data.metadata as Record<string, unknown> } : {}),
-          updatedAt: row.updated_at,
-        };
-      }).filter((memory) => memory.content.trim());
+      return readGenericMemoryCandidates(db);
     } catch {
       return [];
     } finally {
@@ -419,4 +418,105 @@ export class ContextStore {
 
 export function createContextStore(options: ContextStoreOptions): ContextStore {
   return new ContextStore(options);
+}
+
+function readKnowledgeFactCandidates(db: Database.Database): MemoryCandidate[] {
+  if (!tableExists(db, "knowledge_facts")) return [];
+  const rows = db.prepare(`
+    SELECT facts.id, facts.predicate, facts.object_value_json, facts.confidence, facts.sensitivity,
+           facts.source, facts.provenance_json, facts.updated_at, entities.label AS subject_label
+    FROM knowledge_facts AS facts
+    LEFT JOIN knowledge_entities AS entities ON entities.id = facts.subject_id
+    WHERE facts.valid_to IS NULL
+    ORDER BY facts.updated_at DESC
+    LIMIT 500
+  `).all() as Array<{
+    id: string;
+    predicate: string;
+    object_value_json: string;
+    confidence: number | null;
+    sensitivity: string;
+    source: string;
+    provenance_json: string;
+    updated_at: string;
+    subject_label: string | null;
+  }>;
+  return rows.map((row) => {
+    const objectValue = parseJson(row.object_value_json);
+    const objectText = normalizeText(
+      typeof objectValue === "string" || typeof objectValue === "number" || typeof objectValue === "boolean"
+        ? objectValue
+        : JSON.stringify(objectValue),
+    );
+    const subject = normalizeText(row.subject_label);
+    const title = [subject, row.predicate].filter(Boolean).join(" ") || row.id;
+    return {
+      id: row.id,
+      title,
+      content: [subject, row.predicate, objectText].filter(Boolean).join(" "),
+      confidence: typeof row.confidence === "number" ? clamp01(row.confidence) : 1,
+      source: row.source,
+      provenance: row.provenance_json,
+      metadata: { sensitivity: row.sensitivity },
+      updatedAt: row.updated_at,
+    };
+  }).filter((memory) => memory.content.trim());
+}
+
+function readGenericMemoryCandidates(db: Database.Database): MemoryCandidate[] {
+  if (!tableExists(db, "records")) return [];
+  const rows = db.prepare(`
+    SELECT id, data_json, created_at, updated_at
+    FROM records
+    WHERE namespace_id = ? AND collection_name = ?
+  `).all("main", "memory") as Array<{ id: string; data_json: string; created_at: string; updated_at: string }>;
+  return rows.map((row) => {
+    const data = parseJson(row.data_json) as Record<string, unknown>;
+    const title = normalizeText(data.title) || normalizeText(data.label) || row.id;
+    const content = normalizeText(data.content) || normalizeText(data.summary) || title;
+    return {
+      id: row.id,
+      title,
+      content,
+      confidence: typeof data.confidence === "number" ? clamp01(data.confidence) : 1,
+      ...(typeof data.source === "string" ? { source: data.source } : {}),
+      ...(typeof data.provenance === "string" ? { provenance: data.provenance } : {}),
+      ...(data.metadata && typeof data.metadata === "object" && !Array.isArray(data.metadata) ? { metadata: data.metadata as Record<string, unknown> } : {}),
+      updatedAt: row.updated_at,
+    };
+  }).filter((memory) => memory.content.trim());
+}
+
+function tableExists(db: Database.Database, table: string): boolean {
+  const row = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(table) as { name: string } | undefined;
+  return Boolean(row);
+}
+
+function parseJson(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+function resolveMainDbPath(): string {
+  if (process.env.CLAWJS_MAIN_DB_PATH) return expandHome(process.env.CLAWJS_MAIN_DB_PATH);
+  return path.join(resolveDataRoot(), "clawjs.sqlite");
+}
+
+function resolveDataRoot(): string {
+  if (process.env.CLAWJS_MAIN_DATA_DIR) return expandHome(process.env.CLAWJS_MAIN_DATA_DIR);
+  if (process.env.CLAWIX_CLAWJS_DATA_DIR) return expandHome(process.env.CLAWIX_CLAWJS_DATA_DIR);
+  if (process.platform === "darwin") {
+    return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
+  }
+  if (process.platform === "win32") {
+    return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
+  }
+  return path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
+}
+
+function expandHome(value: string): string {
+  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
 }

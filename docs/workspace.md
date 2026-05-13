@@ -132,29 +132,30 @@ The productivity instance adds:
 
 ## Productivity Storage
 
-The productivity layer stores its records under `.clawjs/data` while the
-base workspace metadata stays under the stable `.clawjs/manifest`,
-`compat`, `intents`, `observed`, and `projections` folders.
+The productivity layer stores user-facing records in the canonical
+Clawix/ClawJS main database while the base workspace metadata stays
+under the stable `.clawjs/manifest`, `compat`, `intents`, `observed`,
+and `projections` folders.
 
-The current local-first database path is
-`.clawjs/data/database.sqlite`. Older workspaces that still contain the
-legacy productivity database are detected and migrated by the local data
-layer. After migration, new writes should use `claw db ...`,
-`@clawjs/workspace`, or the database service APIs instead of writing the
-old file directly.
+The current local-first database path on macOS is
+`~/Library/Application Support/Clawix/clawjs/clawjs.sqlite`. Older
+workspaces that still contain the legacy productivity database are
+detected and migrated by the local data layer. After migration, new
+writes should use `claw db ...`, `@clawjs/workspace`, or the database
+service APIs instead of writing the old file directly.
 
 That split matters:
 
 - `.clawjs/manifest`, `intents`, `observed`, and `projections` are SDK-owned control planes
-- `.clawjs/data` stores user-facing productivity records and generated assets
+- the canonical main DB stores user-facing productivity records
 - runtime-facing files such as `SOUL.md` or `IDENTITY.md` stay outside `.clawjs/`
 
 ## Productivity CLI Commands
 
 The CLI defaults to the current directory as the workspace root. Outside
-an existing Claw project, the local-first database lives at
-`.clawjs/data/database.sqlite`. The primary zero-config workflow is
-`claw db ...`, with the productivity nouns available as convenience
+an existing Claw project, the local-first database is still the
+canonical Clawix/ClawJS main database. The primary zero-config workflow
+is `claw db ...`, with the productivity nouns available as convenience
 aliases for overlapping CRUD verbs:
 
 ```bash

@@ -10,6 +10,17 @@ function createWorkspaceDir(label: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), `clawjs-workspace-${label}-`));
 }
 
+function useIsolatedMainData(t: { after(fn: () => void): void }, workspaceDir: string): string {
+  const previous = process.env.CLAWJS_MAIN_DATA_DIR;
+  const dataRoot = path.join(workspaceDir, "clawjs-data");
+  process.env.CLAWJS_MAIN_DATA_DIR = dataRoot;
+  t.after(() => {
+    if (previous === undefined) delete process.env.CLAWJS_MAIN_DATA_DIR;
+    else process.env.CLAWJS_MAIN_DATA_DIR = previous;
+  });
+  return dataRoot;
+}
+
 function embedText(text: string): number[] {
   const normalized = text.toLowerCase();
   const alphabet = "abcdefghijklmnopqrstuvwxyz";
@@ -23,8 +34,9 @@ function daysFromNow(days: number, hour = 9, minute = 0): string {
   return date.toISOString();
 }
 
-test("createWorkspaceClaw manages tasks, notes, people, inbox, events, and badges locally", async () => {
+test("createWorkspaceClaw manages tasks, notes, people, inbox, events, and badges locally", { concurrency: false }, async (t) => {
   const workspaceDir = createWorkspaceDir("crud");
+  const dataRoot = useIsolatedMainData(t, workspaceDir);
   const claw = await createWorkspaceClaw({
     runtime: { adapter: "demo" },
     workspace: {
@@ -158,11 +170,13 @@ test("createWorkspaceClaw manages tasks, notes, people, inbox, events, and badge
   assert.ok(rebuilt.reindexed >= 8);
   assert.ok(rebuilt.embeddings >= 1);
 
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(dataRoot, "clawjs.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite")), false);
 });
 
-test("createWorkspaceClaw migrates legacy JSON productivity collections into sqlite", async () => {
+test("createWorkspaceClaw migrates legacy JSON productivity collections into sqlite", { concurrency: false }, async (t) => {
   const workspaceDir = createWorkspaceDir("migration");
+  const dataRoot = useIsolatedMainData(t, workspaceDir);
   const legacyTasksDir = path.join(workspaceDir, ".clawjs", "data", "collections", "tasks");
   const legacyGoalsDir = path.join(workspaceDir, ".clawjs", "data", "collections", "goals");
   const legacyRemindersDir = path.join(workspaceDir, ".clawjs", "data", "collections", "reminders");
@@ -237,11 +251,13 @@ test("createWorkspaceClaw migrates legacy JSON productivity collections into sql
   assert.equal(goal?.title, "Imported goal");
   assert.equal(reminder?.anchorId, "task-legacy");
   assert.deepEqual(event?.linkedTaskIds, ["task-legacy"]);
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(dataRoot, "clawjs.sqlite")), true);
+  assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite")), false);
 });
 
-test("createWorkspaceClaw builds context blocks and augments session streaming", async () => {
+test("createWorkspaceClaw builds context blocks and augments session streaming", { concurrency: false }, async (t) => {
   const workspaceDir = createWorkspaceDir("context");
+  useIsolatedMainData(t, workspaceDir);
   const claw = await createWorkspaceClaw({
     runtime: {
       adapter: "openclaw",

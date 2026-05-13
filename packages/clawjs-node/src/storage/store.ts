@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import fs from "fs";
+import os from "os";
 import path from "path";
 
 import Database from "better-sqlite3";
@@ -245,15 +246,27 @@ function toBuffer(data: string | Uint8Array): Buffer {
 }
 
 function dataRoot(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "data");
+  if (process.env.CLAWJS_MAIN_DATA_DIR) return expandHome(process.env.CLAWJS_MAIN_DATA_DIR);
+  if (process.env.CLAWIX_CLAWJS_DATA_DIR) return expandHome(process.env.CLAWIX_CLAWJS_DATA_DIR);
+  if (process.platform === "darwin") {
+    return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
+  }
+  if (process.platform === "win32") {
+    return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
+  }
+  return path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
 }
 
 function storageDbPath(workspaceDir: string): string {
-  return path.join(dataRoot(workspaceDir), "storage.sqlite");
+  return path.join(dataRoot(workspaceDir), "drive.sqlite");
 }
 
 function blobsDir(workspaceDir: string): string {
-  return path.join(dataRoot(workspaceDir), "storage-blobs");
+  return path.join(dataRoot(workspaceDir), "blobs");
+}
+
+function expandHome(value: string): string {
+  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
 }
 
 function serializeObject(row: ObjectRow, rootBlobsDir: string): StorageObject {

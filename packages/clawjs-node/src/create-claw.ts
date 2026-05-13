@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import os from "os";
 import { createHash } from "crypto";
 
 import type {
@@ -461,6 +462,27 @@ import {
   type ContentScopedTokenRecord,
   type ContentVariant,
 } from "./content/index.ts";
+
+function defaultClawjsMainDbPath(): string {
+  if (process.env.CLAWJS_MAIN_DB_PATH) return expandHome(process.env.CLAWJS_MAIN_DB_PATH);
+  return path.join(defaultClawjsDataRoot(), "clawjs.sqlite");
+}
+
+function defaultClawjsDataRoot(): string {
+  if (process.env.CLAWJS_MAIN_DATA_DIR) return expandHome(process.env.CLAWJS_MAIN_DATA_DIR);
+  if (process.env.CLAWIX_CLAWJS_DATA_DIR) return expandHome(process.env.CLAWIX_CLAWJS_DATA_DIR);
+  if (process.platform === "darwin") {
+    return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
+  }
+  if (process.platform === "win32") {
+    return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
+  }
+  return path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
+}
+
+function expandHome(value: string): string {
+  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
+}
 
 const TELEGRAM_CODEX_BRIDGE_COMMANDS: TelegramCommand[] = [
   { command: "new", description: "Start a fresh session" },
@@ -1917,7 +1939,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   const embeddedTimeEngine = options.time?.baseUrl
     ? null
     : new EmbeddedTimeEngine({
-        dbPath: options.time?.dbPath ?? path.join(options.workspace.rootDir, ".clawjs", "data", "productivity.sqlite"),
+        dbPath: options.time?.dbPath ?? defaultClawjsMainDbPath(),
         defaultTimeZone: options.time?.defaultTimeZone ?? "UTC",
         schedulerIntervalMs: options.time?.schedulerIntervalMs,
         notifyBaseUrl: options.time?.notifyBaseUrl,

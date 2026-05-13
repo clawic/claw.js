@@ -1,4 +1,5 @@
 import fs from "fs";
+import os from "os";
 import path from "path";
 
 import Database from "better-sqlite3";
@@ -33,7 +34,24 @@ function resolveCollectionsDir(workspaceDir: string): string {
 }
 
 function resolveDatabasePath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite");
+  if (process.env.CLAWJS_MAIN_DB_PATH) return expandHome(process.env.CLAWJS_MAIN_DB_PATH);
+  return path.join(resolveClawjsDataRoot(workspaceDir), "clawjs.sqlite");
+}
+
+function resolveClawjsDataRoot(_workspaceDir: string): string {
+  if (process.env.CLAWJS_MAIN_DATA_DIR) return expandHome(process.env.CLAWJS_MAIN_DATA_DIR);
+  if (process.env.CLAWIX_CLAWJS_DATA_DIR) return expandHome(process.env.CLAWIX_CLAWJS_DATA_DIR);
+  if (process.platform === "darwin") {
+    return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
+  }
+  if (process.platform === "win32") {
+    return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
+  }
+  return path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
+}
+
+function expandHome(value: string): string {
+  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
 }
 
 function extractRecordMetadata(value: unknown): { updatedAt: string | null; archivedAt: string | null } {
@@ -114,6 +132,36 @@ export function createSqliteWorkspaceCollectionStore(workspaceDir: string): Sqli
       tx();
     }
     putMeta.run("legacy_json_collections_imported_at", new Date().toISOString());
+  }
+
+  const hasMigratedSqlite = getMeta.get("legacy_productivity_sqlite_imported_at") as { meta_value: string } | undefined;
+  if (!hasMigratedSqlite) {
+    const legacyPath = path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite");
+    if (fs.existsSync(legacyPath) && path.resolve(legacyPath) !== path.resolve(dbFilePath)) {
+      try {
+        sqlite.prepare("ATTACH DATABASE ? AS legacy_productivity").run(legacyPath);
+        const hasRecordsTable = sqlite.prepare(`
+          SELECT name FROM legacy_productivity.sqlite_master
+          WHERE type = 'table' AND name = 'workspace_records'
+        `).get();
+        if (hasRecordsTable) {
+          sqlite.exec(`
+            INSERT OR IGNORE INTO workspace_records (collection_name, record_id, payload_json, updated_at, archived_at)
+            SELECT collection_name, record_id, payload_json, updated_at, archived_at
+            FROM legacy_productivity.workspace_records
+          `);
+        }
+      } catch {
+        // Ignore broken legacy stores and keep the canonical main DB usable.
+      } finally {
+        try {
+          sqlite.exec("DETACH DATABASE legacy_productivity");
+        } catch {
+          // noop
+        }
+      }
+    }
+    putMeta.run("legacy_productivity_sqlite_imported_at", new Date().toISOString());
   }
 
   return {

@@ -1112,34 +1112,39 @@ test("createClaw exposes the time namespace when configured", async () => {
 
 test("createClaw embeds the time engine by default", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-time-sdk-embedded-"));
-  const claw = await createClaw({
-    runtime: { adapter: "demo" },
-    workspace: {
-      appId: "demo",
-      workspaceId: "workspace-time-embedded",
-      agentId: "agent-time-embedded",
-      rootDir: workspaceDir,
-    },
+  const dataRoot = path.join(workspaceDir, "clawjs-data");
+  await withPatchedEnv({
+    CLAWJS_MAIN_DATA_DIR: dataRoot,
+  }, async () => {
+    const claw = await createClaw({
+      runtime: { adapter: "demo" },
+      workspace: {
+        appId: "demo",
+        workspaceId: "workspace-time-embedded",
+        agentId: "agent-time-embedded",
+        rootDir: workspaceDir,
+      },
+    });
+
+    assert.equal(claw.time.configured, true);
+    const created = await claw.time.create({
+      kind: "reminder",
+      title: "Check release",
+      startsAt: "2026-04-15T09:00:00.000Z",
+      schedule: { mode: "one_off", timezone: "UTC", startsAt: "2026-04-15T09:00:00.000Z" },
+      anchorType: "task",
+      anchorId: "task-123",
+    });
+    assert.equal(created.item.anchorType, "task");
+    assert.equal(created.item.nextRunAt, "2026-04-15T09:00:00.000Z");
+
+    const signalled = await claw.time.signalAnchor({ anchorId: "task-123", signal: "task_completed" });
+    assert.equal(signalled.items[0]?.id, created.item.id);
+    assert.equal(signalled.items[0]?.status, "cancelled");
+
+    assert.equal(fs.existsSync(path.join(dataRoot, "clawjs.sqlite")), true);
+    assert.equal(fs.existsSync(path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite")), false);
   });
-
-  assert.equal(claw.time.configured, true);
-  const created = await claw.time.create({
-    kind: "reminder",
-    title: "Check release",
-    startsAt: "2026-04-15T09:00:00.000Z",
-    schedule: { mode: "one_off", timezone: "UTC", startsAt: "2026-04-15T09:00:00.000Z" },
-    anchorType: "task",
-    anchorId: "task-123",
-  });
-  assert.equal(created.item.anchorType, "task");
-  assert.equal(created.item.nextRunAt, "2026-04-15T09:00:00.000Z");
-
-  const signalled = await claw.time.signalAnchor({ anchorId: "task-123", signal: "task_completed" });
-  assert.equal(signalled.items[0]?.id, created.item.id);
-  assert.equal(signalled.items[0]?.status, "cancelled");
-
-  const dbPath = path.join(workspaceDir, ".clawjs", "data", "productivity.sqlite");
-  assert.equal(fs.existsSync(dbPath), true);
 });
 
 test("createClaw can connect a Telegram bot and reflect it through telegram state and channels", async () => {

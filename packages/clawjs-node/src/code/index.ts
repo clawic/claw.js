@@ -572,7 +572,7 @@ function resolveRepoRoot(options: CreateCodeLedgerOptions): string {
 }
 
 function resolveDatabasePath(repoRoot: string): string {
-  return path.join(repoRoot, ".clawjs", "code", "code.sqlite");
+  return path.join(resolveClawjsDataRoot(), "runtime.sqlite");
 }
 
 function resolvePolicyPath(repoRoot: string): string {
@@ -580,11 +580,27 @@ function resolvePolicyPath(repoRoot: string): string {
 }
 
 function resolveGlobalRootDir(rootDir?: string): string {
-  return path.resolve(rootDir || process.env.CLAWJS_CODE_HOME || path.join(os.homedir(), ".clawjs", "code"));
+  return path.resolve(rootDir || process.env.CLAWJS_CODE_HOME || resolveClawjsDataRoot());
 }
 
 function resolveGlobalDatabasePath(rootDir?: string): string {
-  return path.join(resolveGlobalRootDir(rootDir), "global.sqlite");
+  return path.join(resolveGlobalRootDir(rootDir), "runtime.sqlite");
+}
+
+function resolveClawjsDataRoot(): string {
+  if (process.env.CLAWJS_MAIN_DATA_DIR) return expandHome(process.env.CLAWJS_MAIN_DATA_DIR);
+  if (process.env.CLAWIX_CLAWJS_DATA_DIR) return expandHome(process.env.CLAWIX_CLAWJS_DATA_DIR);
+  if (process.platform === "darwin") {
+    return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
+  }
+  if (process.platform === "win32") {
+    return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
+  }
+  return path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
+}
+
+function expandHome(value: string): string {
+  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
 }
 
 function normalizePathList(paths?: string[]): string[] {
