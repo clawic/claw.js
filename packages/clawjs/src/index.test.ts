@@ -923,6 +923,223 @@ test("runCli indexes external Codex session artifacts without owning their raw b
     }), CLI_EXIT_OK);
     const searched = JSON.parse(searchStdout.getOutput()) as { items: Array<{ sessionId: string }> };
     assert.deepEqual(searched.items.map((item) => item.sessionId), [sessionId]);
+
+    const sidecar = new Database(path.join(tempRoot, "data", "sessions.sqlite"), { readonly: true });
+    try {
+      const sidecarSession = sidecar.prepare("SELECT session_id, artifact_path FROM conversation_sessions WHERE session_id = ?").get(sessionId) as { session_id: string; artifact_path: string };
+      assert.equal(sidecarSession.artifact_path, artifactPath);
+      const sidecarMessages = sidecar.prepare("SELECT role, text FROM conversation_messages WHERE session_id = ?").all(sessionId) as Array<{ role: string; text: string }>;
+      assert.equal(sidecarMessages[0]?.role, "user");
+      assert.match(sidecarMessages[0]?.text ?? "", /large rollout/);
+    } finally {
+      sidecar.close();
+    }
+  });
+});
+
+test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime, search, and backup reset", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-sidecars-"));
+  await withPatchedEnv({
+    CLAWJS_MAIN_DATA_DIR: path.join(tempRoot, "data"),
+    CLAWIX_CLAWJS_DATA_DIR: undefined,
+    CLAWJS_MAIN_DB_PATH: undefined,
+    CLAWJS_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    DATABASE_FILES_DIR: undefined,
+  }, async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-sidecars-cwd-"));
+    const audioPath = path.join(cwd, "voice.wav");
+    const drivePath = path.join(cwd, "brief.md");
+    fs.writeFileSync(audioPath, "fake audio bytes");
+    fs.writeFileSync(drivePath, "# Launch brief\n\nAttachment content");
+
+    const audioStdout = captureStream();
+    assert.equal(await runCli(["audio", "index", "--file", audioPath, "--session-id", "session-1", "--transcript", "voice note about launch timing", "--json"], {
+      stdout: audioStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const audio = JSON.parse(audioStdout.getOutput()) as { id: string; sidecar: string };
+    assert.equal(audio.sidecar, "audio.sqlite");
+
+    const driveStdout = captureStream();
+    assert.equal(await runCli(["drive", "index", "--file", drivePath, "--session-id", "session-1", "--json"], {
+      stdout: driveStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const drive = JSON.parse(driveStdout.getOutput()) as { id: string; sidecar: string };
+    assert.equal(drive.sidecar, "drive.sqlite");
+
+    const runtimeStdout = captureStream();
+    assert.equal(await runCli(["runtime", "queue", "Distill conversation", "--kind", "distillation", "--json"], {
+      stdout: runtimeStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.equal((JSON.parse(runtimeStdout.getOutput()) as { status: string }).status, "queued");
+
+    const notifyStdout = captureStream();
+    assert.equal(await runCli(["notify", "event", "--kind", "delivery", "--message", "Webhook delivered", "--json"], {
+      stdout: notifyStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.equal((JSON.parse(notifyStdout.getOutput()) as { sidecar: string }).sidecar, "notify.sqlite");
+
+    const monitorStdout = captureStream();
+    assert.equal(await runCli(["monitor", "event", "--kind", "heartbeat", "--message", "Worker alive", "--json"], {
+      stdout: monitorStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.equal((JSON.parse(monitorStdout.getOutput()) as { sidecar: string }).sidecar, "monitor.sqlite");
+
+    const infraStdout = captureStream();
+    assert.equal(await runCli(["infra", "event", "--kind", "provider-cache", "--message", "Cache refresh", "--json"], {
+      stdout: infraStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.equal((JSON.parse(infraStdout.getOutput()) as { sidecar: string }).sidecar, "infra.sqlite");
+
+    const opsStdout = captureStream();
+    assert.equal(await runCli(["ops", "metric", "--kind", "api-latency", "--metadata", "{\"p95Ms\":42}", "--json"], {
+      stdout: opsStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.equal((JSON.parse(opsStdout.getOutput()) as { sidecar: string }).sidecar, "ops.sqlite");
+
+    const opsListStdout = captureStream();
+    assert.equal(await runCli(["ops", "list", "--kind", "api-latency", "--json"], {
+      stdout: opsListStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const opsList = JSON.parse(opsListStdout.getOutput()) as { items: Array<{ kind: string; metadata: { p95Ms: number } }> };
+    assert.equal(opsList.items[0]?.kind, "api-latency");
+    assert.equal(opsList.items[0]?.metadata.p95Ms, 42);
+
+    assert.equal(await runCli(["search", "rebuild", "--json"], {
+      stdout: captureStream().stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const searchStdout = captureStream();
+    assert.equal(await runCli(["search", "query", "launch timing", "--json"], {
+      stdout: searchStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const search = JSON.parse(searchStdout.getOutput()) as { global: Array<{ domain: string; sourceId: string }> };
+    assert.ok(search.global.some((item) => item.domain === "audio" && item.sourceId === audio.id));
+
+    const backupDir = path.join(tempRoot, "backup");
+    const backupStdout = captureStream();
+    assert.equal(await runCli(["data", "backup", "--out", backupDir, "--json"], {
+      stdout: backupStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const backup = JSON.parse(backupStdout.getOutput()) as { copied: string[] };
+    assert.ok(backup.copied.some((entry) => entry.endsWith("sidecars/audio.sqlite")));
+    assert.ok(backup.copied.some((entry) => entry.endsWith("sidecars/drive.sqlite")));
+    assert.ok(backup.copied.some((entry) => entry.endsWith("sidecars/runtime.sqlite")));
+    assert.ok(backup.copied.some((entry) => entry.endsWith("sidecars/notify.sqlite")));
+    assert.ok(backup.copied.some((entry) => entry.endsWith("sidecars/monitor.sqlite")));
+    assert.ok(backup.copied.some((entry) => entry.endsWith("sidecars/infra.sqlite")));
+    assert.ok(backup.copied.some((entry) => entry.endsWith("sidecars/ops.sqlite")));
+
+    assert.equal(await runCli(["data", "reset", "--domain", "conversation-artifacts", "--json"], {
+      stdout: captureStream().stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const audioListStdout = captureStream();
+    assert.equal(await runCli(["audio", "artifact", "list", "--json"], {
+      stdout: audioListStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.deepEqual((JSON.parse(audioListStdout.getOutput()) as { items: unknown[] }).items, []);
+
+    assert.equal(await runCli(["data", "reset", "--domain", "ops", "--json"], {
+      stdout: captureStream().stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const opsAfterResetStdout = captureStream();
+    assert.equal(await runCli(["ops", "list", "--json"], {
+      stdout: opsAfterResetStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.deepEqual((JSON.parse(opsAfterResetStdout.getOutput()) as { items: unknown[] }).items, []);
+  });
+});
+
+test("runCli mirrors local memory into V2 knowledge and profile projection", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-memory-"));
+  await withPatchedEnv({
+    CLAWJS_MAIN_DATA_DIR: tempRoot,
+    CLAWIX_CLAWJS_DATA_DIR: undefined,
+    CLAWJS_MAIN_DB_PATH: undefined,
+    CLAWJS_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    DATABASE_FILES_DIR: undefined,
+  }, async () => {
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-memory-workspace-"));
+    const saveStdout = captureStream();
+    assert.equal(await runCli([
+      "memory",
+      "save",
+      "User prefers concise answers with citations",
+      "--workspace", workspaceRoot,
+      "--title", "Response preference",
+      "--tags", "preference,style",
+      "--confidence", "0.8",
+      "--json",
+    ], {
+      stdout: saveStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    }), CLI_EXIT_OK);
+    const saved = JSON.parse(saveStdout.getOutput()) as { data: { id: string } };
+
+    const factsStdout = captureStream();
+    assert.equal(await runCli(["knowledge", "list", "--json"], {
+      stdout: factsStdout.stream,
+      stderr: captureStream().stream,
+      cwd: workspaceRoot,
+    }), CLI_EXIT_OK);
+    const facts = JSON.parse(factsStdout.getOutput()) as { items: Array<{ id: string; predicate: string; objectValue: { content: string } }> };
+    assert.equal(facts.items[0]?.id, `memory:${saved.data.id}`);
+    assert.equal(facts.items[0]?.predicate, "preference");
+    assert.match(facts.items[0]?.objectValue.content ?? "", /concise answers/);
+
+    const profileStdout = captureStream();
+    assert.equal(await runCli(["profile", "get", "--json"], {
+      stdout: profileStdout.stream,
+      stderr: captureStream().stream,
+      cwd: workspaceRoot,
+    }), CLI_EXIT_OK);
+    const profile = JSON.parse(profileStdout.getOutput()) as { items: Array<{ section: string; contentText: string }> };
+    assert.equal(profile.items[0]?.section, "preference");
+    assert.match(profile.items[0]?.contentText ?? "", /concise answers/);
+
+    assert.equal(await runCli(["memory", "delete", saved.data.id, "--workspace", workspaceRoot, "--json"], {
+      stdout: captureStream().stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    }), CLI_EXIT_OK);
+    const afterDeleteStdout = captureStream();
+    assert.equal(await runCli(["knowledge", "list", "--json"], {
+      stdout: afterDeleteStdout.stream,
+      stderr: captureStream().stream,
+      cwd: workspaceRoot,
+    }), CLI_EXIT_OK);
+    assert.deepEqual((JSON.parse(afterDeleteStdout.getOutput()) as { items: unknown[] }).items, []);
   });
 });
 

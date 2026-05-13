@@ -6,6 +6,7 @@ import {
 } from "@clawjs/database";
 import { redactSecrets } from "@clawjs/claw";
 import { openMainDataStore } from "./v1-data.ts";
+import type Database from "better-sqlite3";
 
 export const MEMORY_EXIT_OK = 0;
 export const MEMORY_EXIT_FAILURE = 1;
@@ -272,6 +273,7 @@ function saveMemory(input: MemoryCliInput): number {
   });
   const store = ensureMemoryStore(input);
   const record = store.createRecord(namespaceId(input), MEMORY_COLLECTION, memory);
+  mirrorMemoryToKnowledge(store.sqlite, record.id, toMemoryRecord(record));
   writeSuccess(input.stdout, input.wantsJson, toMemoryRecord(record));
   return MEMORY_EXIT_OK;
 }
@@ -330,6 +332,7 @@ function updateMemory(input: MemoryCliInput): number {
     lastSeenAt: input.flags["last-seen-at"] || new Date().toISOString(),
   });
   const updated = store.updateRecord(namespaceId(input), MEMORY_COLLECTION, id, patch);
+  mirrorMemoryToKnowledge(store.sqlite, updated.id, toMemoryRecord(updated));
   writeSuccess(input.stdout, input.wantsJson, toMemoryRecord(updated));
   return MEMORY_EXIT_OK;
 }
@@ -343,8 +346,65 @@ function deleteMemory(input: MemoryCliInput): number {
     writeError(input, "not_found", `Memory not found: ${id}`, MEMORY_EXIT_FAILURE);
     return MEMORY_EXIT_FAILURE;
   }
+  deleteKnowledgeMirror(store.sqlite, id);
   writeSuccess(input.stdout, input.wantsJson, { deleted: true, id });
   return MEMORY_EXIT_OK;
+}
+
+function mirrorMemoryToKnowledge(sqlite: Database.Database, memoryId: string, memory: MemoryRecord): void {
+  const now = new Date().toISOString();
+  const predicate = memory.tags.includes("preference")
+    ? "preference"
+    : memory.tags.includes("style")
+      ? "communication_style"
+      : `memory_${memory.kind}`;
+  const subjectId = memory.scopeUser ? `user:${memory.scopeUser}` : "user:me";
+  sqlite.prepare(`
+    INSERT INTO knowledge_facts (id, subject_id, predicate, object_kind, object_value_json, confidence, scope_json, sensitivity, source, provenance_json, supersedes_id, valid_from, valid_to, created_at, updated_at)
+    VALUES (?, ?, ?, 'memory', ?, ?, ?, ?, 'memory', ?, NULL, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET subject_id = excluded.subject_id, predicate = excluded.predicate,
+      object_value_json = excluded.object_value_json, confidence = excluded.confidence,
+      scope_json = excluded.scope_json, sensitivity = excluded.sensitivity, source = excluded.source,
+      provenance_json = excluded.provenance_json, valid_from = excluded.valid_from,
+      valid_to = excluded.valid_to, updated_at = excluded.updated_at
+  `).run(
+    `memory:${memoryId}`,
+    subjectId,
+    predicate,
+    JSON.stringify({
+      title: memory.title,
+      content: memory.content,
+      kind: memory.kind,
+      tags: memory.tags,
+      importance: memory.importance,
+    }),
+    memory.confidence,
+    JSON.stringify({
+      user: memory.scopeUser ?? null,
+      agent: memory.scopeAgent ?? null,
+      project: memory.scopeProject ?? null,
+    }),
+    stringFromMetadata(memory.metadata, "sensitivity") ?? "normal",
+    JSON.stringify({
+      memoryId,
+      source: memory.source,
+      provenance: memory.provenance ?? null,
+      supersedes: memory.supersedes,
+    }),
+    memory.validFrom ?? null,
+    memory.validTo ?? null,
+    now,
+    now,
+  );
+}
+
+function deleteKnowledgeMirror(sqlite: Database.Database, memoryId: string): void {
+  sqlite.prepare("DELETE FROM knowledge_facts WHERE id = ?").run(`memory:${memoryId}`);
+}
+
+function stringFromMetadata(metadata: Record<string, unknown>, key: string): string | null {
+  const value = metadata[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 async function searchMemory(input: MemoryCliInput): Promise<number> {

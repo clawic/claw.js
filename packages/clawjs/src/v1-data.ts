@@ -3,6 +3,7 @@ import os from "os";
 import path from "path";
 import { randomUUID } from "crypto";
 
+import BetterSqlite3 from "better-sqlite3";
 import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
 import type { FieldDefinition, IndexDefinition } from "@clawjs/database";
@@ -58,6 +59,7 @@ const LIFE_DOMAIN_TABLES = ["life_verticals", "life_variables", "life_sessions",
 const RESOURCE_DOMAIN_TABLES = ["resources", "apps", "design_resources"];
 const AGENT_DOMAIN_TABLES = ["agents", "skills", "skill_collections", "connections"];
 const SESSION_DOMAIN_TABLES = ["session_index"];
+const SIDECAR_FILENAMES = ["vault.sqlite", "sessions.sqlite", "audio.sqlite", "drive.sqlite", "search.sqlite", "runtime.sqlite", "notify.sqlite", "monitor.sqlite", "infra.sqlite", "ops.sqlite"];
 const KNOWLEDGE_DOMAIN_TABLES = [
   "knowledge_entities",
   "knowledge_facts",
@@ -617,6 +619,7 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
     VALUES (?, 'profile.id', ?, ?)
   `).run(PROFILE_ID, JSON.stringify(PROFILE_ID), nowIso());
   seedSidecarRegistry(sqlite);
+  ensureV2Sidecars();
 }
 
 export async function runV1DataCli(input: V1DataCliInput): Promise<number | null> {
@@ -678,6 +681,20 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
         return runCalendarCommand(input, store);
       case "search":
         return runSearchCommand(input, store);
+      case "audio":
+        return runAudioSidecarCommand(input, store);
+      case "drive":
+        return runDriveSidecarCommand(input, store);
+      case "runtime":
+        return runRuntimeSidecarCommand(input, store);
+      case "notify":
+        return runOperationalSidecarCommand(input, store, "notify.sqlite", "notify");
+      case "monitor":
+        return runOperationalSidecarCommand(input, store, "monitor.sqlite", "monitor");
+      case "infra":
+        return runOperationalSidecarCommand(input, store, "infra.sqlite", "infra");
+      case "ops":
+        return runOperationalSidecarCommand(input, store, "ops.sqlite", "ops");
       case "mcp":
         return runMcpCommand(input);
       case "apps":
@@ -715,6 +732,13 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     content: new Set(["upsert", "list", "get", "delete", "help"]),
     social: new Set(["upsert", "list", "get", "delete", "help"]),
     search: new Set(["query", "rebuild", "help"]),
+    audio: new Set(["index", "artifact", "transcript", "help"]),
+    drive: new Set(["index", "artifact", "attach", "help"]),
+    runtime: new Set(["queue", "job", "event", "retention", "help"]),
+    notify: new Set(["event", "list", "retention", "help"]),
+    monitor: new Set(["event", "list", "retention", "help"]),
+    infra: new Set(["event", "list", "retention", "help"]),
+    ops: new Set(["event", "metric", "list", "retention", "help"]),
     mcp: new Set(["list", "get", "help"]),
     apps: new Set(["list", "upsert", "help"]),
     design: new Set(["list", "upsert", "help"]),
@@ -744,7 +768,7 @@ function runDataCommand(input: V1DataCliInput, store: DatabaseServiceStore): num
   }
   if (command === "reset") {
     const domain = input.flags.domain || input.positionals[2];
-    if (!domain) return usageError(input, "Usage: claw data reset --domain app-state|life|resources|agents|sessions-index|all");
+    if (!domain) return usageError(input, "Usage: claw data reset --domain app-state|knowledge|notes|profile|life|business|content|social|sessions|audio|drive|search|runtime|notify|monitor|infra|ops|all");
     const result = resetDomain(store.sqlite, domain);
     writeSuccess(input, result);
     return V1_DATA_EXIT_OK;
@@ -1294,14 +1318,16 @@ function runSearchCommand(input: V1DataCliInput, store: DatabaseServiceStore): n
   const command = input.positionals[1];
   if (command === "rebuild") {
     const rebuilt = rebuildNotesFts(store.sqlite);
+    const sidecar = rebuildSearchSidecar(store.sqlite);
     upsertRegistry(store.sqlite, "search", "sidecar", "global-search", { path: path.join(resolveClawjsDataRoot(), "search.sqlite"), metadata: { reconstructible: true, rebuilt } });
-    writeSuccess(input, { rebuilt, sidecar: "search.sqlite", canonical: "main-db" });
+    writeSuccess(input, { rebuilt, sidecar: "search.sqlite", sidecarDocuments: sidecar, canonical: "main-db" });
     return V1_DATA_EXIT_OK;
   }
   if (command === "query") {
     const query = input.flags.query || input.flags.q || input.positionals.slice(2).join(" ");
     if (!query) return usageError(input, "Usage: claw search query TEXT [--json]");
     rebuildNotesFts(store.sqlite);
+    rebuildSearchSidecar(store.sqlite);
     const limit = Math.max(1, Number(input.flags.limit ?? 25));
     const pages = store.sqlite.prepare(`
       SELECT pages.*
@@ -1312,10 +1338,253 @@ function runSearchCommand(input: V1DataCliInput, store: DatabaseServiceStore): n
       LIMIT ?
     `).all(ftsPhrase(query), limit).map(normalizeDbRow);
     const knowledge = store.sqlite.prepare("SELECT * FROM knowledge_facts WHERE predicate LIKE ? OR object_value_json LIKE ? ORDER BY updated_at DESC LIMIT ?").all(`%${query}%`, `%${query}%`, limit).map(normalizeDbRow);
-    writeSuccess(input, { pages, knowledge });
+    const global = querySearchSidecar(query, limit);
+    writeSuccess(input, { pages, knowledge, global });
     return V1_DATA_EXIT_OK;
   }
   return usageError(input, usage(input.binName, "search"));
+}
+
+function runAudioSidecarCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
+  const command = input.positionals[1];
+  if (command === "index") {
+    const file = input.flags.file || input.flags.path || input.positionals[2];
+    if (!file) return usageError(input, "Usage: claw audio index --file PATH [--session-id ID] [--transcript TEXT] [--json]");
+    const filePath = path.resolve(input.cwd, expandHome(file));
+    const stat = fs.existsSync(filePath) ? fs.statSync(filePath) : null;
+    const now = nowIso();
+    const id = input.flags.id || `audio-${randomUUID()}`;
+    const sqlite = openSidecar("audio.sqlite");
+    try {
+      sqlite.prepare(`
+        INSERT INTO audio_items (id, session_id, message_id, path, content_type, duration_ms, size_bytes, transcript_text, transcript_source, created_at, updated_at, metadata_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET session_id = excluded.session_id, message_id = excluded.message_id,
+          path = excluded.path, content_type = excluded.content_type, duration_ms = excluded.duration_ms,
+          size_bytes = excluded.size_bytes, transcript_text = excluded.transcript_text,
+          transcript_source = excluded.transcript_source, metadata_json = excluded.metadata_json, updated_at = excluded.updated_at
+      `).run(
+        id,
+        input.flags["session-id"] || null,
+        input.flags["message-id"] || null,
+        filePath,
+        input.flags["content-type"] || guessContentType(filePath),
+        input.flags["duration-ms"] ? Number(input.flags["duration-ms"]) : null,
+        stat?.size ?? null,
+        input.flags.transcript || null,
+        input.flags["transcript-source"] || (input.flags.transcript ? "manual" : null),
+        now,
+        now,
+        input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}",
+      );
+      sqlite.prepare("DELETE FROM audio_fts WHERE item_id = ?").run(id);
+      sqlite.prepare("INSERT INTO audio_fts (item_id, transcript, path) VALUES (?, ?, ?)").run(id, input.flags.transcript || "", filePath);
+    } finally {
+      sqlite.close();
+    }
+    upsertRegistry(store.sqlite, "conversation-artifacts", "audio", id, { path: filePath, metadata: { sessionId: input.flags["session-id"] || null } });
+    writeSuccess(input, { id, path: filePath, sidecar: "audio.sqlite", sizeBytes: stat?.size ?? null });
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "transcript") {
+    const id = input.flags.id || input.positionals[2];
+    const text = input.flags.text || input.flags.transcript || input.positionals.slice(3).join(" ");
+    if (!id || !text) return usageError(input, "Usage: claw audio transcript AUDIO_ID --text TEXT [--json]");
+    const sqlite = openSidecar("audio.sqlite");
+    try {
+      const now = nowIso();
+      const changes = sqlite.prepare("UPDATE audio_items SET transcript_text = ?, transcript_source = ?, updated_at = ? WHERE id = ?").run(text, input.flags.source || "manual", now, id).changes;
+      sqlite.prepare("DELETE FROM audio_fts WHERE item_id = ?").run(id);
+      const row = sqlite.prepare("SELECT path FROM audio_items WHERE id = ?").get(id) as { path: string } | undefined;
+      sqlite.prepare("INSERT INTO audio_fts (item_id, transcript, path) VALUES (?, ?, ?)").run(id, text, row?.path ?? "");
+      writeSuccess(input, { updated: changes > 0, id });
+      return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
+    } finally {
+      sqlite.close();
+    }
+  }
+  if (command === "artifact") {
+    return runSidecarArtifactCommand(input, "audio.sqlite", "audio_items", "audio");
+  }
+  return usageError(input, usage(input.binName, "audio"));
+}
+
+function runDriveSidecarCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
+  const command = input.positionals[1];
+  if (command === "index" || command === "attach") {
+    const file = input.flags.file || input.flags.path || input.positionals[2];
+    if (!file) return usageError(input, "Usage: claw drive index --file PATH [--session-id ID] [--json]");
+    const filePath = path.resolve(input.cwd, expandHome(file));
+    const stat = fs.existsSync(filePath) ? fs.statSync(filePath) : null;
+    const now = nowIso();
+    const id = input.flags.id || `drive-${randomUUID()}`;
+    const name = input.flags.name || path.basename(filePath);
+    const sqlite = openSidecar("drive.sqlite");
+    try {
+      sqlite.prepare(`
+        INSERT INTO drive_items (id, parent_id, session_id, message_id, kind, name, path, content_type, size_bytes, checksum, created_at, updated_at, metadata_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET parent_id = excluded.parent_id, session_id = excluded.session_id,
+          message_id = excluded.message_id, kind = excluded.kind, name = excluded.name, path = excluded.path,
+          content_type = excluded.content_type, size_bytes = excluded.size_bytes, checksum = excluded.checksum,
+          metadata_json = excluded.metadata_json, updated_at = excluded.updated_at
+      `).run(
+        id,
+        input.flags["parent-id"] || null,
+        input.flags["session-id"] || null,
+        input.flags["message-id"] || null,
+        input.flags.kind || "file",
+        name,
+        filePath,
+        input.flags["content-type"] || guessContentType(filePath),
+        stat?.size ?? null,
+        input.flags.checksum || null,
+        now,
+        now,
+        input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}",
+      );
+      sqlite.prepare("DELETE FROM drive_fts WHERE item_id = ?").run(id);
+      sqlite.prepare("INSERT INTO drive_fts (item_id, name, path, metadata) VALUES (?, ?, ?, ?)").run(id, name, filePath, input.flags.metadata || "");
+    } finally {
+      sqlite.close();
+    }
+    upsertRegistry(store.sqlite, "conversation-artifacts", "drive-item", id, { path: filePath, metadata: { sessionId: input.flags["session-id"] || null, name } });
+    writeSuccess(input, { id, name, path: filePath, sidecar: "drive.sqlite", sizeBytes: stat?.size ?? null });
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "artifact") {
+    return runSidecarArtifactCommand(input, "drive.sqlite", "drive_items", "drive");
+  }
+  return usageError(input, usage(input.binName, "drive"));
+}
+
+function runRuntimeSidecarCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
+  const command = input.positionals[1];
+  if (command === "queue") {
+    const title = input.flags.title || input.positionals.slice(2).join(" ") || "Runtime job";
+    const now = nowIso();
+    const id = input.flags.id || `job-${randomUUID()}`;
+    const sqlite = openSidecar("runtime.sqlite");
+    try {
+      sqlite.prepare(`
+        INSERT INTO runtime_jobs (id, kind, title, status, claim_owner, run_at, attempts, payload_json, created_at, updated_at)
+        VALUES (?, ?, ?, 'queued', NULL, ?, 0, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, title = excluded.title, run_at = excluded.run_at,
+          payload_json = excluded.payload_json, updated_at = excluded.updated_at
+      `).run(id, input.flags.kind || "job", title, input.flags["run-at"] || now, input.flags.payload ? JSON.stringify(parseMaybeJson(input.flags.payload)) : "{}", now, now);
+    } finally {
+      sqlite.close();
+    }
+    upsertRegistry(store.sqlite, "runtime", "job", id, { metadata: { status: "queued" } });
+    writeSuccess(input, { id, title, status: "queued", sidecar: "runtime.sqlite" });
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "job") {
+    const action = input.positionals[2] || "list";
+    const sqlite = openSidecar("runtime.sqlite");
+    try {
+      if (action === "list") {
+        const rows = sqlite.prepare("SELECT * FROM runtime_jobs ORDER BY updated_at DESC LIMIT ?").all(Math.max(1, Number(input.flags.limit ?? 100))).map(normalizeDbRow);
+        writeSuccess(input, { items: rows });
+        return V1_DATA_EXIT_OK;
+      }
+      const id = input.flags.id || input.positionals[3];
+      if (!id) return usageError(input, "Usage: claw runtime job get|delete ID [--json]");
+      if (action === "get") {
+        const row = sqlite.prepare("SELECT * FROM runtime_jobs WHERE id = ?").get(id) as JsonRecord | undefined;
+        writeSuccess(input, row ? normalizeDbRow(row) : null);
+        return row ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
+      }
+      if (action === "delete") {
+        const changes = sqlite.prepare("DELETE FROM runtime_jobs WHERE id = ?").run(id).changes;
+        writeSuccess(input, { deleted: changes > 0, id });
+        return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
+      }
+    } finally {
+      sqlite.close();
+    }
+  }
+  if (command === "event") {
+    const now = nowIso();
+    const sqlite = openSidecar("runtime.sqlite");
+    try {
+      sqlite.prepare(`
+        INSERT INTO runtime_events (id, job_id, kind, level, message, created_at, metadata_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(input.flags.id || `event-${randomUUID()}`, input.flags["job-id"] || null, input.flags.kind || "event", input.flags.level || "info", input.flags.message || input.positionals.slice(2).join(" "), now, input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}");
+    } finally {
+      sqlite.close();
+    }
+    writeSuccess(input, { recorded: true, sidecar: "runtime.sqlite" });
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "retention") {
+    const days = Math.max(1, Number(input.flags.days ?? 30));
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+    const sqlite = openSidecar("runtime.sqlite");
+    try {
+      const events = sqlite.prepare("DELETE FROM runtime_events WHERE created_at < ?").run(cutoff).changes;
+      const jobs = sqlite.prepare("DELETE FROM runtime_jobs WHERE updated_at < ? AND status IN ('done','failed','cancelled')").run(cutoff).changes;
+      writeSuccess(input, { cutoff, deleted: { runtimeEvents: events, runtimeJobs: jobs } });
+      return V1_DATA_EXIT_OK;
+    } finally {
+      sqlite.close();
+    }
+  }
+  return usageError(input, usage(input.binName, "runtime"));
+}
+
+function runOperationalSidecarCommand(input: V1DataCliInput, store: DatabaseServiceStore, filename: string, domain: string): number {
+  const command = input.positionals[1];
+  if (command === "event" || command === "metric") {
+    const now = nowIso();
+    const id = input.flags.id || `${domain}-${randomUUID()}`;
+    const kind = command === "metric" ? (input.flags.kind || "metric") : (input.flags.kind || "event");
+    const level = command === "metric" ? (input.flags.level || "info") : (input.flags.level || "info");
+    const message = input.flags.message || input.positionals.slice(2).join(" ") || "";
+    const metadata = input.flags.metadata ? parseMaybeJson(input.flags.metadata) : {};
+    const sqlite = openSidecar(filename);
+    try {
+      sqlite.prepare(`
+        INSERT INTO operational_events (id, kind, level, message, created_at, metadata_json)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, level = excluded.level,
+          message = excluded.message, metadata_json = excluded.metadata_json
+      `).run(id, kind, level, message, now, JSON.stringify(metadata));
+    } finally {
+      sqlite.close();
+    }
+    upsertRegistry(store.sqlite, domain, command === "metric" ? "metric" : "event", id, { metadata: { kind, level } });
+    writeSuccess(input, { id, kind, level, message, sidecar: filename });
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "list") {
+    const kind = input.flags.kind;
+    const limit = Math.max(1, Number(input.flags.limit ?? 100));
+    const sqlite = openSidecar(filename);
+    try {
+      const rows = kind
+        ? sqlite.prepare("SELECT * FROM operational_events WHERE kind = ? ORDER BY created_at DESC LIMIT ?").all(kind, limit)
+        : sqlite.prepare("SELECT * FROM operational_events ORDER BY created_at DESC LIMIT ?").all(limit);
+      writeSuccess(input, { items: rows.map(normalizeDbRow), sidecar: filename });
+      return V1_DATA_EXIT_OK;
+    } finally {
+      sqlite.close();
+    }
+  }
+  if (command === "retention") {
+    const days = Math.max(1, Number(input.flags.days ?? 30));
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+    const sqlite = openSidecar(filename);
+    try {
+      const events = sqlite.prepare("DELETE FROM operational_events WHERE created_at < ?").run(cutoff).changes;
+      writeSuccess(input, { cutoff, deleted: { operationalEvents: events }, sidecar: filename });
+      return V1_DATA_EXIT_OK;
+    } finally {
+      sqlite.close();
+    }
+  }
+  return usageError(input, usage(input.binName, domain));
 }
 
 function runMcpCommand(input: V1DataCliInput): number {
@@ -1592,7 +1861,7 @@ function backupData(outDir: string): JsonRecord {
   }
   const root = resolveClawjsDataRoot();
   const sidecarDir = path.join(outDir, "sidecars");
-  for (const name of ["vault.sqlite", "sessions.sqlite", "audio.sqlite", "drive.sqlite", "search.sqlite", "runtime.sqlite", "notify.sqlite", "monitor.sqlite", "infra.sqlite", "ops.sqlite"]) {
+  for (const name of SIDECAR_FILENAMES) {
     for (const suffix of ["", "-wal", "-shm"]) {
       const src = path.join(root, `${name}${suffix}`);
       if (!fs.existsSync(src)) continue;
@@ -1665,6 +1934,7 @@ function restoreData(fromDir: string): JsonRecord {
 
 function resetDomain(sqlite: Database.Database, domain: string): JsonRecord {
   const normalized = domain.trim().toLowerCase();
+  const sidecarOnlyDomains = new Set(["audio", "drive", "runtime", "notify", "monitor", "infra", "ops", "conversation-artifacts"]);
   const tables =
     normalized === "all" ? [...APP_STATE_DOMAIN_TABLES, ...LIFE_DOMAIN_TABLES, ...KNOWLEDGE_DOMAIN_TABLES, ...PRODUCTIVITY_DOMAIN_TABLES, ...BUSINESS_DOMAIN_TABLES, ...CALENDAR_DOMAIN_TABLES, ...IOT_DOMAIN_TABLES, ...RESOURCE_DOMAIN_TABLES, ...AGENT_DOMAIN_TABLES, ...SESSION_DOMAIN_TABLES] :
     normalized === "app-state" ? APP_STATE_DOMAIN_TABLES :
@@ -1678,8 +1948,9 @@ function resetDomain(sqlite: Database.Database, domain: string): JsonRecord {
     normalized === "agents" || normalized === "skills" || normalized === "connections" ? AGENT_DOMAIN_TABLES :
     normalized === "sessions-index" || normalized === "sessions" ? SESSION_DOMAIN_TABLES :
     normalized === "search" ? ["notes_fts", "session_index_fts"] :
+    sidecarOnlyDomains.has(normalized) ? [] :
     [];
-  if (tables.length === 0) throw new Error(`Unknown reset domain: ${domain}`);
+  if (tables.length === 0 && !sidecarOnlyDomains.has(normalized)) throw new Error(`Unknown reset domain: ${domain}`);
   const deleted: Record<string, number> = {};
   const tx = sqlite.transaction(() => {
     if (tables.includes("session_index")) sqlite.prepare("DELETE FROM session_index_fts").run();
@@ -1689,7 +1960,9 @@ function resetDomain(sqlite: Database.Database, domain: string): JsonRecord {
     }
   });
   tx();
+  resetSidecarDomain(normalized, deleted);
   seedSidecarRegistry(sqlite);
+  ensureV2Sidecars();
   return { domain: normalized, deleted };
 }
 
@@ -1746,6 +2019,7 @@ function indexSessionRoots(sqlite: Database.Database, roots: string[], source: s
     }
   });
   tx();
+  indexSessionSidecar(files, source, now);
   return files.length;
 }
 
@@ -1830,6 +2104,281 @@ function ensureColumn(sqlite: Database.Database, table: string, column: string, 
   const columns = sqlite.prepare(`PRAGMA table_info(${quoteIdent(table)})`).all() as Array<{ name: string }>;
   if (columns.some((entry) => entry.name === column)) return;
   sqlite.prepare(`ALTER TABLE ${quoteIdent(table)} ADD COLUMN ${quoteIdent(column)} ${definition}`).run();
+}
+
+function openSidecar(filename: string): Database.Database {
+  const dbPath = path.join(resolveClawjsDataRoot(), filename);
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  const sqlite = new BetterSqlite3(dbPath);
+  sqlite.pragma("journal_mode = WAL");
+  ensureSidecarSchema(filename, sqlite);
+  return sqlite;
+}
+
+function ensureV2Sidecars(): void {
+  for (const filename of SIDECAR_FILENAMES) {
+    if (filename === "vault.sqlite") continue;
+    const sqlite = openSidecar(filename);
+    sqlite.close();
+  }
+}
+
+function ensureSidecarSchema(filename: string, sqlite: Database.Database): void {
+  if (filename === "sessions.sqlite") {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS conversation_sessions (
+        session_id TEXT PRIMARY KEY,
+        source TEXT NOT NULL,
+        artifact_path TEXT NOT NULL,
+        mtime_ms INTEGER NOT NULL,
+        size_bytes INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        cwd TEXT,
+        created_at TEXT,
+        updated_at TEXT NOT NULL,
+        archived INTEGER NOT NULL DEFAULT 0,
+        pinned INTEGER NOT NULL DEFAULT 0,
+        snippet TEXT NOT NULL DEFAULT '',
+        metadata_json TEXT NOT NULL DEFAULT '{}',
+        indexed_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS conversation_sessions_source_updated_idx ON conversation_sessions(source, updated_at DESC);
+      CREATE TABLE IF NOT EXISTS conversation_messages (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        role TEXT NOT NULL,
+        text TEXT NOT NULL,
+        turn_index INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT,
+        metadata_json TEXT NOT NULL DEFAULT '{}',
+        FOREIGN KEY (session_id) REFERENCES conversation_sessions(session_id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS conversation_messages_session_idx ON conversation_messages(session_id, turn_index);
+      CREATE VIRTUAL TABLE IF NOT EXISTS conversation_fts USING fts5(
+        session_id UNINDEXED,
+        message_id UNINDEXED,
+        title,
+        body,
+        cwd,
+        tokenize='unicode61'
+      );
+    `);
+    return;
+  }
+  if (filename === "audio.sqlite") {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS audio_items (
+        id TEXT PRIMARY KEY,
+        session_id TEXT,
+        message_id TEXT,
+        path TEXT NOT NULL,
+        content_type TEXT,
+        duration_ms INTEGER,
+        size_bytes INTEGER,
+        transcript_text TEXT,
+        transcript_source TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        metadata_json TEXT NOT NULL DEFAULT '{}'
+      );
+      CREATE INDEX IF NOT EXISTS audio_items_session_idx ON audio_items(session_id, updated_at DESC);
+      CREATE VIRTUAL TABLE IF NOT EXISTS audio_fts USING fts5(
+        item_id UNINDEXED,
+        transcript,
+        path,
+        tokenize='unicode61'
+      );
+    `);
+    return;
+  }
+  if (filename === "drive.sqlite") {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS drive_items (
+        id TEXT PRIMARY KEY,
+        parent_id TEXT,
+        session_id TEXT,
+        message_id TEXT,
+        kind TEXT NOT NULL DEFAULT 'file',
+        name TEXT NOT NULL,
+        path TEXT NOT NULL,
+        content_type TEXT,
+        size_bytes INTEGER,
+        checksum TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        metadata_json TEXT NOT NULL DEFAULT '{}'
+      );
+      CREATE INDEX IF NOT EXISTS drive_items_session_idx ON drive_items(session_id, updated_at DESC);
+      CREATE INDEX IF NOT EXISTS drive_items_parent_idx ON drive_items(parent_id, name);
+      CREATE VIRTUAL TABLE IF NOT EXISTS drive_fts USING fts5(
+        item_id UNINDEXED,
+        name,
+        path,
+        metadata,
+        tokenize='unicode61'
+      );
+    `);
+    return;
+  }
+  if (filename === "search.sqlite") {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS search_documents (
+        id TEXT PRIMARY KEY,
+        domain TEXT NOT NULL,
+        source_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL DEFAULT '',
+        path TEXT,
+        updated_at TEXT NOT NULL,
+        metadata_json TEXT NOT NULL DEFAULT '{}'
+      );
+      CREATE INDEX IF NOT EXISTS search_documents_domain_idx ON search_documents(domain, updated_at DESC);
+      CREATE VIRTUAL TABLE IF NOT EXISTS search_fts USING fts5(
+        doc_id UNINDEXED,
+        domain UNINDEXED,
+        title,
+        body,
+        path,
+        tokenize='unicode61'
+      );
+    `);
+    return;
+  }
+  if (filename === "runtime.sqlite") {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS runtime_jobs (
+        id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL,
+        title TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'queued',
+        claim_owner TEXT,
+        run_at TEXT,
+        attempts INTEGER NOT NULL DEFAULT 0,
+        payload_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS runtime_jobs_status_idx ON runtime_jobs(status, run_at, updated_at DESC);
+      CREATE TABLE IF NOT EXISTS runtime_events (
+        id TEXT PRIMARY KEY,
+        job_id TEXT,
+        kind TEXT NOT NULL,
+        level TEXT NOT NULL DEFAULT 'info',
+        message TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        metadata_json TEXT NOT NULL DEFAULT '{}'
+      );
+      CREATE INDEX IF NOT EXISTS runtime_events_job_idx ON runtime_events(job_id, created_at DESC);
+    `);
+    return;
+  }
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS operational_events (
+      id TEXT PRIMARY KEY,
+      kind TEXT NOT NULL,
+      level TEXT NOT NULL DEFAULT 'info',
+      message TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      metadata_json TEXT NOT NULL DEFAULT '{}'
+    );
+    CREATE INDEX IF NOT EXISTS operational_events_kind_idx ON operational_events(kind, created_at DESC);
+  `);
+}
+
+function indexSessionSidecar(files: string[], source: string, indexedAt: string): void {
+  const sqlite = openSidecar("sessions.sqlite");
+  const upsertSession = sqlite.prepare(`
+    INSERT INTO conversation_sessions (session_id, source, artifact_path, mtime_ms, size_bytes, title, cwd, created_at, updated_at, archived, pinned, snippet, metadata_json, indexed_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(session_id) DO UPDATE SET source = excluded.source, artifact_path = excluded.artifact_path,
+      mtime_ms = excluded.mtime_ms, size_bytes = excluded.size_bytes, title = excluded.title, cwd = excluded.cwd,
+      created_at = excluded.created_at, updated_at = excluded.updated_at, archived = excluded.archived,
+      snippet = excluded.snippet, metadata_json = excluded.metadata_json, indexed_at = excluded.indexed_at
+  `);
+  const insertMessage = sqlite.prepare(`
+    INSERT OR REPLACE INTO conversation_messages (id, session_id, role, text, turn_index, created_at, metadata_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+  const insertFts = sqlite.prepare("INSERT INTO conversation_fts (session_id, message_id, title, body, cwd) VALUES (?, ?, ?, ?, ?)");
+  const tx = sqlite.transaction(() => {
+    for (const file of files) {
+      const stat = fs.statSync(file);
+      const summary = summarizeSessionArtifact(file, stat);
+      upsertSession.run(
+        summary.sessionId,
+        source,
+        file,
+        Math.trunc(stat.mtimeMs),
+        stat.size,
+        summary.title,
+        summary.cwd,
+        summary.createdAt,
+        summary.updatedAt,
+        file.includes(`${path.sep}archived_sessions${path.sep}`) ? 1 : 0,
+        0,
+        summary.snippet,
+        JSON.stringify(summary.metadata),
+        indexedAt,
+      );
+      sqlite.prepare("DELETE FROM conversation_messages WHERE session_id = ?").run(summary.sessionId);
+      sqlite.prepare("DELETE FROM conversation_fts WHERE session_id = ?").run(summary.sessionId);
+      const messages = extractSessionMessages(file, summary.sessionId);
+      for (const message of messages) {
+        insertMessage.run(message.id, summary.sessionId, message.role, message.text, message.turnIndex, message.createdAt, JSON.stringify(message.metadata));
+        insertFts.run(summary.sessionId, message.id, summary.title, message.text, summary.cwd ?? "");
+      }
+      if (messages.length === 0) {
+        insertFts.run(summary.sessionId, `${summary.sessionId}:summary`, summary.title, summary.snippet, summary.cwd ?? "");
+      }
+    }
+  });
+  try {
+    tx();
+  } finally {
+    sqlite.close();
+  }
+}
+
+function extractSessionMessages(file: string, sessionId: string): Array<{ id: string; role: string; text: string; turnIndex: number; createdAt: string | null; metadata: JsonRecord }> {
+  const maxBytes = 2 * 1024 * 1024;
+  const fd = fs.openSync(file, "r");
+  try {
+    const stat = fs.fstatSync(fd);
+    const probe = Buffer.alloc(Math.min(maxBytes, stat.size));
+    fs.readSync(fd, probe, 0, probe.length, 0);
+    const messages: Array<{ id: string; role: string; text: string; turnIndex: number; createdAt: string | null; metadata: JsonRecord }> = [];
+    let turnIndex = 0;
+    for (const line of probe.toString("utf8").split("\n")) {
+      if (!line.trim()) continue;
+      const obj = parseJson<JsonRecord>(line, {});
+      const payload = isRecord(obj.payload) ? obj.payload : {};
+      let role = "";
+      let text = "";
+      let createdAt = stringValue(obj.timestamp ?? payload.timestamp ?? payload.created_at, null);
+      if (obj.type === "event_msg" && payload.type === "user_message") {
+        role = "user";
+        text = stringValue(payload.message, "") ?? "";
+      } else if (isRecord(obj.message)) {
+        const message = obj.message as JsonRecord;
+        role = stringValue(message.role, "") ?? "";
+        text = extractTextContent(message.content);
+      }
+      if (!role || !text) continue;
+      turnIndex += 1;
+      messages.push({
+        id: `${sessionId}:${turnIndex}`,
+        role,
+        text: truncate(text, 4000),
+        turnIndex,
+        createdAt,
+        metadata: { truncated: text.length > 4000 },
+      });
+      if (messages.length >= 200) break;
+    }
+    return messages;
+  } finally {
+    fs.closeSync(fd);
+  }
 }
 
 function seedSidecarRegistry(sqlite: Database.Database): void {
@@ -2086,6 +2635,198 @@ function rebuildNotesFts(sqlite: Database.Database): number {
   return pages.length;
 }
 
+function rebuildSearchSidecar(main: Database.Database): number {
+  const sqlite = openSidecar("search.sqlite");
+  const docs: Array<{ id: string; domain: string; sourceId: string; title: string; body: string; path: string | null; updatedAt: string; metadata: JsonRecord }> = [];
+  const pages = main.prepare("SELECT id, title, updated_at, tags_json FROM pages WHERE archived_at IS NULL").all() as Array<{ id: string; title: string; updated_at: string; tags_json: string }>;
+  const pageBlocks = main.prepare("SELECT text FROM page_blocks WHERE page_id = ? ORDER BY sort_order, created_at");
+  for (const page of pages) {
+    docs.push({
+      id: `notes:${page.id}`,
+      domain: "notes",
+      sourceId: page.id,
+      title: page.title,
+      body: (pageBlocks.all(page.id) as Array<{ text: string }>).map((block) => block.text).join("\n\n"),
+      path: null,
+      updatedAt: page.updated_at,
+      metadata: { tags: parseJson(page.tags_json, []) },
+    });
+  }
+  const facts = main.prepare("SELECT id, predicate, object_value_json, updated_at FROM knowledge_facts").all() as Array<{ id: string; predicate: string; object_value_json: string; updated_at: string }>;
+  for (const fact of facts) {
+    docs.push({
+      id: `knowledge:${fact.id}`,
+      domain: "knowledge",
+      sourceId: fact.id,
+      title: fact.predicate,
+      body: JSON.stringify(parseJson(fact.object_value_json, null)),
+      path: null,
+      updatedAt: fact.updated_at,
+      metadata: {},
+    });
+  }
+  const sessionSidecar = openSidecar("sessions.sqlite");
+  try {
+    const sessions = sessionSidecar.prepare("SELECT session_id, title, snippet, cwd, artifact_path, updated_at FROM conversation_sessions").all() as Array<{ session_id: string; title: string; snippet: string; cwd: string | null; artifact_path: string; updated_at: string }>;
+    for (const session of sessions) {
+      docs.push({
+        id: `sessions:${session.session_id}`,
+        domain: "sessions",
+        sourceId: session.session_id,
+        title: session.title,
+        body: session.snippet,
+        path: session.artifact_path,
+        updatedAt: session.updated_at,
+        metadata: { cwd: session.cwd },
+      });
+    }
+  } finally {
+    sessionSidecar.close();
+  }
+  const audioSidecar = openSidecar("audio.sqlite");
+  try {
+    const audio = audioSidecar.prepare("SELECT id, path, transcript_text, updated_at FROM audio_items").all() as Array<{ id: string; path: string; transcript_text: string | null; updated_at: string }>;
+    for (const item of audio) {
+      docs.push({
+        id: `audio:${item.id}`,
+        domain: "audio",
+        sourceId: item.id,
+        title: path.basename(item.path),
+        body: item.transcript_text ?? "",
+        path: item.path,
+        updatedAt: item.updated_at,
+        metadata: {},
+      });
+    }
+  } finally {
+    audioSidecar.close();
+  }
+  const driveSidecar = openSidecar("drive.sqlite");
+  try {
+    const items = driveSidecar.prepare("SELECT id, name, path, metadata_json, updated_at FROM drive_items").all() as Array<{ id: string; name: string; path: string; metadata_json: string; updated_at: string }>;
+    for (const item of items) {
+      docs.push({
+        id: `drive:${item.id}`,
+        domain: "drive",
+        sourceId: item.id,
+        title: item.name,
+        body: item.metadata_json,
+        path: item.path,
+        updatedAt: item.updated_at,
+        metadata: {},
+      });
+    }
+  } finally {
+    driveSidecar.close();
+  }
+  const tx = sqlite.transaction(() => {
+    sqlite.prepare("DELETE FROM search_documents").run();
+    sqlite.prepare("DELETE FROM search_fts").run();
+    const insertDoc = sqlite.prepare(`
+      INSERT INTO search_documents (id, domain, source_id, title, body, path, updated_at, metadata_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const insertFts = sqlite.prepare("INSERT INTO search_fts (doc_id, domain, title, body, path) VALUES (?, ?, ?, ?, ?)");
+    for (const doc of docs) {
+      insertDoc.run(doc.id, doc.domain, doc.sourceId, doc.title, doc.body, doc.path, doc.updatedAt, JSON.stringify(doc.metadata));
+      insertFts.run(doc.id, doc.domain, doc.title, doc.body, doc.path ?? "");
+    }
+  });
+  try {
+    tx();
+  } finally {
+    sqlite.close();
+  }
+  return docs.length;
+}
+
+function querySearchSidecar(query: string, limit: number): unknown[] {
+  const sqlite = openSidecar("search.sqlite");
+  try {
+    return sqlite.prepare(`
+      SELECT search_documents.*
+      FROM search_fts
+      JOIN search_documents ON search_documents.id = search_fts.doc_id
+      WHERE search_fts MATCH ?
+      ORDER BY rank
+      LIMIT ?
+    `).all(ftsPhrase(query), limit).map(normalizeDbRow);
+  } finally {
+    sqlite.close();
+  }
+}
+
+function runSidecarArtifactCommand(input: V1DataCliInput, filename: string, table: string, group: string): number {
+  const action = input.positionals[2] || "list";
+  const sqlite = openSidecar(filename);
+  try {
+    if (action === "list") {
+      const sessionId = input.flags["session-id"];
+      const limit = Math.max(1, Number(input.flags.limit ?? 100));
+      const rows = sessionId
+        ? sqlite.prepare(`SELECT * FROM ${quoteIdent(table)} WHERE session_id = ? ORDER BY updated_at DESC LIMIT ?`).all(sessionId, limit)
+        : sqlite.prepare(`SELECT * FROM ${quoteIdent(table)} ORDER BY updated_at DESC LIMIT ?`).all(limit);
+      writeSuccess(input, { items: rows.map(normalizeDbRow), sidecar: filename });
+      return V1_DATA_EXIT_OK;
+    }
+    const id = input.flags.id || input.positionals[3];
+    if (!id) return usageError(input, `Usage: claw ${group} artifact list|get|delete [ID] [--json]`);
+    if (action === "get") {
+      const row = sqlite.prepare(`SELECT * FROM ${quoteIdent(table)} WHERE id = ?`).get(id) as JsonRecord | undefined;
+      writeSuccess(input, row ? normalizeDbRow(row) : null);
+      return row ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
+    }
+    if (action === "delete") {
+      const changes = sqlite.prepare(`DELETE FROM ${quoteIdent(table)} WHERE id = ?`).run(id).changes;
+      writeSuccess(input, { deleted: changes > 0, id, sidecar: filename });
+      return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
+    }
+    return usageError(input, `Usage: claw ${group} artifact list|get|delete [ID] [--json]`);
+  } finally {
+    sqlite.close();
+  }
+}
+
+function resetSidecarDomain(domain: string, deleted: Record<string, number>): void {
+  const clear = (filename: string, tables: string[]) => {
+    const sqlite = openSidecar(filename);
+    try {
+      for (const table of tables) {
+        deleted[`${filename}:${table}`] = sqlite.prepare(`DELETE FROM ${quoteIdent(table)}`).run().changes;
+      }
+    } finally {
+      sqlite.close();
+    }
+  };
+  if (domain === "all" || domain === "sessions" || domain === "sessions-index" || domain === "conversation-artifacts") {
+    clear("sessions.sqlite", ["conversation_fts", "conversation_messages", "conversation_sessions"]);
+  }
+  if (domain === "all" || domain === "audio" || domain === "conversation-artifacts") {
+    clear("audio.sqlite", ["audio_fts", "audio_items"]);
+  }
+  if (domain === "all" || domain === "drive" || domain === "conversation-artifacts") {
+    clear("drive.sqlite", ["drive_fts", "drive_items"]);
+  }
+  if (domain === "all" || domain === "search") {
+    clear("search.sqlite", ["search_fts", "search_documents"]);
+  }
+  if (domain === "all" || domain === "runtime") {
+    clear("runtime.sqlite", ["runtime_events", "runtime_jobs"]);
+  }
+  if (domain === "all" || domain === "notify") {
+    clear("notify.sqlite", ["operational_events"]);
+  }
+  if (domain === "all" || domain === "monitor") {
+    clear("monitor.sqlite", ["operational_events"]);
+  }
+  if (domain === "all" || domain === "infra") {
+    clear("infra.sqlite", ["operational_events"]);
+  }
+  if (domain === "all" || domain === "ops") {
+    clear("ops.sqlite", ["operational_events"]);
+  }
+}
+
 function readMcpServers(configPath: string): Array<JsonRecord & { id: string }> {
   if (!fs.existsSync(configPath)) return [];
   if (path.resolve(configPath).startsWith(path.join(os.homedir(), ".codex"))) {
@@ -2190,6 +2931,20 @@ function usage(binName: string, group: string): string {
       return `Usage: ${binName} calendar create|list|get|update|delete [--json]`;
     case "search":
       return `Usage: ${binName} search query|rebuild [--json]`;
+    case "audio":
+      return `Usage: ${binName} audio index|transcript|artifact list|get|delete [--json]`;
+    case "drive":
+      return `Usage: ${binName} drive index|attach|artifact list|get|delete [--json]`;
+    case "runtime":
+      return `Usage: ${binName} runtime queue|job list|get|delete|event|retention [--json]`;
+    case "notify":
+      return `Usage: ${binName} notify event|list|retention [--json]`;
+    case "monitor":
+      return `Usage: ${binName} monitor event|list|retention [--json]`;
+    case "infra":
+      return `Usage: ${binName} infra event|list|retention [--json]`;
+    case "ops":
+      return `Usage: ${binName} ops event|metric|list|retention [--json]`;
     case "mcp":
       return `Usage: ${binName} mcp list|get [--json]`;
     case "apps":
@@ -2300,6 +3055,30 @@ function truncate(value: string, max: number): string {
   const normalized = value.replace(/\s+/g, " ").trim();
   if (normalized.length <= max) return normalized;
   return `${normalized.slice(0, max - 3).trim()}...`;
+}
+
+function guessContentType(filePath: string): string | null {
+  const ext = path.extname(filePath).toLowerCase();
+  const map: Record<string, string> = {
+    ".aac": "audio/aac",
+    ".aiff": "audio/aiff",
+    ".flac": "audio/flac",
+    ".m4a": "audio/mp4",
+    ".mp3": "audio/mpeg",
+    ".ogg": "audio/ogg",
+    ".wav": "audio/wav",
+    ".webm": "audio/webm",
+    ".gif": "image/gif",
+    ".jpeg": "image/jpeg",
+    ".jpg": "image/jpeg",
+    ".json": "application/json",
+    ".md": "text/markdown",
+    ".pdf": "application/pdf",
+    ".png": "image/png",
+    ".txt": "text/plain",
+    ".webp": "image/webp",
+  };
+  return map[ext] ?? null;
 }
 
 function extractTextContent(value: unknown): string {

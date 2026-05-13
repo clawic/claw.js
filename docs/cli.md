@@ -203,16 +203,44 @@ claw workspace-index rebuild
 
 claw data doctor --json
 claw data backup --out backups/main-store --json
+claw data restore --in backups/main-store --json
 claw data reset --domain notes --json
+claw app-state snapshot --json
+claw life seed-catalog --json
+claw life observe --kind health --value '{"status":"ok"}' --json
 
 claw knowledge fact --predicate prefers_response_style --value direct --confidence 0.9 --json
 claw knowledge search response_style --json
 claw profile get --json
+claw profile refresh --json
 
 claw notes record-note "Release runbook" --body "Deploy from the release branch" --tags ops,runbook --json
 claw notes export page-123 --json
 claw search rebuild --json
 claw search query "release branch" --json
+claw sessions index --json
+claw audio index --file voice.wav --session-id session-1 --transcript "Voice note" --json
+claw audio transcript artifact-1 --json
+claw audio artifact list --session-id session-1 --json
+claw audio artifact get artifact-1 --json
+claw audio artifact delete artifact-1 --json
+claw drive index --file brief.md --session-id session-1 --json
+claw drive artifact list --session-id session-1 --json
+claw drive artifact get artifact-1 --json
+claw drive artifact delete artifact-1 --json
+claw runtime queue "Distill conversation" --kind distillation --json
+claw runtime job list --json
+claw runtime job get job-1 --json
+claw runtime job delete job-1 --json
+claw runtime retention --days 30 --json
+claw notify event --kind delivery --message "Webhook delivered" --json
+claw notify retention --days 30 --json
+claw monitor event --kind heartbeat --message "Worker alive" --json
+claw monitor retention --days 30 --json
+claw infra event --kind provider-cache --message "Cache refresh" --json
+claw infra retention --days 30 --json
+claw ops metric --kind api-latency --metadata '{"p95Ms":42}' --json
+claw ops retention --days 30 --json
 
 claw business upsert --id customer-1 --kind customer --name "Acme" --notes "Primary account" --json
 claw content upsert --id launch-brief --title "Launch brief" --body "Draft" --json
@@ -243,10 +271,20 @@ timestamps.
 `content`, `social`, `search`, and `mcp` operate on the canonical local
 ClawJS main store. The main store keeps knowledge facts, pages and
 blocks, profile projections, business/content/social records, local FTS
-search, and registry metadata for sidecar databases. Sidecar files such
-as secrets, conversation artifacts, runtime queues, notifications, and
-operational caches remain referenced through the registry rather than
-being mixed into the main database.
+search, and registry metadata for sidecar databases. Local `memory save`
+keeps its compatibility collection but also mirrors semantic memory into
+`knowledge_facts`, so `profile get` can project user-model facts from
+Knowledge rather than a separate profile silo. `sessions index`,
+`audio index`, `drive index`, `runtime queue`, and `search rebuild`
+materialize the V2 sidecars under the same Application Support root:
+conversation/session indexes in `sessions.sqlite`, audio metadata and
+transcripts in `audio.sqlite`, attachments/assets metadata in
+`drive.sqlite`, global search documents in `search.sqlite`, and runtime
+queues/events in `runtime.sqlite`. `notify event`, `monitor event`,
+`infra event`, and `ops metric` keep deliveries, monitoring, provider
+caches, raw metrics, and other operational logs in their own sidecars
+registered in `data_registry` rather than being mixed into the main
+database.
 
 `timeline day|week` returns a shared planning view for Gantt-style
 screens: project groups, task bars, milestone markers, deadline markers,

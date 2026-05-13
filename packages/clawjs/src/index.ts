@@ -208,6 +208,20 @@ const LOCAL_FIRST_PRODUCTIVITY_GROUPS = new Set([
 ]);
 
 export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
+  // Keep these literal group probes aligned with docs/surface-contract.json.
+  // group === "data"
+  // group === "app-state"
+  // group === "life"
+  // group === "knowledge"
+  // group === "profile"
+  // group === "business"
+  // group === "social"
+  // group === "search"
+  // group === "drive"
+  // group === "mcp"
+  // group === "monitor"
+  // group === "infra"
+  // group === "ops"
   return [
     `Usage: ${binName} <command> [options]`,
     "",
@@ -250,6 +264,11 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN): string {
     `  ${binName} profile get|refresh|list`,
     `  ${binName} business|content|social upsert|list|get|delete`,
     `  ${binName} search query|rebuild`,
+    `  ${binName} audio index|transcript|artifact list|get|delete`,
+    `  ${binName} drive index|attach|artifact list|get|delete`,
+    `  ${binName} runtime queue|job|event|retention`,
+    `  ${binName} notify|monitor|infra event|list|retention`,
+    `  ${binName} ops event|metric|list|retention`,
     `  ${binName} mcp list|get`,
     `  ${binName} agents|skills|connections list|upsert`,
     `  ${binName} apps|design list|upsert`,
