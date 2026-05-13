@@ -64,6 +64,8 @@ export type DiscordRuntimeOperation =
   | "bulk-update-lobby-members"
   | "remove-lobby-member"
   | "leave-lobby"
+  | "link-channel-to-lobby"
+  | "unlink-channel-from-lobby"
   | "get-channel"
   | "update-channel"
   | "set-voice-channel-status"
@@ -350,6 +352,10 @@ export function buildDiscordOperationRequest(
       return deletePlan(`lobbies/${lobbyId(values)}/members/${userId(values)}`, auth, headers, { type: "object" });
     case "leave-lobby":
       return deletePlan(`lobbies/${lobbyId(values)}/members/@me`, bearerAuth, headers, { type: "object" });
+    case "link-channel-to-lobby":
+      return bodyPlan("PATCH", `lobbies/${lobbyId(values)}/channel-linking`, bearerAuth, headers, lobbyChannelLinkBody(values), { type: "object", requiredPaths: ["id", "application_id", "members", "linked_channel"] });
+    case "unlink-channel-from-lobby":
+      return bodyPlan("PATCH", `lobbies/${lobbyId(values)}/channel-linking`, bearerAuth, headers, {}, { type: "object", requiredPaths: ["id", "application_id", "members"] });
     case "update-channel":
       return bodyPlan("PATCH", `channels/${channelId(values)}`, auth, headers, channelBody(values), { type: "object", requiredPaths: ["id", "type"] });
     case "set-voice-channel-status":
@@ -655,6 +661,8 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "bulk-update-lobby-members",
   "remove-lobby-member",
   "leave-lobby",
+  "link-channel-to-lobby",
+  "unlink-channel-from-lobby",
   "get-channel",
   "update-channel",
   "set-voice-channel-status",
@@ -883,6 +891,12 @@ function lobbyMemberBody(values: Record<string, IntegrationJson>): Record<string
     metadata: optionalJsonObject(values.metadata),
     flags: optionalNumber(values.flags),
   });
+}
+
+function lobbyChannelLinkBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return {
+    channel_id: requiredString(values.channelId, "channelId"),
+  };
 }
 
 function channelPermissionBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
