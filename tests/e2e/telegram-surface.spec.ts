@@ -10,7 +10,7 @@ import { buildTelegramApp } from "../../telegram/src/server/app.ts";
 const execFileAsync = promisify(execFile);
 
 function writeChannelsState(workspaceDir: string) {
-  const observedDir = path.join(workspaceDir, ".clawjs", "observed");
+  const observedDir = path.join(workspaceDir, ".claw", "observed");
   fs.mkdirSync(observedDir, { recursive: true });
   fs.writeFileSync(path.join(observedDir, "channels.json"), JSON.stringify({
     accounts: [{

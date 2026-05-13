@@ -15,7 +15,7 @@ import { NextRequest } from "next/server";
 
 function catalogPath(): string {
   return process.env.CLAW_CONNECTOR_CATALOG_PATH
-    || path.join(process.cwd(), ".clawjs", "connector-catalog.json");
+    || path.join(process.cwd(), ".claw", "connector-catalog.json");
 }
 
 function loadCatalog() {

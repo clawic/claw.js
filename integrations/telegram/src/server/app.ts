@@ -54,7 +54,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
   // Connect a new Telegram bot. Wraps `claw telegram connect`.
   // The bot token must already live in the Secrets vault under
   // `secretName`; the CLI looks it up there and registers the channel
-  // account in `<workspace>/.clawjs/observed/channels.json`.
+  // account in `<workspace>/.claw/observed/channels.json`.
   app.post("/v1/bots", async (request, reply) => {
     const body = (request.body ?? {}) as RouteBody & {
       secretName?: string;

@@ -1918,7 +1918,7 @@ function writeCleanCollections(): void {
  */
 function ensureFixtureImageAsset(id: string): E2EImageAsset {
   const workspace = resolveClawJSWorkspaceDir();
-  const imageDir = path.join(workspace, ".clawjs-e2e", "images");
+  const imageDir = path.join(workspace, ".claw-e2e", "images");
   ensureDir(imageDir);
   const filePath = path.join(imageDir, `${id}.jpg`);
   if (!fs.existsSync(filePath)) {

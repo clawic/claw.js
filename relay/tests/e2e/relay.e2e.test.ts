@@ -460,7 +460,7 @@ function startFakeConnector(url: string, connectorToken: string, agentId = "demo
           createdAt: Date.now(),
           ...(sessionIdForDocument ? { sessionId: sessionIdForDocument } : {}),
           indexStatus: "indexed",
-          textPath: `.clawjs/documents/index/${path.basename(filePath)}.md`,
+          textPath: `.claw/documents/index/${path.basename(filePath)}.md`,
           contentBase64,
         };
         workspaceDocuments.set(document.documentId, document);
@@ -512,7 +512,7 @@ function startFakeConnector(url: string, connectorToken: string, agentId = "demo
           createdAt: Date.now(),
           ...(upload.sessionId ? { sessionId: upload.sessionId } : {}),
           indexStatus: "indexed",
-          textPath: `.clawjs/documents/index/${documentId}.md`,
+          textPath: `.claw/documents/index/${documentId}.md`,
           contentBase64,
         };
         workspaceDocuments.set(document.documentId, document);

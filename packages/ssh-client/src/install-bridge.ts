@@ -13,7 +13,7 @@ export interface InstallBridgeInput {
   installSystemd?: boolean;
   /**
    * If provided, used verbatim as the systemd unit body. Otherwise a default
-   * unit is rendered (binaryPath, CLAW_BRIDGE_PORT, CLAW_BRIDGE_HTTP_PORT).
+   * unit is rendered (binaryPath, CLAW_REMOTE_PORT, CLAW_REMOTE_HTTP_PORT).
    * Callers that need richer units (extra Environment lines, WorkingDirectory,
    * etc.) should render via `@clawjs/mesh` or the bridge daemon helpers.
    */
@@ -28,7 +28,7 @@ export interface InstallBridgeResult {
 }
 
 /**
- * Push the clawjs-bridged Linux binary to a host via SFTP and (optionally) wire
+ * Push the claw-remote Linux binary to a host via SFTP and (optionally) wire
  * it up as a systemd --user unit. Used the first time a Linux server peers
  * with the mesh: after install, the host can talk the native bridge protocol
  * instead of relying on SSH for every job.
@@ -38,7 +38,7 @@ export async function installBridgeOverSsh(
   input: InstallBridgeInput,
 ): Promise<InstallBridgeResult> {
   const session = await client.open(input.hostId);
-  const remotePath = input.remotePath ?? "/usr/local/bin/clawjs-bridged";
+  const remotePath = input.remotePath ?? "/usr/local/bin/claw-remote";
   const sftp = await session.sftp();
   try {
     const bytes = await readFile(input.localBinaryPath);
@@ -47,13 +47,13 @@ export async function installBridgeOverSsh(
     let systemdUnitInstalled = false;
     if (input.installSystemd !== false) {
       systemdUnitInstalled = await installSystemdUnit(session, sftp, {
-        unitName: input.systemdUnitName ?? "clawjs-bridged",
+        unitName: input.systemdUnitName ?? "claw-remote",
         unitBody:
           input.unitBody ??
           defaultSystemdUnit({
             binaryPath: remotePath,
-            port: input.port ?? 7778,
-            httpPort: input.httpPort ?? 7779,
+            port: input.port ?? 24112,
+            httpPort: input.httpPort ?? 24113,
           }),
       });
     }
@@ -109,14 +109,14 @@ interface DefaultUnitInput {
 function defaultSystemdUnit(input: DefaultUnitInput): string {
   return [
     "[Unit]",
-    "Description=Claw Mesh Bridge (clawjs-bridged)",
+    "Description=Claw Remote (claw-remote)",
     "After=network-online.target",
     "Wants=network-online.target",
     "",
     "[Service]",
     `ExecStart=${input.binaryPath}`,
-    `Environment=CLAW_BRIDGE_PORT=${input.port}`,
-    `Environment=CLAW_BRIDGE_HTTP_PORT=${input.httpPort}`,
+    `Environment=CLAW_REMOTE_PORT=${input.port}`,
+    `Environment=CLAW_REMOTE_HTTP_PORT=${input.httpPort}`,
     "Restart=on-failure",
     "RestartSec=5",
     "",

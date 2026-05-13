@@ -127,7 +127,7 @@ export function getClawJSOpenClawContext(agentId = getClawJSOpenClawAgentId()): 
 
 export async function ensureClawJSOpenClawAgent(): Promise<ClawJSOpenClawContext> {
   const current = getClawJSOpenClawContext();
-  const hasWorkspaceManifest = fs.existsSync(path.join(current.workspaceDir, ".clawjs", "manifest.json"));
+  const hasWorkspaceManifest = fs.existsSync(path.join(current.workspaceDir, ".claw", "manifest.json"));
   if (current.configuredAgent && hasWorkspaceManifest) return current;
 
   if (ensureAgentPromise) return ensureAgentPromise;

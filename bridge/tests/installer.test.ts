@@ -163,7 +163,7 @@ test("install.sh --launchd writes a plist on macOS", async () => {
       "Library/LaunchAgents/com.claw.remote.plist",
     );
     const plist = await readFile(plistPath, "utf8");
-    assert.match(plist, /com\.clawjs\.bridged/);
+    assert.match(plist, /com\.claw\.remote/);
     assert.match(plist, /CLAW_REMOTE_PORT/);
     assert.match(plist, /7779/);
   } finally {

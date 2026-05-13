@@ -29,7 +29,7 @@ function getWorkspaceDir(): string {
 }
 
 function readAuditRecords(wsDir: string): AuditRecord[] {
-  const auditPath = path.join(wsDir, ".clawjs", "audit", "audit.jsonl");
+  const auditPath = path.join(wsDir, ".claw", "audit", "audit.jsonl");
   if (!fs.existsSync(auditPath)) return [];
   try {
     return fs.readFileSync(auditPath, "utf-8")

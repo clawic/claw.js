@@ -21,12 +21,12 @@ interface SubscriptionStore {
 
 function catalogPath(): string {
   return process.env.CLAW_CONNECTOR_CATALOG_PATH
-    || path.join(process.cwd(), ".clawjs", "connector-catalog.json");
+    || path.join(process.cwd(), ".claw", "connector-catalog.json");
 }
 
 function subscriptionsPath(): string {
   return process.env.CLAW_CONNECTOR_SUBSCRIPTIONS_PATH
-    || path.join(process.cwd(), ".clawjs", "connector-subscriptions.json");
+    || path.join(process.cwd(), ".claw", "connector-subscriptions.json");
 }
 
 function loadCatalog() {

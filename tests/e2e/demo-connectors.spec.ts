@@ -3,7 +3,7 @@ import path from "path";
 
 import { expect, resetDemoState, saveArtifactScreenshot, test } from "./fixtures";
 
-const connectorDir = path.join(process.cwd(), "demo", ".clawjs");
+const connectorDir = path.join(process.cwd(), "demo", ".claw");
 const catalogPath = path.join(connectorDir, "connector-catalog.json");
 const subscriptionsPath = path.join(connectorDir, "connector-subscriptions.json");
 

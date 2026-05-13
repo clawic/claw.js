@@ -13,7 +13,7 @@ function clawBin(rootDir: string): string {
 }
 
 function writeSession(workspaceDir: string, sessionId: string, text: string) {
-  const dir = path.join(workspaceDir, ".clawjs", "sessions");
+  const dir = path.join(workspaceDir, ".claw", "sessions");
   fs.mkdirSync(dir, { recursive: true });
   const now = new Date().toISOString();
   fs.writeFileSync(path.join(dir, `${sessionId}.jsonl`), [

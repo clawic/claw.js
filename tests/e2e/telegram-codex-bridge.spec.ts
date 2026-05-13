@@ -38,7 +38,7 @@ function appendChannelMessages(workspacePath: string, messages: Array<{
   providerMessageId?: string;
   senderId?: string;
 }>) {
-  const statePath = path.join(workspacePath, ".clawjs", "observed", "channels.json");
+  const statePath = path.join(workspacePath, ".claw", "observed", "channels.json");
   const now = new Date().toISOString();
   fs.mkdirSync(path.dirname(statePath), { recursive: true });
   const current = fs.existsSync(statePath)

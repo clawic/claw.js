@@ -90,7 +90,7 @@ test("SoulSpec CLI migrates legacy structured souls automatically", async () => 
   const rootDir = process.cwd();
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-e2e-soul-legacy-"));
   const workspaceDir = path.join(tempRoot, "workspace");
-  const stateDir = path.join(workspaceDir, ".clawjs");
+  const stateDir = path.join(workspaceDir, ".claw");
   const binPath = path.join(rootDir, "packages", "clawjs", "bin", "clawjs.mjs");
   fs.mkdirSync(stateDir, { recursive: true });
   fs.writeFileSync(path.join(stateDir, "souls.json"), JSON.stringify({

@@ -107,8 +107,8 @@ const { Claw, deriveOpenClawSetupStatus, getOpenClawSetupStatus } = await import
   },
 });
 
-fs.mkdirSync(${JSON.stringify(path.join(workspaceDir, ".clawjs"))}, { recursive: true });
-fs.writeFileSync(${JSON.stringify(path.join(workspaceDir, ".clawjs", "manifest.json"))}, "{\\"workspaceId\\":\\"demo-e2e-openclaw-regressions\\"}\\n");
+fs.mkdirSync(${JSON.stringify(path.join(workspaceDir, ".claw"))}, { recursive: true });
+fs.writeFileSync(${JSON.stringify(path.join(workspaceDir, ".claw", "manifest.json"))}, "{\\"workspaceId\\":\\"demo-e2e-openclaw-regressions\\"}\\n");
 
 const status = await claw.runtime.status();
 const models = await claw.models.list();

@@ -48,7 +48,7 @@ test("renderLaunchdPlist emits a valid plist with ProgramArguments", () => {
     stderrLogPath: "/tmp/clawjs.err",
   });
   assert.match(plist, /<key>Label<\/key>/);
-  assert.match(plist, /<string>com\.clawjs\.bridged\.user<\/string>/);
+  assert.match(plist, /<string>com\.claw\.remote\.user<\/string>/);
   assert.match(plist, /<key>ProgramArguments<\/key>/);
   assert.match(plist, /<string>\/usr\/local\/bin\/claw-remote<\/string>/);
   assert.match(plist, /<key>EnvironmentVariables<\/key>/);

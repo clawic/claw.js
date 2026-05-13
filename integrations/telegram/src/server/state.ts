@@ -50,7 +50,7 @@ function safeReadJson<T>(filePath: string): T | null {
 }
 
 export function readTelegramBotsForWorkspace(workspaceDir: string): TelegramBotSummary[] {
-  const channelsFile = path.join(workspaceDir, ".clawjs", "observed", "channels.json");
+  const channelsFile = path.join(workspaceDir, ".claw", "observed", "channels.json");
   const data = safeReadJson<ChannelsStateFile>(channelsFile);
   if (!data || !Array.isArray(data.accounts)) return [];
 
