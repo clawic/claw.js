@@ -28,6 +28,7 @@ const TEMPLATE_CODE_FIELD = field("templateCode", "string");
 const SOUNDBOARD_SOUND_FIELD = field("soundboardSoundId", "string");
 const STICKER_FIELD = field("stickerId", "string");
 const STICKER_PACK_FIELD = field("stickerPackId", "string");
+const LOBBY_FIELD = field("lobbyId", "string");
 const AUTO_MODERATION_RULE_FIELD = field("autoModerationRuleId", "string");
 const AUTO_MODERATION_ACTIONS_FIELD = field("actions", "array", false, { default: [{ type: 1, metadata: { custom_message: "sample" } }] });
 const AUTO_MODERATION_TRIGGER_METADATA_FIELD = field("triggerMetadata", "object", true, { default: { keyword_filter: ["sample"] } });
@@ -82,6 +83,10 @@ const DISCORD_ACTIONS = [
   action("get-user-voice-state", "Get User Voice State", [GUILD_FIELD, USER_FIELD]),
   action("modify-current-user-voice-state", "Modify Current User Voice State", [GUILD_FIELD, CHANNEL_FIELD, field("suppress", "boolean", true), field("requestToSpeakTimestamp", "string", true)]),
   action("modify-user-voice-state", "Modify User Voice State", [GUILD_FIELD, USER_FIELD, CHANNEL_FIELD, field("suppress", "boolean", true)]),
+  action("create-lobby", "Create Lobby", [field("metadata", "object", true, { default: { topic: "sample" } }), field("members", "array", true, { default: [{ id: "sample" }] }), field("idleTimeoutSeconds", "integer", true, { default: 5, min: 5, max: 604800 })]),
+  action("get-lobby", "Get Lobby", [LOBBY_FIELD]),
+  action("modify-lobby", "Modify Lobby", [LOBBY_FIELD, field("metadata", "object", true, { default: { topic: "sample" } }), field("members", "array", true, { default: [{ id: "sample" }] }), field("idleTimeoutSeconds", "integer", true, { default: 5, min: 5, max: 604800 })]),
+  action("delete-lobby", "Delete Lobby", [LOBBY_FIELD]),
   action("get-channel", "Get Channel", [CHANNEL_FIELD]),
   action("update-channel", "Update Channel", [CHANNEL_FIELD, field("name", "string", true, { default: "sample" })]),
   action("set-voice-channel-status", "Set Voice Channel Status", [CHANNEL_FIELD, field("status", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
@@ -376,6 +381,75 @@ describe("discord operation runtime", () => {
         channel_id: "789",
         suppress: true,
       },
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-lobby"), {
+      metadata: { topic: "coordination" },
+      members: [{ id: "123", flags: 1 }],
+      idleTimeoutSeconds: 60,
+    }), {
+      method: "POST",
+      endpoint: "lobbies",
+      auth,
+      headers,
+      body: {
+        metadata: { topic: "coordination" },
+        members: [{ id: "123", flags: 1 }],
+        idle_timeout_seconds: 60,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "application_id", "members"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-lobby"), {
+      lobbyId: "lobby-123",
+    }), {
+      method: "GET",
+      endpoint: "lobbies/lobby-123",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "application_id", "members"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.modify-lobby"), {
+      lobbyId: "lobby-123",
+      metadata: { topic: "updated" },
+      members: [{ id: "456" }],
+      idleTimeoutSeconds: 120,
+    }), {
+      method: "PATCH",
+      endpoint: "lobbies/lobby-123",
+      auth,
+      headers,
+      body: {
+        metadata: { topic: "updated" },
+        members: [{ id: "456" }],
+        idle_timeout_seconds: 120,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "application_id", "members"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-lobby"), {
+      lobbyId: "lobby-123",
+    }), {
+      method: "DELETE",
+      endpoint: "lobbies/lobby-123",
+      auth,
+      headers,
+      body: {},
       responseSchema: {
         type: "object",
       },
