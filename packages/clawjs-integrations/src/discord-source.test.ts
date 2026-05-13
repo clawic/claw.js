@@ -23,6 +23,7 @@ const DISCORD_SOURCE_OPERATIONS = [
   source("discord.source.auto-moderation-rule-delete", "Auto Moderation Rule Delete"),
   source("discord.source.auto-moderation-action-execution", "Auto Moderation Action Execution"),
   source("discord.source.guild-emojis-update", "Guild Emojis Update"),
+  source("discord.source.guild-stickers-update", "Guild Stickers Update"),
   source("discord.source.guild-member-add", "Guild Member Add"),
   source("discord.source.guild-member-remove", "Guild Member Remove"),
   source("discord.source.guild-scheduled-event-create", "Guild Scheduled Event Create"),

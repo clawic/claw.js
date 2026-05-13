@@ -19,6 +19,8 @@ const WEBHOOK_FIELD = field("webhookId", "string");
 const WEBHOOK_TOKEN_FIELD = field("webhookToken", "string");
 const APPLICATION_FIELD = field("applicationId", "string");
 const COMMAND_FIELD = field("commandId", "string");
+const STICKER_FIELD = field("stickerId", "string");
+const STICKER_PACK_FIELD = field("stickerPackId", "string");
 const AUTO_MODERATION_RULE_FIELD = field("autoModerationRuleId", "string");
 const AUTO_MODERATION_ACTIONS_FIELD = field("actions", "array", false, { default: [{ type: 1, metadata: { custom_message: "sample" } }] });
 const AUTO_MODERATION_TRIGGER_METADATA_FIELD = field("triggerMetadata", "object", true, { default: { keyword_filter: ["sample"] } });
@@ -36,6 +38,14 @@ const DISCORD_ACTIONS = [
   action("create-guild-emoji", "Create Guild Emoji", [GUILD_FIELD, field("name", "string"), field("image", "string", false, { default: "data:image/png;base64,c2FtcGxl" }), field("roles", "array", true, { default: ["sample"] })]),
   action("update-guild-emoji", "Update Guild Emoji", [GUILD_FIELD, field("emojiId", "string"), field("name", "string", true, { default: "sample" }), field("roles", "array", true, { default: ["sample"] })]),
   action("delete-guild-emoji", "Delete Guild Emoji", [GUILD_FIELD, field("emojiId", "string")]),
+  action("get-sticker", "Get Sticker", [STICKER_FIELD]),
+  action("list-sticker-packs", "List Sticker Packs", []),
+  action("get-sticker-pack", "Get Sticker Pack", [STICKER_PACK_FIELD]),
+  action("list-guild-stickers", "List Guild Stickers", [GUILD_FIELD]),
+  action("get-guild-sticker", "Get Guild Sticker", [GUILD_FIELD, STICKER_FIELD]),
+  action("create-guild-sticker", "Create Guild Sticker", [GUILD_FIELD, field("name", "string"), field("description", "string"), field("tags", "string"), field("file", "string", false, { default: "sample-file" }), field("auditLogReason", "string", true)]),
+  action("update-guild-sticker", "Update Guild Sticker", [GUILD_FIELD, STICKER_FIELD, field("name", "string", true, { default: "sample" }), field("description", "string", true, { default: "sample" }), field("tags", "string", true, { default: "sample" }), field("auditLogReason", "string", true)]),
+  action("delete-guild-sticker", "Delete Guild Sticker", [GUILD_FIELD, STICKER_FIELD, field("auditLogReason", "string", true)]),
   action("get-channel", "Get Channel", [CHANNEL_FIELD]),
   action("update-channel", "Update Channel", [CHANNEL_FIELD, field("name", "string", true, { default: "sample" })]),
   action("delete-channel", "Delete Channel", [CHANNEL_FIELD]),
@@ -331,6 +341,47 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["items"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.list-sticker-packs"), {}), {
+      method: "GET",
+      endpoint: "sticker-packs",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["sticker_packs"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-guild-sticker"), {
+      guildId: "456",
+      name: "wave",
+      description: "Waves hello",
+      tags: "wave,hello",
+      file: "sample-file",
+      auditLogReason: "asset update",
+    }), {
+      method: "POST",
+      endpoint: "guilds/456/stickers",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "asset update",
+      },
+      bodyEncoding: "multipart",
+      body: {
+        name: "wave",
+        description: "Waves hello",
+        tags: "wave,hello",
+        file: "sample-file",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "name"],
       },
     });
 
