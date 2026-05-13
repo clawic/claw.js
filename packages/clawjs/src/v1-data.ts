@@ -1529,18 +1529,18 @@ function runNotesCommand(input: V1DataCliInput, store: DatabaseServiceStore): nu
     const existing = readPage(store.sqlite, id);
     const result = upsertPageWithBlocks(store.sqlite, {
       id,
-      title: input.flags.title || parsed.title || existing?.title || "Untitled",
+      title: input.flags.title || parsed.title || stringValue(existing?.title, "Untitled") || "Untitled",
       text: parsed.body,
-      space: input.flags.space || existing?.space || "notes",
-      surface: input.flags.surface || existing?.surface || "note",
-      visibility: input.flags.visibility || existing?.visibility || "private",
-      sensitivity: input.flags.sensitivity || existing?.sensitivity || "normal",
-      tags: parseCsvOrJson(input.flags.tags) ?? existing?.tags ?? [],
+      space: input.flags.space || stringValue(existing?.space, "notes") || "notes",
+      surface: input.flags.surface || stringValue(existing?.surface, "note") || "note",
+      visibility: input.flags.visibility || stringValue(existing?.visibility, "private") || "private",
+      sensitivity: input.flags.sensitivity || stringValue(existing?.sensitivity, "normal") || "normal",
+      tags: parseCsvOrJson(input.flags.tags) ?? (Array.isArray(existing?.tags) ? existing.tags.filter((tag): tag is string => typeof tag === "string") : []),
       authorKind: input.flags["author-kind"] || "user",
-      authorId: input.flags["author-id"] || null,
-      sourceRecordDomain: existing?.sourceRecordDomain ?? null,
-      sourceRecordId: existing?.sourceRecordId ?? null,
-      properties: existing?.properties ?? {},
+      authorId: input.flags["author-id"] || stringValue(existing?.authorId, null),
+      sourceRecordDomain: stringValue(existing?.sourceRecordDomain, null),
+      sourceRecordId: stringValue(existing?.sourceRecordId, null),
+      properties: isRecord(existing?.properties) ? existing.properties : {},
     });
     writeSuccess(input, result);
     return V1_DATA_EXIT_OK;
