@@ -2,62 +2,149 @@ import type {
   ConnectorRuntimeRequestPlan,
 } from "./runtime-registry.ts";
 import type {
+  ConnectorFieldDefinition,
   ConnectorOperationDefinition,
   IntegrationJson,
 } from "./types.ts";
 
 export const SLACK_APP_ID = "slack";
 
-export type SlackRuntimeOperation =
-  | "send-message"
-  | "update-message"
-  | "delete-message"
-  | "schedule-message"
-  | "delete-scheduled-message"
-  | "post-ephemeral"
-  | "list-channels"
-  | "get-channel"
-  | "create-channel"
-  | "rename-channel"
-  | "archive-channel"
-  | "unarchive-channel"
-  | "invite-to-channel"
-  | "kick-from-channel"
-  | "join-channel"
-  | "leave-channel"
-  | "conversation-history"
-  | "conversation-replies"
-  | "conversation-members"
-  | "open-conversation"
-  | "list-users"
-  | "get-user"
-  | "get-user-presence"
-  | "set-user-presence"
-  | "add-reaction"
-  | "remove-reaction"
-  | "get-reactions"
-  | "add-pin"
-  | "remove-pin"
-  | "list-pins"
-  | "list-files"
-  | "get-file"
-  | "delete-file"
-  | "add-reminder"
-  | "list-reminders"
-  | "complete-reminder"
-  | "delete-reminder"
-  | "search-messages"
-  | "search-files"
-  | "list-usergroups"
-  | "enable-usergroup"
-  | "disable-usergroup"
-  | "list-usergroup-users"
-  | "update-usergroup-users"
-  | "open-view"
-  | "publish-view"
-  | "push-view"
-  | "update-view"
-  | "test-auth";
+export type SlackField = ConnectorFieldDefinition;
+
+export interface SlackGenericOperationSpec {
+  slug: string;
+  method: "GET" | "POST";
+  endpoint: string;
+  fields: SlackField[];
+  query?: string[];
+  body?: string[];
+  requiredPaths?: string[];
+  cursorItemsPath?: string;
+}
+
+export const SLACK_CORE_ACTION_SLUGS = [
+  "send-message",
+  "update-message",
+  "delete-message",
+  "schedule-message",
+  "delete-scheduled-message",
+  "post-ephemeral",
+  "list-channels",
+  "get-channel",
+  "create-channel",
+  "rename-channel",
+  "archive-channel",
+  "unarchive-channel",
+  "invite-to-channel",
+  "kick-from-channel",
+  "join-channel",
+  "leave-channel",
+  "conversation-history",
+  "conversation-replies",
+  "conversation-members",
+  "open-conversation",
+  "list-users",
+  "get-user",
+  "get-user-presence",
+  "set-user-presence",
+  "add-reaction",
+  "remove-reaction",
+  "get-reactions",
+  "add-pin",
+  "remove-pin",
+  "list-pins",
+  "list-files",
+  "get-file",
+  "delete-file",
+  "add-reminder",
+  "list-reminders",
+  "complete-reminder",
+  "delete-reminder",
+  "search-messages",
+  "search-files",
+  "list-usergroups",
+  "enable-usergroup",
+  "disable-usergroup",
+  "list-usergroup-users",
+  "update-usergroup-users",
+  "open-view",
+  "publish-view",
+  "push-view",
+  "update-view",
+  "test-auth",
+] as const;
+
+const CHANNEL_FIELD = stringField("channelId", { default: "C123" });
+const USER_FIELD = stringField("userId", { default: "U123" });
+const MESSAGE_TS_FIELD = stringField("messageTs", { default: "1710000000.000000" });
+const CURSOR_FIELDS = [
+  integerField("limit", { optional: true, default: 100, min: 1, max: 1000 }),
+  stringField("cursor", { optional: true, default: "cursor_sample" }),
+];
+
+export const SLACK_EXTRA_ACTION_SPECS = [
+  spec("get-message-permalink", "GET", "chat.getPermalink", [CHANNEL_FIELD, MESSAGE_TS_FIELD], { query: ["channel", "message_ts"], requiredPaths: ["ok", "permalink"] }),
+  spec("send-me-message", "POST", "chat.meMessage", [CHANNEL_FIELD, stringField("text", { default: "sample" })], { body: ["channel", "text"], requiredPaths: ["ok", "channel", "ts"] }),
+  spec("list-scheduled-messages", "GET", "chat.scheduledMessages.list", [CHANNEL_FIELD, ...CURSOR_FIELDS, stringField("latest", { optional: true, default: "1710003600.000000" }), stringField("oldest", { optional: true, default: "1710000000.000000" })], { query: ["channel", "limit", "cursor", "latest", "oldest"], requiredPaths: ["ok", "scheduled_messages"], cursorItemsPath: "scheduled_messages" }),
+  spec("unfurl-message", "POST", "chat.unfurl", [CHANNEL_FIELD, MESSAGE_TS_FIELD, objectField("unfurls", { "https://example.invalid": { title: "Example" } }), stringField("userAuthMessage", { optional: true, default: "Authorize" }), stringField("userAuthUrl", { optional: true, default: "https://example.invalid/auth" })], { body: ["channel", "ts", "unfurls", "user_auth_message", "user_auth_url"], requiredPaths: ["ok"] }),
+  spec("close-conversation", "POST", "conversations.close", [CHANNEL_FIELD], { body: ["channel"], requiredPaths: ["ok"] }),
+  spec("mark-conversation", "POST", "conversations.mark", [CHANNEL_FIELD, MESSAGE_TS_FIELD], { body: ["channel", "ts"], requiredPaths: ["ok"] }),
+  spec("set-conversation-purpose", "POST", "conversations.setPurpose", [CHANNEL_FIELD, stringField("purpose", { default: "Sample purpose" })], { body: ["channel", "purpose"], requiredPaths: ["ok", "purpose"] }),
+  spec("set-conversation-topic", "POST", "conversations.setTopic", [CHANNEL_FIELD, stringField("topic", { default: "Sample topic" })], { body: ["channel", "topic"], requiredPaths: ["ok", "topic"] }),
+  spec("lookup-user-by-email", "GET", "users.lookupByEmail", [stringField("email", { default: "person@example.invalid" })], { query: ["email"], requiredPaths: ["ok", "user"] }),
+  spec("get-user-profile", "GET", "users.profile.get", [USER_FIELD, booleanField("includeLabels", { optional: true, default: true })], { query: ["user", "include_labels"], requiredPaths: ["ok", "profile"] }),
+  spec("set-user-profile", "POST", "users.profile.set", [USER_FIELD, objectField("profile", { status_text: "Working", status_emoji: ":computer:" }), stringField("name", { optional: true, default: "status_text" }), stringField("value", { optional: true, default: "Working" })], { body: ["user", "profile", "name", "value"], requiredPaths: ["ok", "profile"] }),
+  spec("list-emoji", "GET", "emoji.list", [], { requiredPaths: ["ok", "emoji"] }),
+  spec("get-team-info", "GET", "team.info", [stringField("teamId", { optional: true, default: "T123" })], { query: ["team"], requiredPaths: ["ok", "team"] }),
+  spec("get-team-profile", "GET", "team.profile.get", [stringField("visibility", { optional: true, default: "all" })], { query: ["visibility"], requiredPaths: ["ok", "profile"] }),
+  spec("get-bot-info", "GET", "bots.info", [stringField("botId", { optional: true, default: "B123" }), USER_FIELD], { query: ["bot", "user"], requiredPaths: ["ok", "bot"] }),
+  spec("add-bookmark", "POST", "bookmarks.add", [CHANNEL_FIELD, stringField("title", { default: "Sample bookmark" }), stringField("type", { default: "link" }), stringField("link", { default: "https://example.invalid" }), stringField("emoji", { optional: true, default: ":bookmark:" })], { body: ["channel_id", "title", "type", "link", "emoji"], requiredPaths: ["ok", "bookmark"] }),
+  spec("edit-bookmark", "POST", "bookmarks.edit", [CHANNEL_FIELD, stringField("bookmarkId", { default: "Bk123" }), stringField("title", { default: "Updated bookmark" }), stringField("link", { optional: true, default: "https://example.invalid/updated" }), stringField("emoji", { optional: true, default: ":bookmark:" })], { body: ["channel_id", "bookmark_id", "title", "link", "emoji"], requiredPaths: ["ok", "bookmark"] }),
+  spec("list-bookmarks", "GET", "bookmarks.list", [CHANNEL_FIELD], { query: ["channel_id"], requiredPaths: ["ok", "bookmarks"] }),
+  spec("remove-bookmark", "POST", "bookmarks.remove", [CHANNEL_FIELD, stringField("bookmarkId", { default: "Bk123" })], { body: ["channel_id", "bookmark_id"], requiredPaths: ["ok"] }),
+  spec("add-star", "POST", "stars.add", [CHANNEL_FIELD, MESSAGE_TS_FIELD, stringField("fileId", { optional: true, default: "F123" })], { body: ["channel", "timestamp", "file"], requiredPaths: ["ok"] }),
+  spec("list-stars", "GET", "stars.list", [integerField("count", { optional: true, default: 20, min: 1, max: 100 }), integerField("page", { optional: true, default: 1, min: 1 }), ...CURSOR_FIELDS], { query: ["count", "page", "limit", "cursor"], requiredPaths: ["ok", "items"] }),
+  spec("remove-star", "POST", "stars.remove", [CHANNEL_FIELD, MESSAGE_TS_FIELD, stringField("fileId", { optional: true, default: "F123" })], { body: ["channel", "timestamp", "file"], requiredPaths: ["ok"] }),
+  spec("get-dnd-info", "GET", "dnd.info", [USER_FIELD], { query: ["user"], requiredPaths: ["ok", "dnd_enabled"] }),
+  spec("set-dnd-snooze", "POST", "dnd.setSnooze", [integerField("numMinutes", { default: 30, min: 1, max: 1440 })], { body: ["num_minutes"], requiredPaths: ["ok", "snooze_enabled"] }),
+  spec("end-dnd-snooze", "POST", "dnd.endSnooze", [], { requiredPaths: ["ok"] }),
+  spec("get-team-dnd-info", "GET", "dnd.teamInfo", [stringField("users", { default: "U123,U456" })], { query: ["users"], requiredPaths: ["ok", "users"] }),
+  spec("add-remote-file", "POST", "files.remote.add", [stringField("externalId", { default: "external-123" }), stringField("externalUrl", { default: "https://example.invalid/file" }), stringField("title", { default: "Sample file" }), stringField("filetype", { optional: true, default: "text" }), stringField("indexableFileContents", { optional: true, default: "sample" })], { body: ["external_id", "external_url", "title", "filetype", "indexable_file_contents"], requiredPaths: ["ok", "file"] }),
+  spec("get-remote-file", "GET", "files.remote.info", [stringField("externalId", { optional: true, default: "external-123" }), stringField("fileId", { optional: true, default: "F123" })], { query: ["external_id", "file"], requiredPaths: ["ok", "file"] }),
+  spec("list-remote-files", "GET", "files.remote.list", [CHANNEL_FIELD, ...CURSOR_FIELDS, stringField("tsFrom", { optional: true, default: "1710000000.000000" }), stringField("tsTo", { optional: true, default: "1710003600.000000" })], { query: ["channel", "limit", "cursor", "ts_from", "ts_to"], requiredPaths: ["ok", "files"], cursorItemsPath: "files" }),
+  spec("remove-remote-file", "POST", "files.remote.remove", [stringField("externalId", { optional: true, default: "external-123" }), stringField("fileId", { optional: true, default: "F123" })], { body: ["external_id", "file"], requiredPaths: ["ok"] }),
+  spec("share-remote-file", "POST", "files.remote.share", [stringField("externalId", { optional: true, default: "external-123" }), stringField("fileId", { optional: true, default: "F123" }), stringField("channels", { default: "C123" })], { body: ["external_id", "file", "channels"], requiredPaths: ["ok", "file"] }),
+  spec("update-remote-file", "POST", "files.remote.update", [stringField("externalId", { optional: true, default: "external-123" }), stringField("fileId", { optional: true, default: "F123" }), stringField("title", { optional: true, default: "Updated file" }), stringField("externalUrl", { optional: true, default: "https://example.invalid/file-updated" })], { body: ["external_id", "file", "title", "external_url"], requiredPaths: ["ok", "file"] }),
+  spec("create-usergroup", "POST", "usergroups.create", [stringField("name", { default: "Sample Group" }), stringField("handle", { default: "sample-group" }), stringField("description", { optional: true, default: "Sample group" }), stringField("channels", { optional: true, default: "C123" }), booleanField("includeCount", { optional: true, default: true })], { body: ["name", "handle", "description", "channels", "include_count"], requiredPaths: ["ok", "usergroup"] }),
+  spec("update-usergroup", "POST", "usergroups.update", [stringField("usergroupId", { default: "S123" }), stringField("name", { optional: true, default: "Updated Group" }), stringField("handle", { optional: true, default: "updated-group" }), stringField("description", { optional: true, default: "Updated group" }), stringField("channels", { optional: true, default: "C123" }), booleanField("includeCount", { optional: true, default: true })], { body: ["usergroup", "name", "handle", "description", "channels", "include_count"], requiredPaths: ["ok", "usergroup"] }),
+  spec("list-auth-teams", "GET", "auth.teams.list", CURSOR_FIELDS, { query: ["limit", "cursor"], requiredPaths: ["ok", "teams"], cursorItemsPath: "teams" }),
+  spec("revoke-auth", "POST", "auth.revoke", [booleanField("test", { optional: true, default: true })], { body: ["test"], requiredPaths: ["ok", "revoked"] }),
+  spec("add-call", "POST", "calls.add", [stringField("externalUniqueId", { default: "call-123" }), stringField("joinUrl", { default: "https://example.invalid/call" }), stringField("createdBy", { default: "U123" }), stringField("dateStart", { optional: true, default: "1710000000" })], { body: ["external_unique_id", "join_url", "created_by", "date_start"], requiredPaths: ["ok", "call"] }),
+  spec("get-call", "GET", "calls.info", [stringField("callId", { default: "R123" })], { query: ["id"], requiredPaths: ["ok", "call"] }),
+  spec("update-call", "POST", "calls.update", [stringField("callId", { default: "R123" }), stringField("title", { optional: true, default: "Updated call" }), stringField("joinUrl", { optional: true, default: "https://example.invalid/call-updated" })], { body: ["id", "title", "join_url"], requiredPaths: ["ok", "call"] }),
+  spec("end-call", "POST", "calls.end", [stringField("callId", { default: "R123" }), integerField("duration", { optional: true, default: 300, min: 0 })], { body: ["id", "duration"], requiredPaths: ["ok", "call"] }),
+  spec("add-call-participants", "POST", "calls.participants.add", [stringField("callId", { default: "R123" }), stringField("users", { default: "U123,U456" })], { body: ["id", "users"], requiredPaths: ["ok"] }),
+  spec("remove-call-participants", "POST", "calls.participants.remove", [stringField("callId", { default: "R123" }), stringField("users", { default: "U123" })], { body: ["id", "users"], requiredPaths: ["ok"] }),
+] as const satisfies readonly SlackGenericOperationSpec[];
+
+export const SLACK_ACTION_SLUGS = [
+  ...SLACK_CORE_ACTION_SLUGS,
+  ...SLACK_EXTRA_ACTION_SPECS.map((item) => item.slug),
+] as const;
+
+export type SlackRuntimeOperation = typeof SLACK_ACTION_SLUGS[number];
+
+const SLACK_OPERATION_SET = new Set<string>(SLACK_ACTION_SLUGS);
+const SLACK_EXTRA_SPEC_BY_SLUG = new Map(SLACK_EXTRA_ACTION_SPECS.map((item) => [item.slug, item]));
+const SLACK_OPERATION_ALIASES: Record<string, SlackRuntimeOperation> = {
+  "send-text-message": "send-message",
+  "channel-info": "get-channel",
+  "list-messages": "conversation-history",
+  "list-thread-replies": "conversation-replies",
+  "list-channel-members": "conversation-members",
+  "user-info": "get-user",
+  "file-info": "get-file",
+};
 
 export function isSlackActionOperationSupported(operationId: string): boolean {
   return slackRuntimeOperation(operationId) !== null;
@@ -76,6 +163,9 @@ export function buildSlackOperationRequest(
     field,
     placement: "bearer" as const,
   }));
+  const genericSpec = SLACK_EXTRA_SPEC_BY_SLUG.get(runtimeOperation);
+  if (genericSpec) return genericSlackPlan(genericSpec, values, auth);
+
   switch (runtimeOperation) {
     case "send-message":
       return postPlan("chat.postMessage", auth, {
@@ -344,56 +434,56 @@ export function buildSlackOperationRequest(
 
 function slackRuntimeOperation(operationId: string): SlackRuntimeOperation | null {
   const slug = operationId.split(".").at(-1);
-  if (slug === "send-message" || slug === "send-text-message") return "send-message";
-  if (slug === "update-message") return "update-message";
-  if (slug === "delete-message") return "delete-message";
-  if (slug === "schedule-message") return "schedule-message";
-  if (slug === "delete-scheduled-message") return "delete-scheduled-message";
-  if (slug === "post-ephemeral") return "post-ephemeral";
-  if (slug === "list-channels") return "list-channels";
-  if (slug === "get-channel" || slug === "channel-info") return "get-channel";
-  if (slug === "create-channel") return "create-channel";
-  if (slug === "rename-channel") return "rename-channel";
-  if (slug === "archive-channel") return "archive-channel";
-  if (slug === "unarchive-channel") return "unarchive-channel";
-  if (slug === "invite-to-channel") return "invite-to-channel";
-  if (slug === "kick-from-channel") return "kick-from-channel";
-  if (slug === "join-channel") return "join-channel";
-  if (slug === "leave-channel") return "leave-channel";
-  if (slug === "conversation-history" || slug === "list-messages") return "conversation-history";
-  if (slug === "conversation-replies" || slug === "list-thread-replies") return "conversation-replies";
-  if (slug === "conversation-members" || slug === "list-channel-members") return "conversation-members";
-  if (slug === "open-conversation") return "open-conversation";
-  if (slug === "list-users") return "list-users";
-  if (slug === "get-user" || slug === "user-info") return "get-user";
-  if (slug === "get-user-presence") return "get-user-presence";
-  if (slug === "set-user-presence") return "set-user-presence";
-  if (slug === "add-reaction") return "add-reaction";
-  if (slug === "remove-reaction") return "remove-reaction";
-  if (slug === "get-reactions") return "get-reactions";
-  if (slug === "add-pin") return "add-pin";
-  if (slug === "remove-pin") return "remove-pin";
-  if (slug === "list-pins") return "list-pins";
-  if (slug === "list-files") return "list-files";
-  if (slug === "get-file" || slug === "file-info") return "get-file";
-  if (slug === "delete-file") return "delete-file";
-  if (slug === "add-reminder") return "add-reminder";
-  if (slug === "list-reminders") return "list-reminders";
-  if (slug === "complete-reminder") return "complete-reminder";
-  if (slug === "delete-reminder") return "delete-reminder";
-  if (slug === "search-messages") return "search-messages";
-  if (slug === "search-files") return "search-files";
-  if (slug === "list-usergroups") return "list-usergroups";
-  if (slug === "enable-usergroup") return "enable-usergroup";
-  if (slug === "disable-usergroup") return "disable-usergroup";
-  if (slug === "list-usergroup-users") return "list-usergroup-users";
-  if (slug === "update-usergroup-users") return "update-usergroup-users";
-  if (slug === "open-view") return "open-view";
-  if (slug === "publish-view") return "publish-view";
-  if (slug === "push-view") return "push-view";
-  if (slug === "update-view") return "update-view";
-  if (slug === "test-auth") return "test-auth";
+  const resolved = slug ? SLACK_OPERATION_ALIASES[slug] ?? slug : null;
+  if (resolved && SLACK_OPERATION_SET.has(resolved)) return resolved as SlackRuntimeOperation;
   return null;
+}
+
+function spec(
+  slug: string,
+  method: SlackGenericOperationSpec["method"],
+  endpoint: string,
+  fields: SlackField[],
+  options: {
+    query?: string[];
+    body?: string[];
+    requiredPaths?: string[];
+    cursorItemsPath?: string;
+  } = {},
+): SlackGenericOperationSpec {
+  return {
+    slug,
+    method,
+    endpoint,
+    fields,
+    query: options.query,
+    body: options.body,
+    requiredPaths: options.requiredPaths,
+    cursorItemsPath: options.cursorItemsPath,
+  };
+}
+
+function genericSlackPlan(
+  spec: SlackGenericOperationSpec,
+  values: Record<string, IntegrationJson>,
+  auth: ConnectorRuntimeRequestPlan["auth"],
+): ConnectorRuntimeRequestPlan {
+  const query = valuesForWebKeys(values, spec.query ?? []);
+  const plan: ConnectorRuntimeRequestPlan = spec.method === "GET"
+    ? getPlan(spec.endpoint, auth, query, spec.requiredPaths ?? ["ok"])
+    : postPlan(spec.endpoint, auth, valuesForWebKeys(values, spec.body ?? []), spec.requiredPaths ?? ["ok"]);
+  if (spec.cursorItemsPath) {
+    const limit = numberValue(query.limit) ?? numberValue(query.count) ?? 100;
+    plan.pagination = {
+      mode: "cursor",
+      itemsPath: spec.cursorItemsPath,
+      nextCursorPath: "response_metadata.next_cursor",
+      cursorParam: "cursor",
+      limitParam: "limit",
+      pageSize: limit,
+    };
+  }
+  return plan;
 }
 
 function getPlan(
@@ -505,4 +595,47 @@ function removeEmptyValues(input: Record<string, IntegrationJson | undefined>): 
   return Object.fromEntries(
     Object.entries(input).filter(([, value]) => value !== undefined && value !== ""),
   ) as Record<string, IntegrationJson>;
+}
+
+function valuesForWebKeys(values: Record<string, IntegrationJson>, keys: readonly string[]): Record<string, IntegrationJson> {
+  return removeEmptyValues(Object.fromEntries(keys.map((key) => [key, valueForWebKey(values, key)])));
+}
+
+function valueForWebKey(values: Record<string, IntegrationJson>, key: string): IntegrationJson | undefined {
+  const camel = camelCase(key);
+  const candidates = [
+    key,
+    camel,
+    `${camel}Id`,
+    key.endsWith("_id") ? camelCase(key.slice(0, -3)) : "",
+    key === "channel" ? "channelId" : "",
+    key === "user" ? "userId" : "",
+    key === "ts" || key === "timestamp" || key === "message_ts" ? "messageTs" : "",
+    key === "id" ? "callId" : "",
+    key === "file" ? "fileId" : "",
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    if (Object.prototype.hasOwnProperty.call(values, candidate)) return values[candidate];
+  }
+  return undefined;
+}
+
+function camelCase(key: string): string {
+  return key.replaceAll(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+}
+
+function stringField(name: string, options: { optional?: boolean; default: string }): SlackField {
+  return { name, type: "string", optional: options.optional ?? false, default: options.default };
+}
+
+function integerField(name: string, options: { optional?: boolean; default: number; min?: number; max?: number }): SlackField {
+  return { name, type: "integer", optional: options.optional ?? false, default: options.default, ...(options.min ? { min: options.min } : {}), ...(options.max ? { max: options.max } : {}) };
+}
+
+function booleanField(name: string, options: { optional?: boolean; default: boolean }): SlackField {
+  return { name, type: "boolean", optional: options.optional ?? false, default: options.default };
+}
+
+function objectField(name: string, defaultValue: Record<string, IntegrationJson>, options: { optional?: boolean } = {}): SlackField {
+  return { name, type: "object", optional: options.optional ?? false, default: defaultValue };
 }

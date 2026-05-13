@@ -1,5 +1,5 @@
 ---
-"@clawjs/integrations": patch
+"@clawjs/integrations": minor
 ---
 
-Expand offline Slack runtime coverage across conversations, chat, users, reactions, pins, files, reminders, search, user groups, views, auth checks, and webhook events.
+Expand offline-validated Slack runtime plans across bookmarks, calls, DND, remote files, team metadata, user profiles, stars, additional conversations, and Events API sources.
