@@ -24,6 +24,10 @@ import {
   isStripeActionOperationSupported,
 } from "./stripe-operation-executor.ts";
 import {
+  buildStripeSourcePlan,
+  isStripeSourceOperationSupported,
+} from "./stripe-source.ts";
+import {
   buildNotionOperationRequest,
   isNotionActionOperationSupported,
 } from "./notion-operation-executor.ts";
@@ -373,66 +377,67 @@ const STRIPE_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/stripe-operation-executor.test.ts",
 ];
 
-const STRIPE_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
+const STRIPE_ACTION_FIXTURE_NAMES = [
+  "list-customers",
+  "get-customer",
+  "create-customer",
+  "list-payment-intents",
+  "get-payment-intent",
+  "create-payment-intent",
+  "list-products",
+  "get-product",
+  "create-product",
+  "update-product",
+  "delete-product",
+  "search-products",
+  "list-prices",
+  "get-price",
+  "create-price",
+  "update-price",
+  "search-prices",
+  "list-subscriptions",
+  "get-subscription",
+  "create-subscription",
+  "update-subscription",
+  "cancel-subscription",
+  "resume-subscription",
+  "search-subscriptions",
+  "list-checkout-sessions",
+  "get-checkout-session",
+  "create-checkout-session",
+  "expire-checkout-session",
+  "list-checkout-session-line-items",
+  "list-refunds",
+  "get-refund",
+  "create-refund",
+  "update-refund",
+  "list-charges",
+  "get-charge",
+  "capture-charge",
+] as const;
+
+const STRIPE_ACTION_FIXTURES: ConnectorRuntimeFixture[] = STRIPE_ACTION_FIXTURE_NAMES.flatMap((name) => [
   {
-    kind: "request",
-    operationId: "stripe.action.list-customers",
-    path: "packages/clawjs-integrations/fixtures/stripe-list-customers-request.json",
+    kind: "request" as const,
+    operationId: `stripe.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/stripe-${name}-request.json`,
   },
   {
-    kind: "response",
-    operationId: "stripe.action.list-customers",
-    path: "packages/clawjs-integrations/fixtures/stripe-list-customers-response.json",
+    kind: "response" as const,
+    operationId: `stripe.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/stripe-${name}-response.json`,
   },
+]);
+
+const STRIPE_SOURCE_EVIDENCE = [
+  "packages/clawjs-integrations/src/stripe-source.test.ts",
+];
+
+const STRIPE_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = [
   {
-    kind: "request",
-    operationId: "stripe.action.get-customer",
-    path: "packages/clawjs-integrations/fixtures/stripe-get-customer-request.json",
-  },
-  {
-    kind: "response",
-    operationId: "stripe.action.get-customer",
-    path: "packages/clawjs-integrations/fixtures/stripe-get-customer-response.json",
-  },
-  {
-    kind: "request",
-    operationId: "stripe.action.create-customer",
-    path: "packages/clawjs-integrations/fixtures/stripe-create-customer-request.json",
-  },
-  {
-    kind: "response",
-    operationId: "stripe.action.create-customer",
-    path: "packages/clawjs-integrations/fixtures/stripe-create-customer-response.json",
-  },
-  {
-    kind: "request",
-    operationId: "stripe.action.list-payment-intents",
-    path: "packages/clawjs-integrations/fixtures/stripe-list-payment-intents-request.json",
-  },
-  {
-    kind: "response",
-    operationId: "stripe.action.list-payment-intents",
-    path: "packages/clawjs-integrations/fixtures/stripe-list-payment-intents-response.json",
-  },
-  {
-    kind: "request",
-    operationId: "stripe.action.get-payment-intent",
-    path: "packages/clawjs-integrations/fixtures/stripe-get-payment-intent-request.json",
-  },
-  {
-    kind: "response",
-    operationId: "stripe.action.get-payment-intent",
-    path: "packages/clawjs-integrations/fixtures/stripe-get-payment-intent-response.json",
-  },
-  {
-    kind: "request",
-    operationId: "stripe.action.create-payment-intent",
-    path: "packages/clawjs-integrations/fixtures/stripe-create-payment-intent-request.json",
-  },
-  {
-    kind: "response",
-    operationId: "stripe.action.create-payment-intent",
-    path: "packages/clawjs-integrations/fixtures/stripe-create-payment-intent-response.json",
+    kind: "source_event",
+    operationId: "stripe.source.event",
+    path: "packages/clawjs-integrations/fixtures/stripe-webhook-event.json",
   },
 ];
 
@@ -613,6 +618,19 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     supports: (operation) => isStripeActionOperationSupported(operation.id),
     buildPlan: (operation, values) => ({
       requestPlan: buildStripeOperationRequest(operation, values),
+    }),
+  },
+  {
+    appId: "stripe",
+    kind: "source",
+    executorId: "stripe.webhook",
+    offlineValidated: true,
+    evidence: STRIPE_SOURCE_EVIDENCE,
+    fixtures: STRIPE_SOURCE_FIXTURES,
+    planKinds: ["source"],
+    supports: (operation) => isStripeSourceOperationSupported(operation.id),
+    buildPlan: (operation) => ({
+      sourcePlan: buildStripeSourcePlan(operation),
     }),
   },
   {
