@@ -1,0 +1,15 @@
+{
+  "token": "verification-token",
+  "team_id": "T123",
+  "api_app_id": "A123",
+  "event_id": "Ev_message",
+  "event_time": 1710000000,
+  "type": "event_callback",
+  "event": {
+    "type": "message",
+    "channel": "C123",
+    "user": "U123",
+    "text": "sample",
+    "ts": "1710000000.000000"
+  }
+}

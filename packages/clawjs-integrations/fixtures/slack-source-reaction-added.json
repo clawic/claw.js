@@ -1,0 +1,18 @@
+{
+  "token": "verification-token",
+  "team_id": "T123",
+  "api_app_id": "A123",
+  "event_id": "Ev_reaction_added",
+  "event_time": 1710000000,
+  "type": "event_callback",
+  "event": {
+    "type": "reaction_added",
+    "user": "U123",
+    "reaction": "thumbsup",
+    "item": {
+      "type": "message",
+      "channel": "C123",
+      "ts": "1710000000.000000"
+    }
+  }
+}

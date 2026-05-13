@@ -1,0 +1,15 @@
+{
+  "token": "verification-token",
+  "team_id": "T123",
+  "api_app_id": "A123",
+  "event_id": "Ev_file_shared",
+  "event_time": 1710000000,
+  "type": "event_callback",
+  "event": {
+    "type": "file_shared",
+    "user_id": "U123",
+    "file_id": "F123",
+    "channel_id": "C123",
+    "event_ts": "1710000000.000000"
+  }
+}
