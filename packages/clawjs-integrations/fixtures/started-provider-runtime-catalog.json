@@ -32085,6 +32085,243 @@
           ]
         },
         {
+          "id": "stripe.action.list-payment-method-domains",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Payment Method Domains",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "enabled",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-payment-method-domain",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Payment Method Domain",
+          "fields": [
+            {
+              "name": "domain_name",
+              "type": "string",
+              "optional": false,
+              "default": "pay.example.invalid"
+            },
+            {
+              "name": "enabled",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-payment-method-domain",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Payment Method Domain",
+          "fields": [
+            {
+              "name": "paymentMethodDomain",
+              "type": "string",
+              "optional": false,
+              "default": "pmd_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-payment-method-domain",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Payment Method Domain",
+          "fields": [
+            {
+              "name": "paymentMethodDomain",
+              "type": "string",
+              "optional": false,
+              "default": "pmd_sample"
+            },
+            {
+              "name": "enabled",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.validate-payment-method-domain",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Validate Payment Method Domain",
+          "fields": [
+            {
+              "name": "paymentMethodDomain",
+              "type": "string",
+              "optional": false,
+              "default": "pmd_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-payment-method-configurations",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Payment Method Configurations",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-payment-method-configuration",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Payment Method Configuration",
+          "fields": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "Sample configuration"
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "card",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "display_preference": {
+                  "preference": "on"
+                }
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-payment-method-configuration",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Payment Method Configuration",
+          "fields": [
+            {
+              "name": "configuration",
+              "type": "string",
+              "optional": false,
+              "default": "pmc_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-payment-method-configuration",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Payment Method Configuration",
+          "fields": [
+            {
+              "name": "configuration",
+              "type": "string",
+              "optional": false,
+              "default": "pmc_sample"
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "card",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "display_preference": {
+                  "preference": "on"
+                }
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-invoices",
           "appId": "stripe",
           "kind": "action",

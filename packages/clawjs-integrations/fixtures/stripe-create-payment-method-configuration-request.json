@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/payment_method_configurations",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "name=Sample+configuration&active=true&card=%7B%22display_preference%22%3A%7B%22preference%22%3A%22on%22%7D%7D"
+}

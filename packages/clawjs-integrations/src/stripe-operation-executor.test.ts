@@ -772,6 +772,47 @@ describe("stripe operation runtime", () => {
         requiredPaths: ["id", "object"],
       },
     });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-payment-method-domain"), {
+      domain_name: "pay.example.invalid",
+      enabled: true,
+    }), {
+      method: "POST",
+      endpoint: "payment_method_domains",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        domain_name: "pay.example.invalid",
+        enabled: true,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.update-payment-method-configuration"), {
+      configuration: "pmc_sample",
+      active: true,
+      card: { display_preference: { preference: "on" } },
+    }), {
+      method: "POST",
+      endpoint: "payment_method_configurations/pmc_sample",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        active: true,
+        card: { display_preference: { preference: "on" } },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
   });
 
   it("covers Stripe payment operations with operation-scoped offline fixtures", async () => {
