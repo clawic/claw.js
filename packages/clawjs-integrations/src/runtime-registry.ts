@@ -10,10 +10,12 @@ import {
 import {
   buildSlackOperationRequest,
   isSlackActionOperationSupported,
+  SLACK_ACTION_SLUGS,
 } from "./slack-operation-executor.ts";
 import {
   buildSlackSourcePlan,
   isSlackSourceOperationSupported,
+  SLACK_SOURCE_OPERATION_SLUGS,
 } from "./slack-source.ts";
 import {
   buildGitHubOperationRequest,
@@ -256,59 +258,7 @@ const SLACK_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/slack-operation-executor.test.ts",
 ];
 
-const SLACK_ACTION_FIXTURE_NAMES = [
-  "send-message",
-  "update-message",
-  "delete-message",
-  "schedule-message",
-  "delete-scheduled-message",
-  "post-ephemeral",
-  "get-channel",
-  "list-channels",
-  "create-channel",
-  "rename-channel",
-  "archive-channel",
-  "unarchive-channel",
-  "invite-to-channel",
-  "kick-from-channel",
-  "join-channel",
-  "leave-channel",
-  "conversation-history",
-  "conversation-replies",
-  "conversation-members",
-  "open-conversation",
-  "list-users",
-  "get-user",
-  "get-user-presence",
-  "set-user-presence",
-  "add-reaction",
-  "remove-reaction",
-  "get-reactions",
-  "add-pin",
-  "remove-pin",
-  "list-pins",
-  "list-files",
-  "get-file",
-  "delete-file",
-  "add-reminder",
-  "list-reminders",
-  "complete-reminder",
-  "delete-reminder",
-  "search-messages",
-  "search-files",
-  "list-usergroups",
-  "enable-usergroup",
-  "disable-usergroup",
-  "list-usergroup-users",
-  "update-usergroup-users",
-  "open-view",
-  "publish-view",
-  "push-view",
-  "update-view",
-  "test-auth",
-] as const;
-
-const SLACK_ACTION_FIXTURES: ConnectorRuntimeFixture[] = SLACK_ACTION_FIXTURE_NAMES.flatMap((name) => [
+const SLACK_ACTION_FIXTURES: ConnectorRuntimeFixture[] = SLACK_ACTION_SLUGS.flatMap((name) => [
   {
     kind: "request" as const,
     operationId: `slack.action.${name}`,
@@ -325,15 +275,7 @@ const SLACK_SOURCE_EVIDENCE = [
   "packages/clawjs-integrations/src/slack-source.test.ts",
 ];
 
-const SLACK_SOURCE_FIXTURE_NAMES = [
-  "event",
-  "message",
-  "app-mention",
-  "reaction-added",
-  "file-shared",
-];
-
-const SLACK_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = SLACK_SOURCE_FIXTURE_NAMES.map((name) => ({
+const SLACK_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = SLACK_SOURCE_OPERATION_SLUGS.map((name) => ({
   kind: "source_event",
   operationId: `slack.source.${name}`,
   path: `packages/clawjs-integrations/fixtures/slack-source-${name}.json`,
