@@ -4295,6 +4295,12 @@
               "default": null
             },
             {
+              "name": "targetUsersFile",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
               "name": "roleIds",
               "type": "array",
               "optional": true,
@@ -4674,6 +4680,60 @@
           "appId": "discord",
           "kind": "action",
           "name": "Delete Invite",
+          "fields": [
+            {
+              "name": "inviteCode",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-invite-target-users",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Invite Target Users",
+          "fields": [
+            {
+              "name": "inviteCode",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.update-invite-target-users",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Update Invite Target Users",
+          "fields": [
+            {
+              "name": "inviteCode",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "targetUsersFile",
+              "type": "string",
+              "optional": false,
+              "default": "user_id\n123"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-invite-target-users-job-status",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Invite Target Users Job Status",
           "fields": [
             {
               "name": "inviteCode",
