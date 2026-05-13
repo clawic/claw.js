@@ -124,6 +124,8 @@ const DISCORD_ACTIONS = [
   action("delete-channel-permission", "Delete Channel Permission", [CHANNEL_FIELD, OVERWRITE_FIELD, field("auditLogReason", "string", true)]),
   action("follow-announcement-channel", "Follow Announcement Channel", [CHANNEL_FIELD, field("webhookChannelId", "string"), field("auditLogReason", "string", true)]),
   action("trigger-typing-indicator", "Trigger Typing Indicator", [CHANNEL_FIELD]),
+  action("group-dm-add-recipient", "Group DM Add Recipient", [CHANNEL_FIELD, USER_FIELD, field("accessToken", "string", false, { default: "sample-access-token" }), field("nick", "string", true, { default: "sample" })]),
+  action("group-dm-remove-recipient", "Group DM Remove Recipient", [CHANNEL_FIELD, USER_FIELD]),
   action("list-messages", "List Messages", [CHANNEL_FIELD, field("limit", "integer", true, { default: 1, min: 1, max: 100 })]),
   action("get-message", "Get Message", [CHANNEL_FIELD, MESSAGE_FIELD]),
   action("send-message", "Send Message", [CHANNEL_FIELD, field("content", "string"), field("messageId", "string", true), field("guildId", "string", true)]),
@@ -1008,6 +1010,39 @@ describe("discord operation runtime", () => {
     }), {
       method: "POST",
       endpoint: "channels/123/typing",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.group-dm-add-recipient"), {
+      channelId: "123",
+      userId: "456",
+      accessToken: "recipient-token",
+      nick: "Guest",
+    }), {
+      method: "PUT",
+      endpoint: "channels/123/recipients/456",
+      auth,
+      headers,
+      body: {
+        access_token: "recipient-token",
+        nick: "Guest",
+      },
+      responseSchema: {
+        type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.group-dm-remove-recipient"), {
+      channelId: "123",
+      userId: "456",
+    }), {
+      method: "DELETE",
+      endpoint: "channels/123/recipients/456",
       auth,
       headers,
       body: {},
