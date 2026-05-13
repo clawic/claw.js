@@ -38569,6 +38569,117 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.list-forwarding-requests",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Forwarding Requests",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "created",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "gte": 1704067200
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-forwarding-request",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Forwarding Request",
+          "fields": [
+            {
+              "name": "payment_method",
+              "type": "string",
+              "optional": false,
+              "default": "pm_sample"
+            },
+            {
+              "name": "replacements",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "field": "card_number",
+                  "token": "tok_sample"
+                }
+              ]
+            },
+            {
+              "name": "request",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "headers": [
+                  {
+                    "name": "Authorization",
+                    "value": "Bearer token_sample"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "url",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/forward"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-forwarding-request",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Forwarding Request",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "fwdreq_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/forwarding/requests",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "payment_method=pm_sample&replacements=%7B%22field%22%3A%22card_number%22%2C%22token%22%3A%22tok_sample%22%7D&request=%7B%22headers%22%3A%5B%7B%22name%22%3A%22Authorization%22%2C%22value%22%3A%22Bearer+token_sample%22%7D%5D%7D&url=https%3A%2F%2Fexample.invalid%2Fforward&metadata=%7B%22order_id%22%3A%22sample%22%7D"
+}

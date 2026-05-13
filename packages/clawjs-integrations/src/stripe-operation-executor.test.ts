@@ -1031,6 +1031,32 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-forwarding-request"), {
+      payment_method: "pm_sample",
+      replacements: [{ field: "card_number", token: "tok_sample" }],
+      request: { headers: [{ name: "Authorization", value: "Bearer token_sample" }] },
+      url: "https://example.invalid/forward",
+      metadata: { order_id: "sample" },
+    }), {
+      method: "POST",
+      endpoint: "forwarding/requests",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        payment_method: "pm_sample",
+        replacements: [{ field: "card_number", token: "tok_sample" }],
+        request: { headers: [{ name: "Authorization", value: "Bearer token_sample" }] },
+        url: "https://example.invalid/forward",
+        metadata: { order_id: "sample" },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-apple-pay-domain"), {
       domain_name: "pay.example.invalid",
     }), {
