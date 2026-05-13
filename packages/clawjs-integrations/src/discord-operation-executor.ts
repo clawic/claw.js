@@ -180,6 +180,9 @@ export type DiscordRuntimeOperation =
   | "delete-stage-instance"
   | "get-invite"
   | "delete-invite"
+  | "get-invite-target-users"
+  | "update-invite-target-users"
+  | "get-invite-target-users-job-status"
   | "list-channel-webhooks"
   | "list-guild-webhooks"
   | "create-webhook"
@@ -662,8 +665,10 @@ export function buildDiscordOperationRequest(
       return getPlan(`guilds/${guildId(values)}/invites`, auth, headers, { type: "array" });
     case "list-channel-invites":
       return getPlan(`channels/${channelId(values)}/invites`, auth, headers, { type: "array" });
-    case "create-channel-invite":
-      return bodyPlan("POST", `channels/${channelId(values)}/invites`, auth, auditHeaders(headers, values), channelInviteBody(values), { type: "object", requiredPaths: ["code"] });
+    case "create-channel-invite": {
+      const plan = bodyPlan("POST", `channels/${channelId(values)}/invites`, auth, auditHeaders(headers, values), channelInviteBody(values), { type: "object", requiredPaths: ["code"] });
+      return values.targetUsersFile == null ? plan : { ...plan, bodyEncoding: "multipart" };
+    }
     case "list-guild-scheduled-events":
       return getPlan(`guilds/${guildId(values)}/scheduled-events`, auth, headers, { type: "array" }, removeEmptyValues({
         with_user_count: values.withUserCount,
@@ -694,13 +699,32 @@ export function buildDiscordOperationRequest(
     case "delete-stage-instance":
       return deletePlan(`stage-instances/${channelId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "get-invite":
-      return getPlan(`invites/${pathSegment(requiredString(values.inviteCode, "inviteCode"))}`, auth, headers, { type: "object", requiredPaths: ["code"] }, removeEmptyValues({
+      return getPlan(`invites/${inviteCode(values)}`, auth, headers, { type: "object", requiredPaths: ["code"] }, removeEmptyValues({
         with_counts: values.withCounts,
         with_expiration: values.withExpiration,
         guild_scheduled_event_id: optionalString(values.guildScheduledEventId),
       }));
     case "delete-invite":
-      return deletePlan(`invites/${pathSegment(requiredString(values.inviteCode, "inviteCode"))}`, auth, headers, { type: "object", requiredPaths: ["code"] });
+      return deletePlan(`invites/${inviteCode(values)}`, auth, headers, { type: "object", requiredPaths: ["code"] });
+    case "get-invite-target-users":
+      return {
+        ...getPlan(`invites/${inviteCode(values)}/target-users`, auth, { accept: "text/csv" }, { type: "string" }),
+        responseBodyEncoding: "text",
+      };
+    case "update-invite-target-users":
+      return {
+        method: "PUT",
+        endpoint: `invites/${inviteCode(values)}/target-users`,
+        auth,
+        headers,
+        body: {
+          target_users_file: requiredString(firstValue(values.targetUsersFile, values.csv), "targetUsersFile"),
+        },
+        bodyEncoding: "multipart",
+        responseSchema: { type: "null" },
+      };
+    case "get-invite-target-users-job-status":
+      return getPlan(`invites/${inviteCode(values)}/target-users/job-status`, auth, headers, { type: "object", requiredPaths: ["status", "total_users", "processed_users", "created_at"] });
     case "list-channel-webhooks":
       return getPlan(`channels/${channelId(values)}/webhooks`, auth, headers, { type: "array" });
     case "list-guild-webhooks":
@@ -979,6 +1003,9 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "delete-stage-instance",
   "get-invite",
   "delete-invite",
+  "get-invite-target-users",
+  "update-invite-target-users",
+  "get-invite-target-users-job-status",
   "list-channel-webhooks",
   "list-guild-webhooks",
   "create-webhook",
@@ -1460,6 +1487,7 @@ function channelInviteBody(values: Record<string, IntegrationJson>): Record<stri
     target_type: optionalNumber(values.targetType),
     target_user_id: optionalString(values.targetUserId),
     target_application_id: optionalString(values.targetApplicationId),
+    target_users_file: optionalString(values.targetUsersFile),
     role_ids: optionalJsonArray(values.roleIds),
   });
 }
@@ -1585,6 +1613,10 @@ function integrationId(values: Record<string, IntegrationJson>): string {
 
 function webhookId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.webhookId, values.webhook), "webhookId"));
+}
+
+function inviteCode(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.inviteCode, values.invite), "inviteCode"));
 }
 
 function applicationId(values: Record<string, IntegrationJson>): string {
