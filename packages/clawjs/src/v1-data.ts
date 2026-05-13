@@ -8,7 +8,7 @@ import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
 import type { FieldDefinition, IndexDefinition } from "@clawjs/database";
 import { redactSecrets } from "@clawjs/claw";
-import { assertCodexReadOnlyPath, resolveClawGlobalDataDir } from "@clawjs/core";
+import { assertCodexReadOnlyPath } from "@clawjs/core";
 
 export const V1_DATA_EXIT_OK = 0;
 export const V1_DATA_EXIT_FAILURE = 1;
@@ -72,9 +72,10 @@ const KNOWLEDGE_DOMAIN_TABLES = [
   "profile_projection",
 ];
 const PRODUCTIVITY_DOMAIN_TABLES = ["productivity_items"];
-const BUSINESS_DOMAIN_TABLES = ["business_records", "content_items", "social_posts", "accounting_entries", "accounting_lines"];
+const BUSINESS_DOMAIN_TABLES = ["business_records", "content_items", "social_posts", "finance_records", "accounting_entries", "accounting_lines"];
 const CALENDAR_DOMAIN_TABLES = ["calendar_events"];
 const IOT_DOMAIN_TABLES = ["iot_config"];
+const MARKETPLACE_DOMAIN_TABLES = ["marketplace_choices"];
 
 const LIFE_CATALOG_COLLECTION_FIELDS: FieldDefinition[] = [
   { name: "verticalId", type: "text", required: true },
@@ -94,12 +95,13 @@ const LIFE_CATALOG_COLLECTION_INDEXES: IndexDefinition[] = [
 export function resolveClawjsDataRoot(env: NodeJS.ProcessEnv = process.env): string {
   const explicit = env.CLAWJS_MAIN_DATA_DIR || env.CLAWIX_CLAWJS_DATA_DIR || env.CLAW_HOME;
   if (explicit) return path.resolve(expandHome(explicit));
-  return path.join(resolveClawGlobalDataDir({
-    homeDir: os.homedir(),
-    platform: process.platform as "darwin" | "linux" | "win32",
-    xdgDataHome: process.env.XDG_DATA_HOME,
-    appDataDir: process.env.APPDATA,
-  }), "data");
+  if (process.platform === "win32") {
+    return path.join(env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
+  }
+  if (process.platform === "darwin") {
+    return path.join(os.homedir(), "Library", "Application Support", "Clawix", "clawjs");
+  }
+  return path.join(env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"), "Clawix", "clawjs");
 }
 
 export function resolveClawjsMainDbPath(env: NodeJS.ProcessEnv = process.env): string {
@@ -497,10 +499,42 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
       name TEXT NOT NULL,
       parent_id TEXT,
       status TEXT NOT NULL DEFAULT 'active',
+      config_json TEXT NOT NULL DEFAULT '{}',
+      secret_ref TEXT,
+      enabled INTEGER NOT NULL DEFAULT 1,
       metadata_json TEXT NOT NULL DEFAULT '{}',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS finance_records (
+      id TEXT PRIMARY KEY,
+      kind TEXT NOT NULL DEFAULT 'transaction',
+      account_id TEXT,
+      amount REAL NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      occurred_at TEXT NOT NULL,
+      merchant TEXT,
+      category TEXT,
+      page_id TEXT,
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS finance_records_time_idx ON finance_records(occurred_at DESC, kind);
+
+    CREATE TABLE IF NOT EXISTS marketplace_choices (
+      id TEXT PRIMARY KEY,
+      kind TEXT NOT NULL,
+      target TEXT NOT NULL,
+      choice TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      rationale TEXT,
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS marketplace_choices_kind_target_idx ON marketplace_choices(kind, target);
     CREATE INDEX IF NOT EXISTS iot_config_kind_idx ON iot_config(kind, parent_id);
 
     CREATE TABLE IF NOT EXISTS resources (
@@ -524,6 +558,7 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
       runtime TEXT,
       model TEXT,
       builtin INTEGER NOT NULL DEFAULT 0,
+      secret_ref TEXT,
       config_json TEXT NOT NULL DEFAULT '{}',
       export_path TEXT,
       created_at TEXT NOT NULL,
@@ -536,6 +571,7 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
       name TEXT NOT NULL,
       body TEXT NOT NULL DEFAULT '',
       scope_json TEXT NOT NULL DEFAULT '{}',
+      secret_refs_json TEXT NOT NULL DEFAULT '[]',
       metadata_json TEXT NOT NULL DEFAULT '{}',
       export_path TEXT,
       created_at TEXT NOT NULL,
@@ -614,6 +650,11 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
     );
   `);
   ensureColumn(sqlite, "life_observations", "page_id", "TEXT");
+  ensureColumn(sqlite, "agents", "secret_ref", "TEXT");
+  ensureColumn(sqlite, "skills", "secret_refs_json", "TEXT NOT NULL DEFAULT '[]'");
+  ensureColumn(sqlite, "iot_config", "config_json", "TEXT NOT NULL DEFAULT '{}'");
+  ensureColumn(sqlite, "iot_config", "secret_ref", "TEXT");
+  ensureColumn(sqlite, "iot_config", "enabled", "INTEGER NOT NULL DEFAULT 1");
   sqlite.prepare(`
     INSERT OR IGNORE INTO app_state (profile_id, key, value_json, updated_at)
     VALUES (?, 'profile.id', ?, ?)
@@ -663,6 +704,8 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
         return runKnowledgeCommand(input, store);
       case "notes":
         return runNotesCommand(input, store);
+      case "wiki":
+        return runWikiCommand(input, store);
       case "profile":
         return runProfileCommand(input, store);
       case "tasks":
@@ -677,8 +720,16 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
         return runContentCommand(input, store);
       case "social":
         return runSocialCommand(input, store);
+      case "finance":
+        return runFinanceCommand(input, store);
       case "calendar":
         return runCalendarCommand(input, store);
+      case "iot":
+        return runIotConfigCommand(input, store);
+      case "marketplace":
+        return runMarketplaceCommand(input, store);
+      case "ledger":
+        return runLedgerCommand(input, store);
       case "search":
         return runSearchCommand(input, store);
       case "audio":
@@ -726,11 +777,16 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     "app-state": new Set(["get", "set", "snapshot", "help"]),
     life: new Set(["catalog", "seed-catalog", "observe", "list", "delete", "help"]),
     knowledge: new Set(["entity", "fact", "list", "search", "promote", "help"]),
-    notes: new Set(["export", "import", "link", "record-note", "help"]),
+    notes: new Set(["create", "list", "get", "update", "delete", "search", "export", "import", "link", "record-note", "help"]),
+    wiki: new Set(["create", "list", "get", "update", "delete", "search", "export", "import", "link", "help"]),
     profile: new Set(["get", "refresh", "list", "help"]),
     business: new Set(["upsert", "list", "get", "delete", "help"]),
     content: new Set(["upsert", "list", "get", "delete", "help"]),
     social: new Set(["upsert", "list", "get", "delete", "help"]),
+    finance: new Set(["upsert", "list", "get", "delete", "help"]),
+    iot: new Set(["config", "help"]),
+    marketplace: new Set(["choice", "choices", "help"]),
+    ledger: new Set(["entry", "line", "list", "get", "delete", "help"]),
     search: new Set(["query", "rebuild", "help"]),
     audio: new Set(["index", "artifact", "transcript", "help"]),
     drive: new Set(["index", "artifact", "attach", "help"]),
@@ -739,7 +795,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     monitor: new Set(["event", "list", "retention", "help"]),
     infra: new Set(["event", "list", "retention", "help"]),
     ops: new Set(["event", "metric", "list", "retention", "help"]),
-    mcp: new Set(["list", "get", "help"]),
+    mcp: new Set(["list", "get", "upsert", "delete", "help"]),
     apps: new Set(["list", "upsert", "help"]),
     design: new Set(["list", "upsert", "help"]),
     agents: new Set(["list", "upsert", "help"]),
@@ -768,7 +824,7 @@ function runDataCommand(input: V1DataCliInput, store: DatabaseServiceStore): num
   }
   if (command === "reset") {
     const domain = input.flags.domain || input.positionals[2];
-    if (!domain) return usageError(input, "Usage: claw data reset --domain app-state|knowledge|notes|profile|life|business|content|social|sessions|audio|drive|search|runtime|notify|monitor|infra|ops|all");
+    if (!domain) return usageError(input, "Usage: claw data reset --domain app-state|knowledge|notes|profile|life|business|content|social|marketplace|iot|sessions|audio|drive|search|runtime|notify|monitor|infra|ops|all");
     const result = resetDomain(store.sqlite, domain);
     writeSuccess(input, result);
     return V1_DATA_EXIT_OK;
@@ -1086,6 +1142,42 @@ function runNotesCommand(input: V1DataCliInput, store: DatabaseServiceStore): nu
     writeSuccess(input, format === "markdown" ? { id, markdown: pageToMarkdown(page) } : page);
     return V1_DATA_EXIT_OK;
   }
+  if (command === "search") {
+    const query = input.flags.query || input.flags.q || input.positionals.slice(2).join(" ");
+    if (!query) return usageError(input, "Usage: claw notes search QUERY [--json]");
+    rebuildNotesFts(store.sqlite);
+    const limit = Math.max(1, Number(input.flags.limit ?? 25));
+    const space = input.flags.space;
+    const surface = input.flags.surface;
+    const rows = space
+      ? store.sqlite.prepare(`
+          SELECT pages.*
+          FROM notes_fts
+          JOIN pages ON pages.id = notes_fts.page_id
+          WHERE notes_fts MATCH ? AND pages.archived_at IS NULL AND pages.space = ?
+          ORDER BY rank
+          LIMIT ?
+        `).all(ftsPhrase(query), space, limit)
+      : surface
+        ? store.sqlite.prepare(`
+            SELECT pages.*
+            FROM notes_fts
+            JOIN pages ON pages.id = notes_fts.page_id
+            WHERE notes_fts MATCH ? AND pages.archived_at IS NULL AND pages.surface = ?
+            ORDER BY rank
+            LIMIT ?
+          `).all(ftsPhrase(query), surface, limit)
+        : store.sqlite.prepare(`
+            SELECT pages.*
+            FROM notes_fts
+            JOIN pages ON pages.id = notes_fts.page_id
+            WHERE notes_fts MATCH ? AND pages.archived_at IS NULL
+            ORDER BY rank
+            LIMIT ?
+          `).all(ftsPhrase(query), limit);
+    writeSuccess(input, { items: rows.map(normalizeDbRow) });
+    return V1_DATA_EXIT_OK;
+  }
   if (command === "update" || command === "import") {
     const id = input.flags.id || input.positionals[2];
     if (!id) return usageError(input, "Usage: claw notes update PAGE_ID --body TEXT|--from FILE");
@@ -1132,6 +1224,19 @@ function runNotesCommand(input: V1DataCliInput, store: DatabaseServiceStore): nu
     return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   return usageError(input, usage(input.binName, "notes"));
+}
+
+function runWikiCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
+  const notesInput: V1DataCliInput = {
+    ...input,
+    positionals: ["notes", ...input.positionals.slice(1)],
+    flags: {
+      space: "wiki",
+      surface: "wiki_page",
+      ...input.flags,
+    },
+  };
+  return runNotesCommand(notesInput, store);
 }
 
 function runProfileCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
@@ -1288,6 +1393,44 @@ function runSocialCommand(input: V1DataCliInput, store: DatabaseServiceStore): n
   return runRecordGetDelete(input, store, "social_posts", "social");
 }
 
+function runFinanceCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
+  const command = input.positionals[1];
+  if (command === "upsert") {
+    const now = nowIso();
+    const id = input.flags.id || input.positionals[2] || `finance-${randomUUID()}`;
+    const amount = input.flags.amount ?? input.positionals[3];
+    if (amount === undefined) return usageError(input, "Usage: claw finance upsert --id ID --amount NUMBER [--currency USD]");
+    const pageId = input.flags.notes || input.flags.body
+      ? upsertPageWithBlocks(store.sqlite, {
+          id: input.flags["page-id"] || `page-${id}`,
+          title: `${input.flags.kind || "transaction"} notes`,
+          text: input.flags.notes || input.flags.body || "",
+          space: "finance",
+          surface: "record_note",
+          sourceRecordDomain: "finance_records",
+          sourceRecordId: id,
+          sensitivity: input.flags.sensitivity || "sensitive",
+        }).id
+      : input.flags["page-id"] || null;
+    store.sqlite.prepare(`
+      INSERT INTO finance_records (id, kind, account_id, amount, currency, occurred_at, merchant, category, page_id, metadata_json, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, account_id = excluded.account_id,
+        amount = excluded.amount, currency = excluded.currency, occurred_at = excluded.occurred_at,
+        merchant = excluded.merchant, category = excluded.category, page_id = excluded.page_id,
+        metadata_json = excluded.metadata_json, updated_at = excluded.updated_at
+    `).run(id, input.flags.kind || "transaction", input.flags["account-id"] || null, Number(amount), input.flags.currency || "USD", input.flags.at || input.flags["occurred-at"] || now, input.flags.merchant || null, input.flags.category || null, pageId, input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}", now, now);
+    writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM finance_records WHERE id = ?").get(id) as JsonRecord));
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "list") {
+    const rows = store.sqlite.prepare("SELECT * FROM finance_records ORDER BY occurred_at DESC LIMIT ?").all(Math.max(1, Number(input.flags.limit ?? 100)));
+    writeSuccess(input, { items: rows.map(normalizeDbRow) });
+    return V1_DATA_EXIT_OK;
+  }
+  return runRecordGetDelete(input, store, "finance_records", "finance");
+}
+
 function runCalendarCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
   const command = input.positionals[1];
   if (command === "create" || command === "update") {
@@ -1312,6 +1455,124 @@ function runCalendarCommand(input: V1DataCliInput, store: DatabaseServiceStore):
     return V1_DATA_EXIT_OK;
   }
   return runRecordGetDelete(input, store, "calendar_events", "calendar");
+}
+
+function runIotConfigCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
+  const action = input.positionals[2] || "list";
+  if (action === "set" || action === "upsert") {
+    const id = input.flags.id || input.positionals[3];
+    const name = input.flags.name || id;
+    if (!id || !name) return usageError(input, "Usage: claw iot config set ID --name NAME [--kind KIND] [--secret-ref REF]");
+    const now = nowIso();
+    store.sqlite.prepare(`
+      INSERT INTO iot_config (id, kind, name, config_json, secret_ref, enabled, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, name = excluded.name, config_json = excluded.config_json,
+        secret_ref = excluded.secret_ref, enabled = excluded.enabled, updated_at = excluded.updated_at
+    `).run(id, input.flags.kind || "device", name, input.flags.config ? JSON.stringify(parseMaybeJson(input.flags.config)) : "{}", input.flags["secret-ref"] || null, truthy(input.flags.enabled ?? "true") ? 1 : 0, now, now);
+    writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM iot_config WHERE id = ?").get(id) as JsonRecord));
+    return V1_DATA_EXIT_OK;
+  }
+  if (action === "list") {
+    const rows = store.sqlite.prepare("SELECT * FROM iot_config ORDER BY kind, name LIMIT ?").all(Math.max(1, Number(input.flags.limit ?? 100)));
+    writeSuccess(input, { items: rows.map(normalizeDbRow) });
+    return V1_DATA_EXIT_OK;
+  }
+  return runRecordGetDelete({ ...input, positionals: ["iot", action, ...input.positionals.slice(3)] }, store, "iot_config", "iot config");
+}
+
+function runMarketplaceCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
+  const action = input.positionals[2] || "list";
+  if (action === "upsert" || action === "set") {
+    const id = input.flags.id || input.positionals[3] || `choice-${randomUUID()}`;
+    const target = input.flags.target || input.positionals[4];
+    const choice = input.flags.choice || input.positionals[5];
+    if (!target || !choice) return usageError(input, "Usage: claw marketplace choice upsert --target TARGET --choice CHOICE [--kind KIND]");
+    const now = nowIso();
+    store.sqlite.prepare(`
+      INSERT INTO marketplace_choices (id, kind, target, choice, status, rationale, metadata_json, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, target = excluded.target, choice = excluded.choice,
+        status = excluded.status, rationale = excluded.rationale, metadata_json = excluded.metadata_json,
+        updated_at = excluded.updated_at
+    `).run(id, input.flags.kind || "selection", target, choice, input.flags.status || "active", input.flags.rationale || null, input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}", now, now);
+    writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM marketplace_choices WHERE id = ?").get(id) as JsonRecord));
+    return V1_DATA_EXIT_OK;
+  }
+  if (action === "list") {
+    const target = input.flags.target;
+    const rows = target
+      ? store.sqlite.prepare("SELECT * FROM marketplace_choices WHERE target = ? ORDER BY updated_at DESC LIMIT ?").all(target, Math.max(1, Number(input.flags.limit ?? 100)))
+      : store.sqlite.prepare("SELECT * FROM marketplace_choices ORDER BY updated_at DESC LIMIT ?").all(Math.max(1, Number(input.flags.limit ?? 100)));
+    writeSuccess(input, { items: rows.map(normalizeDbRow) });
+    return V1_DATA_EXIT_OK;
+  }
+  return runRecordGetDelete({ ...input, positionals: ["marketplace", action, ...input.positionals.slice(3)] }, store, "marketplace_choices", "marketplace choice");
+}
+
+function runLedgerCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
+  const command = input.positionals[1];
+  if (command === "entry") {
+    const action = input.positionals[2] || "upsert";
+    if (action === "upsert" || action === "create") {
+      const id = input.flags.id || input.positionals[3] || `entry-${randomUUID()}`;
+      const description = input.flags.description || input.flags.memo || input.positionals.slice(4).join(" ") || id;
+      const now = nowIso();
+      store.sqlite.prepare(`
+        INSERT INTO accounting_entries (id, entity_id, period_id, entry_date, description, status, page_id, metadata_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET entity_id = excluded.entity_id, period_id = excluded.period_id,
+          entry_date = excluded.entry_date, description = excluded.description, status = excluded.status,
+          page_id = excluded.page_id, metadata_json = excluded.metadata_json, updated_at = excluded.updated_at
+      `).run(id, input.flags["entity-id"] || null, input.flags["period-id"] || null, input.flags.date || input.flags["entry-date"] || now.slice(0, 10), description, input.flags.status || "draft", input.flags["page-id"] || null, input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}", now, now);
+      writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM accounting_entries WHERE id = ?").get(id) as JsonRecord));
+      return V1_DATA_EXIT_OK;
+    }
+    if (action === "list") {
+      const rows = store.sqlite.prepare("SELECT * FROM accounting_entries ORDER BY entry_date DESC, updated_at DESC LIMIT ?").all(Math.max(1, Number(input.flags.limit ?? 100)));
+      writeSuccess(input, { items: rows.map(normalizeDbRow) });
+      return V1_DATA_EXIT_OK;
+    }
+    return runRecordGetDelete({ ...input, positionals: ["ledger", action, ...input.positionals.slice(3)] }, store, "accounting_entries", "ledger entry");
+  }
+  if (command === "line") {
+    const action = input.positionals[2] || "add";
+    if (action === "add" || action === "upsert") {
+      const id = input.flags.id || input.positionals[3] || `line-${randomUUID()}`;
+      const entryId = input.flags["entry-id"] || input.positionals[4];
+      const accountCode = input.flags["account-code"] || input.flags.account || input.positionals[5];
+      const amount = input.flags.amount ?? input.positionals[6];
+      if (!entryId || !accountCode || amount === undefined) return usageError(input, "Usage: claw ledger line add --entry-id ENTRY --account-code ACCOUNT --amount NUMBER");
+      const now = nowIso();
+      const numericAmount = Number(amount);
+      const side = input.flags.side || (numericAmount >= 0 ? "debit" : "credit");
+      store.sqlite.prepare(`
+        INSERT INTO accounting_lines (id, entry_id, account_code, side, amount_cents, currency, metadata_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET entry_id = excluded.entry_id, account_code = excluded.account_code,
+          side = excluded.side, amount_cents = excluded.amount_cents, currency = excluded.currency,
+          metadata_json = excluded.metadata_json
+      `).run(id, entryId, accountCode, side, Math.round(Math.abs(numericAmount) * 100), input.flags.currency || "USD", input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}");
+      upsertRegistry(store.sqlite, "ledger", "line", id, { metadata: { entryId, updatedAt: now } });
+      writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM accounting_lines WHERE id = ?").get(id) as JsonRecord));
+      return V1_DATA_EXIT_OK;
+    }
+    if (action === "list") {
+      const entryId = input.flags["entry-id"];
+      const rows = entryId
+        ? store.sqlite.prepare("SELECT * FROM accounting_lines WHERE entry_id = ? ORDER BY id LIMIT ?").all(entryId, Math.max(1, Number(input.flags.limit ?? 100)))
+        : store.sqlite.prepare("SELECT * FROM accounting_lines ORDER BY entry_id, id LIMIT ?").all(Math.max(1, Number(input.flags.limit ?? 100)));
+      writeSuccess(input, { items: rows.map(normalizeDbRow) });
+      return V1_DATA_EXIT_OK;
+    }
+    return runRecordGetDelete({ ...input, positionals: ["ledger", action, ...input.positionals.slice(3)] }, store, "accounting_lines", "ledger line");
+  }
+  if (command === "list") {
+    const rows = store.sqlite.prepare("SELECT * FROM accounting_entries ORDER BY entry_date DESC, updated_at DESC LIMIT ?").all(Math.max(1, Number(input.flags.limit ?? 100)));
+    writeSuccess(input, { items: rows.map(normalizeDbRow) });
+    return V1_DATA_EXIT_OK;
+  }
+  return runRecordGetDelete(input, store, "accounting_entries", "ledger");
 }
 
 function runSearchCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
@@ -1589,8 +1850,8 @@ function runOperationalSidecarCommand(input: V1DataCliInput, store: DatabaseServ
 
 function runMcpCommand(input: V1DataCliInput): number {
   const command = input.positionals[1];
+  const configPath = input.flags.config || path.join(os.homedir(), ".codex", "config.toml");
   if (command === "list" || command === "get") {
-    const configPath = input.flags.config || path.join(os.homedir(), ".codex", "config.toml");
     const servers = readMcpServers(configPath);
     if (command === "get") {
       const id = input.flags.id || input.positionals[2];
@@ -1600,6 +1861,35 @@ function runMcpCommand(input: V1DataCliInput): number {
     }
     writeSuccess(input, { source: "codex-config", configPath, items: servers });
     return V1_DATA_EXIT_OK;
+  }
+  if (command === "upsert") {
+    const id = input.flags.id || input.positionals[2];
+    if (!id) return usageError(input, "Usage: claw mcp upsert SERVER_ID (--command CMD|--url URL) [--json]");
+    const current = readMcpServers(configPath);
+    const existing = current.find((server) => server.id === id) ?? { id, source: "codex-config" };
+    const next: JsonRecord & { id: string } = {
+      ...existing,
+      id,
+      source: "codex-config",
+      ...(input.flags.command ? { command: input.flags.command } : {}),
+      ...(input.flags.url ? { url: input.flags.url } : {}),
+      ...(input.flags.args ? { args: parseCsvOrJson(input.flags.args) ?? [] } : {}),
+      ...(input.flags.env ? { env: parseMaybeJson(input.flags.env) } : {}),
+      ...(input.flags.disabled !== undefined ? { disabled: truthy(input.flags.disabled) } : {}),
+    };
+    const items = [...current.filter((server) => server.id !== id), next];
+    writeMcpServers(configPath, items);
+    writeSuccess(input, { id, configPath, server: next });
+    return V1_DATA_EXIT_OK;
+  }
+  if (command === "delete") {
+    const id = input.flags.id || input.positionals[2];
+    if (!id) return usageError(input, "Usage: claw mcp delete SERVER_ID [--json]");
+    const current = readMcpServers(configPath);
+    const items = current.filter((server) => server.id !== id);
+    writeMcpServers(configPath, items);
+    writeSuccess(input, { id, deleted: items.length !== current.length, configPath });
+    return items.length !== current.length ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   return usageError(input, usage(input.binName, "mcp"));
 }
@@ -1682,16 +1972,16 @@ function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceStore): n
   if (command === "upsert") {
     const id = input.flags.id || input.positionals[2];
     const name = input.flags.name || input.positionals.slice(3).join(" ") || id;
-    if (!id || !name) return usageError(input, "Usage: claw agents upsert ID --name NAME");
+    if (!id || !name) return usageError(input, "Usage: claw agents upsert ID --name NAME [--secret-ref REF]");
     const now = nowIso();
     store.sqlite.prepare(`
-      INSERT INTO agents (id, kind, name, runtime, model, builtin, config_json, export_path, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO agents (id, kind, name, runtime, model, builtin, secret_ref, config_json, export_path, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, name = excluded.name, runtime = excluded.runtime,
-        model = excluded.model, builtin = excluded.builtin, config_json = excluded.config_json,
+        model = excluded.model, builtin = excluded.builtin, secret_ref = excluded.secret_ref, config_json = excluded.config_json,
         export_path = excluded.export_path, updated_at = excluded.updated_at
-    `).run(id, input.flags.kind || "agent", name, input.flags.runtime || null, input.flags.model || null, truthy(input.flags.builtin) ? 1 : 0, input.flags.config ? JSON.stringify(JSON.parse(input.flags.config)) : "{}", input.flags["export-path"] || null, now, now);
-    writeSuccess(input, { id, name, updatedAt: now });
+    `).run(id, input.flags.kind || "agent", name, input.flags.runtime || null, input.flags.model || null, truthy(input.flags.builtin) ? 1 : 0, input.flags["secret-ref"] || null, input.flags.config ? JSON.stringify(JSON.parse(input.flags.config)) : "{}", input.flags["export-path"] || null, now, now);
+    writeSuccess(input, { id, name, secretRef: input.flags["secret-ref"] || null, updatedAt: now });
     return V1_DATA_EXIT_OK;
   }
   return usageError(input, usage(input.binName, "agents"));
@@ -1707,17 +1997,18 @@ function runSkillsCommand(input: V1DataCliInput, store: DatabaseServiceStore): n
   if (command === "upsert") {
     const slug = input.flags.slug || input.positionals[2];
     const name = input.flags.name || slug;
-    if (!slug || !name) return usageError(input, "Usage: claw skills upsert SLUG --name NAME [--body TEXT|--file SKILL.md]");
+    if (!slug || !name) return usageError(input, "Usage: claw skills upsert SLUG --name NAME [--body TEXT|--file SKILL.md] [--secret-refs REF,REF]");
     const now = nowIso();
     const body = input.flags.file ? fs.readFileSync(path.resolve(input.cwd, expandHome(input.flags.file)), "utf8") : (input.flags.body || "");
+    const secretRefs = parseCsvOrJson(input.flags["secret-refs"] || input.flags["secret-ref"]) ?? [];
     store.sqlite.prepare(`
-      INSERT INTO skills (id, slug, kind, name, body, scope_json, metadata_json, export_path, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO skills (id, slug, kind, name, body, scope_json, secret_refs_json, metadata_json, export_path, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(slug) DO UPDATE SET kind = excluded.kind, name = excluded.name, body = excluded.body,
-        scope_json = excluded.scope_json, metadata_json = excluded.metadata_json,
+        scope_json = excluded.scope_json, secret_refs_json = excluded.secret_refs_json, metadata_json = excluded.metadata_json,
         export_path = excluded.export_path, updated_at = excluded.updated_at
-    `).run(input.flags.id || `skill-${slug}`, slug, input.flags.kind || "skill", name, body, input.flags.scope ? JSON.stringify(JSON.parse(input.flags.scope)) : "{}", input.flags.metadata ? JSON.stringify(JSON.parse(input.flags.metadata)) : "{}", input.flags["export-path"] || null, now, now);
-    writeSuccess(input, { slug, name, updatedAt: now });
+    `).run(input.flags.id || `skill-${slug}`, slug, input.flags.kind || "skill", name, body, input.flags.scope ? JSON.stringify(JSON.parse(input.flags.scope)) : "{}", JSON.stringify(secretRefs), input.flags.metadata ? JSON.stringify(JSON.parse(input.flags.metadata)) : "{}", input.flags["export-path"] || null, now, now);
+    writeSuccess(input, { slug, name, secretRefs, updatedAt: now });
     return V1_DATA_EXIT_OK;
   }
   return usageError(input, usage(input.binName, "skills"));
@@ -1936,12 +2227,13 @@ function resetDomain(sqlite: Database.Database, domain: string): JsonRecord {
   const normalized = domain.trim().toLowerCase();
   const sidecarOnlyDomains = new Set(["audio", "drive", "runtime", "notify", "monitor", "infra", "ops", "conversation-artifacts"]);
   const tables =
-    normalized === "all" ? [...APP_STATE_DOMAIN_TABLES, ...LIFE_DOMAIN_TABLES, ...KNOWLEDGE_DOMAIN_TABLES, ...PRODUCTIVITY_DOMAIN_TABLES, ...BUSINESS_DOMAIN_TABLES, ...CALENDAR_DOMAIN_TABLES, ...IOT_DOMAIN_TABLES, ...RESOURCE_DOMAIN_TABLES, ...AGENT_DOMAIN_TABLES, ...SESSION_DOMAIN_TABLES] :
+    normalized === "all" ? [...APP_STATE_DOMAIN_TABLES, ...LIFE_DOMAIN_TABLES, ...KNOWLEDGE_DOMAIN_TABLES, ...PRODUCTIVITY_DOMAIN_TABLES, ...BUSINESS_DOMAIN_TABLES, ...CALENDAR_DOMAIN_TABLES, ...IOT_DOMAIN_TABLES, ...MARKETPLACE_DOMAIN_TABLES, ...RESOURCE_DOMAIN_TABLES, ...AGENT_DOMAIN_TABLES, ...SESSION_DOMAIN_TABLES] :
     normalized === "app-state" ? APP_STATE_DOMAIN_TABLES :
     normalized === "life" ? LIFE_DOMAIN_TABLES :
     normalized === "knowledge" || normalized === "notes" || normalized === "profile" || normalized === "wiki" ? KNOWLEDGE_DOMAIN_TABLES :
     normalized === "tasks" || normalized === "productivity" ? PRODUCTIVITY_DOMAIN_TABLES :
     normalized === "business" || normalized === "content" || normalized === "social" || normalized === "finance" || normalized === "ledger" ? BUSINESS_DOMAIN_TABLES :
+    normalized === "marketplace" ? MARKETPLACE_DOMAIN_TABLES :
     normalized === "calendar" ? CALENDAR_DOMAIN_TABLES :
     normalized === "iot" ? IOT_DOMAIN_TABLES :
     normalized === "resources" || normalized === "apps" || normalized === "design" ? RESOURCE_DOMAIN_TABLES :
@@ -2836,11 +3128,17 @@ function readMcpServers(configPath: string): Array<JsonRecord & { id: string }> 
   const servers: Array<JsonRecord & { id: string }> = [];
   const lines = raw.split(/\r?\n/);
   let current: (JsonRecord & { id: string }) | null = null;
+  let currentSubtable: string | null = null;
   for (const line of lines) {
     const section = line.match(/^\s*\[mcp_servers\.([^\]]+)\]\s*$/);
     if (section) {
-      current = { id: section[1], source: "codex-config" };
-      servers.push(current);
+      const [id, subtable] = section[1].split(".", 2);
+      current = servers.find((server) => server.id === id) ?? null;
+      if (!current) {
+        current = { id, source: "codex-config" };
+        servers.push(current);
+      }
+      currentSubtable = subtable ?? null;
       continue;
     }
     if (!current) continue;
@@ -2848,9 +3146,57 @@ function readMcpServers(configPath: string): Array<JsonRecord & { id: string }> 
     if (!kv) continue;
     const key = kv[1];
     const value = kv[2].replace(/\s+#.*$/, "").trim();
-    current[key] = parseTomlScalar(value);
+    if (currentSubtable) {
+      const nested = isRecord(current[currentSubtable]) ? current[currentSubtable] as JsonRecord : {};
+      nested[key] = parseTomlScalar(value);
+      current[currentSubtable] = nested;
+    } else {
+      current[key] = parseTomlScalar(value);
+    }
   }
   return servers;
+}
+
+function writeMcpServers(configPath: string, servers: Array<JsonRecord & { id: string }>): void {
+  const raw = fs.existsSync(configPath) ? fs.readFileSync(configPath, "utf8") : "";
+  const preserved = stripMcpServerBlocks(raw).trimEnd();
+  const rendered = servers.map(renderMcpServer).filter(Boolean).join("\n\n");
+  const body = [preserved, rendered].filter(Boolean).join("\n\n");
+  fs.mkdirSync(path.dirname(configPath), { recursive: true });
+  fs.writeFileSync(configPath, `${body}${body ? "\n" : ""}`);
+}
+
+function stripMcpServerBlocks(raw: string): string {
+  const lines = raw.split(/\r?\n/);
+  const kept: string[] = [];
+  let skipping = false;
+  for (const line of lines) {
+    const header = line.match(/^\s*\[([^\]]+)\]\s*$/);
+    if (header) {
+      skipping = header[1] === "mcp_servers" || header[1].startsWith("mcp_servers.");
+    }
+    if (!skipping) kept.push(line);
+  }
+  return kept.join("\n");
+}
+
+function renderMcpServer(server: JsonRecord & { id: string }): string {
+  const id = server.id;
+  const root: string[] = [`[mcp_servers.${id}]`];
+  if (typeof server.command === "string") root.push(`command = ${tomlString(server.command)}`);
+  if (typeof server.url === "string") root.push(`url = ${tomlString(server.url)}`);
+  if (Array.isArray(server.args)) root.push(`args = [${server.args.map((entry) => tomlString(String(entry))).join(", ")}]`);
+  if (typeof server.disabled === "boolean") root.push(`disabled = ${server.disabled ? "true" : "false"}`);
+  const env = isRecord(server.env) ? server.env : {};
+  const envLines = Object.entries(env).map(([key, value]) => `${key} = ${tomlString(String(value))}`);
+  if (envLines.length > 0) {
+    root.push("", `[mcp_servers.${id}.env]`, ...envLines);
+  }
+  return root.join("\n");
+}
+
+function tomlString(value: string): string {
+  return JSON.stringify(value);
 }
 
 function parseTomlScalar(value: string): unknown {
@@ -2912,7 +3258,9 @@ function usage(binName: string, group: string): string {
     case "knowledge":
       return `Usage: ${binName} knowledge entity|fact|list|search|promote [--json]`;
     case "notes":
-      return `Usage: ${binName} notes record-note|export|import|link [--json]`;
+      return `Usage: ${binName} notes create|list|get|update|delete|search|record-note|export|import|link [--json]`;
+    case "wiki":
+      return `Usage: ${binName} wiki create|list|get|update|delete|search|export|import|link [--json]`;
     case "profile":
       return `Usage: ${binName} profile get|refresh|list [--json]`;
     case "tasks":
@@ -2927,8 +3275,16 @@ function usage(binName: string, group: string): string {
       return `Usage: ${binName} content upsert|list|get|delete [--json]`;
     case "social":
       return `Usage: ${binName} social upsert|list|get|delete [--json]`;
+    case "finance":
+      return `Usage: ${binName} finance upsert|list|get|delete [--json]`;
     case "calendar":
       return `Usage: ${binName} calendar create|list|get|update|delete [--json]`;
+    case "iot":
+      return `Usage: ${binName} iot config set|list|get|delete [--json]`;
+    case "marketplace":
+      return `Usage: ${binName} marketplace choice upsert|list|get|delete [--json]`;
+    case "ledger":
+      return `Usage: ${binName} ledger entry upsert|list|get|delete | ledger line add|list|get|delete [--json]`;
     case "search":
       return `Usage: ${binName} search query|rebuild [--json]`;
     case "audio":
@@ -2946,7 +3302,7 @@ function usage(binName: string, group: string): string {
     case "ops":
       return `Usage: ${binName} ops event|metric|list|retention [--json]`;
     case "mcp":
-      return `Usage: ${binName} mcp list|get [--json]`;
+      return `Usage: ${binName} mcp list|get|upsert|delete [--json]`;
     case "apps":
       return `Usage: ${binName} apps list|upsert [--json]`;
     case "design":

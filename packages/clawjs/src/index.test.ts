@@ -12,6 +12,7 @@ import Database from "better-sqlite3";
 import { createClaw, saveAuthStore } from "@clawjs/claw";
 import { buildTimeApp } from "../../../time/src/server/app.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CLI_USAGE, runCli } from "./index.ts";
+import { resolveClawjsDataRoot, resolveClawjsFilesDir, resolveClawjsMainDbPath } from "./v1-data.ts";
 
 function captureStream() {
   let output = "";
@@ -783,6 +784,16 @@ test("runCli manages V1 main data app-state and Life domains in the canonical sq
   });
 });
 
+test("V2 main data paths default to the Clawix Application Support namespace", () => {
+  assert.match(resolveClawjsDataRoot(), /Clawix[\\/]clawjs$/);
+  assert.match(resolveClawjsMainDbPath(), /Clawix[\\/]clawjs[\\/]clawjs\.sqlite$/);
+  assert.match(resolveClawjsFilesDir(), /Clawix[\\/]clawjs[\\/]files$/);
+
+  const explicit = path.join(os.tmpdir(), "clawjs-explicit-root");
+  assert.equal(resolveClawjsDataRoot({ CLAWJS_MAIN_DATA_DIR: explicit } as NodeJS.ProcessEnv), explicit);
+  assert.equal(resolveClawjsMainDbPath({ CLAWJS_MAIN_DATA_DIR: explicit } as NodeJS.ProcessEnv), path.join(explicit, "clawjs.sqlite"));
+});
+
 test("runCli manages V2 knowledge, notes, profile, business, and search domains in the main sqlite", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-data-"));
   await withPatchedEnv({
@@ -804,6 +815,44 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     assert.equal(page.title, "Server runbook");
     assert.deepEqual(page.tags, ["ops", "runbook"]);
     assert.equal(page.blocks[0]?.text, "Deploy from the release branch");
+
+    const journalStdout = captureStream();
+    assert.equal(await runCli(["notes", "create", "Private journal", "--body", "Therapy reflection stays private", "--space", "journal", "--sensitivity", "sensitive", "--json"], {
+      stdout: journalStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const journal = JSON.parse(journalStdout.getOutput()) as { id: string; space: string; sensitivity: string };
+    assert.equal(journal.space, "journal");
+    assert.equal(journal.sensitivity, "sensitive");
+
+    const notesSearchStdout = captureStream();
+    assert.equal(await runCli(["notes", "search", "Therapy reflection", "--json"], {
+      stdout: notesSearchStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const notesSearch = JSON.parse(notesSearchStdout.getOutput()) as { items: Array<{ id: string }> };
+    assert.deepEqual(notesSearch.items.map((item) => item.id), [journal.id]);
+
+    const wikiStdout = captureStream();
+    assert.equal(await runCli(["wiki", "create", "Ops handbook", "--body", "Runbooks live as wiki pages backed by Notes", "--json"], {
+      stdout: wikiStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const wikiPage = JSON.parse(wikiStdout.getOutput()) as { id: string; space: string; surface: string };
+    assert.equal(wikiPage.space, "wiki");
+    assert.equal(wikiPage.surface, "wiki_page");
+    const wikiSearchStdout = captureStream();
+    assert.equal(await runCli(["wiki", "search", "Runbooks", "--json"], {
+      stdout: wikiSearchStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const wikiSearch = JSON.parse(wikiSearchStdout.getOutput()) as { items: Array<{ id: string; space: string }> };
+    assert.deepEqual(wikiSearch.items.map((item) => item.id), [wikiPage.id]);
+    assert.deepEqual(wikiSearch.items.map((item) => item.space), ["wiki"]);
 
     const exportStdout = captureStream();
     assert.equal(await runCli(["notes", "export", page.id, "--json"], {
@@ -828,6 +877,7 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
     const profile = JSON.parse(profileStdout.getOutput()) as { items: Array<{ section: string; contentText: string }> };
     assert.deepEqual(profile.items.map((item) => item.section), ["prefers_response_style"]);
     assert.equal(profile.items[0]?.contentText, "direct");
+    assert.equal(profile.items.some((item) => /Therapy reflection/.test(item.contentText)), false);
 
     const businessStdout = captureStream();
     assert.equal(await runCli(["business", "upsert", "--id", "customer-1", "--kind", "customer", "--name", "Acme", "--notes", "Primary account", "--json"], {
@@ -836,6 +886,116 @@ test("runCli manages V2 knowledge, notes, profile, business, and search domains 
       cwd,
     }), CLI_EXIT_OK);
     assert.equal((JSON.parse(businessStdout.getOutput()) as { pageId: string }).pageId, "page-customer-1");
+
+    const financeStdout = captureStream();
+    assert.equal(await runCli(["finance", "upsert", "--id", "txn-1", "--amount", "-19.99", "--currency", "USD", "--merchant", "Coffee", "--category", "food", "--json"], {
+      stdout: financeStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const finance = JSON.parse(financeStdout.getOutput()) as { id: string; amount: number; merchant: string; category: string };
+    assert.equal(finance.id, "txn-1");
+    assert.equal(finance.amount, -19.99);
+    assert.equal(finance.merchant, "Coffee");
+    assert.equal(finance.category, "food");
+
+    const ledgerEntryStdout = captureStream();
+    assert.equal(await runCli(["ledger", "entry", "upsert", "--id", "invoice-1", "--description", "Invoice paid", "--date", "2026-05-13", "--json"], {
+      stdout: ledgerEntryStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.equal((JSON.parse(ledgerEntryStdout.getOutput()) as { id: string; entryDate: string }).entryDate, "2026-05-13");
+
+    const ledgerLineStdout = captureStream();
+    assert.equal(await runCli(["ledger", "line", "add", "--entry-id", "invoice-1", "--account-code", "1010", "--amount", "1200", "--currency", "USD", "--json"], {
+      stdout: ledgerLineStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const ledgerLine = JSON.parse(ledgerLineStdout.getOutput()) as { entryId: string; accountCode: string; amountCents: number; side: string };
+    assert.equal(ledgerLine.entryId, "invoice-1");
+    assert.equal(ledgerLine.accountCode, "1010");
+    assert.equal(ledgerLine.amountCents, 120000);
+    assert.equal(ledgerLine.side, "debit");
+
+    const agentStdout = captureStream();
+    assert.equal(await runCli(["agents", "upsert", "agent-ops", "--name", "Ops", "--secret-ref", "vault://agents/ops", "--json"], {
+      stdout: agentStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.match((JSON.parse(agentStdout.getOutput()) as { secretRef: string }).secretRef, /^\*+\/ops$/);
+
+    const skillStdout = captureStream();
+    assert.equal(await runCli(["skills", "upsert", "deploy", "--name", "Deploy", "--body", "Use deployment APIs by reference", "--secret-refs", "vault://skills/deploy-token", "--json"], {
+      stdout: skillStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.equal((JSON.parse(skillStdout.getOutput()) as { secretRefs: unknown }).secretRefs, "[REDACTED]");
+
+    const connectionStdout = captureStream();
+    assert.equal(await runCli(["connections", "upsert", "github", "--provider", "github", "--label", "GitHub", "--secret-ref", "vault://connections/github", "--json"], {
+      stdout: connectionStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.match((JSON.parse(connectionStdout.getOutput()) as { secretRef: string }).secretRef, /^\*+thub$/);
+
+    const iotStdout = captureStream();
+    assert.equal(await runCli(["iot", "config", "set", "thermostat", "--name", "Hall thermostat", "--kind", "climate", "--secret-ref", "vault://iot/thermostat", "--json"], {
+      stdout: iotStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const iot = JSON.parse(iotStdout.getOutput()) as { id: string; kind: string; secretRef: string };
+    assert.equal(iot.id, "thermostat");
+    assert.equal(iot.kind, "climate");
+    assert.match(iot.secretRef, /^\*+stat$/);
+
+    const marketplaceStdout = captureStream();
+    assert.equal(await runCli(["marketplace", "choice", "upsert", "--target", "default-ai-provider", "--choice", "openai", "--kind", "provider", "--json"], {
+      stdout: marketplaceStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const marketplace = JSON.parse(marketplaceStdout.getOutput()) as { target: string; choice: string; kind: string };
+    assert.equal(marketplace.target, "default-ai-provider");
+    assert.equal(marketplace.choice, "openai");
+    assert.equal(marketplace.kind, "provider");
+
+    const mcpConfig = path.join(cwd, "config.toml");
+    fs.writeFileSync(mcpConfig, "model = \"gpt\"\n\n[mcp_servers.old]\ncommand = \"old\"\n");
+    const mcpUpsertStdout = captureStream();
+    assert.equal(await runCli(["mcp", "upsert", "browser", "--command", "npx", "--args", "@modelcontextprotocol/server-browser", "--config", mcpConfig, "--json"], {
+      stdout: mcpUpsertStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const mcpListStdout = captureStream();
+    assert.equal(await runCli(["mcp", "list", "--config", mcpConfig, "--json"], {
+      stdout: mcpListStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const mcpList = JSON.parse(mcpListStdout.getOutput()) as { items: Array<{ id: string; command: string; args: string[] }> };
+    assert.deepEqual(mcpList.items.map((server) => server.id), ["old", "browser"]);
+    const browserServer = mcpList.items.find((server) => server.id === "browser");
+    assert.equal(browserServer?.command, "npx");
+    assert.deepEqual(browserServer?.args, ["@modelcontextprotocol/server-browser"]);
+    assert.match(fs.readFileSync(mcpConfig, "utf8"), /^model = "gpt"/);
+
+    const main = new Database(path.join(tempRoot, "clawjs.sqlite"), { readonly: true });
+    try {
+      assert.equal((main.prepare("SELECT secret_ref FROM agents WHERE id = ?").get("agent-ops") as { secret_ref: string }).secret_ref, "vault://agents/ops");
+      assert.deepEqual(JSON.parse((main.prepare("SELECT secret_refs_json FROM skills WHERE slug = ?").get("deploy") as { secret_refs_json: string }).secret_refs_json), ["vault://skills/deploy-token"]);
+      assert.equal((main.prepare("SELECT secret_ref FROM connections WHERE id = ?").get("github") as { secret_ref: string }).secret_ref, "vault://connections/github");
+      assert.equal((main.prepare("SELECT secret_ref FROM iot_config WHERE id = ?").get("thermostat") as { secret_ref: string }).secret_ref, "vault://iot/thermostat");
+      assert.equal((main.prepare("SELECT choice FROM marketplace_choices WHERE target = ?").get("default-ai-provider") as { choice: string }).choice, "openai");
+    } finally {
+      main.close();
+    }
 
     assert.equal(await runCli(["search", "rebuild", "--json"], {
       stdout: captureStream().stream,
@@ -1076,6 +1236,26 @@ test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime
       cwd,
     }), CLI_EXIT_OK);
     assert.deepEqual((JSON.parse(opsAfterResetStdout.getOutput()) as { items: unknown[] }).items, []);
+
+    assert.equal(await runCli(["data", "restore", "--from", backupDir, "--json"], {
+      stdout: captureStream().stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const restoredAudioStdout = captureStream();
+    assert.equal(await runCli(["audio", "artifact", "list", "--session-id", "session-1", "--json"], {
+      stdout: restoredAudioStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.equal((JSON.parse(restoredAudioStdout.getOutput()) as { items: unknown[] }).items.length, 1);
+    const restoredOpsStdout = captureStream();
+    assert.equal(await runCli(["ops", "list", "--kind", "api-latency", "--json"], {
+      stdout: restoredOpsStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    assert.equal((JSON.parse(restoredOpsStdout.getOutput()) as { items: unknown[] }).items.length, 1);
   });
 });
 

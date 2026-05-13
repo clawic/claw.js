@@ -28,7 +28,7 @@ canonical store.
 Framework global data lives in:
 
 ```text
-~/Library/Application Support/Claw
+~/Library/Application Support/Clawix/clawjs
 ```
 
 Workspace data lives in:

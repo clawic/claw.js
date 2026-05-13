@@ -215,7 +215,11 @@ claw profile get --json
 claw profile refresh --json
 
 claw notes record-note "Release runbook" --body "Deploy from the release branch" --tags ops,runbook --json
+claw notes create "Private journal" --body "Not promoted unless tagged explicitly" --space journal --sensitivity sensitive --json
+claw notes search "release branch" --json
 claw notes export page-123 --json
+claw wiki create "Ops handbook" --body "Runbooks live as wiki pages backed by Notes" --json
+claw wiki search "Runbooks" --json
 claw search rebuild --json
 claw search query "release branch" --json
 claw sessions index --json
@@ -243,8 +247,17 @@ claw ops metric --kind api-latency --metadata '{"p95Ms":42}' --json
 claw ops retention --days 30 --json
 
 claw business upsert --id customer-1 --kind customer --name "Acme" --notes "Primary account" --json
+claw finance upsert --id txn-1 --amount -19.99 --currency USD --merchant "Coffee" --category food --json
+claw ledger entry upsert --id invoice-1 --description "Invoice paid" --date 2026-05-13 --json
+claw ledger line add --entry-id invoice-1 --account-code 1010 --amount 1200 --currency USD --json
 claw content upsert --id launch-brief --title "Launch brief" --body "Draft" --json
 claw social upsert --id post-1 --title "Launch post" --channel '{"provider":"linkedin"}' --json
+claw iot config set thermostat --name "Hall thermostat" --kind climate --secret-ref vault://iot/thermostat --json
+claw marketplace choice upsert --target default-ai-provider --choice openai --kind provider --json
+claw agents upsert agent-ops --name Ops --secret-ref vault://agents/ops --json
+claw skills upsert deploy --name Deploy --secret-refs vault://skills/deploy-token --json
+claw connections upsert github --provider github --label GitHub --secret-ref vault://connections/github --json
+claw mcp upsert browser --command npx --args "@modelcontextprotocol/server-browser" --json
 claw mcp list --json
 ```
 
