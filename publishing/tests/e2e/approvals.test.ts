@@ -11,16 +11,16 @@ test("approvals: two-stage workflow approves and emits completed", async () => {
       body: JSON.stringify({ name: "approval-ws" }),
     });
     const workspaceId = ws.body.workspace.id;
-    const connect = await jsonFetch<{ account: { id: string } }>(baseUrl, adminToken, `/v1/ws/${workspaceId}/channels/connect/devnull`, {
+    const connect = await jsonFetch<{ account: { id: string } }>(baseUrl, adminToken, `/v1/workspaces/${workspaceId}/channels/connect/devnull`, {
       method: "POST",
       body: JSON.stringify({ display_name: "dev", provider_account_id: "a" }),
     });
     const accountId = connect.body.account.id;
-    const post = await jsonFetch<{ post: { id: string } }>(baseUrl, adminToken, `/v1/ws/${workspaceId}/posts`, {
+    const post = await jsonFetch<{ post: { id: string } }>(baseUrl, adminToken, `/v1/workspaces/${workspaceId}/posts`, {
       method: "POST",
       body: JSON.stringify({ accounts: [accountId], variants: [{ is_original: true, blocks: [{ body: "x" }] }] }),
     });
-    const wf = await jsonFetch<{ workflow: { id: string } }>(baseUrl, adminToken, `/v1/ws/${workspaceId}/approvals/workflows`, {
+    const wf = await jsonFetch<{ workflow: { id: string } }>(baseUrl, adminToken, `/v1/workspaces/${workspaceId}/approvals/workflows`, {
       method: "POST",
       body: JSON.stringify({
         name: "copy-then-legal",
@@ -30,16 +30,16 @@ test("approvals: two-stage workflow approves and emits completed", async () => {
         ],
       }),
     });
-    const start = await jsonFetch<{ id: string }>(baseUrl, adminToken, `/v1/ws/${workspaceId}/approvals`, {
+    const start = await jsonFetch<{ id: string }>(baseUrl, adminToken, `/v1/workspaces/${workspaceId}/approvals`, {
       method: "POST",
       body: JSON.stringify({ post_id: post.body.post.id, workflow_id: wf.body.workflow.id }),
     });
-    const stage1 = await jsonFetch<{ finalState: string }>(baseUrl, adminToken, `/v1/ws/${workspaceId}/approvals/${start.body.id}/decisions`, {
+    const stage1 = await jsonFetch<{ finalState: string }>(baseUrl, adminToken, `/v1/workspaces/${workspaceId}/approvals/${start.body.id}/decisions`, {
       method: "POST",
       body: JSON.stringify({ stage_index: 0, reviewer_user_id: "u1", decision: "approve" }),
     });
     assert.equal(stage1.body.finalState, "pending");
-    const stage2 = await jsonFetch<{ finalState: string }>(baseUrl, adminToken, `/v1/ws/${workspaceId}/approvals/${start.body.id}/decisions`, {
+    const stage2 = await jsonFetch<{ finalState: string }>(baseUrl, adminToken, `/v1/workspaces/${workspaceId}/approvals/${start.body.id}/decisions`, {
       method: "POST",
       body: JSON.stringify({ stage_index: 1, reviewer_user_id: "u2", decision: "approve" }),
     });

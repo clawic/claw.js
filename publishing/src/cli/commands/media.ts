@@ -30,18 +30,18 @@ export async function media(ctx: CliContext): Promise<number> {
   const ws = currentWorkspaceId(ctx);
   const [, command, value] = ctx.args.positional;
   if (!command || command === "list") {
-    out(ctx, await ctx.client.get(`/v1/ws/${ws}/media${ctx.args.flags.mime ? `?mime=${encodeURIComponent(ctx.args.flags.mime)}` : ""}`));
+    out(ctx, await ctx.client.get(`/v1/workspaces/${ws}/media${ctx.args.flags.mime ? `?mime=${encodeURIComponent(ctx.args.flags.mime)}` : ""}`));
     return 0;
   }
   if (command === "upload") {
     if (!value) { ctx.host.stderr.write("file path required\n"); return 64; }
     const filePath = path.resolve(process.cwd(), value);
     const buffer = fs.readFileSync(filePath);
-    out(ctx, await ctx.client.uploadFile(`/v1/ws/${ws}/media`, path.basename(filePath), mimeOf(filePath), buffer));
+    out(ctx, await ctx.client.uploadFile(`/v1/workspaces/${ws}/media`, path.basename(filePath), mimeOf(filePath), buffer));
     return 0;
   }
   if (command === "get") {
-    out(ctx, await ctx.client.get(`/v1/ws/${ws}/media/${value}`));
+    out(ctx, await ctx.client.get(`/v1/workspaces/${ws}/media/${value}`));
     return 0;
   }
   ctx.host.stderr.write(`unknown media command: ${command}\n`);

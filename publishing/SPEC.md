@@ -10,7 +10,7 @@ A generic publication framework. The data model is the load-bearing thing. Adapt
 
 - Folder: `clawjs/publishing/`. Same posture as `drive/`, `database/`, `vault/`, `memory/`.
 - HTTP: Fastify 5.x + `@fastify/cors`, `@fastify/multipart`, `@fastify/static`, `@fastify/websocket`.
-- DB: better-sqlite3, schema-as-code in `src/server/db/schema.ts`. Idempotent `CREATE TABLE IF NOT EXISTS` + an append-only migrations table for forward changes (`badger_migrations`).
+- DB: better-sqlite3, schema-as-code in `src/server/db/schema.ts`. Idempotent `CREATE TABLE IF NOT EXISTS` + an append-only migrations table for forward changes (`publishing_migrations`).
 - Validation: Zod schemas shared between server, CLI, and SDK via `src/shared/schemas.ts`.
 - CLI: minimal custom argv parser at `src/bin/cli.ts`. Subcommand → action → HTTP client.
 - Build: tsup to ESM, Node 20 target.
@@ -77,7 +77,7 @@ batch finalizer: collapses per-account outcomes into post.publish_status
 5. bulk import (CSV/JSON/RSS/external orchestrator; rows carry `idempotency_key`)
 6. evergreen recycling (re-queue after cooldown, until cap)
 7. A/B testing (winner picked by metric after evaluation window)
-8. best-time-to-post suggester (`/v1/ws/:ws/suggest-time`)
+8. best-time-to-post suggester (`/v1/workspaces/:ws/suggest-time`)
 
 ## Lifecycle: two axes
 

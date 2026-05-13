@@ -40,16 +40,16 @@ export async function token(ctx: CliContext): Promise<number> {
   const [, command] = ctx.args.positional;
   const ws = currentWorkspaceId(ctx);
   if (command === "create") {
-    out(ctx, await ctx.client.post(`/v1/ws/${ws}/tokens`, { name: ctx.args.flags.name ?? "cli", scopes: (ctx.args.flags.scope ?? "").split(",").filter(Boolean) }));
+    out(ctx, await ctx.client.post(`/v1/workspaces/${ws}/tokens`, { name: ctx.args.flags.name ?? "cli", scopes: (ctx.args.flags.scope ?? "").split(",").filter(Boolean) }));
     return 0;
   }
   if (command === "list") {
-    out(ctx, await ctx.client.get(`/v1/ws/${ws}/tokens`));
+    out(ctx, await ctx.client.get(`/v1/workspaces/${ws}/tokens`));
     return 0;
   }
   if (command === "revoke") {
     const id = ctx.args.positional[2];
-    out(ctx, await ctx.client.delete(`/v1/ws/${ws}/tokens/${id}`));
+    out(ctx, await ctx.client.delete(`/v1/workspaces/${ws}/tokens/${id}`));
     return 0;
   }
   ctx.host.stderr.write(`unknown token command: ${command}\n`);

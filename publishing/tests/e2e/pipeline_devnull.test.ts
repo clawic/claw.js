@@ -18,7 +18,7 @@ test("end-to-end devnull publish", async () => {
     const connect = await jsonFetch<{ account: { id: string; familyId: string } }>(
       baseUrl,
       adminToken,
-      `/v1/ws/${workspaceId}/channels/connect/devnull`,
+      `/v1/workspaces/${workspaceId}/channels/connect/devnull`,
       { method: "POST", body: JSON.stringify({ display_name: "DevNull #1", provider_account_id: "dev-1" }) },
     );
     assert.equal(connect.status, 201);
@@ -29,7 +29,7 @@ test("end-to-end devnull publish", async () => {
     const post = await jsonFetch<{ post: { id: string; editorial_status: string; publish_status: string } }>(
       baseUrl,
       adminToken,
-      `/v1/ws/${workspaceId}/posts`,
+      `/v1/workspaces/${workspaceId}/posts`,
       {
         method: "POST",
         body: JSON.stringify({
@@ -56,7 +56,7 @@ test("end-to-end devnull publish", async () => {
     const fetched = await jsonFetch<{ post: { publish_status: string }; accounts: Array<{ provider_post_id: string | null; publish_state: string }> }>(
       baseUrl,
       adminToken,
-      `/v1/ws/${workspaceId}/posts/${postId}`,
+      `/v1/workspaces/${workspaceId}/posts/${postId}`,
     );
     assert.equal(fetched.status, 200);
     assert.equal(fetched.body.post.publish_status, "published");
@@ -79,7 +79,7 @@ test("idempotency: same key returns same post", async () => {
     const connect = await jsonFetch<{ account: { id: string } }>(
       baseUrl,
       adminToken,
-      `/v1/ws/${workspaceId}/channels/connect/devnull`,
+      `/v1/workspaces/${workspaceId}/channels/connect/devnull`,
       { method: "POST", body: JSON.stringify({ display_name: "dev", provider_account_id: "x" }) },
     );
     const accountId = connect.body.account.id;
@@ -88,8 +88,8 @@ test("idempotency: same key returns same post", async () => {
       accounts: [accountId],
       variants: [{ is_original: true, blocks: [{ body: "hi" }] }],
     });
-    const first = await jsonFetch<{ post: { id: string } }>(baseUrl, adminToken, `/v1/ws/${workspaceId}/posts`, { method: "POST", body });
-    const second = await jsonFetch<{ post: { id: string } }>(baseUrl, adminToken, `/v1/ws/${workspaceId}/posts`, { method: "POST", body });
+    const first = await jsonFetch<{ post: { id: string } }>(baseUrl, adminToken, `/v1/workspaces/${workspaceId}/posts`, { method: "POST", body });
+    const second = await jsonFetch<{ post: { id: string } }>(baseUrl, adminToken, `/v1/workspaces/${workspaceId}/posts`, { method: "POST", body });
     assert.equal(first.body.post.id, second.body.post.id);
   } finally {
     await cleanup();
@@ -107,11 +107,11 @@ test("rate-limit retry: devnull_mode=rate_limited reschedules", async () => {
     const connect = await jsonFetch<{ account: { id: string } }>(
       baseUrl,
       adminToken,
-      `/v1/ws/${workspaceId}/channels/connect/devnull`,
+      `/v1/workspaces/${workspaceId}/channels/connect/devnull`,
       { method: "POST", body: JSON.stringify({ display_name: "dev", provider_account_id: "x" }) },
     );
     const accountId = connect.body.account.id;
-    await jsonFetch(baseUrl, adminToken, `/v1/ws/${workspaceId}/posts`, {
+    await jsonFetch(baseUrl, adminToken, `/v1/workspaces/${workspaceId}/posts`, {
       method: "POST",
       body: JSON.stringify({
         idempotency_key: "rate-limit-test",
@@ -126,7 +126,7 @@ test("rate-limit retry: devnull_mode=rate_limited reschedules", async () => {
     const jobs = await jsonFetch<{ jobs: Array<{ state: string; available_at: number }> }>(
       baseUrl,
       adminToken,
-      `/v1/ws/${workspaceId}/jobs`,
+      `/v1/workspaces/${workspaceId}/jobs`,
     );
     const publishJobs = jobs.body.jobs.filter((j) => (j as unknown as { kind: string }).kind === "publish_post_account");
     assert.ok(publishJobs.length > 0, "expected at least one publish job");
@@ -150,11 +150,11 @@ test("unauthorized status: devnull_mode=unauthorized marks account", async () =>
     const connect = await jsonFetch<{ account: { id: string } }>(
       baseUrl,
       adminToken,
-      `/v1/ws/${workspaceId}/channels/connect/devnull`,
+      `/v1/workspaces/${workspaceId}/channels/connect/devnull`,
       { method: "POST", body: JSON.stringify({ display_name: "dev", provider_account_id: "x" }) },
     );
     const accountId = connect.body.account.id;
-    const post = await jsonFetch<{ post: { id: string } }>(baseUrl, adminToken, `/v1/ws/${workspaceId}/posts`, {
+    const post = await jsonFetch<{ post: { id: string } }>(baseUrl, adminToken, `/v1/workspaces/${workspaceId}/posts`, {
       method: "POST",
       body: JSON.stringify({
         idempotency_key: "unauth-test",
@@ -169,10 +169,10 @@ test("unauthorized status: devnull_mode=unauthorized marks account", async () =>
     const fetched = await jsonFetch<{ post: { publish_status: string } }>(
       baseUrl,
       adminToken,
-      `/v1/ws/${workspaceId}/posts/${post.body.post.id}`,
+      `/v1/workspaces/${workspaceId}/posts/${post.body.post.id}`,
     );
     assert.equal(fetched.body.post.publish_status, "failed");
-    const account = await jsonFetch<{ authorized: boolean }>(baseUrl, adminToken, `/v1/ws/${workspaceId}/channels/${accountId}`);
+    const account = await jsonFetch<{ authorized: boolean }>(baseUrl, adminToken, `/v1/workspaces/${workspaceId}/channels/${accountId}`);
     assert.equal(account.body.authorized, false);
   } finally {
     await cleanup();

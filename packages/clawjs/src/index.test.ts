@@ -796,7 +796,7 @@ test("runCli rejects removed public legacy namespaces before V1 routing", async 
   for (const args of [
     ["data", "doctor"],
     ["app-state", "snapshot"],
-    ["life", "list"],
+    ["signals", "list"],
     ["ops", "list"],
     ["infra", "list"],
     ["runtime", "queue"],

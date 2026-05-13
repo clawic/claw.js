@@ -21,13 +21,13 @@ export async function channels(ctx: CliContext): Promise<number> {
   const ws = currentWorkspaceId(ctx);
   const [, command, id] = ctx.args.positional;
   if (!command || command === "list") {
-    out(ctx, await ctx.client.get(`/v1/ws/${ws}/channels`));
+    out(ctx, await ctx.client.get(`/v1/workspaces/${ws}/channels`));
     return 0;
   }
   if (command === "add") {
     const family = ctx.args.flags.family;
     if (!family) { ctx.host.stderr.write("--family required\n"); return 64; }
-    const url = ctx.args.flags.url ? `/v1/ws/${ws}/channels` : `/v1/ws/${ws}/channels`;
+    const url = ctx.args.flags.url ? `/v1/workspaces/${ws}/channels` : `/v1/workspaces/${ws}/channels`;
     // Pass through to the framework directly with a raw account record. For
     // OAuth flows the user should use `publishing channels connect --family ...`.
     out(ctx, await ctx.client.post(url, {
@@ -46,17 +46,17 @@ export async function channels(ctx: CliContext): Promise<number> {
       if (k === "family" || k === "url" || k === "token" || k === "workspace") continue;
       body[k.replace(/-/g, "_")] = v;
     }
-    out(ctx, await ctx.client.post(`/v1/ws/${ws}/channels/connect/${family}`, body));
+    out(ctx, await ctx.client.post(`/v1/workspaces/${ws}/channels/connect/${family}`, body));
     return 0;
   }
   if (command === "probe") {
     if (!id) { ctx.host.stderr.write("account id required\n"); return 64; }
-    out(ctx, await ctx.client.post(`/v1/ws/${ws}/channels/${id}/probe`));
+    out(ctx, await ctx.client.post(`/v1/workspaces/${ws}/channels/${id}/probe`));
     return 0;
   }
   if (command === "remove") {
     if (!id) { ctx.host.stderr.write("account id required\n"); return 64; }
-    out(ctx, await ctx.client.delete(`/v1/ws/${ws}/channels/${id}`));
+    out(ctx, await ctx.client.delete(`/v1/workspaces/${ws}/channels/${id}`));
     return 0;
   }
   ctx.host.stderr.write(`unknown channels command: ${command}\n`);

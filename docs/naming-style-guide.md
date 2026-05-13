@@ -14,7 +14,7 @@ If a public or persistent name is not covered here, stop and update
 - Do not introduce a second synonym for an existing stable concept.
 - Name the product/framework `ClawJS`; name the public CLI `claw`.
 - Do not expose public `clawjs`, `clawix`, `commander`, `mp`, `life`, `badger`,
-  or `tracking-runtime` surfaces.
+  or `signals` surfaces.
 - Treat package names, database names, table names, collection names, CLI
   commands, flags, routes, JSON fields, enum values, event names, env vars,
   sockets, service names, app IDs, hostnames, and deep links as stable

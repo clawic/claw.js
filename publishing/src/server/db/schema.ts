@@ -1,6 +1,6 @@
 // All CREATE TABLE statements live here. Schema-as-code, applied on every boot
 // (CREATE TABLE IF NOT EXISTS). Forward-only changes go through the migrations
-// table (badger_migrations) for ordering.
+// table (publishing_migrations) for ordering.
 
 export const DDL: string[] = [
   // ─── Tenancy and identity ─────────────────────────────────────────────────
@@ -607,7 +607,7 @@ export const DDL: string[] = [
   )`,
 
   // ─── Migrations bookkeeping ──────────────────────────────────────────────
-  `CREATE TABLE IF NOT EXISTS badger_migrations (
+  `CREATE TABLE IF NOT EXISTS publishing_migrations (
     name TEXT PRIMARY KEY,
     applied_at INTEGER NOT NULL
   )`,

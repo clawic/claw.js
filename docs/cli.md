@@ -299,7 +299,7 @@ These historical names are intentionally not part of the public CLI:
 
 - Standalone package bins: `clawjs`, `memory`, `user`, `delegation`,
   `publishing`, and `clawix-relay`.
-- Top-level namespaces: `data`, `app-state`, `life`, `ops`, `infra`,
+- Top-level namespaces: `data`, `app-state`, `signals`, `ops`, `infra`,
   `workspace-search`, and `workspace-index`.
 - Top-level snapshot verbs: `export`, `import`, and `backup`.
 - V1 CRUD under `business` and `social`.

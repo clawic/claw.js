@@ -63,7 +63,7 @@ const BADGER_SQL_NAMES = [
   "job_batch",
   "setting",
   "system_status",
-  "badger_migrations",
+  "publishing_migrations",
   "audit_event_ws_idx",
   "post_ws_status_idx",
   "post_account_state_idx",
@@ -124,7 +124,7 @@ function applySchema(db: DB) {
 function rewritePublishingSql(sql: string): string {
   let rewritten = sql;
   for (const name of BADGER_SQL_NAMES) {
-    rewritten = rewritten.replace(new RegExp(`\\b${name}\\b`, "g"), `badger_${name}`);
+    rewritten = rewritten.replace(new RegExp(`\\b${name}\\b`, "g"), `publishing_${name}`);
   }
   return rewritten;
 }

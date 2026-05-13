@@ -55,12 +55,12 @@ const APP_STATE_DOMAIN_TABLES = [
   "app_sidebar_snapshots",
   "app_terminal_tabs",
 ];
-const LIFE_DOMAIN_TABLES = ["life_verticals", "life_variables", "life_sessions", "life_observations"];
+const SIGNALS_DOMAIN_TABLES = ["signals_verticals", "signals_variables", "signals_sessions", "signals_observations"];
 const RESOURCE_DOMAIN_TABLES = ["resources", "apps", "design_resources"];
 const AGENT_DOMAIN_TABLES = ["agents", "skills", "skill_collections", "connections", "channel_accounts", "channel_routing", "channel_messages"];
 const SESSION_DOMAIN_TABLES = ["session_index"];
 const USER_MODEL_DOMAIN_TABLES = ["user_profile_items", "user_profile_meta", "user_profile_history"];
-const TRACKING_RUNTIME_DOMAIN_TABLES = ["system_variables", "user_variables", "observations", "sessions", "healthkit_sync_state", "hidden_system_variables"];
+const SIGNALS_RUNTIME_DOMAIN_TABLES = ["system_variables", "user_variables", "observations", "sessions", "healthkit_sync_state", "hidden_system_variables"];
 const TIME_RUNTIME_DOMAIN_TABLES = ["temporal_projections", "temporal_run_log", "temporal_executions", "temporal_items"];
 const SIDECAR_FILENAMES = ["vault.sqlite", "sessions.sqlite", "audio.sqlite", "drive.sqlite", "search.sqlite", "runtime.sqlite", "notify.sqlite", "monitor.sqlite", "infra.sqlite", "feed.sqlite", "ops.sqlite"];
 const KNOWLEDGE_DOMAIN_TABLES = [
@@ -116,64 +116,64 @@ const ERP_SERVICE_TABLES = [
   "erp_audit_events",
 ];
 const BADGER_SERVICE_TABLES = [
-  "badger_workspace",
-  "badger_user",
-  "badger_workspace_member",
-  "badger_workspace_invitation",
-  "badger_api_token",
-  "badger_audit_event",
-  "badger_channel_family",
-  "badger_channel_account",
-  "badger_channel_account_health",
-  "badger_post",
-  "badger_post_account",
-  "badger_post_variant",
-  "badger_post_label",
-  "badger_post_label_pivot",
-  "badger_media",
-  "badger_post_media_pivot",
-  "badger_post_activity",
-  "badger_queue",
-  "badger_queue_slot",
-  "badger_queue_account",
-  "badger_queue_entry",
-  "badger_blackout_window",
-  "badger_recurrence",
-  "badger_bulk_import_batch",
-  "badger_campaign",
-  "badger_template",
-  "badger_hashtag_group",
-  "badger_dynamic_variable",
-  "badger_evergreen_pool",
-  "badger_evergreen_pool_member",
-  "badger_ab_variant_set",
-  "badger_ab_variant_member",
-  "badger_utm_template",
-  "badger_tracked_link",
-  "badger_link_shortener_provider",
-  "badger_locale_variant_policy",
-  "badger_audience_segment",
-  "badger_account_metric_daily",
-  "badger_post_metric",
-  "badger_report",
-  "badger_report_export",
-  "badger_imported_post",
-  "badger_inbox_thread",
-  "badger_inbox_message",
-  "badger_inbox_rule",
-  "badger_approval_workflow",
-  "badger_post_approval",
-  "badger_post_approval_decision",
-  "badger_external_reviewer_link",
-  "badger_webhook",
-  "badger_webhook_delivery",
-  "badger_integration_service",
-  "badger_ai_brand_voice",
-  "badger_job",
-  "badger_job_batch",
-  "badger_setting",
-  "badger_system_status",
-  "badger_badger_migrations",
+  "publishing_workspace",
+  "publishing_user",
+  "publishing_workspace_member",
+  "publishing_workspace_invitation",
+  "publishing_api_token",
+  "publishing_audit_event",
+  "publishing_channel_family",
+  "publishing_channel_account",
+  "publishing_channel_account_health",
+  "publishing_post",
+  "publishing_post_account",
+  "publishing_post_variant",
+  "publishing_post_label",
+  "publishing_post_label_pivot",
+  "publishing_media",
+  "publishing_post_media_pivot",
+  "publishing_post_activity",
+  "publishing_queue",
+  "publishing_queue_slot",
+  "publishing_queue_account",
+  "publishing_queue_entry",
+  "publishing_blackout_window",
+  "publishing_recurrence",
+  "publishing_bulk_import_batch",
+  "publishing_campaign",
+  "publishing_template",
+  "publishing_hashtag_group",
+  "publishing_dynamic_variable",
+  "publishing_evergreen_pool",
+  "publishing_evergreen_pool_member",
+  "publishing_ab_variant_set",
+  "publishing_ab_variant_member",
+  "publishing_utm_template",
+  "publishing_tracked_link",
+  "publishing_link_shortener_provider",
+  "publishing_locale_variant_policy",
+  "publishing_audience_segment",
+  "publishing_account_metric_daily",
+  "publishing_post_metric",
+  "publishing_report",
+  "publishing_report_export",
+  "publishing_imported_post",
+  "publishing_inbox_thread",
+  "publishing_inbox_message",
+  "publishing_inbox_rule",
+  "publishing_approval_workflow",
+  "publishing_post_approval",
+  "publishing_post_approval_decision",
+  "publishing_external_reviewer_link",
+  "publishing_webhook",
+  "publishing_webhook_delivery",
+  "publishing_integration_service",
+  "publishing_ai_brand_voice",
+  "publishing_job",
+  "publishing_job_batch",
+  "publishing_setting",
+  "publishing_system_status",
+  "publishing_migrations",
 ];
 const CONTENT_DOMAIN_TABLES = ["content_items", ...CONTENT_SERVICE_TABLES];
 const SOCIAL_DOMAIN_TABLES = ["social_posts", ...BADGER_SERVICE_TABLES];
@@ -183,7 +183,7 @@ const IOT_DOMAIN_TABLES = ["iot_config"];
 const MARKETPLACE_DOMAIN_TABLES = ["marketplace_choices"];
 const MCP_DOMAIN_TABLES = ["mcp_servers", "mcp_tools"];
 
-const LIFE_CATALOG_COLLECTION_FIELDS: FieldDefinition[] = [
+const SIGNALS_CATALOG_COLLECTION_FIELDS: FieldDefinition[] = [
   { name: "verticalId", type: "text", required: true },
   { name: "label", type: "text", required: true },
   { name: "category", type: "text" },
@@ -193,9 +193,9 @@ const LIFE_CATALOG_COLLECTION_FIELDS: FieldDefinition[] = [
   { name: "metadata", type: "json" },
 ];
 
-const LIFE_CATALOG_COLLECTION_INDEXES: IndexDefinition[] = [
-  { name: "life_catalog_vertical_idx", fields: ["verticalId"] },
-  { name: "life_catalog_category_idx", fields: ["category"] },
+const SIGNALS_CATALOG_COLLECTION_INDEXES: IndexDefinition[] = [
+  { name: "signals_catalog_vertical_idx", fields: ["verticalId"] },
+  { name: "signals_catalog_category_idx", fields: ["category"] },
 ];
 
 export function resolveClawjsDataRoot(env: NodeJS.ProcessEnv = process.env): string {
@@ -300,7 +300,7 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
       updated_at TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS life_verticals (
+    CREATE TABLE IF NOT EXISTS signals_verticals (
       id TEXT PRIMARY KEY,
       label TEXT NOT NULL,
       category TEXT,
@@ -312,7 +312,7 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
       metadata_json TEXT NOT NULL DEFAULT '{}',
       synced_at TEXT NOT NULL
     );
-    CREATE TABLE IF NOT EXISTS life_variables (
+    CREATE TABLE IF NOT EXISTS signals_variables (
       id TEXT PRIMARY KEY,
       vertical_id TEXT NOT NULL,
       label TEXT NOT NULL,
@@ -322,10 +322,10 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
       sensitive INTEGER NOT NULL DEFAULT 0,
       definition_json TEXT NOT NULL DEFAULT '{}',
       updated_at TEXT NOT NULL,
-      FOREIGN KEY (vertical_id) REFERENCES life_verticals(id) ON DELETE CASCADE
+      FOREIGN KEY (vertical_id) REFERENCES signals_verticals(id) ON DELETE CASCADE
     );
-    CREATE INDEX IF NOT EXISTS life_variables_vertical_idx ON life_variables(vertical_id);
-    CREATE TABLE IF NOT EXISTS life_sessions (
+    CREATE INDEX IF NOT EXISTS signals_variables_vertical_idx ON signals_variables(vertical_id);
+    CREATE TABLE IF NOT EXISTS signals_sessions (
       id TEXT PRIMARY KEY,
       vertical_id TEXT NOT NULL,
       started_at TEXT,
@@ -336,9 +336,9 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
       metadata_json TEXT NOT NULL DEFAULT '{}',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      FOREIGN KEY (vertical_id) REFERENCES life_verticals(id) ON DELETE CASCADE
+      FOREIGN KEY (vertical_id) REFERENCES signals_verticals(id) ON DELETE CASCADE
     );
-    CREATE TABLE IF NOT EXISTS life_observations (
+    CREATE TABLE IF NOT EXISTS signals_observations (
       id TEXT PRIMARY KEY,
       vertical_id TEXT NOT NULL,
       variable_id TEXT NOT NULL,
@@ -353,13 +353,13 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
       sensitive INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      FOREIGN KEY (vertical_id) REFERENCES life_verticals(id) ON DELETE CASCADE,
-      FOREIGN KEY (variable_id) REFERENCES life_variables(id) ON DELETE CASCADE
+      FOREIGN KEY (vertical_id) REFERENCES signals_verticals(id) ON DELETE CASCADE,
+      FOREIGN KEY (variable_id) REFERENCES signals_variables(id) ON DELETE CASCADE
     );
-    CREATE INDEX IF NOT EXISTS life_observations_variable_time_idx
-      ON life_observations(variable_id, recorded_at DESC);
-    CREATE INDEX IF NOT EXISTS life_observations_vertical_time_idx
-      ON life_observations(vertical_id, recorded_at DESC);
+    CREATE INDEX IF NOT EXISTS signals_observations_variable_time_idx
+      ON signals_observations(variable_id, recorded_at DESC);
+    CREATE INDEX IF NOT EXISTS signals_observations_vertical_time_idx
+      ON signals_observations(vertical_id, recorded_at DESC);
 
     CREATE TABLE IF NOT EXISTS knowledge_entities (
       id TEXT PRIMARY KEY,
@@ -751,7 +751,7 @@ export function ensureV1MainSchema(sqlite: Database.Database): void {
       cwd
     );
   `);
-  ensureColumn(sqlite, "life_observations", "page_id", "TEXT");
+  ensureColumn(sqlite, "signals_observations", "page_id", "TEXT");
   ensureColumn(sqlite, "agents", "secret_ref", "TEXT");
   ensureColumn(sqlite, "skills", "secret_refs_json", "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn(sqlite, "iot_config", "config_json", "TEXT NOT NULL DEFAULT '{}'");
@@ -800,8 +800,8 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
         return runDataCommand(input, store);
       case "app-state":
         return runAppStateCommand(input, store);
-      case "life":
-        return runLifeCommand(input, store);
+      case "signals":
+        return runSignalsCommand(input, store);
       case "knowledge":
         return runKnowledgeCommand(input, store);
       case "notes":
@@ -879,7 +879,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
   const commandsByGroup: Record<string, Set<string>> = {
     data: new Set(["doctor", "backup", "restore", "reset", "help"]),
     "app-state": new Set(["get", "set", "snapshot", "project", "pin", "title", "archive", "sidebar", "terminal", "help"]),
-    life: new Set(["catalog", "seed-catalog", "observe", "list", "delete", "help"]),
+    signals: new Set(["catalog", "seed-catalog", "observe", "list", "delete", "help"]),
     knowledge: new Set(["entity", "fact", "list", "search", "promote", "help"]),
     notes: new Set(["create", "list", "get", "update", "delete", "search", "export", "import", "link", "record-note", "help"]),
     wiki: new Set(["create", "list", "get", "update", "delete", "search", "export", "import", "link", "help"]),
@@ -928,7 +928,7 @@ function runDataCommand(input: V1DataCliInput, store: DatabaseServiceStore): num
   }
   if (command === "reset") {
     const domain = input.flags.domain || input.positionals[2];
-    if (!domain) return usageError(input, "Usage: claw data reset --domain app-state|knowledge|notes|profile|life|business|content|social|marketplace|iot|sessions|audio|drive|search|runtime|notify|monitor|infra|ops|all");
+    if (!domain) return usageError(input, "Usage: claw data reset --domain app-state|knowledge|notes|profile|signals|business|content|social|marketplace|iot|sessions|audio|drive|search|runtime|notify|monitor|infra|ops|all");
     const result = resetDomain(store.sqlite, domain);
     writeSuccess(input, result);
     return V1_DATA_EXIT_OK;
@@ -1211,27 +1211,27 @@ function runAppStateCommand(input: V1DataCliInput, store: DatabaseServiceStore):
   return usageError(input, usage(input.binName, "app-state"));
 }
 
-function runLifeCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
+function runSignalsCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
   const command = input.positionals[1];
   if (command === "catalog") {
     const verticalId = input.flags.vertical || input.flags["vertical-id"] || input.positionals[2];
     const rows = verticalId
-      ? store.sqlite.prepare("SELECT * FROM life_variables WHERE vertical_id = ? ORDER BY id").all(verticalId)
-      : store.sqlite.prepare("SELECT * FROM life_verticals ORDER BY category, label").all();
+      ? store.sqlite.prepare("SELECT * FROM signals_variables WHERE vertical_id = ? ORDER BY id").all(verticalId)
+      : store.sqlite.prepare("SELECT * FROM signals_verticals ORDER BY category, label").all();
     writeSuccess(input, { items: rows.map(normalizeDbRow) });
     return V1_DATA_EXIT_OK;
   }
   if (command === "seed-catalog") {
     const file = input.flags.file;
     const verticalId = input.flags.vertical || input.flags["vertical-id"];
-    if (!file || !verticalId) return usageError(input, "Usage: claw life seed-catalog --vertical ID --file catalog.json");
+    if (!file || !verticalId) return usageError(input, "Usage: claw signals seed-catalog --vertical ID --file catalog.json");
     const raw = fs.readFileSync(path.resolve(input.cwd, expandHome(file)), "utf8");
     const catalog = JSON.parse(raw) as { vertical?: JsonRecord; variables?: JsonRecord[] } | JsonRecord[];
     const variables = Array.isArray(catalog) ? catalog : Array.isArray(catalog.variables) ? catalog.variables : [];
     const vertical = !Array.isArray(catalog) && catalog.vertical ? catalog.vertical : {};
     const now = nowIso();
     store.sqlite.prepare(`
-      INSERT INTO life_verticals (id, label, category, description, status, sensitive, catalog_version, metadata_json, synced_at)
+      INSERT INTO signals_verticals (id, label, category, description, status, sensitive, catalog_version, metadata_json, synced_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET label = excluded.label, category = excluded.category, description = excluded.description,
         status = excluded.status, sensitive = excluded.sensitive, catalog_version = excluded.catalog_version,
@@ -1248,7 +1248,7 @@ function runLifeCommand(input: V1DataCliInput, store: DatabaseServiceStore): num
       now,
     );
     const insert = store.sqlite.prepare(`
-      INSERT INTO life_variables (id, vertical_id, label, value_type, unit_json, category, sensitive, definition_json, updated_at)
+      INSERT INTO signals_variables (id, vertical_id, label, value_type, unit_json, category, sensitive, definition_json, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET label = excluded.label, value_type = excluded.value_type,
         unit_json = excluded.unit_json, category = excluded.category, sensitive = excluded.sensitive,
@@ -1272,28 +1272,28 @@ function runLifeCommand(input: V1DataCliInput, store: DatabaseServiceStore): num
       }
     });
     tx();
-    upsertRegistry(store.sqlite, "life", "catalog", verticalId, { sensitive: truthy(vertical.sensitive), metadata: { count: variables.length } });
+    upsertRegistry(store.sqlite, "signals", "catalog", verticalId, { sensitive: truthy(vertical.sensitive), metadata: { count: variables.length } });
     writeSuccess(input, { verticalId, variables: variables.length, syncedAt: now });
     return V1_DATA_EXIT_OK;
   }
   if (command === "observe") {
     const variableId = input.flags.variable || input.flags["variable-id"];
-    if (!variableId) return usageError(input, "Usage: claw life observe --variable ID --value JSON|TEXT [--vertical ID]");
-    const variable = store.sqlite.prepare("SELECT vertical_id, sensitive FROM life_variables WHERE id = ?").get(variableId) as { vertical_id: string; sensitive: number } | undefined;
+    if (!variableId) return usageError(input, "Usage: claw signals observe --variable ID --value JSON|TEXT [--vertical ID]");
+    const variable = store.sqlite.prepare("SELECT vertical_id, sensitive FROM signals_variables WHERE id = ?").get(variableId) as { vertical_id: string; sensitive: number } | undefined;
     const verticalId = input.flags.vertical || input.flags["vertical-id"] || variable?.vertical_id;
     if (!verticalId) return usageError(input, "--vertical is required when the variable is not seeded");
-    ensureLifeVertical(store.sqlite, verticalId);
-    if (!variable) ensureLifeVariable(store.sqlite, verticalId, variableId);
+    ensureSignalsVertical(store.sqlite, verticalId);
+    if (!variable) ensureSignalsVariable(store.sqlite, verticalId, variableId);
     const now = nowIso();
     const id = input.flags.id || `obs-${randomUUID()}`;
     const value = input.flags.json ? JSON.parse(input.flags.json) : parseMaybeJson(input.flags.value ?? input.positionals.slice(2).join(" "));
     const pageId = input.flags.notes
       ? upsertPageWithBlocks(store.sqlite, {
-          id: input.flags["page-id"] || `page-life-${id}`,
+          id: input.flags["page-id"] || `page-signals-${id}`,
           title: input.flags.title || `${variableId} notes`,
           surface: "record_note",
-          space: "life",
-          sourceRecordDomain: "life_observations",
+          space: "signals",
+          sourceRecordDomain: "signals_observations",
           sourceRecordId: id,
           sensitivity: variable?.sensitive ? "sensitive" : "normal",
           text: input.flags.notes,
@@ -1302,7 +1302,7 @@ function runLifeCommand(input: V1DataCliInput, store: DatabaseServiceStore): num
         }).id
       : input.flags["page-id"] || null;
     store.sqlite.prepare(`
-      INSERT INTO life_observations (id, vertical_id, variable_id, value_json, unit_id, recorded_at, source_json, notes, page_id, session_id, external_id, sensitive, created_at, updated_at)
+      INSERT INTO signals_observations (id, vertical_id, variable_id, value_json, unit_id, recorded_at, source_json, notes, page_id, session_id, external_id, sensitive, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET value_json = excluded.value_json, unit_id = excluded.unit_id,
         recorded_at = excluded.recorded_at, source_json = excluded.source_json, notes = excluded.notes,
@@ -1333,21 +1333,21 @@ function runLifeCommand(input: V1DataCliInput, store: DatabaseServiceStore): num
     const variableId = input.flags.variable || input.flags["variable-id"];
     const limit = Math.max(1, Number(input.flags.limit ?? 200));
     const rows = variableId
-      ? store.sqlite.prepare("SELECT * FROM life_observations WHERE variable_id = ? ORDER BY recorded_at DESC LIMIT ?").all(variableId, limit)
+      ? store.sqlite.prepare("SELECT * FROM signals_observations WHERE variable_id = ? ORDER BY recorded_at DESC LIMIT ?").all(variableId, limit)
       : verticalId
-        ? store.sqlite.prepare("SELECT * FROM life_observations WHERE vertical_id = ? ORDER BY recorded_at DESC LIMIT ?").all(verticalId, limit)
-        : store.sqlite.prepare("SELECT * FROM life_observations ORDER BY recorded_at DESC LIMIT ?").all(limit);
+        ? store.sqlite.prepare("SELECT * FROM signals_observations WHERE vertical_id = ? ORDER BY recorded_at DESC LIMIT ?").all(verticalId, limit)
+        : store.sqlite.prepare("SELECT * FROM signals_observations ORDER BY recorded_at DESC LIMIT ?").all(limit);
     writeSuccess(input, { items: rows.map(normalizeDbRow) });
     return V1_DATA_EXIT_OK;
   }
   if (command === "delete") {
     const id = input.flags.id || input.positionals[2];
-    if (!id) return usageError(input, "Usage: claw life delete OBSERVATION_ID");
-    const changes = store.sqlite.prepare("DELETE FROM life_observations WHERE id = ?").run(id).changes;
+    if (!id) return usageError(input, "Usage: claw signals delete OBSERVATION_ID");
+    const changes = store.sqlite.prepare("DELETE FROM signals_observations WHERE id = ?").run(id).changes;
     writeSuccess(input, { deleted: changes > 0, id });
     return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
-  return usageError(input, usage(input.binName, "life"));
+  return usageError(input, usage(input.binName, "signals"));
 }
 
 function runKnowledgeCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
@@ -2440,10 +2440,10 @@ function runSessionsIndexCommand(input: V1DataCliInput, store: DatabaseServiceSt
 function ensureV1Collections(store: DatabaseServiceStore): void {
   store.ensureNamespace({ id: "main", displayName: "Main" });
   store.ensureCollection("main", {
-    name: "life_catalog",
-    displayName: "Life Catalog",
-    fields: LIFE_CATALOG_COLLECTION_FIELDS,
-    indexes: LIFE_CATALOG_COLLECTION_INDEXES,
+    name: "signals_catalog",
+    displayName: "Signals Catalog",
+    fields: SIGNALS_CATALOG_COLLECTION_FIELDS,
+    indexes: SIGNALS_CATALOG_COLLECTION_INDEXES,
     coreFieldNames: ["verticalId", "label"],
   });
 }
@@ -2481,7 +2481,7 @@ function doctorPayload(sqlite: Database.Database): JsonRecord {
       rawRuntime: "operational-sidecars",
     },
     logicalDomains: {
-      mainDb: ["knowledge", "notes", "profile", "user-model", "life", "tracking", "tasks", "productivity", "time", "business", "content", "social", "finance", "ledger", "calendar", "iot", "marketplace", "apps", "design", "agents", "skills", "connections"],
+      mainDb: ["knowledge", "notes", "profile", "user-model", "signals", "tasks", "productivity", "time", "business", "content", "social", "finance", "ledger", "calendar", "iot", "marketplace", "apps", "design", "agents", "skills", "connections"],
       sidecars: ["secrets", "conversation-artifacts", "search", "runtime", "notify", "monitor", "infra", "ops"],
       externalSources: ["codex", "mcp"],
     },
@@ -2579,9 +2579,9 @@ function resetDomain(sqlite: Database.Database, domain: string): JsonRecord {
   const normalized = domain.trim().toLowerCase();
   const sidecarOnlyDomains = new Set(["audio", "drive", "runtime", "notify", "monitor", "infra", "ops", "conversation-artifacts"]);
   const tables =
-    normalized === "all" ? [...APP_STATE_DOMAIN_TABLES, ...LIFE_DOMAIN_TABLES, ...TRACKING_RUNTIME_DOMAIN_TABLES, ...KNOWLEDGE_DOMAIN_TABLES, ...WIKI_VIEW_TABLES, ...USER_MODEL_DOMAIN_TABLES, ...PRODUCTIVITY_DOMAIN_TABLES, ...BUSINESS_DOMAIN_TABLES, ...CALENDAR_DOMAIN_TABLES, ...IOT_DOMAIN_TABLES, ...MARKETPLACE_DOMAIN_TABLES, ...RESOURCE_DOMAIN_TABLES, ...AGENT_DOMAIN_TABLES, ...MCP_DOMAIN_TABLES, ...SESSION_DOMAIN_TABLES] :
+    normalized === "all" ? [...APP_STATE_DOMAIN_TABLES, ...SIGNALS_DOMAIN_TABLES, ...SIGNALS_RUNTIME_DOMAIN_TABLES, ...KNOWLEDGE_DOMAIN_TABLES, ...WIKI_VIEW_TABLES, ...USER_MODEL_DOMAIN_TABLES, ...PRODUCTIVITY_DOMAIN_TABLES, ...BUSINESS_DOMAIN_TABLES, ...CALENDAR_DOMAIN_TABLES, ...IOT_DOMAIN_TABLES, ...MARKETPLACE_DOMAIN_TABLES, ...RESOURCE_DOMAIN_TABLES, ...AGENT_DOMAIN_TABLES, ...MCP_DOMAIN_TABLES, ...SESSION_DOMAIN_TABLES] :
     normalized === "app-state" ? APP_STATE_DOMAIN_TABLES :
-    normalized === "life" || normalized === "tracking" ? [...LIFE_DOMAIN_TABLES, ...TRACKING_RUNTIME_DOMAIN_TABLES] :
+    normalized === "signals" ? [...SIGNALS_DOMAIN_TABLES, ...SIGNALS_RUNTIME_DOMAIN_TABLES] :
     normalized === "knowledge" || normalized === "notes" ? KNOWLEDGE_DOMAIN_TABLES :
     normalized === "wiki" ? WIKI_VIEW_TABLES :
     normalized === "profile" || normalized === "user-model" ? [...KNOWLEDGE_DOMAIN_TABLES, ...USER_MODEL_DOMAIN_TABLES] :
@@ -3674,18 +3674,18 @@ function parseTomlScalar(value: string): unknown {
   return Number.isFinite(numeric) ? numeric : value;
 }
 
-function ensureLifeVertical(sqlite: Database.Database, verticalId: string): void {
+function ensureSignalsVertical(sqlite: Database.Database, verticalId: string): void {
   const now = nowIso();
   sqlite.prepare(`
-    INSERT OR IGNORE INTO life_verticals (id, label, status, metadata_json, synced_at)
+    INSERT OR IGNORE INTO signals_verticals (id, label, status, metadata_json, synced_at)
     VALUES (?, ?, 'alpha', '{}', ?)
   `).run(verticalId, verticalId, now);
 }
 
-function ensureLifeVariable(sqlite: Database.Database, verticalId: string, variableId: string): void {
+function ensureSignalsVariable(sqlite: Database.Database, verticalId: string, variableId: string): void {
   const now = nowIso();
   sqlite.prepare(`
-    INSERT OR IGNORE INTO life_variables (id, vertical_id, label, value_type, definition_json, updated_at)
+    INSERT OR IGNORE INTO signals_variables (id, vertical_id, label, value_type, definition_json, updated_at)
     VALUES (?, ?, ?, 'json', '{}', ?)
   `).run(variableId, verticalId, variableId, now);
 }
@@ -3713,12 +3713,12 @@ function usage(binName: string, group: string): string {
         `  ${binName} data doctor --json`,
         `  ${binName} data backup --out DIR --json`,
         `  ${binName} data restore --from DIR --json`,
-        `  ${binName} data reset --domain app-state|knowledge|notes|profile|life|tasks|business|content|social|calendar|apps|agents|sessions|search|all --json`,
+        `  ${binName} data reset --domain app-state|knowledge|notes|profile|signals|tasks|business|content|social|calendar|apps|agents|sessions|search|all --json`,
       ].join("\n");
     case "app-state":
       return `Usage: ${binName} app-state get [KEY]|set KEY --value JSON|snapshot [--json]`;
-    case "life":
-      return `Usage: ${binName} life catalog|seed-catalog|observe|list|delete [--json]`;
+    case "signals":
+      return `Usage: ${binName} signals catalog|seed-catalog|observe|list|delete [--json]`;
     case "knowledge":
       return `Usage: ${binName} knowledge entity|fact|list|search|promote [--json]`;
     case "notes":

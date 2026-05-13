@@ -30,7 +30,7 @@ export async function logs(ctx: CliContext): Promise<number> {
   // CLI surface we expose the audit log as a poll.
   const ws = ctx.args.flags.workspace ?? process.env.BADGER_WORKSPACE;
   if (!ws) { ctx.host.stderr.write("--workspace required\n"); return 64; }
-  out(ctx, await ctx.client.get(`/v1/ws/${ws}/audit`));
+  out(ctx, await ctx.client.get(`/v1/workspaces/${ws}/audit`));
   return 0;
 }
 
@@ -59,7 +59,7 @@ export async function importCmd(ctx: CliContext): Promise<number> {
   if (!ws) { ctx.host.stderr.write("--workspace required\n"); return 64; }
   if (kind === "json") {
     const payload = JSON.parse(fs.readFileSync(value!, "utf8"));
-    out(ctx, await ctx.client.post(`/v1/ws/${ws}/imports/json`, payload));
+    out(ctx, await ctx.client.post(`/v1/workspaces/${ws}/imports/json`, payload));
     return 0;
   }
   ctx.host.stderr.write(`unknown import kind: ${kind}\n`);
@@ -72,12 +72,12 @@ export async function exportCmd(ctx: CliContext): Promise<number> {
   const out_ = ctx.args.flags.out;
   const dump = {
     workspace: await ctx.client.get(`/v1/workspaces/${ws}`),
-    posts: await ctx.client.get(`/v1/ws/${ws}/posts`),
-    channels: await ctx.client.get(`/v1/ws/${ws}/channels`),
-    queues: await ctx.client.get(`/v1/ws/${ws}/queues`),
-    campaigns: await ctx.client.get(`/v1/ws/${ws}/campaigns`),
-    templates: await ctx.client.get(`/v1/ws/${ws}/templates`),
-    webhooks: await ctx.client.get(`/v1/ws/${ws}/webhooks`),
+    posts: await ctx.client.get(`/v1/workspaces/${ws}/posts`),
+    channels: await ctx.client.get(`/v1/workspaces/${ws}/channels`),
+    queues: await ctx.client.get(`/v1/workspaces/${ws}/queues`),
+    campaigns: await ctx.client.get(`/v1/workspaces/${ws}/campaigns`),
+    templates: await ctx.client.get(`/v1/workspaces/${ws}/templates`),
+    webhooks: await ctx.client.get(`/v1/workspaces/${ws}/webhooks`),
   };
   if (out_) { fs.writeFileSync(out_, JSON.stringify(dump, null, 2)); out(ctx, { ok: true, out: out_ }); return 0; }
   out(ctx, dump);

@@ -52,7 +52,7 @@ test("webhooks: post.published fans out signed delivery", async () => {
       body: JSON.stringify({ name: "wh-ws" }),
     });
     const workspaceId = ws.body.workspace.id;
-    await jsonFetch(baseUrl, adminToken, `/v1/ws/${workspaceId}/webhooks`, {
+    await jsonFetch(baseUrl, adminToken, `/v1/workspaces/${workspaceId}/webhooks`, {
       method: "POST",
       body: JSON.stringify({
         name: "collector",
@@ -60,12 +60,12 @@ test("webhooks: post.published fans out signed delivery", async () => {
         events: ["post.*"],
       }),
     });
-    const connect = await jsonFetch<{ account: { id: string } }>(baseUrl, adminToken, `/v1/ws/${workspaceId}/channels/connect/devnull`, {
+    const connect = await jsonFetch<{ account: { id: string } }>(baseUrl, adminToken, `/v1/workspaces/${workspaceId}/channels/connect/devnull`, {
       method: "POST",
       body: JSON.stringify({ display_name: "dev", provider_account_id: "w" }),
     });
     const accountId = connect.body.account.id;
-    await jsonFetch(baseUrl, adminToken, `/v1/ws/${workspaceId}/posts`, {
+    await jsonFetch(baseUrl, adminToken, `/v1/workspaces/${workspaceId}/posts`, {
       method: "POST",
       body: JSON.stringify({
         accounts: [accountId],

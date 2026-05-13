@@ -39,7 +39,7 @@ function matches(eventName: string, filter: string): boolean {
 }
 
 export async function registerRealtime(app: FastifyInstance, bus: RealtimeBus, auth: AuthService) {
-  app.get<{ Params: { ws: string } }>("/v1/ws/:ws/realtime", { websocket: true } as never, (socket, req) => {
+  app.get<{ Params: { ws: string } }>("/v1/workspaces/:ws/realtime", { websocket: true } as never, (socket, req) => {
     const principal = auth.resolvePrincipal(req);
     const workspaceId = (req.params as { ws: string }).ws;
     const authorized =

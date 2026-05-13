@@ -42,7 +42,7 @@ export class AuthService {
     } catch {
       // fall through, will regenerate
     }
-    const token = `badger_admin_${crypto.randomBytes(24).toString("hex")}`;
+    const token = `publishing_admin_${crypto.randomBytes(24).toString("hex")}`;
     fs.mkdirSync(path.dirname(this.tokenStorePath), { recursive: true });
     fs.writeFileSync(this.tokenStorePath, token, { mode: 0o600 });
     return token;
@@ -53,7 +53,7 @@ export class AuthService {
   }
 
   rotateEphemeralAdminToken(): string {
-    const token = `badger_admin_${crypto.randomBytes(24).toString("hex")}`;
+    const token = `publishing_admin_${crypto.randomBytes(24).toString("hex")}`;
     fs.writeFileSync(this.tokenStorePath, token, { mode: 0o600 });
     this.ephemeralToken = token;
     return token;
@@ -71,7 +71,7 @@ export class AuthService {
     expiresAt?: number | null;
   }): { id: string; secret: string; record: TokenRecord } {
     const id = prefixedId("tok");
-    const secret = `badger_${crypto.randomBytes(24).toString("hex")}`;
+    const secret = `publishing_${crypto.randomBytes(24).toString("hex")}`;
     const tokenHash = this.hashToken(secret);
     const createdAt = now();
     this.db

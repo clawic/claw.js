@@ -145,7 +145,7 @@ updating this ADR or adding a successor ADR.
 - Personal signal domains such as health, sleep, finance, journal, workouts,
   emotions, and similar categories are versioned catalog data under
   `@clawjs/signals`, not individual public packages in v1.
-- `tracking-runtime` is absorbed into `@clawjs/signals`.
+- `signals` is absorbed into `@clawjs/signals`.
 - `badger` and the old public `content` surface become `publishing`.
 - `content` is not a top-level public module name.
 - `feed` is inbound/external source ingestion and timeline reading.
@@ -347,7 +347,7 @@ Repository checks must block new public or stable uses of:
 - `clawix-bridged`
 - `badger`
 - public `life`
-- `tracking-runtime`
+- `signals`
 - public `mp`
 - public `/mesh` without `/v1`
 - public `/ws`
