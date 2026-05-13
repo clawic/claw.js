@@ -1385,6 +1385,11 @@
               "default": [
                 "sample"
               ]
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": [
@@ -1420,6 +1425,11 @@
               "default": [
                 "sample"
               ]
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": [
@@ -1441,6 +1451,11 @@
               "name": "emojiId",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": [
