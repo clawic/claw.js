@@ -1,0 +1,11 @@
+{
+  "sticker_packs": [
+    {
+      "id": "sample",
+      "stickers": [],
+      "name": "sample",
+      "sku_id": "sample",
+      "description": "sample"
+    }
+  ]
+}

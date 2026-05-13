@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://discord.com/api/v10/guilds/sample/stickers",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "X-Audit-Log-Reason": "sample"
+  },
+  "body": "[object FormData]"
+}

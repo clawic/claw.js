@@ -1,0 +1,13 @@
+{
+  "id": "sample",
+  "guild_id": "sample",
+  "stickers": [
+    {
+      "id": "sample",
+      "name": "sample",
+      "tags": "sample",
+      "type": 2,
+      "format_type": 1
+    }
+  ]
+}

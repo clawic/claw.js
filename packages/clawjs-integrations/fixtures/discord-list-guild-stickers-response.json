@@ -1,0 +1,12 @@
+[
+  {
+    "id": "sample",
+    "guild_id": "sample",
+    "name": "sample",
+    "description": "sample",
+    "tags": "sample",
+    "type": 2,
+    "format_type": 1,
+    "available": true
+  }
+]
