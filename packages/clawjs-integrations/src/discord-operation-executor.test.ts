@@ -177,6 +177,7 @@ const DISCORD_ACTIONS = [
     field("allowedMentions", "object", true, { default: null }),
     field("stickerIds", "array", true, { default: null }),
     field("attachments", "array", true, { default: null }),
+    field("files", "array", true, { default: null }),
     field("flags", "integer", true, { default: null }),
     field("enforceNonce", "boolean", true, { default: null }),
     field("poll", "object", true, { default: null }),
@@ -192,6 +193,7 @@ const DISCORD_ACTIONS = [
     field("components", "array", true, { default: null }),
     field("allowedMentions", "object", true, { default: null }),
     field("attachments", "array", true, { default: null }),
+    field("files", "array", true, { default: null }),
     field("flags", "integer", true, { default: null }),
   ]),
   action("delete-message", "Delete Message", [CHANNEL_FIELD, MESSAGE_FIELD, field("auditLogReason", "string", true)]),
@@ -749,6 +751,55 @@ describe("discord operation runtime", () => {
         allowed_mentions: { parse: [] },
         attachments: [{ id: "0", filename: "release.txt" }],
         flags: 4,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "channel_id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.send-message"), {
+      channelId: "123",
+      content: "file upload",
+      files: ["hello world"],
+      attachments: [{ id: "0", filename: "hello.txt" }],
+    }), {
+      method: "POST",
+      endpoint: "channels/123/messages",
+      auth,
+      headers,
+      bodyEncoding: "multipart",
+      body: {
+        payload_json: JSON.stringify({
+          content: "file upload",
+          attachments: [{ id: "0", filename: "hello.txt" }],
+        }),
+        "files[0]": "hello world",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "channel_id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.edit-message"), {
+      channelId: "123",
+      messageId: "456",
+      content: "replace attachment",
+      files: ["updated file"],
+      attachments: [{ id: "0", filename: "updated.txt" }],
+    }), {
+      method: "PATCH",
+      endpoint: "channels/123/messages/456",
+      auth,
+      headers,
+      bodyEncoding: "multipart",
+      body: {
+        payload_json: JSON.stringify({
+          content: "replace attachment",
+          attachments: [{ id: "0", filename: "updated.txt" }],
+        }),
+        "files[0]": "updated file",
       },
       responseSchema: {
         type: "object",
