@@ -761,7 +761,7 @@ export function buildDiscordOperationRequest(
     case "delete-webhook-with-token":
       return deletePlan(`webhooks/${webhookId(values)}/${webhookToken(values)}`, [], headers, { type: "null" });
     case "execute-webhook":
-      return bodyPlan("POST", `webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}`, [], headers, messageBody(values, true), { type: "object" }, removeEmptyValues({ wait: values.wait, thread_id: optionalString(values.threadId), with_components: values.withComponents }));
+      return webhookMessagePlan("POST", `webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}`, [], headers, values, true, { type: "object" }, removeEmptyValues({ wait: values.wait, thread_id: optionalString(values.threadId), with_components: values.withComponents }));
     case "execute-slack-compatible-webhook":
       return bodyPlan("POST", `webhooks/${webhookId(values)}/${webhookToken(values)}/slack`, [], headers, webhookServicePayload(values), { type: "object" }, webhookServiceQuery(values));
     case "execute-github-compatible-webhook":
@@ -769,7 +769,7 @@ export function buildDiscordOperationRequest(
     case "get-webhook-message":
       return getPlan(`webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, { type: "object", requiredPaths: ["id"] }, removeEmptyValues({ thread_id: optionalString(values.threadId) }));
     case "edit-webhook-message":
-      return bodyPlan("PATCH", `webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, messageBody(values, false), { type: "object", requiredPaths: ["id"] }, removeEmptyValues({ thread_id: optionalString(values.threadId), with_components: values.withComponents }));
+      return webhookMessagePlan("PATCH", `webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, values, false, { type: "object", requiredPaths: ["id"] }, removeEmptyValues({ thread_id: optionalString(values.threadId), with_components: values.withComponents }));
     case "delete-webhook-message":
       return deletePlan(`webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, { type: "object" }, removeEmptyValues({ thread_id: optionalString(values.threadId) }));
     case "create-interaction-response":
@@ -777,15 +777,15 @@ export function buildDiscordOperationRequest(
     case "get-original-interaction-response":
       return getPlan(`webhooks/${applicationId(values)}/${interactionToken(values)}/messages/@original`, [], headers, { type: "object", requiredPaths: ["id"] });
     case "edit-original-interaction-response":
-      return bodyPlan("PATCH", `webhooks/${applicationId(values)}/${interactionToken(values)}/messages/@original`, [], headers, messageBody(values, false), { type: "object", requiredPaths: ["id"] });
+      return webhookMessagePlan("PATCH", `webhooks/${applicationId(values)}/${interactionToken(values)}/messages/@original`, [], headers, values, false, { type: "object", requiredPaths: ["id"] });
     case "delete-original-interaction-response":
       return deletePlan(`webhooks/${applicationId(values)}/${interactionToken(values)}/messages/@original`, [], headers, { type: "object" });
     case "create-followup-message":
-      return bodyPlan("POST", `webhooks/${applicationId(values)}/${interactionToken(values)}`, [], headers, messageBody(values, true), { type: "object", requiredPaths: ["id"] });
+      return webhookMessagePlan("POST", `webhooks/${applicationId(values)}/${interactionToken(values)}`, [], headers, values, true, { type: "object", requiredPaths: ["id"] });
     case "get-followup-message":
       return getPlan(`webhooks/${applicationId(values)}/${interactionToken(values)}/messages/${messageId(values)}`, [], headers, { type: "object", requiredPaths: ["id"] });
     case "edit-followup-message":
-      return bodyPlan("PATCH", `webhooks/${applicationId(values)}/${interactionToken(values)}/messages/${messageId(values)}`, [], headers, messageBody(values, false), { type: "object", requiredPaths: ["id"] });
+      return webhookMessagePlan("PATCH", `webhooks/${applicationId(values)}/${interactionToken(values)}/messages/${messageId(values)}`, [], headers, values, false, { type: "object", requiredPaths: ["id"] });
     case "delete-followup-message":
       return deletePlan(`webhooks/${applicationId(values)}/${interactionToken(values)}/messages/${messageId(values)}`, [], headers, { type: "object" });
     case "list-global-application-commands":
@@ -1171,6 +1171,31 @@ function messagePlan(
   };
 }
 
+function webhookMessagePlan(
+  method: string,
+  endpoint: string,
+  auth: ConnectorRuntimeRequestPlan["auth"],
+  headers: Record<string, string>,
+  values: Record<string, IntegrationJson>,
+  requireContent: boolean,
+  responseSchema: ResponseSchema,
+  query?: Record<string, IntegrationJson>,
+): ConnectorRuntimeRequestPlan {
+  const body = webhookMessageBody(values, requireContent);
+  const files = optionalFileArray(values.files);
+  if (!files) return bodyPlan(method, endpoint, auth, headers, body, responseSchema, query);
+  return {
+    method,
+    endpoint,
+    auth,
+    headers,
+    ...(query ? { query } : {}),
+    bodyEncoding: "multipart",
+    body: messageMultipartBody(body, files),
+    responseSchema,
+  };
+}
+
 function putPlan(
   endpoint: string,
   auth: ConnectorRuntimeRequestPlan["auth"],
@@ -1365,6 +1390,24 @@ function messageMultipartBody(body: Record<string, IntegrationJson>, files: Inte
     formBody[`files[${index}]`] = file;
   });
   return formBody;
+}
+
+function webhookMessageBody(values: Record<string, IntegrationJson>, requireContent: boolean): Record<string, IntegrationJson> {
+  const content = firstValue(values.content, values.text);
+  return removeEmptyValues({
+    content: requireContent ? requiredString(content, "content") : optionalString(content),
+    username: requireContent ? optionalString(values.username) : undefined,
+    avatar_url: requireContent ? optionalString(firstValue(values.avatarUrl, values.avatar_url)) : undefined,
+    tts: values.tts,
+    embeds: optionalJsonArray(values.embeds),
+    allowed_mentions: optionalJsonObject(values.allowedMentions),
+    components: optionalJsonArray(values.components),
+    attachments: optionalJsonArray(values.attachments),
+    flags: optionalNumber(values.flags),
+    thread_name: requireContent ? optionalString(firstValue(values.threadName, values.thread_name)) : undefined,
+    applied_tags: requireContent ? optionalJsonArray(firstValue(values.appliedTags, values.applied_tags)) : undefined,
+    poll: optionalJsonObject(values.poll),
+  });
 }
 
 function messageReference(values: Record<string, IntegrationJson>): IntegrationJson | undefined {
