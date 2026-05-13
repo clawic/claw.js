@@ -436,6 +436,8 @@ const DISCORD_ACTION_FIXTURE_NAMES = [
   "delete-own-reaction",
   "delete-user-reaction",
   "list-reactions",
+  "get-answer-voters",
+  "end-poll",
   "start-thread-from-message",
   "start-thread-without-message",
   "start-thread-in-forum-or-media-channel",
