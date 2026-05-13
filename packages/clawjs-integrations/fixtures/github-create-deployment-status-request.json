@@ -1,0 +1,18 @@
+{
+  "method": "POST",
+  "url": "https://api.github.com/repos/octocat/Hello-World/deployments/1/statuses",
+  "headers": {
+    "accept": "application/vnd.github+json",
+    "authorization": "Bearer offline-githubToken-secret",
+    "content-type": "application/json",
+    "x-github-api-version": "2026-03-10"
+  },
+  "body": {
+    "state": "success",
+    "target_url": "https://example.invalid/deploy",
+    "log_url": "https://example.invalid/deploy/log",
+    "description": "Deployment finished",
+    "environment": "production",
+    "auto_inactive": true
+  }
+}
