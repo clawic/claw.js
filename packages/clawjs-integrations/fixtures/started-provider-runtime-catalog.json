@@ -40520,6 +40520,138 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.create-account-bank-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Account Bank Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "external_account",
+              "type": "string",
+              "optional": false,
+              "default": "btok_sample"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "default_for_currency",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-account-bank-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Account Bank Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "ba_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-account-bank-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Account Bank Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "ba_sample"
+            },
+            {
+              "name": "account_holder_name",
+              "type": "string",
+              "optional": true,
+              "default": "Sample Person"
+            },
+            {
+              "name": "account_holder_type",
+              "type": "string",
+              "optional": true,
+              "default": "individual"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "default_for_currency",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-account-bank-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Account Bank Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "ba_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

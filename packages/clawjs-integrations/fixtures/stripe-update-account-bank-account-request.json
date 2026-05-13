@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/accounts/acct_sample/bank_accounts/ba_sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "account_holder_name=Sample+Person&account_holder_type=individual&metadata=%7B%22order_id%22%3A%22sample%22%7D&default_for_currency=true"
+}
