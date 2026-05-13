@@ -481,6 +481,51 @@
           ]
         },
         {
+          "id": "discord.action.get-application-role-connection-metadata",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Application Role Connection Metadata",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.update-application-role-connection-metadata",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Update Application Role Connection Metadata",
+          "fields": [
+            {
+              "name": "applicationId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "records",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "type": 2,
+                  "key": "score",
+                  "name": "Score",
+                  "description": "Sample score"
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.list-guild-emojis",
           "appId": "discord",
           "kind": "action",
