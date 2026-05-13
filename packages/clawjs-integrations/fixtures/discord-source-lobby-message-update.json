@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "application_id": "app-sample",
+  "type": 1,
+  "event": {
+    "type": "LOBBY_MESSAGE_UPDATE",
+    "timestamp": "2026-01-01T00:06:00.000000",
+    "data": {
+      "id": "message-sample",
+      "type": 0,
+      "content": "updated sample",
+      "lobby_id": "lobby-sample",
+      "channel_id": "channel-sample",
+      "author": {
+        "id": "user-sample",
+        "username": "sample"
+      },
+      "edited_timestamp": "2026-01-01T00:06:00.000000",
+      "flags": 0
+    }
+  }
+}

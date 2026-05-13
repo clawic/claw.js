@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "application_id": "app-sample",
+  "type": 1,
+  "event": {
+    "type": "GAME_DIRECT_MESSAGE_UPDATE",
+    "timestamp": "2026-01-01T00:09:00.000000",
+    "data": {
+      "id": "message-sample",
+      "content": "updated sample",
+      "channel_id": "channel-sample",
+      "author": {
+        "id": "user-sample",
+        "username": "sample"
+      },
+      "recipient_id": "recipient-sample"
+    }
+  }
+}
