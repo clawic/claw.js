@@ -3492,6 +3492,107 @@
           ]
         },
         {
+          "id": "discord.action.get-guild-onboarding",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Guild Onboarding",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.modify-guild-onboarding",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Modify Guild Onboarding",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "prompts",
+              "type": "array",
+              "optional": true,
+              "default": [
+                {
+                  "id": "sample",
+                  "type": 0,
+                  "options": [],
+                  "title": "sample",
+                  "single_select": true,
+                  "required": false,
+                  "in_onboarding": true
+                }
+              ]
+            },
+            {
+              "name": "defaultChannelIds",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "sample"
+              ]
+            },
+            {
+              "name": "enabled",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            },
+            {
+              "name": "mode",
+              "type": "integer",
+              "optional": true,
+              "default": 0
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.modify-guild-incident-actions",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Modify Guild Incident Actions",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "invitesDisabledUntil",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "dmsDisabledUntil",
+              "type": "string",
+              "optional": true,
+              "default": "2026-05-13T14:00:00.000Z"
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.list-auto-moderation-rules",
           "appId": "discord",
           "kind": "action",
