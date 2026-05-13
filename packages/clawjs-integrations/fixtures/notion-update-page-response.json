@@ -1,0 +1,19 @@
+{
+  "object": "page",
+  "id": "sample",
+  "archived": false,
+  "properties": {
+    "title": {
+      "id": "title",
+      "type": "title",
+      "title": [
+        {
+          "type": "text",
+          "text": {
+            "content": "sample"
+          }
+        }
+      ]
+    }
+  }
+}

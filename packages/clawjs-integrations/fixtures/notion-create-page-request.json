@@ -1,0 +1,26 @@
+{
+  "method": "POST",
+  "url": "https://api.notion.com/v1/pages",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-notionToken-secret",
+    "notion-version": "2026-03-11"
+  },
+  "body": {
+    "parent": {
+      "page_id": "sample"
+    },
+    "properties": {
+      "title": {
+        "title": [
+          {
+            "text": {
+              "content": "sample"
+            }
+          }
+        ]
+      }
+    },
+    "markdown": "sample"
+  }
+}
