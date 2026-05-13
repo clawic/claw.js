@@ -133,12 +133,12 @@ The productivity instance adds:
 ## Productivity Storage
 
 The productivity layer stores user-facing records in the canonical
-Clawix/ClawJS main database while the base workspace metadata stays
-under the stable `.clawjs/manifest`, `compat`, `intents`, `observed`,
-and `projections` folders.
+Claw main database while the base workspace metadata stays under the
+stable `.claw/manifest`, `compat`, `intents`, `observed`, and
+`projections` folders. `.clawjs/` is legacy compatibility only.
 
 The current local-first database path on macOS is
-`~/Library/Application Support/Clawix/clawjs/clawjs.sqlite`. Older
+`~/Library/Application Support/Claw/claw.sqlite`. Older
 workspaces that still contain the legacy productivity database are
 detected and migrated by the local data layer. After migration, new
 writes should use `claw db ...`, `@clawjs/workspace`, or the database
@@ -146,9 +146,9 @@ service APIs instead of writing the old file directly.
 
 That split matters:
 
-- `.clawjs/manifest`, `intents`, `observed`, and `projections` are SDK-owned control planes
+- `.claw/manifest`, `intents`, `observed`, and `projections` are SDK-owned control planes
 - the canonical main DB stores user-facing productivity records
-- runtime-facing files such as `SOUL.md` or `IDENTITY.md` stay outside `.clawjs/`
+- runtime-facing files such as `SOUL.md` or `IDENTITY.md` stay outside `.claw/`
 
 ## Productivity CLI Commands
 

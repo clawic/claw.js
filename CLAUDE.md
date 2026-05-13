@@ -5,8 +5,10 @@
 Read and follow:
 
 1. `AGENTS.md`
-2. Any docs or wiki pages that `AGENTS.md` explicitly points to
-3. The task-specific docs, tests, and code in the area you are changing
+2. `docs/host-ownership.md`
+3. `docs/adr/0001-claw-framework-host-boundary.md`
+4. Any docs or wiki pages that `AGENTS.md` explicitly points to
+5. The task-specific docs, tests, and code in the area you are changing
 
 Critical guardrail for prompt-based tests:
 

@@ -56,7 +56,7 @@
     "test": "node --test packages/clawjs-core/src/**/*.test.ts packages/clawjs-node/src/**/*.test.ts packages/clawjs-workspace/src/**/*.test.ts packages/clawjs-node-compat/src/**/*.test.ts packages/clawjs/src/**/*.test.ts packages/clawjs-integrations/src/**/*.test.ts packages/mesh/src/**/*.test.ts packages/ssh-client/tests/**/*.test.ts packages/openclaw-plugin/src/**/*.test.ts packages/openclaw-context-engine/src/**/*.test.ts packages/create-claw-app/src/**/*.test.ts packages/create-claw-agent/src/**/*.test.ts packages/create-claw-server/src/**/*.test.ts packages/create-claw-plugin/src/**/*.test.ts packages/eslint-config-claw/src/**/*.test.ts",
     "test:types": "tsc -p tsconfig.type-tests.json --noEmit",
     "test:ts": "tsc -p tsconfig.json --noEmit",
-    "test:docs": "node ./scripts/docs-surface-check.mjs",
+    "test:docs": "node ./scripts/docs-surface-check.mjs && node ./scripts/docs-alignment-check.mjs",
     "test:pack": "node ./scripts/pack-smoke.mjs",
     "privacy:check": "node ./scripts/privacy-check.mjs",
     "privacy:test": "node --test ./scripts/privacy-check.test.mjs",
