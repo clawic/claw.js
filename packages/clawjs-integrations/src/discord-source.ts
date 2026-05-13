@@ -7,6 +7,17 @@ import type {
 
 export type DiscordSourceOperation =
   | "event"
+  | "application-authorized"
+  | "application-deauthorized"
+  | "entitlement-create"
+  | "entitlement-update"
+  | "entitlement-delete"
+  | "lobby-message-create"
+  | "lobby-message-update"
+  | "lobby-message-delete"
+  | "game-direct-message-create"
+  | "game-direct-message-update"
+  | "game-direct-message-delete"
   | "message-create"
   | "message-update"
   | "message-delete"
@@ -37,6 +48,17 @@ export type DiscordSourceOperation =
 
 const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "event",
+  "application-authorized",
+  "application-deauthorized",
+  "entitlement-create",
+  "entitlement-update",
+  "entitlement-delete",
+  "lobby-message-create",
+  "lobby-message-update",
+  "lobby-message-delete",
+  "game-direct-message-create",
+  "game-direct-message-update",
+  "game-direct-message-delete",
   "message-create",
   "message-update",
   "message-delete",
@@ -66,6 +88,20 @@ const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "reaction-add",
 ]);
 
+const DISCORD_APPLICATION_WEBHOOK_EVENT_OPERATIONS = new Set<DiscordSourceOperation>([
+  "application-authorized",
+  "application-deauthorized",
+  "entitlement-create",
+  "entitlement-update",
+  "entitlement-delete",
+  "lobby-message-create",
+  "lobby-message-update",
+  "lobby-message-delete",
+  "game-direct-message-create",
+  "game-direct-message-update",
+  "game-direct-message-delete",
+]);
+
 export function isDiscordSourceOperationSupported(operationId: string): boolean {
   return discordSourceOperation(operationId) !== null;
 }
@@ -74,6 +110,14 @@ export function buildDiscordSourcePlan(operation: ConnectorOperationDefinition):
   const sourceOperation = discordSourceOperation(operation.id);
   if (!sourceOperation) {
     throw new Error(`Unsupported Discord source operation: ${operation.id}`);
+  }
+  if (DISCORD_APPLICATION_WEBHOOK_EVENT_OPERATIONS.has(sourceOperation)) {
+    return {
+      delivery: "webhook",
+      dedupe: "timestamp",
+      hooks: [],
+      eventsPath: "event",
+    };
   }
   return {
     delivery: "webhook",
