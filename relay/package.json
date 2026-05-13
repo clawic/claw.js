@@ -17,9 +17,6 @@
     "test:e2e": "tsx --test tests/e2e/**/*.test.ts",
     "test:e2e:ui": "npm run build && npx playwright test -c playwright.ui.config.ts"
   },
-  "bin": {
-    "clawix-relay": "dist/cli.js"
-  },
   "dependencies": {
     "@clawjs/claw": "file:../packages/clawjs-node",
     "@clawjs/workspace": "file:../packages/clawjs-workspace",

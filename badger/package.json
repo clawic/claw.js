@@ -4,9 +4,6 @@
   "private": true,
   "type": "module",
   "description": "Generic publication framework for ClawJS. Author content, schedule it, fan it out to many destinations, observe what happens.",
-  "bin": {
-    "badger": "dist/cli.js"
-  },
   "scripts": {
     "dev": "tsx watch src/bin/server.ts",
     "build": "tsup src/bin/server.ts src/bin/cli.ts --format esm --target node20 --out-dir dist --clean",

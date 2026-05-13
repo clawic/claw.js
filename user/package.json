@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "description": "Cross-service user explorer dashboard for ClawJS",
   "private": true,
-  "bin": {
-    "user": "dist/cli.js"
-  },
   "scripts": {
     "build": "tsc -p tsconfig.json && cp src/ui.html dist/ui.html",
     "test": "npm run build && node --test dist/test/*.spec.js"
