@@ -1,0 +1,14 @@
+{
+  "id": "fca_sample",
+  "object": "financial_connections.account",
+  "client_secret": "fcsess_secret_sample",
+  "status": "active",
+  "data": [
+    {
+      "id": "stripe_sample",
+      "object": "stripe_object",
+      "status": "active"
+    }
+  ],
+  "has_more": false
+}

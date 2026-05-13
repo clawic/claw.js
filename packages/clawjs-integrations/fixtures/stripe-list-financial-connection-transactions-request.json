@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://api.stripe.com/v1/financial_connections/transactions?account=fca_sample&limit=10&transacted_at=%7B%22gte%22%3A1704067200%7D&transaction_refresh=%7B%22after%22%3A%22fctxnref_sample%22%7D",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  }
+}

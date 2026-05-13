@@ -953,6 +953,32 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-financial-connection-session"), {
+      account_holder: { type: "customer", customer: "cus_sample" },
+      permissions: ["balances", "transactions"],
+      filters: { countries: ["US"] },
+      prefetch: ["transactions"],
+      return_url: "https://example.invalid/return",
+    }), {
+      method: "POST",
+      endpoint: "financial_connections/sessions",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        account_holder: { type: "customer", customer: "cus_sample" },
+        permissions: ["balances", "transactions"],
+        filters: { countries: ["US"] },
+        prefetch: ["transactions"],
+        return_url: "https://example.invalid/return",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object", "client_secret"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-apple-pay-domain"), {
       domain_name: "pay.example.invalid",
     }), {

@@ -33293,6 +33293,344 @@
           ]
         },
         {
+          "id": "stripe.action.list-financial-connection-accounts",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Financial Connection Accounts",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "account_holder",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "customer": "cus_sample"
+              }
+            },
+            {
+              "name": "session",
+              "type": "string",
+              "optional": true,
+              "default": "fcsess_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-financial-connection-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Financial Connection Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "fca_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.disconnect-financial-connection-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Disconnect Financial Connection Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "fca_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-financial-connection-account-owners",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Financial Connection Account Owners",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "fca_sample"
+            },
+            {
+              "name": "ownership",
+              "type": "string",
+              "optional": false,
+              "default": "fcaowns_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.refresh-financial-connection-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Refresh Financial Connection Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "fca_sample"
+            },
+            {
+              "name": "features",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "balance",
+                "transactions"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.subscribe-financial-connection-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Subscribe Financial Connection Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "fca_sample"
+            },
+            {
+              "name": "features",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "transactions"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.unsubscribe-financial-connection-account",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Unsubscribe Financial Connection Account",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "fca_sample"
+            },
+            {
+              "name": "features",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "transactions"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-financial-connection-session",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Financial Connection Session",
+          "fields": [
+            {
+              "name": "account_holder",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "type": "customer",
+                "customer": "cus_sample"
+              }
+            },
+            {
+              "name": "permissions",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "balances",
+                "transactions"
+              ]
+            },
+            {
+              "name": "filters",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "countries": [
+                  "US"
+                ]
+              }
+            },
+            {
+              "name": "prefetch",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "transactions"
+              ]
+            },
+            {
+              "name": "return_url",
+              "type": "string",
+              "optional": true,
+              "default": "https://example.invalid/return"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-financial-connection-session",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Financial Connection Session",
+          "fields": [
+            {
+              "name": "session",
+              "type": "string",
+              "optional": false,
+              "default": "fcsess_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-financial-connection-transactions",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Financial Connection Transactions",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "fca_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "transacted_at",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "gte": 1704067200
+              }
+            },
+            {
+              "name": "transaction_refresh",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "after": "fctxnref_sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-financial-connection-transaction",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Financial Connection Transaction",
+          "fields": [
+            {
+              "name": "transaction",
+              "type": "string",
+              "optional": false,
+              "default": "fctxn_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-terminal-configurations",
           "appId": "stripe",
           "kind": "action",

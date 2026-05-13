@@ -1,0 +1,10 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/financial_connections/sessions",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret",
+    "content-type": "application/x-www-form-urlencoded"
+  },
+  "body": "account_holder=%7B%22type%22%3A%22customer%22%2C%22customer%22%3A%22cus_sample%22%7D&permissions=balances&permissions=transactions&filters=%7B%22countries%22%3A%5B%22US%22%5D%7D&prefetch=transactions&return_url=https%3A%2F%2Fexample.invalid%2Freturn"
+}

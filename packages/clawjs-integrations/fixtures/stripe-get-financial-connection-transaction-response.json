@@ -1,0 +1,14 @@
+{
+  "id": "fctxn_sample",
+  "object": "financial_connections.transaction",
+  "client_secret": "fcsess_secret_sample",
+  "status": "active",
+  "data": [
+    {
+      "id": "stripe_sample",
+      "object": "stripe_object",
+      "status": "active"
+    }
+  ],
+  "has_more": false
+}

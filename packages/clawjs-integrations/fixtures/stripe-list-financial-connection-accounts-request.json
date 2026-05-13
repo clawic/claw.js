@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://api.stripe.com/v1/financial_connections/accounts?limit=10&account_holder=%7B%22customer%22%3A%22cus_sample%22%7D&session=fcsess_sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  }
+}
