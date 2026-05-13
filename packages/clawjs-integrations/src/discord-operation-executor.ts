@@ -29,6 +29,7 @@ export type DiscordRuntimeOperation =
   | "delete-guild-soundboard-sound"
   | "get-application-role-connection-metadata"
   | "update-application-role-connection-metadata"
+  | "get-guild-audit-log"
   | "list-guild-emojis"
   | "get-guild-emoji"
   | "create-guild-emoji"
@@ -204,6 +205,14 @@ export function buildDiscordOperationRequest(
         bodyValue: requiredJsonArray(firstValue(values.records, values.metadataRecords), "records"),
         responseSchema: { type: "array" },
       };
+    case "get-guild-audit-log":
+      return getPlan(`guilds/${guildId(values)}/audit-logs`, auth, headers, { type: "object", requiredPaths: ["audit_log_entries"] }, removeEmptyValues({
+        user_id: optionalString(values.userId),
+        action_type: optionalNumber(values.actionType),
+        before: optionalString(values.before),
+        after: optionalString(values.after),
+        limit: optionalNumber(values.limit),
+      }));
     case "list-guild-emojis":
       return getPlan(`guilds/${guildId(values)}/emojis`, auth, headers, { type: "array" });
     case "get-guild-emoji":
@@ -479,6 +488,7 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "delete-guild-soundboard-sound",
   "get-application-role-connection-metadata",
   "update-application-role-connection-metadata",
+  "get-guild-audit-log",
   "list-guild-emojis",
   "get-guild-emoji",
   "create-guild-emoji",
