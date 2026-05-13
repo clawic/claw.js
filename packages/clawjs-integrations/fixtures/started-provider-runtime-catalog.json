@@ -6563,6 +6563,4418 @@
       ]
     },
     {
+      "id": "google",
+      "name": "Google",
+      "authFieldNames": [
+        "googleAccessToken"
+      ],
+      "fields": [
+        {
+          "name": "googleAccessToken",
+          "type": "app",
+          "optional": false,
+          "secret": true
+        }
+      ],
+      "operations": [
+        {
+          "id": "google.action.list-drive-files",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Drive Files",
+          "fields": [
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 1000
+            },
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": true,
+              "default": "offline-page-token"
+            },
+            {
+              "name": "q",
+              "type": "string",
+              "optional": true,
+              "default": "trashed = false"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-drive-file",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Drive File",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-drive-file",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Drive File",
+          "fields": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "Sample"
+            },
+            {
+              "name": "mimeType",
+              "type": "string",
+              "optional": true,
+              "default": "text/plain"
+            },
+            {
+              "name": "parents",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "folder-123"
+              ]
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Sample file"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-drive-file",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Drive File",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "Renamed"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Updated"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-drive-file",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Drive File",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.copy-drive-file",
+          "appId": "google",
+          "kind": "action",
+          "name": "Copy Drive File",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "Copy"
+            },
+            {
+              "name": "parents",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "folder-123"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.empty-drive-trash",
+          "appId": "google",
+          "kind": "action",
+          "name": "Empty Drive Trash",
+          "fields": [],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.export-drive-file",
+          "appId": "google",
+          "kind": "action",
+          "name": "Export Drive File",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "mimeType",
+              "type": "string",
+              "optional": false,
+              "default": "text/plain"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.generate-drive-ids",
+          "appId": "google",
+          "kind": "action",
+          "name": "Generate Drive Ids",
+          "fields": [
+            {
+              "name": "count",
+              "type": "integer",
+              "optional": true,
+              "default": 1,
+              "min": 1,
+              "max": 100
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-drive-changes",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Drive Changes",
+          "fields": [
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": false,
+              "default": "start-token"
+            },
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 1000
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-drive-start-page-token",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Drive Start Page Token",
+          "fields": [],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.watch-drive-changes",
+          "appId": "google",
+          "kind": "action",
+          "name": "Watch Drive Changes",
+          "fields": [
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": false,
+              "default": "start-token"
+            },
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "channel-123"
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false,
+              "default": "web_hook"
+            },
+            {
+              "name": "address",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/google/webhook"
+            },
+            {
+              "name": "token",
+              "type": "string",
+              "optional": true,
+              "default": "offline-token"
+            },
+            {
+              "name": "expiration",
+              "type": "string",
+              "optional": true,
+              "default": "1893456000000"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.stop-drive-channel",
+          "appId": "google",
+          "kind": "action",
+          "name": "Stop Drive Channel",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "channel-123"
+            },
+            {
+              "name": "resourceId",
+              "type": "string",
+              "optional": false,
+              "default": "resource-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-drive-permissions",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Drive Permissions",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 1000
+            },
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": true,
+              "default": "offline-page-token"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-drive-permission",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Drive Permission",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "permissionId",
+              "type": "string",
+              "optional": false,
+              "default": "perm-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-drive-permission",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Drive Permission",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false,
+              "default": "user"
+            },
+            {
+              "name": "role",
+              "type": "string",
+              "optional": false,
+              "default": "reader"
+            },
+            {
+              "name": "emailAddress",
+              "type": "string",
+              "optional": true,
+              "default": "person@example.invalid"
+            },
+            {
+              "name": "domain",
+              "type": "string",
+              "optional": true,
+              "default": "example.invalid"
+            },
+            {
+              "name": "allowFileDiscovery",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-drive-permission",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Drive Permission",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "permissionId",
+              "type": "string",
+              "optional": false,
+              "default": "perm-123"
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false,
+              "default": "user"
+            },
+            {
+              "name": "role",
+              "type": "string",
+              "optional": false,
+              "default": "reader"
+            },
+            {
+              "name": "emailAddress",
+              "type": "string",
+              "optional": true,
+              "default": "person@example.invalid"
+            },
+            {
+              "name": "domain",
+              "type": "string",
+              "optional": true,
+              "default": "example.invalid"
+            },
+            {
+              "name": "allowFileDiscovery",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-drive-permission",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Drive Permission",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "permissionId",
+              "type": "string",
+              "optional": false,
+              "default": "perm-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-drive-comments",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Drive Comments",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 1000
+            },
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": true,
+              "default": "offline-page-token"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-drive-comment",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Drive Comment",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "commentId",
+              "type": "string",
+              "optional": false,
+              "default": "comment-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-drive-comment",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Drive Comment",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "content",
+              "type": "string",
+              "optional": false,
+              "default": "Looks good"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-drive-comment",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Drive Comment",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "commentId",
+              "type": "string",
+              "optional": false,
+              "default": "comment-123"
+            },
+            {
+              "name": "content",
+              "type": "string",
+              "optional": false,
+              "default": "Updated comment"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-drive-comment",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Drive Comment",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "commentId",
+              "type": "string",
+              "optional": false,
+              "default": "comment-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-drive-replies",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Drive Replies",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "commentId",
+              "type": "string",
+              "optional": false,
+              "default": "comment-123"
+            },
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 1000
+            },
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": true,
+              "default": "offline-page-token"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-drive-reply",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Drive Reply",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "commentId",
+              "type": "string",
+              "optional": false,
+              "default": "comment-123"
+            },
+            {
+              "name": "replyId",
+              "type": "string",
+              "optional": false,
+              "default": "reply-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-drive-reply",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Drive Reply",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "commentId",
+              "type": "string",
+              "optional": false,
+              "default": "comment-123"
+            },
+            {
+              "name": "content",
+              "type": "string",
+              "optional": false,
+              "default": "Reply"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-drive-reply",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Drive Reply",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "commentId",
+              "type": "string",
+              "optional": false,
+              "default": "comment-123"
+            },
+            {
+              "name": "replyId",
+              "type": "string",
+              "optional": false,
+              "default": "reply-123"
+            },
+            {
+              "name": "content",
+              "type": "string",
+              "optional": false,
+              "default": "Updated reply"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-drive-reply",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Drive Reply",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "commentId",
+              "type": "string",
+              "optional": false,
+              "default": "comment-123"
+            },
+            {
+              "name": "replyId",
+              "type": "string",
+              "optional": false,
+              "default": "reply-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-drive-revisions",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Drive Revisions",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-drive-revision",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Drive Revision",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "revisionId",
+              "type": "string",
+              "optional": false,
+              "default": "rev-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-drive-revision",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Drive Revision",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "revisionId",
+              "type": "string",
+              "optional": false,
+              "default": "rev-123"
+            },
+            {
+              "name": "keepForever",
+              "type": "boolean",
+              "optional": true,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-drive-revision",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Drive Revision",
+          "fields": [
+            {
+              "name": "fileId",
+              "type": "string",
+              "optional": false,
+              "default": "file-123"
+            },
+            {
+              "name": "revisionId",
+              "type": "string",
+              "optional": false,
+              "default": "rev-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-shared-drives",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Shared Drives",
+          "fields": [
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 1000
+            },
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": true,
+              "default": "offline-page-token"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-shared-drive",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Shared Drive",
+          "fields": [
+            {
+              "name": "driveId",
+              "type": "string",
+              "optional": false,
+              "default": "drive-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-shared-drive",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Shared Drive",
+          "fields": [
+            {
+              "name": "requestId",
+              "type": "string",
+              "optional": false,
+              "default": "request-123"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "Shared Drive"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-shared-drive",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Shared Drive",
+          "fields": [
+            {
+              "name": "driveId",
+              "type": "string",
+              "optional": false,
+              "default": "drive-123"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "Updated Drive"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-shared-drive",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Shared Drive",
+          "fields": [
+            {
+              "name": "driveId",
+              "type": "string",
+              "optional": false,
+              "default": "drive-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.hide-shared-drive",
+          "appId": "google",
+          "kind": "action",
+          "name": "Hide Shared Drive",
+          "fields": [
+            {
+              "name": "driveId",
+              "type": "string",
+              "optional": false,
+              "default": "drive-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.unhide-shared-drive",
+          "appId": "google",
+          "kind": "action",
+          "name": "Unhide Shared Drive",
+          "fields": [
+            {
+              "name": "driveId",
+              "type": "string",
+              "optional": false,
+              "default": "drive-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-gmail-profile",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Gmail Profile",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-gmail-messages",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Gmail Messages",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "maxResults",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 500
+            },
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": true,
+              "default": "offline-page-token"
+            },
+            {
+              "name": "q",
+              "type": "string",
+              "optional": true,
+              "default": "from:example.invalid"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-gmail-message",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Gmail Message",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false,
+              "default": "msg-123"
+            },
+            {
+              "name": "format",
+              "type": "string",
+              "optional": true,
+              "default": "full"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.send-gmail-message",
+          "appId": "google",
+          "kind": "action",
+          "name": "Send Gmail Message",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "raw",
+              "type": "string",
+              "optional": false,
+              "default": "RnJvbTogbWVAZXhhbXBsZS5pbnZhbGlkCg=="
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.import-gmail-message",
+          "appId": "google",
+          "kind": "action",
+          "name": "Import Gmail Message",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "raw",
+              "type": "string",
+              "optional": false,
+              "default": "RnJvbTogbWVAZXhhbXBsZS5pbnZhbGlkCg=="
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.insert-gmail-message",
+          "appId": "google",
+          "kind": "action",
+          "name": "Insert Gmail Message",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "raw",
+              "type": "string",
+              "optional": false,
+              "default": "RnJvbTogbWVAZXhhbXBsZS5pbnZhbGlkCg=="
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-gmail-message",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Gmail Message",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false,
+              "default": "msg-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.trash-gmail-message",
+          "appId": "google",
+          "kind": "action",
+          "name": "Trash Gmail Message",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false,
+              "default": "msg-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.untrash-gmail-message",
+          "appId": "google",
+          "kind": "action",
+          "name": "Untrash Gmail Message",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false,
+              "default": "msg-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.modify-gmail-message",
+          "appId": "google",
+          "kind": "action",
+          "name": "Modify Gmail Message",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false,
+              "default": "msg-123"
+            },
+            {
+              "name": "addLabelIds",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Label_1"
+              ]
+            },
+            {
+              "name": "removeLabelIds",
+              "type": "array",
+              "optional": false,
+              "default": []
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.batch-delete-gmail-messages",
+          "appId": "google",
+          "kind": "action",
+          "name": "Batch Delete Gmail Messages",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "ids",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "msg-123"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.batch-modify-gmail-messages",
+          "appId": "google",
+          "kind": "action",
+          "name": "Batch Modify Gmail Messages",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "ids",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "msg-123"
+              ]
+            },
+            {
+              "name": "addLabelIds",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Label_1"
+              ]
+            },
+            {
+              "name": "removeLabelIds",
+              "type": "array",
+              "optional": false,
+              "default": []
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-gmail-attachment",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Gmail Attachment",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false,
+              "default": "msg-123"
+            },
+            {
+              "name": "attachmentId",
+              "type": "string",
+              "optional": false,
+              "default": "att-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-gmail-threads",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Gmail Threads",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "maxResults",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 500
+            },
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": true,
+              "default": "offline-page-token"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-gmail-thread",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Gmail Thread",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "threadId",
+              "type": "string",
+              "optional": false,
+              "default": "thread-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.modify-gmail-thread",
+          "appId": "google",
+          "kind": "action",
+          "name": "Modify Gmail Thread",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "threadId",
+              "type": "string",
+              "optional": false,
+              "default": "thread-123"
+            },
+            {
+              "name": "addLabelIds",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Label_1"
+              ]
+            },
+            {
+              "name": "removeLabelIds",
+              "type": "array",
+              "optional": false,
+              "default": []
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.trash-gmail-thread",
+          "appId": "google",
+          "kind": "action",
+          "name": "Trash Gmail Thread",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "threadId",
+              "type": "string",
+              "optional": false,
+              "default": "thread-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.untrash-gmail-thread",
+          "appId": "google",
+          "kind": "action",
+          "name": "Untrash Gmail Thread",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "threadId",
+              "type": "string",
+              "optional": false,
+              "default": "thread-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-gmail-thread",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Gmail Thread",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "threadId",
+              "type": "string",
+              "optional": false,
+              "default": "thread-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-gmail-labels",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Gmail Labels",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-gmail-label",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Gmail Label",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "labelId",
+              "type": "string",
+              "optional": false,
+              "default": "Label_1"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-gmail-label",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Gmail Label",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "Claw"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-gmail-label",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Gmail Label",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "labelId",
+              "type": "string",
+              "optional": false,
+              "default": "Label_1"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "Claw Updated"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.patch-gmail-label",
+          "appId": "google",
+          "kind": "action",
+          "name": "Patch Gmail Label",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "labelId",
+              "type": "string",
+              "optional": false,
+              "default": "Label_1"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false,
+              "default": "Claw Patched"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-gmail-label",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Gmail Label",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "labelId",
+              "type": "string",
+              "optional": false,
+              "default": "Label_1"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-gmail-drafts",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Gmail Drafts",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "maxResults",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 500
+            },
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": true,
+              "default": "offline-page-token"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-gmail-draft",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Gmail Draft",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "draftId",
+              "type": "string",
+              "optional": false,
+              "default": "draft-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-gmail-draft",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Gmail Draft",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "message",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "raw": "RnJvbTogbWVAZXhhbXBsZS5pbnZhbGlkCg=="
+              }
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-gmail-draft",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Gmail Draft",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "draftId",
+              "type": "string",
+              "optional": false,
+              "default": "draft-123"
+            },
+            {
+              "name": "message",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "raw": "RnJvbTogbWVAZXhhbXBsZS5pbnZhbGlkCg=="
+              }
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-gmail-draft",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Gmail Draft",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "draftId",
+              "type": "string",
+              "optional": false,
+              "default": "draft-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.send-gmail-draft",
+          "appId": "google",
+          "kind": "action",
+          "name": "Send Gmail Draft",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "draft-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-gmail-history",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Gmail History",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "startHistoryId",
+              "type": "string",
+              "optional": false,
+              "default": "1000"
+            },
+            {
+              "name": "maxResults",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 500
+            },
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": true,
+              "default": "offline-page-token"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.watch-gmail-mailbox",
+          "appId": "google",
+          "kind": "action",
+          "name": "Watch Gmail Mailbox",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "topicName",
+              "type": "string",
+              "optional": false,
+              "default": "projects/offline/topics/gmail"
+            },
+            {
+              "name": "labelIds",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "INBOX"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.stop-gmail-mailbox",
+          "appId": "google",
+          "kind": "action",
+          "name": "Stop Gmail Mailbox",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-gmail-filters",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Gmail Filters",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-gmail-filter",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Gmail Filter",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "filterId",
+              "type": "string",
+              "optional": false,
+              "default": "filter-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-gmail-filter",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Gmail Filter",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "criteria",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "from": "sender@example.invalid"
+              }
+            },
+            {
+              "name": "action",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "addLabelIds": [
+                  "Label_1"
+                ]
+              }
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-gmail-filter",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Gmail Filter",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "filterId",
+              "type": "string",
+              "optional": false,
+              "default": "filter-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-gmail-auto-forwarding",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Gmail Auto Forwarding",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-gmail-auto-forwarding",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Gmail Auto Forwarding",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "enabled",
+              "type": "boolean",
+              "optional": false,
+              "default": false
+            },
+            {
+              "name": "emailAddress",
+              "type": "string",
+              "optional": true,
+              "default": "forward@example.invalid"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-gmail-imap",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Gmail Imap",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-gmail-imap",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Gmail Imap",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "enabled",
+              "type": "boolean",
+              "optional": false,
+              "default": true
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-gmail-pop",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Gmail Pop",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-gmail-pop",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Gmail Pop",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "accessWindow",
+              "type": "string",
+              "optional": false,
+              "default": "disabled"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-gmail-vacation",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Gmail Vacation",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-gmail-vacation",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Gmail Vacation",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "enableAutoReply",
+              "type": "boolean",
+              "optional": false,
+              "default": true
+            },
+            {
+              "name": "responseSubject",
+              "type": "string",
+              "optional": false,
+              "default": "Away"
+            },
+            {
+              "name": "responseBodyPlainText",
+              "type": "string",
+              "optional": false,
+              "default": "I am away."
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-gmail-delegates",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Gmail Delegates",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-gmail-delegate",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Gmail Delegate",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "delegateEmail",
+              "type": "string",
+              "optional": false,
+              "default": "delegate@example.invalid"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-gmail-delegate",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Gmail Delegate",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "delegateEmail",
+              "type": "string",
+              "optional": false,
+              "default": "delegate@example.invalid"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-gmail-delegate",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Gmail Delegate",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "delegateEmail",
+              "type": "string",
+              "optional": false,
+              "default": "delegate@example.invalid"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-gmail-send-as",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Gmail Send As",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-gmail-send-as",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Gmail Send As",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "sendAsEmail",
+              "type": "string",
+              "optional": false,
+              "default": "me@example.invalid"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-gmail-send-as",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Gmail Send As",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false,
+              "default": "me"
+            },
+            {
+              "name": "sendAsEmail",
+              "type": "string",
+              "optional": false,
+              "default": "me@example.invalid"
+            },
+            {
+              "name": "displayName",
+              "type": "string",
+              "optional": false,
+              "default": "Example User"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-calendars",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Calendars",
+          "fields": [
+            {
+              "name": "maxResults",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 500
+            },
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": true,
+              "default": "offline-page-token"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-calendar-list-entry",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Calendar List Entry",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.insert-calendar-list-entry",
+          "appId": "google",
+          "kind": "action",
+          "name": "Insert Calendar List Entry",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "calendar@example.invalid"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-calendar-list-entry",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Calendar List Entry",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "summaryOverride",
+              "type": "string",
+              "optional": false,
+              "default": "Work"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.patch-calendar-list-entry",
+          "appId": "google",
+          "kind": "action",
+          "name": "Patch Calendar List Entry",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "summaryOverride",
+              "type": "string",
+              "optional": false,
+              "default": "Work"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-calendar-list-entry",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Calendar List Entry",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.watch-calendar-list",
+          "appId": "google",
+          "kind": "action",
+          "name": "Watch Calendar List",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "channel-123"
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false,
+              "default": "web_hook"
+            },
+            {
+              "name": "address",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/google/webhook"
+            },
+            {
+              "name": "token",
+              "type": "string",
+              "optional": true,
+              "default": "offline-token"
+            },
+            {
+              "name": "expiration",
+              "type": "string",
+              "optional": true,
+              "default": "1893456000000"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-calendar",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Calendar",
+          "fields": [
+            {
+              "name": "summary",
+              "type": "string",
+              "optional": false,
+              "default": "Team Calendar"
+            },
+            {
+              "name": "timeZone",
+              "type": "string",
+              "optional": true,
+              "default": "UTC"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-calendar",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Calendar",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-calendar",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Calendar",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "summary",
+              "type": "string",
+              "optional": false,
+              "default": "Updated Calendar"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.patch-calendar",
+          "appId": "google",
+          "kind": "action",
+          "name": "Patch Calendar",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "summary",
+              "type": "string",
+              "optional": false,
+              "default": "Patched Calendar"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-calendar",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Calendar",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.clear-calendar",
+          "appId": "google",
+          "kind": "action",
+          "name": "Clear Calendar",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-calendar-events",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Calendar Events",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "maxResults",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 500
+            },
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": true,
+              "default": "offline-page-token"
+            },
+            {
+              "name": "timeMin",
+              "type": "string",
+              "optional": true,
+              "default": "2026-05-01T00:00:00Z"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-calendar-event",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Calendar Event",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "eventId",
+              "type": "string",
+              "optional": false,
+              "default": "event-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-calendar-event",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Calendar Event",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "summary",
+              "type": "string",
+              "optional": false,
+              "default": "Planning"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Sample event"
+            },
+            {
+              "name": "start",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "dateTime": "2026-05-13T09:00:00Z"
+              }
+            },
+            {
+              "name": "end",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "dateTime": "2026-05-13T10:00:00Z"
+              }
+            },
+            {
+              "name": "attendees",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "email": "person@example.invalid"
+                }
+              ]
+            },
+            {
+              "name": "location",
+              "type": "string",
+              "optional": true,
+              "default": "Online"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-calendar-event",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Calendar Event",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "eventId",
+              "type": "string",
+              "optional": false,
+              "default": "event-123"
+            },
+            {
+              "name": "summary",
+              "type": "string",
+              "optional": false,
+              "default": "Planning"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Sample event"
+            },
+            {
+              "name": "start",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "dateTime": "2026-05-13T09:00:00Z"
+              }
+            },
+            {
+              "name": "end",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "dateTime": "2026-05-13T10:00:00Z"
+              }
+            },
+            {
+              "name": "attendees",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "email": "person@example.invalid"
+                }
+              ]
+            },
+            {
+              "name": "location",
+              "type": "string",
+              "optional": true,
+              "default": "Online"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.patch-calendar-event",
+          "appId": "google",
+          "kind": "action",
+          "name": "Patch Calendar Event",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "eventId",
+              "type": "string",
+              "optional": false,
+              "default": "event-123"
+            },
+            {
+              "name": "summary",
+              "type": "string",
+              "optional": false,
+              "default": "Updated Event"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-calendar-event",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Calendar Event",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "eventId",
+              "type": "string",
+              "optional": false,
+              "default": "event-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.import-calendar-event",
+          "appId": "google",
+          "kind": "action",
+          "name": "Import Calendar Event",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "summary",
+              "type": "string",
+              "optional": false,
+              "default": "Planning"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "optional": true,
+              "default": "Sample event"
+            },
+            {
+              "name": "start",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "dateTime": "2026-05-13T09:00:00Z"
+              }
+            },
+            {
+              "name": "end",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "dateTime": "2026-05-13T10:00:00Z"
+              }
+            },
+            {
+              "name": "attendees",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "email": "person@example.invalid"
+                }
+              ]
+            },
+            {
+              "name": "location",
+              "type": "string",
+              "optional": true,
+              "default": "Online"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.move-calendar-event",
+          "appId": "google",
+          "kind": "action",
+          "name": "Move Calendar Event",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "eventId",
+              "type": "string",
+              "optional": false,
+              "default": "event-123"
+            },
+            {
+              "name": "destination",
+              "type": "string",
+              "optional": false,
+              "default": "target@example.invalid"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.quick-add-calendar-event",
+          "appId": "google",
+          "kind": "action",
+          "name": "Quick Add Calendar Event",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "optional": false,
+              "default": "Lunch tomorrow at noon"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.watch-calendar-events",
+          "appId": "google",
+          "kind": "action",
+          "name": "Watch Calendar Events",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "channel-123"
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false,
+              "default": "web_hook"
+            },
+            {
+              "name": "address",
+              "type": "string",
+              "optional": false,
+              "default": "https://example.invalid/google/webhook"
+            },
+            {
+              "name": "token",
+              "type": "string",
+              "optional": true,
+              "default": "offline-token"
+            },
+            {
+              "name": "expiration",
+              "type": "string",
+              "optional": true,
+              "default": "1893456000000"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.query-calendar-freebusy",
+          "appId": "google",
+          "kind": "action",
+          "name": "Query Calendar Freebusy",
+          "fields": [
+            {
+              "name": "items",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "id": "primary"
+                }
+              ]
+            },
+            {
+              "name": "timeMin",
+              "type": "string",
+              "optional": false,
+              "default": "2026-05-01T00:00:00Z"
+            },
+            {
+              "name": "timeMax",
+              "type": "string",
+              "optional": false,
+              "default": "2026-05-02T00:00:00Z"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-calendar-colors",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Calendar Colors",
+          "fields": [],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-calendar-settings",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Calendar Settings",
+          "fields": [
+            {
+              "name": "maxResults",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 500
+            },
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": true,
+              "default": "offline-page-token"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-calendar-setting",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Calendar Setting",
+          "fields": [
+            {
+              "name": "settingId",
+              "type": "string",
+              "optional": false,
+              "default": "timezone"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-calendar-acl",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Calendar Acl",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "maxResults",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 500
+            },
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": true,
+              "default": "offline-page-token"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-calendar-acl-rule",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Calendar Acl Rule",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "ruleId",
+              "type": "string",
+              "optional": false,
+              "default": "user:reader@example.invalid"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-calendar-acl-rule",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Calendar Acl Rule",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "role",
+              "type": "string",
+              "optional": false,
+              "default": "reader"
+            },
+            {
+              "name": "scope",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "type": "user",
+                "value": "reader@example.invalid"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-calendar-acl-rule",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Calendar Acl Rule",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "ruleId",
+              "type": "string",
+              "optional": false,
+              "default": "user:reader@example.invalid"
+            },
+            {
+              "name": "role",
+              "type": "string",
+              "optional": false,
+              "default": "writer"
+            },
+            {
+              "name": "scope",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "type": "user",
+                "value": "reader@example.invalid"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.patch-calendar-acl-rule",
+          "appId": "google",
+          "kind": "action",
+          "name": "Patch Calendar Acl Rule",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "ruleId",
+              "type": "string",
+              "optional": false,
+              "default": "user:reader@example.invalid"
+            },
+            {
+              "name": "role",
+              "type": "string",
+              "optional": false,
+              "default": "reader"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-calendar-acl-rule",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Calendar Acl Rule",
+          "fields": [
+            {
+              "name": "calendarId",
+              "type": "string",
+              "optional": false,
+              "default": "primary"
+            },
+            {
+              "name": "ruleId",
+              "type": "string",
+              "optional": false,
+              "default": "user:reader@example.invalid"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.stop-calendar-channel",
+          "appId": "google",
+          "kind": "action",
+          "name": "Stop Calendar Channel",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "channel-123"
+            },
+            {
+              "name": "resourceId",
+              "type": "string",
+              "optional": false,
+              "default": "resource-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-spreadsheet",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Spreadsheet",
+          "fields": [
+            {
+              "name": "properties",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "title": "Sample Sheet"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-spreadsheet",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Spreadsheet",
+          "fields": [
+            {
+              "name": "spreadsheetId",
+              "type": "string",
+              "optional": false,
+              "default": "spreadsheet-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.batch-update-spreadsheet",
+          "appId": "google",
+          "kind": "action",
+          "name": "Batch Update Spreadsheet",
+          "fields": [
+            {
+              "name": "spreadsheetId",
+              "type": "string",
+              "optional": false,
+              "default": "spreadsheet-123"
+            },
+            {
+              "name": "requests",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "addSheet": {
+                    "properties": {
+                      "title": "Sheet2"
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-sheet-values",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Sheet Values",
+          "fields": [
+            {
+              "name": "spreadsheetId",
+              "type": "string",
+              "optional": false,
+              "default": "spreadsheet-123"
+            },
+            {
+              "name": "range",
+              "type": "string",
+              "optional": false,
+              "default": "Sheet1!A1:B2"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.batch-get-sheet-values",
+          "appId": "google",
+          "kind": "action",
+          "name": "Batch Get Sheet Values",
+          "fields": [
+            {
+              "name": "spreadsheetId",
+              "type": "string",
+              "optional": false,
+              "default": "spreadsheet-123"
+            },
+            {
+              "name": "ranges",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Sheet1!A1:B2"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-sheet-values",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Sheet Values",
+          "fields": [
+            {
+              "name": "spreadsheetId",
+              "type": "string",
+              "optional": false,
+              "default": "spreadsheet-123"
+            },
+            {
+              "name": "range",
+              "type": "string",
+              "optional": false,
+              "default": "Sheet1!A1:B2"
+            },
+            {
+              "name": "valueInputOption",
+              "type": "string",
+              "optional": false,
+              "default": "RAW"
+            },
+            {
+              "name": "values",
+              "type": "array",
+              "optional": false,
+              "default": [
+                [
+                  "A",
+                  "B"
+                ]
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.append-sheet-values",
+          "appId": "google",
+          "kind": "action",
+          "name": "Append Sheet Values",
+          "fields": [
+            {
+              "name": "spreadsheetId",
+              "type": "string",
+              "optional": false,
+              "default": "spreadsheet-123"
+            },
+            {
+              "name": "range",
+              "type": "string",
+              "optional": false,
+              "default": "Sheet1!A1:B2"
+            },
+            {
+              "name": "valueInputOption",
+              "type": "string",
+              "optional": false,
+              "default": "RAW"
+            },
+            {
+              "name": "values",
+              "type": "array",
+              "optional": false,
+              "default": [
+                [
+                  "A",
+                  "B"
+                ]
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.clear-sheet-values",
+          "appId": "google",
+          "kind": "action",
+          "name": "Clear Sheet Values",
+          "fields": [
+            {
+              "name": "spreadsheetId",
+              "type": "string",
+              "optional": false,
+              "default": "spreadsheet-123"
+            },
+            {
+              "name": "range",
+              "type": "string",
+              "optional": false,
+              "default": "Sheet1!A1:B2"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.batch-update-sheet-values",
+          "appId": "google",
+          "kind": "action",
+          "name": "Batch Update Sheet Values",
+          "fields": [
+            {
+              "name": "spreadsheetId",
+              "type": "string",
+              "optional": false,
+              "default": "spreadsheet-123"
+            },
+            {
+              "name": "valueInputOption",
+              "type": "string",
+              "optional": false,
+              "default": "RAW"
+            },
+            {
+              "name": "data",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "range": "Sheet1!A1:B2",
+                  "values": [
+                    [
+                      "A",
+                      "B"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.batch-clear-sheet-values",
+          "appId": "google",
+          "kind": "action",
+          "name": "Batch Clear Sheet Values",
+          "fields": [
+            {
+              "name": "spreadsheetId",
+              "type": "string",
+              "optional": false,
+              "default": "spreadsheet-123"
+            },
+            {
+              "name": "ranges",
+              "type": "array",
+              "optional": false,
+              "default": [
+                "Sheet1!A1:B2"
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.copy-sheet-to-spreadsheet",
+          "appId": "google",
+          "kind": "action",
+          "name": "Copy Sheet To Spreadsheet",
+          "fields": [
+            {
+              "name": "spreadsheetId",
+              "type": "string",
+              "optional": false,
+              "default": "spreadsheet-123"
+            },
+            {
+              "name": "sheetId",
+              "type": "string",
+              "optional": false,
+              "default": "0"
+            },
+            {
+              "name": "destinationSpreadsheetId",
+              "type": "string",
+              "optional": false,
+              "default": "spreadsheet-456"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-document",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Document",
+          "fields": [
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false,
+              "default": "Sample Doc"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-document",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Document",
+          "fields": [
+            {
+              "name": "documentId",
+              "type": "string",
+              "optional": false,
+              "default": "doc-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.batch-update-document",
+          "appId": "google",
+          "kind": "action",
+          "name": "Batch Update Document",
+          "fields": [
+            {
+              "name": "documentId",
+              "type": "string",
+              "optional": false,
+              "default": "doc-123"
+            },
+            {
+              "name": "requests",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "insertText": {
+                    "location": {
+                      "index": 1
+                    },
+                    "text": "Hello"
+                  }
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-form",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Form",
+          "fields": [
+            {
+              "name": "info",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "title": "Sample Form"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-form",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Form",
+          "fields": [
+            {
+              "name": "formId",
+              "type": "string",
+              "optional": false,
+              "default": "form-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.batch-update-form",
+          "appId": "google",
+          "kind": "action",
+          "name": "Batch Update Form",
+          "fields": [
+            {
+              "name": "formId",
+              "type": "string",
+              "optional": false,
+              "default": "form-123"
+            },
+            {
+              "name": "requests",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "updateFormInfo": {
+                    "info": {
+                      "title": "Updated"
+                    },
+                    "updateMask": "title"
+                  }
+                }
+              ]
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-form-responses",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Form Responses",
+          "fields": [
+            {
+              "name": "formId",
+              "type": "string",
+              "optional": false,
+              "default": "form-123"
+            },
+            {
+              "name": "pageSize",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 500
+            },
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": true,
+              "default": "offline-page-token"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-form-response",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Form Response",
+          "fields": [
+            {
+              "name": "formId",
+              "type": "string",
+              "optional": false,
+              "default": "form-123"
+            },
+            {
+              "name": "responseId",
+              "type": "string",
+              "optional": false,
+              "default": "response-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-form-watch",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Form Watch",
+          "fields": [
+            {
+              "name": "formId",
+              "type": "string",
+              "optional": false,
+              "default": "form-123"
+            },
+            {
+              "name": "target",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "topic": {
+                  "topicName": "projects/offline/topics/forms"
+                }
+              }
+            },
+            {
+              "name": "eventType",
+              "type": "string",
+              "optional": false,
+              "default": "RESPONSES"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-form-watches",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Form Watches",
+          "fields": [
+            {
+              "name": "formId",
+              "type": "string",
+              "optional": false,
+              "default": "form-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.renew-form-watch",
+          "appId": "google",
+          "kind": "action",
+          "name": "Renew Form Watch",
+          "fields": [
+            {
+              "name": "formId",
+              "type": "string",
+              "optional": false,
+              "default": "form-123"
+            },
+            {
+              "name": "watchId",
+              "type": "string",
+              "optional": false,
+              "default": "watch-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-form-watch",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Form Watch",
+          "fields": [
+            {
+              "name": "formId",
+              "type": "string",
+              "optional": false,
+              "default": "form-123"
+            },
+            {
+              "name": "watchId",
+              "type": "string",
+              "optional": false,
+              "default": "watch-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-tasklists",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Tasklists",
+          "fields": [
+            {
+              "name": "maxResults",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 500
+            },
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": true,
+              "default": "offline-page-token"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-tasklist",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Tasklist",
+          "fields": [
+            {
+              "name": "tasklist",
+              "type": "string",
+              "optional": false,
+              "default": "@default"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-tasklist",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Tasklist",
+          "fields": [
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false,
+              "default": "Tasks"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-tasklist",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Tasklist",
+          "fields": [
+            {
+              "name": "tasklist",
+              "type": "string",
+              "optional": false,
+              "default": "@default"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false,
+              "default": "Updated Tasks"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.patch-tasklist",
+          "appId": "google",
+          "kind": "action",
+          "name": "Patch Tasklist",
+          "fields": [
+            {
+              "name": "tasklist",
+              "type": "string",
+              "optional": false,
+              "default": "@default"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false,
+              "default": "Patched Tasks"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-tasklist",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Tasklist",
+          "fields": [
+            {
+              "name": "tasklist",
+              "type": "string",
+              "optional": false,
+              "default": "@default"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.list-tasks",
+          "appId": "google",
+          "kind": "action",
+          "name": "List Tasks",
+          "fields": [
+            {
+              "name": "tasklist",
+              "type": "string",
+              "optional": false,
+              "default": "@default"
+            },
+            {
+              "name": "maxResults",
+              "type": "integer",
+              "optional": true,
+              "default": 100,
+              "min": 1,
+              "max": 500
+            },
+            {
+              "name": "pageToken",
+              "type": "string",
+              "optional": true,
+              "default": "offline-page-token"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.get-task",
+          "appId": "google",
+          "kind": "action",
+          "name": "Get Task",
+          "fields": [
+            {
+              "name": "tasklist",
+              "type": "string",
+              "optional": false,
+              "default": "@default"
+            },
+            {
+              "name": "task",
+              "type": "string",
+              "optional": false,
+              "default": "task-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.create-task",
+          "appId": "google",
+          "kind": "action",
+          "name": "Create Task",
+          "fields": [
+            {
+              "name": "tasklist",
+              "type": "string",
+              "optional": false,
+              "default": "@default"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false,
+              "default": "Follow up"
+            },
+            {
+              "name": "notes",
+              "type": "string",
+              "optional": true,
+              "default": "Sample note"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.update-task",
+          "appId": "google",
+          "kind": "action",
+          "name": "Update Task",
+          "fields": [
+            {
+              "name": "tasklist",
+              "type": "string",
+              "optional": false,
+              "default": "@default"
+            },
+            {
+              "name": "task",
+              "type": "string",
+              "optional": false,
+              "default": "task-123"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false,
+              "default": "Updated task"
+            },
+            {
+              "name": "notes",
+              "type": "string",
+              "optional": true,
+              "default": "Updated note"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.patch-task",
+          "appId": "google",
+          "kind": "action",
+          "name": "Patch Task",
+          "fields": [
+            {
+              "name": "tasklist",
+              "type": "string",
+              "optional": false,
+              "default": "@default"
+            },
+            {
+              "name": "task",
+              "type": "string",
+              "optional": false,
+              "default": "task-123"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "optional": false,
+              "default": "Patched task"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.delete-task",
+          "appId": "google",
+          "kind": "action",
+          "name": "Delete Task",
+          "fields": [
+            {
+              "name": "tasklist",
+              "type": "string",
+              "optional": false,
+              "default": "@default"
+            },
+            {
+              "name": "task",
+              "type": "string",
+              "optional": false,
+              "default": "task-123"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.move-task",
+          "appId": "google",
+          "kind": "action",
+          "name": "Move Task",
+          "fields": [
+            {
+              "name": "tasklist",
+              "type": "string",
+              "optional": false,
+              "default": "@default"
+            },
+            {
+              "name": "task",
+              "type": "string",
+              "optional": false,
+              "default": "task-123"
+            },
+            {
+              "name": "parent",
+              "type": "string",
+              "optional": true,
+              "default": "parent-task"
+            },
+            {
+              "name": "previous",
+              "type": "string",
+              "optional": true,
+              "default": "previous-task"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.action.clear-completed-tasks",
+          "appId": "google",
+          "kind": "action",
+          "name": "Clear Completed Tasks",
+          "fields": [
+            {
+              "name": "tasklist",
+              "type": "string",
+              "optional": false,
+              "default": "@default"
+            }
+          ],
+          "authFieldNames": [
+            "googleAccessToken"
+          ]
+        },
+        {
+          "id": "google.source.drive-change",
+          "appId": "google",
+          "kind": "source",
+          "name": "Drive Change",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "google.source.gmail-message",
+          "appId": "google",
+          "kind": "source",
+          "name": "Gmail Message",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "google.source.calendar-event",
+          "appId": "google",
+          "kind": "source",
+          "name": "Calendar Event",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "google.source.calendar-list-change",
+          "appId": "google",
+          "kind": "source",
+          "name": "Calendar List Change",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "google.source.form-response",
+          "appId": "google",
+          "kind": "source",
+          "name": "Form Response",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "google.source.task-change",
+          "appId": "google",
+          "kind": "source",
+          "name": "Task Change",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "google.source.sheets-change",
+          "appId": "google",
+          "kind": "source",
+          "name": "Sheets Change",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "eventId"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        }
+      ]
+    },
+    {
       "id": "salesforce",
       "name": "Salesforce",
       "authFieldNames": [
