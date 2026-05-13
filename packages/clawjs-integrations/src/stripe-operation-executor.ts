@@ -14,6 +14,7 @@ export interface StripeGenericOperationSpec {
   method: "GET" | "POST" | "DELETE";
   endpoint: string;
   fields: StripeField[];
+  bodyEncoding?: "form" | "multipart";
   query?: string[];
   body?: string[];
   requiredPaths?: string[];
@@ -99,6 +100,21 @@ export const STRIPE_EXTRA_ACTION_SPECS = [
   spec("get-balance", "GET", "balance", [], { requiredPaths: ["object"] }),
   spec("list-balance-transactions", "GET", "balance_transactions", [...PAGE_FIELDS, stringField("type", { optional: true, default: "charge" })], { query: ["limit", "starting_after", "ending_before", "type"], requiredPaths: ["object", "data"] }),
   spec("get-balance-transaction", "GET", "balance_transactions/{balanceTransactionId}", [stringField("balanceTransactionId", { default: "txn_sample" })]),
+  spec("list-files", "GET", "files", [...PAGE_FIELDS, stringField("purpose", { optional: true, default: "business_logo" })], { query: ["limit", "starting_after", "ending_before", "purpose"], requiredPaths: ["object", "data"] }),
+  spec("create-file", "POST", "files", [stringField("file", { default: "sample-file" }), stringField("purpose", { default: "business_logo" }), objectField("file_link_data", { create: true }, { optional: true })], { body: ["file", "purpose", "file_link_data"], bodyEncoding: "multipart" }),
+  spec("get-file", "GET", "files/{file}", [stringField("file", { default: "file_sample" })]),
+  spec("list-file-links", "GET", "file_links", [...PAGE_FIELDS, stringField("file", { optional: true, default: "file_sample" }), booleanField("expired", { optional: true, default: false })], { query: ["limit", "starting_after", "ending_before", "file", "expired"], requiredPaths: ["object", "data"] }),
+  spec("create-file-link", "POST", "file_links", [stringField("file", { default: "file_sample" }), integerField("expires_at", { optional: true, default: 1893456000 }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["file", "expires_at", "metadata"] }),
+  spec("get-file-link", "GET", "file_links/{link}", [stringField("link", { default: "link_sample" })]),
+  spec("update-file-link", "POST", "file_links/{link}", [stringField("link", { default: "link_sample" }), integerField("expires_at", { optional: true, default: 1893456000 }), objectField("metadata", { order_id: "sample" }, { optional: true })], { body: ["expires_at", "metadata"] }),
+  spec("list-country-specs", "GET", "country_specs", PAGE_FIELDS, { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
+  spec("get-country-spec", "GET", "country_specs/{country}", [stringField("country", { default: "US" })]),
+  spec("list-exchange-rates", "GET", "exchange_rates", PAGE_FIELDS, { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
+  spec("get-exchange-rate", "GET", "exchange_rates/{rate_id}", [stringField("rateId", { default: "usd" })]),
+  spec("create-token", "POST", "tokens", [objectField("cvc_update", { cvc: "123" }, { optional: true })], { body: ["cvc_update"] }),
+  spec("get-token", "GET", "tokens/{token}", [stringField("token", { default: "tok_sample" })]),
+  spec("create-ephemeral-key", "POST", "ephemeral_keys", [stringField("customer", { optional: true, default: "cus_sample" })], { body: ["customer"] }),
+  spec("delete-ephemeral-key", "DELETE", "ephemeral_keys/{key}", [stringField("key", { default: "ephkey_sample" })], { requiredPaths: ["id", "object", "deleted"] }),
   spec("list-events", "GET", "events", [...PAGE_FIELDS, stringField("type", { optional: true, default: "payment_intent.succeeded" })], { query: ["limit", "starting_after", "ending_before", "type"], requiredPaths: ["object", "data"] }),
   spec("get-event", "GET", "events/{eventId}", [stringField("eventId", { default: "evt_sample" })]),
   spec("list-disputes", "GET", "disputes", [...PAGE_FIELDS], { query: ["limit", "starting_after", "ending_before"], requiredPaths: ["object", "data"] }),
@@ -448,6 +464,7 @@ function spec(
   endpoint: string,
   fields: StripeField[],
   options: {
+    bodyEncoding?: StripeGenericOperationSpec["bodyEncoding"];
     query?: string[];
     body?: string[];
     requiredPaths?: string[];
@@ -458,6 +475,7 @@ function spec(
     method,
     endpoint,
     fields,
+    bodyEncoding: options.bodyEncoding,
     query: options.query,
     body: options.body,
     requiredPaths: options.requiredPaths,
@@ -476,7 +494,7 @@ function genericStripePlan(
     auth,
     headers,
     query: valuesForApiKeys(values, spec.query ?? []),
-    bodyEncoding: spec.method === "POST" ? "form" : undefined,
+    bodyEncoding: spec.method === "POST" ? spec.bodyEncoding ?? "form" : undefined,
     body: valuesForApiKeys(values, spec.body ?? []),
     responseSchema: {
       type: "object",

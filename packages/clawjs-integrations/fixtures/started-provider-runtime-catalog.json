@@ -32167,6 +32167,379 @@
           ]
         },
         {
+          "id": "stripe.action.list-files",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Files",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "purpose",
+              "type": "string",
+              "optional": true,
+              "default": "business_logo"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-file",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create File",
+          "fields": [
+            {
+              "name": "file",
+              "type": "string",
+              "optional": false,
+              "default": "sample-file"
+            },
+            {
+              "name": "purpose",
+              "type": "string",
+              "optional": false,
+              "default": "business_logo"
+            },
+            {
+              "name": "file_link_data",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "create": true
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-file",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get File",
+          "fields": [
+            {
+              "name": "file",
+              "type": "string",
+              "optional": false,
+              "default": "file_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-file-links",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List File Links",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "file",
+              "type": "string",
+              "optional": true,
+              "default": "file_sample"
+            },
+            {
+              "name": "expired",
+              "type": "boolean",
+              "optional": true,
+              "default": false
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-file-link",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create File Link",
+          "fields": [
+            {
+              "name": "file",
+              "type": "string",
+              "optional": false,
+              "default": "file_sample"
+            },
+            {
+              "name": "expires_at",
+              "type": "integer",
+              "optional": true,
+              "default": 1893456000
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-file-link",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get File Link",
+          "fields": [
+            {
+              "name": "link",
+              "type": "string",
+              "optional": false,
+              "default": "link_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-file-link",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update File Link",
+          "fields": [
+            {
+              "name": "link",
+              "type": "string",
+              "optional": false,
+              "default": "link_sample"
+            },
+            {
+              "name": "expires_at",
+              "type": "integer",
+              "optional": true,
+              "default": 1893456000
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-country-specs",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Country Specs",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-country-spec",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Country Spec",
+          "fields": [
+            {
+              "name": "country",
+              "type": "string",
+              "optional": false,
+              "default": "US"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-exchange-rates",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Exchange Rates",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-exchange-rate",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Exchange Rate",
+          "fields": [
+            {
+              "name": "rateId",
+              "type": "string",
+              "optional": false,
+              "default": "usd"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-token",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Token",
+          "fields": [
+            {
+              "name": "cvc_update",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "cvc": "123"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-token",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Token",
+          "fields": [
+            {
+              "name": "token",
+              "type": "string",
+              "optional": false,
+              "default": "tok_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-ephemeral-key",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Ephemeral Key",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-ephemeral-key",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Ephemeral Key",
+          "fields": [
+            {
+              "name": "key",
+              "type": "string",
+              "optional": false,
+              "default": "ephkey_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.source.event",
           "appId": "stripe",
           "kind": "source",

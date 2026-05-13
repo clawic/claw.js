@@ -1,0 +1,9 @@
+{
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/files",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  },
+  "body": "[object FormData]"
+}

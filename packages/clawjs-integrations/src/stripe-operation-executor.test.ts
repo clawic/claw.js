@@ -360,6 +360,68 @@ describe("stripe operation runtime", () => {
         requiredPaths: ["id", "object"],
       },
     });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-file"), {
+      file: "sample-file",
+      purpose: "business_logo",
+      file_link_data: { create: true },
+    }), {
+      method: "POST",
+      endpoint: "files",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "multipart",
+      body: {
+        file: "sample-file",
+        purpose: "business_logo",
+        file_link_data: { create: true },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-file-link"), {
+      file: "file_sample",
+      expires_at: 1893456000,
+      metadata: { order_id: "sample" },
+    }), {
+      method: "POST",
+      endpoint: "file_links",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        file: "file_sample",
+        expires_at: 1893456000,
+        metadata: { order_id: "sample" },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-token"), {
+      cvc_update: { cvc: "123" },
+    }), {
+      method: "POST",
+      endpoint: "tokens",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        cvc_update: { cvc: "123" },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
   });
 
   it("covers Stripe payment operations with operation-scoped offline fixtures", async () => {
