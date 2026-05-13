@@ -106,10 +106,13 @@ export type DiscordRuntimeOperation =
   | "remove-thread-member"
   | "get-thread-member"
   | "list-thread-members"
+  | "add-guild-member"
   | "list-guild-members"
   | "get-guild-member"
   | "search-guild-members"
   | "modify-guild-member"
+  | "modify-current-member"
+  | "modify-current-user-nick"
   | "remove-guild-member"
   | "list-guild-roles"
   | "create-guild-role"
@@ -463,6 +466,8 @@ export function buildDiscordOperationRequest(
         after: optionalString(values.after),
         limit: optionalNumber(values.limit),
       }));
+    case "add-guild-member":
+      return bodyPlan("PUT", `guilds/${guildId(values)}/members/${userId(values)}`, auth, headers, addGuildMemberBody(values), { type: "object", requiredPaths: ["user"] });
     case "list-guild-members":
       return getPlan(`guilds/${guildId(values)}/members`, auth, headers, { type: "array" }, removeEmptyValues({
         after: optionalString(values.after),
@@ -477,6 +482,10 @@ export function buildDiscordOperationRequest(
       }));
     case "modify-guild-member":
       return bodyPlan("PATCH", `guilds/${guildId(values)}/members/${userId(values)}`, auth, headers, memberBody(values), { type: "object", requiredPaths: ["user"] });
+    case "modify-current-member":
+      return bodyPlan("PATCH", `guilds/${guildId(values)}/members/@me`, auth, auditHeaders(headers, values), currentMemberBody(values), { type: "object", requiredPaths: ["user"] });
+    case "modify-current-user-nick":
+      return bodyPlan("PATCH", `guilds/${guildId(values)}/members/@me/nick`, auth, auditHeaders(headers, values), currentUserNickBody(values), { type: "object", requiredPaths: ["nick"] });
     case "remove-guild-member":
       return deletePlan(`guilds/${guildId(values)}/members/${userId(values)}`, auth, headers, { type: "object" });
     case "list-guild-roles":
@@ -720,10 +729,13 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "remove-thread-member",
   "get-thread-member",
   "list-thread-members",
+  "add-guild-member",
   "list-guild-members",
   "get-guild-member",
   "search-guild-members",
   "modify-guild-member",
+  "modify-current-member",
+  "modify-current-user-nick",
   "remove-guild-member",
   "list-guild-roles",
   "create-guild-role",
@@ -1069,6 +1081,31 @@ function memberBody(values: Record<string, IntegrationJson>): Record<string, Int
     communication_disabled_until: optionalString(values.communicationDisabledUntil),
     flags: optionalNumber(values.flags),
   });
+}
+
+function addGuildMemberBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    access_token: requiredString(values.accessToken, "accessToken"),
+    nick: optionalString(values.nick),
+    roles: optionalJsonArray(values.roles),
+    mute: values.mute,
+    deaf: values.deaf,
+  });
+}
+
+function currentMemberBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    nick: optionalString(values.nick),
+    avatar: optionalString(values.avatar),
+    banner: optionalString(values.banner),
+    bio: optionalString(values.bio),
+  });
+}
+
+function currentUserNickBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return {
+    nick: requiredString(values.nick, "nick"),
+  };
 }
 
 function roleBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
