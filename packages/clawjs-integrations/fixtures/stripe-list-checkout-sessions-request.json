@@ -1,0 +1,1 @@
+{"method":"GET","url":"https://api.stripe.com/v1/checkout/sessions?limit=10","headers":{"accept":"application/json","authorization":"Bearer offline-stripeSecretKey-secret"}}

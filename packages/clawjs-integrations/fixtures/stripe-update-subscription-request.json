@@ -1,0 +1,1 @@
+{"method":"POST","url":"https://api.stripe.com/v1/subscriptions/sample","headers":{"accept":"application/json","authorization":"Bearer offline-stripeSecretKey-secret","content-type":"application/x-www-form-urlencoded"},"body":"items=%7B%22id%22%3A%22si_sample%22%2C%22price%22%3A%22price_sample%22%7D"}

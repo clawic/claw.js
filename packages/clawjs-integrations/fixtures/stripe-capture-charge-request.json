@@ -1,0 +1,1 @@
+{"method":"POST","url":"https://api.stripe.com/v1/charges/sample/capture","headers":{"accept":"application/json","authorization":"Bearer offline-stripeSecretKey-secret","content-type":"application/x-www-form-urlencoded"},"body":"amount=1"}
