@@ -1234,6 +1234,233 @@
           ]
         },
         {
+          "id": "discord.action.list-auto-moderation-rules",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Auto Moderation Rules",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-auto-moderation-rule",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Auto Moderation Rule",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "autoModerationRuleId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.create-auto-moderation-rule",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Create Auto Moderation Rule",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "eventType",
+              "type": "integer",
+              "optional": false,
+              "default": 1
+            },
+            {
+              "name": "triggerType",
+              "type": "integer",
+              "optional": false,
+              "default": 1
+            },
+            {
+              "name": "triggerMetadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "keyword_filter": [
+                  "sample"
+                ]
+              }
+            },
+            {
+              "name": "actions",
+              "type": "array",
+              "optional": false,
+              "default": [
+                {
+                  "type": 1,
+                  "metadata": {
+                    "custom_message": "sample"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "enabled",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "exemptRoles",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "sample"
+              ]
+            },
+            {
+              "name": "exemptChannels",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "sample"
+              ]
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.update-auto-moderation-rule",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Update Auto Moderation Rule",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "autoModerationRuleId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": true,
+              "default": "sample"
+            },
+            {
+              "name": "eventType",
+              "type": "integer",
+              "optional": true,
+              "default": 1
+            },
+            {
+              "name": "triggerMetadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "keyword_filter": [
+                  "sample"
+                ]
+              }
+            },
+            {
+              "name": "actions",
+              "type": "array",
+              "optional": true,
+              "default": [
+                {
+                  "type": 1,
+                  "metadata": {
+                    "custom_message": "sample"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "enabled",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "exemptRoles",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "sample"
+              ]
+            },
+            {
+              "name": "exemptChannels",
+              "type": "array",
+              "optional": true,
+              "default": [
+                "sample"
+              ]
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.delete-auto-moderation-rule",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Delete Auto Moderation Rule",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "autoModerationRuleId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "auditLogReason",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.list-guild-invites",
           "appId": "discord",
           "kind": "action",
@@ -2277,6 +2504,90 @@
           "appId": "discord",
           "kind": "source",
           "name": "Message Delete",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.auto-moderation-rule-create",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Auto Moderation Rule Create",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.auto-moderation-rule-update",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Auto Moderation Rule Update",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.auto-moderation-rule-delete",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Auto Moderation Rule Delete",
+          "fields": [],
+          "authFieldNames": [],
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": false,
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "dedupe": "id"
+          },
+          "source": {
+            "delivery": "webhook",
+            "usesTimer": false,
+            "usesHttp": true,
+            "usesServiceDb": false
+          }
+        },
+        {
+          "id": "discord.source.auto-moderation-action-execution",
+          "appId": "discord",
+          "kind": "source",
+          "name": "Auto Moderation Action Execution",
           "fields": [],
           "authFieldNames": [],
           "runtime": {
