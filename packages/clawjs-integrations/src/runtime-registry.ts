@@ -12,6 +12,10 @@ import {
   isSlackActionOperationSupported,
 } from "./slack-operation-executor.ts";
 import {
+  buildSlackSourcePlan,
+  isSlackSourceOperationSupported,
+} from "./slack-source.ts";
+import {
   buildGitHubOperationRequest,
   isGitHubActionOperationSupported,
 } from "./github-operation-executor.ts";
@@ -199,38 +203,88 @@ const SLACK_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/slack-operation-executor.test.ts",
 ];
 
-const SLACK_ACTION_FIXTURES: ConnectorRuntimeFixture[] = [
+const SLACK_ACTION_FIXTURE_NAMES = [
+  "send-message",
+  "update-message",
+  "delete-message",
+  "schedule-message",
+  "delete-scheduled-message",
+  "post-ephemeral",
+  "get-channel",
+  "list-channels",
+  "create-channel",
+  "rename-channel",
+  "archive-channel",
+  "unarchive-channel",
+  "invite-to-channel",
+  "kick-from-channel",
+  "join-channel",
+  "leave-channel",
+  "conversation-history",
+  "conversation-replies",
+  "conversation-members",
+  "open-conversation",
+  "list-users",
+  "get-user",
+  "get-user-presence",
+  "set-user-presence",
+  "add-reaction",
+  "remove-reaction",
+  "get-reactions",
+  "add-pin",
+  "remove-pin",
+  "list-pins",
+  "list-files",
+  "get-file",
+  "delete-file",
+  "add-reminder",
+  "list-reminders",
+  "complete-reminder",
+  "delete-reminder",
+  "search-messages",
+  "search-files",
+  "list-usergroups",
+  "enable-usergroup",
+  "disable-usergroup",
+  "list-usergroup-users",
+  "update-usergroup-users",
+  "open-view",
+  "publish-view",
+  "push-view",
+  "update-view",
+  "test-auth",
+] as const;
+
+const SLACK_ACTION_FIXTURES: ConnectorRuntimeFixture[] = SLACK_ACTION_FIXTURE_NAMES.flatMap((name) => [
   {
-    kind: "request",
-    operationId: "slack.action.send-message",
-    path: "packages/clawjs-integrations/fixtures/slack-send-message-request.json",
+    kind: "request" as const,
+    operationId: `slack.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/slack-${name}-request.json`,
   },
   {
-    kind: "response",
-    operationId: "slack.action.send-message",
-    path: "packages/clawjs-integrations/fixtures/slack-send-message-response.json",
+    kind: "response" as const,
+    operationId: `slack.action.${name}`,
+    path: `packages/clawjs-integrations/fixtures/slack-${name}-response.json`,
   },
-  {
-    kind: "request",
-    operationId: "slack.action.list-channels",
-    path: "packages/clawjs-integrations/fixtures/slack-list-channels-request.json",
-  },
-  {
-    kind: "response",
-    operationId: "slack.action.list-channels",
-    path: "packages/clawjs-integrations/fixtures/slack-list-channels-response.json",
-  },
-  {
-    kind: "request",
-    operationId: "slack.action.get-channel",
-    path: "packages/clawjs-integrations/fixtures/slack-get-channel-request.json",
-  },
-  {
-    kind: "response",
-    operationId: "slack.action.get-channel",
-    path: "packages/clawjs-integrations/fixtures/slack-get-channel-response.json",
-  },
+]);
+
+const SLACK_SOURCE_EVIDENCE = [
+  "packages/clawjs-integrations/src/slack-source.test.ts",
 ];
+
+const SLACK_SOURCE_FIXTURE_NAMES = [
+  "event",
+  "message",
+  "app-mention",
+  "reaction-added",
+  "file-shared",
+];
+
+const SLACK_SOURCE_FIXTURES: ConnectorRuntimeFixture[] = SLACK_SOURCE_FIXTURE_NAMES.map((name) => ({
+  kind: "source_event",
+  operationId: `slack.source.${name}`,
+  path: `packages/clawjs-integrations/fixtures/slack-source-${name}.json`,
+}));
 
 const GITHUB_ACTION_EVIDENCE = [
   "packages/clawjs-integrations/src/github-operation-executor.test.ts",
@@ -672,6 +726,19 @@ export const CONNECTOR_RUNTIME_REGISTRY: readonly ConnectorRuntimeImplementation
     supports: (operation) => isSlackActionOperationSupported(operation.id),
     buildPlan: (operation, values) => ({
       requestPlan: buildSlackOperationRequest(operation, values),
+    }),
+  },
+  {
+    appId: "slack",
+    kind: "source",
+    executorId: "slack.events.webhook",
+    offlineValidated: true,
+    evidence: SLACK_SOURCE_EVIDENCE,
+    fixtures: SLACK_SOURCE_FIXTURES,
+    planKinds: ["source"],
+    supports: (operation) => isSlackSourceOperationSupported(operation.id),
+    buildPlan: (operation) => ({
+      sourcePlan: buildSlackSourcePlan(operation),
     }),
   },
   {
