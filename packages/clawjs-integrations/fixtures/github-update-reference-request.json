@@ -1,0 +1,14 @@
+{
+  "method": "PATCH",
+  "url": "https://api.github.com/repos/octocat/Hello-World/git/refs/heads%2Ffeature",
+  "headers": {
+    "accept": "application/vnd.github+json",
+    "authorization": "Bearer offline-githubToken-secret",
+    "content-type": "application/json",
+    "x-github-api-version": "2026-03-10"
+  },
+  "body": {
+    "sha": "abc123",
+    "force": false
+  }
+}
