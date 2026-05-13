@@ -301,7 +301,7 @@ export function buildDiscordOperationRequest(
     case "list-guild-channels":
       return getPlan(`guilds/${guildId(values)}/channels`, auth, headers, { type: "array" });
     case "create-guild-channel":
-      return bodyPlan("POST", `guilds/${guildId(values)}/channels`, auth, headers, channelBody(values), { type: "object", requiredPaths: ["id", "type", "name"] });
+      return bodyPlan("POST", `guilds/${guildId(values)}/channels`, auth, auditHeaders(headers, values), channelBody(values, true), { type: "object", requiredPaths: ["id", "type", "name"] });
     case "modify-guild-channel-positions":
       return {
         method: "PATCH",
@@ -469,7 +469,7 @@ export function buildDiscordOperationRequest(
     case "update-lobby-message-moderation-metadata":
       return bodyPlan("PUT", `lobbies/${lobbyId(values)}/messages/${messageId(values)}/moderation-metadata`, auth, headers, lobbyMessageModerationMetadataBody(values), { type: "object" });
     case "update-channel":
-      return bodyPlan("PATCH", `channels/${channelId(values)}`, auth, headers, channelBody(values), { type: "object", requiredPaths: ["id", "type"] });
+      return bodyPlan("PATCH", `channels/${channelId(values)}`, auth, headers, channelBody(values, false), { type: "object", requiredPaths: ["id", "type"] });
     case "set-voice-channel-status":
       return bodyPlan("PUT", `channels/${channelId(values)}/voice-status`, auth, auditHeaders(headers, values), voiceChannelStatusBody(values), { type: "object" });
     case "delete-channel":
@@ -1216,19 +1216,35 @@ function deletePlan(
   return bodyPlan("DELETE", endpoint, auth, headers, {}, responseSchema, query);
 }
 
-function channelBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
-  return removeEmptyValues({
-    name: optionalString(values.name),
-    type: optionalNumber(values.type),
-    topic: optionalString(values.topic),
-    bitrate: optionalNumber(values.bitrate),
-    user_limit: optionalNumber(values.userLimit),
-    rate_limit_per_user: optionalNumber(values.rateLimitPerUser),
-    position: optionalNumber(values.position),
-    parent_id: optionalString(values.parentId),
-    nsfw: values.nsfw,
-    permission_overwrites: optionalJsonArray(values.permissionOverwrites),
-  });
+function channelBody(values: Record<string, IntegrationJson>, requireCreateFields: boolean): Record<string, IntegrationJson> {
+  const body: Record<string, IntegrationJson> = {};
+  const assign = (name: string, value: IntegrationJson | undefined) => {
+    if (value !== undefined && value !== "") body[name] = value;
+  };
+  const stringField = (key: string) => requireCreateFields ? optionalNullableStringField(values, key) : optionalString(values[key]);
+  const numberField = (key: string) => requireCreateFields ? optionalNullableNumberField(values, key) : optionalNumber(values[key]);
+  const arrayField = (key: string) => requireCreateFields ? optionalNullableJsonArrayField(values, key) : optionalJsonArray(values[key]);
+  const objectField = (key: string) => requireCreateFields ? optionalNullableJsonObjectField(values, key) : optionalJsonObject(values[key]);
+
+  assign("name", requireCreateFields ? requiredString(values.name, "name") : optionalString(values.name));
+  assign("type", numberField("type"));
+  assign("topic", stringField("topic"));
+  assign("bitrate", numberField("bitrate"));
+  assign("user_limit", numberField("userLimit"));
+  assign("rate_limit_per_user", numberField("rateLimitPerUser"));
+  assign("position", numberField("position"));
+  assign("permission_overwrites", arrayField("permissionOverwrites"));
+  assign("parent_id", stringField("parentId"));
+  assign("nsfw", requireCreateFields ? optionalNullableBooleanField(values, "nsfw") : optionalBoolean(values.nsfw));
+  assign("rtc_region", stringField("rtcRegion"));
+  assign("video_quality_mode", numberField("videoQualityMode"));
+  assign("default_auto_archive_duration", numberField("defaultAutoArchiveDuration"));
+  assign("default_reaction_emoji", objectField("defaultReactionEmoji"));
+  assign("available_tags", arrayField("availableTags"));
+  assign("default_sort_order", numberField("defaultSortOrder"));
+  assign("default_forum_layout", numberField("defaultForumLayout"));
+  assign("default_thread_rate_limit_per_user", numberField("defaultThreadRateLimitPerUser"));
+  return body;
 }
 
 function guildBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
@@ -1924,6 +1940,16 @@ function optionalNumber(value: IntegrationJson): number | undefined {
   return undefined;
 }
 
+function optionalBoolean(value: IntegrationJson): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined;
+}
+
+function optionalNullableBooleanField(values: Record<string, IntegrationJson>, key: string): boolean | null | undefined {
+  if (!Object.prototype.hasOwnProperty.call(values, key)) return undefined;
+  if (values[key] === null) return null;
+  return optionalBoolean(values[key]);
+}
+
 function optionalNullableNumberField(values: Record<string, IntegrationJson>, key: string): number | null | undefined {
   if (!Object.prototype.hasOwnProperty.call(values, key)) return undefined;
   if (values[key] === null) return null;
@@ -1979,6 +2005,11 @@ function optionalJsonObject(value: IntegrationJson): Record<string, IntegrationJ
 function optionalNullableJsonObject(value: IntegrationJson): Record<string, IntegrationJson> | null | undefined {
   if (value === null) return null;
   return optionalJsonObject(value);
+}
+
+function optionalNullableJsonObjectField(values: Record<string, IntegrationJson>, key: string): Record<string, IntegrationJson> | null | undefined {
+  if (!Object.prototype.hasOwnProperty.call(values, key)) return undefined;
+  return optionalNullableJsonObject(values[key]);
 }
 
 function pathSegment(value: string): string {
