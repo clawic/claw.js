@@ -12,7 +12,7 @@ import {
   writeTemplate,
 } from "./storage.ts";
 import { normalizeTemplateManifest } from "./serializer.ts";
-import type { TemplateManifest, TemplateOutputFormat } from "./schema.ts";
+import type { TemplateAspect, TemplateManifest, TemplateOutputFormat } from "./schema.ts";
 import { readStyle } from "../styles/storage.ts";
 import { renderTemplate } from "./render/adapters.ts";
 
@@ -79,7 +79,7 @@ export async function runTemplateCli(options: TemplateCliOptions): Promise<numbe
       id,
       name,
       category,
-      aspect: seed?.aspect ?? aspectFlag ?? "16:9",
+      aspect: seed?.aspect ?? (aspectFlag as TemplateAspect | undefined) ?? "16:9",
       description: flags.description ?? seed?.description,
       tags: flags.tags ? flags.tags.split(",").map((t) => t.trim()).filter(Boolean) : seed?.tags ?? [],
       slots: seed?.slots ?? [],
