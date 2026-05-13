@@ -11,20 +11,10 @@ import {
 } from "./runtime-webhook.ts";
 import {
   buildGitLabSourcePlan,
+  GITLAB_SOURCE_SLUGS,
 } from "./gitlab-source.ts";
 
-const GITLAB_SOURCE_OPERATIONS = [
-  source("gitlab.source.event", "Event"),
-  source("gitlab.source.push", "Push"),
-  source("gitlab.source.tag-push", "Tag Push"),
-  source("gitlab.source.issue", "Issue"),
-  source("gitlab.source.merge-request", "Merge Request"),
-  source("gitlab.source.note", "Note"),
-  source("gitlab.source.job", "Job"),
-  source("gitlab.source.pipeline", "Pipeline"),
-  source("gitlab.source.wiki-page", "Wiki Page"),
-  source("gitlab.source.release", "Release"),
-];
+const GITLAB_SOURCE_OPERATIONS = GITLAB_SOURCE_SLUGS.map((slug) => source(`gitlab.source.${slug}`, titleize(slug)));
 
 const GITLAB_SOURCE_CATALOG = normalizeConnectorCatalog({
   version: 1,
@@ -125,4 +115,8 @@ function source(id: string, name: string) {
       usesServiceDb: false,
     },
   };
+}
+
+function titleize(slug: string): string {
+  return slug.split("-").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
 }

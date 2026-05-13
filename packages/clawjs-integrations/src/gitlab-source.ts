@@ -5,19 +5,7 @@ import type {
   ConnectorOperationDefinition,
 } from "./types.ts";
 
-export type GitLabSourceOperation =
-  | "event"
-  | "push"
-  | "tag-push"
-  | "issue"
-  | "merge-request"
-  | "note"
-  | "job"
-  | "pipeline"
-  | "wiki-page"
-  | "release";
-
-const GITLAB_SOURCE_OPERATIONS = new Set<GitLabSourceOperation>([
+export const GITLAB_SOURCE_SLUGS = [
   "event",
   "push",
   "tag-push",
@@ -28,7 +16,16 @@ const GITLAB_SOURCE_OPERATIONS = new Set<GitLabSourceOperation>([
   "pipeline",
   "wiki-page",
   "release",
-]);
+  "deployment",
+  "feature-flag",
+  "member",
+  "subgroup",
+  "emoji",
+] as const;
+
+export type GitLabSourceOperation = typeof GITLAB_SOURCE_SLUGS[number];
+
+const GITLAB_SOURCE_OPERATIONS = new Set<GitLabSourceOperation>(GITLAB_SOURCE_SLUGS);
 
 export function isGitLabSourceOperationSupported(operationId: string): boolean {
   return gitLabSourceOperation(operationId) !== null;
@@ -52,5 +49,6 @@ function gitLabSourceOperation(operationId: string): GitLabSourceOperation | nul
   if (slug === "tag_push" || slug === "tag") return "tag-push";
   if (slug === "merge_request" || slug === "merge-requests") return "merge-request";
   if (slug === "wiki_page" || slug === "wiki") return "wiki-page";
+  if (slug === "feature_flag" || slug === "feature-flag-event") return "feature-flag";
   return null;
 }
