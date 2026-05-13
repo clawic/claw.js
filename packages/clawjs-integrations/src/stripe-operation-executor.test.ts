@@ -575,6 +575,56 @@ describe("stripe operation runtime", () => {
         requiredPaths: ["id", "object"],
       },
     });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-credit-note"), {
+      invoice: "in_sample",
+      amount: 500,
+      memo: "Sample credit",
+      metadata: { order_id: "sample" },
+      reason: "order_change",
+    }), {
+      method: "POST",
+      endpoint: "credit_notes",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        invoice: "in_sample",
+        amount: 500,
+        memo: "Sample credit",
+        metadata: { order_id: "sample" },
+        reason: "order_change",
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.preview-credit-note"), {
+      invoice: "in_sample",
+      amount: 500,
+      memo: "Sample credit",
+      reason: "order_change",
+    }), {
+      method: "GET",
+      endpoint: "credit_notes/preview",
+      auth,
+      headers,
+      query: {
+        invoice: "in_sample",
+        amount: 500,
+        memo: "Sample credit",
+        reason: "order_change",
+      },
+      bodyEncoding: undefined,
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
   });
 
   it("covers Stripe payment operations with operation-scoped offline fixtures", async () => {

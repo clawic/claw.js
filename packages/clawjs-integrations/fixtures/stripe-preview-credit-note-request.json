@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "https://api.stripe.com/v1/credit_notes/preview?invoice=in_sample&amount=500&memo=Sample+credit&reason=order_change",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bearer offline-stripeSecretKey-secret"
+  }
+}

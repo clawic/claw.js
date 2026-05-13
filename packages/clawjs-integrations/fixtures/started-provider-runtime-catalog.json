@@ -31136,6 +31136,272 @@
           ]
         },
         {
+          "id": "stripe.action.list-credit-notes",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Credit Notes",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "invoice",
+              "type": "string",
+              "optional": true,
+              "default": "in_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-credit-note",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Credit Note",
+          "fields": [
+            {
+              "name": "invoice",
+              "type": "string",
+              "optional": false,
+              "default": "in_sample"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 500
+            },
+            {
+              "name": "memo",
+              "type": "string",
+              "optional": true,
+              "default": "Sample credit"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            },
+            {
+              "name": "reason",
+              "type": "string",
+              "optional": true,
+              "default": "order_change"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.preview-credit-note",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Preview Credit Note",
+          "fields": [
+            {
+              "name": "invoice",
+              "type": "string",
+              "optional": false,
+              "default": "in_sample"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 500
+            },
+            {
+              "name": "memo",
+              "type": "string",
+              "optional": true,
+              "default": "Sample credit"
+            },
+            {
+              "name": "reason",
+              "type": "string",
+              "optional": true,
+              "default": "order_change"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-credit-note-preview-lines",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Credit Note Preview Lines",
+          "fields": [
+            {
+              "name": "invoice",
+              "type": "string",
+              "optional": false,
+              "default": "in_sample"
+            },
+            {
+              "name": "amount",
+              "type": "integer",
+              "optional": true,
+              "default": 500
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-credit-note",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Credit Note",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "cn_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-credit-note",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Credit Note",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "cn_sample"
+            },
+            {
+              "name": "memo",
+              "type": "string",
+              "optional": true,
+              "default": "Updated credit"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.void-credit-note",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Void Credit Note",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "cn_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-credit-note-lines",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Credit Note Lines",
+          "fields": [
+            {
+              "name": "creditNote",
+              "type": "string",
+              "optional": false,
+              "default": "cn_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
           "id": "stripe.action.list-invoices",
           "appId": "stripe",
           "kind": "action",
