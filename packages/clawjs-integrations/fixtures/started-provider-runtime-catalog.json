@@ -5321,9 +5321,87 @@
               "optional": false
             },
             {
+              "name": "username",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "avatarUrl",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "tts",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "embeds",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "allowedMentions",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "components",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "attachments",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "files",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "flags",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "threadName",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "appliedTags",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "poll",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
               "name": "wait",
               "type": "boolean",
               "optional": true
+            },
+            {
+              "name": "threadId",
+              "type": "string",
+              "optional": true,
+              "default": null
             },
             {
               "name": "withComponents",
@@ -5611,6 +5689,78 @@
               "name": "content",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "username",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "avatarUrl",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "tts",
+              "type": "boolean",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "embeds",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "allowedMentions",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "components",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "attachments",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "files",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "flags",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "threadName",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "appliedTags",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "poll",
+              "type": "object",
+              "optional": true,
+              "default": null
             }
           ],
           "authFieldNames": []
