@@ -86,6 +86,108 @@ const STRIPE_CATALOG = normalizeConnectorCatalog({
         ],
         authFieldNames: ["stripeSecretKey"],
       },
+      action("stripe.action.list-products", "List Products", [
+        { name: "limit", type: "integer", optional: true, default: 10, min: 1 },
+      ]),
+      action("stripe.action.get-product", "Get Product", [
+        { name: "productId", type: "string", optional: false },
+      ]),
+      action("stripe.action.create-product", "Create Product", [
+        { name: "name", type: "string", optional: false },
+      ]),
+      action("stripe.action.update-product", "Update Product", [
+        { name: "productId", type: "string", optional: false },
+        { name: "name", type: "string", optional: true },
+      ]),
+      action("stripe.action.delete-product", "Delete Product", [
+        { name: "productId", type: "string", optional: false },
+      ]),
+      action("stripe.action.search-products", "Search Products", [
+        { name: "query", type: "string", optional: false },
+      ]),
+      action("stripe.action.list-prices", "List Prices", [
+        { name: "limit", type: "integer", optional: true, default: 10, min: 1 },
+      ]),
+      action("stripe.action.get-price", "Get Price", [
+        { name: "priceId", type: "string", optional: false },
+      ]),
+      action("stripe.action.create-price", "Create Price", [
+        { name: "currency", type: "string", optional: false },
+        { name: "productId", type: "string", optional: false },
+        { name: "unitAmount", type: "integer", optional: false },
+      ]),
+      action("stripe.action.update-price", "Update Price", [
+        { name: "priceId", type: "string", optional: false },
+        { name: "nickname", type: "string", optional: true },
+      ]),
+      action("stripe.action.search-prices", "Search Prices", [
+        { name: "query", type: "string", optional: false },
+      ]),
+      action("stripe.action.list-subscriptions", "List Subscriptions", [
+        { name: "limit", type: "integer", optional: true, default: 10, min: 1 },
+      ]),
+      action("stripe.action.get-subscription", "Get Subscription", [
+        { name: "subscriptionId", type: "string", optional: false },
+      ]),
+      action("stripe.action.create-subscription", "Create Subscription", [
+        { name: "customerId", type: "string", optional: false },
+        { name: "items", type: "array", optional: false, default: [{ price: "price_sample" }] },
+      ]),
+      action("stripe.action.update-subscription", "Update Subscription", [
+        { name: "subscriptionId", type: "string", optional: false },
+        { name: "items", type: "array", optional: true, default: [{ id: "si_sample", price: "price_sample" }] },
+      ]),
+      action("stripe.action.cancel-subscription", "Cancel Subscription", [
+        { name: "subscriptionId", type: "string", optional: false },
+      ]),
+      action("stripe.action.resume-subscription", "Resume Subscription", [
+        { name: "subscriptionId", type: "string", optional: false },
+      ]),
+      action("stripe.action.search-subscriptions", "Search Subscriptions", [
+        { name: "query", type: "string", optional: false },
+      ]),
+      action("stripe.action.list-checkout-sessions", "List Checkout Sessions", [
+        { name: "limit", type: "integer", optional: true, default: 10, min: 1 },
+      ]),
+      action("stripe.action.get-checkout-session", "Get Checkout Session", [
+        { name: "sessionId", type: "string", optional: false },
+      ]),
+      action("stripe.action.create-checkout-session", "Create Checkout Session", [
+        { name: "mode", type: "string", optional: false, default: "payment" },
+        { name: "successUrl", type: "string", optional: false, default: "https://example.invalid/success" },
+        { name: "lineItems", type: "array", optional: true, default: [{ price: "price_sample", quantity: 1 }] },
+      ]),
+      action("stripe.action.expire-checkout-session", "Expire Checkout Session", [
+        { name: "sessionId", type: "string", optional: false },
+      ]),
+      action("stripe.action.list-checkout-session-line-items", "List Checkout Session Line Items", [
+        { name: "sessionId", type: "string", optional: false },
+        { name: "limit", type: "integer", optional: true, default: 10, min: 1 },
+      ]),
+      action("stripe.action.list-refunds", "List Refunds", [
+        { name: "limit", type: "integer", optional: true, default: 10, min: 1 },
+      ]),
+      action("stripe.action.get-refund", "Get Refund", [
+        { name: "refundId", type: "string", optional: false },
+      ]),
+      action("stripe.action.create-refund", "Create Refund", [
+        { name: "paymentIntentId", type: "string", optional: false },
+        { name: "amount", type: "integer", optional: true },
+      ]),
+      action("stripe.action.update-refund", "Update Refund", [
+        { name: "refundId", type: "string", optional: false },
+        { name: "metadata", type: "object", optional: true, default: { order_id: "sample" } },
+      ]),
+      action("stripe.action.list-charges", "List Charges", [
+        { name: "limit", type: "integer", optional: true, default: 10, min: 1 },
+      ]),
+      action("stripe.action.get-charge", "Get Charge", [
+        { name: "chargeId", type: "string", optional: false },
+      ]),
+      action("stripe.action.capture-charge", "Capture Charge", [
+        { name: "chargeId", type: "string", optional: false },
+        { name: "amount", type: "integer", optional: true },
+      ]),
     ],
   }],
 });
@@ -197,16 +299,46 @@ describe("stripe operation runtime", () => {
   it("covers Stripe payment operations with operation-scoped offline fixtures", async () => {
     const coverage = verifyConnectorRuntimeCoverage(STRIPE_CATALOG);
     assert.equal(coverage.summary.missing, 0);
-    assert.equal(coverage.summary.implemented, 6);
+    assert.equal(coverage.summary.implemented, 36);
 
     const offline = await verifyConnectorRuntimeOfflineExecutions(STRIPE_CATALOG);
     assert.deepEqual(offline.results.map((result) => result.operationId).sort(), [
+      "stripe.action.cancel-subscription",
+      "stripe.action.capture-charge",
+      "stripe.action.create-checkout-session",
       "stripe.action.create-customer",
       "stripe.action.create-payment-intent",
+      "stripe.action.create-price",
+      "stripe.action.create-product",
+      "stripe.action.create-refund",
+      "stripe.action.create-subscription",
+      "stripe.action.delete-product",
+      "stripe.action.expire-checkout-session",
+      "stripe.action.get-charge",
+      "stripe.action.get-checkout-session",
       "stripe.action.get-customer",
       "stripe.action.get-payment-intent",
+      "stripe.action.get-price",
+      "stripe.action.get-product",
+      "stripe.action.get-refund",
+      "stripe.action.get-subscription",
+      "stripe.action.list-charges",
+      "stripe.action.list-checkout-session-line-items",
+      "stripe.action.list-checkout-sessions",
       "stripe.action.list-customers",
       "stripe.action.list-payment-intents",
+      "stripe.action.list-prices",
+      "stripe.action.list-products",
+      "stripe.action.list-refunds",
+      "stripe.action.list-subscriptions",
+      "stripe.action.resume-subscription",
+      "stripe.action.search-prices",
+      "stripe.action.search-products",
+      "stripe.action.search-subscriptions",
+      "stripe.action.update-price",
+      "stripe.action.update-product",
+      "stripe.action.update-refund",
+      "stripe.action.update-subscription",
     ]);
   });
 });
@@ -215,4 +347,21 @@ function operation(operationId: string) {
   const found = STRIPE_CATALOG.apps[0]?.operations.find((candidate) => candidate.id === operationId);
   assert.ok(found);
   return found;
+}
+
+function action(id: string, name: string, fields: Array<{
+  name: string;
+  type: string;
+  optional: boolean;
+  default?: unknown;
+  min?: number;
+}>) {
+  return {
+    id,
+    appId: "stripe",
+    kind: "action" as const,
+    name,
+    fields,
+    authFieldNames: ["stripeSecretKey"],
+  };
 }
