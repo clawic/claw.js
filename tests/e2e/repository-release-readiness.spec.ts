@@ -228,47 +228,47 @@ test("repository exposes a standalone execution plane spec surface", async ({ re
   expect(status.ok()).toBeTruthy();
 
   const requiredFiles = [
-    "execution-plane/README.md",
-    "execution-plane/docs/product.md",
-    "execution-plane/docs/domain-model.md",
-    "execution-plane/docs/architecture.md",
-    "execution-plane/docs/api.md",
-    "execution-plane/docs/roadmap.md",
+    "execution/README.md",
+    "execution/docs/product.md",
+    "execution/docs/domain-model.md",
+    "execution/docs/architecture.md",
+    "execution/docs/api.md",
+    "execution/docs/roadmap.md",
   ];
 
   for (const relativePath of requiredFiles) {
     expect(fs.existsSync(path.join(process.cwd(), relativePath)), `${relativePath} should exist`).toBe(true);
   }
 
-  const readme = readFile("execution-plane/README.md");
-  expect(readme).toContain("Agent Execution Plane");
+  const readme = readFile("execution/README.md");
+  expect(readme).toContain("Agent Execution");
   expect(readme).toContain("execution-first");
   expect(readme).toContain("Vault-compatible");
 
-  const product = readFile("execution-plane/docs/product.md");
+  const product = readFile("execution/docs/product.md");
   expect(product).toContain("not an extension of `relay/`");
   expect(product).toContain("Git repositories remain the source of truth");
   expect(product).toContain("script");
   expect(product).toContain("notebook");
 
-  const domainModel = readFile("execution-plane/docs/domain-model.md");
+  const domainModel = readFile("execution/docs/domain-model.md");
   expect(domainModel).toContain("ChangeRequest");
   expect(domainModel).toContain("Artifact");
   expect(domainModel).toContain("Deployment");
   expect(domainModel).toContain("Every run points to exactly one revision.");
 
-  const architecture = readFile("execution-plane/docs/architecture.md");
+  const architecture = readFile("execution/docs/architecture.md");
   expect(architecture).toContain("control plane");
   expect(architecture).toContain("worker plane");
   expect(architecture).toContain("Secrets are never injected into model-visible plaintext context.");
 
-  const api = readFile("execution-plane/docs/api.md");
+  const api = readFile("execution/docs/api.md");
   expect(api).toContain("registerWorker");
   expect(api).toContain("createRun");
   expect(api).toContain("openChangeRequest");
   expect(api).toContain("createDeployment");
 
-  const roadmap = readFile("execution-plane/docs/roadmap.md");
+  const roadmap = readFile("execution/docs/roadmap.md");
   expect(roadmap).toContain("Phase 1: Execution Core");
   expect(roadmap).toContain("Phase 4: Deployment Plane");
   expect(roadmap).toContain("published with domain and SSL");
@@ -277,7 +277,7 @@ test("repository exposes a standalone execution plane spec surface", async ({ re
     const content = readFile(relativePath);
     const preview = content
       .split("\n")
-      .filter((line) => line.includes("Execution Plane") || line.includes("control plane") || line.includes("createRun") || line.includes("Deployment") || line.includes("Phase"))
+      .filter((line) => line.includes("Execution") || line.includes("control plane") || line.includes("createRun") || line.includes("Deployment") || line.includes("Phase"))
       .slice(0, 6)
       .join("\n");
 
@@ -365,7 +365,7 @@ test("repository exposes a standalone execution plane spec surface", async ({ re
         <main>
           <h1>Execution plane spec surfaced</h1>
           <p>
-            The repository now carries a standalone top-level execution-plane specification with product,
+            The repository now carries a standalone top-level execution specification with product,
             domain, architecture, API, and roadmap documents for distributed agent-authored code execution.
           </p>
           <span class="badge">top-level product surface</span>
@@ -375,5 +375,5 @@ test("repository exposes a standalone execution plane spec surface", async ({ re
     </html>
   `);
 
-  await saveArtifactScreenshot(page, "repository-execution-plane-surface.png");
+  await saveArtifactScreenshot(page, "repository-execution-surface.png");
 });

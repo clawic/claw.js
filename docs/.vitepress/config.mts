@@ -78,6 +78,7 @@ export default defineConfig({
           { text: "API Reference", link: "/api" },
           { text: "Interface Matrix", link: "/interface-matrix" },
           { text: "Public Surface", link: "/surface" },
+          { text: "Repository Map", link: "/repository-map" },
         ],
       },
       {
@@ -92,8 +93,8 @@ export default defineConfig({
           { text: "IoT", link: "/iot" },
           { text: "Secrets", link: "/secrets" },
           { text: "Drive", link: "/drive" },
-          { text: "Execution Plane", link: "/execution-plane" },
-          { text: "Delegation Plane", link: "/delegation-plane" },
+          { text: "Execution", link: "/execution" },
+          { text: "Delegation", link: "/delegation" },
         ],
       },
       {

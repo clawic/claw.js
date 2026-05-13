@@ -42,7 +42,7 @@ test("telegram surface lists configured bots from an isolated workspace", async 
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-telegram-surface-"));
   writeChannelsState(workspaceDir);
 
-  await execFileAsync("npm", ["--prefix", "telegram/ui", "run", "build"], {
+  await execFileAsync("npm", ["--prefix", "integrations/telegram/ui", "run", "build"], {
     cwd: rootDir,
     timeout: 120_000,
     maxBuffer: 1024 * 1024,

@@ -62,8 +62,8 @@ process.env.OPENCLAW_WORKSPACE_DIR = ${JSON.stringify(workspaceDir)};
 process.env.OPENCLAW_AGENT_DIR = ${JSON.stringify(agentDir)};
 process.env.HOME = ${JSON.stringify(homeDir)};
 
-const { findCommand, findCommandFresh } = await import("./demo/src/lib/platform.ts");
-const { getClawJSOpenClawStatus } = await import("./demo/src/lib/openclaw-agent.ts");
+const { findCommand, findCommandFresh } = await import("./examples/demo/src/lib/platform.ts");
+const { getClawJSOpenClawStatus } = await import("./examples/demo/src/lib/openclaw-agent.ts");
 
 const resolvedNpmPath = await findCommandFresh("npm");
 const cachedPath = await findCommand("openclaw");

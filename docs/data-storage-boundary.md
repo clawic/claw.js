@@ -36,7 +36,7 @@ The main database owns:
 - Memory and knowledge records: entities, facts, pages, page blocks, links,
   mentions, revisions, comments, and profile projections.
 - User model, tracking/life observations, time projections, MCP metadata,
-  channel metadata, apps/resources/design metadata, content, ERP, Badger/social,
+  channel metadata, apps/resources/design metadata, content, ERP, Publishing/social,
   marketplace, IoT, and other structured domain tables when the data is not a
   native secret and not a high-churn runtime log.
 
@@ -54,7 +54,7 @@ folder.
 Canonical sidecars:
 
 - `runtime.sqlite`: runtime, sandbox, code index, bridge/daemon operational
-  state, and delegation-plane execution state.
+  state, and delegation execution state.
 - `sessions.sqlite`: session service data and long-running session event state
   when it is not just a searchable main-db projection.
 - `audio.sqlite` plus `audio/`: audio and voice catalog/output metadata and

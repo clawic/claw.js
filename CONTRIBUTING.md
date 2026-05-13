@@ -11,7 +11,7 @@
 
 ```bash
 npm ci
-npm --prefix demo ci
+npm --prefix examples/demo ci
 npm --prefix website ci
 npx playwright install --with-deps chromium
 npm run ci

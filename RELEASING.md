@@ -22,7 +22,7 @@ For preview builds from `next`, run prereleases with the npm dist-tag `next` ins
 
 ## Release checklist
 
-1. Run `npm ci`, `npm --prefix demo ci`, and `npm --prefix website ci`.
+1. Run `npm ci`, `npm --prefix examples/demo ci`, and `npm --prefix website ci`.
 2. Run `npx playwright install --with-deps chromium`.
 3. Run `npm run ci`.
 4. Run `npm run publish:dry-run`.

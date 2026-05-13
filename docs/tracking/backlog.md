@@ -25,7 +25,7 @@ This page is the detailed counterpart to the portfolio overview. Use one row per
 | Service stack | IoT | Seed the first IoT backlog slice | `research` | `P2` | `planned` | Tracker created | Add rows for things, scenes, approvals, and automations | 2026-04-16 |
 | Service stack | Secrets | Seed the first secrets backlog slice | `research` | `P2` | `planned` | Tracker created | Add rows for secret catalog, policies, brokered requests, and leases | 2026-04-16 |
 | Service stack | Drive | Seed the first drive backlog slice | `research` | `P2` | `planned` | Tracker created | Add rows for docs, uploads, revisions, previews, and sharing | 2026-04-16 |
-| Service stack | Execution Plane | Seed the first execution-plane backlog slice | `research` | `P2` | `planned` | Tracker created | Add rows for runs, workers, artifacts, notebooks, and deployments | 2026-04-16 |
+| Service stack | Execution | Seed the first execution backlog slice | `research` | `P2` | `planned` | Tracker created | Add rows for runs, workers, artifacts, notebooks, and deployments | 2026-04-16 |
 
 ## Column Rules
 

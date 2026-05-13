@@ -297,8 +297,8 @@ claw inference generate-text --prompt "hello"
 
 These historical names are intentionally not part of the public CLI:
 
-- Standalone package bins: `clawjs`, `memory`, `user`, `delegation-plane`,
-  `badger`, and `clawix-relay`.
+- Standalone package bins: `clawjs`, `memory`, `user`, `delegation`,
+  `publishing`, and `clawix-relay`.
 - Top-level namespaces: `data`, `app-state`, `life`, `ops`, `infra`,
   `workspace-search`, and `workspace-index`.
 - Top-level snapshot verbs: `export`, `import`, and `backup`.

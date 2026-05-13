@@ -20,17 +20,29 @@ This project is governed by `CONSTITUTION.md` at the repository root. It defines
 
 ## Repository Shape
 
-This is a Node.js monorepo for ClawJS, an SDK plus CLI, runtime adapters, workspace tooling, scaffolding packages, a demo app, and a docs website.
+This is a Node.js monorepo for ClawJS, a local-first Agent OS with an SDK,
+CLI, runtime adapters, workspace tooling, horizontal services, capability
+modules, examples, and a docs website.
 
 Important top-level areas:
 
 - `packages/`: published packages and scaffolding tools.
-- `demo/`: Next.js demo app used by the browser E2E suite.
+- `runtime/`, `relay/`, `database/`, `bridge/`, `browser/`, `storage/`,
+  `sessions/`, `memory/`, `secrets/`, `audio/`, `time/`, `notify/`, `drive/`,
+  `content/`, `iot/`, `wiki/`, `execution/`, `delegation/`, `publishing/`,
+  `mcp/`, and `monitor/`: horizontal Agent OS systems.
+- `modules/`: optional domain capability packs. Do not put personal or
+  domain-specific verticals back in the repository root.
+- `integrations/`: provider and channel services such as Slack, Telegram,
+  email, Teams, WhatsApp, SMS, and webhooks.
+- `examples/demo/`: Next.js demo app used by the browser E2E suite.
+- `examples/mock/`: local mock helpers for demo workflows.
+- `assets/`: shared brand assets and shared UI fonts for internal dashboards
+  and operational web UIs.
 - `website/`: docs-site runtime wrapper for local preview and production builds.
 - `docs/`: the single Markdown source for product, reference, and workflow documentation.
 - `tests/e2e/`: canonical Playwright end-to-end suite.
 - `scripts/`: repo automation such as docs and packaging checks.
-- `mock/`: local mock helpers for demo workflows.
 
 Key published packages:
 
@@ -46,14 +58,14 @@ Key published packages:
 ## Environment And Setup
 
 - Use Node.js `20` or `22`. The root `package.json` requires Node `>=20`.
-- Use the root workspace as the command entrypoint unless a task clearly belongs inside `demo/` or `website/`.
+- Use the root workspace as the command entrypoint unless a task clearly belongs inside `examples/demo/` or `website/`.
 - The repo is validated locally with `npm`. Do not add GitHub Actions workflows or other automatic GitHub checks unless the maintainer explicitly reverses that policy.
 
 Bootstrap the full repository:
 
 ```bash
 npm ci
-npm --prefix demo ci
+npm --prefix examples/demo ci
 npm --prefix website ci
 npx playwright install --with-deps chromium
 ```
@@ -77,7 +89,7 @@ Useful focused commands:
 ```bash
 npm run demo
 npm run demo:mock
-npm --prefix demo run test
+npm --prefix examples/demo run test
 npm --prefix website run build
 ```
 
@@ -94,7 +106,7 @@ For E2E work:
 - The blocking suite is hermetic and runs the demo against `next start`, not `next dev`.
 - If a change touches visible UI in the demo, add or update Playwright coverage and follow the artifact guidance in `tests/e2e/README.md`.
 - Reuse `tests/e2e/fixtures.ts` so console errors, page errors, failed requests, and unexpected `4xx` or `5xx` responses stay gated.
-- If a scenario depends on runtime or external services, add or extend hermetic fixture logic in `demo/src/lib/e2e.ts` and the relevant test-only API routes.
+- If a scenario depends on runtime or external services, add or extend hermetic fixture logic in `examples/demo/src/lib/e2e.ts` and the relevant test-only API routes.
 
 Validation fidelity rules:
 
@@ -195,7 +207,7 @@ Pull request rules:
 - Read before changing: inspect the affected package, tests, and docs before editing.
 - Prefer small, surgical patches over broad refactors unless the task explicitly asks for structural change.
 - Do not overwrite unrelated user changes in a dirty worktree.
-- Shared brand assets and shared UI fonts live in the repo-root `public/` directory for internal dashboards and operational web UIs; treat `public/logo.png`, `public/favicon.ico`, `public/fonts/source-sans-3/*`, and `public/fonts/ubuntu-mono/*` as the source of truth there, but keep `website/` and chat/mobile clients on their own visual systems.
+- Shared brand assets and shared UI fonts live in the repo-root `assets/` directory for internal dashboards and operational web UIs; treat `assets/logo.png`, `assets/favicon.ico`, `assets/fonts/source-sans-3/*`, and `assets/fonts/ubuntu-mono/*` as the source of truth there, but keep `website/` and chat/mobile clients on their own visual systems.
 - For every change, review the relevant docs, README files, examples, templates, and website content to confirm they still match the current behavior, APIs, and workflows; update them in the same patch whenever they are stale.
 - When you touch a package, verify whether corresponding docs, templates, smoke coverage, and repository surface checks also need updates.
 - When you add or rename public packages, commands, or scaffolding behavior, update docs and package-surface coverage.

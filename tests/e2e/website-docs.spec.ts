@@ -81,7 +81,7 @@ test("docs site builds and renders core docs navigation publicly", async ({ page
     await expect(page.locator(".VPSidebar").getByRole("link", { name: "Tracking Backlog" }).first()).toHaveAttribute("href", /\/tracking\/backlog$/);
     await expect(page.locator("main")).toContainText("Portfolio Overview");
     await expect(page.locator("main")).toContainText("SDK + CLI");
-    await expect(page.locator("main")).toContainText("Execution Plane");
+    await expect(page.locator("main")).toContainText("Execution");
     await saveArtifactScreenshot(page, "website-docs-tracking-overview.png");
 
     await page.goto(`http://127.0.0.1:${WEBSITE_PORT}/tracking/backlog.html`, { waitUntil: "networkidle" });
