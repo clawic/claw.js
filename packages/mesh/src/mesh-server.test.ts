@@ -43,7 +43,7 @@ async function makeHarness(
     auditStore,
     capabilities: ["bridge", "codex"],
     endpointResolver: () => [
-      { kind: "lan", host: "192.168.1.10", port: 7778, protocol: "bridge" },
+      { kind: "lan", host: "192.168.1.10", port: 24180, protocol: "bridge" },
     ],
     ...override,
   };
@@ -342,7 +342,7 @@ test("POST /v1/mesh/link is loopback only and uses linkClient", async () => {
     method: "POST",
     url: "/v1/mesh/link",
     remoteAddress: "10.0.0.5",
-    payload: { remoteHost: "h", remotePort: 7779, remoteToken: "t" },
+    payload: { remoteHost: "h", remotePort: 24181, remoteToken: "t" },
   });
   assert.equal(remote.statusCode, 403);
 
@@ -350,7 +350,7 @@ test("POST /v1/mesh/link is loopback only and uses linkClient", async () => {
     method: "POST",
     url: "/v1/mesh/link",
     remoteAddress: "127.0.0.1",
-    payload: { remoteHost: "remote.local", remotePort: 7779, remoteToken: "t" },
+    payload: { remoteHost: "remote.local", remotePort: 24181, remoteToken: "t" },
   });
   assert.equal(ok.statusCode, 200);
   const peer = hostStore.get("remote-mac-1");

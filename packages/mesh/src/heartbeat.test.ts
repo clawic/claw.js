@@ -24,8 +24,8 @@ test("write produces a valid status file", async () => {
       nodeId: "node-1",
       displayName: "Studio Mac",
       host: "127.0.0.1",
-      bridgePort: 7778,
-      httpPort: 7779,
+      bridgePort: 24180,
+      httpPort: 24181,
       startedAt: new Date("2026-05-10T10:00:00.000Z").toISOString(),
       version: "0.1.0",
     },
@@ -35,7 +35,7 @@ test("write produces a valid status file", async () => {
   const text = await readFile(path, "utf8");
   const status = BridgeStatusSchema.parse(JSON.parse(text));
   assert.equal(status.nodeId, "node-1");
-  assert.equal(status.bridgePort, 7778);
+  assert.equal(status.bridgePort, 24180);
   assert.equal(status.lastHeartbeatAt, "2026-05-10T10:01:00.000Z");
   await writer.stop();
 });
@@ -50,8 +50,8 @@ test("stop removes the status file", async () => {
       nodeId: "n",
       displayName: "d",
       host: "127.0.0.1",
-      bridgePort: 7778,
-      httpPort: 7779,
+      bridgePort: 24180,
+      httpPort: 24181,
       startedAt: new Date().toISOString(),
     },
   });

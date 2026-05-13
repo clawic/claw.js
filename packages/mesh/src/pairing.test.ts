@@ -79,7 +79,7 @@ test("pairing payload encodes and decodes round-trip", () => {
   const payload = {
     v: 1 as const,
     host: "192.168.1.10",
-    port: 7778,
+    port: 24180,
     token: generateBearerToken(),
     shortCode: generateShortCode(),
     macName: "Studio Mac",

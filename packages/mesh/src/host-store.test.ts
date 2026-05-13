@@ -24,8 +24,8 @@ const macInput: HostInput = {
   permissionProfile: "fullTrust",
   capabilities: ["codex", "computerUse"],
   endpoints: [
-    { kind: "lan", host: "192.168.1.10", port: 7778, protocol: "bridge" },
-    { kind: "tailscale", host: "100.64.0.10", port: 7778, protocol: "bridge" },
+    { kind: "lan", host: "192.168.1.10", port: 24180, protocol: "bridge" },
+    { kind: "tailscale", host: "100.64.0.10", port: 24180, protocol: "bridge" },
   ],
   metadata: { tags: ["personal"], notes: "main desk" },
 };
