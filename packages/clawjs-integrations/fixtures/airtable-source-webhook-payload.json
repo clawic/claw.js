@@ -1,0 +1,11 @@
+{
+  "events": [
+    {
+      "eventId": "offline-webhook-payload-event",
+      "baseId": "appBase123",
+      "tableId": "tblTable123",
+      "recordId": "recRecord123",
+      "payloadFormat": "airtable-webhook"
+    }
+  ]
+}
