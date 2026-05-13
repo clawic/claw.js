@@ -56,6 +56,10 @@ export type DiscordRuntimeOperation =
   | "get-user-voice-state"
   | "modify-current-user-voice-state"
   | "modify-user-voice-state"
+  | "create-lobby"
+  | "get-lobby"
+  | "modify-lobby"
+  | "delete-lobby"
   | "get-channel"
   | "update-channel"
   | "set-voice-channel-status"
@@ -313,6 +317,14 @@ export function buildDiscordOperationRequest(
       return bodyPlan("PATCH", `guilds/${guildId(values)}/voice-states/@me`, auth, headers, voiceStateBody(values, true), { type: "object" });
     case "modify-user-voice-state":
       return bodyPlan("PATCH", `guilds/${guildId(values)}/voice-states/${userId(values)}`, auth, headers, voiceStateBody(values, false), { type: "object" });
+    case "create-lobby":
+      return bodyPlan("POST", "lobbies", auth, headers, lobbyBody(values), { type: "object", requiredPaths: ["id", "application_id", "members"] });
+    case "get-lobby":
+      return getPlan(`lobbies/${lobbyId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "application_id", "members"] });
+    case "modify-lobby":
+      return bodyPlan("PATCH", `lobbies/${lobbyId(values)}`, auth, headers, lobbyBody(values), { type: "object", requiredPaths: ["id", "application_id", "members"] });
+    case "delete-lobby":
+      return deletePlan(`lobbies/${lobbyId(values)}`, auth, headers, { type: "object" });
     case "update-channel":
       return bodyPlan("PATCH", `channels/${channelId(values)}`, auth, headers, channelBody(values), { type: "object", requiredPaths: ["id", "type"] });
     case "set-voice-channel-status":
@@ -610,6 +622,10 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "get-user-voice-state",
   "modify-current-user-voice-state",
   "modify-user-voice-state",
+  "create-lobby",
+  "get-lobby",
+  "modify-lobby",
+  "delete-lobby",
   "get-channel",
   "update-channel",
   "set-voice-channel-status",
@@ -822,6 +838,14 @@ function voiceStateBody(values: Record<string, IntegrationJson>, includeRequestT
     channel_id: optionalString(values.channelId),
     suppress: values.suppress,
     ...(includeRequestToSpeak ? { request_to_speak_timestamp: optionalString(values.requestToSpeakTimestamp) } : {}),
+  });
+}
+
+function lobbyBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    metadata: optionalJsonObject(values.metadata),
+    members: optionalJsonArray(values.members),
+    idle_timeout_seconds: optionalNumber(values.idleTimeoutSeconds),
   });
 }
 
@@ -1094,6 +1118,10 @@ function skuId(values: Record<string, IntegrationJson>): string {
 
 function subscriptionId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.subscriptionId, values.subscription), "subscriptionId"));
+}
+
+function lobbyId(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.lobbyId, values.lobby), "lobbyId"));
 }
 
 function emojiId(values: Record<string, IntegrationJson>): string {
