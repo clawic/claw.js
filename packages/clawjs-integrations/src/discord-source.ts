@@ -12,6 +12,9 @@ export type DiscordSourceOperation =
   | "message-delete"
   | "guild-member-add"
   | "guild-member-remove"
+  | "guild-scheduled-event-create"
+  | "guild-scheduled-event-update"
+  | "guild-scheduled-event-delete"
   | "interaction-create"
   | "thread-create"
   | "reaction-add";
@@ -23,6 +26,9 @@ const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "message-delete",
   "guild-member-add",
   "guild-member-remove",
+  "guild-scheduled-event-create",
+  "guild-scheduled-event-update",
+  "guild-scheduled-event-delete",
   "interaction-create",
   "thread-create",
   "reaction-add",

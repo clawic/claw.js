@@ -56,6 +56,12 @@ export type DiscordRuntimeOperation =
   | "create-guild-ban"
   | "remove-guild-ban"
   | "list-guild-invites"
+  | "list-guild-scheduled-events"
+  | "create-guild-scheduled-event"
+  | "get-guild-scheduled-event"
+  | "update-guild-scheduled-event"
+  | "delete-guild-scheduled-event"
+  | "list-guild-scheduled-event-users"
   | "get-invite"
   | "delete-invite"
   | "list-channel-webhooks"
@@ -227,6 +233,27 @@ export function buildDiscordOperationRequest(
       return deletePlan(`guilds/${guildId(values)}/bans/${userId(values)}`, auth, headers, { type: "object" });
     case "list-guild-invites":
       return getPlan(`guilds/${guildId(values)}/invites`, auth, headers, { type: "array" });
+    case "list-guild-scheduled-events":
+      return getPlan(`guilds/${guildId(values)}/scheduled-events`, auth, headers, { type: "array" }, removeEmptyValues({
+        with_user_count: values.withUserCount,
+      }));
+    case "create-guild-scheduled-event":
+      return bodyPlan("POST", `guilds/${guildId(values)}/scheduled-events`, auth, headers, scheduledEventBody(values, true), { type: "object", requiredPaths: ["id", "guild_id", "name"] });
+    case "get-guild-scheduled-event":
+      return getPlan(`guilds/${guildId(values)}/scheduled-events/${guildScheduledEventId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "guild_id", "name"] }, removeEmptyValues({
+        with_user_count: values.withUserCount,
+      }));
+    case "update-guild-scheduled-event":
+      return bodyPlan("PATCH", `guilds/${guildId(values)}/scheduled-events/${guildScheduledEventId(values)}`, auth, headers, scheduledEventBody(values, false), { type: "object", requiredPaths: ["id", "guild_id", "name"] });
+    case "delete-guild-scheduled-event":
+      return deletePlan(`guilds/${guildId(values)}/scheduled-events/${guildScheduledEventId(values)}`, auth, headers, { type: "object" });
+    case "list-guild-scheduled-event-users":
+      return getPlan(`guilds/${guildId(values)}/scheduled-events/${guildScheduledEventId(values)}/users`, auth, headers, { type: "array" }, removeEmptyValues({
+        limit: optionalNumber(values.limit),
+        with_member: values.withMember,
+        before: optionalString(values.before),
+        after: optionalString(values.after),
+      }));
     case "get-invite":
       return getPlan(`invites/${pathSegment(requiredString(values.inviteCode, "inviteCode"))}`, auth, headers, { type: "object", requiredPaths: ["code"] }, removeEmptyValues({
         with_counts: values.withCounts,
@@ -337,6 +364,12 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "create-guild-ban",
   "remove-guild-ban",
   "list-guild-invites",
+  "list-guild-scheduled-events",
+  "create-guild-scheduled-event",
+  "get-guild-scheduled-event",
+  "update-guild-scheduled-event",
+  "delete-guild-scheduled-event",
+  "list-guild-scheduled-event-users",
   "get-invite",
   "delete-invite",
   "list-channel-webhooks",
@@ -542,6 +575,24 @@ function applicationCommandBody(values: Record<string, IntegrationJson>): Record
   });
 }
 
+function scheduledEventBody(values: Record<string, IntegrationJson>, requireCreateFields: boolean): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    channel_id: optionalString(values.channelId),
+    entity_metadata: optionalJsonObject(values.entityMetadata),
+    name: requireCreateFields ? requiredString(values.name, "name") : optionalString(values.name),
+    privacy_level: requireCreateFields ? optionalNumber(values.privacyLevel) ?? 2 : optionalNumber(values.privacyLevel),
+    scheduled_start_time: requireCreateFields
+      ? requiredString(values.scheduledStartTime, "scheduledStartTime")
+      : optionalString(values.scheduledStartTime),
+    scheduled_end_time: optionalString(values.scheduledEndTime),
+    description: optionalString(values.description),
+    entity_type: requireCreateFields ? optionalNumber(values.entityType) ?? 3 : optionalNumber(values.entityType),
+    status: optionalNumber(values.status),
+    image: optionalString(values.image),
+    recurrence_rule: optionalJsonObject(values.recurrenceRule),
+  });
+}
+
 function guildId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.guildId, values.guild), "guildId"));
 }
@@ -572,6 +623,10 @@ function applicationId(values: Record<string, IntegrationJson>): string {
 
 function commandId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.commandId, values.command), "commandId"));
+}
+
+function guildScheduledEventId(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.guildScheduledEventId, values.scheduledEventId, values.eventId), "guildScheduledEventId"));
 }
 
 function firstValue(...values: IntegrationJson[]): IntegrationJson {
