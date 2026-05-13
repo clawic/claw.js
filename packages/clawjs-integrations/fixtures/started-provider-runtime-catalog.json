@@ -1125,6 +1125,115 @@
           ]
         },
         {
+          "id": "discord.action.list-voice-regions",
+          "appId": "discord",
+          "kind": "action",
+          "name": "List Voice Regions",
+          "fields": [],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-current-user-voice-state",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get Current User Voice State",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.get-user-voice-state",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Get User Voice State",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.modify-current-user-voice-state",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Modify Current User Voice State",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "suppress",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "requestToSpeakTimestamp",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
+          "id": "discord.action.modify-user-voice-state",
+          "appId": "discord",
+          "kind": "action",
+          "name": "Modify User Voice State",
+          "fields": [
+            {
+              "name": "guildId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "channelId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "suppress",
+              "type": "boolean",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "discordBotToken"
+          ]
+        },
+        {
           "id": "discord.action.get-channel",
           "appId": "discord",
           "kind": "action",
