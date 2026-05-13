@@ -1,6 +1,6 @@
 import SwiftUI
-import CommanderAdapters
-import CommanderCore
+import ClawHostAdapters
+import ClawHostKit
 
 @MainActor
 final class DashboardModel: ObservableObject {
@@ -10,7 +10,7 @@ final class DashboardModel: ObservableObject {
     @Published var adapters: [AdapterDescriptor] = []
     @Published var adapterHealth: [String: AdapterHealthStatus] = [:]
     @Published var logs: [OperationLog] = []
-    @Published var installPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin/commander").path
+    @Published var installPath = (try? StatePaths.cliInstallPath().path) ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin/claw").path
     @Published var message: String?
 
     private let environment = ProcessInfo.processInfo.environment
@@ -94,7 +94,7 @@ final class DashboardModel: ObservableObject {
 
     func installCLI() async {
         do {
-            let executable = try locateSiblingBinary(named: "commander")
+            let executable = try locateSiblingBinary(named: "claw-host")
             let installedPath = try RuntimeInstaller.installCLI(sourceBinaryPath: executable, destinationPath: installPath, environment: environment)
             message = "CLI instalado en \(installedPath)"
             await refresh()
@@ -105,7 +105,7 @@ final class DashboardModel: ObservableObject {
 
     func installLaunchAgent() async {
         do {
-            let daemon = try locateSiblingBinary(named: "commanderd")
+            let daemon = try locateSiblingBinary(named: "claw-hostd")
             let installedPath = try RuntimeInstaller.installLaunchAgent(daemonBinaryPath: daemon, environment: environment)
             message = "LaunchAgent escrito en \(installedPath)"
             await refresh()
@@ -140,14 +140,14 @@ final class DashboardModel: ObservableObject {
                 resource: resource,
                 action: action,
                 arguments: arguments,
-                clientContext: .current(executablePath: "CommanderApp")
+                clientContext: .current(executablePath: clientExecutablePath)
             )
         )
     }
 
     private func fetchHealth(with client: DaemonClient) async throws -> DaemonHealth {
         let response = try client.send(
-            CommandRequest(domain: .system, resource: "daemon", action: "health", arguments: [:], clientContext: .current(executablePath: "CommanderApp"))
+            CommandRequest(domain: .system, resource: "daemon", action: "health", arguments: [:], clientContext: .current(executablePath: clientExecutablePath))
         )
         guard case .object(let data)? = response.data else {
             throw CommanderError.transport("Invalid daemon health response")
@@ -165,7 +165,7 @@ final class DashboardModel: ObservableObject {
 
     private func fetchCapabilities(with client: DaemonClient) async throws -> [Capability] {
         let response = try client.send(
-            CommandRequest(domain: .system, resource: "capabilities", action: "list", arguments: [:], clientContext: .current(executablePath: "CommanderApp"))
+            CommandRequest(domain: .system, resource: "capabilities", action: "list", arguments: [:], clientContext: .current(executablePath: clientExecutablePath))
         )
         guard case .array(let values)? = response.data else { return [] }
         return values.compactMap { value in
@@ -184,7 +184,7 @@ final class DashboardModel: ObservableObject {
 
     private func fetchAdapters(with client: DaemonClient) async throws -> [AdapterDescriptor] {
         let response = try client.send(
-            CommandRequest(domain: .system, resource: "adapters", action: "list", arguments: [:], clientContext: .current(executablePath: "CommanderApp"))
+            CommandRequest(domain: .system, resource: "adapters", action: "list", arguments: [:], clientContext: .current(executablePath: clientExecutablePath))
         )
         guard case .array(let values)? = response.data else { return [] }
         return values.compactMap { value in
@@ -218,7 +218,7 @@ final class DashboardModel: ObservableObject {
 
     private func fetchInstallStatus(with client: DaemonClient) async throws -> InstallStatus {
         let response = try client.send(
-            CommandRequest(domain: .system, resource: "install", action: "status", arguments: [:], clientContext: .current(executablePath: "CommanderApp"))
+            CommandRequest(domain: .system, resource: "install", action: "status", arguments: [:], clientContext: .current(executablePath: clientExecutablePath))
         )
         guard let object = response.data?.objectValue else {
             throw CommanderError.transport("Invalid install status response")
@@ -240,7 +240,7 @@ final class DashboardModel: ObservableObject {
 
     private func fetchAdapterHealth(with client: DaemonClient) async throws -> [String: AdapterHealthStatus] {
         let response = try client.send(
-            CommandRequest(domain: .system, resource: "doctor", action: "run", arguments: [:], clientContext: .current(executablePath: "CommanderApp"))
+            CommandRequest(domain: .system, resource: "doctor", action: "run", arguments: [:], clientContext: .current(executablePath: clientExecutablePath))
         )
         guard let object = response.data?.objectValue?["adapter_health"]?.objectValue else { return [:] }
         return object.reduce(into: [String: AdapterHealthStatus]()) { partial, item in
@@ -255,7 +255,7 @@ final class DashboardModel: ObservableObject {
 
     private func fetchLogs(with client: DaemonClient) async throws -> [OperationLog] {
         let response = try client.send(
-            CommandRequest(domain: .system, resource: "logs", action: "list", arguments: ["limit": "15"], clientContext: .current(executablePath: "CommanderApp"))
+            CommandRequest(domain: .system, resource: "logs", action: "list", arguments: ["limit": "15"], clientContext: .current(executablePath: clientExecutablePath))
         )
         guard case .array(let values)? = response.data else { return [] }
         return values.compactMap { value in
@@ -302,6 +302,10 @@ final class DashboardModel: ObservableObject {
 
         throw CommanderError.notFound("No se pudo localizar el binario \(name)")
     }
+
+    private var clientExecutablePath: String {
+        CommandLine.arguments.first ?? "ClawApp"
+    }
 }
 
 struct DashboardView: View {
@@ -323,7 +327,7 @@ struct DashboardView: View {
                 .padding(24)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .navigationTitle("Commander Control Plane")
+            .navigationTitle("Claw Control Plane")
         }
     }
 

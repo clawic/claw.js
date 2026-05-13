@@ -1,6 +1,6 @@
 import SwiftUI
-import CommanderAdapters
-import CommanderCore
+import ClawHostAdapters
+import ClawHostKit
 
 struct LaunchPermissionRequest {
     let domains: [Domain]
@@ -86,7 +86,7 @@ final class CommanderAppDelegate: NSObject, NSApplicationDelegate {
             }
             runtimeHost = host
         } catch {
-            fputs("Commander runtime host failed: \(error.localizedDescription)\n", stderr)
+            fputs("Claw runtime host failed: \(error.localizedDescription)\n", stderr)
         }
     }
 
@@ -102,7 +102,7 @@ struct CommanderAppMain: App {
     private let launchOptions = LaunchOptions.parse(arguments: CommandLine.arguments)
 
     var body: some Scene {
-        WindowGroup("Commander") {
+        WindowGroup("Claw") {
             if launchOptions.runtimeHostOnly {
                 EmptyView()
                     .frame(width: 1, height: 1)
@@ -111,7 +111,7 @@ struct CommanderAppMain: App {
                     .frame(minWidth: 980, minHeight: 700)
             }
         }
-        MenuBarExtra("Commander", systemImage: model.health?.running == true ? "bolt.horizontal.circle.fill" : "bolt.horizontal.circle") {
+        MenuBarExtra("Claw", systemImage: model.health?.running == true ? "bolt.horizontal.circle.fill" : "bolt.horizontal.circle") {
             VStack(alignment: .leading, spacing: 12) {
                 Text(model.health?.running == true ? "Daemon activo" : "Daemon parado")
                     .font(.headline)

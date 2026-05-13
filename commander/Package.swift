@@ -31,15 +31,15 @@ let package = Package(
         ),
         .executableTarget(
             name: "commander",
-            dependencies: ["CommanderCore", "CommanderAdapters"]
+            dependencies: ["ClawHostKit", "ClawHostAdapters"]
         ),
         .executableTarget(
             name: "commanderd",
-            dependencies: ["CommanderCore", "CommanderAdapters"]
+            dependencies: ["ClawHostKit", "ClawHostAdapters"]
         ),
         .executableTarget(
             name: "CommanderApp",
-            dependencies: ["CommanderCore", "CommanderAdapters"],
+            dependencies: ["ClawHostKit", "ClawHostAdapters"],
             swiftSettings: [
                 .unsafeFlags(["-parse-as-library"]),
             ]

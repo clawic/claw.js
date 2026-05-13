@@ -1,6 +1,6 @@
 import Foundation
-import CommanderAdapters
-import CommanderCore
+import ClawHostAdapters
+import ClawHostKit
 
 struct ParsedCommand {
     var domain: Domain
@@ -59,7 +59,7 @@ struct CommanderCLI {
                 ok: false,
                 data: nil,
                 error: error.payload,
-                meta: .init(adapter: "commander", source: .filesystem, riskLevel: "read", validationMode: .hostReal, durationMS: 0)
+                meta: .init(adapter: "claw-host", source: .filesystem, riskLevel: "read", validationMode: .hostReal, durationMS: 0)
             ))
             exit(1)
         } catch {
@@ -67,7 +67,7 @@ struct CommanderCLI {
                 ok: false,
                 data: nil,
                 error: CommanderError.internalFailure(error.localizedDescription).payload,
-                meta: .init(adapter: "commander", source: .filesystem, riskLevel: "read", validationMode: .hostReal, durationMS: 0)
+                meta: .init(adapter: "claw-host", source: .filesystem, riskLevel: "read", validationMode: .hostReal, durationMS: 0)
             ))
             exit(1)
         }
@@ -103,7 +103,7 @@ struct CommanderCLI {
 
     static func parse(arguments: [String]) throws -> ParsedCommand {
         guard arguments.count >= 3 else {
-            throw CommanderError.invalidCommand("Usage: commander <domain> <resource> <action> [--key value]")
+            throw CommanderError.invalidCommand("Usage: claw-host <domain> <resource> <action> [--key value]")
         }
 
         guard let domain = Domain(rawValue: arguments[0]) else {

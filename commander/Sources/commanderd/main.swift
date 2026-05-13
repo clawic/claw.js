@@ -1,6 +1,6 @@
 import Foundation
-import CommanderAdapters
-import CommanderCore
+import ClawHostAdapters
+import ClawHostKit
 
 @main
 struct CommanderDaemon {

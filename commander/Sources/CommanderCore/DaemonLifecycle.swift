@@ -56,22 +56,26 @@ public enum DaemonLauncher {
         try start(environment: environment)
     }
 
-    public static func daemonBinaryPath(executablePath: String = CommandLine.arguments.first ?? "") throws -> String {
+    public static func daemonBinaryPath(
+        executablePath: String = CommandLine.arguments.first ?? "",
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) throws -> String {
+        let daemonName = HostConfiguration.current(environment: environment).daemonExecutableName
         let currentURL = URL(fileURLWithPath: executablePath)
         let directory = currentURL.deletingLastPathComponent()
-        let sibling = directory.appendingPathComponent("commanderd")
+        let sibling = directory.appendingPathComponent(daemonName)
         if FileManager.default.isExecutableFile(atPath: sibling.path) {
             return sibling.path
         }
-        let builtProduct = URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent(".build/debug/commanderd")
+        let builtProduct = URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent(".build/debug/\(daemonName)")
         if FileManager.default.isExecutableFile(atPath: builtProduct.path) {
             return builtProduct.path
         }
-        throw CommanderError.notFound("Unable to locate commanderd binary")
+        throw CommanderError.notFound("Unable to locate \(daemonName) binary")
     }
 
     private static func startLegacySocketDaemon(environment: [String: String]) throws {
-        let daemonBinary = try daemonBinaryPath()
+        let daemonBinary = try daemonBinaryPath(environment: environment)
         let process = Process()
         process.executableURL = URL(fileURLWithPath: daemonBinary)
         process.arguments = ["serve"]
@@ -84,14 +88,14 @@ public enum DaemonLauncher {
 
     private static func startAppRuntime(environment: [String: String]) throws {
         let appExecutable = try RuntimeInstaller.appExecutablePath(environment: environment)
-            .unwrap(or: CommanderError.notFound("Unable to locate Commander.app executable"))
+            .unwrap(or: CommanderError.notFound("Unable to locate \(HostConfiguration.current(environment: environment).displayName).app executable"))
 
         let daemonBinaryPath = FileManager.default.isExecutableFile(atPath: appExecutable)
             ? appExecutable
-            : try daemonBinaryPath()
+            : try daemonBinaryPath(environment: environment)
 
         guard RuntimeInstaller.appExecutablePath(environment: environment) != nil else {
-            throw CommanderError.notFound("Unable to locate Commander.app executable")
+            throw CommanderError.notFound("Unable to locate \(HostConfiguration.current(environment: environment).displayName).app executable")
         }
 
         let plistPath = try RuntimeInstaller.installLaunchAgent(
