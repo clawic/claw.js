@@ -867,6 +867,30 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.update-account-persons-person"), {
+      account: "acct_sample",
+      person: "person_sample",
+      first_name: "Updated",
+      last_name: "Person",
+      metadata: { order_id: "sample" },
+    }), {
+      method: "POST",
+      endpoint: "accounts/acct_sample/persons/person_sample",
+      auth,
+      headers,
+      query: {},
+      bodyEncoding: "form",
+      body: {
+        first_name: "Updated",
+        last_name: "Person",
+        metadata: { order_id: "sample" },
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.update-external-account"), {
       id: "ba_sample",
       account_holder_name: "Sample Person",

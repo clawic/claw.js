@@ -40948,6 +40948,183 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.list-account-persons",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Account Persons",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "relationship",
+              "type": "string",
+              "optional": true,
+              "default": "representative"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.create-account-persons-person",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Create Account Persons Person",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "first_name",
+              "type": "string",
+              "optional": true,
+              "default": "Sample"
+            },
+            {
+              "name": "last_name",
+              "type": "string",
+              "optional": true,
+              "default": "Person"
+            },
+            {
+              "name": "relationship",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "representative": true
+              }
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-account-persons-person",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Account Persons Person",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "person",
+              "type": "string",
+              "optional": false,
+              "default": "person_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.update-account-persons-person",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Update Account Persons Person",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "person",
+              "type": "string",
+              "optional": false,
+              "default": "person_sample"
+            },
+            {
+              "name": "first_name",
+              "type": "string",
+              "optional": true,
+              "default": "Updated"
+            },
+            {
+              "name": "last_name",
+              "type": "string",
+              "optional": true,
+              "default": "Person"
+            },
+            {
+              "name": "metadata",
+              "type": "object",
+              "optional": true,
+              "default": {
+                "order_id": "sample"
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.delete-account-persons-person",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Delete Account Persons Person",
+          "fields": [
+            {
+              "name": "account",
+              "type": "string",
+              "optional": false,
+              "default": "acct_sample"
+            },
+            {
+              "name": "person",
+              "type": "string",
+              "optional": false,
+              "default": "person_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },
