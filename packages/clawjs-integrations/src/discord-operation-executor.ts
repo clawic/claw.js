@@ -93,6 +93,8 @@ export type DiscordRuntimeOperation =
   | "delete-channel-permission"
   | "follow-announcement-channel"
   | "trigger-typing-indicator"
+  | "group-dm-add-recipient"
+  | "group-dm-remove-recipient"
   | "list-messages"
   | "get-message"
   | "send-message"
@@ -468,6 +470,10 @@ export function buildDiscordOperationRequest(
       return bodyPlan("POST", `channels/${channelId(values)}/followers`, auth, auditHeaders(headers, values), followAnnouncementChannelBody(values), { type: "object", requiredPaths: ["channel_id", "webhook_id"] });
     case "trigger-typing-indicator":
       return bodyPlan("POST", `channels/${channelId(values)}/typing`, auth, headers, {}, { type: "object" });
+    case "group-dm-add-recipient":
+      return bodyPlan("PUT", `channels/${channelId(values)}/recipients/${userId(values)}`, auth, headers, groupDmRecipientBody(values), { type: "object" });
+    case "group-dm-remove-recipient":
+      return deletePlan(`channels/${channelId(values)}/recipients/${userId(values)}`, auth, headers, { type: "object" });
     case "list-messages":
       return getPlan(`channels/${channelId(values)}/messages`, auth, headers, { type: "array" }, removeEmptyValues({
         around: optionalString(values.around),
@@ -878,6 +884,8 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "delete-channel-permission",
   "follow-announcement-channel",
   "trigger-typing-indicator",
+  "group-dm-add-recipient",
+  "group-dm-remove-recipient",
   "list-messages",
   "get-message",
   "send-message",
@@ -1180,6 +1188,13 @@ function followAnnouncementChannelBody(values: Record<string, IntegrationJson>):
   return {
     webhook_channel_id: requiredString(firstValue(values.webhookChannelId, values.targetChannelId), "webhookChannelId"),
   };
+}
+
+function groupDmRecipientBody(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+  return removeEmptyValues({
+    access_token: requiredString(values.accessToken, "accessToken"),
+    nick: optionalString(values.nick),
+  });
 }
 
 function guildTemplateBody(values: Record<string, IntegrationJson>, requireCreateFields: boolean): Record<string, IntegrationJson> {
