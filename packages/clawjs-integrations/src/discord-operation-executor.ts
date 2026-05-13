@@ -13,6 +13,7 @@ export type DiscordRuntimeOperation =
   | "get-guild"
   | "get-guild-preview"
   | "modify-guild"
+  | "get-guild-voice-regions"
   | "list-guild-channels"
   | "create-guild-channel"
   | "modify-guild-channel-positions"
@@ -130,6 +131,8 @@ export type DiscordRuntimeOperation =
   | "bulk-ban-guild-users"
   | "get-guild-prune-count"
   | "begin-guild-prune"
+  | "get-guild-integrations"
+  | "delete-guild-integration"
   | "list-auto-moderation-rules"
   | "get-auto-moderation-rule"
   | "create-auto-moderation-rule"
@@ -216,6 +219,8 @@ export function buildDiscordOperationRequest(
       return getPlan(`guilds/${guildId(values)}/preview`, auth, headers, { type: "object", requiredPaths: ["id", "name"] });
     case "modify-guild":
       return bodyPlan("PATCH", `guilds/${guildId(values)}`, auth, auditHeaders(headers, values), guildBody(values), { type: "object", requiredPaths: ["id", "name"] });
+    case "get-guild-voice-regions":
+      return getPlan(`guilds/${guildId(values)}/regions`, auth, headers, { type: "array" });
     case "get-channel":
       return getPlan(`channels/${channelId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "type"] });
     case "list-guild-channels":
@@ -540,6 +545,10 @@ export function buildDiscordOperationRequest(
       return getPlan(`guilds/${guildId(values)}/prune`, auth, headers, { type: "object", requiredPaths: ["pruned"] }, guildPruneQuery(values));
     case "begin-guild-prune":
       return bodyPlan("POST", `guilds/${guildId(values)}/prune`, auth, auditHeaders(headers, values), beginGuildPruneBody(values), { type: "object", requiredPaths: ["pruned"] });
+    case "get-guild-integrations":
+      return getPlan(`guilds/${guildId(values)}/integrations`, auth, headers, { type: "array" });
+    case "delete-guild-integration":
+      return deletePlan(`guilds/${guildId(values)}/integrations/${integrationId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "list-auto-moderation-rules":
       return getPlan(`guilds/${guildId(values)}/auto-moderation/rules`, auth, headers, { type: "array" });
     case "get-auto-moderation-rule":
@@ -662,6 +671,7 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "get-guild",
   "get-guild-preview",
   "modify-guild",
+  "get-guild-voice-regions",
   "list-guild-channels",
   "create-guild-channel",
   "modify-guild-channel-positions",
@@ -779,6 +789,8 @@ const DISCORD_OPERATIONS = new Set<DiscordRuntimeOperation>([
   "bulk-ban-guild-users",
   "get-guild-prune-count",
   "begin-guild-prune",
+  "get-guild-integrations",
+  "delete-guild-integration",
   "list-auto-moderation-rules",
   "get-auto-moderation-rule",
   "create-auto-moderation-rule",
@@ -1284,6 +1296,10 @@ function userId(values: Record<string, IntegrationJson>): string {
 
 function roleId(values: Record<string, IntegrationJson>): string {
   return pathSegment(requiredString(firstValue(values.roleId, values.role), "roleId"));
+}
+
+function integrationId(values: Record<string, IntegrationJson>): string {
+  return pathSegment(requiredString(firstValue(values.integrationId, values.integration), "integrationId"));
 }
 
 function webhookId(values: Record<string, IntegrationJson>): string {
