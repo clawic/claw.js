@@ -108,6 +108,8 @@ export const STRIPE_EXTRA_ACTION_SPECS = [
   spec("get-balance", "GET", "balance", [], { requiredPaths: ["object"] }),
   spec("get-balance-settings", "GET", "balance_settings", []),
   spec("update-balance-settings", "POST", "balance_settings", [objectField("payments", { debit_negative_balances: false, payouts: { schedule: { interval: "manual" } } }, { optional: true })], { body: ["payments"] }),
+  spec("list-balance-history", "GET", "balance/history", [...PAGE_FIELDS, stringField("currency", { optional: true, default: "usd" }), stringField("payout", { optional: true, default: "po_sample" }), stringField("source", { optional: true, default: "ch_sample" }), stringField("type", { optional: true, default: "charge" })], { query: ["limit", "starting_after", "ending_before", "currency", "payout", "source", "type"], requiredPaths: ["object", "data"] }),
+  spec("get-balance-history-transaction", "GET", "balance/history/{id}", [stringField("id", { default: "txn_sample" })]),
   spec("list-balance-transactions", "GET", "balance_transactions", [...PAGE_FIELDS, stringField("type", { optional: true, default: "charge" })], { query: ["limit", "starting_after", "ending_before", "type"], requiredPaths: ["object", "data"] }),
   spec("get-balance-transaction", "GET", "balance_transactions/{balanceTransactionId}", [stringField("balanceTransactionId", { default: "txn_sample" })]),
   spec("list-application-fees", "GET", "application_fees", [...PAGE_FIELDS, stringField("charge", { optional: true, default: "ch_sample" })], { query: ["limit", "starting_after", "ending_before", "charge"], requiredPaths: ["object", "data"] }),

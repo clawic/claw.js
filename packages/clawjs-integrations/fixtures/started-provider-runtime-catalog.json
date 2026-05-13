@@ -39149,6 +39149,78 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.list-balance-history",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Balance History",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "currency",
+              "type": "string",
+              "optional": true,
+              "default": "usd"
+            },
+            {
+              "name": "payout",
+              "type": "string",
+              "optional": true,
+              "default": "po_sample"
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "optional": true,
+              "default": "ch_sample"
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": true,
+              "default": "charge"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-balance-history-transaction",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Balance History Transaction",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "txn_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

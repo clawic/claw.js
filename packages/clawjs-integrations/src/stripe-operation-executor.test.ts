@@ -537,6 +537,32 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.list-balance-history"), {
+      limit: 3,
+      currency: "usd",
+      payout: "po_sample",
+      source: "ch_sample",
+      type: "charge",
+    }), {
+      method: "GET",
+      endpoint: "balance/history",
+      auth,
+      headers,
+      query: {
+        limit: 3,
+        currency: "usd",
+        payout: "po_sample",
+        source: "ch_sample",
+        type: "charge",
+      },
+      bodyEncoding: undefined,
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["object", "data"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.create-topup"), {
       amount: 1200,
       currency: "usd",
