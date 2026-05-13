@@ -29351,10 +29351,10 @@
       ],
       "operations": [
         {
-          "id": "telegram_bot_api.action.send-text-message-or-reply",
+          "id": "telegram_bot_api.action.create-chat-invite-link",
           "appId": "telegram_bot_api",
           "kind": "action",
-          "name": "Send Text Message",
+          "name": "Create Chat Invite Link",
           "fields": [
             {
               "name": "chatId",
@@ -29362,7 +29362,51 @@
               "optional": false
             },
             {
-              "name": "text",
+              "name": "name",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "expire_date",
+              "type": "integer",
+              "optional": true
+            },
+            {
+              "name": "member_limit",
+              "type": "integer",
+              "optional": true
+            },
+            {
+              "name": "creates_join_request",
+              "type": "boolean",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.delete-message",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Delete Message",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
               "type": "string",
               "optional": false
             }
@@ -29377,6 +29421,1021 @@
             "hasAdditionalProps": false,
             "hasMethods": false,
             "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.edit-media-message",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Edit Media Message",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false,
+              "options": [
+                {
+                  "label": "Photo",
+                  "value": "photo"
+                }
+              ]
+            },
+            {
+              "name": "media",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "caption",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "parseMode",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "replyMarkup",
+              "type": "string",
+              "optional": true,
+              "default": "{}"
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.edit-text-message",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Edit Text Message",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "parseMode",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "linkPreviewOptions",
+              "type": "string",
+              "optional": true,
+              "default": "{}"
+            },
+            {
+              "name": "replyMarkup",
+              "type": "string",
+              "optional": true,
+              "default": "{}"
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.export-chat-invite-link",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Export Chat Invite Link",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.forward-message",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Forward Message",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "fromChatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "disable_notification",
+              "type": "boolean",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.get-num-members-in-chat",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Get Chat Member Count",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.kick-chat-member",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Ban Chat Member",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "until_date",
+              "type": "integer",
+              "optional": true
+            },
+            {
+              "name": "revoke_messages",
+              "type": "boolean",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.list-administrators-in-chat",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "List Chat Administrators",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.list-chats",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "List Chats",
+          "fields": [
+            {
+              "name": "offset",
+              "type": "integer",
+              "optional": true
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.list-updates",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "List Updates",
+          "fields": [
+            {
+              "name": "offset",
+              "type": "integer",
+              "optional": true
+            },
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.pin-message",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Pin Message",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "disable_notification",
+              "type": "boolean",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.promote-chat-member",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Promote Chat Member",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "canChangeInfo",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "canInviteUsers",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "canPinMessages",
+              "type": "boolean",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.restrict-chat-member",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Restrict Chat Member",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "until_date",
+              "type": "integer",
+              "optional": true
+            },
+            {
+              "name": "canSendMessages",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "canSendMediaMessages",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "canInviteUsers",
+              "type": "boolean",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.send-album",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Send Album",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "media",
+              "type": "string",
+              "optional": false,
+              "default": "[{\"type\":\"photo\",\"media\":\"https://example.invalid/media\"}]"
+            },
+            {
+              "name": "disable_notification",
+              "type": "boolean",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.send-audio-file",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Send Audio File",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "audio",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "caption",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "duration",
+              "type": "integer",
+              "optional": true
+            },
+            {
+              "name": "parseMode",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.send-document-or-image",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Send Document Or Image",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "doc",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "caption",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "parseMode",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.send-media-by-url-or-id",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Send Media By URL Or ID",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "mediaType",
+              "type": "string",
+              "optional": false,
+              "options": [
+                {
+                  "label": "Document/Image",
+                  "value": "Document/Image"
+                }
+              ]
+            },
+            {
+              "name": "media",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "caption",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.send-photo",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Send Photo",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "photo",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "caption",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "parseMode",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.send-sticker",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Send Sticker",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "sticker",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.send-text-message-or-reply",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Send Text Message",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "parseMode",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "replyMarkup",
+              "type": "string",
+              "optional": true,
+              "default": "{}"
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.send-video-note",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Send Video Note",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "videoNote",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "length",
+              "type": "integer",
+              "optional": true
+            },
+            {
+              "name": "duration",
+              "type": "integer",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.send-video",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Send Video",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "video",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "caption",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "duration",
+              "type": "integer",
+              "optional": true
+            },
+            {
+              "name": "parseMode",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.send-voice-message",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Send Voice Message",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "voice",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "caption",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "duration",
+              "type": "integer",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.set-chat-permissions",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Set Chat Permissions",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "canSendMessages",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "canSendMediaMessages",
+              "type": "boolean",
+              "optional": true
+            },
+            {
+              "name": "canInviteUsers",
+              "type": "boolean",
+              "optional": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.action.unpin-message",
+          "appId": "telegram_bot_api",
+          "kind": "action",
+          "name": "Unpin Message",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "messageId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "runtime": {
+            "hasRun": true,
+            "hasHooks": false,
+            "hookNames": [],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": []
+          }
+        },
+        {
+          "id": "telegram_bot_api.source.new-updates",
+          "appId": "telegram_bot_api",
+          "kind": "source",
+          "name": "New Updates",
+          "fields": [
+            {
+              "name": "timer",
+              "type": "$.interface.timer",
+              "optional": false,
+              "managed": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "source": {
+            "delivery": "polling",
+            "usesTimer": true,
+            "usesHttp": false,
+            "usesServiceDb": false
+          },
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": true,
+            "hookNames": [
+              "deploy"
+            ],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": [],
+            "dedupe": "unique"
+          }
+        },
+        {
+          "id": "telegram_bot_api.source.message-updates",
+          "appId": "telegram_bot_api",
+          "kind": "source",
+          "name": "Message Updates",
+          "fields": [
+            {
+              "name": "chatId",
+              "type": "string",
+              "optional": true
+            },
+            {
+              "name": "timer",
+              "type": "$.interface.timer",
+              "optional": false,
+              "managed": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "source": {
+            "delivery": "polling",
+            "usesTimer": true,
+            "usesHttp": false,
+            "usesServiceDb": false
+          },
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": true,
+            "hookNames": [
+              "deploy"
+            ],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": [],
+            "dedupe": "unique"
+          }
+        },
+        {
+          "id": "telegram_bot_api.source.channel-updates",
+          "appId": "telegram_bot_api",
+          "kind": "source",
+          "name": "Channel Updates",
+          "fields": [
+            {
+              "name": "timer",
+              "type": "$.interface.timer",
+              "optional": false,
+              "managed": true
+            }
+          ],
+          "authFieldNames": [
+            "telegramBotApi"
+          ],
+          "source": {
+            "delivery": "polling",
+            "usesTimer": true,
+            "usesHttp": false,
+            "usesServiceDb": false
+          },
+          "runtime": {
+            "hasRun": false,
+            "hasHooks": true,
+            "hookNames": [
+              "deploy"
+            ],
+            "hasAdditionalProps": false,
+            "hasMethods": false,
+            "methodNames": [],
+            "dedupe": "unique"
           }
         },
         {
@@ -29400,6 +30459,12 @@
           "authFieldNames": [
             "telegramBotApi"
           ],
+          "source": {
+            "delivery": "polling",
+            "usesTimer": true,
+            "usesHttp": false,
+            "usesServiceDb": false
+          },
           "runtime": {
             "hasRun": false,
             "hasHooks": true,
@@ -29410,12 +30475,6 @@
             "hasMethods": false,
             "methodNames": [],
             "dedupe": "unique"
-          },
-          "source": {
-            "delivery": "polling",
-            "usesTimer": true,
-            "usesHttp": false,
-            "usesServiceDb": false
           }
         }
       ]
