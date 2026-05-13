@@ -294,19 +294,23 @@ const DISCORD_ACTIONS = [
   action("list-guild-scheduled-events", "List Guild Scheduled Events", [GUILD_FIELD, field("withUserCount", "boolean", true)]),
   action("create-guild-scheduled-event", "Create Guild Scheduled Event", [
     GUILD_FIELD,
-    CHANNEL_FIELD,
+    field("channelId", "string", true, { default: "sample" }),
+    field("entityMetadata", "object", true),
     field("name", "string"),
     field("privacyLevel", "integer", false, { default: 2 }),
     field("scheduledStartTime", "string", false, { default: "2026-05-13T10:00:00.000Z" }),
     field("scheduledEndTime", "string", true, { default: "2026-05-13T11:00:00.000Z" }),
     field("entityType", "integer", false, { default: 2 }),
     field("description", "string", true, { default: "sample" }),
+    field("image", "string", true, { default: null }),
+    field("recurrenceRule", "object", true),
   ]),
   action("get-guild-scheduled-event", "Get Guild Scheduled Event", [GUILD_FIELD, field("guildScheduledEventId", "string"), field("withUserCount", "boolean", true)]),
   action("update-guild-scheduled-event", "Update Guild Scheduled Event", [
     GUILD_FIELD,
     field("guildScheduledEventId", "string"),
-    CHANNEL_FIELD,
+    field("channelId", "string", true, { default: "sample" }),
+    field("entityMetadata", "object", true),
     field("name", "string", true, { default: "sample" }),
     field("privacyLevel", "integer", true, { default: 2 }),
     field("scheduledStartTime", "string", true, { default: "2026-05-13T10:00:00.000Z" }),
@@ -314,14 +318,16 @@ const DISCORD_ACTIONS = [
     field("entityType", "integer", true, { default: 2 }),
     field("description", "string", true, { default: "sample" }),
     field("status", "integer", true, { default: 2 }),
+    field("image", "string", true, { default: null }),
+    field("recurrenceRule", "object", true),
   ]),
   action("delete-guild-scheduled-event", "Delete Guild Scheduled Event", [GUILD_FIELD, field("guildScheduledEventId", "string")]),
-  action("list-guild-scheduled-event-users", "List Guild Scheduled Event Users", [GUILD_FIELD, field("guildScheduledEventId", "string"), field("limit", "integer", true, { default: 1, min: 1, max: 100 }), field("withMember", "boolean", true)]),
+  action("list-guild-scheduled-event-users", "List Guild Scheduled Event Users", [GUILD_FIELD, field("guildScheduledEventId", "string"), field("limit", "integer", true, { default: 1, min: 1, max: 100 }), field("withMember", "boolean", true), field("before", "string", true, { default: null }), field("after", "string", true, { default: null })]),
   action("create-stage-instance", "Create Stage Instance", [CHANNEL_FIELD, field("topic", "string"), field("privacyLevel", "integer", true, { default: 2 }), field("sendStartNotification", "boolean", true), field("guildScheduledEventId", "string", true)]),
   action("get-stage-instance", "Get Stage Instance", [CHANNEL_FIELD]),
   action("update-stage-instance", "Update Stage Instance", [CHANNEL_FIELD, field("topic", "string", true, { default: "sample" }), field("privacyLevel", "integer", true, { default: 2 }), field("auditLogReason", "string", true)]),
   action("delete-stage-instance", "Delete Stage Instance", [CHANNEL_FIELD, field("auditLogReason", "string", true)]),
-  action("get-invite", "Get Invite", [field("inviteCode", "string"), field("withCounts", "boolean", true), field("withExpiration", "boolean", true)]),
+  action("get-invite", "Get Invite", [field("inviteCode", "string"), field("withCounts", "boolean", true), field("withExpiration", "boolean", true), field("guildScheduledEventId", "string", true, { default: null })]),
   action("delete-invite", "Delete Invite", [field("inviteCode", "string")]),
   action("get-invite-target-users", "Get Invite Target Users", [field("inviteCode", "string")]),
   action("update-invite-target-users", "Update Invite Target Users", [field("inviteCode", "string"), field("targetUsersFile", "string", false, { default: "user_id\n123" })]),
@@ -2353,6 +2359,26 @@ describe("discord operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-invite"), {
+      inviteCode: "abc123",
+      withCounts: true,
+      guildScheduledEventId: "event-123",
+    }), {
+      method: "GET",
+      endpoint: "invites/abc123",
+      auth,
+      headers,
+      query: {
+        with_counts: true,
+        guild_scheduled_event_id: "event-123",
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["code"],
+      },
+    });
+
     assert.deepEqual(buildDiscordOperationRequest(action("get-invite-target-users", "Get Invite Target Users", [
       field("inviteCode", "string"),
     ]), {
@@ -3233,6 +3259,95 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["id", "guild_id", "name"],
+      },
+    });
+
+    const recurrenceRule = {
+      start: "2026-05-13T10:00:00.000Z",
+      frequency: 2,
+      interval: 1,
+      by_weekday: [2],
+    };
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-guild-scheduled-event"), {
+      guildId: "456",
+      name: "External launch",
+      privacyLevel: 2,
+      scheduledStartTime: "2026-05-13T10:00:00.000Z",
+      scheduledEndTime: "2026-05-13T11:00:00.000Z",
+      entityType: 3,
+      entityMetadata: { location: "Online" },
+      image: "data:image/png;base64,c2FtcGxl",
+      recurrenceRule,
+    }), {
+      method: "POST",
+      endpoint: "guilds/456/scheduled-events",
+      auth,
+      headers,
+      body: {
+        entity_metadata: { location: "Online" },
+        name: "External launch",
+        privacy_level: 2,
+        scheduled_start_time: "2026-05-13T10:00:00.000Z",
+        scheduled_end_time: "2026-05-13T11:00:00.000Z",
+        entity_type: 3,
+        image: "data:image/png;base64,c2FtcGxl",
+        recurrence_rule: recurrenceRule,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "guild_id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.update-guild-scheduled-event"), {
+      guildId: "456",
+      guildScheduledEventId: "event-123",
+      channelId: null,
+      entityMetadata: null,
+      description: null,
+      recurrenceRule: null,
+      image: "data:image/png;base64,dXBkYXRlZA==",
+      status: 2,
+    }), {
+      method: "PATCH",
+      endpoint: "guilds/456/scheduled-events/event-123",
+      auth,
+      headers,
+      body: {
+        channel_id: null,
+        entity_metadata: null,
+        description: null,
+        status: 2,
+        image: "data:image/png;base64,dXBkYXRlZA==",
+        recurrence_rule: null,
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "guild_id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.list-guild-scheduled-event-users"), {
+      guildId: "456",
+      guildScheduledEventId: "event-123",
+      limit: 50,
+      withMember: true,
+      before: "user-before",
+      after: "user-after",
+    }), {
+      method: "GET",
+      endpoint: "guilds/456/scheduled-events/event-123/users",
+      auth,
+      headers,
+      query: {
+        limit: 50,
+        with_member: true,
+        before: "user-before",
+        after: "user-after",
+      },
+      body: {},
+      responseSchema: {
+        type: "array",
       },
     });
 
