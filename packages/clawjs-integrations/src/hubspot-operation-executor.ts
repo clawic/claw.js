@@ -254,6 +254,7 @@ export function buildHubSpotOperationRequest(
     case "delete-webhook-subscription":
       return jsonPlan("DELETE", `webhooks/2026-3/${recordId(values.appId, "appId")}/subscriptions/${recordId(values.subscriptionId, "subscriptionId")}`, auth, headers, {}, objectSchema());
   }
+  throw new Error(`Unsupported HubSpot operation: ${operation.id}`);
 }
 
 function hubSpotRuntimeOperation(operationId: string): HubSpotRuntimeOperation | null {
@@ -302,7 +303,7 @@ function getPlan(
   auth: ConnectorRuntimeRequestPlan["auth"],
   headers: Record<string, string>,
   responseSchema: NonNullable<ConnectorRuntimeRequestPlan["responseSchema"]>,
-  query: Record<string, IntegrationJson> = {},
+  query: Record<string, IntegrationJson | undefined> = {},
 ): ConnectorRuntimeRequestPlan {
   return {
     method: "GET",
@@ -347,7 +348,7 @@ function jsonPlan(
   endpoint: string,
   auth: ConnectorRuntimeRequestPlan["auth"],
   headers: Record<string, string>,
-  body: Record<string, IntegrationJson>,
+  body: Record<string, IntegrationJson | undefined>,
   responseSchema: NonNullable<ConnectorRuntimeRequestPlan["responseSchema"]>,
 ): ConnectorRuntimeRequestPlan {
   return {
@@ -449,7 +450,7 @@ function webhookSubscriptionBody(values: Record<string, IntegrationJson>, requir
   });
 }
 
-function pagingQuery(values: Record<string, IntegrationJson>): Record<string, IntegrationJson> {
+function pagingQuery(values: Record<string, IntegrationJson>): Record<string, IntegrationJson | undefined> {
   return removeEmptyValues({
     limit: values.limit,
     after: values.after,
@@ -486,39 +487,39 @@ function pathSegment(value: string): string {
   return encodeURIComponent(value);
 }
 
-function requiredString(value: IntegrationJson, name: string): string {
+function requiredString(value: IntegrationJson | undefined, name: string): string {
   const parsed = optionalString(value);
   if (!parsed) throw new Error(`HubSpot ${name} is required`);
   return parsed;
 }
 
-function optionalString(value: IntegrationJson): string | undefined {
+function optionalString(value: IntegrationJson | undefined): string | undefined {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return undefined;
 }
 
-function numberValue(value: IntegrationJson): number | undefined {
+function numberValue(value: IntegrationJson | undefined): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
-function optionalJsonArray(value: IntegrationJson): IntegrationJson[] | undefined {
+function optionalJsonArray(value: IntegrationJson | undefined): IntegrationJson[] | undefined {
   return Array.isArray(value) ? value : undefined;
 }
 
-function requiredJsonArray(value: IntegrationJson, name: string): IntegrationJson[] {
+function requiredJsonArray(value: IntegrationJson | undefined, name: string): IntegrationJson[] {
   const parsed = optionalJsonArray(value);
   if (!parsed) throw new Error(`HubSpot ${name} is required`);
   return parsed;
 }
 
-function optionalJsonObject(value: IntegrationJson): Record<string, IntegrationJson> | undefined {
+function optionalJsonObject(value: IntegrationJson | undefined): Record<string, IntegrationJson> | undefined {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, IntegrationJson>
     : undefined;
 }
 
-function requiredJsonObject(value: IntegrationJson, name: string): Record<string, IntegrationJson> {
+function requiredJsonObject(value: IntegrationJson | undefined, name: string): Record<string, IntegrationJson> {
   const parsed = optionalJsonObject(value);
   if (!parsed) throw new Error(`HubSpot ${name} is required`);
   return parsed;

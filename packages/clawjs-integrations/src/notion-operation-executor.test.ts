@@ -9,6 +9,7 @@ import {
 import {
   buildNotionOperationRequest,
 } from "./notion-operation-executor.ts";
+import type { IntegrationJson } from "./types.ts";
 
 const NOTION_CATALOG = normalizeConnectorCatalog({
   version: 1,
@@ -876,7 +877,7 @@ function operation(operationId: string) {
 
 function assertRequest(
   operationId: string,
-  values: Record<string, unknown>,
+  values: Record<string, IntegrationJson>,
   expected: Record<string, unknown>,
 ): void {
   assert.deepEqual(stripCommonPlanFields(buildNotionOperationRequest(operation(operationId), values)), expected);

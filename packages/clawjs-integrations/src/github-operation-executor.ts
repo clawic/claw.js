@@ -17,7 +17,7 @@ interface GitHubGenericOperationSpec {
   query?: string[];
   body?: string[];
   requiredPaths?: string[];
-  responseType?: ConnectorRuntimeRequestPlan["responseSchema"]["type"];
+  responseType?: NonNullable<ConnectorRuntimeRequestPlan["responseSchema"]>["type"];
   paged?: boolean;
 }
 
@@ -461,6 +461,7 @@ export function buildGitHubOperationRequest(
     case "delete-gist":
       return deletePlan(`gists/${pathSegment(requiredString(firstValue(values.gistId, values.gist_id), "gistId"))}`, auth, headers);
   }
+  throw new Error(`Unsupported GitHub operation: ${operation.id}`);
 }
 
 function gitHubRuntimeOperation(operationId: string): GitHubRuntimeOperation | null {
@@ -515,7 +516,7 @@ function getPlan(
   headers: Record<string, string>,
   query: Record<string, IntegrationJson | undefined>,
   requiredPaths: string[],
-  type: ConnectorRuntimeRequestPlan["responseSchema"]["type"] = "object",
+  type: NonNullable<ConnectorRuntimeRequestPlan["responseSchema"]>["type"] = "object",
 ): ConnectorRuntimeRequestPlan {
   return {
     method: "GET",
@@ -536,7 +537,7 @@ function getPagedPlan(
   auth: ConnectorRuntimeRequestPlan["auth"],
   headers: Record<string, string>,
   query: Record<string, IntegrationJson | undefined>,
-  type: ConnectorRuntimeRequestPlan["responseSchema"]["type"],
+  type: NonNullable<ConnectorRuntimeRequestPlan["responseSchema"]>["type"],
 ): ConnectorRuntimeRequestPlan {
   const perPage = numberValue(query.per_page) ?? 30;
   return {

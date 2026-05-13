@@ -543,6 +543,7 @@ export function buildGitLabOperationRequest(
     case "delete-project-variable":
       return deletePlan(`projects/${projectId(values)}/variables/${variableKey(values)}`, auth, headers);
   }
+  throw new Error(`Unsupported GitLab operation: ${operation.id}`);
 }
 
 function gitLabRuntimeOperation(operationId: string): GitLabRuntimeOperation | null {
@@ -1019,24 +1020,24 @@ function firstValue(...values: IntegrationJson[]): IntegrationJson {
   return values.find((value) => value != null && value !== "") ?? null;
 }
 
-function requiredString(value: IntegrationJson, name: string): string {
+function requiredString(value: IntegrationJson | undefined, name: string): string {
   const parsed = optionalString(value);
   if (!parsed) throw new Error(`GitLab ${name} is required`);
   return parsed;
 }
 
-function optionalString(value: IntegrationJson): string | undefined {
+function optionalString(value: IntegrationJson | undefined): string | undefined {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return undefined;
 }
 
-function numberId(value: IntegrationJson, name: string): string {
+function numberId(value: IntegrationJson | undefined, name: string): string {
   const parsed = requiredNumber(value, name);
   return String(parsed);
 }
 
-function requiredNumber(value: IntegrationJson, name: string): number {
+function requiredNumber(value: IntegrationJson | undefined, name: string): number {
   if (typeof value === "number" && Number.isInteger(value) && value > 0) return value;
   if (typeof value === "string" && /^[1-9]\d*$/.test(value.trim())) return Number(value.trim());
   throw new Error(`GitLab ${name} must be a positive integer`);
@@ -1050,21 +1051,21 @@ function camelCase(value: string): string {
   return value.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
-function numberValue(value: IntegrationJson): number | undefined {
+function numberValue(value: IntegrationJson | undefined): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
-function optionalJsonArray(value: IntegrationJson): IntegrationJson[] | undefined {
+function optionalJsonArray(value: IntegrationJson | undefined): IntegrationJson[] | undefined {
   return Array.isArray(value) ? value : undefined;
 }
 
-function requiredJsonArray(value: IntegrationJson, name: string): IntegrationJson[] {
+function requiredJsonArray(value: IntegrationJson | undefined, name: string): IntegrationJson[] {
   const parsed = optionalJsonArray(value);
   if (!parsed) throw new Error(`GitLab ${name} is required`);
   return parsed;
 }
 
-function optionalJsonObject(value: IntegrationJson): Record<string, IntegrationJson> | undefined {
+function optionalJsonObject(value: IntegrationJson | undefined): Record<string, IntegrationJson> | undefined {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, IntegrationJson>
     : undefined;

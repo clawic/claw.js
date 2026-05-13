@@ -430,6 +430,7 @@ export function buildSlackOperationRequest(
     case "test-auth":
       return getPlan("auth.test", auth, {}, ["ok", "team_id", "user_id"]);
   }
+  throw new Error(`Unsupported Slack operation: ${operation.id}`);
 }
 
 function slackRuntimeOperation(operationId: string): SlackRuntimeOperation | null {

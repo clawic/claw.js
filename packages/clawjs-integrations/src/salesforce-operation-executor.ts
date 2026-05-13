@@ -111,7 +111,7 @@ export const SALESFORCE_ACTION_SLUGS = [
 export type SalesforceRuntimeOperation = typeof SALESFORCE_ACTION_SLUGS[number];
 
 const SALESFORCE_OPERATION_SET = new Set<string>(SALESFORCE_ACTION_SLUGS);
-const SALESFORCE_OBJECT_BY_SINGULAR = new Map(SALESFORCE_STANDARD_OBJECTS.map((object) => [object.singular, object.object]));
+const SALESFORCE_OBJECT_BY_SINGULAR = new Map<string, string>(SALESFORCE_STANDARD_OBJECTS.map((object) => [object.singular, object.object]));
 
 export function isSalesforceActionOperationSupported(operationId: string): boolean {
   return salesforceRuntimeOperation(operationId) !== null;
@@ -334,6 +334,7 @@ export function buildSalesforceOperationRequest(
     case "get-event-schema":
       return getPlan(dataPath(values, `event/eventSchema/${pathSegment(requiredString(values.schemaId, "schemaId"))}`), auth, headers, {}, objectSchema());
   }
+  throw new Error(`Unsupported Salesforce operation: ${operation.id}`);
 }
 
 function standardObjectPlan(
@@ -374,8 +375,8 @@ function getPlan(
   endpoint: string,
   auth: ConnectorRuntimeAuthBinding[],
   headers: Record<string, string>,
-  query: Record<string, IntegrationJson>,
-  responseSchema = objectSchema(),
+  query: Record<string, IntegrationJson | undefined>,
+  responseSchema: NonNullable<ConnectorRuntimeRequestPlan["responseSchema"]> = objectSchema(),
 ): ConnectorRuntimeRequestPlan {
   return { method: "GET", endpoint, auth, headers, query: removeEmptyValues(query), body: {}, responseSchema };
 }
@@ -385,9 +386,9 @@ function jsonPlan(
   endpoint: string,
   auth: ConnectorRuntimeAuthBinding[],
   headers: Record<string, string>,
-  body: Record<string, IntegrationJson>,
-  responseSchema = objectSchema(),
-  query: Record<string, IntegrationJson> = {},
+  body: Record<string, IntegrationJson | undefined>,
+  responseSchema: NonNullable<ConnectorRuntimeRequestPlan["responseSchema"]> = objectSchema(),
+  query: Record<string, IntegrationJson | undefined> = {},
 ): ConnectorRuntimeRequestPlan {
   return { method, endpoint, auth, headers, query: removeEmptyValues(query), body: removeEmptyValues(body), responseSchema };
 }

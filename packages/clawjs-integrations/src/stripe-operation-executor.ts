@@ -792,6 +792,7 @@ export function buildStripeOperationRequest(
         statement_descriptor: values.statementDescriptor ?? values.statement_descriptor,
       }), auth, headers, ["id", "object", "status"]);
   }
+  throw new Error(`Unsupported Stripe operation: ${operation.id}`);
 }
 
 function spec(
@@ -977,17 +978,17 @@ function camelCase(key: string): string {
   return key.replaceAll(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
-function firstValue(...values: IntegrationJson[]): IntegrationJson {
+function firstValue(...values: Array<IntegrationJson | undefined>): IntegrationJson {
   return values.find((value) => value != null && value !== "") ?? null;
 }
 
-function requiredString(value: IntegrationJson, name: string): string {
+function requiredString(value: IntegrationJson | undefined, name: string): string {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   throw new Error(`Stripe ${name} is required`);
 }
 
-function requiredInteger(value: IntegrationJson, name: string): number {
+function requiredInteger(value: IntegrationJson | undefined, name: string): number {
   if (typeof value === "number" && Number.isInteger(value)) return value;
   if (typeof value === "string" && /^-?\d+$/.test(value.trim())) return Number(value);
   throw new Error(`Stripe ${name} must be an integer`);

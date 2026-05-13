@@ -14,8 +14,8 @@ import {
 } from "./salesforce-operation-executor.ts";
 import type { ConnectorOperationDefinition } from "./types.ts";
 
-const OBJECT_SINGULARS = new Set(SALESFORCE_STANDARD_OBJECTS.map((object) => object.singular));
-const OBJECT_ACTIONS = new Set(["query", "get", "create", "update", "delete", "upsert"]);
+const OBJECT_SINGULARS = new Set<string>(SALESFORCE_STANDARD_OBJECTS.map((object) => object.singular));
+const OBJECT_ACTIONS = new Set<string>(["query", "get", "create", "update", "delete", "upsert"]);
 const SALESFORCE_ACTIONS = SALESFORCE_ACTION_SLUGS.map((slug) => action(slug, fieldsForOperation(slug)));
 
 const SALESFORCE_CATALOG = normalizeConnectorCatalog({

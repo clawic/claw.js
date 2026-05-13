@@ -397,7 +397,7 @@ export function buildNotionOperationRequest(
         auth,
         headers,
         body: {
-          rich_text: richText(values.richText ?? values.text, "richText"),
+          rich_text: requiredJson(richText(values.richText ?? values.text, "richText"), "richText"),
         },
         responseSchema: {
           type: "object",
@@ -753,9 +753,8 @@ function initialDataSource(values: Record<string, IntegrationJson>): Integration
   });
 }
 
-function titleProperties(title: IntegrationJson | undefined): IntegrationJson | undefined {
-  const parsed = optionalString(title);
-  if (!parsed) return undefined;
+function titleProperties(title: IntegrationJson | undefined): IntegrationJson {
+  const parsed = requiredString(title, "title");
   return {
     title: {
       title: [{
@@ -837,17 +836,17 @@ function requiredJson(value: IntegrationJson | undefined, name: string): Integra
   return value;
 }
 
-function firstValue(...values: IntegrationJson[]): IntegrationJson {
+function firstValue(...values: Array<IntegrationJson | undefined>): IntegrationJson {
   return values.find((value) => value != null && value !== "") ?? null;
 }
 
-function requiredString(value: IntegrationJson, name: string): string {
+function requiredString(value: IntegrationJson | undefined, name: string): string {
   const parsed = optionalString(value);
   if (!parsed) throw new Error(`Notion ${name} is required`);
   return parsed;
 }
 
-function optionalString(value: IntegrationJson): string | undefined {
+function optionalString(value: IntegrationJson | undefined): string | undefined {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return undefined;
