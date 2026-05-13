@@ -1,6 +1,6 @@
 {
-  "method": "POST",
-  "url": "https://discord.com/api/v10/channels/sample/messages",
+  "method": "PATCH",
+  "url": "https://discord.com/api/v10/channels/sample/messages/sample",
   "headers": {
     "accept": "application/json",
     "authorization": "Bot offline-discordBotToken-secret",
@@ -10,8 +10,7 @@
     "content": "sample",
     "message_reference": {
       "message_id": "sample",
-      "channel_id": "sample",
-      "guild_id": "sample"
+      "channel_id": "sample"
     }
   }
 }

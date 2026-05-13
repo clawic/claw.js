@@ -1,0 +1,10 @@
+{
+  "id": "list-active-threads-sample",
+  "threads": [
+    {
+      "id": "sample",
+      "type": 11,
+      "name": "sample"
+    }
+  ]
+}

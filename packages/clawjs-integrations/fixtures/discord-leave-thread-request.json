@@ -1,0 +1,8 @@
+{
+  "method": "DELETE",
+  "url": "https://discord.com/api/v10/channels/sample/thread-members/@me",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret"
+  }
+}

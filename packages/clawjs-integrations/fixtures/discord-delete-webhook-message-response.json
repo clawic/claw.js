@@ -1,0 +1,6 @@
+{
+  "id": "delete-webhook-message-sample",
+  "channel_id": "sample",
+  "name": "sample",
+  "token": "offline-token"
+}

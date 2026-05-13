@@ -1,0 +1,8 @@
+[
+  {
+    "id": "list-channel-webhooks-sample",
+    "type": 0,
+    "name": "sample",
+    "token": "offline-token"
+  }
+]

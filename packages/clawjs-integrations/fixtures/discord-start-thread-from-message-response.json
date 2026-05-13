@@ -1,4 +1,6 @@
 {
   "id": "sample",
+  "type": 0,
+  "name": "sample",
   "channel_id": "sample"
 }

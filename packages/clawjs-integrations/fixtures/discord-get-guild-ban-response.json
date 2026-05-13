@@ -1,0 +1,8 @@
+{
+  "id": "get-guild-ban-sample",
+  "user": {
+    "id": "sample",
+    "username": "sample"
+  },
+  "name": "sample"
+}

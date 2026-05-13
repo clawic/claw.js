@@ -1,0 +1,8 @@
+{
+  "method": "PUT",
+  "url": "https://discord.com/api/v10/guilds/sample/bans/sample?delete_message_seconds=0",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret"
+  }
+}

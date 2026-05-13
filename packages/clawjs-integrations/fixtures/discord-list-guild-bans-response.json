@@ -1,0 +1,10 @@
+[
+  {
+    "id": "list-guild-bans-sample",
+    "name": "sample",
+    "user": {
+      "id": "sample",
+      "username": "sample"
+    }
+  }
+]

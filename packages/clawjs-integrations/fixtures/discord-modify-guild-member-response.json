@@ -1,0 +1,8 @@
+{
+  "id": "modify-guild-member-sample",
+  "user": {
+    "id": "sample",
+    "username": "sample"
+  },
+  "name": "sample"
+}

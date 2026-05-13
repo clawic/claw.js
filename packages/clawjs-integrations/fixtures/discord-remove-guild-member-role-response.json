@@ -1,0 +1,8 @@
+{
+  "id": "remove-guild-member-role-sample",
+  "name": "sample",
+  "user": {
+    "id": "sample",
+    "username": "sample"
+  }
+}

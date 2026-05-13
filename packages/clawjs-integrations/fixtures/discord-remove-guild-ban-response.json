@@ -1,0 +1,8 @@
+{
+  "id": "remove-guild-ban-sample",
+  "name": "sample",
+  "user": {
+    "id": "sample",
+    "username": "sample"
+  }
+}

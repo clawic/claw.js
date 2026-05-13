@@ -1,0 +1,11 @@
+{
+  "method": "POST",
+  "url": "https://discord.com/api/v10/webhooks/sample/sample?wait=false",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "application/json"
+  },
+  "body": {
+    "content": "sample"
+  }
+}

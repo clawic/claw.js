@@ -1,0 +1,13 @@
+{
+  "method": "PATCH",
+  "url": "https://discord.com/api/v10/applications/sample/commands/sample",
+  "headers": {
+    "accept": "application/json",
+    "authorization": "Bot offline-discordBotToken-secret",
+    "content-type": "application/json"
+  },
+  "body": {
+    "name": "sample",
+    "description": "sample"
+  }
+}
