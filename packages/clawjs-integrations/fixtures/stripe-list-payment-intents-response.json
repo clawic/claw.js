@@ -1,0 +1,11 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "pi_sample",
+      "object": "payment_intent",
+      "status": "requires_payment_method"
+    }
+  ],
+  "has_more": false
+}

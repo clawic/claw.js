@@ -1,0 +1,11 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "cus_sample",
+      "object": "customer",
+      "email": "sample@example.invalid"
+    }
+  ],
+  "has_more": false
+}

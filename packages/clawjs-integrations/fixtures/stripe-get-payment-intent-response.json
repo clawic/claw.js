@@ -1,0 +1,5 @@
+{
+  "id": "sample",
+  "object": "payment_intent",
+  "status": "requires_payment_method"
+}
