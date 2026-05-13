@@ -31,12 +31,12 @@ let package = Package(
         ),
         .executableTarget(
             name: "ClawHostCLI",
-            path: "Sources/commander",
+            path: "Sources/ClawHostCLI",
             dependencies: ["ClawHostKit", "ClawHostAdapters"]
         ),
         .executableTarget(
             name: "ClawHostDaemon",
-            path: "Sources/commanderd",
+            path: "Sources/ClawHostDaemon",
             dependencies: ["ClawHostKit", "ClawHostAdapters"]
         ),
         .executableTarget(
