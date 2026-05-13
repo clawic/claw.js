@@ -469,7 +469,7 @@ export function buildDiscordOperationRequest(
     case "update-lobby-message-moderation-metadata":
       return bodyPlan("PUT", `lobbies/${lobbyId(values)}/messages/${messageId(values)}/moderation-metadata`, auth, headers, lobbyMessageModerationMetadataBody(values), { type: "object" });
     case "update-channel":
-      return bodyPlan("PATCH", `channels/${channelId(values)}`, auth, headers, channelBody(values, false), { type: "object", requiredPaths: ["id", "type"] });
+      return bodyPlan("PATCH", `channels/${channelId(values)}`, auth, auditHeaders(headers, values), channelBody(values, false), { type: "object", requiredPaths: ["id", "type"] });
     case "set-voice-channel-status":
       return bodyPlan("PUT", `channels/${channelId(values)}/voice-status`, auth, auditHeaders(headers, values), voiceChannelStatusBody(values), { type: "object" });
     case "delete-channel":
@@ -1221,29 +1221,39 @@ function channelBody(values: Record<string, IntegrationJson>, requireCreateField
   const assign = (name: string, value: IntegrationJson | undefined) => {
     if (value !== undefined && value !== "") body[name] = value;
   };
-  const stringField = (key: string) => requireCreateFields ? optionalNullableStringField(values, key) : optionalString(values[key]);
   const numberField = (key: string) => requireCreateFields ? optionalNullableNumberField(values, key) : optionalNumber(values[key]);
   const arrayField = (key: string) => requireCreateFields ? optionalNullableJsonArrayField(values, key) : optionalJsonArray(values[key]);
-  const objectField = (key: string) => requireCreateFields ? optionalNullableJsonObjectField(values, key) : optionalJsonObject(values[key]);
+  const nullableStringField = (key: string) => optionalNullableStringField(values, key);
+  const nullableNumberField = (key: string) => optionalNullableNumberField(values, key);
+  const nullableObjectField = (key: string) => optionalNullableJsonObjectField(values, key);
 
   assign("name", requireCreateFields ? requiredString(values.name, "name") : optionalString(values.name));
   assign("type", numberField("type"));
-  assign("topic", stringField("topic"));
+  assign("topic", nullableStringField("topic"));
   assign("bitrate", numberField("bitrate"));
   assign("user_limit", numberField("userLimit"));
   assign("rate_limit_per_user", numberField("rateLimitPerUser"));
   assign("position", numberField("position"));
   assign("permission_overwrites", arrayField("permissionOverwrites"));
-  assign("parent_id", stringField("parentId"));
+  assign("parent_id", nullableStringField("parentId"));
   assign("nsfw", requireCreateFields ? optionalNullableBooleanField(values, "nsfw") : optionalBoolean(values.nsfw));
-  assign("rtc_region", stringField("rtcRegion"));
+  assign("rtc_region", nullableStringField("rtcRegion"));
   assign("video_quality_mode", numberField("videoQualityMode"));
   assign("default_auto_archive_duration", numberField("defaultAutoArchiveDuration"));
-  assign("default_reaction_emoji", objectField("defaultReactionEmoji"));
+  assign("default_reaction_emoji", nullableObjectField("defaultReactionEmoji"));
   assign("available_tags", arrayField("availableTags"));
-  assign("default_sort_order", numberField("defaultSortOrder"));
+  assign("default_sort_order", nullableNumberField("defaultSortOrder"));
   assign("default_forum_layout", numberField("defaultForumLayout"));
   assign("default_thread_rate_limit_per_user", numberField("defaultThreadRateLimitPerUser"));
+  if (!requireCreateFields) {
+    assign("icon", optionalNullableStringField(values, "icon"));
+    assign("flags", optionalNumber(values.flags));
+    assign("archived", optionalBoolean(values.archived));
+    assign("auto_archive_duration", optionalNumber(values.autoArchiveDuration));
+    assign("locked", optionalBoolean(values.locked));
+    assign("invitable", optionalBoolean(values.invitable));
+    assign("applied_tags", optionalJsonArray(values.appliedTags));
+  }
   return body;
 }
 
