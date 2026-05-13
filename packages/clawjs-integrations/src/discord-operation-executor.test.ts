@@ -21,6 +21,7 @@ const INTEGRATION_FIELD = field("integrationId", "string");
 const WEBHOOK_FIELD = field("webhookId", "string");
 const WEBHOOK_TOKEN_FIELD = field("webhookToken", "string");
 const APPLICATION_FIELD = field("applicationId", "string");
+const INSTANCE_FIELD = field("instanceId", "string");
 const COMMAND_FIELD = field("commandId", "string");
 const ENTITLEMENT_FIELD = field("entitlementId", "string");
 const SKU_FIELD = field("skuId", "string");
@@ -58,6 +59,9 @@ const DISCORD_ACTIONS = [
   action("create-guild-soundboard-sound", "Create Guild Soundboard Sound", [GUILD_FIELD, field("name", "string"), field("sound", "string", false, { default: "data:audio/mpeg;base64,c2FtcGxl" }), field("volume", "number", true, { default: 1 }), field("emojiId", "string", true), field("emojiName", "string", true), field("auditLogReason", "string", true)]),
   action("update-guild-soundboard-sound", "Update Guild Soundboard Sound", [GUILD_FIELD, SOUNDBOARD_SOUND_FIELD, field("name", "string", true, { default: "sample" }), field("volume", "number", true, { default: 1 }), field("emojiId", "string", true), field("emojiName", "string", true), field("auditLogReason", "string", true)]),
   action("delete-guild-soundboard-sound", "Delete Guild Soundboard Sound", [GUILD_FIELD, SOUNDBOARD_SOUND_FIELD, field("auditLogReason", "string", true)]),
+  action("get-current-application", "Get Current Application", []),
+  action("edit-current-application", "Edit Current Application", [field("customInstallUrl", "string", true), field("description", "string", true, { default: "sample" }), field("roleConnectionsVerificationUrl", "string", true), field("installParams", "object", true), field("integrationTypesConfig", "object", true), field("flags", "integer", true), field("icon", "string", true), field("coverImage", "string", true), field("interactionsEndpointUrl", "string", true), field("tags", "array", true, { default: ["sample"] }), field("eventWebhooksUrl", "string", true), field("eventWebhooksStatus", "integer", true, { default: 1 }), field("eventWebhooksTypes", "array", true)]),
+  action("get-application-activity-instance", "Get Application Activity Instance", [APPLICATION_FIELD, INSTANCE_FIELD]),
   action("get-application-role-connection-metadata", "Get Application Role Connection Metadata", [APPLICATION_FIELD]),
   action("update-application-role-connection-metadata", "Update Application Role Connection Metadata", [APPLICATION_FIELD, field("records", "array", false, { default: [{ type: 2, key: "score", name: "Score", description: "Sample score" }] })]),
   action("list-entitlements", "List Entitlements", [APPLICATION_FIELD, field("userId", "string", true), field("skuIds", "array", true, { default: ["sample"] }), field("before", "string", true), field("after", "string", true), field("limit", "integer", true, { default: 1, min: 1, max: 100 }), field("guildId", "string", true), field("excludeEnded", "boolean", true), field("excludeDeleted", "boolean", true)]),
@@ -1293,6 +1297,95 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["sound_id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-current-application"), {}), {
+      method: "GET",
+      endpoint: "applications/@me",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "name", "description", "verify_key"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.edit-current-application"), {
+      customInstallUrl: "https://example.invalid/install",
+      description: "Updated app",
+      roleConnectionsVerificationUrl: "https://example.invalid/roles",
+      installParams: {
+        scopes: ["bot"],
+        permissions: "0",
+      },
+      integrationTypesConfig: {
+        "0": {
+          oauth2_install_params: {
+            scopes: ["bot"],
+            permissions: "0",
+          },
+        },
+      },
+      flags: 0,
+      icon: "data:image/png;base64,c2FtcGxl",
+      coverImage: "data:image/png;base64,c2FtcGxl",
+      interactionsEndpointUrl: "https://example.invalid/interactions",
+      tags: ["sample"],
+      eventWebhooksUrl: "https://example.invalid/events",
+      eventWebhooksStatus: 1,
+      eventWebhooksTypes: ["APPLICATION_AUTHORIZED"],
+    }), {
+      method: "PATCH",
+      endpoint: "applications/@me",
+      auth,
+      headers,
+      body: {
+        custom_install_url: "https://example.invalid/install",
+        description: "Updated app",
+        role_connections_verification_url: "https://example.invalid/roles",
+        install_params: {
+          scopes: ["bot"],
+          permissions: "0",
+        },
+        integration_types_config: {
+          "0": {
+            oauth2_install_params: {
+              scopes: ["bot"],
+              permissions: "0",
+            },
+          },
+        },
+        flags: 0,
+        icon: "data:image/png;base64,c2FtcGxl",
+        cover_image: "data:image/png;base64,c2FtcGxl",
+        interactions_endpoint_url: "https://example.invalid/interactions",
+        tags: ["sample"],
+        event_webhooks_url: "https://example.invalid/events",
+        event_webhooks_status: 1,
+        event_webhooks_types: ["APPLICATION_AUTHORIZED"],
+      },
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "name", "description", "verify_key"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-application-activity-instance"), {
+      applicationId: "app-123",
+      instanceId: "instance-123",
+    }), {
+      method: "GET",
+      endpoint: "applications/app-123/activity-instances/instance-123",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["application_id", "instance_id", "launch_id", "location", "users"],
       },
     });
 
