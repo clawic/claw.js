@@ -432,7 +432,7 @@ final class CommanderE2ETests: XCTestCase {
         let context = try TestContext()
         defer { context.cleanup() }
 
-        let filePath = context.tmp.appendingPathComponent("sandbox/demo.txt").path
+        let filePath = context.tmp.appendingPathComponent("modules/sandbox/demo.txt").path
 
         let denied = try context.runCLI([
             "files", "entries", "create",
@@ -481,7 +481,7 @@ final class CommanderE2ETests: XCTestCase {
             "--json",
         ]).ok)
 
-        let movedPath = context.tmp.appendingPathComponent("sandbox/archive/demo.txt").path
+        let movedPath = context.tmp.appendingPathComponent("modules/sandbox/archive/demo.txt").path
         XCTAssertTrue(try context.runCLI([
             "files", "entries", "move",
             "--path", filePath,
