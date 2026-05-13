@@ -212,6 +212,46 @@ describe("connector runtime http transport", () => {
     assert.deepEqual(response.body, { detail: "accepted" });
   });
 
+  it("parses explicit base64 responses", async () => {
+    const response = await executeConnectorRuntimeRequestPlan({
+      baseUrl: "https://api.example.invalid/",
+      secrets: {},
+      plan: {
+        method: "GET",
+        endpoint: "files/image",
+        auth: [],
+        body: {},
+        responseBodyEncoding: "base64",
+        responseSchema: { type: "string" },
+      },
+      fetchImpl: async () => new Response(new Uint8Array([137, 80, 78, 71]), {
+        headers: { "content-type": "image/png" },
+      }),
+    });
+
+    assert.equal(response.body, "iVBORw==");
+  });
+
+  it("parses explicit text responses with JSON content types", async () => {
+    const response = await executeConnectorRuntimeRequestPlan({
+      baseUrl: "https://api.example.invalid/",
+      secrets: {},
+      plan: {
+        method: "GET",
+        endpoint: "items/raw",
+        auth: [],
+        body: {},
+        responseBodyEncoding: "text",
+        responseSchema: { type: "string" },
+      },
+      fetchImpl: async () => new Response("{\"ok\":true}", {
+        headers: { "content-type": "application/json" },
+      }),
+    });
+
+    assert.equal(response.body, "{\"ok\":true}");
+  });
+
   it("rejects successful responses that fail the response schema", async () => {
     await assert.rejects(
       () => executeConnectorRuntimeRequestPlan({
