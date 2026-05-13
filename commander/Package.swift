@@ -7,18 +7,21 @@ let package = Package(
         .macOS(.v14),
     ],
     products: [
-        .library(name: "ClawHostKit", targets: ["CommanderCore"]),
-        .library(name: "ClawHostAdapters", targets: ["CommanderAdapters"]),
+        .library(name: "ClawHostKit", targets: ["ClawHostKit"]),
+        .library(name: "ClawHostAdapters", targets: ["ClawHostAdapters"]),
         .executable(name: "claw-host", targets: ["commander"]),
         .executable(name: "claw-hostd", targets: ["commanderd"]),
         .executable(name: "ClawApp", targets: ["CommanderApp"]),
-        .library(name: "CommanderCore", targets: ["CommanderCore"]),
-        .library(name: "CommanderAdapters", targets: ["CommanderAdapters"]),
-        .executable(name: "commander", targets: ["commander"]),
-        .executable(name: "commanderd", targets: ["commanderd"]),
-        .executable(name: "CommanderApp", targets: ["CommanderApp"]),
     ],
     targets: [
+        .target(
+            name: "ClawHostKit",
+            dependencies: ["CommanderCore"]
+        ),
+        .target(
+            name: "ClawHostAdapters",
+            dependencies: ["ClawHostKit", "CommanderAdapters"]
+        ),
         .target(
             name: "CommanderCore"
         ),
