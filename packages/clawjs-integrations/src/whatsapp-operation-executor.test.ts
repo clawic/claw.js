@@ -8,6 +8,7 @@ import {
 } from "./runtime-coverage.ts";
 import {
   buildWhatsAppOperationRequest,
+  WHATSAPP_ACTION_SLUGS,
 } from "./whatsapp-operation-executor.ts";
 
 const WHATSAPP_CATALOG = normalizeConnectorCatalog({
@@ -92,6 +93,87 @@ describe("whatsapp operation runtime", () => {
     });
   });
 
+  it("builds expanded WhatsApp message request plans", () => {
+    assert.deepEqual(buildWhatsAppOperationRequest(testOperation("whatsapp.action.send-image-message"), {
+      phoneNumberId: "12345",
+      to: "15551234567",
+      mediaLink: "https://example.invalid/image.png",
+      caption: "image",
+    }).body, {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: "15551234567",
+      type: "image",
+      image: {
+        link: "https://example.invalid/image.png",
+        caption: "image",
+      },
+    });
+
+    assert.deepEqual(buildWhatsAppOperationRequest(testOperation("whatsapp.action.send-location-message"), {
+      phoneNumberId: "12345",
+      to: "15551234567",
+      latitude: 37.485,
+      longitude: -122.153,
+      name: "Office",
+      address: "1 Example Way",
+    }).body, {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: "15551234567",
+      type: "location",
+      location: {
+        latitude: 37.485,
+        longitude: -122.153,
+        name: "Office",
+        address: "1 Example Way",
+      },
+    });
+
+    assert.deepEqual(buildWhatsAppOperationRequest(testOperation("whatsapp.action.send-template-message"), {
+      phoneNumberId: "12345",
+      to: "15551234567",
+      templateName: "order_update",
+      languageCode: "en_US",
+      components: "[{\"type\":\"body\",\"parameters\":[{\"type\":\"text\",\"text\":\"A123\"}]}]",
+    }).body, {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: "15551234567",
+      type: "template",
+      template: {
+        name: "order_update",
+        language: { code: "en_US" },
+        components: [{ type: "body", parameters: [{ type: "text", text: "A123" }] }],
+      },
+    });
+
+    assert.deepEqual(buildWhatsAppOperationRequest(testOperation("whatsapp.action.mark-message-read"), {
+      phoneNumberId: "12345",
+      messageId: "wamid.sample",
+    }).body, {
+      messaging_product: "whatsapp",
+      status: "read",
+      message_id: "wamid.sample",
+    });
+  });
+
+  it("exposes supported WhatsApp action slugs", () => {
+    assert.deepEqual(WHATSAPP_ACTION_SLUGS, [
+      "verify-phone-number",
+      "send-message",
+      "send-image-message",
+      "send-document-message",
+      "send-audio-message",
+      "send-video-message",
+      "send-sticker-message",
+      "send-location-message",
+      "send-contacts-message",
+      "send-template-message",
+      "mark-message-read",
+    ]);
+  });
+
   it("covers WhatsApp operations with operation-scoped offline fixtures", async () => {
     const coverage = verifyConnectorRuntimeCoverage(WHATSAPP_CATALOG);
     assert.equal(coverage.summary.missing, 0);
@@ -109,4 +191,15 @@ function operation(operationId: string) {
   const found = WHATSAPP_CATALOG.apps[0]?.operations.find((candidate) => candidate.id === operationId);
   assert.ok(found);
   return found;
+}
+
+function testOperation(operationId: string) {
+  return {
+    id: operationId,
+    appId: "whatsapp",
+    kind: "action" as const,
+    name: operationId,
+    fields: [],
+    authFieldNames: ["whatsAppAccessToken"],
+  };
 }
