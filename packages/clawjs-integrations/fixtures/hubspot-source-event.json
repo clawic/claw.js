@@ -1,0 +1,10 @@
+[
+  {
+    "eventId": "event-sample",
+    "subscriptionType": "contact.creation",
+    "objectId": 101,
+    "propertyName": "name",
+    "propertyValue": "sample",
+    "occurredAt": 1700000000000
+  }
+]

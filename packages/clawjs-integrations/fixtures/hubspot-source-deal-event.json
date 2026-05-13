@@ -1,0 +1,10 @@
+[
+  {
+    "eventId": "deal-event-sample",
+    "subscriptionType": "deal.propertyChange",
+    "objectId": 101,
+    "propertyName": "name",
+    "propertyValue": "sample",
+    "occurredAt": 1700000000000
+  }
+]
