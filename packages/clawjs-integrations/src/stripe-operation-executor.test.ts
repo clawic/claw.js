@@ -940,6 +940,28 @@ describe("stripe operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.get-billing-credit-balance-summary"), {
+      customer: "cus_sample",
+      customer_account: "acct_sample",
+      filter: { type: "applicability_scope", applicability_scope: { price_type: "metered" } },
+    }), {
+      method: "GET",
+      endpoint: "billing/credit_balance_summary",
+      auth,
+      headers,
+      query: {
+        customer: "cus_sample",
+        customer_account: "acct_sample",
+        filter: { type: "applicability_scope", applicability_scope: { price_type: "metered" } },
+      },
+      bodyEncoding: undefined,
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id", "object"],
+      },
+    });
+
     assert.deepEqual(buildStripeOperationRequest(operation("stripe.action.process-terminal-reader-setup-intent"), {
       reader: "tmr_sample",
       setup_intent: "seti_sample",

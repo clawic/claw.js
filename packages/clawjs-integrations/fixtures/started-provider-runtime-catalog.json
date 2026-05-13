@@ -41268,6 +41268,106 @@
           "authFieldNames": [
             "stripeSecretKey"
           ]
+        },
+        {
+          "id": "stripe.action.get-billing-credit-balance-summary",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Billing Credit Balance Summary",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "customer_account",
+              "type": "string",
+              "optional": true,
+              "default": "acct_sample"
+            },
+            {
+              "name": "filter",
+              "type": "object",
+              "optional": false,
+              "default": {
+                "type": "applicability_scope",
+                "applicability_scope": {
+                  "price_type": "metered"
+                }
+              }
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.list-billing-credit-balance-transactions",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "List Billing Credit Balance Transactions",
+          "fields": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "optional": true,
+              "default": 10,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "name": "startingAfter",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "endingBefore",
+              "type": "string",
+              "optional": true,
+              "default": ""
+            },
+            {
+              "name": "credit_grant",
+              "type": "string",
+              "optional": true,
+              "default": "credgrant_sample"
+            },
+            {
+              "name": "customer",
+              "type": "string",
+              "optional": true,
+              "default": "cus_sample"
+            },
+            {
+              "name": "customer_account",
+              "type": "string",
+              "optional": true,
+              "default": "acct_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
+        },
+        {
+          "id": "stripe.action.get-billing-credit-balance-transaction",
+          "appId": "stripe",
+          "kind": "action",
+          "name": "Get Billing Credit Balance Transaction",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false,
+              "default": "cbtxn_sample"
+            }
+          ],
+          "authFieldNames": [
+            "stripeSecretKey"
+          ]
         }
       ]
     },

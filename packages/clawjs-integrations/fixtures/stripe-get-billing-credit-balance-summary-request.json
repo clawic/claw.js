@@ -1,0 +1,7 @@
+{
+  "url": "https://api.stripe.com/v1/billing/credit_balance_summary?customer=cus_sample&customer_account=acct_sample&filter=%7B%22type%22%3A%22applicability_scope%22%2C%22applicability_scope%22%3A%7B%22price_type%22%3A%22metered%22%7D%7D",
+  "init": {
+    "method": "GET",
+    "headers": {}
+  }
+}

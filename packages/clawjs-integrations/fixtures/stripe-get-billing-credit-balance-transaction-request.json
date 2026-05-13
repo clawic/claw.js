@@ -1,0 +1,7 @@
+{
+  "url": "https://api.stripe.com/v1/billing/credit_balance_transactions/cbtxn_sample",
+  "init": {
+    "method": "GET",
+    "headers": {}
+  }
+}
