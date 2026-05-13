@@ -5537,6 +5537,54 @@
               "default": "sample"
             },
             {
+              "name": "embeds",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "allowedMentions",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "components",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "attachments",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "files",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "flags",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "poll",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "threadId",
+              "type": "string",
+              "optional": true,
+              "default": null
+            },
+            {
               "name": "withComponents",
               "type": "boolean",
               "optional": true
@@ -5646,6 +5694,48 @@
               "type": "string",
               "optional": true,
               "default": "sample"
+            },
+            {
+              "name": "embeds",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "allowedMentions",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "components",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "attachments",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "files",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "flags",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "poll",
+              "type": "object",
+              "optional": true,
+              "default": null
             }
           ],
           "authFieldNames": []
@@ -5815,6 +5905,48 @@
               "type": "string",
               "optional": true,
               "default": "sample"
+            },
+            {
+              "name": "embeds",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "allowedMentions",
+              "type": "object",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "components",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "attachments",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "files",
+              "type": "array",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "flags",
+              "type": "integer",
+              "optional": true,
+              "default": null
+            },
+            {
+              "name": "poll",
+              "type": "object",
+              "optional": true,
+              "default": null
             }
           ],
           "authFieldNames": []
