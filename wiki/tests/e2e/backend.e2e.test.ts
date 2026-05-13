@@ -69,7 +69,7 @@ test("health endpoint returns ok", async () => {
 
 test("wiki ui serves shared brand assets and fonts", async () => {
   const { baseUrl } = await boot();
-  const sharedPublicDir = path.resolve(process.cwd(), "..", "public");
+  const sharedAssetsDir = path.resolve(process.cwd(), "..", "assets");
 
   const indexRes = await fetch(`${baseUrl}/`);
   assert.equal(indexRes.status, 200);
@@ -80,21 +80,21 @@ test("wiki ui serves shared brand assets and fonts", async () => {
   assert.equal(logoRes.status, 200);
   assert.deepEqual(
     Buffer.from(await logoRes.arrayBuffer()),
-    fs.readFileSync(path.join(sharedPublicDir, "logo.png")),
+    fs.readFileSync(path.join(sharedAssetsDir, "logo.png")),
   );
 
   const faviconRes = await fetch(`${baseUrl}/brand/favicon.ico`);
   assert.equal(faviconRes.status, 200);
   assert.deepEqual(
     Buffer.from(await faviconRes.arrayBuffer()),
-    fs.readFileSync(path.join(sharedPublicDir, "favicon.ico")),
+    fs.readFileSync(path.join(sharedAssetsDir, "favicon.ico")),
   );
 
   const fontRes = await fetch(`${baseUrl}/brand/fonts/source-sans-3/source-sans-3-v18-cyrillic_latin_latin-ext-regular.woff2`);
   assert.equal(fontRes.status, 200);
   assert.deepEqual(
     Buffer.from(await fontRes.arrayBuffer()),
-    fs.readFileSync(path.join(sharedPublicDir, "fonts", "source-sans-3", "source-sans-3-v18-cyrillic_latin_latin-ext-regular.woff2")),
+    fs.readFileSync(path.join(sharedAssetsDir, "fonts", "source-sans-3", "source-sans-3-v18-cyrillic_latin_latin-ext-regular.woff2")),
   );
 });
 
