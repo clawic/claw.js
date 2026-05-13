@@ -10,7 +10,8 @@
   "body": {
     "name": "sample",
     "sound": "data:audio/mpeg;base64,c2FtcGxl",
-    "volume": 1,
-    "emoji_id": "sample"
+    "volume": null,
+    "emoji_id": null,
+    "emoji_name": null
   }
 }

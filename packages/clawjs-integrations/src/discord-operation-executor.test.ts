@@ -129,7 +129,7 @@ const DISCORD_ACTIONS = [
   action("list-default-soundboard-sounds", "List Default Soundboard Sounds", []),
   action("list-guild-soundboard-sounds", "List Guild Soundboard Sounds", [GUILD_FIELD]),
   action("get-guild-soundboard-sound", "Get Guild Soundboard Sound", [GUILD_FIELD, SOUNDBOARD_SOUND_FIELD]),
-  action("create-guild-soundboard-sound", "Create Guild Soundboard Sound", [GUILD_FIELD, field("name", "string"), field("sound", "string", false, { default: "data:audio/mpeg;base64,c2FtcGxl" }), field("volume", "number", true, { default: 1 }), field("emojiId", "string", true), field("emojiName", "string", true), field("auditLogReason", "string", true)]),
+  action("create-guild-soundboard-sound", "Create Guild Soundboard Sound", [GUILD_FIELD, field("name", "string"), field("sound", "string", false, { default: "data:audio/mpeg;base64,c2FtcGxl" }), field("volume", "number", true, { default: null }), field("emojiId", "string", true, { default: null }), field("emojiName", "string", true, { default: null }), field("auditLogReason", "string", true)]),
   action("update-guild-soundboard-sound", "Update Guild Soundboard Sound", [GUILD_FIELD, SOUNDBOARD_SOUND_FIELD, field("name", "string", true, { default: "sample" }), field("volume", "number", true, { default: 1 }), field("emojiId", "string", true), field("emojiName", "string", true), field("auditLogReason", "string", true)]),
   action("delete-guild-soundboard-sound", "Delete Guild Soundboard Sound", [GUILD_FIELD, SOUNDBOARD_SOUND_FIELD, field("auditLogReason", "string", true)]),
   action("get-current-application", "Get Current Application", []),
@@ -2205,8 +2205,9 @@ describe("discord operation runtime", () => {
       guildId: "456",
       name: "Doorbell",
       sound: "data:audio/mpeg;base64,c2FtcGxl",
-      volume: 0.75,
-      emojiName: "bell",
+      volume: null,
+      emojiId: null,
+      emojiName: null,
       auditLogReason: "sound update",
     }), {
       method: "POST",
@@ -2219,8 +2220,9 @@ describe("discord operation runtime", () => {
       body: {
         name: "Doorbell",
         sound: "data:audio/mpeg;base64,c2FtcGxl",
-        volume: 0.75,
-        emoji_name: "bell",
+        volume: null,
+        emoji_id: null,
+        emoji_name: null,
       },
       responseSchema: {
         type: "object",
