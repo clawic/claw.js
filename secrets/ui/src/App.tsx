@@ -105,7 +105,7 @@ type Session = {
   role: string;
 };
 
-const BASE_URL = (globalThis as { __SECRETS_BASE_URL__?: string }).__SECRETS_BASE_URL__ || window.location.origin;
+const BASE_URL = (globalThis as { __CLAW_SECRETS_BASE_URL__?: string }).__CLAW_SECRETS_BASE_URL__ || window.location.origin;
 
 async function api<T>(session: Session, pathname: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${BASE_URL}${pathname}`, {

@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useEffect, useMemo, useState } from "react";
-const BASE_URL = globalThis.__SECRETS_BASE_URL__ || window.location.origin;
+const BASE_URL = globalThis.__CLAW_SECRETS_BASE_URL__ || window.location.origin;
 async function api(session, pathname, init = {}) {
     const response = await fetch(`${BASE_URL}${pathname}`, {
         ...init,
