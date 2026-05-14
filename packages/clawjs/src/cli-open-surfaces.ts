@@ -99,3 +99,41 @@ export function openSurfaceRows(useClawDomains = false): Array<Record<string, st
     aliases: (surface.aliases ?? []).join(","),
   }));
 }
+
+export function domainIndexHtml(): string {
+  const links = OPEN_SURFACES.map((surface) => `<a class="surface" href="${surfacePrimaryClawUrl(surface)}"><span>${surface.label}</span><code>${surface.id}.claw</code></a>`).join("");
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claw domains</title>
+  <style>
+    :root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 0; min-height: 100vh; background: #f7f8fb; color: #16181d; }
+    main { max-width: 960px; margin: 0 auto; padding: 48px 24px; }
+    h1 { margin: 0 0 8px; font-size: 32px; letter-spacing: 0; }
+    p { margin: 0 0 28px; color: #5f6573; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+    .surface { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border: 1px solid #dde1e8; border-radius: 8px; background: #fff; color: inherit; text-decoration: none; }
+    .surface:hover { border-color: #9aa4b5; }
+    .surface span { font-weight: 650; }
+    code { color: #315b9f; font-size: 13px; overflow-wrap: anywhere; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #111318; color: #f2f4f8; }
+      p { color: #a6adbb; }
+      .surface { background: #191c23; border-color: #303642; }
+      .surface:hover { border-color: #687386; }
+      code { color: #8bb6ff; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Claw domains</h1>
+    <p>Local dashboards available on this machine.</p>
+    <section class="grid">${links}</section>
+  </main>
+</body>
+</html>`;
+}

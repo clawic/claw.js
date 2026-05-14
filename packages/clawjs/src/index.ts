@@ -73,9 +73,11 @@ import {
 } from "./cli-telegram-codex-constants.ts";
 import { parseImageOperation, parseImageProvenance, parseImageType } from "./cli-image-parsers.ts";
 import { buildImageCommonInput, buildMediaListInput, buildMediaMetadata } from "./cli-media-utils.ts";
-import { OPEN_SURFACES, allOpenSurfaceHostnames, buildOpenUsage, openSurfaceRows, parseClawHostSurface, resolveOpenSurface, surfacePrimaryClawUrl, type OpenSurface, type OpenSurfaceState } from "./cli-open-surfaces.ts";
+import { OPEN_SURFACES, allOpenSurfaceHostnames, buildOpenUsage, domainIndexHtml, openSurfaceRows, parseClawHostSurface, resolveOpenSurface, surfacePrimaryClawUrl, type OpenSurface, type OpenSurfaceState } from "./cli-open-surfaces.ts";
 import { currentCliEntryPath, openBrowser, openStateDir, openStatePath, readOpenState, repoRootFromCliPackage, writeOpenState } from "./cli-open-state.ts";
+import { buildSurfaceCommand, ensureSurfaceBuild, prepareOpenSurface } from "./cli-open-runtime.ts";
 import { portIsOpen, processIsAlive, waitForUrl, writeProgress } from "./cli-process-utils.ts";
+import { proxyHttpResponse } from "./cli-http-proxy.ts";
 import { CLAW_DOMAINS_BEGIN, CLAW_DOMAINS_END, CLAW_DOMAINS_LABEL, buildDomainsPlist, buildDomainsProxyScript, buildDomainsServiceConfig, domainHostsBlock, domainsInstallPlan, domainsProxyConfigPath, domainsProxyScriptPath, domainsServiceDir, parseSurfacePortOverrides, readDomainsStatus, replaceDomainHostsBlock, surfaceTargetPort } from "./cli-domains-config.ts";
 import { runPrivilegedScript } from "./cli-domains-privileges.ts";
 import { parseRuleHints, parseRuleReferences } from "./cli-rule-utils.ts";
@@ -137,94 +139,6 @@ function isClawDomainConfigured(flags: Record<string, string>): boolean {
   }
 }
 
-async function proxyHttpResponse(input: {
-  request: http.IncomingMessage;
-  response: http.ServerResponse;
-  targetUrl: URL;
-}): Promise<void> {
-  const incomingUrl = new URL(input.request.url || "/", "http://127.0.0.1");
-  const target = new URL(input.targetUrl.toString());
-  target.pathname = incomingUrl.pathname;
-  target.search = incomingUrl.search;
-  const headers = new Headers();
-  for (const [key, value] of Object.entries(input.request.headers)) {
-    if (key.toLowerCase() === "host" || value === undefined) continue;
-    if (Array.isArray(value)) {
-      for (const entry of value) headers.append(key, entry);
-    } else {
-      headers.set(key, value);
-    }
-  }
-  const body = input.request.method === "GET" || input.request.method === "HEAD"
-    ? undefined
-    : input.request as unknown as BodyInit;
-  try {
-    const upstream = await fetch(target, {
-      method: input.request.method,
-      headers,
-      body,
-      redirect: "manual",
-      duplex: body ? "half" : undefined,
-    } as RequestInit & { duplex?: "half" });
-    input.response.statusCode = upstream.status;
-    upstream.headers.forEach((value, key) => {
-      if (key.toLowerCase() !== "content-encoding") input.response.setHeader(key, value);
-    });
-    if (!upstream.body) {
-      input.response.end();
-      return;
-    }
-    const reader = upstream.body.getReader();
-    while (true) {
-      const chunk = await reader.read();
-      if (chunk.done) break;
-      input.response.write(Buffer.from(chunk.value));
-    }
-    input.response.end();
-  } catch (error) {
-    input.response.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
-    input.response.end(error instanceof Error ? error.message : "Domain proxy failed.");
-  }
-}
-
-function domainIndexHtml(): string {
-  const links = OPEN_SURFACES.map((surface) => `<a class="surface" href="${surfacePrimaryClawUrl(surface)}"><span>${surface.label}</span><code>${surface.id}.claw</code></a>`).join("");
-  return `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Claw domains</title>
-  <style>
-    :root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    body { margin: 0; min-height: 100vh; background: #f7f8fb; color: #16181d; }
-    main { max-width: 960px; margin: 0 auto; padding: 48px 24px; }
-    h1 { margin: 0 0 8px; font-size: 32px; letter-spacing: 0; }
-    p { margin: 0 0 28px; color: #5f6573; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
-    .surface { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border: 1px solid #dde1e8; border-radius: 8px; background: #fff; color: inherit; text-decoration: none; }
-    .surface:hover { border-color: #9aa4b5; }
-    .surface span { font-weight: 650; }
-    code { color: #315b9f; font-size: 13px; overflow-wrap: anywhere; }
-    @media (prefers-color-scheme: dark) {
-      body { background: #111318; color: #f2f4f8; }
-      p { color: #a6adbb; }
-      .surface { background: #191c23; border-color: #303642; }
-      .surface:hover { border-color: #687386; }
-      code { color: #8bb6ff; }
-    }
-  </style>
-</head>
-<body>
-  <main>
-    <h1>Claw domains</h1>
-    <p>Local dashboards available on this machine.</p>
-    <section class="grid">${links}</section>
-  </main>
-</body>
-</html>`;
-}
-
 async function ensureDomainSurfaceRunning(surface: OpenSurface, flags: Record<string, string>, workspace: string): Promise<URL> {
   const port = surfaceTargetPort(surface, flags);
   const targetUrl = new URL(`http://127.0.0.1:${port}`);
@@ -282,135 +196,6 @@ function cliErrorFromUnknown(error: unknown): CliHandledError {
   return error instanceof CliHandledError
     ? error
     : new CliHandledError("internal_error", error instanceof Error ? error.message : String(error));
-}
-
-function ensureSurfaceBuild(surface: OpenSurface): void {
-  if (!surface.dir || !surface.buildCheck) return;
-  const repoRoot = repoRootFromCliPackage();
-  const surfaceDir = path.join(repoRoot, surface.dir);
-  if (!fs.existsSync(surfaceDir)) {
-    throw new CliHandledError("dashboard_unavailable", `${surface.id} dashboard is not available in this installation.`);
-  }
-  if (fs.existsSync(path.join(surfaceDir, surface.buildCheck))) return;
-  if (fs.existsSync(path.join(surfaceDir, "package.json")) && !fs.existsSync(path.join(surfaceDir, "node_modules"))) {
-    const install = spawnSync("npm", ["--prefix", surfaceDir, "install"], {
-      cwd: repoRoot,
-      stdio: "ignore",
-      env: {
-        ...process.env,
-        npm_config_audit: "false",
-        npm_config_fund: "false",
-      },
-    });
-    if (install.status !== 0) {
-      throw new CliHandledError("dashboard_install_failed", `Failed to install ${surface.id} dashboard dependencies.`);
-    }
-  }
-  const result = spawnSync("npm", ["--prefix", surfaceDir, "run", "build"], {
-    cwd: repoRoot,
-    stdio: "ignore",
-    env: {
-      ...process.env,
-      npm_config_audit: "false",
-      npm_config_fund: "false",
-    },
-  });
-  if (result.status !== 0) {
-    throw new CliHandledError("dashboard_build_failed", `Failed to build ${surface.id} dashboard.`);
-  }
-}
-
-function prepareOpenSurface(surface: OpenSurface, workspace: string): void {
-  if (surface.kind !== "memory") return;
-  if (fs.existsSync(path.join(workspace, ".memory"))) return;
-  const repoRoot = repoRootFromCliPackage();
-  const memoryCli = path.join(repoRoot, "memory", "dist", "cli.js");
-  const result = spawnSync(process.execPath, [memoryCli, "init", "--dir", workspace], {
-    cwd: workspace,
-    stdio: "ignore",
-    env: process.env,
-  });
-  if (result.status !== 0) {
-    throw new CliHandledError("dashboard_prepare_failed", "Failed to initialize memory dashboard workspace.");
-  }
-}
-
-function cliBinPath(): string {
-  const currentArgv = process.argv[1];
-  if (currentArgv && fs.existsSync(currentArgv)) return currentArgv;
-  const packagedBin = fileURLToPath(new URL("../bin/claw.mjs", import.meta.url));
-  if (fs.existsSync(packagedBin)) return packagedBin;
-  return fileURLToPath(import.meta.url);
-}
-
-function buildSurfaceCommand(surface: OpenSurface, input: { host: string; port: number; workspace: string }): { command: string; args: string[]; cwd: string; env: NodeJS.ProcessEnv } {
-  const repoRoot = repoRootFromCliPackage();
-  const surfaceDir = surface.dir ? path.join(repoRoot, surface.dir) : repoRoot;
-  const env: NodeJS.ProcessEnv = { ...process.env };
-  if (surface.envHost) env[surface.envHost] = input.host;
-  if (surface.envPort) env[surface.envPort] = String(input.port);
-
-  if (surface.kind === "internal-database" || surface.kind === "internal-storage") {
-    return {
-      command: process.execPath,
-      args: [
-        cliBinPath(),
-        "__open-server",
-        surface.id,
-        "--host",
-        input.host,
-        "--port",
-        String(input.port),
-        "--workspace",
-        input.workspace,
-      ],
-      cwd: repoRoot,
-      env,
-    };
-  }
-
-  if (surface.kind === "memory") {
-    return {
-      command: process.execPath,
-      args: [path.join(surfaceDir, "dist", "cli.js"), "serve", "--port", String(input.port)],
-      cwd: input.workspace,
-      env,
-    };
-  }
-
-  if (surface.kind === "cli-serve") {
-    return {
-      command: process.execPath,
-      args: [path.join(surfaceDir, "dist", "cli.js"), "serve", "--host", input.host, "--port", String(input.port)],
-      cwd: surfaceDir,
-      env,
-    };
-  }
-
-  if (surface.kind === "server-script") {
-    return {
-      command: process.execPath,
-      args: [path.join(surfaceDir, surface.script ?? "dist/server.js")],
-      cwd: surfaceDir,
-      env,
-    };
-  }
-
-  if (surface.kind === "agenda") {
-    return {
-      command: process.execPath,
-      args: [path.join(surfaceDir, "dist", "serve-dashboard.js"), "--port", String(input.port), "--root", input.workspace],
-      cwd: surfaceDir,
-      env,
-    };
-  }
-
-  return {
-    command: "npm",
-    args: ["--prefix", surfaceDir, "exec", "--", "next", "start", "--hostname", input.host, "--port", String(input.port)],
-    cwd: surfaceDir,
-    env,
-  };
 }
 
 async function runOpenCli(input: {
