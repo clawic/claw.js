@@ -244,6 +244,7 @@ export async function downloadTelegramFile(
         agent: "telegram-file-download",
         riskTier: "read",
         declaredFields: [{ secretName, fieldName: "token", placement: "query" }],
+        allowBinaryResponse: true,
       }),
     });
     const payload = await response.json() as { ok?: boolean; status?: number; bodyText?: string; bodyBase64?: string };

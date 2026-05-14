@@ -133,11 +133,16 @@ test("secrets stores encrypted versions and never returns plaintext through meta
   }
 });
 
-test("secrets exposes typed secret catalog, capabilities, and typed actions", async () => {
+test("secrets exposes typed secret catalog and disables generic typed action execution", async () => {
   const secrets = await startSecretsServer("secrets-typed");
   const upstream = await startUpstreamServer();
   try {
-    const session = await login(secrets.baseUrl);
+    const tenantId = "clawix-local";
+    const session = await login(secrets.baseUrl, {
+      tenantId,
+      email: "admin@secrets.local",
+      password: "secrets-admin",
+    });
     const upstreamHost = new URL(upstream.baseUrl).host;
 
     const typesResponse = await fetch(`${secrets.baseUrl}/v1/secret-types`);
@@ -145,27 +150,33 @@ test("secrets exposes typed secret catalog, capabilities, and typed actions", as
     const typesPayload = await typesResponse.json() as { types: Array<{ typeId: string }> };
     assert.ok(typesPayload.types.some((entry) => entry.typeId === "revenuecat.api_key"));
 
-    const create = await fetch(`${secrets.baseUrl}/v1/tenants/demo-tenant/secrets`, {
+    const create = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/secrets`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${session.accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        secretName: "revenuecat_primary",
-        secretValue: "rc_secret_123",
-        typeId: "revenuecat.api_key",
-        structuredFields: { baseUrl: upstream.baseUrl },
-        allowedHosts: [upstreamHost, "api.revenuecat.com"],
-        allowedHeaderNames: ["Authorization", "X-Platform"],
-        allowLocalNetwork: true,
-        leaseModes: ["process"],
+        draft: {
+          typeId: "revenuecat.api_key",
+          internalName: "revenuecat_primary",
+          title: "RevenueCat Primary",
+          fields: [
+            { fieldName: "api_key", fieldKind: "password", placement: "header", isSecret: true, secretValue: "rc_secret_123" },
+            { fieldName: "project_id", fieldKind: "text", placement: "none", isSecret: false, publicValue: "proj_demo" },
+          ],
+          governance: {
+            allowedHosts: [upstreamHost, "api.revenuecat.com"],
+            allowedHeaders: ["Authorization", "X-Platform"],
+            allowLocalNetwork: true,
+          },
+        },
       }),
     });
     assert.equal(create.status, 200);
-    const created = await create.json() as { secret: { typeId: string; structuredFields: Record<string, string> } };
+    const created = await create.json() as { secret: { typeId: string; [key: string]: unknown } };
     assert.equal(created.secret.typeId, "revenuecat.api_key");
-    assert.equal(created.secret.structuredFields.baseUrl, upstream.baseUrl);
+    assert.equal("secretValue" in created.secret, false);
 
     await createPolicy(secrets.baseUrl, session.accessToken, {
       subjectType: "tenant_admin",
@@ -173,31 +184,27 @@ test("secrets exposes typed secret catalog, capabilities, and typed actions", as
       secretName: "revenuecat_primary",
       capability: "broker.http",
       effect: "allow",
-    });
+    }, tenantId);
 
-    const capabilities = await fetch(`${secrets.baseUrl}/v1/tenants/demo-tenant/secrets/revenuecat_primary/capabilities`, {
+    const capabilities = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/secrets/revenuecat_primary/capabilities`, {
       headers: { Authorization: `Bearer ${session.accessToken}` },
     });
     assert.equal(capabilities.status, 200);
     const capabilityPayload = await capabilities.json() as { capabilities: Array<{ capability: string; allowed: boolean }> };
     assert.ok(capabilityPayload.capabilities.some((entry) => entry.capability === "broker.http" && entry.allowed));
 
-    const actions = await fetch(`${secrets.baseUrl}/v1/tenants/demo-tenant/secrets/revenuecat_primary/actions`, {
+    const actions = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/secrets/revenuecat_primary/actions`, {
       headers: { Authorization: `Bearer ${session.accessToken}` },
     });
     assert.equal(actions.status, 200);
     const actionPayload = await actions.json() as { actions: Array<{ id: string; allowed: boolean }> };
-    assert.ok(actionPayload.actions.some((entry) => entry.id === "revenuecat.projects.list" && entry.allowed));
+    assert.ok(actionPayload.actions.some((entry) => entry.id === "broker.http" && entry.allowed));
 
-    const run = await fetch(`${secrets.baseUrl}/v1/tenants/demo-tenant/secrets/revenuecat_primary/actions/revenuecat.projects.list`, {
+    const run = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/secrets/revenuecat_primary/actions/broker.http`, {
       method: "POST",
       headers: { Authorization: `Bearer ${session.accessToken}` },
     });
-    assert.equal(run.status, 200);
-    const runPayload = await run.json() as { result: { bodyText: string } };
-    const typedResponse = JSON.parse(runPayload.result.bodyText) as { authorization: string; platform: string };
-    assert.equal(typedResponse.authorization, "Bearer rc_secret_123");
-    assert.equal(typedResponse.platform, "clawjs-secrets");
+    assert.equal(run.status, 410);
   } finally {
     await upstream.close();
     await secrets.close();
@@ -275,6 +282,146 @@ test("secrets broker enforces deny precedence and host constraints", async () =>
     const brokerPayload = await ok.json() as { bodyText: string };
     const upstreamPayload = JSON.parse(brokerPayload.bodyText) as { authorization: string };
     assert.equal(upstreamPayload.authorization, "Bearer [REDACTED]");
+
+    const binary = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/broker/http`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        method: "GET",
+        url: `${upstream.baseUrl}/binary-echo`,
+        capability: "broker.http",
+        agent: "secrets-broker-e2e",
+        riskTier: "read",
+        declaredFields: [{ secretName: "slack_bot", fieldName: "token", placement: "header" }],
+        headers: {
+          Authorization: "Bearer {{slack_bot.token}}",
+        },
+        allowBinaryResponse: true,
+      }),
+    });
+    assert.equal(binary.status, 200);
+    const binaryPayload = await binary.json() as { bodyText: string; bodyBase64?: string };
+    assert.equal(binaryPayload.bodyText, "");
+    assert.equal("bodyBase64" in binaryPayload, false);
+
+    const binaryFile = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/broker/http`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        method: "GET",
+        url: `${upstream.baseUrl}/binary-file`,
+        capability: "broker.http",
+        agent: "secrets-broker-e2e",
+        riskTier: "read",
+        declaredFields: [{ secretName: "slack_bot", fieldName: "token", placement: "header" }],
+        headers: {
+          Authorization: "Bearer {{slack_bot.token}}",
+        },
+        allowBinaryResponse: true,
+      }),
+    });
+    assert.equal(binaryFile.status, 200);
+    const binaryFilePayload = await binaryFile.json() as { bodyText: string; bodyBase64?: string };
+    assert.equal(binaryFilePayload.bodyText, "");
+    assert.equal(binaryFilePayload.bodyBase64, Buffer.from([0, 1, 2, 3, 4, 5]).toString("base64"));
+
+    for (const input of [
+      {
+        label: "missing capability",
+        body: {
+          method: "GET",
+          url: `${upstream.baseUrl}/echo`,
+          agent: "secrets-broker-e2e",
+          riskTier: "read",
+          declaredFields: [{ secretName: "slack_bot", fieldName: "token", placement: "header" }],
+          headers: { Authorization: "Bearer {{slack_bot.token}}" },
+        },
+      },
+      {
+        label: "missing risk tier",
+        body: {
+          method: "GET",
+          url: `${upstream.baseUrl}/echo`,
+          capability: "broker.http",
+          agent: "secrets-broker-e2e",
+          declaredFields: [{ secretName: "slack_bot", fieldName: "token", placement: "header" }],
+          headers: { Authorization: "Bearer {{slack_bot.token}}" },
+        },
+      },
+      {
+        label: "missing declared fields",
+        body: {
+          method: "GET",
+          url: `${upstream.baseUrl}/echo`,
+          capability: "broker.http",
+          agent: "secrets-broker-e2e",
+          riskTier: "read",
+          headers: { Authorization: "Bearer {{slack_bot.token}}" },
+        },
+      },
+      {
+        label: "undeclared placement",
+        body: {
+          method: "GET",
+          url: `${upstream.baseUrl}/echo?token={{slack_bot.token}}`,
+          capability: "broker.http",
+          agent: "secrets-broker-e2e",
+          riskTier: "read",
+          declaredFields: [{ secretName: "slack_bot", fieldName: "token", placement: "header" }],
+          headers: { Authorization: "Bearer {{slack_bot.token}}" },
+        },
+      },
+      {
+        label: "ambiguous body encoding",
+        body: {
+          method: "POST",
+          url: `${upstream.baseUrl}/echo`,
+          capability: "broker.http",
+          agent: "secrets-broker-e2e",
+          riskTier: "read",
+          declaredFields: [{ secretName: "slack_bot", fieldName: "token", placement: "header" }],
+          headers: { Authorization: "Bearer {{slack_bot.token}}" },
+          body: "plain",
+          bodyBase64: Buffer.from("plain").toString("base64"),
+        },
+      },
+    ]) {
+      const failed = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/broker/http`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(input.body),
+      });
+      assert.equal(failed.status, 400, input.label);
+    }
+
+    const legacyExecute = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/secrets/slack_bot/execute/broker.http`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ args: {} }),
+    });
+    assert.equal(legacyExecute.status, 410);
+
+    const legacyAction = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/secrets/slack_bot/actions/broker.http`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ args: {} }),
+    });
+    assert.equal(legacyAction.status, 410);
 
     const hostMismatch = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/broker/http`, {
       method: "POST",

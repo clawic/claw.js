@@ -70,6 +70,16 @@ export async function startUpstreamServer() {
       }));
       return;
     }
+    if (url.pathname === "/binary-echo") {
+      response.setHeader("content-type", "application/octet-stream");
+      response.end(Buffer.from(String(request.headers.authorization ?? "")));
+      return;
+    }
+    if (url.pathname === "/binary-file") {
+      response.setHeader("content-type", "application/octet-stream");
+      response.end(Buffer.from([0, 1, 2, 3, 4, 5]));
+      return;
+    }
     if (url.pathname === "/api/auth.test") {
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({

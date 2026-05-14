@@ -94,6 +94,8 @@ export interface SecretBrokerHttpInput {
   declaredFields: Array<{ secretName: string; fieldName: string; placement: "query" | "body" | "header" }>;
   headers?: Record<string, string>;
   body?: string;
+  bodyBase64?: string;
+  allowBinaryResponse?: boolean;
   approvalSatisfied?: boolean;
   vpnSatisfied?: boolean;
 }

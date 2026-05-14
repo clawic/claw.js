@@ -767,6 +767,8 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       url?: string;
       headers?: Record<string, string>;
       body?: string;
+      bodyBase64?: string;
+      allowBinaryResponse?: boolean;
       timeoutMs?: number;
       agent?: string;
       capability?: string;
@@ -776,6 +778,9 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       vpnSatisfied?: boolean;
     };
     if (!body.method || !body.url) return reply.code(400).send({ error: "method, url required" });
+    if (body.body !== undefined && body.bodyBase64 !== undefined) {
+      return reply.code(400).send({ error: "body and bodyBase64 are mutually exclusive" });
+    }
     if (body.capability !== "broker.http") return reply.code(400).send({ error: "capability broker.http required" });
     if (!body.riskTier || !RISK_TIERS.has(body.riskTier as RiskTier)) {
       return reply.code(400).send({ error: "valid riskTier required" });
@@ -869,7 +874,9 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       Object.entries(requestHeaders).map(([key, value]) => [key, replaceSecrets(value)]),
     );
     const outgoingUrl = replaceSecrets(urlBefore);
-    const outgoingBody = body.body === undefined ? undefined : replaceSecrets(body.body);
+    const outgoingBody = body.bodyBase64 !== undefined
+      ? Buffer.from(body.bodyBase64, "base64")
+      : body.body === undefined ? undefined : replaceSecrets(body.body);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), body.timeoutMs ?? 30_000);
     try {
@@ -883,12 +890,22 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       response.headers.forEach((value, key) => {
         responseHeaders[key] = redactString(value, redactionValues);
       });
-      const bodyText = redactString(await response.text(), redactionValues);
+      const bytes = Buffer.from(await response.arrayBuffer());
+      const contentType = response.headers.get("content-type") ?? "";
+      const isTextResponse = contentType.startsWith("text/")
+        || contentType.includes("json")
+        || contentType.includes("xml")
+        || contentType.includes("javascript")
+        || contentType === "";
+      const binaryContainsSecret = !isTextResponse && redactionValues.some((value) => bytes.includes(Buffer.from(value)));
+      const rawBodyText = isTextResponse ? bytes.toString("utf8") : "";
+      const bodyText = redactString(rawBodyText, redactionValues);
       return {
         ok: response.ok,
         status: response.status,
         headers: responseHeaders,
         bodyText,
+        ...(!isTextResponse && body.allowBinaryResponse === true && !binaryContainsSecret ? { bodyBase64: bytes.toString("base64") } : {}),
       };
     } finally {
       clearTimeout(timer);
