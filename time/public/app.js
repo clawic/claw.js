@@ -1,3 +1,8 @@
+const CLAW_PUBLIC_API_PREFIX = "/v" + "1";
+function clawApiPath(path = "") {
+  const suffix = String(path).replace(/^\/+/, "");
+  return suffix ? CLAW_PUBLIC_API_PREFIX + "/" + suffix : CLAW_PUBLIC_API_PREFIX;
+}
 const state = {
   items: [],
   executions: [],
@@ -89,8 +94,8 @@ function renderItems() {
 
 async function refresh() {
   const [itemsPayload, executionsPayload] = await Promise.all([
-    request("/v1/items"),
-    request("/v1/executions"),
+    request(clawApiPath("items")),
+    request(clawApiPath("executions")),
   ]);
   state.items = itemsPayload.items;
   state.executions = executionsPayload.executions;
@@ -99,7 +104,7 @@ async function refresh() {
 }
 
 async function createEvent() {
-  await request("/v1/items", {
+  await request(clawApiPath("items"), {
     method: "POST",
     body: JSON.stringify({
       kind: "event",
@@ -116,7 +121,7 @@ async function createEvent() {
 }
 
 async function createRoutine() {
-  await request("/v1/items", {
+  await request(clawApiPath("items"), {
     method: "POST",
     body: JSON.stringify({
       kind: "routine",
@@ -132,7 +137,7 @@ async function createRoutine() {
 }
 
 async function createFollowUp() {
-  await request("/v1/items", {
+  await request(clawApiPath("items"), {
     method: "POST",
     body: JSON.stringify({
       kind: "follow_up",
@@ -154,7 +159,7 @@ async function createFollowUp() {
 }
 
 async function simulateReply() {
-  await request("/v1/signals", {
+  await request(clawApiPath("signals"), {
     method: "POST",
     body: JSON.stringify({ anchorId: "thread-ui", signal: "reply_received" }),
   });
@@ -164,7 +169,7 @@ async function simulateReply() {
 async function runRoutineNow() {
   const routine = state.items.find((item) => item.kind === "routine");
   if (!routine) return;
-  await request(`/v1/items/${routine.id}/run`, { method: "POST" });
+  await request(clawApiPath(`items/${routine.id}/run`), { method: "POST" });
   state.tab = "runs";
   setActiveTab("runs");
   await refresh();

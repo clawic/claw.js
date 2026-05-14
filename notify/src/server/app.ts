@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -256,14 +257,14 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     await reply.code(204).send();
   });
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     service: "notify",
     host: config.host,
     port: config.port,
   }));
 
-  app.post("/v1/auth/admin/login", async (request, reply) => {
+  app.post(clawApiPath("auth/admin/login"), async (request, reply) => {
     const body = readBody(request);
     const email = asString(body.email) ?? "";
     const password = asString(body.password) ?? "";
@@ -281,7 +282,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.get("/v1/admin/source-apps", async (request, reply) => {
+  app.get(clawApiPath("admin/source-apps"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const tenantId = asString((request.query as Record<string, unknown>).tenantId);
@@ -293,7 +294,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.get("/v1/admin/client-apps", async (request, reply) => {
+  app.get(clawApiPath("admin/client-apps"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const tenantId = asString((request.query as Record<string, unknown>).tenantId);
@@ -305,7 +306,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.get("/v1/admin/notifications", async (request, reply) => {
+  app.get(clawApiPath("admin/notifications"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const query = request.query as Record<string, unknown>;
@@ -319,7 +320,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.get("/v1/admin/deliveries", async (request, reply) => {
+  app.get(clawApiPath("admin/deliveries"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const query = request.query as Record<string, unknown>;
@@ -340,7 +341,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.get("/v1/admin/metrics/summary", async (request, reply) => {
+  app.get(clawApiPath("admin/metrics/summary"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const tenantId = asString((request.query as Record<string, unknown>).tenantId);
@@ -352,7 +353,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.get("/v1/admin/users/:userId/feed", async (request, reply) => {
+  app.get(clawApiPath("admin/users/:userId/feed"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const tenantId = asString((request.query as Record<string, unknown>).tenantId);
@@ -365,7 +366,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.get("/v1/admin/users/:userId/preferences", async (request, reply) => {
+  app.get(clawApiPath("admin/users/:userId/preferences"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const tenantId = asString((request.query as Record<string, unknown>).tenantId);
@@ -379,7 +380,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.put("/v1/admin/users/:userId/preferences", async (request, reply) => {
+  app.put(clawApiPath("admin/users/:userId/preferences"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const body = readBody(request);
@@ -398,7 +399,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.get("/v1/admin/users/:userId/devices", async (request, reply) => {
+  app.get(clawApiPath("admin/users/:userId/devices"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const tenantId = asString((request.query as Record<string, unknown>).tenantId);
@@ -411,7 +412,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.put("/v1/admin/users/:userId/subscriptions", async (request, reply) => {
+  app.put(clawApiPath("admin/users/:userId/subscriptions"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const body = readBody(request);
@@ -445,7 +446,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.delete("/v1/admin/users/:userId/subscriptions/:id", async (request, reply) => {
+  app.delete(clawApiPath("admin/users/:userId/subscriptions/:id"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const tenantId = asString((request.query as Record<string, unknown>).tenantId);
@@ -463,7 +464,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.get("/v1/admin/users/:userId/glances", async (request, reply) => {
+  app.get(clawApiPath("admin/users/:userId/glances"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const tenantId = asString((request.query as Record<string, unknown>).tenantId);
@@ -476,7 +477,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.post("/v1/admin/installations/:id/unregister", async (request, reply) => {
+  app.post(clawApiPath("admin/installations/:id/unregister"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const body = readBody(request);
@@ -494,7 +495,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.post("/v1/admin/deliveries/:deliveryId/read", async (request, reply) => {
+  app.post(clawApiPath("admin/deliveries/:deliveryId/read"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const body = readBody(request);
@@ -512,7 +513,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.post("/v1/admin/receipts/:receiptId/ack", async (request, reply) => {
+  app.post(clawApiPath("admin/receipts/:receiptId/ack"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const body = readBody(request);
@@ -530,7 +531,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.post("/v1/source-apps", async (request, reply) => {
+  app.post(clawApiPath("source-apps"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const body = readBody(request);
@@ -551,7 +552,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     return await reply.code(201).send(created);
   });
 
-  app.post("/v1/source-apps/:id/rotate-token", async (request, reply) => {
+  app.post(clawApiPath("source-apps/:id/rotate-token"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const sourceAppId = asString((request.params as Record<string, unknown>).id);
@@ -564,7 +565,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.post("/v1/client-apps", async (request, reply) => {
+  app.post(clawApiPath("client-apps"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "admin");
     if (!principal) return null;
     const body = readBody(request);
@@ -586,7 +587,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     return await reply.code(201).send(record);
   });
 
-  app.post("/v1/notifications", async (request, reply) => {
+  app.post(clawApiPath("notifications"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "source");
     if (!principal || principal.kind !== "source") return null;
     const body = readBody(request);
@@ -657,7 +658,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     });
   });
 
-  app.post("/v1/notifications/:id/cancel", async (request, reply) => {
+  app.post(clawApiPath("notifications/:id/cancel"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "source");
     if (!principal || principal.kind !== "source") return null;
     const notificationId = asString((request.params as Record<string, unknown>).id);
@@ -675,7 +676,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.get("/v1/receipts/:receiptId", async (request, reply) => {
+  app.get(clawApiPath("receipts/:receiptId"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, ["source", "installation", "admin"]);
     if (!principal) return null;
     store.expirePendingReceipts();
@@ -693,7 +694,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.post("/v1/client/installations/register", async (request, reply) => {
+  app.post(clawApiPath("client/installations/register"), async (request, reply) => {
     const body = readBody(request);
     const tenantId = asString(body.tenantId);
     const userId = asString(body.userId);
@@ -716,7 +717,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     }
   });
 
-  app.post("/v1/client/installations/:id/push-token", async (request, reply) => {
+  app.post(clawApiPath("client/installations/:id/push-token"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "installation");
     if (!principal || principal.kind !== "installation") return null;
     const installationId = asString((request.params as Record<string, unknown>).id);
@@ -734,7 +735,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.post("/v1/client/installations/:id/unregister", async (request, reply) => {
+  app.post(clawApiPath("client/installations/:id/unregister"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "installation");
     if (!principal || principal.kind !== "installation") return null;
     const installationId = asString((request.params as Record<string, unknown>).id);
@@ -754,7 +755,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.get("/v1/client/feed", async (request, reply) => {
+  app.get(clawApiPath("client/feed"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "installation");
     if (!principal || principal.kind !== "installation") return null;
     const limit = Number((request.query as Record<string, unknown>).limit ?? 50);
@@ -765,7 +766,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.get("/v1/client/preferences", async (request, reply) => {
+  app.get(clawApiPath("client/preferences"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "installation");
     if (!principal || principal.kind !== "installation") return null;
     return {
@@ -774,7 +775,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.put("/v1/client/preferences", async (request, reply) => {
+  app.put(clawApiPath("client/preferences"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "installation");
     if (!principal || principal.kind !== "installation") return null;
     const body = readBody(request);
@@ -788,7 +789,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.get("/v1/client/devices", async (request, reply) => {
+  app.get(clawApiPath("client/devices"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "installation");
     if (!principal || principal.kind !== "installation") return null;
     return {
@@ -796,7 +797,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.get("/v1/client/glances", async (request, reply) => {
+  app.get(clawApiPath("client/glances"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "installation");
     if (!principal || principal.kind !== "installation") return null;
     return {
@@ -804,7 +805,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.post("/v1/client/notifications/:id/read", async (request, reply) => {
+  app.post(clawApiPath("client/notifications/:id/read"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "installation");
     if (!principal || principal.kind !== "installation") return null;
     const notificationId = asString((request.params as Record<string, unknown>).id);
@@ -820,7 +821,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.post("/v1/client/receipts/:receiptId/ack", async (request, reply) => {
+  app.post(clawApiPath("client/receipts/:receiptId/ack"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "installation");
     if (!principal || principal.kind !== "installation") return null;
     const receiptId = asString((request.params as Record<string, unknown>).receiptId);
@@ -836,7 +837,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.put("/v1/subscriptions", async (request, reply) => {
+  app.put(clawApiPath("subscriptions"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "installation");
     if (!principal || principal.kind !== "installation") return null;
     const body = readBody(request);
@@ -866,7 +867,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.delete("/v1/subscriptions/:id", async (request, reply) => {
+  app.delete(clawApiPath("subscriptions/:id"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "installation");
     if (!principal || principal.kind !== "installation") return null;
     const id = asString((request.params as Record<string, unknown>).id);
@@ -886,7 +887,7 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     };
   });
 
-  app.put("/v1/glances/:scope", async (request, reply) => {
+  app.put(clawApiPath("glances/:scope"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, "source");
     if (!principal || principal.kind !== "source") return null;
     const scope = asString((request.params as Record<string, unknown>).scope);

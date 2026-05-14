@@ -1,3 +1,10 @@
+const STABLE_EVENT_TYPES = {
+  automationFailed: "automation.failed",
+  deployStarted: "deploy.started",
+  deployFailed: "deploy.failed",
+  opsSummary: "ops.summary",
+  opsFailed: "ops.failed",
+} as const;
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 
@@ -161,7 +168,7 @@ test("send fanout, multi-device feed, read flow, and critical ack work together"
         projectId: "alpha",
         agentId: "ops-agent",
         workspaceId: "alpha-ops",
-        eventType: "automation.failed",
+        eventType: STABLE_EVENT_TYPES.automationFailed,
         severity: "error",
       },
       delivery: {
@@ -296,7 +303,7 @@ test("subscription resolution supports allow, mute, critical-only, unsubscribe, 
       context: {
         tenantId: "tenant-a",
         agentId: "deploy-agent",
-        eventType: "deploy.started",
+        eventType: STABLE_EVENT_TYPES.deployStarted,
       },
       audience: {
         useSubscriptions: true,
@@ -323,7 +330,7 @@ test("subscription resolution supports allow, mute, critical-only, unsubscribe, 
       context: {
         tenantId: "tenant-a",
         agentId: "deploy-agent",
-        eventType: "deploy.failed",
+        eventType: STABLE_EVENT_TYPES.deployFailed,
       },
       audience: {
         useSubscriptions: true,
@@ -578,7 +585,7 @@ test("admin dashboard routes expose prefs, devices, feed, and quiet-hours gating
       context: {
         tenantId: "tenant-admin",
         agentId: "ops-agent",
-        eventType: "ops.summary",
+        eventType: STABLE_EVENT_TYPES.opsSummary,
       },
       delivery: {
         mode: "alert",
@@ -603,7 +610,7 @@ test("admin dashboard routes expose prefs, devices, feed, and quiet-hours gating
       context: {
         tenantId: "tenant-admin",
         agentId: "ops-agent",
-        eventType: "ops.failed",
+        eventType: STABLE_EVENT_TYPES.opsFailed,
       },
       delivery: {
         mode: "alert",

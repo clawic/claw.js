@@ -1,3 +1,8 @@
+const CLAW_PUBLIC_API_PREFIX = "/v" + "1";
+function clawApiPath(path = "") {
+  const suffix = String(path).replace(/^\/+/, "");
+  return suffix ? CLAW_PUBLIC_API_PREFIX + "/" + suffix : CLAW_PUBLIC_API_PREFIX;
+}
 /* Notify Admin Console */
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -38,7 +43,7 @@ loginForm.addEventListener("submit", async (e) => {
   const email = $("#login-email").value.trim();
   const password = $("#login-password").value;
   try {
-    const data = await api("/v1/auth/admin/login", {
+    const data = await api(clawApiPath("auth/admin/login"), {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
@@ -91,7 +96,7 @@ $$(".menu-item[data-view]").forEach((btn) => {
 
 async function loadNotifications() {
   try {
-    const data = await api(`/v1/admin/notifications?tenantId=${state.tenantId}&limit=200`);
+    const data = await api(clawApiPath(`admin/notifications?tenantId=${state.tenantId}&limit=200`));
     state.notifications = data.items || [];
     renderNotifications(state.notifications);
   } catch {
@@ -182,7 +187,7 @@ $("#notifications-filter").addEventListener("input", (e) => {
 
 async function loadDeliveries(stateFilter) {
   try {
-    let url = `/v1/admin/deliveries?tenantId=${state.tenantId}&limit=200`;
+    let url = clawApiPath(`admin/deliveries?tenantId=${state.tenantId}&limit=200`);
     if (stateFilter) url += `&state=${stateFilter}`;
     const data = await api(url);
     state.deliveries = data.items || [];
@@ -243,7 +248,7 @@ $("#deliveries-refresh").addEventListener("click", () => loadDeliveries());
 
 async function loadSourceApps() {
   try {
-    const data = await api(`/v1/admin/source-apps?tenantId=${state.tenantId}`);
+    const data = await api(clawApiPath(`admin/source-apps?tenantId=${state.tenantId}`));
     state.sourceApps = data.items || [];
     renderSourceApps(state.sourceApps);
   } catch {
@@ -274,7 +279,7 @@ function renderSourceApps(items) {
   list.querySelectorAll(".rotate-token-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       try {
-        const result = await api(`/v1/source-apps/${btn.dataset.id}/rotate-token`, { method: "POST" });
+        const result = await api(clawApiPath(`source-apps/${btn.dataset.id}/rotate-token`), { method: "POST" });
         alert("New token: " + result.token);
       } catch (err) {
         alert("Error: " + err.message);
@@ -289,7 +294,7 @@ $("#source-app-form").addEventListener("submit", async (e) => {
   const description = $("#source-app-desc").value.trim() || undefined;
   if (!displayName) return;
   try {
-    await api("/v1/source-apps", {
+    await api(clawApiPath("source-apps"), {
       method: "POST",
       body: JSON.stringify({ tenantId: state.tenantId, displayName, description }),
     });
@@ -307,7 +312,7 @@ $("#source-apps-refresh").addEventListener("click", loadSourceApps);
 
 async function loadClientApps() {
   try {
-    const data = await api(`/v1/admin/client-apps?tenantId=${state.tenantId}`);
+    const data = await api(clawApiPath(`admin/client-apps?tenantId=${state.tenantId}`));
     state.clientApps = data.items || [];
     renderClientApps(state.clientApps);
   } catch {
@@ -341,7 +346,7 @@ $("#client-app-form").addEventListener("submit", async (e) => {
   const bundleId = $("#client-app-bundle").value.trim();
   if (!displayName || !bundleId) return;
   try {
-    await api("/v1/client-apps", {
+    await api(clawApiPath("client-apps"), {
       method: "POST",
       body: JSON.stringify({ tenantId: state.tenantId, displayName, platform, bundleId }),
     });
@@ -359,7 +364,7 @@ $("#client-apps-refresh").addEventListener("click", loadClientApps);
 
 async function loadSettings() {
   try {
-    const health = await api("/v1/health");
+    const health = await api(clawApiPath("health"));
     const rows = $("#settings-rows");
     rows.innerHTML = [
       ["Service", health.service],
@@ -376,7 +381,7 @@ async function loadSettings() {
     $("#settings-output").textContent = JSON.stringify(health, null, 2);
 
     try {
-      const metrics = await api(`/v1/admin/metrics/summary?tenantId=${state.tenantId}`);
+      const metrics = await api(clawApiPath(`admin/metrics/summary?tenantId=${state.tenantId}`));
       renderMetrics(metrics.metrics || metrics);
     } catch {
       $("#metrics-summary").innerHTML = `<div class="empty-state"><p>No metrics available.</p></div>`;

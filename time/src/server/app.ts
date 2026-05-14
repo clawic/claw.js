@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -74,14 +75,14 @@ export function buildTimeApp(options: BuildTimeAppOptions = {}) {
     await reply.code(204).send();
   });
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     service: "time",
     host: config.host,
     port: config.port,
   }));
 
-  app.get("/v1/items", async (request) => {
+  app.get(clawApiPath("items"), async (request) => {
     const query = request.query as Record<string, string | undefined>;
     return await engine.list({
       kind: query.kind as TemporalItem["kind"] | undefined,
@@ -94,13 +95,13 @@ export function buildTimeApp(options: BuildTimeAppOptions = {}) {
     });
   });
 
-  app.post("/v1/items", async (request, reply) => {
+  app.post(clawApiPath("items"), async (request, reply) => {
     const body = jsonBody(request.body) as unknown as CreateTemporalItemInput;
     const created = await engine.create(body);
     return await reply.code(201).send(created);
   });
 
-  app.get("/v1/items/:id", async (request, reply) => {
+  app.get(clawApiPath("items/:id"), async (request, reply) => {
     const id = String((request.params as Record<string, unknown>).id ?? "");
     try {
       return await engine.get(id);
@@ -109,7 +110,7 @@ export function buildTimeApp(options: BuildTimeAppOptions = {}) {
     }
   });
 
-  app.put("/v1/items/:id", async (request, reply) => {
+  app.put(clawApiPath("items/:id"), async (request, reply) => {
     const id = String((request.params as Record<string, unknown>).id ?? "");
     try {
       return await engine.update(id, jsonBody(request.body) as unknown as UpdateTemporalItemInput);
@@ -118,7 +119,7 @@ export function buildTimeApp(options: BuildTimeAppOptions = {}) {
     }
   });
 
-  app.delete("/v1/items/:id", async (request, reply) => {
+  app.delete(clawApiPath("items/:id"), async (request, reply) => {
     const id = String((request.params as Record<string, unknown>).id ?? "");
     try {
       return await engine.delete(id);
@@ -127,7 +128,7 @@ export function buildTimeApp(options: BuildTimeAppOptions = {}) {
     }
   });
 
-  app.post("/v1/items/:id/pause", async (request, reply) => {
+  app.post(clawApiPath("items/:id/pause"), async (request, reply) => {
     const id = String((request.params as Record<string, unknown>).id ?? "");
     try {
       return await engine.pause(id);
@@ -136,7 +137,7 @@ export function buildTimeApp(options: BuildTimeAppOptions = {}) {
     }
   });
 
-  app.post("/v1/items/:id/resume", async (request, reply) => {
+  app.post(clawApiPath("items/:id/resume"), async (request, reply) => {
     const id = String((request.params as Record<string, unknown>).id ?? "");
     try {
       return await engine.resume(id);
@@ -145,7 +146,7 @@ export function buildTimeApp(options: BuildTimeAppOptions = {}) {
     }
   });
 
-  app.post("/v1/items/:id/run", async (request, reply) => {
+  app.post(clawApiPath("items/:id/run"), async (request, reply) => {
     const id = String((request.params as Record<string, unknown>).id ?? "");
     try {
       return await engine.runNow(id);
@@ -154,28 +155,28 @@ export function buildTimeApp(options: BuildTimeAppOptions = {}) {
     }
   });
 
-  app.get("/v1/executions", async (request) => {
+  app.get(clawApiPath("executions"), async (request) => {
     const query = request.query as Record<string, string | undefined>;
     return await engine.listExecutions(query.itemId);
   });
 
-  app.get("/v1/run-log", async (request) => {
+  app.get(clawApiPath("run-log"), async (request) => {
     const query = request.query as Record<string, string | undefined>;
     const limit = query.limit ? Number(query.limit) : undefined;
     return await engine.listRunLog(query.itemId, limit);
   });
 
-  app.get("/v1/views/calendar", async (request) => engine.calendarView(request.query as { start?: string; end?: string }));
+  app.get(clawApiPath("views/calendar"), async (request) => engine.calendarView(request.query as { start?: string; end?: string }));
 
-  app.get("/v1/views/timeline", async (request) => engine.timelineView(request.query as { start?: string; end?: string }));
+  app.get(clawApiPath("views/timeline"), async (request) => engine.timelineView(request.query as { start?: string; end?: string }));
 
-  app.post("/v1/signals", async (request) => engine.signalAnchor(jsonBody(request.body) as { anchorId: string; signal: "reply_received" | "task_completed" | "event_started" | "execution_succeeded" }));
+  app.post(clawApiPath("signals"), async (request) => engine.signalAnchor(jsonBody(request.body) as { anchorId: string; signal: "reply_received" | "task_completed" | "event_started" | "execution_succeeded" }));
 
-  app.post("/v1/scheduler/run", async () => ({ executions: await engine.runSchedulerCycle() }));
+  app.post(clawApiPath("scheduler/run"), async () => ({ executions: await engine.runSchedulerCycle() }));
 
-  app.get("/v1/legacy/events", async () => engine.legacyEvents());
+  app.get(clawApiPath("legacy/events"), async () => engine.legacyEvents());
 
-  app.get("/v1/legacy/routines", async () => engine.legacyRoutines());
+  app.get(clawApiPath("legacy/routines"), async () => engine.legacyRoutines());
 
   return {
     app,
