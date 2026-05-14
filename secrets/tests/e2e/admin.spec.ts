@@ -1,10 +1,15 @@
 import { expect, saveBrowserScreenshot, test } from "./helpers.js";
 
 test("secrets admin console covers secret creation, policy assignment, principal issuance, lease revocation, and audit", async ({ page }) => {
+  await page.request.post("/v1/secrets/setup", {
+    headers: { "x-claw-signed-host-token": "secrets-test-signed-host" },
+    data: { password: "secrets-e2e-password" },
+  });
   await page.goto("/");
   await expect(page.locator('link[rel="icon"]').first()).toHaveAttribute("href", "/brand/favicon.ico");
   await expect(page.locator(".login-brand-mark img")).toHaveAttribute("src", "/brand/logo.png");
 
+  await page.getByTestId("login-tenant").fill("clawix-local");
   await page.getByTestId("login-submit").click();
   await expect(page.getByTestId("secrets-console")).toBeVisible();
   await expect(page.locator(".brand-mark img")).toHaveAttribute("src", "/brand/logo.png");

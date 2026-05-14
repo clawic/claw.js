@@ -38,6 +38,7 @@ export async function startSecretsServer(prefix = "secrets-e2e") {
     rootDir,
     baseUrl,
     async close() {
+      app.server.closeAllConnections?.();
       await app.close();
       fs.rmSync(rootDir, { recursive: true, force: true });
     },
