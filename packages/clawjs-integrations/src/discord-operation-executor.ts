@@ -761,11 +761,11 @@ export function buildDiscordOperationRequest(
     case "delete-webhook-with-token":
       return deletePlan(`webhooks/${webhookId(values)}/${webhookToken(values)}`, [], headers, { type: "null" });
     case "execute-webhook":
-      return webhookMessagePlan("POST", `webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}`, [], headers, values, true, { type: "object" }, removeEmptyValues({ wait: values.wait, thread_id: optionalString(values.threadId), with_components: values.withComponents }));
+      return webhookMessagePlan("POST", `webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}`, [], headers, values, true, values.wait === true ? { type: "object" } : { type: "null" }, removeEmptyValues({ wait: values.wait, thread_id: optionalString(values.threadId), with_components: values.withComponents }));
     case "execute-slack-compatible-webhook":
-      return bodyPlan("POST", `webhooks/${webhookId(values)}/${webhookToken(values)}/slack`, [], headers, webhookServicePayload(values), { type: "object" }, webhookServiceQuery(values));
+      return bodyPlan("POST", `webhooks/${webhookId(values)}/${webhookToken(values)}/slack`, [], headers, webhookServicePayload(values), values.wait === false ? { type: "null" } : { type: "object" }, webhookServiceQuery(values));
     case "execute-github-compatible-webhook":
-      return bodyPlan("POST", `webhooks/${webhookId(values)}/${webhookToken(values)}/github`, [], headers, webhookServicePayload(values), { type: "object" }, webhookServiceQuery(values));
+      return bodyPlan("POST", `webhooks/${webhookId(values)}/${webhookToken(values)}/github`, [], headers, webhookServicePayload(values), values.wait === false ? { type: "null" } : { type: "object" }, webhookServiceQuery(values));
     case "get-webhook-message":
       return getPlan(`webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, { type: "object", requiredPaths: ["id"] }, removeEmptyValues({ thread_id: optionalString(values.threadId) }));
     case "edit-webhook-message":
