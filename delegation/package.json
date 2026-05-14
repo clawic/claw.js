@@ -8,7 +8,7 @@
     "build": "tsup src/bin/server.ts src/bin/cli.ts --format esm --target node20 --out-dir dist --clean",
     "start": "node dist/server.js",
     "cli": "tsx src/bin/cli.ts",
-    "test": "tsx --test src/**/*.test.ts tests/e2e/*.e2e.test.ts",
+    "test": "vitest run --config vitest.config.ts && tsx --test tests/e2e/*.e2e.test.ts",
     "test:e2e": "tsx --test tests/e2e/*.e2e.test.ts"
   },
   "dependencies": {
