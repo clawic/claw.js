@@ -1873,6 +1873,9 @@ The docs check script validates that every current export from
     ClawPersistentSurfaceRegistry
     ClawPersistentSurfaceSource
     ClawPersistentSurfaceStorageClass
+    ClawSurfaceParityGap
+    ClawSurfaceParityStatus
+    ClawSurfaceParitySurface
     ClawStableSurfaceClass
     ClawStableSurfaceDirection
     ClawStableSurfaceKind

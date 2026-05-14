@@ -67,6 +67,7 @@ The first supported inspection commands are:
 - `claw inspect schemas`
 - `claw inspect ids`
 - `claw inspect cli`
+- `claw inspect surfaces`
 - `claw inspect external`
 - `claw inspect render --format markdown|mermaid`
 
@@ -132,6 +133,13 @@ The stable compatibility node kinds are:
 - `externalDependency`
 - `externalMapping`
 
+Each stable capability node may also declare surface parity metadata:
+`humanSurfaces`, `programmaticSurfaces`, and `surfaceGaps`. Human surfaces
+identify UI or human review/approval workflows. Programmatic surfaces identify
+SDK, CLI, service API, MCP, Relay, or persistence access. Gaps use the
+classifications from ADR 0009: `required`, `optional`, `local-only`,
+`remote-safe`, `blocked`, and `not applicable`.
+
 ## Rules
 
 Any code that introduces a new durable path, database, collection/table,
@@ -148,6 +156,11 @@ protocol frame/type/field, CLI command, CLI flag, CLI JSON output field,
 persistent ID namespace or prefix, deep link, local hostname, port, or
 Claw-owned external provider mapping must register it through the same stable
 surface contract before it lands.
+
+Any code that introduces or promotes an important capability must register
+enough surface parity metadata for `claw inspect` to answer which human and
+programmatic surfaces expose it, and which missing surfaces are required,
+blocked, or not applicable.
 
 Manual lists are allowed only as generated output or as tests that assert registry coverage. They are not source of truth.
 
@@ -182,6 +195,8 @@ must prove that public inspection works, generated docs are current, external
 language manifests can be fused, and the registry includes the known canonical
 roots, databases, workspace paths, host paths, preference keys, API routes,
 protocols, events, schemas, CLI commands, IDs, external dependencies, and Codex
-external source.
+external source. Surface parity checks also make UI-only and
+programmatic-only capabilities visible during review instead of leaving them as
+implicit product debt.
 
 This ADR intentionally makes the generated diagram a view. If generated docs drift from `claw inspect`, the generated docs are wrong.

@@ -83,6 +83,10 @@ requireSnippet("docs/AGENTS.md", "decision-map.md");
 requireSnippet("docs/index.md", "Decision Map");
 requireSnippet("docs/index.md", "Canonical Data Catalog");
 requireSnippet("docs/repository-map.md", "Decision Map");
+requireSnippet("CONSTITUTION.md", "Capabilities are complete only when dual-surfaced");
+requireSnippet("docs/adr/TEMPLATE.md", "## Surface Parity");
+requireSnippet("docs/adr/0009-dual-human-programmatic-surfaces.md", "MCP is the model-native surface");
+requireSnippet("docs/adr/0004-persistent-surface-registry-and-inspection.md", "surface parity metadata");
 
 for (const snippet of [
   "decision -> document",

@@ -72,6 +72,14 @@ export type ClawPersistentSurfaceLifecycle = "durable" | "rebuildable" | "epheme
 export type ClawStableSurfaceClass = "persistent" | "api" | "protocol" | "event" | "schema" | "id" | "cli" | "config" | "external";
 export type ClawStableSurfaceStability = "v1" | "preV1Reset" | "internalCrossVersion" | "externalDependency";
 export type ClawStableSurfaceDirection = "inbound" | "outbound" | "bidirectional" | "local" | "generated";
+export type ClawSurfaceParitySurface = "humanUi" | "sdk" | "cli" | "serviceApi" | "mcp" | "relay" | "persistence";
+export type ClawSurfaceParityStatus = "required" | "optional" | "local-only" | "remote-safe" | "blocked" | "not applicable";
+
+export interface ClawSurfaceParityGap {
+  surface: ClawSurfaceParitySurface;
+  status: ClawSurfaceParityStatus;
+  reason?: string;
+}
 
 export interface ClawPersistentSurfaceSource {
   file: string;
@@ -116,6 +124,9 @@ export interface ClawPersistentSurfaceNode {
   deprecatedIn?: string;
   dataType?: string;
   nullable?: boolean;
+  humanSurfaces?: ClawSurfaceParitySurface[];
+  programmaticSurfaces?: ClawSurfaceParitySurface[];
+  surfaceGaps?: ClawSurfaceParityGap[];
   notes?: string;
   warnings?: string[];
 }
@@ -732,6 +743,16 @@ const stableIdNamespaces = [
   ["claw.id.record", "recordId", "Database record identifiers"],
 ] as const;
 
+const stableSurfaceRoots = [
+  ["claw.contracts.api", "API routes", "api", ["serviceApi"]],
+  ["claw.contracts.protocol", "Wire protocols", "protocol", ["serviceApi"]],
+  ["claw.contracts.events", "Events and queues", "event", ["serviceApi"]],
+  ["claw.contracts.schemas", "Schemas and JSON fields", "schema", ["sdk", "serviceApi", "persistence"]],
+  ["claw.contracts.ids", "Persistent IDs", "id", ["sdk", "serviceApi", "persistence"]],
+  ["claw.contracts.cli", "CLI commands and flags", "cli", ["cli"]],
+  ["claw.contracts.external", "External dependencies and owned mappings", "external", ["sdk", "serviceApi", "mcp"]],
+] as const;
+
 export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
   version: clawSurfaceRegistryVersion,
   nodes: [
@@ -743,18 +764,12 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       privacy: "public",
       surfaceClass: "schema",
       stability: "v1",
+      humanSurfaces: ["humanUi"],
+      programmaticSurfaces: ["cli", "persistence"],
       source: registrySource,
       notes: "Root for names, fields, routes, protocols, CLI commands, IDs, and external mappings that must not drift after V1 without versioning.",
     }),
-    ...[
-      ["claw.contracts.api", "API routes", "api"],
-      ["claw.contracts.protocol", "Wire protocols", "protocol"],
-      ["claw.contracts.events", "Events and queues", "event"],
-      ["claw.contracts.schemas", "Schemas and JSON fields", "schema"],
-      ["claw.contracts.ids", "Persistent IDs", "id"],
-      ["claw.contracts.cli", "CLI commands and flags", "cli"],
-      ["claw.contracts.external", "External dependencies and owned mappings", "external"],
-    ].map(([id, name, surfaceClass]) => clawPersistentSurface.root({
+    ...stableSurfaceRoots.map(([id, name, surfaceClass, programmaticSurfaces]) => clawPersistentSurface.root({
       id,
       name,
       path: id.replace("claw.contracts.", "contracts/"),
@@ -763,6 +778,8 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       privacy: "public",
       surfaceClass: surfaceClass as ClawStableSurfaceClass,
       stability: "v1",
+      programmaticSurfaces: [...programmaticSurfaces],
+      surfaceGaps: [{ surface: "humanUi", status: "optional", reason: "Category nodes are inspected through generated docs and CLI output." }],
       source: registrySource,
     })),
     ...corePublicRoutes.map(([id, method, route, name]) => clawPersistentSurface.contract({
