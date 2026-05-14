@@ -1,5 +1,127 @@
 export const clawSurfaceRegistryVersion = 1;
 
+export type ClawPersistentSurfaceKind =
+  | "root"
+  | "database"
+  | "sidecar"
+  | "table"
+  | "column"
+  | "index"
+  | "folder"
+  | "file"
+  | "socket"
+  | "statusFile"
+  | "preferenceKey"
+  | "appStorageKey"
+  | "browserStorageKey"
+  | "envOverride"
+  | "cache"
+  | "fixture"
+  | "persistentTemp"
+  | "legacyPath"
+  | "externalReadOnlySource";
+
+export type ClawPersistentSurfaceOwner = "claw" | "clawix" | "external";
+export type ClawPersistentSurfaceStorageClass =
+  | "frameworkGlobal"
+  | "workspace"
+  | "hostOperational"
+  | "nativeAppData"
+  | "sidecar"
+  | "secretVault"
+  | "cache"
+  | "fixture"
+  | "persistentTemp"
+  | "external";
+export type ClawPersistentSurfaceCanonicality =
+  | "canonical"
+  | "hostOnly"
+  | "cache"
+  | "generated"
+  | "legacyReadOnly"
+  | "testOnly"
+  | "externalReadOnly";
+export type ClawPersistentSurfacePrivacy = "public" | "userData" | "secretReference" | "secretMaterial" | "externalReadOnly";
+export type ClawPersistentSurfaceLifecycle = "durable" | "rebuildable" | "ephemeral" | "legacy" | "external";
+
+export interface ClawPersistentSurfaceSource {
+  file: string;
+  line?: number;
+  language?: "typescript" | "swift" | "javascript" | "json" | "sql" | "markdown";
+}
+
+export interface ClawPersistentSurfaceNode {
+  id: string;
+  kind: ClawPersistentSurfaceKind;
+  owner: ClawPersistentSurfaceOwner;
+  name: string;
+  path?: string;
+  key?: string;
+  storageClass: ClawPersistentSurfaceStorageClass;
+  canonicality: ClawPersistentSurfaceCanonicality;
+  privacy: ClawPersistentSurfacePrivacy;
+  lifecycle: ClawPersistentSurfaceLifecycle;
+  parentId?: string;
+  children?: string[];
+  source?: ClawPersistentSurfaceSource;
+  envOverrides?: string[];
+  databaseId?: string;
+  dataType?: string;
+  nullable?: boolean;
+  notes?: string;
+  warnings?: string[];
+}
+
+export interface ClawPersistentSurfaceRegistry {
+  version: number;
+  nodes: ClawPersistentSurfaceNode[];
+}
+
+type SurfaceDefaults = Pick<
+  ClawPersistentSurfaceNode,
+  "owner" | "storageClass" | "canonicality" | "privacy" | "lifecycle"
+>;
+
+type SurfaceBuilderInput<TKind extends ClawPersistentSurfaceKind> =
+  Omit<ClawPersistentSurfaceNode, "kind" | keyof SurfaceDefaults> &
+  Partial<SurfaceDefaults> &
+  { kind?: TKind };
+
+function surfaceNode(input: Omit<ClawPersistentSurfaceNode, keyof SurfaceDefaults> & Partial<SurfaceDefaults>): ClawPersistentSurfaceNode {
+  return {
+    owner: input.owner ?? "claw",
+    storageClass: input.storageClass ?? "frameworkGlobal",
+    canonicality: input.canonicality ?? "canonical",
+    privacy: input.privacy ?? "userData",
+    lifecycle: input.lifecycle ?? "durable",
+    ...input,
+  };
+}
+
+export const clawPersistentSurface = {
+  root(input: SurfaceBuilderInput<"root">): ClawPersistentSurfaceNode {
+    return surfaceNode({ ...input, kind: "root" });
+  },
+  database(input: SurfaceBuilderInput<"database" | "sidecar">): ClawPersistentSurfaceNode {
+    return surfaceNode({ ...input, kind: input.kind ?? "database" });
+  },
+  table(input: SurfaceBuilderInput<"table">): ClawPersistentSurfaceNode {
+    return surfaceNode({ ...input, kind: "table" });
+  },
+  column(input: SurfaceBuilderInput<"column">): ClawPersistentSurfaceNode {
+    return surfaceNode({ ...input, kind: "column" });
+  },
+  path(input: Omit<SurfaceBuilderInput<"folder" | "file" | "socket" | "statusFile" | "cache" | "fixture" | "persistentTemp" | "legacyPath" | "externalReadOnlySource">, "kind"> & { kind: "folder" | "file" | "socket" | "statusFile" | "cache" | "fixture" | "persistentTemp" | "legacyPath" | "externalReadOnlySource" }): ClawPersistentSurfaceNode {
+    return surfaceNode(input);
+  },
+  preference(input: SurfaceBuilderInput<"preferenceKey" | "appStorageKey" | "browserStorageKey">): ClawPersistentSurfaceNode {
+    return surfaceNode({ ...input, kind: input.kind ?? "preferenceKey" });
+  },
+  envOverride(input: SurfaceBuilderInput<"envOverride">): ClawPersistentSurfaceNode {
+    return surfaceNode({ ...input, kind: "envOverride", privacy: input.privacy ?? "public" });
+  },
+};
+
 export const clawixPortRange = { start: 24080, end: 24099 } as const;
 export const clawPortRange = { start: 24100, end: 24199 } as const;
 
@@ -124,4 +246,207 @@ export function clawServiceSocketPath(service: string): string {
 
 export function clawServiceWindowsPipe(service: string): string {
   return String.raw`\\.\pipe\claw-${service}`;
+}
+
+const registrySource: ClawPersistentSurfaceSource = {
+  file: "packages/clawjs-core/src/surface-registry.ts",
+  language: "typescript",
+};
+
+export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
+  version: clawSurfaceRegistryVersion,
+  nodes: [
+    clawPersistentSurface.root({
+      id: "claw.global",
+      name: "Claw global home",
+      path: clawGlobalHomeLayout.root,
+      storageClass: "frameworkGlobal",
+      source: registrySource,
+    }),
+    clawPersistentSurface.root({
+      id: "claw.workspace",
+      name: "Claw workspace state",
+      path: clawWorkspaceLayout.root,
+      storageClass: "workspace",
+      source: registrySource,
+    }),
+    clawPersistentSurface.root({
+      id: "clawix.home",
+      owner: "clawix",
+      name: "Clawix host home",
+      path: clawixHomeLayout.root,
+      storageClass: "hostOperational",
+      canonicality: "hostOnly",
+      source: registrySource,
+    }),
+    clawPersistentSurface.database({
+      id: "claw.database.core",
+      name: "Framework main database",
+      path: `${clawGlobalHomeLayout.data}/${clawDataFiles.mainDatabase}`,
+      parentId: "claw.global",
+      source: registrySource,
+      notes: "User-facing structured records and framework metadata that belong in the canonical relational graph.",
+      envOverrides: ["CLAW_DATABASE_DB_PATH", "CLAW_DB_PATH", "CLAW_DATA_DIR", "CLAW_HOME"],
+    }),
+    clawPersistentSurface.database({
+      id: "claw.database.runtime",
+      kind: "sidecar",
+      name: "Runtime sidecar database",
+      path: `${clawGlobalHomeLayout.data}/runtime.sqlite`,
+      parentId: "claw.global",
+      storageClass: "sidecar",
+      source: registrySource,
+      envOverrides: ["RUNTIME_DB_PATH", "RUNTIME_DATA_DIR", "CLAW_DATA_DIR", "CLAW_HOME"],
+    }),
+    clawPersistentSurface.database({
+      id: "claw.database.sessions",
+      kind: "sidecar",
+      name: "Sessions sidecar database",
+      path: `${clawGlobalHomeLayout.data}/${clawDataFiles.sessionsDatabase}`,
+      parentId: "claw.global",
+      storageClass: "sidecar",
+      source: registrySource,
+      envOverrides: ["CLAW_SESSIONS_DB_PATH", "CLAW_SESSIONS_DATA_DIR", "CLAW_DATA_DIR", "CLAW_HOME"],
+    }),
+    clawPersistentSurface.database({
+      id: "claw.database.audio",
+      kind: "sidecar",
+      name: "Audio sidecar database",
+      path: `${clawGlobalHomeLayout.data}/audio.sqlite`,
+      parentId: "claw.global",
+      storageClass: "sidecar",
+      source: registrySource,
+      envOverrides: ["CLAW_AUDIO_DB_PATH", "CLAW_AUDIO_DATA_DIR", "CLAW_DATA_DIR", "CLAW_HOME"],
+    }),
+    clawPersistentSurface.database({
+      id: "claw.database.search",
+      kind: "sidecar",
+      name: "Search sidecar database",
+      path: `${clawGlobalHomeLayout.data}/${clawDataFiles.searchDatabase}`,
+      parentId: "claw.global",
+      storageClass: "sidecar",
+      source: registrySource,
+      envOverrides: ["CLAW_SEARCH_DB_PATH", "CLAW_SEARCH_DATA_DIR", "CLAW_DATA_DIR", "CLAW_HOME"],
+    }),
+    clawPersistentSurface.database({
+      id: "claw.database.notify",
+      kind: "sidecar",
+      name: "Notify sidecar database",
+      path: `${clawGlobalHomeLayout.data}/notify.sqlite`,
+      parentId: "claw.global",
+      storageClass: "sidecar",
+      source: registrySource,
+      envOverrides: ["NOTIFY_DB_PATH", "NOTIFY_DATA_DIR", "CLAW_DATA_DIR", "CLAW_HOME"],
+    }),
+    clawPersistentSurface.database({
+      id: "claw.database.feed",
+      kind: "sidecar",
+      name: "Feed sidecar database",
+      path: `${clawGlobalHomeLayout.data}/feed.sqlite`,
+      parentId: "claw.global",
+      storageClass: "sidecar",
+      source: registrySource,
+      envOverrides: ["FEED_DB_PATH", "FEED_DATA_DIR", "CLAW_DATA_DIR", "CLAW_HOME"],
+    }),
+    clawPersistentSurface.database({
+      id: "claw.database.monitor",
+      kind: "sidecar",
+      name: "Monitor sidecar database",
+      path: `${clawGlobalHomeLayout.data}/monitor.sqlite`,
+      parentId: "claw.global",
+      storageClass: "sidecar",
+      source: registrySource,
+      envOverrides: ["CLAW_MONITOR_DB_PATH", "CLAW_MONITOR_DATA_DIR", "CLAW_DATA_DIR", "CLAW_HOME"],
+    }),
+    clawPersistentSurface.path({
+      id: "claw.workspace.manifest",
+      kind: "file",
+      name: "Workspace manifest",
+      path: clawWorkspaceLayout.manifest,
+      parentId: "claw.workspace",
+      storageClass: "workspace",
+      source: registrySource,
+    }),
+    ...Object.entries(clawWorkspaceLayout)
+      .filter(([name]) => name !== "root" && name !== "manifest")
+      .map(([name, surfacePath]) => clawPersistentSurface.path({
+        id: `claw.workspace.${name}`,
+        kind: "folder",
+        name,
+        path: surfacePath,
+        parentId: "claw.workspace",
+        storageClass: "workspace",
+        source: registrySource,
+      })),
+    ...Object.entries(clawGlobalHomeLayout)
+      .filter(([name]) => name !== "root")
+      .map(([name, surfacePath]) => clawPersistentSurface.path({
+        id: `claw.global.${name}`,
+        kind: "folder",
+        name,
+        path: surfacePath,
+        parentId: "claw.global",
+        storageClass: "frameworkGlobal",
+        source: registrySource,
+      })),
+    ...Object.entries(clawixHomeLayout)
+      .filter(([name]) => name !== "root" && name !== "windowsBridgePipe")
+      .map(([name, surfacePath]) => clawPersistentSurface.path({
+        id: `clawix.home.${name}`,
+        kind: name === "bridgeSocket" ? "socket" : "folder",
+        owner: "clawix",
+        name,
+        path: surfacePath,
+        parentId: "clawix.home",
+        storageClass: "hostOperational",
+        canonicality: "hostOnly",
+        source: registrySource,
+      })),
+    clawPersistentSurface.path({
+      id: "claw.external.codex",
+      kind: "externalReadOnlySource",
+      owner: "external",
+      name: "Codex home",
+      path: "~/.codex",
+      storageClass: "external",
+      canonicality: "externalReadOnly",
+      privacy: "externalReadOnly",
+      lifecycle: "external",
+      source: registrySource,
+      warnings: ["Read, mirror, and index only. Writes require explicit AGENTS.md opt-in."],
+    }),
+    clawPersistentSurface.path({
+      id: "claw.legacy.workspace.clawjs",
+      kind: "legacyPath",
+      name: "Legacy pre-public workspace root",
+      path: ".clawjs",
+      storageClass: "workspace",
+      canonicality: "legacyReadOnly",
+      lifecycle: "legacy",
+      source: registrySource,
+      warnings: ["New canonical workspace writes must use .claw/."],
+    }),
+  ],
+};
+
+export function listClawPersistentSurfaceNodes(parentId?: string): ClawPersistentSurfaceNode[] {
+  const nodes = withSurfaceChildren(clawPersistentSurfaceRegistry.nodes);
+  return parentId ? nodes.filter((node) => node.parentId === parentId) : nodes;
+}
+
+export function findClawPersistentSurfaceNode(idOrPath: string): ClawPersistentSurfaceNode | undefined {
+  const nodes = withSurfaceChildren(clawPersistentSurfaceRegistry.nodes);
+  return nodes.find((node) => node.id === idOrPath || node.path === idOrPath || `/${node.id.replace(/\./g, "/")}` === idOrPath);
+}
+
+export function withSurfaceChildren(nodes: ClawPersistentSurfaceNode[]): ClawPersistentSurfaceNode[] {
+  const childMap = new Map<string, string[]>();
+  for (const node of nodes) {
+    if (!node.parentId) continue;
+    childMap.set(node.parentId, [...(childMap.get(node.parentId) ?? []), node.id]);
+  }
+  return nodes.map((node) => ({
+    ...node,
+    ...(childMap.has(node.id) ? { children: childMap.get(node.id) } : {}),
+  }));
 }

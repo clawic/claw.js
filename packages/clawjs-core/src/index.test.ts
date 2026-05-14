@@ -24,6 +24,7 @@ import {
   clawEventsPath,
   clawExportExtensions,
   clawGlobalHomeLayout,
+  clawPersistentSurfaceRegistry,
   clawLocalHostnames,
   clawPublicApiPrefix,
   clawServiceSocketPath,
@@ -46,9 +47,11 @@ import {
   deadlineRecordSchema,
   eventRecordSchema,
   feedbackRecordSchema,
+  findClawPersistentSurfaceNode,
   goalRecordSchema,
   handoffRecordSchema,
   incidentRecordSchema,
+  listClawPersistentSurfaceNodes,
   linkedEntityRefSchema,
   segmentTextForTts,
   semanticPlanSchema,
@@ -73,6 +76,7 @@ import {
   templatePackSchema,
   temporalItemSchema,
   workspaceSearchQuerySchema,
+  withSurfaceChildren,
 } from "./index.ts";
 
 test("createManifest returns a valid manifest", () => {
@@ -216,6 +220,26 @@ test("domain ownership matrix covers every v1 host domain", () => {
   assert.deepEqual(clawDomainOwnershipMatrixV1.system.brokerRequired, true);
   assert.deepEqual(clawDomainOwnershipMatrixV1.sessions.requiredTests.includes("codex_read_only"), true);
   assert.deepEqual(clawDomainOwnershipMatrixV1.voice.destructivePolicy, "none");
+});
+
+test("persistent surface registry exposes framework and host storage nodes", () => {
+  assert.equal(clawPersistentSurfaceRegistry.version, clawSurfaceRegistryVersion);
+
+  const coreDatabase = findClawPersistentSurfaceNode("claw.database.core");
+  assert.equal(coreDatabase?.kind, "database");
+  assert.equal(coreDatabase?.path, "~/.claw/data/core.sqlite");
+  assert.deepEqual(coreDatabase?.envOverrides?.includes("CLAW_DATABASE_DB_PATH"), true);
+
+  const workspaceChildren = listClawPersistentSurfaceNodes("claw.workspace");
+  assert.equal(workspaceChildren.some((node) => node.id === "claw.workspace.manifest"), true);
+  assert.equal(findClawPersistentSurfaceNode(".claw/manifest.json")?.id, "claw.workspace.manifest");
+
+  const externalCodex = findClawPersistentSurfaceNode("claw.external.codex");
+  assert.equal(externalCodex?.canonicality, "externalReadOnly");
+  assert.equal(externalCodex?.lifecycle, "external");
+
+  const indexed = withSurfaceChildren(clawPersistentSurfaceRegistry.nodes);
+  assert.deepEqual(indexed.find((node) => node.id === "claw.global")?.children?.includes("claw.database.core"), true);
 });
 
 test("storage helpers resolve Claw roots and enforce Codex read-only policy", () => {

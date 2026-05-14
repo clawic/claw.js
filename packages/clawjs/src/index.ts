@@ -59,8 +59,8 @@ import { activeHost, readHostRegistry, registerHost, resolveHostRegistryFile, us
 import { HostClientError, sendHostCommand } from "./host-client.ts";
 import { CLI_USAGE, DEFAULT_CLI_BIN, PUBLIC_PORTAL_HELP_ONLY, REMOVED_RUNTIME_COMMANDS, REMOVED_V1_CRUD_COMMANDS, buildCliUsage, buildCommandHelp, normalizePublicCliArgv, removedPublicCommandMessage } from "./cli-surface.ts";
 import { inferBrokerDeclaredFields } from "./broker-http.ts";
+import { runInspectCli } from "./inspect-cli.ts";
 export { CLI_USAGE, DEFAULT_CLI_BIN, buildCliUsage } from "./cli-surface.ts";
-
 export interface CliContext {
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
@@ -69,10 +69,7 @@ export interface CliContext {
   runCommand?: (command: string, args: string[], options: { cwd: string }) => Promise<void>;
 }
 
-export const CLI_EXIT_OK = 0;
-export const CLI_EXIT_FAILURE = 1;
-export const CLI_EXIT_DEGRADED = 2;
-export const CLI_EXIT_USAGE = 64;
+export const CLI_EXIT_OK = 0, CLI_EXIT_FAILURE = 1, CLI_EXIT_DEGRADED = 2, CLI_EXIT_USAGE = 64;
 
 type CliMediaShare = { id: string; url: string };
 type CliTemporalExecution = {
@@ -771,7 +768,6 @@ function writeCliError(stream: NodeJS.WritableStream, error: unknown): void {
     },
   });
 }
-
 function cliErrorFromUnknown(error: unknown): CliHandledError {
   return error instanceof CliHandledError
     ? error
@@ -6042,6 +6038,10 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "open") {
     return await runOpenCli({ argv, positionals, flags, context, wantsJson, binName });
+  }
+
+  if (group === "inspect") {
+    return await runInspectCli({ positionals, flags, context, wantsJson, binName });
   }
 
   if (group === "domains") {

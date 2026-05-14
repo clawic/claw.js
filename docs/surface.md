@@ -1835,6 +1835,15 @@ The docs check script validates that every current export from
 
 ## Surface Registry Exports
 
+    ClawPersistentSurfaceCanonicality
+    ClawPersistentSurfaceKind
+    ClawPersistentSurfaceLifecycle
+    ClawPersistentSurfaceNode
+    ClawPersistentSurfaceOwner
+    ClawPersistentSurfacePrivacy
+    ClawPersistentSurfaceRegistry
+    ClawPersistentSurfaceSource
+    ClawPersistentSurfaceStorageClass
     clawAppPorts
     clawCorePorts
     clawDataFiles
@@ -1846,6 +1855,8 @@ The docs check script validates that every current export from
     clawLocalHostnames
     clawPortRange
     clawPortSubranges
+    clawPersistentSurface
+    clawPersistentSurfaceRegistry
     clawPrivateAppApiPrefix
     clawPublicApiPrefix
     clawServiceSocketName
@@ -1857,3 +1868,6 @@ The docs check script validates that every current export from
     clawixDeepLinkRoutes
     clawixHomeLayout
     clawixPortRange
+    findClawPersistentSurfaceNode
+    listClawPersistentSurfaceNodes
+    withSurfaceChildren
