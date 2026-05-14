@@ -76,19 +76,107 @@ function readManifest(manifestPath: string, cwd: string): ClawPersistentSurfaceR
   }
 }
 
-function readCodebaseManifest(input: InspectCliInput): unknown {
-  const manifestPath = input.flags["codebase-manifest"] || process.env.CLAW_CODEBASE_MANIFEST || "docs/codebase-manifest.json";
-  const absolutePath = path.resolve(input.context.cwd, manifestPath);
+function defaultCodebaseManifestPaths(cwd: string): string[] {
+  const candidates = [
+    "docs/codebase-manifest.json",
+    "../Clawix/clawix/docs/codebase-manifest.json",
+  ];
+  return candidates.filter((manifestPath) => fs.existsSync(path.resolve(cwd, manifestPath)));
+}
+
+function codebaseManifestPaths(input: InspectCliInput): string[] {
+  const raw = input.flags["codebase-manifest"] || process.env.CLAW_CODEBASE_MANIFEST || "";
+  if (raw) return raw.split(",").map((value) => value.trim()).filter(Boolean);
+  return defaultCodebaseManifestPaths(input.context.cwd);
+}
+
+function readOneCodebaseManifest(manifestPath: string, cwd: string): Record<string, unknown> {
+  const absolutePath = path.resolve(cwd, manifestPath);
   try {
     const parsed = JSON.parse(fs.readFileSync(absolutePath, "utf8")) as unknown;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       throw new Error("manifest must be a JSON object");
     }
-    return parsed;
+    return parsed as Record<string, unknown>;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new InspectCliError("inspect_codebase_manifest_error", `Could not read codebase manifest ${manifestPath}: ${message}`, CLI_EXIT_USAGE);
   }
+}
+
+function readCodebaseManifest(input: InspectCliInput): unknown {
+  const manifestPaths = codebaseManifestPaths(input);
+  if (manifestPaths.length === 0) {
+    throw new InspectCliError("inspect_codebase_manifest_error", "Could not find a codebase manifest. Generate docs/codebase-manifest.json or pass --codebase-manifest <path>.", CLI_EXIT_USAGE);
+  }
+  const manifests = manifestPaths.map((manifestPath) => ({
+    manifestPath,
+    manifest: readOneCodebaseManifest(manifestPath, input.context.cwd),
+  }));
+  if (manifests.length === 1) return manifests[0].manifest;
+  return combineCodebaseManifests(manifests);
+}
+
+function combineCodebaseManifests(entries: Array<{ manifestPath: string; manifest: Record<string, unknown> }>): unknown {
+  const files = [];
+  const summary = {
+    files: 0,
+    tests: 0,
+    entrypoints: 0,
+    languages: {
+      typescript: 0,
+      javascript: 0,
+      swift: 0,
+    },
+  };
+  const astCoverage: Record<string, unknown> = {};
+  for (const entry of entries) {
+    const manifest = entry.manifest as {
+      repository?: unknown;
+      root?: unknown;
+      astCoverage?: Record<string, unknown>;
+      summary?: {
+        files?: unknown;
+        tests?: unknown;
+        entrypoints?: unknown;
+        languages?: Record<string, unknown>;
+      };
+      files?: Array<Record<string, unknown>>;
+    };
+    const repository = typeof manifest.repository === "string" ? manifest.repository : path.basename(path.dirname(path.dirname(entry.manifestPath))) || "repository";
+    if (manifest.astCoverage && typeof manifest.astCoverage === "object") {
+      Object.assign(astCoverage, manifest.astCoverage);
+    }
+    const manifestSummary = manifest.summary ?? {};
+    summary.files += typeof manifestSummary.files === "number" ? manifestSummary.files : 0;
+    summary.tests += typeof manifestSummary.tests === "number" ? manifestSummary.tests : 0;
+    summary.entrypoints += typeof manifestSummary.entrypoints === "number" ? manifestSummary.entrypoints : 0;
+    const languages = manifestSummary.languages ?? {};
+    summary.languages.typescript += typeof languages.typescript === "number" ? languages.typescript : 0;
+    summary.languages.javascript += typeof languages.javascript === "number" ? languages.javascript : 0;
+    summary.languages.swift += typeof languages.swift === "number" ? languages.swift : 0;
+    for (const file of Array.isArray(manifest.files) ? manifest.files : []) {
+      files.push({
+        ...file,
+        repository,
+        manifestPath: entry.manifestPath,
+      });
+    }
+  }
+  return {
+    schemaVersion: 1,
+    scope: "workspace",
+    summary,
+    astCoverage,
+    manifests: entries.map((entry) => ({
+      manifestPath: entry.manifestPath,
+      repository: typeof entry.manifest.repository === "string" ? entry.manifest.repository : undefined,
+      root: entry.manifest.root,
+      summary: entry.manifest.summary,
+      astCoverage: entry.manifest.astCoverage,
+    })),
+    files,
+  };
 }
 
 function readConnectorCatalog(input: InspectCliInput): unknown {

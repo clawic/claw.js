@@ -134,6 +134,66 @@ test("runCli exposes the generated codebase manifest through inspect", async () 
   assert.equal(payload.files.some((file) => file.path === "packages/clawjs/src/inspect-cli.ts" && file.declarations.some((entry) => entry.name === "runInspectCli")), true);
 });
 
+test("runCli fuses multiple codebase manifests through inspect", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-inspect-codebase-"));
+  const frameworkManifestPath = path.join(tempRoot, "clawjs-codebase.json");
+  const hostManifestPath = path.join(tempRoot, "clawix-codebase.json");
+  fs.writeFileSync(frameworkManifestPath, JSON.stringify({
+    schemaVersion: 1,
+    repository: "ClawJS",
+    root: ".",
+    scope: "repository",
+    astCoverage: { typescript: "typescript-compiler-api" },
+    summary: {
+      files: 1,
+      tests: 0,
+      entrypoints: 1,
+      languages: { typescript: 1, javascript: 0, swift: 0 },
+    },
+    files: [{
+      path: "packages/clawjs/src/inspect-cli.ts",
+      language: "typescript",
+      declarations: [{ kind: "function", name: "runInspectCli", exported: true }],
+    }],
+  }), "utf8");
+  fs.writeFileSync(hostManifestPath, JSON.stringify({
+    schemaVersion: 1,
+    repository: "Clawix",
+    root: ".",
+    scope: "repository",
+    astCoverage: { swift: "structural-regex" },
+    summary: {
+      files: 1,
+      tests: 1,
+      entrypoints: 0,
+      languages: { typescript: 0, javascript: 0, swift: 1 },
+    },
+    files: [{
+      path: "macos/Sources/Clawix/AppState.swift",
+      language: "swift",
+      declarations: [{ kind: "class", name: "AppState", exported: false }],
+    }],
+  }), "utf8");
+
+  const codebase = await runCliCapture(["inspect", "codebase", "--codebase-manifest", `${frameworkManifestPath},${hostManifestPath}`, "--json"], process.cwd());
+  assert.equal(codebase.code, CLI_EXIT_OK);
+  const payload = parseCliJson<{
+    scope: string;
+    summary: { files: number; tests: number; entrypoints: number; languages: { typescript: number; swift: number } };
+    manifests: Array<{ repository: string; manifestPath: string }>;
+    files: Array<{ repository: string; manifestPath: string; path: string }>;
+  }>(codebase.stdout).data;
+  assert.equal(payload.scope, "workspace");
+  assert.deepEqual(payload.summary, {
+    files: 2,
+    tests: 1,
+    entrypoints: 1,
+    languages: { typescript: 1, javascript: 0, swift: 1 },
+  });
+  assert.equal(payload.manifests.some((entry) => entry.repository === "Clawix" && entry.manifestPath === hostManifestPath), true);
+  assert.equal(payload.files.some((file) => file.repository === "Clawix" && file.path === "macos/Sources/Clawix/AppState.swift"), true);
+});
+
 test("runCli exposes connector catalog support and external schema coverage through inspect", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-inspect-connectors-"));
   const catalogPath = path.join(tempRoot, "connectors.json");

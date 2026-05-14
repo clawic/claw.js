@@ -303,6 +303,7 @@ claw search "system capabilities" --json
 claw search query "release branch" --json
 claw search rebuild --json
 claw inspect codebase --json
+claw inspect codebase --codebase-manifest docs/codebase-manifest.json,../Clawix/clawix/docs/codebase-manifest.json --json
 claw inspect connectors --connector-catalog packages/clawjs-integrations/fixtures/started-provider-runtime-catalog.json --json
 claw inspect aliases --json
 claw inspect why host --json

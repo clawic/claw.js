@@ -98270,7 +98270,7 @@
     {
       "path": "packages/clawjs/src/inspect-cli.test.ts",
       "language": "typescript",
-      "lines": 272,
+      "lines": 332,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -98305,7 +98305,7 @@
     {
       "path": "packages/clawjs/src/inspect-cli.ts",
       "language": "typescript",
-      "lines": 486,
+      "lines": 574,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -98328,6 +98328,21 @@
         {
           "kind": "function",
           "name": "cliErrorFromUnknown",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "codebaseManifestPaths",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "combineCodebaseManifests",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "defaultCodebaseManifestPaths",
           "exported": false
         },
         {
@@ -98403,6 +98418,11 @@
         {
           "kind": "function",
           "name": "readManifest",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "readOneCodebaseManifest",
           "exported": false
         },
         {
