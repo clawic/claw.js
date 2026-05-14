@@ -31,12 +31,12 @@ The first supported inspection commands are:
 - `claw inspect prefs`
 - `claw inspect render --format markdown|mermaid`
 
-Generated documentation, including `docs/persistent-surface.md`, must be regenerated from `claw inspect render --format markdown`; it is not an independent registry.
+The CLI reads the framework registry by default and can fuse additional static
+language manifests with `--manifest <path>` or `CLAW_INSPECT_MANIFEST`. External
+manifests must use the same node contract and are read-only inputs; the CLI does
+not inspect live user data or require services.
 
-The CLI may fuse additional static manifest files from other language builders
-with `--manifest <path>` or `CLAW_INSPECT_MANIFEST=path[,path...]`. Those
-manifests must use the same `ClawPersistentSurfaceRegistry` shape and remain
-read-only inputs to inspection.
+Generated documentation, including `docs/persistent-surface.md`, must be regenerated from `claw inspect render --format markdown`; it is not an independent registry.
 
 ## Rules
 
