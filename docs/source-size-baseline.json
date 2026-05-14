@@ -16,20 +16,16 @@
       "reason": "Remaining CLI smoke and integration test surface after scenario split; add new scenario files instead of expanding broadly."
     },
     "examples/showcase/src/lib/i18n/messages.ts": {
-      "lines": 6272,
-      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+      "lines": 1267,
+      "reason": "English locale, locale registry, and brand override assembly after locale table extraction; add new translations in locale-specific modules."
     },
     "packages/clawjs-workspace/src/index.ts": {
       "lines": 4993,
       "reason": "Existing workspace runtime assembly after productivity and UI/session facade extraction; split new app/state domains before expanding."
     },
     "examples/showcase/src/app/settings/page.tsx": {
-      "lines": 5172,
-      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
-    },
-    "packages/clawjs-integrations/src/discord-operation-executor.test.ts": {
-      "lines": 4360,
-      "reason": "Existing broad test coverage; split by scenario before expanding."
+      "lines": 4735,
+      "reason": "Existing settings UI surface after shared control extraction; extract tabs, interactions, and adapters before expanding."
     },
     "relay/src/server/app.ts": {
       "lines": 4139,
@@ -44,8 +40,8 @@
       "reason": "Existing canonical contract/schema surface; split codecs, fixtures, and docs before expanding."
     },
     "packages/clawjs-node/src/create-claw.test.ts": {
-      "lines": 3030,
-      "reason": "Existing broad test coverage; split by scenario before expanding."
+      "lines": 1994,
+      "reason": "Remaining Claw SDK integration tests after helper and Telegram scenario split; add new scenario files instead of expanding broadly."
     },
     "memory/src/service.ts": {
       "lines": 2542,
@@ -76,8 +72,8 @@
       "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
     },
     "packages/clawjs-integrations/src/discord-operation-executor.ts": {
-      "lines": 2056,
-      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+      "lines": 1870,
+      "reason": "Discord request planner switch after value helper extraction; split operation families before expanding."
     },
     "examples/showcase/src/lib/e2e.ts": {
       "lines": 2041,
