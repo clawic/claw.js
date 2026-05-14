@@ -48,7 +48,7 @@
       "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
     },
     "relay/tests/e2e/relay.e2e.test.ts": {
-      "lines": 1396,
+      "lines": 1397,
       "reason": "Remaining relay E2E coverage after fake connector extraction; split additional scenario groups before expanding."
     },
     "packages/clawjs-core/src/schemas.ts": {
@@ -168,8 +168,8 @@
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     },
     "secrets/src/server/app.ts": {
-      "lines": 1207,
-      "reason": "Existing secrets server app crossed threshold during public-values routing; split routes, auth helpers, and response serializers before expanding."
+      "lines": 1208,
+      "reason": "Existing secrets server app after broker redirect handling; split routes, auth helpers, and response serializers before expanding."
     }
   }
 }
