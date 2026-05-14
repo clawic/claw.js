@@ -59,6 +59,12 @@ export {
   verifyOfficialApiCoverageMatrix,
 } from "./integration-qa-policy.js";
 export {
+  auditCredentialLeaseEvent,
+  buildConnectorCredentialLeaseRequest,
+  credentialLeaseAuditEvent,
+  verifyConnectorCredentialLease,
+} from "./credential-lease-broker.js";
+export {
   createConnectorRuntimeFixtureFetch,
   loadConnectorRuntimeFixture,
   loadConnectorRuntimeFixtures,
@@ -78,6 +84,15 @@ export type {
   ConnectorOperationRunResult,
   RunConnectorOperationOptions,
 } from "./operation-runner.js";
+export type {
+  ConnectorCredentialLease,
+  ConnectorCredentialLeaseAuditEvent,
+  ConnectorCredentialLeaseBroker,
+  ConnectorCredentialLeaseCostPolicy,
+  ConnectorCredentialLeasePolicy,
+  ConnectorCredentialLeasePurpose,
+  ConnectorCredentialLeaseRequest,
+} from "./credential-lease-broker.js";
 export type {
   ConnectorManagedInterface,
   ConnectorManagedInterfaceRole,
@@ -157,6 +172,7 @@ export {
   executeTelegramOperation,
   isTelegramActionOperationSupported,
   sendTelegramRequest,
+  TelegramBotApiError,
 } from "./telegram-operation-executor.js";
 export {
   TELEGRAM_POLL_UPDATE_TYPES,
@@ -175,8 +191,26 @@ export {
   TELEGRAM_OFFICIAL_BOT_API_SOURCE_DATE,
   TELEGRAM_OFFICIAL_BOT_API_SOURCE_URL,
   TELEGRAM_OFFICIAL_BOT_API_VERSION,
+  TELEGRAM_OFFICIAL_UPDATE_COVERAGE,
+  TELEGRAM_OFFICIAL_UPDATE_FIELDS,
+} from "./telegram-official-api-matrix.js";
+export {
+  TELEGRAM_LIVE_SMOKE_SCENARIOS,
+  runTelegramBrokeredLiveSmoke,
+} from "./telegram-live-smoke.js";
+export type {
+  RunTelegramBrokeredLiveSmokeOptions,
+  TelegramLiveSmokeReport,
+  TelegramLiveSmokeResult,
+  TelegramLiveSmokeResultStatus,
+  TelegramLiveSmokeScenario,
+} from "./telegram-live-smoke.js";
+export type {
+  TelegramOfficialUpdateField,
+  TelegramUpdateCoverageEntry,
 } from "./telegram-official-api-matrix.js";
 export type {
+  TelegramBotApiErrorParameters,
   TelegramOperationExecutorOptions,
   TelegramRequestPlan,
 } from "./telegram-operation-executor.js";

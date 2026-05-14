@@ -9,6 +9,14 @@ import {
   requiredConnectorFieldNames,
 } from "./connector-input.ts";
 import {
+  auditCredentialLeaseEvent,
+  buildConnectorCredentialLeaseRequest,
+  credentialLeaseAuditEvent,
+  verifyConnectorCredentialLease,
+  type ConnectorCredentialLeaseBroker,
+  type ConnectorCredentialLeasePolicy,
+} from "./credential-lease-broker.ts";
+import {
   buildConnectorOperationRuntimePlan,
   type ConnectorOperationRuntimePlan,
 } from "./runtime-coverage.ts";
@@ -68,6 +76,8 @@ export interface ConnectorSourceRunResult {
   operationId: string;
   appId: string;
   output: Record<string, IntegrationJson>;
+  credentialLeaseId?: string;
+  credentialLeaseReleased?: boolean;
 }
 
 export type ConnectorSourceSubscriptionStatus = "ready" | "blocked" | "disabled";
@@ -105,6 +115,8 @@ export interface RunConnectorSourceOptions {
   input?: ConnectorOperationInput;
   dryRun?: boolean;
   executor?: ConnectorSourceExecutor;
+  credentialBroker?: ConnectorCredentialLeaseBroker;
+  leasePolicy?: ConnectorCredentialLeasePolicy;
   runtimeExecutorOptions?: ConnectorRuntimeExecutorOptions;
   runtimeRegistry?: readonly ConnectorRuntimeImplementation[];
 }
@@ -203,7 +215,7 @@ export async function runConnectorSource(
   if (missingFields.length > 0 || missingSecrets.length > 0 || invalidFields.length > 0) {
     throw new Error(`Connector source is missing or invalid input: ${[...missingFields, ...missingSecrets, ...invalidFields].join(", ")}`);
   }
-  if (found.operation.authFieldNames.length > 0) {
+  if (found.operation.authFieldNames.length > 0 && !options.credentialBroker) {
     throw new Error("Connector source execution with secrets requires a capability broker; plaintext secret resolution is disabled.");
   }
   const executor = options.executor ?? createConnectorSourceExecutor(found.operation, options.runtimeExecutorOptions, options.runtimeRegistry);
@@ -211,18 +223,67 @@ export async function runConnectorSource(
     throw new Error("Connector source execution requires an explicit executor or registered runtime executor.");
   }
 
-  const output = await executor.start({
-    operation: found.operation,
-    values,
-    secrets: {},
-    plan,
-  });
-  return {
-    status: "source_started",
-    operationId: found.operation.id,
+  if (found.operation.authFieldNames.length === 0) {
+    const output = await executor.start({
+      operation: found.operation,
+      values,
+      secrets: {},
+      plan,
+    });
+    return {
+      status: "source_started",
+      operationId: found.operation.id,
+      appId: found.app.id,
+      output,
+    };
+  }
+
+  const broker = options.credentialBroker;
+  if (!broker) {
+    throw new Error("Connector source execution with secrets requires a capability broker; plaintext secret resolution is disabled.");
+  }
+  const leaseRequest = buildConnectorCredentialLeaseRequest({
     appId: found.app.id,
-    output,
-  };
+    operationId: found.operation.id,
+    purpose: options.leasePolicy?.purpose ?? "source",
+    secretRefs,
+    scopes: options.leasePolicy?.scopes,
+    ttlSeconds: options.leasePolicy?.ttlSeconds,
+    costPolicy: options.leasePolicy?.costPolicy,
+    valuesPreview: redactConnectorSecretValues(found.operation.fields, values),
+  });
+  const lease = await broker.acquire(leaseRequest);
+  await auditCredentialLeaseEvent(broker, credentialLeaseAuditEvent({ event: "acquire", lease }));
+  let released = false;
+  try {
+    verifyConnectorCredentialLease(lease, leaseRequest, found.operation.authFieldNames);
+    if (broker.heartbeat) {
+      await broker.heartbeat(lease, leaseRequest);
+      await auditCredentialLeaseEvent(broker, credentialLeaseAuditEvent({ event: "heartbeat", lease }));
+    }
+    const output = await executor.start({
+      operation: found.operation,
+      values,
+      secrets: lease.secrets,
+      plan,
+    });
+    await broker.release(lease, leaseRequest);
+    released = true;
+    await auditCredentialLeaseEvent(broker, credentialLeaseAuditEvent({ event: "release", lease }));
+    return {
+      status: "source_started",
+      operationId: found.operation.id,
+      appId: found.app.id,
+      output,
+      credentialLeaseId: lease.id,
+      credentialLeaseReleased: released,
+    };
+  } finally {
+    if (!released) {
+      await broker.release(lease, leaseRequest);
+      await auditCredentialLeaseEvent(broker, credentialLeaseAuditEvent({ event: "release", lease }));
+    }
+  }
 }
 
 function buildSourcePlan(options: {
