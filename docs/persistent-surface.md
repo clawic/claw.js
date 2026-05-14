@@ -106,6 +106,18 @@ flowchart TD
   claw_contracts_events --> claw_event_database_record_deleted
   claw_event_time_temporal_item_due["temporal.item.due\neventTopic"]
   claw_contracts_events --> claw_event_time_temporal_item_due
+  claw_event_sessions_project_updated["project.updated\neventTopic"]
+  claw_contracts_events --> claw_event_sessions_project_updated
+  claw_event_sessions_session_updated["session.updated\neventTopic"]
+  claw_contracts_events --> claw_event_sessions_session_updated
+  claw_event_sessions_message_appended["message.appended\neventTopic"]
+  claw_contracts_events --> claw_event_sessions_message_appended
+  claw_event_sessions_message_updated["message.updated\neventTopic"]
+  claw_contracts_events --> claw_event_sessions_message_updated
+  claw_event_sessions_turn_started["turn.started\neventTopic"]
+  claw_contracts_events --> claw_event_sessions_turn_started
+  claw_event_sessions_turn_finished["turn.finished\neventTopic"]
+  claw_contracts_events --> claw_event_sessions_turn_finished
   claw_schema_common_field_schemaVersion["Persisted/exported data version field\njsonField"]
   claw_contracts_schemas --> claw_schema_common_field_schemaVersion
   claw_schema_common_field_protocolVersion["Wire protocol version field\njsonField"]
@@ -657,6 +669,12 @@ flowchart TD
 | `claw.event.database.record.updated` | eventTopic | event | claw | `record.updated` |
 | `claw.event.database.record.deleted` | eventTopic | event | claw | `record.deleted` |
 | `claw.event.time.temporal.item.due` | eventTopic | event | claw | `temporal.item.due` |
+| `claw.event.sessions.project.updated` | eventTopic | event | claw | `project.updated` |
+| `claw.event.sessions.session.updated` | eventTopic | event | claw | `session.updated` |
+| `claw.event.sessions.message.appended` | eventTopic | event | claw | `message.appended` |
+| `claw.event.sessions.message.updated` | eventTopic | event | claw | `message.updated` |
+| `claw.event.sessions.turn.started` | eventTopic | event | claw | `turn.started` |
+| `claw.event.sessions.turn.finished` | eventTopic | event | claw | `turn.finished` |
 | `claw.schema.common.field.schemaVersion` | jsonField | schema | claw | `schemaVersion` |
 | `claw.schema.common.field.protocolVersion` | jsonField | schema | claw | `protocolVersion` |
 | `claw.schema.common.field.sessionId` | jsonField | schema | claw | `sessionId` |
