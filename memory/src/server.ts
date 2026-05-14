@@ -1,10 +1,16 @@
-import { clawApiPath } from "@clawjs/core";
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { MemoryService } from "./service";
 import { initWorkspace } from "./workspace";
 import { LoadedSchema, ParsedNote } from "./types";
+
+const CLAW_PUBLIC_API_PREFIX = "/v1";
+
+function clawApiPath(pathname = ""): string {
+  const suffix = pathname.replace(/^\/+/, "");
+  return suffix ? `${CLAW_PUBLIC_API_PREFIX}/${suffix}` : CLAW_PUBLIC_API_PREFIX;
+}
 
 type GraphNode = {
   id: string;
