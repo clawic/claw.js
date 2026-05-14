@@ -36,11 +36,11 @@
     ]
   },
   "summary": {
-    "files": 2822,
-    "tests": 388,
+    "files": 2823,
+    "tests": 389,
     "entrypoints": 160,
     "languages": {
-      "typescript": 2626,
+      "typescript": 2627,
       "javascript": 106,
       "swift": 90
     }
@@ -94606,9 +94606,23 @@
       ]
     },
     {
+      "path": "packages/clawjs/src/cli-agent-plan.test.ts",
+      "language": "typescript",
+      "lines": 40,
+      "test": true,
+      "entrypoint": false,
+      "imports": [
+        "./cli-agent-plan.ts",
+        "node:assert/strict",
+        "vitest"
+      ],
+      "exports": [],
+      "declarations": []
+    },
+    {
       "path": "packages/clawjs/src/cli-agent-plan.ts",
       "language": "typescript",
-      "lines": 281,
+      "lines": 290,
       "test": false,
       "entrypoint": false,
       "imports": [

@@ -260,21 +260,30 @@ export function formatPlan(plan: AgentPlanRecord): string {
 
 export async function createDelegationGraphForPlan(plan: AgentPlanRecord, flags: Record<string, string>): Promise<string> {
   const url = (flags["delegation-url"] ?? process.env.DELEGATION_PLANE_URL ?? "http://127.0.0.1:4520").replace(/\/$/, "");
-  const response = await fetch(`${url}/v1/graphs`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      objective: plan.objective,
-      creator: plan.creatorAgentId,
-      semanticPlan: plan.semanticPlan,
-      root: {
-        agentType: plan.executorAgentId ?? plan.creatorAgentId,
-        adapter: flags.adapter ?? "deterministic",
-      },
-    }),
-  });
-  const text = await response.text();
-  const parsed = text ? JSON.parse(text) as { graph?: { id?: string }; error?: string } : {};
-  if (!response.ok || !parsed.graph?.id) throw new Error(parsed.error ?? text ?? `HTTP ${response.status}`);
-  return parsed.graph.id;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      const response = await fetch(`${url}/v1/graphs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          objective: plan.objective,
+          creator: plan.creatorAgentId,
+          semanticPlan: plan.semanticPlan,
+          root: {
+            agentType: plan.executorAgentId ?? plan.creatorAgentId,
+            adapter: flags.adapter ?? "deterministic",
+          },
+        }),
+      });
+      const text = await response.text();
+      const parsed = text ? JSON.parse(text) as { graph?: { id?: string }; error?: string } : {};
+      if (response.ok && parsed.graph?.id) return parsed.graph.id;
+      lastError = new Error(parsed.error ?? text ?? `HTTP ${response.status}`);
+    } catch (error) {
+      lastError = error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
