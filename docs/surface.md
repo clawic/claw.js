@@ -43,6 +43,7 @@ The docs check script validates that every current export from
     BuildDatabaseAppOptions
     CollectionDefinition
     CollectionRule
+    DatabaseRecordChangeEventType
     DatabaseApiClient
     DatabaseAuthService
     DatabaseCliOptions
@@ -1074,11 +1075,15 @@ The docs check script validates that every current export from
     BUILTIN_COLLECTIONS_BY_NAME
     BUILTIN_FAMILIES
     BUILTIN_FAMILY_BY_COLLECTION
+    BuiltinCatalogEvidenceTag
     BuiltinCollectionDefinition
+    BuiltinCollectionCatalogMetadata
     BuiltinFamilyDefinition
     BuiltinFieldDefinition
     BuiltinIndexDefinition
     BuiltinRelationDefinition
+    BuiltinRelationKind
+    BuiltinRequiredFieldReason
     CALENDAR_FAMILY
     CapabilityDescriptor
     capabilityDescriptorSchema
@@ -1851,16 +1856,22 @@ The docs check script validates that every current export from
     ClawStableSurfaceRegistry
     ClawStableSurfaceStability
     clawAppPorts
+    clawCommonJsonFields
     clawCorePorts
+    clawDatabaseRecordEvents
     clawDatabaseApiRoutePatterns
     clawDatabaseApiRoutes
     clawDataFiles
     clawDeepLinkSchemes
     clawDefaultBindAddress
+    clawDriveApiRoutePatterns
+    clawDriveApiRoutes
     clawEventsPath
     clawExportExtensions
     clawGlobalHomeLayout
+    clawHostApiRoutes
     clawLocalHostnames
+    clawNotifyApiRoutes
     clawPortRange
     clawPortSubranges
     clawPersistentSurface
@@ -1872,7 +1883,10 @@ The docs check script validates that every current export from
     clawServiceSocketPath
     clawServiceWindowsPipe
     clawSearchApiRoutes
+    clawStorageApiRoutes
     clawSurfaceRegistryVersion
+    clawTemporalEvents
+    clawTimeApiRoutes
     clawWorkspaceLayout
     clawixBridgePort
     clawixDeepLinkRoutes

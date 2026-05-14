@@ -25,14 +25,44 @@ export type BuiltinBarcodeKind = "isbn10" | "isbn13" | "ean13" | "upc12" | "qr_t
 
 export type BuiltinDurationDisplayUnit = "second" | "minute" | "hour" | "day";
 
+export type BuiltinCatalogEvidenceTag =
+  | "human_recognizable"
+  | "market_validated"
+  | "multi_domain_reuse"
+  | "agent_useful";
+
+export type BuiltinRelationKind =
+  | "ownership"
+  | "membership"
+  | "participant"
+  | "line_item"
+  | "source_import"
+  | "attachment"
+  | "location"
+  | "temporal_event"
+  | "financial_transaction"
+  | "observation_sample"
+  | "dependency"
+  | "generic";
+
+export type BuiltinRequiredFieldReason =
+  | "identity"
+  | "integrity"
+  | "lifecycle"
+  | "relation_integrity";
+
 export interface BuiltinRelationDefinition {
   collectionName: string;
+  kind?: BuiltinRelationKind;
+  inverseName?: string;
 }
 
 export interface BuiltinFieldDefinition {
   name: string;
   type: BuiltinFieldType;
+  aliases?: string[];
   required?: boolean;
+  requiredReason?: BuiltinRequiredFieldReason;
   options?: string[];
   relation?: BuiltinRelationDefinition;
   min?: number;
@@ -58,11 +88,20 @@ export type BuiltinCollectionRule =
   | { kind: "number_compare"; left: string; op: "<" | "<=" | "==" | ">=" | ">"; right: string | number; message?: string }
   | { kind: "regex"; field: string; pattern: string; message?: string };
 
+export interface BuiltinCollectionCatalogMetadata {
+  purpose: string;
+  evidence: BuiltinCatalogEvidenceTag[];
+  fieldGuidance?: string;
+  relationGuidance?: string;
+  notes?: string;
+}
+
 export interface BuiltinCollectionDefinition {
   name: string;
   displayName: string;
   family: string;
   aliases: string[];
+  catalog?: BuiltinCollectionCatalogMetadata;
   fields: BuiltinFieldDefinition[];
   indexes: BuiltinIndexDefinition[];
   rules?: BuiltinCollectionRule[];

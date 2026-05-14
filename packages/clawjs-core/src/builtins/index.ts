@@ -1,9 +1,13 @@
 export type {
+  BuiltinCatalogEvidenceTag,
   BuiltinCollectionDefinition,
+  BuiltinCollectionCatalogMetadata,
   BuiltinFamilyDefinition,
   BuiltinFieldDefinition,
   BuiltinIndexDefinition,
   BuiltinRelationDefinition,
+  BuiltinRelationKind,
+  BuiltinRequiredFieldReason,
 } from "./_types.ts";
 
 export {
