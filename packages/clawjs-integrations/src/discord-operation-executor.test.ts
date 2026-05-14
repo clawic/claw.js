@@ -3696,6 +3696,33 @@ describe("discord operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-interaction-response"), {
+      interactionId: "interaction-123",
+      interactionToken: "interaction-token",
+      responseType: 4,
+      responseData: {
+        content: "hello",
+      },
+      withResponse: false,
+    }), {
+      method: "POST",
+      endpoint: "interactions/interaction-123/interaction-token/callback",
+      auth: [],
+      headers,
+      query: {
+        with_response: false,
+      },
+      body: {
+        type: 4,
+        data: {
+          content: "hello",
+        },
+      },
+      responseSchema: {
+        type: "null",
+      },
+    });
+
     assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-original-interaction-response"), {
       applicationId: "app-123",
       interactionToken: "interaction-token",

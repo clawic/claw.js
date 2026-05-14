@@ -1,7 +1,7 @@
 {
-  "interaction": {
-    "id": "sample",
-    "type": 2,
-    "token": "sample"
+  "runtimeResponse": {
+    "status": 204,
+    "body": "",
+    "bodyEncoding": "text"
   }
 }
