@@ -5,7 +5,7 @@ import { createCodeGlobalIndex, createCodeLedger, startCodeServer } from "@clawj
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable, joinedPositionals, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
-import { cliErrorFromUnknown, writeCliError, writeJson, writeJsonLine } from "./cli-json.ts";
+import { cliErrorFromUnknown, writeCommandJsonError, writeCommandJsonOk, writeCommandJsonOkLine } from "./cli-json.ts";
 import { readJsonFile } from "./cli-runtime-utils.ts";
 
 function parseCodeListFlag(value: string | undefined): string[] {
@@ -34,6 +34,12 @@ export async function runCodeCli(input: {
   const projectLedger = () => input.flags.project ? globalIndex.projectLedger(input.flags.project) : localLedger();
   const dryRun = readBooleanFlag(input.argv, input.flags, "dry-run", false);
   const wantsAll = readBooleanFlag(input.argv, input.flags, "all", false);
+  const jsonMeta = () => ({
+    invokedCommand: "code",
+    subcommand: command ?? null,
+    ...(subcommand ? { operation: subcommand } : {}),
+  });
+  const writeCodeJson = (data: unknown) => writeCommandJsonOk(input.context.stdout, "code", data, jsonMeta());
 
   try {
     if (command === "projects" && subcommand === "add") {
@@ -43,7 +49,7 @@ export async function runCodeCli(input: {
         return CLI_EXIT_USAGE;
       }
       const project = globalIndex.addProject({ rootDir, id: input.flags.id, name: input.flags.name });
-      if (input.wantsJson) writeJson(input.context.stdout, { project });
+      if (input.wantsJson) writeCodeJson({ project });
       else input.context.stdout.write(`${project.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -52,7 +58,7 @@ export async function runCodeCli(input: {
       const rootDir = input.positionals[3] ?? input.flags.path ?? input.context.cwd;
       const maxDepth = input.flags["max-depth"] ? Number(input.flags["max-depth"]) : undefined;
       const projects = globalIndex.discoverProjects({ rootDir, ...(maxDepth !== undefined ? { maxDepth } : {}) });
-      if (input.wantsJson) writeJson(input.context.stdout, { projects });
+      if (input.wantsJson) writeCodeJson({ projects });
       else input.context.stdout.write(formatCliTable(projects.map((project: { id: string; status: string; name: string; rootDir: string }) => ({
         id: project.id,
         status: project.status,
@@ -64,7 +70,7 @@ export async function runCodeCli(input: {
 
     if (command === "projects" && subcommand === "list") {
       const projects = globalIndex.listProjects();
-      if (input.wantsJson) writeJson(input.context.stdout, { projects });
+      if (input.wantsJson) writeCodeJson({ projects });
       else input.context.stdout.write(formatCliTable(projects.map((project: { id: string; status: string; name: string; rootDir: string }) => ({
         id: project.id,
         status: project.status,
@@ -81,7 +87,7 @@ export async function runCodeCli(input: {
         return CLI_EXIT_USAGE;
       }
       const project = globalIndex.syncProject(projectId);
-      if (input.wantsJson) writeJson(input.context.stdout, { project });
+      if (input.wantsJson) writeCodeJson({ project });
       else input.context.stdout.write(`${project.id} ${project.status} ${project.rootDir}\n`);
       return CLI_EXIT_OK;
     }
@@ -93,7 +99,7 @@ export async function runCodeCli(input: {
         return CLI_EXIT_USAGE;
       }
       const ok = globalIndex.removeProject(projectId);
-      if (input.wantsJson) writeJson(input.context.stdout, { ok });
+      if (input.wantsJson) writeCodeJson({ ok });
       else input.context.stdout.write(`${ok}\n`);
       return CLI_EXIT_OK;
     }
@@ -112,7 +118,7 @@ export async function runCodeCli(input: {
         intentId: input.flags.intent ?? input.flags["intent-id"] ?? null,
         worktreePath: input.flags.worktree ?? input.flags["worktree-path"] ?? null,
       });
-      if (input.wantsJson) writeJson(input.context.stdout, { agent });
+      if (input.wantsJson) writeCodeJson({ agent });
       else input.context.stdout.write(`${agent.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -130,7 +136,7 @@ export async function runCodeCli(input: {
         intentId: input.flags.intent ?? input.flags["intent-id"] ?? null,
         worktreePath: input.flags.worktree ?? input.flags["worktree-path"] ?? null,
       });
-      if (input.wantsJson) writeJson(input.context.stdout, { agent });
+      if (input.wantsJson) writeCodeJson({ agent });
       else input.context.stdout.write(`${agent.status}\n`);
       return CLI_EXIT_OK;
     }
@@ -138,7 +144,7 @@ export async function runCodeCli(input: {
     if (command === "agents" && subcommand === "list") {
       const offlineAfterMs = input.flags["offline-after-ms"] ? Number(input.flags["offline-after-ms"]) : undefined;
       const agents = globalIndex.listAgents({ ...(offlineAfterMs !== undefined ? { offlineAfterMs } : {}) });
-      if (input.wantsJson) writeJson(input.context.stdout, { agents });
+      if (input.wantsJson) writeCodeJson({ agents });
       else input.context.stdout.write(formatCliTable(agents.map((agent: { id: string; status: string; projectId: string | null; intentId: string | null }) => ({
         id: agent.id,
         status: agent.status,
@@ -155,7 +161,7 @@ export async function runCodeCli(input: {
         return CLI_EXIT_USAGE;
       }
       const agent = globalIndex.requireAgent(agentId);
-      if (input.wantsJson) writeJson(input.context.stdout, { agent });
+      if (input.wantsJson) writeCodeJson({ agent });
       else input.context.stdout.write(`${agent.id} ${agent.status}\n`);
       return CLI_EXIT_OK;
     }
@@ -163,7 +169,7 @@ export async function runCodeCli(input: {
     if (command === "serve") {
       const port = input.flags.port ? Number(input.flags.port) : 0;
       const server = await startCodeServer(globalIndex, { host: input.flags.host || "127.0.0.1", port });
-      if (input.wantsJson) writeJsonLine(input.context.stdout, { ok: true, url: server.url });
+      if (input.wantsJson) writeCommandJsonOkLine(input.context.stdout, "code", { url: server.url }, jsonMeta());
       else input.context.stdout.write(`${server.url}\n`);
       await new Promise<void>((resolve) => {
         const stop = () => {
@@ -179,21 +185,21 @@ export async function runCodeCli(input: {
       const ledger = projectLedger();
       const repository = ledger.init();
       if (input.flags.project) globalIndex.syncProject(input.flags.project);
-      if (input.wantsJson) writeJson(input.context.stdout, { repository, databasePath: ledger.databasePath });
+      if (input.wantsJson) writeCodeJson({ repository, databasePath: ledger.databasePath });
       else input.context.stdout.write(`${repository.id}\n`);
       return CLI_EXIT_OK;
     }
 
     if (command === "policy" && (subcommand === "show" || subcommand === undefined)) {
       const policy = input.flags.project ? globalIndex.policy(input.flags.project) : localLedger().policy();
-      if (input.wantsJson) writeJson(input.context.stdout, { policy });
+      if (input.wantsJson) writeCodeJson({ policy });
       else input.context.stdout.write(`${policy.path}\n`);
       return CLI_EXIT_OK;
     }
 
     if (command === "policy" && subcommand === "validate") {
       const policy = input.flags.project ? globalIndex.validatePolicy(input.flags.project) : localLedger().validatePolicy();
-      if (input.wantsJson) writeJson(input.context.stdout, { ok: true, policy });
+      if (input.wantsJson) writeCodeJson({ ok: true, policy });
       else input.context.stdout.write("ok\n");
       return CLI_EXIT_OK;
     }
@@ -207,7 +213,7 @@ export async function runCodeCli(input: {
         return CLI_EXIT_USAGE;
       }
       const policy = input.flags.project ? globalIndex.setPolicy(input.flags.project, raw) : localLedger().setPolicy(raw);
-      if (input.wantsJson) writeJson(input.context.stdout, { policy });
+      if (input.wantsJson) writeCodeJson({ policy });
       else input.context.stdout.write(`${policy.path}\n`);
       return CLI_EXIT_OK;
     }
@@ -215,19 +221,19 @@ export async function runCodeCli(input: {
     if (command === "status") {
       if (wantsAll) {
         const status = globalIndex.status();
-        if (input.wantsJson) writeJson(input.context.stdout, status);
+        if (input.wantsJson) writeCodeJson(status);
         else input.context.stdout.write(`${status.projects.length} projects, ${status.intents.length} intents, ${status.queued.length} queued\n`);
         return CLI_EXIT_OK;
       }
       if (input.flags.project) {
         const project = globalIndex.syncProject(input.flags.project);
         const status = project.status === "active" ? globalIndex.projectLedger(project.id).status() : { repository: project, intents: [], blocked: [], queued: [] };
-        if (input.wantsJson) writeJson(input.context.stdout, { project, ...status });
+        if (input.wantsJson) writeCodeJson({ project, ...status });
         else input.context.stdout.write(`${project.id} ${project.status}\n`);
         return CLI_EXIT_OK;
       }
       const status = localLedger().status();
-      if (input.wantsJson) writeJson(input.context.stdout, status);
+      if (input.wantsJson) writeCodeJson(status);
       else input.context.stdout.write(`${status.intents.length} intents, ${status.queued.length} queued\n`);
       return CLI_EXIT_OK;
     }
@@ -239,7 +245,7 @@ export async function runCodeCli(input: {
           ...(input.flags["agent-id"] ? { agentId: input.flags["agent-id"] } : {}),
           ...(input.flags.status ? { status: input.flags.status as never } : {}),
         });
-        if (input.wantsJson) writeJson(input.context.stdout, { intents });
+        if (input.wantsJson) writeCodeJson({ intents });
         else input.context.stdout.write(formatCliTable(intents.map((intent: { projectId: string; id: string; status: string; kind: string; scope: string; title: string }) => ({
           project: intent.projectId,
           id: intent.id,
@@ -251,7 +257,7 @@ export async function runCodeCli(input: {
         return CLI_EXIT_OK;
       }
       const intents = localLedger().listIntents({ ...(input.flags.status ? { status: input.flags.status as never } : {}) });
-      if (input.wantsJson) writeJson(input.context.stdout, { intents });
+      if (input.wantsJson) writeCodeJson({ intents });
       else input.context.stdout.write(formatCliTable(intents.map((intent) => ({
         id: intent.id,
         status: intent.status,
@@ -266,7 +272,7 @@ export async function runCodeCli(input: {
       const detail = input.flags.project
         ? globalIndex.showIntent(input.flags.project, resolveCodeIntentId(input.positionals, input.flags))
         : localLedger().showIntent(resolveCodeIntentId(input.positionals, input.flags));
-      if (input.wantsJson) writeJson(input.context.stdout, detail);
+      if (input.wantsJson) writeCodeJson(detail);
       else input.context.stdout.write(`${detail.intent.id} ${detail.intent.status} ${detail.intent.branch}\n`);
       return CLI_EXIT_OK;
     }
@@ -292,7 +298,7 @@ export async function runCodeCli(input: {
       const detail = input.flags.project
         ? globalIndex.startIntent(input.flags.project, startInput)
         : localLedger().start(startInput);
-      if (input.wantsJson) writeJson(input.context.stdout, detail);
+      if (input.wantsJson) writeCodeJson(detail);
       else input.context.stdout.write(`${detail.intent.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -305,7 +311,7 @@ export async function runCodeCli(input: {
         paths: [...parseCodeListFlag(input.flags.path), ...parseCodeListFlag(input.flags.paths)],
       });
       if (input.flags.project) globalIndex.syncProject(input.flags.project);
-      if (input.wantsJson) writeJson(input.context.stdout, { reservations });
+      if (input.wantsJson) writeCodeJson({ reservations });
       else input.context.stdout.write(`${reservations.length}\n`);
       return CLI_EXIT_OK;
     }
@@ -329,7 +335,7 @@ export async function runCodeCli(input: {
         ...(input.flags.path ? { path: input.flags.path } : {}),
         ...(input.flags.url ? { url: input.flags.url } : {}),
       });
-      if (input.wantsJson) writeJson(input.context.stdout, { evidence });
+      if (input.wantsJson) writeCodeJson({ evidence });
       else input.context.stdout.write(`${evidence.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -351,7 +357,7 @@ export async function runCodeCli(input: {
       const check = input.flags.project
         ? globalIndex.recordCheck(input.flags.project, checkInput)
         : localLedger().recordCheck(checkInput);
-      if (input.wantsJson) writeJson(input.context.stdout, { check });
+      if (input.wantsJson) writeCodeJson({ check });
       else input.context.stdout.write(`${check.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -371,7 +377,7 @@ export async function runCodeCli(input: {
       const check = input.flags.project
         ? globalIndex.runCheck(input.flags.project, checkInput)
         : localLedger().runCheck(checkInput);
-      if (input.wantsJson) writeJson(input.context.stdout, { check });
+      if (input.wantsJson) writeCodeJson({ check });
       else input.context.stdout.write(`${check.status}\n`);
       return check.status === "passed" ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
     }
@@ -380,7 +386,7 @@ export async function runCodeCli(input: {
       const result = input.flags.project
         ? globalIndex.commit(input.flags.project, resolveCodeIntentId(input.positionals, input.flags))
         : localLedger().commit(resolveCodeIntentId(input.positionals, input.flags));
-      if (input.wantsJson) writeJson(input.context.stdout, result);
+      if (input.wantsJson) writeCodeJson(result);
       else input.context.stdout.write(`${result.commitSha}\n`);
       return CLI_EXIT_OK;
     }
@@ -395,7 +401,7 @@ export async function runCodeCli(input: {
       const review = input.flags.project
         ? globalIndex.review(input.flags.project, reviewInput)
         : localLedger().review(reviewInput);
-      if (input.wantsJson) writeJson(input.context.stdout, { review });
+      if (input.wantsJson) writeCodeJson({ review });
       else input.context.stdout.write(`${review.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -404,7 +410,7 @@ export async function runCodeCli(input: {
       const gate = input.flags.project
         ? globalIndex.gate(input.flags.project, resolveCodeIntentId(input.positionals, input.flags))
         : localLedger().gate(resolveCodeIntentId(input.positionals, input.flags));
-      if (input.wantsJson) writeJson(input.context.stdout, { gate });
+      if (input.wantsJson) writeCodeJson({ gate });
       else input.context.stdout.write(`${gate.status}${gate.reasons.length > 0 ? ` ${gate.reasons.join("; ")}` : ""}\n`);
       return gate.status === "passed" ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
     }
@@ -412,7 +418,7 @@ export async function runCodeCli(input: {
     if (command === "queue") {
       if (wantsAll) {
         const queue = globalIndex.listQueue(input.flags.project);
-        if (input.wantsJson) writeJson(input.context.stdout, { queue });
+        if (input.wantsJson) writeCodeJson({ queue });
         else input.context.stdout.write(formatCliTable(queue.map((entry: { projectId: string; intentId: string; status: string }) => ({
           project: entry.projectId,
           intent: entry.intentId,
@@ -423,7 +429,7 @@ export async function runCodeCli(input: {
       const queue = input.flags.project
         ? globalIndex.queueIntent(input.flags.project, resolveCodeIntentId(input.positionals, input.flags))
         : localLedger().queue(resolveCodeIntentId(input.positionals, input.flags));
-      if (input.wantsJson) writeJson(input.context.stdout, { queue });
+      if (input.wantsJson) writeCodeJson({ queue });
       else input.context.stdout.write(`${queue.status}\n`);
       return CLI_EXIT_OK;
     }
@@ -432,7 +438,7 @@ export async function runCodeCli(input: {
       const result = input.flags.project
         ? globalIndex.integrateIntent(input.flags.project, resolveCodeIntentId(input.positionals, input.flags))
         : localLedger().integrate(resolveCodeIntentId(input.positionals, input.flags));
-      if (input.wantsJson) writeJson(input.context.stdout, result);
+      if (input.wantsJson) writeCodeJson(result);
       else input.context.stdout.write(`${result.integrationSha}\n`);
       return CLI_EXIT_OK;
     }
@@ -447,7 +453,7 @@ export async function runCodeCli(input: {
       const sync = input.flags.project
         ? globalIndex.syncGithub(input.flags.project, syncInput)
         : localLedger().syncGithub(syncInput);
-      if (input.wantsJson) writeJson(input.context.stdout, { sync });
+      if (input.wantsJson) writeCodeJson({ sync });
       else input.context.stdout.write(`${sync.remoteUrl ?? sync.status}\n`);
       return sync.status === "failed" ? CLI_EXIT_FAILURE : CLI_EXIT_OK;
     }
@@ -456,7 +462,7 @@ export async function runCodeCli(input: {
     return CLI_EXIT_USAGE;
   } catch (error) {
     const handled = cliErrorFromUnknown(error);
-    if (input.wantsJson) writeCliError(input.context.stdout, handled);
+    if (input.wantsJson) writeCommandJsonError(input.context.stdout, "code", handled, jsonMeta());
     else input.context.stderr.write(`${handled.message}\n`);
     return handled.exitCode;
   }
