@@ -12,7 +12,7 @@ let erpDistCli = "";
 let clawBin = "";
 
 before(async () => {
-  const repoRoot = path.resolve(process.cwd(), "..");
+  const repoRoot = path.resolve(process.cwd(), "../..");
   await execFileAsync("npm", ["run", "build"], { cwd: process.cwd() });
   await execFileAsync("npm", ["run", "build:packages"], { cwd: repoRoot });
   erpDistCli = path.join(process.cwd(), "dist", "cli.js");
