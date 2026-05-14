@@ -41,7 +41,7 @@ const OPERATION_ENDPOINTS: Record<string, string> = {
   "send-text-message-or-reply": "sendMessage",
   "send-video-note": "sendVideoNote",
   "send-video": "sendVideo",
-  "send-voice-message": "sendAudio",
+  "send-voice-message": "sendVoice",
   "set-chat-permissions": "setChatPermissions",
   "unpin-message": "unpinChatMessage",
 };
@@ -204,7 +204,7 @@ function normalizeTelegramBody(
   if (slug === "send-voice-message") {
     const voice = body.voice;
     delete body.voice;
-    if (voice != null) body.audio = voice;
+    if (voice != null) body.voice = voice;
   }
 
   if (slug === "set-chat-permissions") {

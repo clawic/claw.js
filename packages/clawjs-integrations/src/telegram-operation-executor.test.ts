@@ -204,7 +204,7 @@ describe("telegram operation executor", () => {
     });
   });
 
-  it("maps voice messages through the reference audio send path", () => {
+  it("maps voice messages through the official voice send path", () => {
     assert.deepEqual(buildTelegramOperationRequest(
       "telegram_bot_api.action.send-voice-message-send-voice-message",
       {
@@ -216,12 +216,12 @@ describe("telegram operation executor", () => {
       },
     ), {
       method: "POST",
-      endpoint: "sendAudio",
+      endpoint: "sendVoice",
       body: {
         chat_id: "123",
         caption: "voice",
         duration: 30,
-        audio: "https://example.com/voice.ogg",
+        voice: "https://example.com/voice.ogg",
       },
     });
   });

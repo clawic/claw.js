@@ -168,6 +168,14 @@ export {
   createTelegramSourceExecutor,
   executeTelegramSource,
 } from "./telegram-source-executor.js";
+export {
+  TELEGRAM_OFFICIAL_API_COVERAGE,
+  TELEGRAM_OFFICIAL_API_MATRIX,
+  TELEGRAM_OFFICIAL_BOT_API_METHODS,
+  TELEGRAM_OFFICIAL_BOT_API_SOURCE_DATE,
+  TELEGRAM_OFFICIAL_BOT_API_SOURCE_URL,
+  TELEGRAM_OFFICIAL_BOT_API_VERSION,
+} from "./telegram-official-api-matrix.js";
 export type {
   TelegramOperationExecutorOptions,
   TelegramRequestPlan,
