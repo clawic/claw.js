@@ -90508,7 +90508,7 @@
       ]
     },
     {
-      "path": "packages/clawjs-search-mcp/bin/claw-search-mcp.mjs",
+      "path": "packages/clawjs-search-mcp/bin/clawjs-index-mcp.mjs",
       "language": "javascript",
       "lines": 8,
       "test": false,

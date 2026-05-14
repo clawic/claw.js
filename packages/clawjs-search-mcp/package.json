@@ -22,7 +22,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "claw-search-mcp": "./bin/claw-search-mcp.mjs"
+    "clawjs-index-mcp": "./bin/clawjs-index-mcp.mjs"
   },
   "exports": {
     ".": {
