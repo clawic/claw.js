@@ -1085,6 +1085,9 @@ The docs check script validates that every current export from
     BuiltinRelationKind
     BuiltinRequiredFieldReason
     CALENDAR_FAMILY
+    CATALOG_COVERAGE_NEEDS
+    CATALOG_COVERAGE_SCENARIOS
+    CATALOG_COVERAGE_WAVES
     CapabilityDescriptor
     capabilityDescriptorSchema
     CapabilityName
@@ -1096,6 +1099,10 @@ The docs check script validates that every current export from
     CapacityRecord
     capacityRecordSchema
     CAREER_FAMILY
+    CatalogCoverageMapping
+    CatalogCoverageNeed
+    CatalogCoverageRelationNeed
+    CatalogCoverageStatus
     ChannelAccountDescriptor
     ChannelAgentBinding
     ChannelCatalog
@@ -1372,6 +1379,7 @@ The docs check script validates that every current export from
     linkedEntityRefSchema
     listBuiltinCollections
     listBuiltinFamilies
+    listCatalogCoverageNeeds
     ListRecord
     listRecordSchema
     LUXURY_AND_COLLECTING_FAMILY
@@ -1856,6 +1864,7 @@ The docs check script validates that every current export from
     ClawStableSurfaceRegistry
     ClawStableSurfaceStability
     clawAppPorts
+    clawApiPath
     clawCommonJsonFields
     clawCorePorts
     clawDatabaseRecordEvents
@@ -1884,6 +1893,7 @@ The docs check script validates that every current export from
     clawServiceSocketPath
     clawServiceWindowsPipe
     clawSearchApiRoutes
+    clawSessionEvents
     clawStorageApiRoutes
     clawSurfaceRegistryVersion
     clawTemporalEvents
