@@ -4,7 +4,6 @@ import { demoAdapter } from "./demo-adapter.ts";
 import { clawAdapter } from "./claw-adapter.ts";
 import { codexAdapter } from "./codex-adapter.ts";
 import { openclawAdapter } from "./openclaw-adapter.ts";
-import { openClaudeAdapter } from "./openclaude-adapter.ts";
 import { nanobotAdapter } from "./nanobot-adapter.ts";
 import { nanoclawAdapter } from "./nanoclaw-adapter.ts";
 import { nullclawAdapter } from "./nullclaw-adapter.ts";
@@ -18,7 +17,6 @@ const ADAPTERS = new Map<RuntimeAdapterId, RuntimeAdapter>([
   [demoAdapter.id, demoAdapter],
   [clawAdapter.id, clawAdapter],
   [openclawAdapter.id, openclawAdapter],
-  [openClaudeAdapter.id, openClaudeAdapter],
   [codexAdapter.id, codexAdapter],
   [zeroclawAdapter.id, zeroclawAdapter],
   [picoclawAdapter.id, picoclawAdapter],

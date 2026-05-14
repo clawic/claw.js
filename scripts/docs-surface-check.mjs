@@ -262,7 +262,10 @@ for (const marker of surfaceContract.taxonomy.visibility) {
   }
 }
 
-const cliSourceRaw = read(path.join(rootDir, "packages", "clawjs", "src", "index.ts"));
+const cliSourceRaw = [
+  read(path.join(rootDir, "packages", "clawjs", "src", "index.ts")),
+  read(path.join(rootDir, "packages", "clawjs", "src", "cli-surface.ts")),
+].join("\n");
 const cliDocRaw = read(path.join(rootDir, "docs", "cli.md"));
 function cliSourceHasGroup(groupName) {
   return cliSourceRaw.includes(`group === "${groupName}"`)

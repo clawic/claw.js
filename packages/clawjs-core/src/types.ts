@@ -71,7 +71,6 @@ export type KnownRuntimeAdapterId =
   | "demo"
   | "claw"
   | "openclaw"
-  | "openclaude"
   | "codex"
   | "zeroclaw"
   | "picoclaw"

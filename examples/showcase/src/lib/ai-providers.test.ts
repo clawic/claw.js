@@ -120,7 +120,6 @@ const VISIBLE_ADAPTERS = listRuntimeAdapters().filter((a) => a.supportLevel !== 
 const EXPECTED_ADAPTER_IDS = [
   "openclaw",
   "claw",
-  "openclaude",
   "codex",
   "zeroclaw",
   "picoclaw",
@@ -132,8 +131,8 @@ const EXPECTED_ADAPTER_IDS = [
   "hermes",
 ];
 
-test("SDK exposes 12 visible runtime adapters (excluding demo)", () => {
-  assert.equal(VISIBLE_ADAPTERS.length, 12, `Expected 12 visible adapters, got ${VISIBLE_ADAPTERS.length}`);
+test("SDK exposes 11 visible runtime adapters (excluding demo)", () => {
+  assert.equal(VISIBLE_ADAPTERS.length, 11, `Expected 11 visible adapters, got ${VISIBLE_ADAPTERS.length}`);
   const ids = VISIBLE_ADAPTERS.map((a) => a.id).sort();
   const expected = [...EXPECTED_ADAPTER_IDS].sort();
   assert.deepEqual(ids, expected);

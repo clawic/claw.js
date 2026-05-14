@@ -618,7 +618,7 @@ function builtInCollections(): Array<{
         // models it under `~/.claw/agents/<id>/`. The filesystem
         // version is the source of truth; this table is a cache for
         // SQL joins (e.g. issue.assigneeAgentId → agent.name).
-        { name: "runtime", type: "select", options: ["codex", "openclaude", "hermes", "claw", "demo"] },
+        { name: "runtime", type: "select", options: ["codex", "hermes", "claw", "demo"] },
         { name: "model", type: "text" },
         { name: "avatarKind", type: "select", options: ["logoTint", "customImage"] },
         { name: "avatarTintHex", type: "text" },

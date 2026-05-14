@@ -7,7 +7,6 @@
 
 export type AgentRuntimeKind =
   | "codex"
-  | "openclaude"
   | "hermes"
   | "claw"
   | "demo";
