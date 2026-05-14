@@ -6,6 +6,7 @@ import type {
   TemporalProjection,
   TemporalRunLogEntry,
 } from "@clawjs/core";
+import { clawNotifyApiRoutes, clawTemporalEvents } from "@clawjs/core";
 
 import {
   applyTemporalItemUpdate,
@@ -402,14 +403,14 @@ async function dispatchActions(
       if (options.notifySourceToken) {
         headers.authorization = `Bearer ${options.notifySourceToken}`;
       }
-      await fetch(`${options.notifyBaseUrl.replace(/\/$/, "")}/v1/notifications`, {
+      await fetch(`${options.notifyBaseUrl.replace(/\/$/, "")}${clawNotifyApiRoutes.notifications}`, {
         method: "POST",
         headers,
         body: JSON.stringify({
           context: {
             tenantId: item.workspaceId ?? "time-local",
             workspaceId: item.workspaceId ?? "time-local",
-            eventType: "temporal.item.due",
+            eventType: clawTemporalEvents.itemDue,
             severity: "normal",
           },
           delivery: {

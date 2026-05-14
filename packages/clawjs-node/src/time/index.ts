@@ -8,6 +8,7 @@ import type {
   TemporalProjection,
   TemporalRunLogEntry,
 } from "@clawjs/core";
+import { clawTimeApiRoutes } from "@clawjs/core";
 
 import { EmbeddedTimeEngine, type EmbeddedTimeEngineOptions } from "./embedded.ts";
 
@@ -104,80 +105,80 @@ export class TimeClient {
     ownerId?: string;
     sourceProvider?: string;
   }) {
-    return await this.request<{ items: TemporalItem[] }>(appendQuery("/v1/items", filters));
+    return await this.request<{ items: TemporalItem[] }>(appendQuery(clawTimeApiRoutes.items, filters));
   }
 
   async get(id: string) {
-    return await this.request<{ item: TemporalItem }>(`/v1/items/${encodeURIComponent(id)}`);
+    return await this.request<{ item: TemporalItem }>(clawTimeApiRoutes.item(id));
   }
 
   async create(input: CreateTemporalItemInput) {
-    return await this.request<{ item: TemporalItem }>("/v1/items", {
+    return await this.request<{ item: TemporalItem }>(clawTimeApiRoutes.items, {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async update(id: string, input: UpdateTemporalItemInput) {
-    return await this.request<{ item: TemporalItem }>(`/v1/items/${encodeURIComponent(id)}`, {
+    return await this.request<{ item: TemporalItem }>(clawTimeApiRoutes.item(id), {
       method: "PUT",
       body: JSON.stringify(input),
     });
   }
 
   async delete(id: string) {
-    return await this.request<{ ok: boolean }>(`/v1/items/${encodeURIComponent(id)}`, {
+    return await this.request<{ ok: boolean }>(clawTimeApiRoutes.item(id), {
       method: "DELETE",
     });
   }
 
   async pause(id: string) {
-    return await this.request<{ item: TemporalItem }>(`/v1/items/${encodeURIComponent(id)}/pause`, {
+    return await this.request<{ item: TemporalItem }>(clawTimeApiRoutes.itemPause(id), {
       method: "POST",
     });
   }
 
   async resume(id: string) {
-    return await this.request<{ item: TemporalItem }>(`/v1/items/${encodeURIComponent(id)}/resume`, {
+    return await this.request<{ item: TemporalItem }>(clawTimeApiRoutes.itemResume(id), {
       method: "POST",
     });
   }
 
   async runNow(id: string) {
-    return await this.request<{ item: TemporalItem; execution: TemporalExecution }>(`/v1/items/${encodeURIComponent(id)}/run`, {
+    return await this.request<{ item: TemporalItem; execution: TemporalExecution }>(clawTimeApiRoutes.itemRun(id), {
       method: "POST",
     });
   }
 
   async listExecutions(itemId?: string) {
-    return await this.request<{ executions: TemporalExecution[] }>(appendQuery("/v1/executions", { itemId }));
+    return await this.request<{ executions: TemporalExecution[] }>(appendQuery(clawTimeApiRoutes.executions, { itemId }));
   }
 
   async listRunLog(itemId?: string, limit?: number) {
-    return await this.request<{ entries: TemporalRunLogEntry[] }>(appendQuery("/v1/run-log", { itemId, limit }));
+    return await this.request<{ entries: TemporalRunLogEntry[] }>(appendQuery(clawTimeApiRoutes.runLog, { itemId, limit }));
   }
 
   async calendarView(input?: { start?: string; end?: string }) {
-    return await this.request<{ items: TemporalItem[]; entries: Array<Record<string, unknown>> }>(appendQuery("/v1/views/calendar", input));
+    return await this.request<{ items: TemporalItem[]; entries: Array<Record<string, unknown>> }>(appendQuery(clawTimeApiRoutes.calendarView, input));
   }
 
   async timelineView(input?: { start?: string; end?: string }) {
-    return await this.request<{ items: TemporalItem[] }>(appendQuery("/v1/views/timeline", input));
+    return await this.request<{ items: TemporalItem[] }>(appendQuery(clawTimeApiRoutes.timelineView, input));
   }
 
   async signalAnchor(input: { anchorId: string; signal: "reply_received" | "task_completed" | "event_started" | "execution_succeeded" }) {
-    return await this.request<{ items: TemporalItem[] }>("/v1/signals", {
+    return await this.request<{ items: TemporalItem[] }>(clawTimeApiRoutes.signals, {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async legacyEvents() {
-    return await this.request<{ events: Array<Record<string, unknown>> }>("/v1/legacy/events");
+    return await this.request<{ events: Array<Record<string, unknown>> }>(clawTimeApiRoutes.legacyEvents);
   }
 
   async legacyRoutines() {
-    return await this.request<{ routines: Array<Record<string, unknown>>; executions: Array<Record<string, unknown>> }>("/v1/legacy/routines");
+    return await this.request<{ routines: Array<Record<string, unknown>>; executions: Array<Record<string, unknown>> }>(clawTimeApiRoutes.legacyRoutines);
   }
 }
 
