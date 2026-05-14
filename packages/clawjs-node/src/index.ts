@@ -25,6 +25,8 @@ export * from "./sessions/index.ts";
 export * from "./soul/store.ts";
 export * from "./user/store.ts";
 export * from "./create-claw.ts";
+export type * from "./create-claw-instance.ts";
+export type * from "./create-claw-options.ts";
 export * from "./data/index.ts";
 export * from "./files/managed-blocks.ts";
 export * from "./files/template-pack.ts";

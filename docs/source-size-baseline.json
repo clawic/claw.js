@@ -4,24 +4,24 @@
   "maxNewFileLines": 1200,
   "files": {
     "packages/clawjs/src/index.ts": {
-      "lines": 6187,
+      "lines": 4977,
       "reason": "Existing public CLI router after command extraction; keep routing thin and split new domains into modules."
     },
     "packages/clawjs-node/src/create-claw.ts": {
-      "lines": 7363,
-      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+      "lines": 4943,
+      "reason": "Existing Claw runtime assembly after contract and facade extraction; keep new runtime domains in focused modules."
     },
     "packages/clawjs/src/index.test.ts": {
-      "lines": 6505,
-      "reason": "Existing broad test coverage; split by scenario before expanding."
+      "lines": 1535,
+      "reason": "Remaining CLI smoke and integration test surface after scenario split; add new scenario files instead of expanding broadly."
     },
     "examples/showcase/src/lib/i18n/messages.ts": {
       "lines": 6272,
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     },
     "packages/clawjs-workspace/src/index.ts": {
-      "lines": 6238,
-      "reason": "Existing workspace runtime implementation; contracts have been extracted and remaining runtime should split by domain before expanding."
+      "lines": 4993,
+      "reason": "Existing workspace runtime assembly after productivity and UI/session facade extraction; split new app/state domains before expanding."
     },
     "examples/showcase/src/app/settings/page.tsx": {
       "lines": 5172,
