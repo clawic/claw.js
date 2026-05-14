@@ -39,6 +39,8 @@ const DISCORD_SOURCE_OPERATIONS = [
   source("discord.source.message-reaction-remove-all", "Message Reaction Remove All"),
   source("discord.source.message-reaction-remove-emoji", "Message Reaction Remove Emoji"),
   source("discord.source.typing-start", "Typing Start"),
+  source("discord.source.presence-update", "Presence Update"),
+  source("discord.source.user-update", "User Update"),
   source("discord.source.message-poll-vote-add", "Message Poll Vote Add"),
   source("discord.source.message-poll-vote-remove", "Message Poll Vote Remove"),
   source("discord.source.guild-create", "Guild Create"),

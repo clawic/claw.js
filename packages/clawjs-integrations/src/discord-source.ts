@@ -31,6 +31,8 @@ export type DiscordSourceOperation =
   | "message-reaction-remove-all"
   | "message-reaction-remove-emoji"
   | "typing-start"
+  | "presence-update"
+  | "user-update"
   | "message-poll-vote-add"
   | "message-poll-vote-remove"
   | "guild-create"
@@ -109,6 +111,8 @@ const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "message-reaction-remove-all",
   "message-reaction-remove-emoji",
   "typing-start",
+  "presence-update",
+  "user-update",
   "message-poll-vote-add",
   "message-poll-vote-remove",
   "guild-create",

@@ -1,0 +1,12 @@
+{
+  "id": "presence-update-sample",
+  "user": {
+    "id": "user-sample"
+  },
+  "guild_id": "guild-sample",
+  "status": "online",
+  "activities": [],
+  "client_status": {
+    "desktop": "online"
+  }
+}

@@ -652,6 +652,8 @@ const DISCORD_SOURCE_FIXTURE_NAMES = [
   "message-reaction-remove-all",
   "message-reaction-remove-emoji",
   "typing-start",
+  "presence-update",
+  "user-update",
   "message-poll-vote-add",
   "message-poll-vote-remove",
   "guild-create",
