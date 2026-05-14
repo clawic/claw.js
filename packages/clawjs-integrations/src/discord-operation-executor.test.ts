@@ -3518,7 +3518,7 @@ describe("discord operation runtime", () => {
         "files[0]": "hello world",
       },
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -3643,6 +3643,29 @@ describe("discord operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildDiscordOperationRequest(action("execute-slack-compatible-webhook", "Execute Slack-Compatible Webhook", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD], []), {
+      webhookId: "999",
+      webhookToken: "offline-token",
+      payload: {
+        text: "hello",
+      },
+      wait: false,
+    }), {
+      method: "POST",
+      endpoint: "webhooks/999/offline-token/slack",
+      auth: [],
+      headers,
+      query: {
+        wait: false,
+      },
+      body: {
+        text: "hello",
+      },
+      responseSchema: {
+        type: "null",
+      },
+    });
+
     assert.deepEqual(buildDiscordOperationRequest(action("execute-github-compatible-webhook", "Execute GitHub-Compatible Webhook", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD], []), {
       webhookId: "999",
       webhookToken: "offline-token",
@@ -3665,6 +3688,29 @@ describe("discord operation runtime", () => {
       },
       responseSchema: {
         type: "object",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(action("execute-github-compatible-webhook", "Execute GitHub-Compatible Webhook", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD], []), {
+      webhookId: "999",
+      webhookToken: "offline-token",
+      payload: {
+        ref: "refs/heads/main",
+      },
+      wait: false,
+    }), {
+      method: "POST",
+      endpoint: "webhooks/999/offline-token/github",
+      auth: [],
+      headers,
+      query: {
+        wait: false,
+      },
+      body: {
+        ref: "refs/heads/main",
+      },
+      responseSchema: {
+        type: "null",
       },
     });
 
