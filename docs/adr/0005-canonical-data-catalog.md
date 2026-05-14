@@ -35,9 +35,12 @@ field optionality, relationship meaning, or migration safety.
   ownership, membership, participation, line items, source/import,
   attachments, location, temporal events, financial transactions,
   observation/samples, dependencies, or a temporary generic relation.
-- Existing built-ins are grandfathered. New collections must satisfy the
-  catalog metadata guardrail, and touched collections should be upgraded before
-  more fields or relations are added.
+- Existing built-ins without catalog metadata are tracked as active debt, not
+  grandfathered as final-compliant. The accepted end state is zero undocumented built-ins.
+- The 1000+ coverage ledger in `@clawjs/core` is the discovery surface for
+  broad catalog expansion. `candidate_mapping` entries are not final coverage;
+  each wave must prove field and relationship support or record a canonical gap
+  or custom-database boundary.
 - Custom databases stay first-class for niche, private, experimental, or
   unapproved entities.
 

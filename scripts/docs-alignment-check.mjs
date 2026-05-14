@@ -112,7 +112,8 @@ for (const snippet of [
   "ClawJS owns canonical catalog definitions",
   "Fields are optional by default",
   "Relations are semantic",
-  "Existing built-ins are grandfathered",
+  "active debt, not",
+  "zero undocumented built-ins",
 ]) {
   requireSnippet("docs/adr/0005-canonical-data-catalog.md", snippet);
 }

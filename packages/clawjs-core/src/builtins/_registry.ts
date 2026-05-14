@@ -57,8 +57,9 @@ import { SOCIAL_CULTURE_FAMILY } from "./social_culture/index.ts";
 import { IDENTITY_BODY_RELIGIOUS_FINE_FAMILY } from "./identity_body_religious_fine/index.ts";
 import { REPRODUCTIVE_INTIMATE_FAMILY } from "./reproductive_intimate/index.ts";
 import { PERSONAL_CARE_AESTHETICS_FAMILY } from "./personal_care_aesthetics/index.ts";
+import { enrichBuiltinFamilies } from "./_catalog_enrichment.ts";
 
-export const BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = [
+const RAW_BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = [
   COOKING_FAMILY,
   IDENTITY_FAMILY,
   WORK_FAMILY,
@@ -114,6 +115,8 @@ export const BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = [
   REPRODUCTIVE_INTIMATE_FAMILY,
   PERSONAL_CARE_AESTHETICS_FAMILY,
 ];
+
+export const BUILTIN_FAMILIES: BuiltinFamilyDefinition[] = enrichBuiltinFamilies(RAW_BUILTIN_FAMILIES);
 
 export const BUILTIN_COLLECTIONS: BuiltinCollectionDefinition[] = BUILTIN_FAMILIES.flatMap(
   (family) => family.collections,

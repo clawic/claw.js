@@ -40,9 +40,10 @@ A collection may be canonical when it satisfies at least one evidence tag:
 | `multi_domain_reuse` | Three or more skills, apps, integrations, or domains would reuse it. |
 | `agent_useful` | Agents become materially more capable when the concept is portable and queryable. |
 
-New canonical collections must declare a short purpose and at least one
-evidence tag. Existing built-ins are grandfathered, but any touched collection
-should gain the same metadata before more fields or relationships are added.
+Canonical collections must declare a short purpose and at least one evidence
+tag. Existing built-ins without that metadata are active catalog debt, not
+accepted exceptions. They remain usable while the catalog is upgraded, but the
+final acceptance state is zero undocumented built-ins.
 
 ## Naming Rules
 
@@ -99,6 +100,10 @@ same pattern appears in more than one family.
 
 - Expansion should happen in reviewable batches by domain or capability, not
   by dumping unrelated entities into the registry.
+- Broad coverage is validated through the coverage ledger in
+  `CATALOG_COVERAGE_NEEDS`. Candidate mappings are discovery evidence only;
+  they are not final proof that the canonical fields and relations are
+  complete.
 - Additive optional fields are preferred. Renames, splits, merges, and
   structural changes require migration support and a pre-migration snapshot.
 - A new collection must be able to CRUD through the shared database smoke test.
