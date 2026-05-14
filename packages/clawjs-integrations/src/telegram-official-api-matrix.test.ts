@@ -7,8 +7,11 @@ import {
   TELEGRAM_OFFICIAL_API_MATRIX,
   TELEGRAM_OFFICIAL_BOT_API_METHODS,
   TELEGRAM_OFFICIAL_BOT_API_VERSION,
+  TELEGRAM_OFFICIAL_UPDATE_COVERAGE,
+  TELEGRAM_OFFICIAL_UPDATE_FIELDS,
 } from "./telegram-official-api-matrix.ts";
 import { isTelegramActionOperationSupported } from "./telegram-operation-executor.ts";
+import { TELEGRAM_POLL_UPDATE_TYPES } from "./telegram-source.ts";
 
 describe("Telegram official Bot API coverage matrix", () => {
   it("classifies every official Bot API 10.0 method exactly once", () => {
@@ -44,5 +47,19 @@ describe("Telegram official Bot API coverage matrix", () => {
       .filter((entry) => entry.officialMethod.includes("ManagedBot"));
     assert.equal(managedBotRows.length, 4);
     assert.ok(managedBotRows.every((entry) => entry.status === "unsupported_by_policy"));
+  });
+
+  it("tracks official update fields separately from method coverage", () => {
+    assert.equal(TELEGRAM_OFFICIAL_UPDATE_FIELDS.length, 25);
+    assert.deepEqual(
+      TELEGRAM_OFFICIAL_UPDATE_COVERAGE
+        .filter((entry) => entry.status === "implemented")
+        .map((entry) => entry.updateField),
+      [...TELEGRAM_POLL_UPDATE_TYPES],
+    );
+    assert.equal(
+      TELEGRAM_OFFICIAL_UPDATE_COVERAGE.filter((entry) => entry.status === "unsupported_by_policy").length,
+      1,
+    );
   });
 });

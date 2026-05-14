@@ -189,6 +189,18 @@ export const TELEGRAM_OFFICIAL_BOT_API_METHODS = [
 ] as const;
 
 type TelegramOfficialMethod = typeof TELEGRAM_OFFICIAL_BOT_API_METHODS[number];
+export type TelegramOfficialUpdateField = typeof TELEGRAM_OFFICIAL_UPDATE_FIELDS[number];
+
+export interface TelegramUpdateCoverageEntry {
+  provider: "telegram_bot_api";
+  officialApiVersion: string;
+  updateField: TelegramOfficialUpdateField;
+  status: IntegrationQaCoverageStatus;
+  sourceKinds: readonly string[];
+  liveLane: IntegrationQaLiveLane;
+  requiresCredentialLease: boolean;
+  notes: string;
+}
 
 interface TelegramMethodOverride {
   status: IntegrationQaCoverageStatus;
@@ -289,6 +301,37 @@ const MANUAL_ONLY_METHODS = new Set<TelegramOfficialMethod>([
 export const TELEGRAM_OFFICIAL_API_COVERAGE: readonly OfficialApiCoverageEntry[] =
   TELEGRAM_OFFICIAL_BOT_API_METHODS.map((officialMethod) => coverageEntry(officialMethod));
 
+export const TELEGRAM_OFFICIAL_UPDATE_FIELDS = [
+  "message",
+  "edited_message",
+  "channel_post",
+  "edited_channel_post",
+  "business_connection",
+  "business_message",
+  "edited_business_message",
+  "deleted_business_messages",
+  "guest_message",
+  "message_reaction",
+  "message_reaction_count",
+  "inline_query",
+  "chosen_inline_result",
+  "callback_query",
+  "shipping_query",
+  "pre_checkout_query",
+  "purchased_paid_media",
+  "poll",
+  "poll_answer",
+  "my_chat_member",
+  "chat_member",
+  "chat_join_request",
+  "chat_boost",
+  "removed_chat_boost",
+  "managed_bot",
+] as const;
+
+export const TELEGRAM_OFFICIAL_UPDATE_COVERAGE: readonly TelegramUpdateCoverageEntry[] =
+  TELEGRAM_OFFICIAL_UPDATE_FIELDS.map((updateField) => updateCoverageEntry(updateField));
+
 export const TELEGRAM_OFFICIAL_API_MATRIX: OfficialApiCoverageMatrix = {
   provider: "telegram_bot_api",
   officialApiVersion: TELEGRAM_OFFICIAL_BOT_API_VERSION,
@@ -326,6 +369,53 @@ function coverageEntry(officialMethod: TelegramOfficialMethod): OfficialApiCover
     requiresCredentialLease: false,
     notes: "Official Bot API method is tracked but not yet exposed by the connector; fixture coverage must be added before implementation can claim runtime completeness.",
   });
+}
+
+function updateCoverageEntry(updateField: TelegramOfficialUpdateField): TelegramUpdateCoverageEntry {
+  if (
+    updateField === "message"
+    || updateField === "edited_message"
+    || updateField === "channel_post"
+    || updateField === "edited_channel_post"
+  ) {
+    return {
+      provider: "telegram_bot_api",
+      officialApiVersion: TELEGRAM_OFFICIAL_BOT_API_VERSION,
+      updateField,
+      status: "implemented",
+      sourceKinds: ["new-updates", "message-updates", "channel-updates", "new-bot-command-received"],
+      liveLane: "brokered_live",
+      requiresCredentialLease: true,
+      notes: "The polling source extracts message and channel message updates into connector events.",
+    };
+  }
+  if (
+    updateField === "shipping_query"
+    || updateField === "pre_checkout_query"
+    || updateField === "purchased_paid_media"
+    || updateField === "managed_bot"
+  ) {
+    return {
+      provider: "telegram_bot_api",
+      officialApiVersion: TELEGRAM_OFFICIAL_BOT_API_VERSION,
+      updateField,
+      status: updateField === "managed_bot" ? "unsupported_by_policy" : "manual_only",
+      sourceKinds: [],
+      liveLane: updateField === "managed_bot" ? "blocked_by_policy" : "manual_physical",
+      requiresCredentialLease: updateField !== "managed_bot",
+      notes: "This update type depends on payments, paid media, or managed-bot delegation and cannot be default-live validated.",
+    };
+  }
+  return {
+    provider: "telegram_bot_api",
+    officialApiVersion: TELEGRAM_OFFICIAL_BOT_API_VERSION,
+    updateField,
+    status: "fixture_only",
+    sourceKinds: [],
+    liveLane: "none",
+    requiresCredentialLease: false,
+    notes: "Official update type is tracked but not yet extracted into a typed connector source event.",
+  };
 }
 
 function implemented(connectorOperationId: string, notes: string): TelegramMethodOverride {

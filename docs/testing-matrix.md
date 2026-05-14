@@ -17,6 +17,8 @@ Coverage budgets live in `qa/coverage-budgets.json` and are enforced by
 | Host and permissions | `test:host` | `test:release` | Signed host command hook or `EXTERNAL PENDING` QA scenario |
 | Device clients | `test:device` | `test:release` | Device hook or `EXTERNAL PENDING` QA scenario |
 | Live integrations | `test:live` | opt-in only | Requires `CLAW_TEST_LIVE=1`, brokered credential leases, disposable or approved external state, and an Integration QA Lab scenario |
+| Package/live connector harness | `test:package-live` | opt-in only | Packs and installs the candidate connector package before any approved broker command can run; Docker check is opt-in |
+| Integration QA scenarios | `test:qa-scenarios` | `test:release` | Builds integrations and validates Telegram matrix, live-smoke scenario coverage, report vocabulary, gates, and `EXTERNAL PENDING` docs |
 | Connector official API coverage | `test:fast`, `test:policy` | `test:release` | Integration QA Lab coverage matrices such as Telegram Bot API 10.0 under `packages/clawjs-integrations/src/*official-api-matrix*` |
 
 ## Completion Rules

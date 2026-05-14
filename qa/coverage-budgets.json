@@ -63,6 +63,20 @@
       "metric": "matrix_coverage",
       "minimum": 1,
       "ratchet": true
+    },
+    {
+      "boundary": "integration-qa-scenarios",
+      "lane": "fast",
+      "metric": "scenario_validation",
+      "minimum": 1,
+      "ratchet": true
+    },
+    {
+      "boundary": "package-live-connector-harness",
+      "lane": "live",
+      "metric": "package_install_smoke",
+      "minimum": 1,
+      "ratchet": false
     }
   ]
 }

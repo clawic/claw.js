@@ -119,6 +119,14 @@ function live() {
   npmRun("test:e2e:smoke-real", extraArgs);
 }
 
+function liveBrokered() {
+  if (process.env.CLAW_TEST_LIVE !== "1") {
+    console.error("CLAW_TEST_LIVE=1 is required for the live-brokered lane.");
+    process.exit(2);
+  }
+  npmRun("test:package-live", extraArgs);
+}
+
 function host() {
   if (process.env.CLAW_HOST_TEST_COMMAND) {
     run("bash", ["-lc", process.env.CLAW_HOST_TEST_COMMAND]);
@@ -183,6 +191,9 @@ switch (lane) {
     break;
   case "live":
     live();
+    break;
+  case "live-brokered":
+    liveBrokered();
     break;
   case "release":
     release();

@@ -7,8 +7,9 @@ Boundary: Telegram Bot API, connector runtime, live credentials
 ## Purpose
 
 Verify Telegram as the pilot for complete connector coverage: official API
-surface mapping, hermetic request/source fixtures, brokered live smoke checks,
-manual provider flows, and explicit `EXTERNAL PENDING` reporting.
+method and update-field mapping, hermetic request/source fixtures, brokered
+live smoke checks, manual provider flows, and explicit `EXTERNAL PENDING`
+reporting.
 
 ## Hermetic Evidence
 
@@ -16,6 +17,7 @@ manual provider flows, and explicit `EXTERNAL PENDING` reporting.
 - `packages/clawjs-integrations/src/telegram-operation-executor.test.ts`
 - `packages/clawjs-integrations/src/telegram-source.test.ts`
 - `packages/clawjs-integrations/src/runtime-coverage.test.ts`
+- `packages/clawjs-integrations/fixtures/telegram-official-api-10.0-surface.json`
 
 ## Live Prerequisites
 
@@ -34,11 +36,15 @@ manual provider flows, and explicit `EXTERNAL PENDING` reporting.
    no missing or duplicate entries.
 2. Run offline request/source fixture checks for implemented Telegram actions
    and sources.
-3. If live prerequisites are available, request a brokered credential lease and
+3. Run `npm run test:qa-scenarios` to validate the official-surface fixture
+   snapshot, live-smoke scenario list, report vocabulary, and sensitive gates.
+4. Run `npm run test:package-live` to prove the candidate package installs in
+   a temporary consumer before any broker command can receive live context.
+5. If live prerequisites are available, request a brokered credential lease and
    run only disposable read/send/edit/delete smoke checks.
-4. Mark manual-only and policy-blocked rows as `EXTERNAL PENDING` unless the
+6. Mark manual-only and policy-blocked rows as `EXTERNAL PENDING` unless the
    exact physical/provider prerequisite is present and approved.
-5. Confirm that no real prompts, paid APIs, production chats, private tokens,
+7. Confirm that no real prompts, paid APIs, production chats, private tokens,
    public posts, or unapproved destructive provider state were used.
 
 ## Expected Result
