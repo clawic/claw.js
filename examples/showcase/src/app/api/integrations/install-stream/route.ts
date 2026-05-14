@@ -1,11 +1,12 @@
 import { NextRequest } from "next/server";
 import { NodeProcessHost, getRuntimeAdapter, listRuntimeAdapters } from "@clawjs/claw";
-import type { RuntimeProgressSink } from "@clawjs/claw";
 
-type InstallProgressEvent = Parameters<RuntimeProgressSink>[0] & {
-  phase: string;
-  message?: string;
-  percent?: number;
+type InstallProgressEvent = {
+  phase?: unknown;
+  message?: unknown;
+  percent?: unknown;
+  status?: unknown;
+  operation?: unknown;
 };
 
 const VALID_ADAPTER_IDS = new Set(
@@ -31,14 +32,13 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       };
 
-      const onProgress: RuntimeProgressSink = (event) => {
-        const progress = event as InstallProgressEvent;
+      const onProgress = (progress: InstallProgressEvent) => {
         send({
-          phase: progress.phase,
-          message: progress.message ?? "",
-          percent: progress.percent ?? 0,
-          status: event.status,
-          operation: event.operation,
+          phase: typeof progress.phase === "string" ? progress.phase : "running",
+          message: typeof progress.message === "string" ? progress.message : "",
+          percent: typeof progress.percent === "number" ? progress.percent : 0,
+          status: progress.status,
+          operation: progress.operation,
         });
       };
 

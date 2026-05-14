@@ -76,6 +76,8 @@ function threadToMessage(thread: {
   };
 }
 
+type InboxThreadSummary = Parameters<typeof threadToMessage>[0];
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const channel = searchParams.get("channel");
@@ -94,7 +96,7 @@ export async function GET(request: Request) {
   }
 
   const claw = await getWorkspaceClaw();
-  let threads = await claw.inbox.list({
+  let threads: InboxThreadSummary[] = await claw.inbox.list({
     unreadOnly: unread === "true",
     limit: 100,
   });
@@ -143,7 +145,7 @@ export async function PUT(request: Request) {
   }
 
   // For marking unread or other updates, return current state
-  const threads = await claw.inbox.list({ limit: 200 });
+  const threads: InboxThreadSummary[] = await claw.inbox.list({ limit: 200 });
   const thread = threads.find((t) => t.id === body.id);
   if (!thread) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
