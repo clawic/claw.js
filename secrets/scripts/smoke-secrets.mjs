@@ -10,6 +10,7 @@ import { ARGON2_FAST_PARAMS } from "../src/server/calibration.ts";
 import { TenantStore, SecretsMetaStore, FolderStore } from "../src/server/stores.ts";
 import { SecretsResolver } from "../src/server/resolver.ts";
 import { evaluateGovernance } from "../src/server/governance.ts";
+import { decryptBackup, encryptBackup } from "../src/server/backup.ts";
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "secrets-secrets-"));
 const dbPath = path.join(tmpDir, "vault.sqlite");
@@ -75,6 +76,15 @@ if (notes === "Use only for clawix repo") ok("reveal notes roundtrip"); else ko(
 const all = resolver.revealAllFields({ secret, masterKey: setup.masterKey });
 if (all.token === "ghp_super_secret_xxx" && all.username === "ivan") ok("reveal all fields"); else ko("reveal all fields");
 
+const encryptedBackup = encryptBackup(db, "backup-passphrase");
+const encryptedBackupJson = JSON.stringify(encryptedBackup);
+if (!encryptedBackupJson.includes("ghp_super_secret_xxx") && !encryptedBackupJson.includes("Use only for clawix repo")) ok("backup export omits plaintext");
+else ko("backup export omits plaintext");
+const logicalBackup = decryptBackup(encryptedBackup, "backup-passphrase");
+const fieldTable = logicalBackup.tables.find((table) => table.name === "secret_fields");
+if (fieldTable?.rows.some((row) => row.field_name === "token" && row.value_ciphertext && !("secretValue" in row))) ok("backup decrypts to encrypted field rows");
+else ko("backup decrypts to encrypted field rows", fieldTable);
+
 // Issue agent grant.
 const grant = resolver.grants.issue({
   tenantId: "clawix-local",
@@ -128,6 +138,16 @@ else ko("blocks unknown host", dec1);
 
 const dec2 = evaluateGovernance(secret, { host: "api.github.com", headers: { Authorization: "Bearer x" } });
 if (dec2.allowed) ok("allows whitelisted host+header"); else ko("allows whitelisted", dec2);
+
+const decPlacement = evaluateGovernance(secret, {
+  host: "api.github.com",
+  placements: ["query"],
+  riskTier: "read",
+  agent: "claude-code",
+  requireCompleteContext: true,
+});
+if (!decPlacement.allowed && decPlacement.reasons.includes("placement_not_allowed")) ok("blocks disallowed placement");
+else ko("blocks disallowed placement", decPlacement);
 
 const decStrictMissing = evaluateGovernance(secret, { requireCompleteContext: true });
 if (!decStrictMissing.allowed && decStrictMissing.reasons.includes("missing_context")) ok("strict governance fails closed on missing context");
@@ -196,6 +216,64 @@ const decWildcardRoot = evaluateGovernance(wildcardSecret, {
 });
 if (decWildcard.allowed && !decWildcardRoot.allowed && decWildcardRoot.reasons.includes("host_not_allowed")) ok("wildcard host matches subdomains only");
 else ko("wildcard host matches subdomains only", { decWildcard, decWildcardRoot });
+
+const expiredSecret = resolver.secrets.create({
+  tenantId: "clawix-local",
+  masterKey: setup.masterKey,
+  draft: {
+    internalName: "expired_token",
+    title: "Expired Token",
+    fields: [{ fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, secretValue: "expired" }],
+    governance: { allowedHosts: ["api.example.com"], allowedHeaders: ["Authorization"], ttlExpiresAt: "2000-01-01T00:00:00.000Z" },
+  },
+});
+const decExpired = evaluateGovernance(expiredSecret, { host: "api.example.com", headers: { Authorization: "Bearer x" }, placements: ["header"], riskTier: "read", agent: "claude-code", requireCompleteContext: true });
+if (!decExpired.allowed && decExpired.reasons.includes("ttl_expired")) ok("blocks expired secret");
+else ko("blocks expired secret", decExpired);
+
+const maxUsesSecret = resolver.secrets.create({
+  tenantId: "clawix-local",
+  masterKey: setup.masterKey,
+  draft: {
+    internalName: "max_uses_token",
+    title: "Max Uses Token",
+    fields: [{ fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, secretValue: "maxuses" }],
+    governance: { allowedHosts: ["api.example.com"], allowedHeaders: ["Authorization"], maxUses: 0 },
+  },
+});
+const decMaxUses = evaluateGovernance(maxUsesSecret, { host: "api.example.com", headers: { Authorization: "Bearer x" }, placements: ["header"], riskTier: "read", agent: "claude-code", requireCompleteContext: true });
+if (!decMaxUses.allowed && decMaxUses.reasons.includes("max_uses_exhausted")) ok("blocks max-uses exhausted secret");
+else ko("blocks max-uses exhausted secret", decMaxUses);
+
+const lockedSecret = resolver.secrets.create({
+  tenantId: "clawix-local",
+  masterKey: setup.masterKey,
+  draft: {
+    internalName: "locked_token",
+    title: "Locked Token",
+    fields: [{ fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, secretValue: "locked" }],
+    governance: { allowedHosts: ["api.example.com"], allowedHeaders: ["Authorization"] },
+  },
+});
+db.prepare("UPDATE secrets SET is_locked = 1 WHERE id = ?").run(lockedSecret.id);
+const decLocked = evaluateGovernance(resolver.secrets.get(lockedSecret.id), { host: "api.example.com", headers: { Authorization: "Bearer x" }, placements: ["header"], riskTier: "read", agent: "claude-code", requireCompleteContext: true });
+if (!decLocked.allowed && decLocked.reasons.includes("secret_locked")) ok("blocks locked secret");
+else ko("blocks locked secret", decLocked);
+
+const trashedSecret = resolver.secrets.create({
+  tenantId: "clawix-local",
+  masterKey: setup.masterKey,
+  draft: {
+    internalName: "trashed_token",
+    title: "Trashed Token",
+    fields: [{ fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, secretValue: "trashed" }],
+    governance: { allowedHosts: ["api.example.com"], allowedHeaders: ["Authorization"] },
+  },
+});
+resolver.secrets.trash(trashedSecret.id);
+const decTrashed = evaluateGovernance(resolver.secrets.get(trashedSecret.id), { host: "api.example.com", headers: { Authorization: "Bearer x" }, placements: ["header"], riskTier: "read", agent: "claude-code", requireCompleteContext: true });
+if (!decTrashed.allowed && decTrashed.reasons.includes("secret_trashed")) ok("blocks trashed secret");
+else ko("blocks trashed secret", decTrashed);
 
 // Compromise & TTL exhausted reasons.
 const activeGrant = resolver.grants.issue({

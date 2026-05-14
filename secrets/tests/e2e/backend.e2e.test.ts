@@ -11,8 +11,8 @@ import { startUpstreamServer, startSecretsServer, login } from "./helpers.ts";
 
 const execFileAsync = promisify(execFile);
 
-async function createPrincipal(baseUrl: string, accessToken: string, input: { type: string; label: string }) {
-  const response = await fetch(`${baseUrl}/v1/tenants/demo-tenant/principals`, {
+async function createPrincipal(baseUrl: string, accessToken: string, input: { type: string; label: string }, tenantId = "demo-tenant") {
+  const response = await fetch(`${baseUrl}/v1/tenants/${tenantId}/principals`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -331,6 +331,64 @@ test("secrets broker enforces deny precedence and host constraints", async () =>
     assert.equal(binaryFilePayload.bodyText, "");
     assert.equal(binaryFilePayload.bodyBase64, Buffer.from([0, 1, 2, 3, 4, 5]).toString("base64"));
 
+    const limitedCreate = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/secrets`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        draft: {
+          internalName: "limited_bot",
+          title: "Limited Bot",
+          fields: [{ fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, secretValue: "xoxb-limited-secret" }],
+          governance: {
+            allowedHosts: [upstreamHost],
+            allowedHeaders: ["Authorization"],
+            allowLocalNetwork: true,
+            allowInsecureTransport: true,
+            maxUses: 1,
+          },
+        },
+      }),
+    });
+    assert.equal(limitedCreate.status, 200);
+    await createPolicy(secrets.baseUrl, session.accessToken, {
+      subjectType: "tenant_admin",
+      subjectId: "*",
+      secretName: "limited_bot",
+      capability: "broker.http",
+      effect: "allow",
+    }, tenantId);
+    const limitedRequest = {
+      method: "GET",
+      url: `${upstream.baseUrl}/echo`,
+      capability: "broker.http",
+      agent: "secrets-broker-e2e",
+      riskTier: "read",
+      declaredFields: [{ secretName: "limited_bot", fieldName: "token", placement: "header" }],
+      headers: { Authorization: "Bearer {{limited_bot.token}}" },
+    };
+    const limitedFirst = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/broker/http`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(limitedRequest),
+    });
+    assert.equal(limitedFirst.status, 200);
+    const limitedSecond = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/broker/http`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(limitedRequest),
+    });
+    assert.equal(limitedSecond.status, 400);
+    assert.match(await limitedSecond.text(), /max_uses_exhausted/);
+
     for (const input of [
       {
         label: "missing capability",
@@ -479,30 +537,40 @@ test("secrets sidecar stays compatible with request/list/describe and supports p
   const secrets = await startSecretsServer("secrets-sidecar");
   const upstream = await startUpstreamServer();
   try {
-    const session = await login(secrets.baseUrl);
+    const tenantId = "clawix-local";
+    const session = await login(secrets.baseUrl, {
+      tenantId,
+      email: "admin@secrets.local",
+      password: "secrets-admin",
+    });
     const upstreamHost = new URL(upstream.baseUrl).host;
-    const create = await fetch(`${secrets.baseUrl}/v1/tenants/demo-tenant/secrets`, {
+    const create = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/secrets`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${session.accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        secretName: "telegram_support_bot_token",
-        secretValue: "secret-browser-token",
-        allowedHosts: [upstreamHost],
-        allowedHeaderNames: ["Authorization"],
-        allowInURL: true,
-        allowLocalNetwork: true,
-        leaseModes: ["process", "browser"],
+        draft: {
+          internalName: "telegram_support_bot_token",
+          title: "Telegram Support Bot Token",
+          fields: [{ fieldName: "token", fieldKind: "password", placement: "query", isSecret: true, secretValue: "secret-browser-token" }],
+          governance: {
+            allowedHosts: [upstreamHost],
+            allowedHeaders: ["Authorization"],
+            allowInUrl: true,
+            allowLocalNetwork: true,
+            allowInsecureTransport: true,
+          },
+        },
       }),
     });
-    assert.equal(create.status, 201);
+    assert.equal(create.status, 200);
 
     const principal = await createPrincipal(secrets.baseUrl, session.accessToken, {
       type: "sidecar_principal",
       label: "test-sidecar",
-    });
+    }, tenantId);
     for (const capability of ["metadata.read", "broker.http", "lease.process", "lease.browser"] as const) {
       await createPolicy(secrets.baseUrl, session.accessToken, {
         subjectType: "sidecar_principal",
@@ -510,14 +578,14 @@ test("secrets sidecar stays compatible with request/list/describe and supports p
         secretName: "telegram_support_bot_token",
         capability,
         effect: "allow",
-      });
+      }, tenantId);
     }
 
     const env = {
       ...process.env,
       CLAW_SECRETS_BASE_URL: secrets.baseUrl,
       CLAW_SECRETS_TOKEN: principal.principal.token,
-      CLAW_SECRETS_TENANT_ID: "demo-tenant",
+      CLAW_SECRETS_TENANT_ID: tenantId,
     };
     const list = await execFileAsync(process.execPath, [path.join(process.cwd(), "dist", "sidecar.js"), "list-secrets"], { env, encoding: "utf8" });
     const listed = JSON.parse(list.stdout) as Array<{ name: string }>;

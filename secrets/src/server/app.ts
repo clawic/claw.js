@@ -523,7 +523,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       label: body.label,
       tokenHash: hashToken(issued.token),
     });
-    return {
+    return reply.code(201).send({
       principal: {
         id: principal.id,
         tenantId: principal.tenant_id,
@@ -533,7 +533,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
         lastUsedAt: principal.last_used_at,
       },
       token: issued.token,
-    };
+    });
   });
 
   // ---------- Secrets ----------
@@ -873,6 +873,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       redactionValues.push(value);
       if (!auditedSecretIds.has(row.id)) {
         auditedSecretIds.add(row.id);
+        resolver.secrets.bumpUsage(row.id);
         audit.append({
           tenantId,
           meta: metaStore.load(tenantId)!,
@@ -1008,23 +1009,49 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
   // ---------- Leases ----------
 
   app.post("/v1/tenants/:tenantId/leases", async (req, reply) => {
-    await requirePrincipalOrUser(req, reply);
+    const actor = await requirePrincipalOrUser(req, reply);
+    const keys = session.requireKeys();
     const { tenantId } = req.params as { tenantId: string };
     const body = (req.body ?? {}) as {
       secretName?: string;
       mode?: "process" | "browser";
       durationMinutes?: number;
       context?: Record<string, unknown>;
+      agent?: string;
+      approvalSatisfied?: boolean;
+      vpnSatisfied?: boolean;
     };
     if (!body.secretName || !body.mode) return reply.code(400).send({ error: "secretName, mode required" });
     const row = resolver.secrets.getByInternalName(tenantId, body.secretName);
     if (!row) return reply.code(404).send({ error: "Not found" });
+    const capability = `lease.${body.mode}`;
+    if (!isCapabilityAllowed(actor, tenantId, body.secretName, capability)) {
+      return reply.code(403).send({ error: `${capability} denied`, secretName: body.secretName });
+    }
+    const agent = body.agent ?? (actor.kind === "principal" ? actor.principal.id : actor.claims.sub);
+    if (!agent) return reply.code(400).send({ error: "agent required" });
+    const decision = evaluateGovernance(row, {
+      placements: ["none"],
+      riskTier: "read",
+      agent,
+      requireCompleteContext: false,
+      approvalSatisfied: body.approvalSatisfied === true,
+      vpnSatisfied: body.vpnSatisfied === true,
+    });
+    if (!decision.allowed) return reply.code(400).send({ error: "Blocked by governance", secretName: body.secretName, reasons: decision.reasons });
     const issued = resolver.leases.issue({
       tenantId,
       secretId: row.id,
       mode: body.mode,
       durationMinutes: body.durationMinutes ?? 10,
       ...(body.context ? { context: body.context } : {}),
+    });
+    resolver.secrets.bumpUsage(row.id);
+    audit.append({
+      tenantId,
+      meta: metaStore.load(tenantId)!,
+      auditMacKey: keys.auditMacKey,
+      event: { kind: "leaseIssued", source: "admin", secretId: row.id, payload: {} },
     });
     return { lease: resolver.describeLease(issued.lease), token: issued.token };
   });
@@ -1037,8 +1064,17 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.post("/v1/tenants/:tenantId/leases/:id/revoke", async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
-    const { id } = req.params as { id: string };
+    const keys = session.requireKeys();
+    const { tenantId, id } = req.params as { tenantId: string; id: string };
     const row = resolver.leases.revoke(id);
+    if (row) {
+      audit.append({
+        tenantId,
+        meta: metaStore.load(tenantId)!,
+        auditMacKey: keys.auditMacKey,
+        event: { kind: "leaseRevoked", source: "admin", secretId: row.secret_id, payload: {} },
+      });
+    }
     return { lease: row ? resolver.describeLease(row) : null };
   });
 

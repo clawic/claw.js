@@ -37,6 +37,8 @@ export type AuditEventKind =
   | "grantUsed"
   | "grantRevoked"
   | "grantExpired"
+  | "leaseIssued"
+  | "leaseRevoked"
   // Anomaly + integrity
   | "anomalyDetected"
   | "auditIntegrityFailed";
