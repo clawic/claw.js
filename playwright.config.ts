@@ -26,7 +26,7 @@ export default defineConfig({
     viewport: { width: 1440, height: 1024 },
   },
   webServer: {
-    command: "cd demo && npm run start -- --port 4317",
+    command: "npm --prefix examples/showcase run start -- --port 4317",
     url: "http://127.0.0.1:4317/api/e2e/status",
     reuseExistingServer,
     stdout: "pipe",

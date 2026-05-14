@@ -84,7 +84,7 @@ The current Playwright specs are:
   Verifies the published SDK preserves the `status.installed` and `modelId` compatibility aliases and surfaces gateway lifecycle failures as explicit errors, with a final validation screenshot.
 
 - [sdk-openclaw-detection-freshness.spec.ts](./sdk-openclaw-detection-freshness.spec.ts)
-  Verifies the examples/demo/runtime detection does not stay stuck on a cached OpenClaw path after the binary disappears, with a final validation screenshot.
+  Verifies the examples/showcase runtime detection does not stay stuck on a cached OpenClaw path after the binary disappears, with a final validation screenshot.
 
 - [sdk-openclaw-conversation-transports.spec.ts](./sdk-openclaw-conversation-transports.spec.ts)
   Verifies the SDK routes OpenClaw product chat through `responses`, keeps `chat/completions` as text fallback, preserves native gateway wrappers, and captures a final validation screenshot.
@@ -116,9 +116,9 @@ It starts the demo with:
 - a dedicated E2E port: `4317`
 - isolated workspace/config/state/session/data directories
 - `NEXT_DIST_DIR=.next-e2e`
-- `cd demo && npm run start -- --port 4317` so `next start` always resolves the hermetic build from the demo package cwd
+- `npm --prefix examples/showcase run start -- --port 4317` so `next start` always resolves the hermetic build from the showcase package cwd
 
-The demo fixture layer lives in [examples/demo/src/lib/e2e.ts](../../examples/demo/src/lib/e2e.ts).
+The demo fixture layer lives in [examples/showcase/src/lib/e2e.ts](../../examples/showcase/src/lib/e2e.ts).
 
 That module is responsible for:
 
@@ -129,9 +129,9 @@ That module is responsible for:
 
 The test-only API endpoints are:
 
-- [examples/demo/src/app/api/e2e/reset/route.ts](../../examples/demo/src/app/api/e2e/reset/route.ts)
-- [examples/demo/src/app/api/e2e/seed/route.ts](../../examples/demo/src/app/api/e2e/seed/route.ts)
-- [examples/demo/src/app/api/e2e/status/route.ts](../../examples/demo/src/app/api/e2e/status/route.ts)
+- [examples/showcase/src/app/api/e2e/reset/route.ts](../../examples/showcase/src/app/api/e2e/reset/route.ts)
+- [examples/showcase/src/app/api/e2e/seed/route.ts](../../examples/showcase/src/app/api/e2e/seed/route.ts)
+- [examples/showcase/src/app/api/e2e/status/route.ts](../../examples/showcase/src/app/api/e2e/status/route.ts)
 
 They only exist to support `CLAW_E2E=1`.
 
@@ -164,7 +164,7 @@ The current suite intentionally captures final settled states, not loaders.
 ## How to add a new E2E test
 
 1. Add or reuse stable selectors on the affected UI.
-2. If the feature depends on runtime, external APIs, or local machine state, add a hermetic branch in [examples/demo/src/lib/e2e.ts](../../examples/demo/src/lib/e2e.ts) and the relevant API route.
+2. If the feature depends on runtime, external APIs, or local machine state, add a hermetic branch in [examples/showcase/src/lib/e2e.ts](../../examples/showcase/src/lib/e2e.ts) and the relevant API route.
 3. Add a new spec in [tests/e2e](.).
 4. Reuse [fixtures.ts](./fixtures.ts) so console/network failures stay gated.
 5. If the scenario changes visible UI, save at least one final-state screenshot under [artifacts/e2e](../../artifacts/e2e).
