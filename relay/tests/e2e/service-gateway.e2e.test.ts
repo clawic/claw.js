@@ -20,6 +20,7 @@ const workspaceRoot = path.join(tempDir, "workspaces");
 
 let appRef: Awaited<ReturnType<typeof buildRelayApp>> | null = null;
 let serviceServer: http.Server | null = null;
+let serviceWsServer: WebSocketServer | null = null;
 let serviceBaseUrl = "";
 let baseUrl = "";
 let connectorSocket: WebSocket | null = null;
@@ -48,6 +49,18 @@ async function listen(server: http.Server): Promise<string> {
   const address = server.address();
   assert.equal(typeof address, "object");
   return `http://127.0.0.1:${address!.port}`;
+}
+
+async function closeWebSocket(socket: WebSocket | null): Promise<void> {
+  if (!socket || socket.readyState === WebSocket.CLOSED) return;
+  if (socket.readyState === WebSocket.CLOSING) {
+    await new Promise<void>((resolve) => socket.once("close", () => resolve()));
+    return;
+  }
+  await new Promise<void>((resolve) => {
+    socket.once("close", () => resolve());
+    socket.close();
+  });
 }
 
 async function login(email: string, password: string) {
@@ -99,10 +112,31 @@ async function startServiceConnector(): Promise<WebSocket> {
       baseUrl: serviceBaseUrl,
     }],
   });
-  const ack = new Promise<void>((resolve) => {
+  const ack = new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error("Timed out waiting for connector ack"));
+    }, 5_000);
+    const cleanup = () => {
+      clearTimeout(timer);
+      socket.off("error", handleError);
+      socket.off("close", handleClose);
+    };
+    const handleError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+    const handleClose = () => {
+      cleanup();
+      reject(new Error("Connector socket closed before ack"));
+    };
+    socket.once("error", handleError);
+    socket.once("close", handleClose);
     socket.on("message", (buffer) => {
       const message = JSON.parse(buffer.toString()) as ConnectorInboundEnvelope | InvokeEnvelope | CancelEnvelope;
-      if (message.type === "ack") resolve();
+      if (message.type === "ack") {
+        cleanup();
+        resolve();
+      }
       if (message.type === "cancel") return;
       if (message.type !== "invoke") return;
       const controller = new AbortController();
@@ -145,7 +179,7 @@ async function startServiceConnector(): Promise<WebSocket> {
 }
 
 before(async () => {
-  const wsServer = new WebSocketServer({ noServer: true });
+  serviceWsServer = new WebSocketServer({ noServer: true });
   serviceServer = http.createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://service.local");
     serviceRequests.push({
@@ -186,7 +220,7 @@ before(async () => {
       socket.destroy();
       return;
     }
-    wsServer.handleUpgrade(request, socket, head, (client) => {
+    serviceWsServer!.handleUpgrade(request, socket, head, (client) => {
       client.on("message", (data, isBinary) => {
         const prefix = isBinary ? Buffer.from([9]) : "ws:";
         client.send(isBinary ? Buffer.concat([prefix as Buffer, Buffer.from(data as Buffer)]) : `${prefix}${data.toString()}`, { binary: isBinary });
@@ -213,7 +247,11 @@ before(async () => {
 });
 
 after(async () => {
-  connectorSocket?.close();
+  await closeWebSocket(connectorSocket);
+  for (const client of serviceWsServer?.clients ?? []) {
+    await closeWebSocket(client);
+  }
+  await new Promise<void>((resolve) => serviceWsServer?.close(() => resolve()) ?? resolve());
   await appRef?.app.close();
   await new Promise<void>((resolve) => serviceServer?.close(() => resolve()));
   fs.rmSync(tempDir, { recursive: true, force: true });
@@ -274,7 +312,7 @@ test("Relay service gateway preserves native service auth and proxies HTTP, uplo
   await new Promise<void>((resolve) => ws.once("open", () => resolve()));
   ws.send("hello");
   assert.equal(await wsReply, "ws:hello");
-  ws.close();
+  await closeWebSocket(ws);
 });
 
 test("local UI bridge serves the local UI and sends API calls through Relay", async () => {
