@@ -6054,6 +6054,11 @@
               "name": "messageId",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "threadId",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": []
@@ -6161,6 +6166,11 @@
               "name": "messageId",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "threadId",
+              "type": "string",
+              "optional": true
             }
           ],
           "authFieldNames": []
