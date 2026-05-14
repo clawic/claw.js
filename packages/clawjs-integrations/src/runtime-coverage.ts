@@ -12,6 +12,7 @@ import {
   type ConnectorRuntimeExecutorOptions,
   type ConnectorRuntimeImplementation,
   type ConnectorRuntimeOutputSchema,
+  type ConnectorRuntimeOutputSchemaVariant,
   type ConnectorRuntimeRequestPlan,
   type ConnectorRuntimeSourcePlan,
 } from "./runtime-registry.ts";
@@ -636,6 +637,24 @@ function isRequestPlan(value: ConnectorRuntimeRequestPlan | undefined): boolean 
 function isOutputSchema(value: ConnectorRuntimeOutputSchema | undefined): boolean {
   return Boolean(
     value
+    && (
+      isOutputSchemaVariant(value)
+      || (
+        value.type === undefined
+        && value.requiredPaths === undefined
+        && Array.isArray(value.oneOf)
+        && value.oneOf.length > 0
+        && value.oneOf.every(isOutputSchemaVariant)
+      )
+    ),
+  );
+}
+
+function isOutputSchemaVariant(value: ConnectorRuntimeOutputSchema | ConnectorRuntimeOutputSchemaVariant | undefined): boolean {
+  if (!value || ("oneOf" in value && value.oneOf !== undefined)) return false;
+
+  return Boolean(
+    value.type !== undefined
     && ["object", "array", "string", "number", "boolean", "null"].includes(value.type)
     && (value.requiredPaths === undefined || (
       Array.isArray(value.requiredPaths)

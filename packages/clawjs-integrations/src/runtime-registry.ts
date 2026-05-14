@@ -167,9 +167,15 @@ export interface ConnectorRuntimeQuerySerialization {
 
 export type ConnectorRuntimeJsonType = "object" | "array" | "string" | "number" | "boolean" | "null";
 
-export interface ConnectorRuntimeOutputSchema {
+export interface ConnectorRuntimeOutputSchemaVariant {
   type: ConnectorRuntimeJsonType;
   requiredPaths?: string[];
+}
+
+export interface ConnectorRuntimeOutputSchema {
+  type?: ConnectorRuntimeJsonType;
+  requiredPaths?: string[];
+  oneOf?: ConnectorRuntimeOutputSchemaVariant[];
 }
 
 export type ConnectorRuntimePaginationMode = "cursor" | "offset" | "next_url";

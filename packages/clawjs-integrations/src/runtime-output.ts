@@ -1,9 +1,31 @@
-import type { ConnectorRuntimeOutputSchema } from "./runtime-registry.ts";
+import type {
+  ConnectorRuntimeJsonType,
+  ConnectorRuntimeOutputSchema,
+  ConnectorRuntimeOutputSchemaVariant,
+} from "./runtime-registry.ts";
 import type { IntegrationJson } from "./types.ts";
 
 export function validateConnectorRuntimeOutput(
   output: IntegrationJson,
   schema: ConnectorRuntimeOutputSchema,
+): string[] {
+  const variants = outputSchemaVariants(schema);
+  if (variants.length === 0) return ["output schema requires type or oneOf"];
+  if (variants.length === 1) return validateOutputVariant(output, variants[0]);
+  const errorsByVariant = variants.map((variant) => validateOutputVariant(output, variant));
+  if (errorsByVariant.some((errors) => errors.length === 0)) return [];
+  return [`output did not match any schema: ${errorsByVariant.map((errors) => errors.join(", ")).join("; ")}`];
+}
+
+function outputSchemaVariants(schema: ConnectorRuntimeOutputSchema): ConnectorRuntimeOutputSchemaVariant[] {
+  if (schema.oneOf?.length) return schema.oneOf;
+  if (!schema.type) return [];
+  return [{ type: schema.type, requiredPaths: schema.requiredPaths }];
+}
+
+function validateOutputVariant(
+  output: IntegrationJson,
+  schema: ConnectorRuntimeOutputSchemaVariant,
 ): string[] {
   const errors: string[] = [];
   if (jsonType(output) !== schema.type) {
@@ -17,7 +39,7 @@ export function validateConnectorRuntimeOutput(
   return errors;
 }
 
-function jsonType(value: IntegrationJson): ConnectorRuntimeOutputSchema["type"] {
+function jsonType(value: IntegrationJson): ConnectorRuntimeJsonType {
   if (value === null) return "null";
   if (Array.isArray(value)) return "array";
   if (typeof value === "boolean") return "boolean";
