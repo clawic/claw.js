@@ -16051,7 +16051,7 @@
     {
       "path": "content/src/server/app.ts",
       "language": "typescript",
-      "lines": 1014,
+      "lines": 1018,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -16775,7 +16775,7 @@
     {
       "path": "content/tests/e2e/cli.e2e.test.ts",
       "language": "typescript",
-      "lines": 162,
+      "lines": 169,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -16791,6 +16791,11 @@
         {
           "kind": "function",
           "name": "boot",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "parseClawJsonData",
           "exported": false
         }
       ]
@@ -18642,7 +18647,7 @@
     {
       "path": "database/tests/e2e/cli.e2e.test.ts",
       "language": "typescript",
-      "lines": 291,
+      "lines": 298,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -18658,6 +18663,11 @@
         {
           "kind": "function",
           "name": "boot",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "parseClawJsonData",
           "exported": false
         }
       ]
@@ -33818,7 +33828,7 @@
     {
       "path": "iot/tests/e2e/ui.spec.ts",
       "language": "typescript",
-      "lines": 30,
+      "lines": 31,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -36769,7 +36779,7 @@
     {
       "path": "modules/erp/ui/src/api/client.ts",
       "language": "typescript",
-      "lines": 416,
+      "lines": 417,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -36785,6 +36795,9 @@
         "DashboardData",
         "DocumentDetail",
         "DocumentRecord",
+        "ERP_ENTITY_STORAGE_KEY",
+        "ERP_TENANT_STORAGE_KEY",
+        "ERP_TOKEN_STORAGE_KEY",
         "EmployeeRecord",
         "ErrorEnvelope",
         "FiscalPeriodRecord",
@@ -36814,6 +36827,21 @@
         {
           "kind": "const",
           "name": "api",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "ERP_ENTITY_STORAGE_KEY",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "ERP_TENANT_STORAGE_KEY",
+          "exported": true
+        },
+        {
+          "kind": "const",
+          "name": "ERP_TOKEN_STORAGE_KEY",
           "exported": true
         },
         {
@@ -37271,7 +37299,7 @@
     {
       "path": "modules/erp/ui/src/hooks/useAuth.ts",
       "language": "typescript",
-      "lines": 57,
+      "lines": 55,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -38350,7 +38378,7 @@
     {
       "path": "modules/erp/ui/src/router.tsx",
       "language": "typescript",
-      "lines": 198,
+      "lines": 208,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -121086,7 +121114,7 @@
     {
       "path": "time/public/app.js",
       "language": "javascript",
-      "lines": 199,
+      "lines": 203,
       "test": false,
       "entrypoint": false,
       "imports": [],
@@ -121120,6 +121148,11 @@
         {
           "kind": "function",
           "name": "fmtDate",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "isoHoursFromNow",
           "exported": false
         },
         {
