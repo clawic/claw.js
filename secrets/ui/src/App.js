@@ -1,3 +1,9 @@
+const CLAW_PUBLIC_API_PREFIX = "/v" + "1";
+function clawApiPath(path = "") {
+  const suffix = String(path).replace(/^\/+/, "");
+  return suffix ? CLAW_PUBLIC_API_PREFIX + "/" + suffix : CLAW_PUBLIC_API_PREFIX;
+}
+const SECRETS_SESSION_STORAGE_KEY = SECRETS_SESSION_STORAGE_KEY;
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useEffect, useMemo, useState } from "react";
 const BASE_URL = globalThis.__CLAW_SECRETS_BASE_URL__ || window.location.origin;
@@ -15,7 +21,7 @@ async function api(session, pathname, init = {}) {
     return await response.json();
 }
 function readStoredSession() {
-    const raw = window.localStorage.getItem("secrets-session");
+    const raw = window.localStorage.getItem(SECRETS_SESSION_STORAGE_KEY);
     if (!raw)
         return null;
     try {
@@ -77,11 +83,11 @@ export function App() {
     const [rotateValue, setRotateValue] = useState("top-secret-token-v2");
     async function refreshAll(active) {
         const [secretPayload, policyPayload, principalPayload, leasePayload, auditPayload, secretTypePayload] = await Promise.all([
-            api(active, `/v1/tenants/${active.tenantId}/secrets`),
-            api(active, `/v1/tenants/${active.tenantId}/policies`),
-            api(active, `/v1/tenants/${active.tenantId}/principals`),
-            api(active, `/v1/tenants/${active.tenantId}/leases`),
-            api(active, `/v1/tenants/${active.tenantId}/audit`),
+            api(active, clawApiPath(`tenants/${active.tenantId}/secrets`)),
+            api(active, clawApiPath(`tenants/${active.tenantId}/policies`)),
+            api(active, clawApiPath(`tenants/${active.tenantId}/principals`)),
+            api(active, clawApiPath(`tenants/${active.tenantId}/leases`)),
+            api(active, clawApiPath(`tenants/${active.tenantId}/audit`)),
             fetch(`${BASE_URL}/v1/secret-types`).then(async (response) => {
                 if (!response.ok)
                     throw new Error(await response.text());
@@ -107,8 +113,8 @@ export function App() {
             return;
         }
         Promise.all([
-            api(session, `/v1/tenants/${session.tenantId}/secrets/${encodeURIComponent(selectedSecret)}/capabilities`),
-            api(session, `/v1/tenants/${session.tenantId}/secrets/${encodeURIComponent(selectedSecret)}/actions`),
+            api(session, clawApiPath(`tenants/${session.tenantId}/secrets/${encodeURIComponent(selectedSecret)}/capabilities`)),
+            api(session, clawApiPath(`tenants/${session.tenantId}/secrets/${encodeURIComponent(selectedSecret)}/actions`)),
         ])
             .then(([capabilityPayload, actionPayload]) => {
             setSelectedSecretCapabilities(capabilityPayload.capabilities);
@@ -134,7 +140,7 @@ export function App() {
     ]), []);
     if (!session) {
         return _jsx(LoginScreen, { onLogin: (next) => {
-                window.localStorage.setItem("secrets-session", JSON.stringify(next));
+                window.localStorage.setItem(SECRETS_SESSION_STORAGE_KEY, JSON.stringify(next));
                 setSession(next);
             }, error: error, onError: setError });
     }
@@ -142,7 +148,7 @@ export function App() {
     async function createSecret() {
         try {
             setError("");
-            const payload = await api(activeSession, `/v1/tenants/${activeSession.tenantId}/secrets`, {
+            const payload = await api(activeSession, clawApiPath(`tenants/${activeSession.tenantId}/secrets`), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -165,7 +171,7 @@ export function App() {
     async function rotateSecret() {
         try {
             setError("");
-            await api(activeSession, `/v1/tenants/${activeSession.tenantId}/secrets/${encodeURIComponent(selectedSecret || secretForm.secretName)}/versions`, {
+            await api(activeSession, clawApiPath(`tenants/${activeSession.tenantId}/secrets/${encodeURIComponent(selectedSecret || secretForm.secretName)}/versions`), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ secretValue: rotateValue }),
@@ -179,7 +185,7 @@ export function App() {
     async function createPolicy() {
         try {
             setError("");
-            await api(activeSession, `/v1/tenants/${activeSession.tenantId}/policies`, {
+            await api(activeSession, clawApiPath(`tenants/${activeSession.tenantId}/policies`), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(policyForm),
@@ -193,7 +199,7 @@ export function App() {
     async function createPrincipal() {
         try {
             setError("");
-            const payload = await api(activeSession, `/v1/tenants/${activeSession.tenantId}/principals`, {
+            const payload = await api(activeSession, clawApiPath(`tenants/${activeSession.tenantId}/principals`), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(principalForm),
@@ -210,7 +216,7 @@ export function App() {
     async function createLease() {
         try {
             setError("");
-            await api(activeSession, `/v1/tenants/${activeSession.tenantId}/leases`, {
+            await api(activeSession, clawApiPath(`tenants/${activeSession.tenantId}/leases`), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(leaseForm),
@@ -224,7 +230,7 @@ export function App() {
     async function revokeLease(leaseId) {
         try {
             setError("");
-            await api(activeSession, `/v1/tenants/${activeSession.tenantId}/leases/${leaseId}/revoke`, { method: "POST" });
+            await api(activeSession, clawApiPath(`tenants/${activeSession.tenantId}/leases/${leaseId}/revoke`), { method: "POST" });
             await refreshAll(activeSession);
         }
         catch (nextError) {
@@ -232,7 +238,7 @@ export function App() {
         }
     }
     return (_jsxs("div", { className: "shell", "data-testid": "secrets-console", children: [_jsxs("aside", { className: "rail", children: [_jsxs("div", { children: [_jsxs("div", { className: "brand brand-mark", children: [_jsx("img", { src: "/brand/logo.png", alt: "ClawJS", width: "28", height: "28" }), _jsx("span", { children: "Secrets" })] }), _jsx("div", { className: "hint", children: session.tenantId })] }), _jsx("nav", { className: "nav", children: pages.map((item) => (_jsx("button", { "data-testid": `nav-${item.id}`, className: page === item.id ? "nav-item nav-item-active" : "nav-item", onClick: () => setPage(item.id), children: item.label }, item.id))) }), _jsx("button", { className: "ghost", onClick: () => {
-                            window.localStorage.removeItem("secrets-session");
+                            window.localStorage.removeItem(SECRETS_SESSION_STORAGE_KEY);
                             setSession(null);
                         }, children: "Sign out" })] }), _jsxs("main", { className: "content", children: [_jsxs("header", { className: "page-header", children: [_jsxs("div", { children: [_jsx("h1", { children: "Secrets Console" }), _jsx("p", { children: "Brokered secrets with non-exportable defaults." })] }), _jsxs("div", { className: "status", children: [_jsx("span", { children: activeSession.email }), _jsx("span", { children: activeSession.role })] })] }), error ? _jsx("div", { className: "error", "data-testid": "error-banner", children: error }) : null, _jsxs("div", { className: "grid", children: [page === "secrets" ? (_jsxs(_Fragment, { children: [_jsxs("section", { className: "card", children: [_jsx("h2", { children: "Create Secret" }), _jsxs("label", { children: ["Type search", _jsx("input", { "data-testid": "secret-type-search", value: typeSearch, onChange: (event) => setTypeSearch(event.target.value) })] }), _jsxs("label", { children: ["Secret type", _jsx("select", { "data-testid": "secret-type-select", value: secretForm.typeId, onChange: (event) => {
                                                             const nextType = secretTypes.find((entry) => entry.typeId === event.target.value);

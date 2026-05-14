@@ -61,6 +61,9 @@ const setup = await fetchJson(`${base}/v1/secrets/setup`, {
 if (setup.ok && setup.body.recoveryPhrase && setup.body.recoveryPhrase.split(" ").length === 24) ok("setup");
 else ko("setup", setup.body);
 const recoveryPhrase = setup.body.recoveryPhrase;
+let currentPassword = "master-pw";
+let currentSecretKey = setup.body.secretKey;
+if (currentSecretKey?.startsWith("CSK1-")) ok("setup returns Secret Key"); else ko("setup returns Secret Key", setup.body);
 
 // State after setup.
 const s1 = await fetchJson(`${base}/v1/secrets/state`);
@@ -280,6 +283,8 @@ try {
   const metaSnapshot = JSON.parse(metaTable?.rows?.[0]?.snapshot_json ?? "{}");
   if (!("platformKeyWrap" in metaSnapshot)) ok("backup omits host-bound platform key wrap");
   else ko("backup omits host-bound platform key wrap", metaSnapshot);
+  if (!JSON.stringify(logicalBackup).includes(currentSecretKey)) ok("backup omits Secret Key material");
+  else ko("backup omits Secret Key material", metaSnapshot);
 } catch (err) {
   ko("backup portability inspection", err.message);
 }
@@ -302,7 +307,11 @@ if (backupImport.ok && backupImport.body.imported?.secrets === 3 && backupImport
   ko("backup import", backupImport.body);
 }
 
-const unlockAfterImport = await fetchJson(`${base}/v1/secrets/unlock`, { method: "POST", headers: signedHostHeaders, body: JSON.stringify({ password: "master-pw" }) });
+const unlockAfterImport = await fetchJson(`${base}/v1/secrets/unlock`, {
+  method: "POST",
+  headers: signedHostHeaders,
+  body: JSON.stringify({ password: currentPassword, secretKey: currentSecretKey }),
+});
 if (unlockAfterImport.ok) ok("unlock after backup import"); else ko("unlock after import", unlockAfterImport.body);
 
 // Lock.
@@ -310,26 +319,64 @@ const lockRes = await fetchJson(`${base}/v1/secrets/lock`, { method: "POST" });
 if (lockRes.ok) ok("lock"); else ko("lock", { status: lockRes.status, body: lockRes.body });
 
 // Re-unlock with wrong password.
-const u1 = await fetchJson(`${base}/v1/secrets/unlock`, { method: "POST", headers: signedHostHeaders, body: JSON.stringify({ password: "wrong" }) });
+const unlockWithoutSecretKey = await fetchJson(`${base}/v1/secrets/unlock`, {
+  method: "POST",
+  headers: signedHostHeaders,
+  body: JSON.stringify({ password: currentPassword }),
+});
+if (unlockWithoutSecretKey.status === 400) ok("unlock requires Secret Key"); else ko("unlock requires Secret Key", unlockWithoutSecretKey.body);
+
+const u1 = await fetchJson(`${base}/v1/secrets/unlock`, {
+  method: "POST",
+  headers: signedHostHeaders,
+  body: JSON.stringify({ password: "wrong", secretKey: currentSecretKey }),
+});
 if (u1.status === 401) ok("unlock rejects wrong password"); else ko("expected 401");
 
 // Re-unlock with correct password.
-const u2 = await fetchJson(`${base}/v1/secrets/unlock`, { method: "POST", headers: signedHostHeaders, body: JSON.stringify({ password: "master-pw" }) });
+const u2 = await fetchJson(`${base}/v1/secrets/unlock`, {
+  method: "POST",
+  headers: signedHostHeaders,
+  body: JSON.stringify({ password: currentPassword, secretKey: currentSecretKey }),
+});
 if (u2.ok) ok("unlock with correct password"); else ko("unlock");
 
 // Recover via phrase.
 const lock2 = await fetchJson(`${base}/v1/secrets/lock`, { method: "POST" });
 if (lock2.ok) ok("lock #2");
-const rec = await fetchJson(`${base}/v1/secrets/recover`, { method: "POST", headers: signedHostHeaders, body: JSON.stringify({ phrase: recoveryPhrase }) });
-if (rec.ok) ok("recover via phrase"); else ko("recover", rec.body);
+const rec = await fetchJson(`${base}/v1/secrets/recover`, {
+  method: "POST",
+  headers: signedHostHeaders,
+  body: JSON.stringify({ phrase: recoveryPhrase, newPassword: "recovered-pw" }),
+});
+if (rec.ok && rec.body.secretKey && rec.body.recoveryPhrase) {
+  ok("recover via phrase rotates Secret Key and recovery");
+  currentPassword = "recovered-pw";
+  currentSecretKey = rec.body.secretKey;
+} else {
+  ko("recover", rec.body);
+}
+
+const oldRecoveryRejected = await fetchJson(`${base}/v1/secrets/recover`, {
+  method: "POST",
+  headers: signedHostHeaders,
+  body: JSON.stringify({ phrase: recoveryPhrase, newPassword: "should-not-work" }),
+});
+if (oldRecoveryRejected.status === 401) ok("old recovery phrase revoked"); else ko("old recovery phrase revoked", oldRecoveryRejected.body);
 
 // Change password.
 const cp = await fetchJson(`${base}/v1/secrets/change-password`, {
   method: "POST",
   headers: signedHostHeaders,
-  body: JSON.stringify({ oldPassword: "master-pw", newPassword: "new-pw" }),
+  body: JSON.stringify({ oldPassword: currentPassword, oldSecretKey: currentSecretKey, newPassword: "new-pw" }),
 });
-if (cp.ok && cp.body.recoveryPhrase) ok("change password"); else ko("change-password", cp.body);
+if (cp.ok && cp.body.recoveryPhrase && cp.body.secretKey) {
+  ok("change password rotates Secret Key");
+  currentPassword = "new-pw";
+  currentSecretKey = cp.body.secretKey;
+} else {
+  ko("change-password", cp.body);
+}
 
 // Doctor.
 const doc = await fetchJson(`${base}/v1/secrets/doctor`);

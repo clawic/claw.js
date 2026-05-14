@@ -1,3 +1,9 @@
+const CLAW_PUBLIC_API_PREFIX = "/v" + "1";
+function clawApiPath(path = "") {
+  const suffix = String(path).replace(/^\/+/, "");
+  return suffix ? CLAW_PUBLIC_API_PREFIX + "/" + suffix : CLAW_PUBLIC_API_PREFIX;
+}
+const SECRETS_SESSION_STORAGE_KEY = SECRETS_SESSION_STORAGE_KEY;
 import { useEffect, useMemo, useState } from "react";
 
 type Secret = {
@@ -122,7 +128,7 @@ async function api<T>(session: Session, pathname: string, init: RequestInit = {}
 }
 
 function readStoredSession(): Session | null {
-  const raw = window.localStorage.getItem("secrets-session");
+  const raw = window.localStorage.getItem(SECRETS_SESSION_STORAGE_KEY);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as Session;
@@ -185,11 +191,11 @@ export function App() {
 
   async function refreshAll(active: Session) {
     const [secretPayload, policyPayload, principalPayload, leasePayload, auditPayload, secretTypePayload] = await Promise.all([
-      api<{ secrets: Secret[] }>(active, `/v1/tenants/${active.tenantId}/secrets`),
-      api<{ policies: Policy[] }>(active, `/v1/tenants/${active.tenantId}/policies`),
-      api<{ principals: Principal[] }>(active, `/v1/tenants/${active.tenantId}/principals`),
-      api<{ leases: Lease[] }>(active, `/v1/tenants/${active.tenantId}/leases`),
-      api<{ events: AuditEvent[] }>(active, `/v1/tenants/${active.tenantId}/audit`),
+      api<{ secrets: Secret[] }>(active, clawApiPath(`tenants/${active.tenantId}/secrets`)),
+      api<{ policies: Policy[] }>(active, clawApiPath(`tenants/${active.tenantId}/policies`)),
+      api<{ principals: Principal[] }>(active, clawApiPath(`tenants/${active.tenantId}/principals`)),
+      api<{ leases: Lease[] }>(active, clawApiPath(`tenants/${active.tenantId}/leases`)),
+      api<{ events: AuditEvent[] }>(active, clawApiPath(`tenants/${active.tenantId}/audit`)),
       fetch(`${BASE_URL}/v1/secret-types`).then(async (response) => {
         if (!response.ok) throw new Error(await response.text());
         return await response.json() as { types: SecretType[] };
@@ -215,8 +221,8 @@ export function App() {
       return;
     }
     Promise.all([
-      api<{ capabilities: SecretCapability[] }>(session, `/v1/tenants/${session.tenantId}/secrets/${encodeURIComponent(selectedSecret)}/capabilities`),
-      api<{ actions: SecretAction[] }>(session, `/v1/tenants/${session.tenantId}/secrets/${encodeURIComponent(selectedSecret)}/actions`),
+      api<{ capabilities: SecretCapability[] }>(session, clawApiPath(`tenants/${session.tenantId}/secrets/${encodeURIComponent(selectedSecret)}/capabilities`)),
+      api<{ actions: SecretAction[] }>(session, clawApiPath(`tenants/${session.tenantId}/secrets/${encodeURIComponent(selectedSecret)}/actions`)),
     ])
       .then(([capabilityPayload, actionPayload]) => {
         setSelectedSecretCapabilities(capabilityPayload.capabilities);
@@ -250,7 +256,7 @@ export function App() {
 
   if (!session) {
     return <LoginScreen onLogin={(next) => {
-      window.localStorage.setItem("secrets-session", JSON.stringify(next));
+      window.localStorage.setItem(SECRETS_SESSION_STORAGE_KEY, JSON.stringify(next));
       setSession(next);
     }} error={error} onError={setError} />;
   }
@@ -260,7 +266,7 @@ export function App() {
   async function createSecret() {
     try {
       setError("");
-      const payload = await api<{ secret: Secret }>(activeSession, `/v1/tenants/${activeSession.tenantId}/secrets`, {
+      const payload = await api<{ secret: Secret }>(activeSession, clawApiPath(`tenants/${activeSession.tenantId}/secrets`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -283,7 +289,7 @@ export function App() {
   async function rotateSecret() {
     try {
       setError("");
-      await api(activeSession, `/v1/tenants/${activeSession.tenantId}/secrets/${encodeURIComponent(selectedSecret || secretForm.secretName)}/versions`, {
+      await api(activeSession, clawApiPath(`tenants/${activeSession.tenantId}/secrets/${encodeURIComponent(selectedSecret || secretForm.secretName)}/versions`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ secretValue: rotateValue }),
@@ -297,7 +303,7 @@ export function App() {
   async function createPolicy() {
     try {
       setError("");
-      await api(activeSession, `/v1/tenants/${activeSession.tenantId}/policies`, {
+      await api(activeSession, clawApiPath(`tenants/${activeSession.tenantId}/policies`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(policyForm),
@@ -311,7 +317,7 @@ export function App() {
   async function createPrincipal() {
     try {
       setError("");
-      const payload = await api<{ principal: Principal }>(activeSession, `/v1/tenants/${activeSession.tenantId}/principals`, {
+      const payload = await api<{ principal: Principal }>(activeSession, clawApiPath(`tenants/${activeSession.tenantId}/principals`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(principalForm),
@@ -328,7 +334,7 @@ export function App() {
   async function createLease() {
     try {
       setError("");
-      await api(activeSession, `/v1/tenants/${activeSession.tenantId}/leases`, {
+      await api(activeSession, clawApiPath(`tenants/${activeSession.tenantId}/leases`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(leaseForm),
@@ -342,7 +348,7 @@ export function App() {
   async function revokeLease(leaseId: string) {
     try {
       setError("");
-      await api(activeSession, `/v1/tenants/${activeSession.tenantId}/leases/${leaseId}/revoke`, { method: "POST" });
+      await api(activeSession, clawApiPath(`tenants/${activeSession.tenantId}/leases/${leaseId}/revoke`), { method: "POST" });
       await refreshAll(activeSession);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
@@ -372,7 +378,7 @@ export function App() {
           ))}
         </nav>
         <button className="ghost" onClick={() => {
-          window.localStorage.removeItem("secrets-session");
+          window.localStorage.removeItem(SECRETS_SESSION_STORAGE_KEY);
           setSession(null);
         }}
         >

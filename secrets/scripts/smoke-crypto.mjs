@@ -5,7 +5,9 @@ import {
   secretsSetup,
   secretsUnlock,
   secretsRecover,
+  secretsRecoverAndRotate,
   secretsChangePassword,
+  normalizeSecretKey,
   generateKey,
   generateItemKey,
   wrapItemKey,
@@ -54,31 +56,50 @@ const setup = secretsSetup("correct horse battery staple", {
   platformKey,
 });
 if (!setup.recoveryPhrase || setup.recoveryPhrase.split(" ").length !== 24) ko("24-word phrase"); else ok("24-word phrase");
+if (!setup.secretKey || normalizeSecretKey(setup.secretKey) !== setup.secretKey) ko("versioned Secret Key"); else ok("versioned Secret Key");
 if (setup.masterKey.length !== 32) ko("masterKey 32B"); else ok("masterKey 32B");
 if (setup.auditMacKey.length !== 32) ko("auditMacKey 32B"); else ok("auditMacKey 32B");
 
 try {
-  const unlocked = secretsUnlock(setup.meta, "correct horse battery staple", platformKey);
+  const unlocked = secretsUnlock(setup.meta, "correct horse battery staple", setup.secretKey, platformKey);
   if (unlocked.masterKey.length !== 32) throw new Error("wrong length");
-  ok("unlock with correct password");
+  ok("unlock with correct password + Secret Key");
   unlocked.masterKey.zero();
   unlocked.auditMacKey.zero();
-} catch (e) { ko("unlock with correct password", e); }
+} catch (e) { ko("unlock with correct password + Secret Key", e); }
 
 try {
-  secretsUnlock(setup.meta, "correct horse battery staple");
+  secretsUnlock(setup.meta, "correct horse battery staple", "", platformKey);
+  ko("unlock without Secret Key (should throw)");
+} catch (e) { ok("unlock requires Secret Key"); }
+
+try {
+  secretsUnlock(setup.meta, "correct horse battery staple", setup.secretKey);
   ko("unlock without platform key (should throw)");
 } catch (e) { ok("unlock requires platform key when wrapped"); }
 
 try {
-  secretsUnlock(setup.meta, "correct horse battery staple", generateKey());
+  secretsUnlock(setup.meta, "correct horse battery staple", setup.secretKey, generateKey());
   ko("unlock with wrong platform key (should throw)");
 } catch (e) { ok("unlock rejects wrong platform key"); }
 
 try {
-  secretsUnlock(setup.meta, "wrong password", platformKey);
+  secretsUnlock(setup.meta, "wrong password", setup.secretKey, platformKey);
   ko("unlock with wrong password (should throw)");
 } catch (e) { ok("unlock with wrong password rejects"); }
+
+try {
+  const wrongSecretKeySetup = secretsSetup("other", {
+    schemaVersion: 1,
+    appVersion: "0.1.2",
+    kdfParams: ARGON2_FAST_PARAMS,
+    recoveryParams: ARGON2_FAST_PARAMS,
+  });
+  secretsUnlock(setup.meta, "correct horse battery staple", wrongSecretKeySetup.secretKey, platformKey);
+  wrongSecretKeySetup.masterKey.zero();
+  wrongSecretKeySetup.auditMacKey.zero();
+  ko("unlock with wrong Secret Key (should throw)");
+} catch (e) { ok("unlock rejects wrong Secret Key"); }
 
 try {
   const recovered = secretsRecover(setup.meta, setup.recoveryPhrase);
@@ -88,9 +109,15 @@ try {
 } catch (e) { ko("recover with phrase", e); }
 
 try {
-  const changed = secretsChangePassword(setup.meta, "correct horse battery staple", "new-master-pw", platformKey);
-  const u = secretsUnlock(changed.newMeta, "new-master-pw", platformKey);
-  ok("change password preserves verifier");
+  const recovered = secretsRecoverAndRotate(setup.meta, setup.recoveryPhrase, "recovered-master-pw", platformKey);
+  secretsRecover(recovered.newMeta, setup.recoveryPhrase);
+  ko("recovery rotation revokes old recovery phrase");
+} catch (e) { ok("recovery rotation revokes old recovery phrase"); }
+
+try {
+  const changed = secretsChangePassword(setup.meta, "correct horse battery staple", setup.secretKey, "new-master-pw", platformKey);
+  const u = secretsUnlock(changed.newMeta, "new-master-pw", changed.newSecretKey, platformKey);
+  ok("change password rotates Secret Key and preserves verifier");
   u.masterKey.zero();
   u.auditMacKey.zero();
 } catch (e) { ko("change password", e); }

@@ -36,6 +36,7 @@ const TEXT_DEC = new TextDecoder();
 
 export const CRYPTO_VERSION = 1;
 export const FORMAT_VERSION = 1;
+export const SECRETS_SCHEMA_VERSION = 3;
 export const KEY_LENGTH = 32;
 export const NONCE_LENGTH = 12;
 export const SALT_LENGTH = 32;
@@ -94,6 +95,122 @@ export function deriveKey(password: string, salt: Uint8Array, params: Argon2Para
   return argon2id(pw, salt, { t: params.t, m: params.m, p: params.p, dkLen: KEY_LENGTH });
 }
 
+// ---------- Secret Key ----------
+//
+// The user unlock factor is password + Secret Key. The Secret Key is a
+// generated 256-bit value formatted for the Emergency Kit. Only a fingerprint
+// is persisted; the raw Secret Key must stay with the user / host Keychain.
+
+const SECRET_KEY_PREFIX = "CSK1";
+const SECRET_KEY_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+const SECRET_KEY_BODY_BYTES = KEY_LENGTH;
+const SECRET_KEY_BODY_LENGTH = 52;
+const SECRET_KEY_CHECKSUM_LENGTH = 8;
+const SECRET_KEY_KDF_LABEL = TEXT.encode("clawjs-secrets.unlock.v1\0");
+
+function base32Encode(bytes: Uint8Array): string {
+  let bits = 0;
+  let value = 0;
+  let out = "";
+  for (const byte of bytes) {
+    value = (value << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      out += SECRET_KEY_ALPHABET[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  if (bits > 0) out += SECRET_KEY_ALPHABET[(value << (5 - bits)) & 31];
+  return out;
+}
+
+function base32Decode(input: string): Uint8Array {
+  let bits = 0;
+  let value = 0;
+  const out: number[] = [];
+  for (const char of input) {
+    const idx = SECRET_KEY_ALPHABET.indexOf(char);
+    if (idx < 0) throw new Error("Invalid Secret Key character");
+    value = (value << 5) | idx;
+    bits += 5;
+    if (bits >= 8) {
+      out.push((value >>> (bits - 8)) & 0xff);
+      bits -= 8;
+    }
+  }
+  return new Uint8Array(out);
+}
+
+function formatSecretKeyBody(body: string, checksum: string): string {
+  return [SECRET_KEY_PREFIX, ...`${body}${checksum}`.match(/.{1,4}/g)!].join("-");
+}
+
+function secretKeyChecksum(body: string): string {
+  return base32Encode(sha256(TEXT.encode(`${SECRET_KEY_PREFIX}:${body}`)).subarray(0, 5)).slice(0, SECRET_KEY_CHECKSUM_LENGTH);
+}
+
+export function generateSecretKey(): string {
+  const raw = generateKey();
+  try {
+    const body = base32Encode(raw);
+    return formatSecretKeyBody(body, secretKeyChecksum(body));
+  } finally {
+    raw.fill(0);
+  }
+}
+
+export function decodeSecretKey(secretKey: string): Uint8Array {
+  const compact = secretKey.trim().toUpperCase().replace(/[\s-]+/g, "");
+  if (!compact.startsWith(SECRET_KEY_PREFIX)) throw new Error("Secret Key prefix invalid");
+  const payload = compact.slice(SECRET_KEY_PREFIX.length);
+  const body = payload.slice(0, SECRET_KEY_BODY_LENGTH);
+  const checksum = payload.slice(SECRET_KEY_BODY_LENGTH);
+  if (body.length !== SECRET_KEY_BODY_LENGTH || checksum.length !== SECRET_KEY_CHECKSUM_LENGTH) {
+    throw new Error("Secret Key length invalid");
+  }
+  if (checksum !== secretKeyChecksum(body)) throw new Error("Secret Key checksum invalid");
+  const raw = base32Decode(body);
+  if (raw.length !== SECRET_KEY_BODY_BYTES) throw new Error("Secret Key payload invalid");
+  return raw;
+}
+
+export function normalizeSecretKey(secretKey: string): string {
+  const raw = decodeSecretKey(secretKey);
+  try {
+    const body = base32Encode(raw);
+    return formatSecretKeyBody(body, secretKeyChecksum(body));
+  } finally {
+    raw.fill(0);
+  }
+}
+
+export function secretKeyFingerprint(secretKey: string): string {
+  const raw = decodeSecretKey(secretKey);
+  try {
+    return `${SECRET_KEY_PREFIX}:${base32Encode(sha256(raw).subarray(0, 5)).slice(0, SECRET_KEY_CHECKSUM_LENGTH)}`;
+  } finally {
+    raw.fill(0);
+  }
+}
+
+export function deriveUnlockKey(password: string, secretKey: string, salt: Uint8Array, params: Argon2Params): Uint8Array {
+  if (!password) throw new Error("Password required");
+  if (!secretKey) throw new Error("Secret Key required");
+  const passwordBytes = TEXT.encode(password);
+  const secretKeyBytes = decodeSecretKey(secretKey);
+  const input = new Uint8Array(SECRET_KEY_KDF_LABEL.length + passwordBytes.length + 1 + secretKeyBytes.length);
+  input.set(SECRET_KEY_KDF_LABEL, 0);
+  input.set(passwordBytes, SECRET_KEY_KDF_LABEL.length);
+  input[SECRET_KEY_KDF_LABEL.length + passwordBytes.length] = 0;
+  input.set(secretKeyBytes, SECRET_KEY_KDF_LABEL.length + passwordBytes.length + 1);
+  try {
+    return argon2id(input, salt, { t: params.t, m: params.m, p: params.p, dkLen: KEY_LENGTH });
+  } finally {
+    input.fill(0);
+    secretKeyBytes.fill(0);
+  }
+}
+
 // ---------- Verifier (proves we have the masterKey) ----------
 //
 // Stored alongside the meta. On unlock, we re-derive the masterKey from
@@ -144,6 +261,9 @@ export interface SecretsMetaSnapshot {
   kdfSalt: Uint8Array;
   kdfParams: Argon2Params;
   verifier: Uint8Array;
+  secretKeyRequired: true;
+  secretKeyVersion: 1;
+  secretKeyFingerprint: string;
   // Recovery phrase derivation
   recoverySalt: Uint8Array;
   recoveryParams: Argon2Params;
@@ -168,6 +288,7 @@ export interface SecretsSetupResult {
   masterKey: LockableSecret;
   auditMacKey: LockableSecret;
   recoveryPhrase: string;
+  secretKey: string;
 }
 
 export interface SecretsUnlockResult {
@@ -221,6 +342,7 @@ export function secretsSetup(masterPassword: string, opts: SecretsSetupOptions):
   const masterKeyBytes = generateKey();
   const auditMacKeyBytes = generateKey();
   const recoveryPhrase = generateMnemonic();
+  const secretKey = generateSecretKey();
   const deviceId = opts.deviceId ?? randomUUID();
   const auditChainGenesis = generateKey();
 
@@ -229,7 +351,7 @@ export function secretsSetup(masterPassword: string, opts: SecretsSetupOptions):
   //  password+salt+params; verifier proves we got the right one).
   // To allow rotating password without re-encrypting items, the masterKey
   // we expose is RANDOM, and the password derivation key wraps it.
-  const passwordKey = deriveKey(masterPassword, kdfSalt, kdfParams);
+  const passwordKey = deriveUnlockKey(masterPassword, secretKey, kdfSalt, kdfParams);
   const recoveryKey = deriveRecoveryKey(recoveryPhrase, recoverySalt, recoveryParams);
 
   const _passwordWrap = aeadSeal(passwordKey, masterKeyBytes, "secrets.master-key|password");
@@ -253,6 +375,9 @@ export function secretsSetup(masterPassword: string, opts: SecretsSetupOptions):
     kdfSalt,
     kdfParams,
     verifier,
+    secretKeyRequired: true,
+    secretKeyVersion: 1,
+    secretKeyFingerprint: secretKeyFingerprint(secretKey),
     recoverySalt,
     recoveryParams,
     recoveryWrap: combineWrap(_passwordWrap, recoveryWrap),
@@ -266,7 +391,7 @@ export function secretsSetup(masterPassword: string, opts: SecretsSetupOptions):
   masterKeyBytes.fill(0);
   auditMacKeyBytes.fill(0);
 
-  return { meta, masterKey, auditMacKey, recoveryPhrase };
+  return { meta, masterKey, auditMacKey, recoveryPhrase, secretKey };
 }
 
 // We store BOTH the password-wrapped masterKey AND the recovery-wrapped one
@@ -292,8 +417,19 @@ function splitWrap(combined: Uint8Array): { passwordWrap: Uint8Array; recoveryWr
   return { passwordWrap, recoveryWrap };
 }
 
-export function secretsUnlock(meta: SecretsMetaSnapshot, password: string, platformKey?: Uint8Array): SecretsUnlockResult {
-  const passwordKey = deriveKey(password, meta.kdfSalt, meta.kdfParams);
+export function secretsUnlock(
+  meta: SecretsMetaSnapshot,
+  password: string,
+  secretKey: string,
+  platformKey?: Uint8Array,
+): SecretsUnlockResult {
+  if (meta.secretKeyRequired !== true || meta.secretKeyVersion !== 1) {
+    throw new Error("Unsupported Secrets meta: Secret Key required");
+  }
+  if (secretKeyFingerprint(secretKey) !== meta.secretKeyFingerprint) {
+    throw new Error("Secret Key mismatch");
+  }
+  const passwordKey = deriveUnlockKey(password, secretKey, meta.kdfSalt, meta.kdfParams);
   const { passwordWrap } = splitWrap(meta.recoveryWrap);
   let masterKeyBytes: Uint8Array;
   try {
@@ -349,51 +485,52 @@ export function secretsRecover(meta: SecretsMetaSnapshot, recoveryPhrase: string
 export interface SecretsChangePasswordResult {
   newMeta: SecretsMetaSnapshot;
   newRecoveryPhrase: string;
+  newSecretKey: string;
 }
 
-export function secretsChangePassword(
+function rewrapUnlockedVault(
   meta: SecretsMetaSnapshot,
-  oldPassword: string,
+  masterKey: LockableSecret,
+  auditMacKey: LockableSecret,
   newPassword: string,
   platformKey?: Uint8Array,
   newKdfParams?: Argon2Params,
   newRecoveryParams?: Argon2Params,
 ): SecretsChangePasswordResult {
-  const { masterKey, auditMacKey } = secretsUnlock(meta, oldPassword, platformKey);
+  const kdfParams = newKdfParams ?? meta.kdfParams;
+  const recoveryParams = newRecoveryParams ?? meta.recoveryParams;
+  const newKdfSalt = generateSalt();
+  const newRecoverySalt = generateSalt();
+  const newRecoveryPhrase = generateMnemonic();
+  const newSecretKey = generateSecretKey();
+
+  const passwordKey = deriveUnlockKey(newPassword, newSecretKey, newKdfSalt, kdfParams);
+  const recoveryKey = deriveRecoveryKey(newRecoveryPhrase, newRecoverySalt, recoveryParams);
+
+  let masterKeyBytes!: Uint8Array;
+  let auditMacKeyBytes!: Uint8Array;
+  masterKey.withBytes((b) => {
+    masterKeyBytes = new Uint8Array(b);
+  });
+  auditMacKey.withBytes((b) => {
+    auditMacKeyBytes = new Uint8Array(b);
+  });
+
   try {
-    const kdfParams = newKdfParams ?? meta.kdfParams;
-    const recoveryParams = newRecoveryParams ?? meta.recoveryParams;
-    const newKdfSalt = generateSalt();
-    const newRecoverySalt = generateSalt();
-    const newRecoveryPhrase = generateMnemonic();
-
-    const passwordKey = deriveKey(newPassword, newKdfSalt, kdfParams);
-    const recoveryKey = deriveRecoveryKey(newRecoveryPhrase, newRecoverySalt, recoveryParams);
-
-    let masterKeyBytes!: Uint8Array;
-    let auditMacKeyBytes!: Uint8Array;
-    masterKey.withBytes((b) => {
-      masterKeyBytes = new Uint8Array(b);
-    });
-    auditMacKey.withBytes((b) => {
-      auditMacKeyBytes = new Uint8Array(b);
-    });
-
     const passwordWrap = aeadSeal(passwordKey, masterKeyBytes, "secrets.master-key|password");
     const recoveryWrap = aeadSeal(recoveryKey, masterKeyBytes, "secrets.master-key|recovery");
     const auditMacKeyWrap = aeadSeal(masterKeyBytes, auditMacKeyBytes, "secrets.audit-mac-key");
     const platformKeyWrap = platformKey ? wrapMasterKeyWithPlatformKey(masterKeyBytes, platformKey) : meta.platformKeyWrap;
 
-    passwordKey.fill(0);
-    recoveryKey.fill(0);
-    masterKeyBytes.fill(0);
-    auditMacKeyBytes.fill(0);
-
     const newMeta: SecretsMetaSnapshot = {
       ...meta,
+      schemaVersion: Math.max(meta.schemaVersion, SECRETS_SCHEMA_VERSION),
       kdfSalt: newKdfSalt,
       kdfParams,
-      verifier: meta.verifier, // verifier is HMAC of masterKey, doesn't change
+      verifier: meta.verifier,
+      secretKeyRequired: true,
+      secretKeyVersion: 1,
+      secretKeyFingerprint: secretKeyFingerprint(newSecretKey),
       recoverySalt: newRecoverySalt,
       recoveryParams,
       recoveryWrap: combineWrap(passwordWrap, recoveryWrap),
@@ -401,7 +538,46 @@ export function secretsChangePassword(
       ...(platformKeyWrap ? { platformKeyWrap } : {}),
     };
 
-    return { newMeta, newRecoveryPhrase };
+    return { newMeta, newRecoveryPhrase, newSecretKey };
+  } finally {
+    passwordKey.fill(0);
+    recoveryKey.fill(0);
+    masterKeyBytes.fill(0);
+    auditMacKeyBytes.fill(0);
+  }
+}
+
+export function secretsChangePassword(
+  meta: SecretsMetaSnapshot,
+  oldPassword: string,
+  oldSecretKey: string,
+  newPassword: string,
+  platformKey?: Uint8Array,
+  newKdfParams?: Argon2Params,
+  newRecoveryParams?: Argon2Params,
+): SecretsChangePasswordResult {
+  const { masterKey, auditMacKey } = secretsUnlock(meta, oldPassword, oldSecretKey, platformKey);
+  try {
+    return rewrapUnlockedVault(meta, masterKey, auditMacKey, newPassword, platformKey, newKdfParams, newRecoveryParams);
+  } finally {
+    masterKey.zero();
+    auditMacKey.zero();
+  }
+}
+
+export function secretsRecoverAndRotate(
+  meta: SecretsMetaSnapshot,
+  recoveryPhrase: string,
+  newPassword: string,
+  platformKey?: Uint8Array,
+  newKdfParams?: Argon2Params,
+  newRecoveryParams?: Argon2Params,
+): SecretsChangePasswordResult & SecretsUnlockResult {
+  const { masterKey, auditMacKey } = secretsRecover(meta, recoveryPhrase);
+  try {
+    const rotated = rewrapUnlockedVault(meta, masterKey, auditMacKey, newPassword, platformKey, newKdfParams, newRecoveryParams);
+    const unlocked = secretsUnlock(rotated.newMeta, newPassword, rotated.newSecretKey, platformKey);
+    return { ...rotated, ...unlocked };
   } finally {
     masterKey.zero();
     auditMacKey.zero();

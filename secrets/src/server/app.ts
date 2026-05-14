@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 // Clawix-grade Secrets HTTP server for the Mac UI client and @clawjs/cli sidecar:
 //
 //   - Secrets lifecycle: setup / unlock / lock / recover / change-password.
@@ -22,9 +23,10 @@ import { SecretsAuthService, generateOpaqueToken, hashToken } from "./auth.ts";
 import { loadSecretsConfig, type SecretsConfig } from "./config.ts";
 import {
   secretsChangePassword,
-  secretsRecover,
+  secretsRecoverAndRotate,
   secretsSetup,
   secretsUnlock,
+  SECRETS_SCHEMA_VERSION,
   type SecretsMetaSnapshot,
   withPlatformKeyWrap,
 } from "./crypto.ts";
@@ -204,20 +206,20 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // ---------- Public ----------
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     service: "clawjs-secrets",
     host: config.host,
     port: config.port,
-    schemaVersion: 2,
+    schemaVersion: SECRETS_SCHEMA_VERSION,
     cryptoVersion: 1,
   }));
 
-  app.get("/v1/secret-types", async () => {
+  app.get(clawApiPath("secret-types"), async () => {
     return { types: registry.listTypes() };
   });
 
-  app.post("/v1/auth/login", async (req, reply) => {
+  app.post(clawApiPath("auth/login"), async (req, reply) => {
     const body = (req.body ?? {}) as { tenantId?: string; email?: string; password?: string };
     if (!config.adminToken || body.password !== config.adminToken) {
       return reply.code(401).send({ error: "Invalid credentials" });
@@ -245,7 +247,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // ---------- Secrets lifecycle ----------
 
-  app.get("/v1/secrets/state", async () => {
+  app.get(clawApiPath("secrets/state"), async () => {
     const exists = metaStore.exists(DEFAULT_TENANT_ID);
     return {
       tenantId: DEFAULT_TENANT_ID,
@@ -255,7 +257,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     };
   });
 
-  app.post("/v1/secrets/setup", async (req, reply) => {
+  app.post(clawApiPath("secrets/setup"), async (req, reply) => {
     if (!requireSignedHost(req, reply)) return;
     if (metaStore.exists(DEFAULT_TENANT_ID)) {
       return reply.code(409).send({ error: "Secrets already initialized" });
@@ -264,7 +266,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     if (!body.password) return reply.code(400).send({ error: "password required" });
     const params = body.calibrate ? calibrateArgon2() : ARGON2_DEFAULT_PARAMS;
     const result = secretsSetup(body.password, {
-      schemaVersion: 2,
+      schemaVersion: SECRETS_SCHEMA_VERSION,
       appVersion: body.appVersion ?? "0.1.2",
       kdfParams: params,
       platformKey,
@@ -284,19 +286,20 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return {
       ok: true,
       recoveryPhrase: result.recoveryPhrase,
+      secretKey: result.secretKey,
       kdfParams: result.meta.kdfParams,
       deviceId: result.meta.deviceId,
     };
   });
 
-  app.post("/v1/secrets/unlock", async (req, reply) => {
+  app.post(clawApiPath("secrets/unlock"), async (req, reply) => {
     if (!requireSignedHost(req, reply)) return;
     const meta = metaStore.load(DEFAULT_TENANT_ID);
     if (!meta) return reply.code(404).send({ error: "Secrets not initialized" });
-    const body = (req.body ?? {}) as { password?: string };
-    if (!body.password) return reply.code(400).send({ error: "password required" });
+    const body = (req.body ?? {}) as { password?: string; secretKey?: string };
+    if (!body.password || !body.secretKey) return reply.code(400).send({ error: "password, secretKey required" });
     try {
-      const { masterKey, auditMacKey } = secretsUnlock(meta, body.password, platformKey);
+      const { masterKey, auditMacKey } = secretsUnlock(meta, body.password, body.secretKey, platformKey);
       const activeMeta = !meta.platformKeyWrap && platformKey
         ? withPlatformKeyWrap(meta, masterKey, platformKey)
         : meta;
@@ -309,25 +312,12 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
         event: { kind: "secretsUnlock", source: "system", success: true, payload: {} },
       });
       return { ok: true };
-    } catch (err) {
-      const tempKeys = (() => {
-        try { return secretsUnlock(meta, "_anonymous_", platformKey); } catch { return null; }
-      })();
-      if (tempKeys) {
-        audit.append({
-          tenantId: DEFAULT_TENANT_ID,
-          meta,
-          auditMacKey: tempKeys.auditMacKey,
-          event: { kind: "secretsFailedUnlock", source: "system", success: false, payload: { reason: (err as Error).message } },
-        });
-        tempKeys.masterKey.zero();
-        tempKeys.auditMacKey.zero();
-      }
+    } catch {
       return reply.code(401).send({ error: "Invalid password" });
     }
   });
 
-  app.post("/v1/secrets/lock", async () => {
+  app.post(clawApiPath("secrets/lock"), async () => {
     if (session.isUnlocked()) {
       const meta = metaStore.load(DEFAULT_TENANT_ID);
       if (meta) {
@@ -346,42 +336,41 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return { ok: true };
   });
 
-  app.post("/v1/secrets/recover", async (req, reply) => {
+  app.post(clawApiPath("secrets/recover"), async (req, reply) => {
     if (!requireSignedHost(req, reply)) return;
     const meta = metaStore.load(DEFAULT_TENANT_ID);
     if (!meta) return reply.code(404).send({ error: "Secrets not initialized" });
-    const body = (req.body ?? {}) as { phrase?: string };
-    if (!body.phrase) return reply.code(400).send({ error: "phrase required" });
+    const body = (req.body ?? {}) as { phrase?: string; newPassword?: string };
+    if (!body.phrase || !body.newPassword) return reply.code(400).send({ error: "phrase, newPassword required" });
     try {
-      const { masterKey, auditMacKey } = secretsRecover(meta, body.phrase);
-      const activeMeta = platformKey
-        ? withPlatformKeyWrap(meta, masterKey, platformKey)
-        : meta;
-      if (activeMeta !== meta) metaStore.save(DEFAULT_TENANT_ID, activeMeta);
-      session.setUnlocked({ tenantId: DEFAULT_TENANT_ID, masterKey, auditMacKey });
+      const result = secretsRecoverAndRotate(meta, body.phrase, body.newPassword, platformKey);
+      metaStore.save(DEFAULT_TENANT_ID, result.newMeta);
+      session.setUnlocked({ tenantId: DEFAULT_TENANT_ID, masterKey: result.masterKey, auditMacKey: result.auditMacKey });
       audit.append({
         tenantId: DEFAULT_TENANT_ID,
-        meta: activeMeta,
-        auditMacKey,
+        meta: result.newMeta,
+        auditMacKey: result.auditMacKey,
         event: { kind: "secretsRecoveryUsed", source: "system", success: true, payload: {} },
       });
-      return { ok: true };
+      return { ok: true, recoveryPhrase: result.newRecoveryPhrase, secretKey: result.newSecretKey };
     } catch (err) {
       return reply.code(401).send({ error: (err as Error).message });
     }
   });
 
-  app.post("/v1/secrets/change-password", async (req, reply) => {
+  app.post(clawApiPath("secrets/change-password"), async (req, reply) => {
     if (!requireSignedHost(req, reply)) return;
     const meta = metaStore.load(DEFAULT_TENANT_ID);
     if (!meta) return reply.code(404).send({ error: "Secrets not initialized" });
-    const body = (req.body ?? {}) as { oldPassword?: string; newPassword?: string };
-    if (!body.oldPassword || !body.newPassword) return reply.code(400).send({ error: "oldPassword, newPassword required" });
+    const body = (req.body ?? {}) as { oldPassword?: string; oldSecretKey?: string; newPassword?: string };
+    if (!body.oldPassword || !body.oldSecretKey || !body.newPassword) {
+      return reply.code(400).send({ error: "oldPassword, oldSecretKey, newPassword required" });
+    }
     try {
-      const result = secretsChangePassword(meta, body.oldPassword, body.newPassword, platformKey);
+      const result = secretsChangePassword(meta, body.oldPassword, body.oldSecretKey, body.newPassword, platformKey);
       metaStore.save(DEFAULT_TENANT_ID, result.newMeta);
       // Re-unlock with new password to refresh in-memory keys.
-      const unlocked = secretsUnlock(result.newMeta, body.newPassword, platformKey);
+      const unlocked = secretsUnlock(result.newMeta, body.newPassword, result.newSecretKey, platformKey);
       session.setUnlocked({
         tenantId: DEFAULT_TENANT_ID,
         masterKey: unlocked.masterKey,
@@ -393,13 +382,13 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
         auditMacKey: unlocked.auditMacKey,
         event: { kind: "secretsPasswordChange", source: "admin", payload: {} },
       });
-      return { ok: true, recoveryPhrase: result.newRecoveryPhrase };
+      return { ok: true, recoveryPhrase: result.newRecoveryPhrase, secretKey: result.newSecretKey };
     } catch (err) {
       return reply.code(401).send({ error: (err as Error).message });
     }
   });
 
-  app.get("/v1/secrets/doctor", async () => {
+  app.get(clawApiPath("secrets/doctor"), async () => {
     const meta = metaStore.load(DEFAULT_TENANT_ID);
     const unlocked = session.isUnlocked();
     const integrity = unlocked && meta
@@ -424,7 +413,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     };
   });
 
-  app.post("/v1/secrets/backup/export", async (req, reply) => {
+  app.post(clawApiPath("secrets/backup/export"), async (req, reply) => {
     if (!requireFreshHostReauth(req, reply, requireSignedHost)) return;
     await requirePrincipalOrUser(req, reply);
     session.requireKeys();
@@ -443,7 +432,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     }
   });
 
-  app.post("/v1/secrets/backup/import", async (req, reply) => {
+  app.post(clawApiPath("secrets/backup/import"), async (req, reply) => {
     if (!requireFreshHostReauth(req, reply, requireSignedHost)) return;
     await requirePrincipalOrUser(req, reply);
     session.requireKeys();
@@ -461,7 +450,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // ---------- Containers (secrets folders) ----------
 
-  app.get("/v1/tenants/:tenantId/folders", async (req) => {
+  app.get(clawApiPath("tenants/:tenantId/folders"), async (req) => {
     await requirePrincipalOrUser(req, undefined as unknown as FastifyReply);
     const { tenantId } = req.params as { tenantId: string };
     const includeTrashed = ((req.query as Record<string, string>)?.includeTrashed === "true");
@@ -469,7 +458,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return { folders: rows.map((r) => resolver.describeContainer(r)) };
   });
 
-  app.post("/v1/tenants/:tenantId/folders", async (req) => {
+  app.post(clawApiPath("tenants/:tenantId/folders"), async (req) => {
     await requirePrincipalOrUser(req, undefined as unknown as FastifyReply);
     const { tenantId } = req.params as { tenantId: string };
     const body = (req.body ?? {}) as { name?: string; icon?: string; color?: string; sortOrder?: number };
@@ -485,7 +474,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     ) };
   });
 
-  app.patch("/v1/tenants/:tenantId/folders/:id", async (req) => {
+  app.patch(clawApiPath("tenants/:tenantId/folders/:id"), async (req) => {
     await requirePrincipalOrUser(req, undefined as unknown as FastifyReply);
     const { id } = req.params as { id: string };
     const body = (req.body ?? {}) as { name?: string };
@@ -493,7 +482,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return { folder: row ? resolver.describeContainer(row) : null };
   });
 
-  app.delete("/v1/tenants/:tenantId/folders/:id", async (req) => {
+  app.delete(clawApiPath("tenants/:tenantId/folders/:id"), async (req) => {
     await requirePrincipalOrUser(req, undefined as unknown as FastifyReply);
     const { id } = req.params as { id: string };
     resolver.containers.trash(id);
@@ -502,7 +491,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // ---------- Principals ----------
 
-  app.get("/v1/tenants/:tenantId/principals", async (req) => {
+  app.get(clawApiPath("tenants/:tenantId/principals"), async (req) => {
     await requirePrincipalOrUser(req, undefined as unknown as FastifyReply);
     const { tenantId } = req.params as { tenantId: string };
     return {
@@ -517,7 +506,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     };
   });
 
-  app.post("/v1/tenants/:tenantId/principals", async (req, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/principals"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const { tenantId } = req.params as { tenantId: string };
     const body = (req.body ?? {}) as { type?: "service_principal" | "sidecar_principal"; label?: string };
@@ -544,7 +533,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // ---------- Secrets ----------
 
-  app.get("/v1/tenants/:tenantId/secrets", async (req, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/secrets"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const withPublicValues = includePublicValues(req, reply);
     if ((req.query as Record<string, string> | undefined)?.includePublicValues === "true" && !withPublicValues) return;
@@ -560,7 +549,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return { secrets: rows.map((r) => resolver.describeSecret(r, { includePublicValues: withPublicValues })) };
   });
 
-  app.get("/v1/tenants/:tenantId/secrets/:name", async (req, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/secrets/:name"), async (req, reply) => {
     const actor = await requirePrincipalOrUser(req, reply);
     const { tenantId, name } = req.params as { tenantId: string; name: string };
     if (!isCapabilityAllowed(actor, tenantId, name, "metadata.read")) return reply.code(403).send({ error: "metadata.read denied" });
@@ -571,7 +560,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return { secret: resolver.describeSecret(row, { includePublicValues: withPublicValues }) };
   });
 
-  app.get("/v1/tenants/:tenantId/secrets/:name/versions", async (req, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/secrets/:name/versions"), async (req, reply) => {
     const actor = await requirePrincipalOrUser(req, reply);
     const { tenantId, name } = req.params as { tenantId: string; name: string };
     if (!isCapabilityAllowed(actor, tenantId, name, "metadata.read")) return reply.code(403).send({ error: "metadata.read denied" });
@@ -580,7 +569,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return { versions: resolver.secrets.listVersions(row.id) };
   });
 
-  app.get("/v1/tenants/:tenantId/secrets/:name/capabilities", async (req, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/secrets/:name/capabilities"), async (req, reply) => {
     const actor = await requirePrincipalOrUser(req, reply);
     const { tenantId, name } = req.params as { tenantId: string; name: string };
     const row = resolver.secrets.getByInternalName(tenantId, name);
@@ -594,7 +583,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     };
   });
 
-  app.get("/v1/tenants/:tenantId/secrets/:name/actions", async (req, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/secrets/:name/actions"), async (req, reply) => {
     const actor = await requirePrincipalOrUser(req, reply);
     const { tenantId, name } = req.params as { tenantId: string; name: string };
     const row = resolver.secrets.getByInternalName(tenantId, name);
@@ -612,7 +601,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return { secret: resolver.describeSecret(row), actions };
   });
 
-  app.post("/v1/tenants/:tenantId/secrets/:name/actions/:actionId", async (req, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/secrets/:name/actions/:actionId"), async (req, reply) => {
     const actor = await requirePrincipalOrUser(req, reply);
     const { tenantId, name, actionId } = req.params as { tenantId: string; name: string; actionId: string };
     const row = resolver.secrets.getByInternalName(tenantId, name);
@@ -629,7 +618,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     });
   });
 
-  app.post("/v1/tenants/:tenantId/secrets", async (req, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/secrets"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const keys = session.requireKeys();
     const { tenantId } = req.params as { tenantId: string };
@@ -650,7 +639,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return { secret: resolver.describeSecret(created) };
   });
 
-  app.patch("/v1/tenants/:tenantId/secrets/:name", async (req, reply) => {
+  app.patch(clawApiPath("tenants/:tenantId/secrets/:name"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const keys = session.requireKeys();
     const { tenantId, name } = req.params as { tenantId: string; name: string };
@@ -670,7 +659,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return { secret: resolver.describeSecret(updated) };
   });
 
-  app.post("/v1/tenants/:tenantId/secrets/:name/archive", async (req, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/secrets/:name/archive"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const keys = session.requireKeys();
     const { tenantId, name } = req.params as { tenantId: string; name: string };
@@ -692,7 +681,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     };
   });
 
-  app.post("/v1/tenants/:tenantId/secrets/:name/compromise", async (req, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/secrets/:name/compromise"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const keys = session.requireKeys();
     const { tenantId, name } = req.params as { tenantId: string; name: string };
@@ -714,7 +703,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     };
   });
 
-  app.delete("/v1/tenants/:tenantId/secrets/:name", async (req, reply) => {
+  app.delete(clawApiPath("tenants/:tenantId/secrets/:name"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const keys = session.requireKeys();
     const { tenantId, name } = req.params as { tenantId: string; name: string };
@@ -730,7 +719,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return { secret: updated ? resolver.describeSecret(updated) : null };
   });
 
-  app.post("/v1/tenants/:tenantId/secrets/:name/restore", async (req, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/secrets/:name/restore"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const keys = session.requireKeys();
     const { tenantId, name } = req.params as { tenantId: string; name: string };
@@ -748,7 +737,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // ---------- Reveal field / notes ----------
 
-  app.post("/v1/tenants/:tenantId/secrets/:name/reveal-field", async (req, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/secrets/:name/reveal-field"), async (req, reply) => {
     if (!requireSignedHost(req, reply)) return;
     const actor = await requirePrincipalOrUser(req, reply);
     if (actor.kind !== "user") return reply.code(403).send({ error: "Human re-authenticated UI session required" });
@@ -774,7 +763,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // ---------- Brokered execute ----------
 
-  app.post("/v1/tenants/:tenantId/secrets/:name/execute/:executorId", async (req, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/secrets/:name/execute/:executorId"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const { tenantId, name, executorId } = req.params as { tenantId: string; name: string; executorId: string };
     const row = resolver.secrets.getByInternalName(tenantId, name);
@@ -788,7 +777,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     });
   });
 
-  app.post("/v1/tenants/:tenantId/broker/http", async (req, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/broker/http"), async (req, reply) => {
     const actor = await requirePrincipalOrUser(req, reply);
     const keys = session.requireKeys();
     const { tenantId } = req.params as { tenantId: string };
@@ -946,7 +935,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // ---------- Brand sync ----------
 
-  app.post("/v1/tenants/:tenantId/secrets/:name/sync", async (req, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/secrets/:name/sync"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const { tenantId, name } = req.params as { tenantId: string; name: string };
     const row = resolver.secrets.getByInternalName(tenantId, name);
@@ -964,7 +953,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // ---------- Agent grants ----------
 
-  app.post("/v1/tenants/:tenantId/grants", async (req, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/grants"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const keys = session.requireKeys();
     const { tenantId } = req.params as { tenantId: string };
@@ -999,13 +988,13 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return { grant: resolver.describeGrant(issued.grant), token: issued.token };
   });
 
-  app.get("/v1/tenants/:tenantId/grants", async (req, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/grants"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const { tenantId } = req.params as { tenantId: string };
     return { grants: resolver.grants.list(tenantId).map((g) => resolver.describeGrant(g)) };
   });
 
-  app.delete("/v1/tenants/:tenantId/grants/:id", async (req, reply) => {
+  app.delete(clawApiPath("tenants/:tenantId/grants/:id"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const keys = session.requireKeys();
     const { tenantId, id } = req.params as { tenantId: string; id: string };
@@ -1022,7 +1011,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // ---------- Leases ----------
 
-  app.post("/v1/tenants/:tenantId/leases", async (req, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/leases"), async (req, reply) => {
     const actor = await requirePrincipalOrUser(req, reply);
     const keys = session.requireKeys();
     const { tenantId } = req.params as { tenantId: string };
@@ -1070,13 +1059,13 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return { lease: resolver.describeLease(issued.lease), token: issued.token };
   });
 
-  app.get("/v1/tenants/:tenantId/leases", async (req, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/leases"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const { tenantId } = req.params as { tenantId: string };
     return { leases: resolver.leases.list(tenantId).map((l) => resolver.describeLease(l)) };
   });
 
-  app.post("/v1/tenants/:tenantId/leases/:id/revoke", async (req, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/leases/:id/revoke"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const keys = session.requireKeys();
     const { tenantId, id } = req.params as { tenantId: string; id: string };
@@ -1094,13 +1083,13 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // ---------- Policies ----------
 
-  app.get("/v1/tenants/:tenantId/policies", async (req, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/policies"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const { tenantId } = req.params as { tenantId: string };
     return { policies: resolver.policies.list(tenantId) };
   });
 
-  app.post("/v1/tenants/:tenantId/policies", async (req, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/policies"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const { tenantId } = req.params as { tenantId: string };
     const body = (req.body ?? {}) as { subjectType?: string; subjectId?: string; secretName?: string; capability?: string; effect?: "allow" | "deny" };
@@ -1118,7 +1107,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return { policy: row };
   });
 
-  app.delete("/v1/tenants/:tenantId/policies/:id", async (req, reply) => {
+  app.delete(clawApiPath("tenants/:tenantId/policies/:id"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const { id } = req.params as { id: string };
     resolver.policies.delete(id);
@@ -1127,7 +1116,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // ---------- Audit ----------
 
-  app.get("/v1/tenants/:tenantId/audit", async (req, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/audit"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const keys = session.requireKeys();
     const { tenantId } = req.params as { tenantId: string };
@@ -1142,7 +1131,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return { events: audit.query({ tenantId, auditMacKey: keys.auditMacKey, filter }) };
   });
 
-  app.post("/v1/tenants/:tenantId/audit/verify-integrity", async (req, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/audit/verify-integrity"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
     const keys = session.requireKeys();
     const { tenantId } = req.params as { tenantId: string };
@@ -1152,7 +1141,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // ---------- Plugins ----------
 
-  app.get("/v1/plugins", async () => {
+  app.get(clawApiPath("plugins"), async () => {
     return {
       plugins: registry.listPlugins().map((p) => ({ id: p.id, version: p.version, label: p.label })),
       types: registry.listTypes().length,

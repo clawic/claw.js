@@ -1,3 +1,4 @@
+// @clawjs-persistent-surface-ddl-source
 // Clawix-grade SQLite schema. Replaces the prior thin schema with the
 // full data model needed to host the merged Clawix Secrets + Secrets
 // Secrets feature set under ClawJS Secrets.
@@ -304,6 +305,9 @@ interface SerializedMeta {
   kdfSalt: string;
   kdfParams: { t: number; m: number; p: number };
   verifier: string;
+  secretKeyRequired: true;
+  secretKeyVersion: 1;
+  secretKeyFingerprint: string;
   recoverySalt: string;
   recoveryParams: { t: number; m: number; p: number };
   recoveryWrap: string;
@@ -323,6 +327,9 @@ export function serializeSecretsMeta(meta: SecretsMetaSnapshot): string {
     kdfSalt: toBase64(meta.kdfSalt),
     kdfParams: meta.kdfParams,
     verifier: toBase64(meta.verifier),
+    secretKeyRequired: meta.secretKeyRequired,
+    secretKeyVersion: meta.secretKeyVersion,
+    secretKeyFingerprint: meta.secretKeyFingerprint,
     recoverySalt: toBase64(meta.recoverySalt),
     recoveryParams: meta.recoveryParams,
     recoveryWrap: toBase64(meta.recoveryWrap),
@@ -345,6 +352,9 @@ export function deserializeSecretsMeta(json: string): SecretsMetaSnapshot {
     kdfSalt: fromBase64(obj.kdfSalt),
     kdfParams: obj.kdfParams,
     verifier: fromBase64(obj.verifier),
+    secretKeyRequired: obj.secretKeyRequired,
+    secretKeyVersion: obj.secretKeyVersion,
+    secretKeyFingerprint: obj.secretKeyFingerprint,
     recoverySalt: fromBase64(obj.recoverySalt),
     recoveryParams: obj.recoveryParams,
     recoveryWrap: fromBase64(obj.recoveryWrap),

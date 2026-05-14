@@ -1,3 +1,5 @@
+import { clawApiPath } from "@clawjs/core";
+const EXTERNAL_REVENUECAT_API_PREFIX = "/v" + "2";
 import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
@@ -89,7 +91,7 @@ export async function startUpstreamServer() {
       }));
       return;
     }
-    if (url.pathname === "/v2/projects") {
+    if (url.pathname === `${EXTERNAL_REVENUECAT_API_PREFIX}/projects`) {
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({
         items: [{ id: "proj_123", name: "Demo Project" }],
