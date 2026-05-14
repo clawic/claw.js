@@ -95060,7 +95060,7 @@
     {
       "path": "packages/clawjs/src/cli-discovery.test.ts",
       "language": "typescript",
-      "lines": 117,
+      "lines": 128,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -96517,7 +96517,7 @@
     {
       "path": "packages/clawjs/src/cli-rules-library-skills-command.ts",
       "language": "typescript",
-      "lines": 562,
+      "lines": 578,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -97798,7 +97798,7 @@
     {
       "path": "packages/clawjs/src/index-memory-runtime.test.ts",
       "language": "typescript",
-      "lines": 948,
+      "lines": 956,
       "test": true,
       "entrypoint": false,
       "imports": [

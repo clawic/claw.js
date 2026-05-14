@@ -244,11 +244,19 @@ test("runCli rules compiles scoped active rules and ignores pending rules", asyn
     stderr: captureStream().stream,
     cwd: process.cwd(),
   }), CLI_EXIT_OK);
-  const result = JSON.parse(stdout.getOutput()) as {
-    prompt: string;
-    overridden: Array<{ rule: { id: string } }>;
-    omitted: Array<{ rule: { id: string }; reason: string }>;
+  const envelope = JSON.parse(stdout.getOutput()) as {
+    ok: boolean;
+    data: {
+      prompt: string;
+      overridden: Array<{ rule: { id: string } }>;
+      omitted: Array<{ rule: { id: string }; reason: string }>;
+    };
+    meta: { canonicalCommand: string; subcommand: string };
   };
+  assert.equal(envelope.ok, true);
+  assert.equal(envelope.meta.canonicalCommand, "rules");
+  assert.equal(envelope.meta.subcommand, "compile");
+  const result = envelope.data;
   assert.match(result.prompt, /Northstar tone/);
   assert.match(result.prompt, /Website typography/);
   assert.doesNotMatch(result.prompt, /Keynote/);

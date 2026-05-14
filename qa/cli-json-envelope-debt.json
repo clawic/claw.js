@@ -7,7 +7,6 @@
     "packages/clawjs/src/cli-productivity-command.ts": 37,
     "packages/clawjs/src/cli-productivity-extended-command.ts": 93,
     "packages/clawjs/src/cli-productivity-primary-command.ts": 34,
-    "packages/clawjs/src/cli-rules-library-skills-command.ts": 35,
     "packages/clawjs/src/cli-user-knowledge-command.ts": 40,
     "packages/clawjs/src/index.ts": 49
   }

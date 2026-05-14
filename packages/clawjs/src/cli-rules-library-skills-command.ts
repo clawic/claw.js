@@ -3,7 +3,7 @@ import type { RuntimeAdapterId } from "@clawjs/core";
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { parseCsvFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
-import { cliErrorFromUnknown, writeCliError, writeJson } from "./cli-json.ts";
+import { cliErrorFromUnknown, writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
 import { parseRuleReferences } from "./cli-rule-utils.ts";
 import { parseSkillParamsFlag, parseSkillScopeFlag, readAllStdin } from "./cli-value-utils.ts";
@@ -24,6 +24,22 @@ export async function runRulesLibrarySkillsCli(input: {
   runtimeAdapterId: RuntimeAdapterId;
 }): Promise<number | null> {
   const { group, command, subcommand, positionals, flags, argv, context, wantsJson, workspaceRoot, appId, workspaceId, agentId, runtimeAdapterId } = input;
+  const writeSurfaceJson = (payload: unknown) => {
+    const canonicalCommand = group === "init-skills-builtins" ? "skills" : group ?? "skills";
+    writeCommandJsonOk(context.stdout, canonicalCommand, payload, {
+      invokedCommand: group ?? canonicalCommand,
+      subcommand: command ?? null,
+      ...(subcommand ? { operation: subcommand } : {}),
+    });
+  };
+  const writeSurfaceJsonError = (error: unknown) => {
+    const canonicalCommand = group === "init-skills-builtins" ? "skills" : group ?? "skills";
+    writeCommandJsonError(context.stdout, canonicalCommand, error, {
+      invokedCommand: group ?? canonicalCommand,
+      subcommand: command ?? null,
+      ...(subcommand ? { operation: subcommand } : {}),
+    });
+  };
 if (group === "rules") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
   const scopeId = flags.scope || flags["scope-id"];
@@ -31,7 +47,7 @@ if (group === "rules") {
   try {
     if (command === "status") {
       const status = claw.rules.status();
-      if (wantsJson) writeJson(context.stdout, status);
+      if (wantsJson) writeSurfaceJson(status);
       else context.stdout.write(`rules ${status.rules} active ${status.active} pending ${status.pending}\n`);
       return CLI_EXIT_OK;
     }
@@ -41,7 +57,7 @@ if (group === "rules") {
         ...(flags.status ? { status: flags.status as "pending" | "active" | "archived" } : {}),
         ...(scopeId ? { scopeId } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, { rules });
+      if (wantsJson) writeSurfaceJson({ rules });
       else context.stdout.write(`${rules.map((rule) => `${rule.status} ${rule.kind} ${rule.id} ${rule.title}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -50,7 +66,7 @@ if (group === "rules") {
       const id = subcommand || flags.id;
       const rule = id ? claw.rules.get(id) : null;
       if (!rule) throw new CliHandledError("not_found", `Rule not found: ${id ?? ""}`, CLI_EXIT_FAILURE);
-      if (wantsJson) writeJson(context.stdout, rule);
+      if (wantsJson) writeSurfaceJson(rule);
       else context.stdout.write(`${rule.status} ${rule.kind} ${rule.id}\n${rule.content}\n`);
       return CLI_EXIT_OK;
     }
@@ -68,12 +84,12 @@ if (group === "rules") {
           parentId: flags.parent,
           aliases: parseCsvFlag(flags.aliases),
         });
-        if (wantsJson) writeJson(context.stdout, scope);
+        if (wantsJson) writeSurfaceJson(scope);
         else context.stdout.write(`scope ${scope.id}\n`);
         return CLI_EXIT_OK;
       }
       const scopes = claw.rules.scopes();
-      if (wantsJson) writeJson(context.stdout, { scopes });
+      if (wantsJson) writeSurfaceJson({ scopes });
       else context.stdout.write(`${scopes.map((scope) => `${scope.kind} ${scope.id} ${scope.name}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -108,7 +124,7 @@ if (group === "rules") {
         },
         source: flags.source,
       });
-      if (wantsJson) writeJson(context.stdout, rule);
+      if (wantsJson) writeSurfaceJson(rule);
       else context.stdout.write(`proposed ${rule.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -120,7 +136,7 @@ if (group === "rules") {
         return CLI_EXIT_USAGE;
       }
       const rule = command === "approve" ? claw.rules.approve(id) : claw.rules.archive(id);
-      if (wantsJson) writeJson(context.stdout, rule);
+      if (wantsJson) writeSurfaceJson(rule);
       else context.stdout.write(`${rule.status} ${rule.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -146,13 +162,13 @@ if (group === "rules") {
         channel: flags.channel,
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeSurfaceJson(result);
       else context.stdout.write(result.prompt ? `${result.prompt}\n` : "No applicable rules.\n");
       return CLI_EXIT_OK;
     }
   } catch (error) {
     const handled = cliErrorFromUnknown(error);
-    if (wantsJson) writeCliError(context.stdout, handled);
+    if (wantsJson) writeSurfaceJsonError(handled);
     else context.stderr.write(`${handled.message}\n`);
     return handled.exitCode;
   }
@@ -172,7 +188,7 @@ if (group === "library") {
   try {
     if (command === "list") {
       const assets = claw.library.list();
-      if (wantsJson) writeJson(context.stdout, { assets });
+      if (wantsJson) writeSurfaceJson({ assets });
       else context.stdout.write(`${assets.map((asset) => `${asset.kind} ${asset.id} ${asset.title}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -180,7 +196,7 @@ if (group === "library") {
     if (command === "inspect") {
       const asset = subcommand ? claw.library.get(subcommand) : null;
       if (!asset) throw new CliHandledError("not_found", `Library asset not found: ${subcommand ?? ""}`, CLI_EXIT_FAILURE);
-      if (wantsJson) writeJson(context.stdout, asset);
+      if (wantsJson) writeSurfaceJson(asset);
       else context.stdout.write(`${asset.kind} ${asset.id}\n${asset.title}\n`);
       return CLI_EXIT_OK;
     }
@@ -218,7 +234,7 @@ if (group === "library") {
         } : {}),
         ...(kind === "bundle" ? { bundleAssetIds: parseCsvFlag(flags.assets) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, asset);
+      if (wantsJson) writeSurfaceJson(asset);
       else context.stdout.write(`created ${asset.kind} ${asset.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -246,7 +262,7 @@ if (group === "library") {
         ...(flags["auto-apply-tags"] !== undefined ? { autoApplyTags: parseCsvFlag(flags["auto-apply-tags"]) } : {}),
         ...(flags.assets !== undefined ? { bundleAssetIds: parseCsvFlag(flags.assets) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, asset);
+      if (wantsJson) writeSurfaceJson(asset);
       else context.stdout.write(`updated ${asset.kind} ${asset.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -258,7 +274,7 @@ if (group === "library") {
         return CLI_EXIT_USAGE;
       }
       const removed = claw.library.remove(id);
-      if (wantsJson) writeJson(context.stdout, { removed });
+      if (wantsJson) writeSurfaceJson({ removed });
       else context.stdout.write(`${removed ? "removed" : "not found"} ${id}\n`);
       return removed ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -279,7 +295,7 @@ if (group === "library") {
           },
         } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, asset);
+      if (wantsJson) writeSurfaceJson(asset);
       else context.stdout.write(`imported skill ${asset.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -299,7 +315,7 @@ if (group === "library") {
         mode: readBooleanFlag(argv, flags, "exclude", false) ? "exclude" as const : "include" as const,
       };
       const result = command === "assign" ? claw.library.assign(payload) : claw.library.unassign(payload);
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeSurfaceJson(result);
       else context.stdout.write(`${command === "assign" ? "assigned" : "unassigned"} ${assetId}\n`);
       return CLI_EXIT_OK;
     }
@@ -314,18 +330,18 @@ if (group === "library") {
       };
       if (command === "sync") {
         const result = await claw.library.sync(input);
-        if (wantsJson) writeJson(context.stdout, result);
+        if (wantsJson) writeSurfaceJson(result);
         else context.stdout.write(`synced ${result.resolved.assets.length} library assets\n`);
       } else {
         const result = claw.library.resolve(input);
-        if (wantsJson) writeJson(context.stdout, result);
+        if (wantsJson) writeSurfaceJson(result);
         else context.stdout.write(`${result.assets.map((asset) => `${asset.kind} ${asset.id}`).join("\n")}\n`);
       }
       return CLI_EXIT_OK;
     }
   } catch (error) {
     const handled = cliErrorFromUnknown(error);
-    if (wantsJson) writeCliError(context.stdout, handled);
+    if (wantsJson) writeSurfaceJsonError(handled);
     else context.stderr.write(`${handled.message}\n`);
     return handled.exitCode;
   }
@@ -338,7 +354,7 @@ if (group === "skills" && command === "list") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   if (readBooleanFlag(argv, flags, "legacy", false)) {
     const skills = await claw.skills.list();
-    if (wantsJson) writeJson(context.stdout, skills);
+    if (wantsJson) writeSurfaceJson(skills);
     else context.stdout.write(`${skills.map((entry) => `${entry.enabled ? "*" : "-"} ${entry.id}`).join("\n")}\n`);
     return skills.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   }
@@ -347,7 +363,7 @@ if (group === "skills" && command === "list") {
   if (flags.scope) filter.scope = flags.scope as "global" | "project" | "tag" | "chat";
   if (flags.tag) filter.tags = String(flags.tag).split(",").map((t) => t.trim()).filter(Boolean);
   const skills = claw.skills.listV2(filter);
-  if (wantsJson) writeJson(context.stdout, skills);
+  if (wantsJson) writeSurfaceJson(skills);
   else context.stdout.write(`${skills.map((entry) => `${entry.kind}\t${entry.slug}\t${entry.name}`).join("\n")}\n`);
   return skills.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
 }
@@ -359,7 +375,7 @@ if (group === "skills" && (command === "view" || command === "show") && subcomma
     context.stderr.write(`Skill not found: ${subcommand}\n`);
     return CLI_EXIT_FAILURE;
   }
-  if (wantsJson) writeJson(context.stdout, spec);
+  if (wantsJson) writeSurfaceJson(spec);
   else context.stdout.write(`${spec.kind} ${spec.slug}\n${spec.name}\n${spec.description}\n\n${spec.body}\n`);
   return CLI_EXIT_OK;
 }
@@ -383,7 +399,7 @@ if (group === "skills" && command === "create" && subcommand) {
     tags,
     syncTo,
   });
-  if (wantsJson) writeJson(context.stdout, spec);
+  if (wantsJson) writeSurfaceJson(spec);
   else context.stdout.write(`created ${spec.kind}/${spec.slug}\n`);
   return CLI_EXIT_OK;
 }
@@ -391,7 +407,7 @@ if (group === "skills" && command === "create" && subcommand) {
 if (group === "skills" && command === "remove" && subcommand) {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const ok = claw.skills.removeV2(subcommand);
-  if (wantsJson) writeJson(context.stdout, { removed: ok });
+  if (wantsJson) writeSurfaceJson({ removed: ok });
   else context.stdout.write(ok ? `removed ${subcommand}\n` : `not found: ${subcommand}\n`);
   return ok ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
 }
@@ -400,7 +416,7 @@ if (group === "skills" && command === "activate" && subcommand) {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const scope = parseSkillScopeFlag(flags.scope || "global");
   const assignment = claw.skills.activate(subcommand, scope);
-  if (wantsJson) writeJson(context.stdout, assignment);
+  if (wantsJson) writeSurfaceJson(assignment);
   else context.stdout.write(`activated ${subcommand} scope=${scope.kind}\n`);
   return CLI_EXIT_OK;
 }
@@ -409,7 +425,7 @@ if (group === "skills" && command === "deactivate" && subcommand) {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const scope = parseSkillScopeFlag(flags.scope || "global");
   const removed = claw.skills.deactivate(subcommand, scope);
-  if (wantsJson) writeJson(context.stdout, { removed });
+  if (wantsJson) writeSurfaceJson({ removed });
   else context.stdout.write(removed ? `deactivated ${subcommand}\n` : `not active: ${subcommand}\n`);
   return removed ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
 }
@@ -419,7 +435,7 @@ if (group === "skills" && command === "compile") {
   const slugs = (flags.slugs ? flags.slugs.split(",") : positionals.slice(2)).map((s) => s.trim()).filter(Boolean);
   const slugList = slugs.length > 0 ? slugs : claw.skills.resolveActive({ projectId: flags.project, chatId: flags.chat }).map((s) => s.slug);
   const text = claw.skills.compile(slugList);
-  if (wantsJson) writeJson(context.stdout, { slugs: slugList, prompt: text });
+  if (wantsJson) writeSurfaceJson({ slugs: slugList, prompt: text });
   else context.stdout.write(`${text}\n`);
   return CLI_EXIT_OK;
 }
@@ -431,7 +447,7 @@ if (group === "skills" && command === "instantiate" && subcommand) {
     saveAs: flags["save-as"],
     freeze: readBooleanFlag(argv, flags, "freeze", false),
   });
-  if (wantsJson) writeJson(context.stdout, spec);
+  if (wantsJson) writeSurfaceJson(spec);
   else context.stdout.write(`instantiated ${spec.slug} (template=${subcommand})\n`);
   return CLI_EXIT_OK;
 }
@@ -439,7 +455,7 @@ if (group === "skills" && command === "instantiate" && subcommand) {
 if (group === "skills" && command === "freeze" && subcommand) {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const spec = claw.skills.freeze(subcommand);
-  if (wantsJson) writeJson(context.stdout, spec);
+  if (wantsJson) writeSurfaceJson(spec);
   else context.stdout.write(`frozen ${spec.slug}\n`);
   return CLI_EXIT_OK;
 }
@@ -447,7 +463,7 @@ if (group === "skills" && command === "freeze" && subcommand) {
 if (group === "skills" && (command === "init-builtins" || command === "init")) {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const report = claw.skills.initBuiltins();
-  if (wantsJson) writeJson(context.stdout, report);
+  if (wantsJson) writeSurfaceJson(report);
   else context.stdout.write(`personalities=${report.personalitiesCreated} procedures=${report.proceduresCreated} skipped=${report.skipped}\n`);
   return CLI_EXIT_OK;
 }
@@ -455,7 +471,7 @@ if (group === "skills" && (command === "init-builtins" || command === "init")) {
 if (group === "init-skills-builtins") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const report = claw.skills.initBuiltins();
-  if (wantsJson) writeJson(context.stdout, report);
+  if (wantsJson) writeSurfaceJson(report);
   else context.stdout.write(`personalities=${report.personalitiesCreated} procedures=${report.proceduresCreated} skipped=${report.skipped}\n`);
   return CLI_EXIT_OK;
 }
@@ -464,7 +480,7 @@ if (group === "skills" && command === "import") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const dirs = flags.from ? [flags.from] : flags.dirs ? flags.dirs.split(",").map((d) => d.trim()).filter(Boolean) : undefined;
   const report = await claw.skills.importExternal({ dirs });
-  if (wantsJson) writeJson(context.stdout, report);
+  if (wantsJson) writeSurfaceJson(report);
   else context.stdout.write(`imported=${report.imported.length} skipped=${report.skipped.length} warnings=${report.warnings.length}\n`);
   return CLI_EXIT_OK;
 }
@@ -473,7 +489,7 @@ if (group === "skills" && command === "sources") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const sources = await claw.skills.sources();
   if (wantsJson) {
-    writeJson(context.stdout, sources);
+    writeSurfaceJson(sources);
   } else {
     context.stdout.write(`${sources.map((entry) => {
       const caps = Object.entries(entry.capabilities)
@@ -498,7 +514,7 @@ if (group === "skills" && command === "search") {
     ...(flags.limit ? { limit: Number(flags.limit) } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, result);
+    writeSurfaceJson(result);
   } else {
     if (result.entries.length === 0) {
       context.stdout.write("no matches\n");
@@ -520,13 +536,13 @@ if (group === "skills" && (command === "sync" || command === "inspect")) {
   if (command === "sync" && !readBooleanFlag(argv, flags, "legacy", false)) {
     const targets = flags.target && flags.target !== "all" ? flags.target.split(",").map((t) => t.trim()).filter(Boolean) : undefined;
     const report = await claw.skills.syncV2({ targets });
-    if (wantsJson) writeJson(context.stdout, report);
+    if (wantsJson) writeSurfaceJson(report);
     else context.stdout.write(`synced=${report.synced.length} removed=${report.removed.length} warnings=${report.warnings.length}\n`);
     return CLI_EXIT_OK;
   }
   const skills = command === "sync" ? await claw.skills.sync() : await claw.skills.list();
   if (wantsJson) {
-    writeJson(context.stdout, skills);
+    writeSurfaceJson(skills);
   } else {
     context.stdout.write(`${skills.map((entry) => entry.id).join("\n")}\n`);
   }
@@ -544,7 +560,7 @@ if (group === "skills" && command === "install") {
     source: flags.source,
   });
   if (wantsJson) {
-    writeJson(context.stdout, result);
+    writeSurfaceJson(result);
   } else {
     const synced = result.syncedSkills ? ` synced=${result.syncedSkills.length}` : "";
     context.stdout.write(`installed ${result.source}:${result.slug} visibility=${result.runtimeVisibility}${synced}\n`);
