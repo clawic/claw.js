@@ -25,6 +25,7 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       CLAW_DAY_ROOT: path.join(outputRoot, "workspace"),
+      CLAW_DATA_DIR: path.join(outputRoot, "data"),
     },
   },
   projects: [

@@ -9,7 +9,9 @@ async function submitModal(page: Page) {
 
 async function reloadDashboard(page: Page) {
   await page.waitForTimeout(1000);
-  await page.reload();
+  await expect(page.locator("#sec-projects h2")).toBeVisible({ timeout: 30_000 });
+  await page.waitForLoadState("networkidle");
+  await page.reload({ waitUntil: "networkidle" });
   await expect(page.getByTestId("day-dashboard")).toBeVisible();
   await expect(page.locator("#sec-projects h2")).toBeVisible({ timeout: 30_000 });
 }

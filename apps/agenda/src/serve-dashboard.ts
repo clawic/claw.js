@@ -8,9 +8,11 @@ const { flags } = parseArgv(process.argv.slice(2));
 const rootDir = resolveRoot(flags);
 const PORT = Number(flags.port) || 3737;
 const HTML = readFileSync(path.join(import.meta.dirname, "app.html"), "utf8");
+let clawPromise: ReturnType<typeof createDashboard> | undefined;
 
 async function getClaw() {
-  return createDashboard(rootDir);
+  clawPromise ??= createDashboard(rootDir);
+  return clawPromise;
 }
 
 async function readBody(req: http.IncomingMessage): Promise<any> {

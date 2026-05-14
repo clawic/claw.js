@@ -1032,6 +1032,12 @@ function openModal(type, editId) {
 
 function closeModal() { document.getElementById("modal-overlay").classList.remove("open"); }
 
+async function finishModal(message) {
+  await reload();
+  closeModal();
+  toast(message);
+}
+
 /* ── Submit handlers ── */
 async function submitTask(editId) {
   const body = {
@@ -1061,12 +1067,11 @@ async function submitTask(editId) {
   if (!body.title) { toast("Title is required"); return; }
   if (editId) {
     await api("PATCH", "/api/tasks/" + editId, body);
-    toast("Task updated");
+    await finishModal("Task updated");
   } else {
     await api("POST", "/api/tasks", body);
-    toast("Task created");
+    await finishModal("Task created");
   }
-  closeModal(); reload();
 }
 
 async function submitList() {
@@ -1078,7 +1083,7 @@ async function submitList() {
   };
   if (!body.title) { toast("Title is required"); return; }
   await api("POST", "/api/lists", body);
-  toast("List created"); closeModal(); reload();
+  await finishModal("List created");
 }
 
 async function submitSection() {
@@ -1090,7 +1095,7 @@ async function submitSection() {
   };
   if (!body.title) { toast("Title is required"); return; }
   await api("POST", "/api/sections", body);
-  toast("Section created"); closeModal(); reload();
+  await finishModal("Section created");
 }
 
 async function submitCycle() {
@@ -1104,7 +1109,7 @@ async function submitCycle() {
   };
   if (!body.name) { toast("Name is required"); return; }
   await api("POST", "/api/cycles", body);
-  toast("Cycle created"); closeModal(); reload();
+  await finishModal("Cycle created");
 }
 
 async function submitEpic() {
@@ -1118,7 +1123,7 @@ async function submitEpic() {
   };
   if (!body.title) { toast("Title is required"); return; }
   await api("POST", "/api/epics", body);
-  toast("Epic created"); closeModal(); reload();
+  await finishModal("Epic created");
 }
 
 async function submitMilestone(editId) {
@@ -1132,12 +1137,11 @@ async function submitMilestone(editId) {
   if (!body.title) { toast("Title is required"); return; }
   if (editId) {
     await api("PATCH", "/api/milestones/" + editId, body);
-    toast("Milestone updated");
+    await finishModal("Milestone updated");
   } else {
     await api("POST", "/api/milestones", body);
-    toast("Milestone created");
+    await finishModal("Milestone created");
   }
-  closeModal(); reload();
 }
 
 async function submitProject(editId) {
@@ -1155,12 +1159,11 @@ async function submitProject(editId) {
   if (!body.name) { toast("Name is required"); return; }
   if (editId) {
     await api("PATCH", "/api/projects/" + editId, body);
-    toast("Project updated");
+    await finishModal("Project updated");
   } else {
     await api("POST", "/api/projects", body);
-    toast("Project created");
+    await finishModal("Project created");
   }
-  closeModal(); reload();
 }
 
 async function submitGoal(editId) {
@@ -1177,12 +1180,11 @@ async function submitGoal(editId) {
   if (!body.title) { toast("Title is required"); return; }
   if (editId) {
     await api("PATCH", "/api/goals/" + editId, body);
-    toast("Goal updated");
+    await finishModal("Goal updated");
   } else {
     await api("POST", "/api/goals", body);
-    toast("Goal created");
+    await finishModal("Goal created");
   }
-  closeModal(); reload();
 }
 
 /* ── Keyboard ── */
