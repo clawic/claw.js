@@ -4,8 +4,8 @@
   "maxNewFileLines": 1200,
   "files": {
     "packages/clawjs/src/index.ts": {
-      "lines": 11776,
-      "reason": "Existing public surface barrel or command surface; split by domain before expanding."
+      "lines": 6187,
+      "reason": "Existing public CLI router after command extraction; keep routing thin and split new domains into modules."
     },
     "packages/clawjs-node/src/create-claw.ts": {
       "lines": 7363,

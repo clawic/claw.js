@@ -262,9 +262,13 @@ for (const marker of surfaceContract.taxonomy.visibility) {
   }
 }
 
+const cliSourceDir = path.join(rootDir, "packages", "clawjs", "src");
+const cliSourceFiles = fs.readdirSync(cliSourceDir)
+  .filter((entry) => /^cli-.*\.ts$/.test(entry))
+  .map((entry) => path.join(cliSourceDir, entry));
 const cliSourceRaw = [
-  read(path.join(rootDir, "packages", "clawjs", "src", "index.ts")),
-  read(path.join(rootDir, "packages", "clawjs", "src", "cli-surface.ts")),
+  read(path.join(cliSourceDir, "index.ts")),
+  ...cliSourceFiles.map((filePath) => read(filePath)),
 ].join("\n");
 const cliDocRaw = read(path.join(rootDir, "docs", "cli.md"));
 function cliSourceHasGroup(groupName) {
