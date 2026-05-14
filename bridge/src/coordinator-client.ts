@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import { setTimeout as delay } from "node:timers/promises";
 
 export interface CoordinatorClientOptions {
@@ -52,7 +53,7 @@ export class CoordinatorClient {
   }
 
   async listPeers(): Promise<{ peers: CoordinatorPeer[]; irohRelay: { publicUrl: string | null } }> {
-    const response = await this.fetch("/v1/peers", { method: "GET" });
+    const response = await this.fetch(clawApiPath("peers"), { method: "GET" });
     if (!response.ok) {
       throw new Error(`coordinator /peers failed: ${response.status}`);
     }
@@ -64,7 +65,7 @@ export class CoordinatorClient {
   }
 
   async sendSignaling(toDeviceId: string, payload: unknown): Promise<void> {
-    const response = await this.fetch("/v1/signaling/send", {
+    const response = await this.fetch(clawApiPath("signaling/send"), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ toDeviceId, payload }),
@@ -95,7 +96,7 @@ export class CoordinatorClient {
     if (this.options.irohNodeId) body.irohNodeId = this.options.irohNodeId;
     if (this.options.relayUrl) body.relayUrl = this.options.relayUrl;
     if (addrs.length > 0) body.publicAddrs = addrs;
-    const response = await this.fetch("/v1/devices/heartbeat", {
+    const response = await this.fetch(clawApiPath("devices/heartbeat"), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),

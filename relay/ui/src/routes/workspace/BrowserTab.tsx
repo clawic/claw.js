@@ -1,3 +1,6 @@
+const STABLE_EVENT_TYPES = {
+  browserInput: "browser.input",
+} as const;
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -214,7 +217,7 @@ export function BrowserTab({
       setError("Browser stream is offline.");
       return;
     }
-    wsRef.current.send(JSON.stringify({ type: "browser.input", command }));
+    wsRef.current.send(JSON.stringify({ type: STABLE_EVENT_TYPES.browserInput, command }));
   }
 
   function handleFrameClick(event: React.MouseEvent<HTMLImageElement>) {

@@ -1,3 +1,8 @@
+const STABLE_EVENT_TYPES = {
+  browserState: "browser.state",
+  browserFrame: "browser.frame",
+} as const;
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -65,7 +70,7 @@ function startBrowserConnector(baseUrl: string, connectorToken: string, agentId 
   };
   let frameSeq = 0;
 
-  const socket = new WebSocket(baseUrl.replace(/^http/, "ws") + "/v1/connector/connect", {
+  const socket = new WebSocket(baseUrl.replace(/^http/, "ws") + clawApiPath("connector/connect"), {
     headers: { Authorization: `Bearer ${connectorToken}` },
   });
 
@@ -87,7 +92,7 @@ function startBrowserConnector(baseUrl: string, connectorToken: string, agentId 
     session.updatedAt = new Date().toISOString();
     socket.send(JSON.stringify({
       type: "event",
-      event: "browser.state",
+      event: STABLE_EVENT_TYPES.browserState,
       payload: {
         workspaceId: "main",
         reason,
@@ -100,7 +105,7 @@ function startBrowserConnector(baseUrl: string, connectorToken: string, agentId 
     frameSeq += 1;
     socket.send(JSON.stringify({
       type: "event",
-      event: "browser.frame",
+      event: STABLE_EVENT_TYPES.browserFrame,
       payload: {
         workspaceId: "main",
         seq: frameSeq,

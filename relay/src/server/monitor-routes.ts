@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import type { FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
 
@@ -19,7 +20,7 @@ export function registerMonitorRoutes(input: {
      Designed to be polled by the standalone monitor service.
      No auth required (intended for same-network access).
      ------------------------------------------------------- */
-  app.get("/v1/monitor/status", async () => {
+  app.get(clawApiPath("monitor/status"), async () => {
     const tenants = db.sqlite.prepare("SELECT id FROM tenants").all() as Array<{ id: string }>;
 
     const allConnectors: Array<{
@@ -156,7 +157,7 @@ export function registerMonitorRoutes(input: {
     };
   };
 
-  app.get("/v1/tenants/:tenantId/monitor/stream", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/monitor/stream"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "monitor:read");
     if (!claims) return;
     const params = request.params as { tenantId: string };

@@ -1,3 +1,7 @@
+const STABLE_EVENT_TYPES = {
+  browserState: "browser.state",
+  browserFrame: "browser.frame",
+} as const;
 import { randomUUID } from "node:crypto";
 
 import type { WebSocket } from "ws";
@@ -115,13 +119,13 @@ export class ConnectorRegistry {
         return;
       }
       case "event":
-        if (message.event === "browser.state") {
+        if (message.event === STABLE_EVENT_TYPES.browserState) {
           const workspaceId = typeof message.payload.workspaceId === "string" ? message.payload.workspaceId : undefined;
           const session = message.payload.session as BrowserSessionSnapshot | undefined;
           if (workspaceId && session) {
             this.browserSessions.set(this.browserKey(auth.tenantId, auth.agentId, workspaceId), session);
             this.broadcastBrowser(auth.tenantId, auth.agentId, workspaceId, {
-              type: "browser.state",
+              type: STABLE_EVENT_TYPES.browserState,
               reason: message.payload.reason,
               session,
             });
@@ -129,19 +133,19 @@ export class ConnectorRegistry {
               tenantId: auth.tenantId,
               agentId: auth.agentId,
               workspaceId,
-              capability: "browser.state",
+              capability: STABLE_EVENT_TYPES.browserState,
               status: "info",
               detail: typeof message.payload.reason === "string" ? message.payload.reason : "browser update",
             });
             return;
           }
         }
-        if (message.event === "browser.frame") {
+        if (message.event === STABLE_EVENT_TYPES.browserFrame) {
           const frame = message.payload as BrowserFrameEvent;
           if (typeof frame.workspaceId === "string") {
             this.browserFrames.set(this.browserKey(auth.tenantId, auth.agentId, frame.workspaceId), frame);
             this.broadcastBrowser(auth.tenantId, auth.agentId, frame.workspaceId, {
-              type: "browser.frame",
+              type: STABLE_EVENT_TYPES.browserFrame,
               frame,
             });
             return;

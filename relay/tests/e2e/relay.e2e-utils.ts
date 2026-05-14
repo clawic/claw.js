@@ -1,3 +1,8 @@
+const STABLE_EVENT_TYPES = {
+  browserState: "browser.state",
+  browserFrame: "browser.frame",
+} as const;
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -136,7 +141,7 @@ export function startFakeConnector(url: string, connectorToken: string, agentId 
     },
     frameSeq: 0,
   };
-  const socket = new WebSocket(url.replace(/^http/, "ws") + "/v1/connector/connect", {
+  const socket = new WebSocket(url.replace(/^http/, "ws") + clawApiPath("connector/connect"), {
     headers: { Authorization: `Bearer ${connectorToken}` },
   });
 
@@ -185,7 +190,7 @@ export function startFakeConnector(url: string, connectorToken: string, agentId 
       browserState.session.updatedAt = new Date().toISOString();
       socket.send(JSON.stringify({
         type: "event",
-        event: "browser.state",
+        event: STABLE_EVENT_TYPES.browserState,
         payload: {
           workspaceId: targetWorkspaceId,
           reason,
@@ -197,7 +202,7 @@ export function startFakeConnector(url: string, connectorToken: string, agentId 
       browserState.frameSeq += 1;
       socket.send(JSON.stringify({
         type: "event",
-        event: "browser.frame",
+        event: STABLE_EVENT_TYPES.browserFrame,
         payload: {
           workspaceId: targetWorkspaceId,
           seq: browserState.frameSeq,

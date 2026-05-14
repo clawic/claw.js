@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import { setTimeout as delay } from "node:timers/promises";
 import fs from "node:fs";
 import path from "node:path";
@@ -148,7 +149,7 @@ function writeStoredCredential(options: RelayConnectorOptions, credential: Enrol
 }
 
 async function enroll(options: RelayConnectorOptions): Promise<EnrollmentResult> {
-  const response = await fetch(new URL("/v1/connector/enroll", options.relayUrl), {
+  const response = await fetch(new URL(clawApiPath("connector/enroll"), options.relayUrl), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ enrollmentToken: options.enrollmentToken }),
@@ -169,7 +170,7 @@ async function startDevicePairing(options: RelayConnectorOptions): Promise<{
   qrPayload: string;
   intervalSec: number;
 }> {
-  const response = await fetch(new URL("/v1/connectors/device/start", options.relayUrl), {
+  const response = await fetch(new URL(clawApiPath("connectors/device/start"), options.relayUrl), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -193,7 +194,7 @@ async function startDevicePairing(options: RelayConnectorOptions): Promise<{
 
 async function pollDevicePairing(options: RelayConnectorOptions, deviceCode: string, intervalSec: number): Promise<EnrollmentResult> {
   for (;;) {
-    const response = await fetch(new URL("/v1/connectors/device/poll", options.relayUrl), {
+    const response = await fetch(new URL(clawApiPath("connectors/device/poll"), options.relayUrl), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ deviceCode }),
@@ -231,7 +232,7 @@ async function bootstrapConnector(options: RelayConnectorOptions): Promise<Enrol
 }
 
 function toWebSocketUrl(relayUrl: string): string {
-  const url = new URL("/v1/connector/connect", relayUrl);
+  const url = new URL(clawApiPath("connector/connect"), relayUrl);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   return url.toString();
 }

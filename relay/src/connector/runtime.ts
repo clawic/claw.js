@@ -1,3 +1,4 @@
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -1074,7 +1075,7 @@ export class RelayConnectorRuntime {
       }
       case "sessions.delete-all": {
         const metadata = this.resolveWorkspaceMaterialization(targetWorkspaceId);
-        const sessionsDir = path.join(metadata.workspaceDir, ".claw", "sessions");
+        const sessionsDir = resolveClawPersistentSurfacePath("claw.workspace.sessions", metadata.workspaceDir);
         let deleted = 0;
         if (fs.existsSync(sessionsDir)) {
           for (const entry of fs.readdirSync(sessionsDir)) {

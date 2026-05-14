@@ -1,3 +1,6 @@
+const STABLE_EVENT_TYPES = {
+  browserInput: "browser.input",
+} as const;
 import { after, before, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import os from "node:os";
@@ -966,7 +969,7 @@ describe("relay e2e", () => {
       };
       browserWs.on("message", onMessage);
       browserWs.send(JSON.stringify({
-        type: "browser.input",
+        type: STABLE_EVENT_TYPES.browserInput,
         command: { type: "key", key: "Enter" },
       }));
     });

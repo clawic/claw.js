@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -82,7 +83,7 @@ async function createEnrollment(agentId: string): Promise<string> {
 
 async function startServiceConnector(): Promise<WebSocket> {
   const connectorToken = await createEnrollment("service-agent");
-  const socket = new WebSocket(baseUrl.replace(/^http/, "ws") + "/v1/connector/connect", {
+  const socket = new WebSocket(baseUrl.replace(/^http/, "ws") + clawApiPath("connector/connect"), {
     headers: { Authorization: `Bearer ${connectorToken}` },
   });
   const runtime = new RelayConnectorRuntime({
@@ -152,21 +153,21 @@ before(async () => {
       authorization: request.headers.authorization,
       relayAuth: request.headers["x-clawjs-relay-authorization"] as string | undefined,
     });
-    if (url.pathname === "/v1/secure") {
+    if (url.pathname === clawApiPath("secure")) {
       if (request.headers.authorization !== "Bearer native-token") return sendJson(response, 401, { error: "native_auth_required" });
       return sendJson(response, 200, { ok: true, query: url.searchParams.get("q") });
     }
-    if (url.pathname === "/v1/upload") {
+    if (url.pathname === clawApiPath("upload")) {
       const body = await readBody(request);
       return sendJson(response, 201, { size: body.length, text: body.toString("utf8") });
     }
-    if (url.pathname === "/v1/download") {
+    if (url.pathname === clawApiPath("download")) {
       response.statusCode = 200;
       response.setHeader("content-type", "application/octet-stream");
       response.end(Buffer.from([0, 1, 2, 3, 255]));
       return;
     }
-    if (url.pathname === "/v1/events") {
+    if (url.pathname === clawApiPath("events")) {
       response.writeHead(200, {
         "content-type": "text/event-stream",
         "cache-control": "no-cache",
@@ -181,7 +182,7 @@ before(async () => {
     return sendJson(response, 404, { error: "not_found" });
   });
   serviceServer.on("upgrade", (request, socket, head) => {
-    if (!request.url?.startsWith("/v1/socket")) {
+    if (!request.url?.startsWith(clawApiPath("socket"))) {
       socket.destroy();
       return;
     }
@@ -231,7 +232,7 @@ test("Relay service gateway preserves native service auth and proxies HTTP, uplo
   });
   assert.equal(secure.status, 200);
   assert.deepEqual(await secure.json(), { ok: true, query: "relay" });
-  const seenSecure = serviceRequests.find((entry) => entry.pathname === "/v1/secure");
+  const seenSecure = serviceRequests.find((entry) => entry.pathname === clawApiPath("secure"));
   assert.equal(seenSecure?.authorization, "Bearer native-token");
   assert.equal(seenSecure?.relayAuth, undefined);
 

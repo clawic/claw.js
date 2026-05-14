@@ -1,3 +1,12 @@
+const STABLE_EVENT_TYPES = {
+  sessionStart: "session.start",
+  sessionDelta: "session.delta",
+  sessionEnd: "session.end",
+  sessionTouch: "session.touch",
+  agentPresence: "agent.presence",
+  clientAttach: "client.attach",
+  clientDetach: "client.detach",
+} as const;
 import { useEffect, useReducer, useRef, useCallback } from "react";
 import { streamSSE } from "../../lib/api";
 
@@ -60,14 +69,14 @@ type Action =
   | { type: "connected"; clientId: string }
   | { type: "disconnected"; error?: string }
   | { type: "snapshot"; payload: any }
-  | { type: "session.start"; payload: any }
-  | { type: "session.delta"; payload: any }
-  | { type: "session.end"; payload: any }
-  | { type: "session.touch"; payload: any }
-  | { type: "agent.presence"; payload: any }
+  | { type: typeof STABLE_EVENT_TYPES.sessionStart; payload: any }
+  | { type: typeof STABLE_EVENT_TYPES.sessionDelta; payload: any }
+  | { type: typeof STABLE_EVENT_TYPES.sessionEnd; payload: any }
+  | { type: typeof STABLE_EVENT_TYPES.sessionTouch; payload: any }
+  | { type: typeof STABLE_EVENT_TYPES.agentPresence; payload: any }
   | { type: "activity"; payload: any }
-  | { type: "client.attach"; payload: any }
-  | { type: "client.detach"; payload: any }
+  | { type: typeof STABLE_EVENT_TYPES.clientAttach; payload: any }
+  | { type: typeof STABLE_EVENT_TYPES.clientDetach; payload: any }
   | { type: "select"; sessionId: string | null };
 
 const initialState: MonitorState = {
@@ -340,28 +349,28 @@ export function useMonitorStream(tenantId: string) {
               dispatch({ type: "connected", clientId: typeof data.clientId === "string" ? data.clientId : clientIdRef.current });
               break;
             case "monitor.session.start":
-              dispatch({ type: "session.start", payload: data });
+              dispatch({ type: STABLE_EVENT_TYPES.sessionStart, payload: data });
               break;
             case "monitor.session.delta":
-              dispatch({ type: "session.delta", payload: data });
+              dispatch({ type: STABLE_EVENT_TYPES.sessionDelta, payload: data });
               break;
             case "monitor.session.end":
-              dispatch({ type: "session.end", payload: data });
+              dispatch({ type: STABLE_EVENT_TYPES.sessionEnd, payload: data });
               break;
             case "monitor.session.touch":
-              dispatch({ type: "session.touch", payload: data });
+              dispatch({ type: STABLE_EVENT_TYPES.sessionTouch, payload: data });
               break;
             case "monitor.agent.presence":
-              dispatch({ type: "agent.presence", payload: data });
+              dispatch({ type: STABLE_EVENT_TYPES.agentPresence, payload: data });
               break;
             case "monitor.activity":
               dispatch({ type: "activity", payload: data });
               break;
             case "monitor.client.attach":
-              dispatch({ type: "client.attach", payload: data });
+              dispatch({ type: STABLE_EVENT_TYPES.clientAttach, payload: data });
               break;
             case "monitor.client.detach":
-              dispatch({ type: "client.detach", payload: data });
+              dispatch({ type: STABLE_EVENT_TYPES.clientDetach, payload: data });
               break;
             case "monitor.heartbeat":
             default:

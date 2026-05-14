@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -142,7 +143,7 @@ async function startCodexConnector(input: {
   expectOnline?: boolean;
 }): Promise<{ socket: WebSocket; runtime: RelayConnectorRuntimeSummary }> {
   const connectorToken = await createEnrollment(input.agentId);
-  const socket = new WebSocket(baseUrl.replace(/^http/, "ws") + "/v1/connector/connect", {
+  const socket = new WebSocket(baseUrl.replace(/^http/, "ws") + clawApiPath("connector/connect"), {
     headers: { Authorization: `Bearer ${connectorToken}` },
   });
   const runtime = new RelayConnectorRuntime({

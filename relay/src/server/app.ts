@@ -1,3 +1,9 @@
+const STABLE_EVENT_TYPES = {
+  browserState: "browser.state",
+  browserFrame: "browser.frame",
+  browserError: "browser.error",
+} as const;
+import { clawApiPath } from "@clawjs/core";
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
@@ -177,7 +183,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     irohRelayHost.stop();
   });
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     service: "clawjs-relay",
     uptimeSeconds: Math.round(process.uptime()),
@@ -265,17 +271,17 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
   for (const method of serviceRouteMethods) {
     app.route({
       method,
-      url: "/v1/tenants/:tenantId/services/:serviceId",
+      url: clawApiPath("tenants/:tenantId/services/:serviceId"),
       handler: serviceHttpHandler,
     });
     app.route({
       method,
-      url: "/v1/tenants/:tenantId/services/:serviceId/*",
+      url: clawApiPath("tenants/:tenantId/services/:serviceId/*"),
       handler: serviceHttpHandler,
     });
   }
 
-  app.get("/v1/tenants/:tenantId/services/:serviceId/_ws/*", { websocket: true }, async (socket, request) => {
+  app.get(clawApiPath("tenants/:tenantId/services/:serviceId/_ws/*"), { websocket: true }, async (socket, request) => {
     const typedRequest = request as FastifyRequest<{ Params: { tenantId: string; serviceId: string; "*": string } }>;
     const token = parseServiceRelayToken(typedRequest);
     if (!token) {
@@ -398,7 +404,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
 
   registerMonitorRoutes({ app, auth, db, monitor });
 
-  app.post("/v1/auth/login", async (request, reply) => {
+  app.post(clawApiPath("auth/login"), async (request, reply) => {
     if (!await requireSecureTransport(request, reply, config)) return;
     if (!await requireRateLimit(request, reply, rateLimiter, "login", config.loginRateLimitWindowMs, config.loginRateLimitMax)) return;
     const body = await readRequestBody(request);
@@ -439,7 +445,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     };
   });
 
-  app.post("/v1/auth/refresh", async (request, reply) => {
+  app.post(clawApiPath("auth/refresh"), async (request, reply) => {
     if (!await requireSecureTransport(request, reply, config)) return;
     const body = await readRequestBody(request);
     const refreshToken = typeof body.refreshToken === "string" ? body.refreshToken : "";
@@ -471,7 +477,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     };
   });
 
-  app.post("/v1/auth/logout", async (request, reply) => {
+  app.post(clawApiPath("auth/logout"), async (request, reply) => {
     if (!await requireSecureTransport(request, reply, config)) return;
     const body = await readRequestBody(request);
     const refreshToken = typeof body.refreshToken === "string" ? body.refreshToken : "";
@@ -479,7 +485,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return await reply.send({ ok: true });
   });
 
-  app.get("/v1/me/devices", async (request, reply) => {
+  app.get(clawApiPath("me/devices"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "tenant:read");
     if (!claims) return;
     return {
@@ -487,7 +493,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     };
   });
 
-  app.get("/v1/me/workspaces", async (request, reply) => {
+  app.get(clawApiPath("me/workspaces"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "workspace:read");
     if (!claims) return;
     if (claims.deviceId) {
@@ -502,7 +508,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     };
   });
 
-  app.post("/v1/connectors/device/start", async (request, reply) => {
+  app.post(clawApiPath("connectors/device/start"), async (request, reply) => {
     if (!await requireSecureTransport(request, reply, config)) return;
     if (!await requireRateLimit(request, reply, rateLimiter, "pairing-start", config.pairingStartRateLimitWindowMs, config.pairingStartRateLimitMax)) return;
     const body = await readRequestBody(request);
@@ -539,7 +545,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     };
   });
 
-  app.post("/v1/connectors/device/poll", async (request, reply) => {
+  app.post(clawApiPath("connectors/device/poll"), async (request, reply) => {
     if (!await requireSecureTransport(request, reply, config)) return;
     if (!await requireRateLimit(request, reply, rateLimiter, "pairing-poll", config.pairingPollRateLimitWindowMs, config.pairingPollRateLimitMax)) return;
     const body = await readRequestBody(request);
@@ -562,7 +568,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     };
   });
 
-  app.post("/v1/pairings/:pairingId/approve", async (request, reply) => {
+  app.post(clawApiPath("pairings/:pairingId/approve"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "tenant:read");
     if (!claims) return;
     const { pairingId } = request.params as { pairingId: string };
@@ -576,7 +582,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return { pairing: approved };
   });
 
-  app.post("/v1/pairings/:pairingId/deny", async (request, reply) => {
+  app.post(clawApiPath("pairings/:pairingId/deny"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "tenant:read");
     if (!claims) return;
     const { pairingId } = request.params as { pairingId: string };
@@ -587,7 +593,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return { ok: true };
   });
 
-  app.post("/v1/connector/enroll", async (request, reply) => {
+  app.post(clawApiPath("connector/enroll"), async (request, reply) => {
     const body = await readRequestBody(request);
     const enrollmentToken = typeof body.enrollmentToken === "string" ? body.enrollmentToken : "";
     const result = db.consumeEnrollment(enrollmentToken);
@@ -597,7 +603,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return result;
   });
 
-  app.get("/v1/connector/connect", { websocket: true }, async (socket, request) => {
+  app.get(clawApiPath("connector/connect"), { websocket: true }, async (socket, request) => {
     const fastifyRequest = request as unknown as FastifyRequest;
     const host = fastifyRequest.headers.host ?? new URL(config.publicBaseUrl).host;
     if (!isLoopbackHost(host) && !isSecureRequest(fastifyRequest)) {
@@ -617,7 +623,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     registry.attach(socket as any, authContext);
   });
 
-  app.post("/v1/admin/connectors/enrollments", async (request, reply) => {
+  app.post(clawApiPath("admin/connectors/enrollments"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "admin:*");
     if (!claims) return;
     const body = await readRequestBody(request);
@@ -635,7 +641,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     };
   });
 
-  app.post("/v1/admin/connectors/:connectorId/revoke", async (request, reply) => {
+  app.post(clawApiPath("admin/connectors/:connectorId/revoke"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "admin:*");
     if (!claims) return;
     const { connectorId } = request.params as { connectorId: string };
@@ -654,7 +660,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return { ok: true, connectorId };
   });
 
-  app.get("/v1/tenants/:tenantId/agents", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/agents"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "agent:read");
     if (!claims) return;
     const { tenantId } = request.params as { tenantId: string };
@@ -666,7 +672,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return { agents: db.listAgents(tenantId) };
   });
 
-  app.get("/v1/tenants/:tenantId/projects", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/projects"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "agent:read");
     if (!claims) return;
     const { tenantId } = request.params as { tenantId: string };
@@ -678,7 +684,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return { projects: db.listProjects(tenantId) };
   });
 
-  app.post("/v1/tenants/:tenantId/projects", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/projects"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "admin:*");
     if (!claims) return;
     const { tenantId } = request.params as { tenantId: string };
@@ -705,7 +711,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return { project };
   });
 
-  app.get("/v1/tenants/:tenantId/projects/:projectId", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/projects/:projectId"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "agent:read");
     if (!claims) return;
     const params = request.params as { tenantId: string; projectId: string };
@@ -721,7 +727,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return { project };
   });
 
-  app.patch("/v1/tenants/:tenantId/projects/:projectId", async (request, reply) => {
+  app.patch(clawApiPath("tenants/:tenantId/projects/:projectId"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "admin:*");
     if (!claims) return;
     const params = request.params as { tenantId: string; projectId: string };
@@ -760,7 +766,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return { project };
   });
 
-  app.get("/v1/tenants/:tenantId/projects/:projectId/agents", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/projects/:projectId/agents"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "agent:read");
     if (!claims) return;
     const params = request.params as { tenantId: string; projectId: string };
@@ -783,7 +789,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return { project, agents: assignments };
   });
 
-  app.get("/v1/tenants/:tenantId/agents/:agentId/projects", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/agents/:agentId/projects"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "agent:read");
     if (!claims) return;
     const params = request.params as { tenantId: string; agentId: string };
@@ -800,7 +806,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     };
   });
 
-  app.post("/v1/tenants/:tenantId/projects/:projectId/agents/:agentId", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/projects/:projectId/agents/:agentId"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "admin:*");
     if (!claims) return;
     const params = request.params as { tenantId: string; projectId: string; agentId: string };
@@ -844,7 +850,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     }
   });
 
-  app.delete("/v1/tenants/:tenantId/projects/:projectId/agents/:agentId", async (request, reply) => {
+  app.delete(clawApiPath("tenants/:tenantId/projects/:projectId/agents/:agentId"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "admin:*");
     if (!claims) return;
     const params = request.params as { tenantId: string; projectId: string; agentId: string };
@@ -874,7 +880,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return { ok: true };
   });
 
-  app.get("/v1/tenants/:tenantId/agents/:agentId/workspaces", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/agents/:agentId/workspaces"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "workspace:read");
     if (!claims) return;
     const params = request.params as { tenantId: string; agentId: string };
@@ -887,7 +893,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return { workspaces };
   });
 
-  app.get("/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/status", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/status"), async (request, reply) => {
     const result = await invokeWorkspace(
       request as FastifyRequest<{ Params: WorkspaceParams }>,
       reply,
@@ -901,7 +907,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return result;
   });
 
-  app.get("/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/session", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/session"), async (request, reply) => {
     const params = request.params as WorkspaceParams;
     const claims = await requireClaims(request, reply, auth, "workspace:read");
     if (!claims) return;
@@ -936,7 +942,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     };
   });
 
-  app.post("/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/session", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/session"), async (request, reply) => {
     const params = request.params as WorkspaceParams;
     const claims = await requireClaims(request, reply, auth, "workspace:data");
     if (!claims) return;
@@ -983,7 +989,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     };
   });
 
-  app.post("/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/control/acquire", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/control/acquire"), async (request, reply) => {
     const params = request.params as WorkspaceParams;
     const claims = await requireClaims(request, reply, auth, "workspace:data");
     if (!claims) return;
@@ -1022,7 +1028,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return result;
   });
 
-  app.post("/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/control/release", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/control/release"), async (request, reply) => {
     const params = request.params as WorkspaceParams;
     const claims = await requireClaims(request, reply, auth, "workspace:data");
     if (!claims) return;
@@ -1061,7 +1067,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return result;
   });
 
-  app.post("/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/navigate", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/navigate"), async (request, reply) => {
     const params = request.params as WorkspaceParams;
     const claims = await requireClaims(request, reply, auth, "workspace:data");
     if (!claims) return;
@@ -1108,7 +1114,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return result;
   });
 
-  app.get("/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/events", { websocket: true }, async (socket, request) => {
+  app.get(clawApiPath("tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/browser/events"), { websocket: true }, async (socket, request) => {
     const fastifyRequest = request as unknown as FastifyRequest<{ Params: WorkspaceParams }>;
     const host = fastifyRequest.headers.host ?? new URL(config.publicBaseUrl).host;
     if (!isLoopbackHost(host) && !isSecureRequest(fastifyRequest)) {
@@ -1154,14 +1160,14 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     });
     if (cached.session) {
       socket.send(JSON.stringify({
-        type: "browser.state",
+        type: STABLE_EVENT_TYPES.browserState,
         reason: "cached",
         session: cached.session,
       }));
     }
     if (cached.frame) {
       socket.send(JSON.stringify({
-        type: "browser.frame",
+        type: STABLE_EVENT_TYPES.browserFrame,
         frame: cached.frame,
       }));
     }
@@ -1202,7 +1208,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
               session,
             });
             socket.send(JSON.stringify({
-              type: "browser.state",
+              type: STABLE_EVENT_TYPES.browserState,
               reason: "input-applied",
               session,
             }));
@@ -1230,7 +1236,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
               session,
             });
             socket.send(JSON.stringify({
-              type: "browser.state",
+              type: STABLE_EVENT_TYPES.browserState,
               reason: "navigate-applied",
               session,
             }));
@@ -1238,7 +1244,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
         }
       } catch (error) {
         socket.send(JSON.stringify({
-          type: "browser.error",
+          type: STABLE_EVENT_TYPES.browserError,
           message: error instanceof Error ? error.message : String(error),
         }));
       }
@@ -1248,7 +1254,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     socket.on("error", unsubscribe);
   });
 
-  app.get("/v1/tenants/:tenantId/projects/:projectId/agents/:agentId/status", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/projects/:projectId/agents/:agentId/status"), async (request, reply) => {
     const result = await invokeProjectAssignment(
       request as FastifyRequest<{ Params: ProjectAgentParams }>,
       reply,
@@ -1262,7 +1268,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return result;
   });
 
-  app.post("/v1/admin/tenants/:tenantId/agents/:agentId/workspaces", async (request, reply) => {
+  app.post(clawApiPath("admin/tenants/:tenantId/agents/:agentId/workspaces"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "admin:*");
     if (!claims) return;
     const params = request.params as { tenantId: string; agentId: string };
@@ -1294,7 +1300,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     }
   });
 
-  app.post("/v1/admin/tenants/:tenantId/agents/:agentId/runtime/:action", async (request, reply) => {
+  app.post(clawApiPath("admin/tenants/:tenantId/agents/:agentId/runtime/:action"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "admin:*");
     if (!claims) return;
     const params = request.params as { tenantId: string; agentId: string; action: string };
@@ -1317,7 +1323,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     }
   });
 
-  app.post("/v1/admin/tenants/:tenantId/workspace-grants", async (request, reply) => {
+  app.post(clawApiPath("admin/tenants/:tenantId/workspace-grants"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "admin:*");
     if (!claims) return;
     const { tenantId } = request.params as { tenantId: string };
@@ -1338,7 +1344,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
   });
 
   // --- Admin data deletion endpoints ---
-  app.delete("/v1/admin/tenants/:tenantId/activity", async (request, reply) => {
+  app.delete(clawApiPath("admin/tenants/:tenantId/activity"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "admin:*");
     if (!claims) return;
     const { tenantId } = request.params as { tenantId: string };
@@ -1350,7 +1356,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return { ok: true, deleted };
   });
 
-  app.delete("/v1/admin/tenants/:tenantId/usage", async (request, reply) => {
+  app.delete(clawApiPath("admin/tenants/:tenantId/usage"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "admin:*");
     if (!claims) return;
     const { tenantId } = request.params as { tenantId: string };
@@ -1362,7 +1368,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return { ok: true, deleted };
   });
 
-  app.delete("/v1/admin/tenants/:tenantId/agents/:agentId", async (request, reply) => {
+  app.delete(clawApiPath("admin/tenants/:tenantId/agents/:agentId"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "admin:*");
     if (!claims) return;
     const params = request.params as { tenantId: string; agentId: string };
@@ -1373,7 +1379,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return { ok: true };
   });
 
-  app.delete("/v1/admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId", async (request, reply) => {
+  app.delete(clawApiPath("admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "admin:*");
     if (!claims) return;
     const params = request.params as WorkspaceParams;
@@ -1397,7 +1403,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return { ok: true };
   });
 
-  app.post("/v1/admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/sessions/clear", async (request, reply) => {
+  app.post(clawApiPath("admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/sessions/clear"), async (request, reply) => {
     const result = await invokeWorkspace(
       request as FastifyRequest<{ Params: WorkspaceParams }>,
       reply,
@@ -1411,7 +1417,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return result;
   });
 
-  app.get("/v1/admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/config", async (request, reply) => {
+  app.get(clawApiPath("admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/config"), async (request, reply) => {
     const result = await invokeWorkspace(
       request as FastifyRequest<{ Params: WorkspaceParams }>,
       reply,
@@ -1425,7 +1431,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return result;
   });
 
-  app.put("/v1/admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/config", async (request, reply) => {
+  app.put(clawApiPath("admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/config"), async (request, reply) => {
     const result = await invokeWorkspace(
       request as FastifyRequest<{ Params: WorkspaceParams }>,
       reply,
@@ -1440,7 +1446,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return result;
   });
 
-  app.get("/v1/admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/workspace-files/:fileName", async (request, reply) => {
+  app.get(clawApiPath("admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/workspace-files/:fileName"), async (request, reply) => {
     const params = request.params as WorkspaceParams & { fileName: string };
     const result = await invokeWorkspace(
       request as FastifyRequest<{ Params: WorkspaceParams }>,
@@ -1457,7 +1463,7 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return result;
   });
 
-  app.put("/v1/admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/workspace-files/:fileName", async (request, reply) => {
+  app.put(clawApiPath("admin/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId/workspace-files/:fileName"), async (request, reply) => {
     const params = request.params as WorkspaceParams & { fileName: string };
     const body = await readRequestBody(request);
     const result = await invokeWorkspace(
@@ -1475,127 +1481,127 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
     return result;
   });
 
-  app.get("/v1/tenants/:tenantId/homes", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/homes"), async (request, reply) => {
     const params = request.params as { tenantId: string };
     const result = await forwardIotJson(request, reply, auth, config, "tenant:read", {
       tenantId: params.tenantId,
-      path: "/v1/homes",
+      path: clawApiPath("homes"),
     });
     if (!result) return;
     return result;
   });
 
-  app.get("/v1/tenants/:tenantId/homes/:homeId/areas", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/homes/:homeId/areas"), async (request, reply) => {
     const params = request.params as { tenantId: string; homeId: string };
     const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
       tenantId: params.tenantId,
-      path: `/v1/homes/${params.homeId}/areas`,
+      path: clawApiPath(`homes/${params.homeId}/areas`),
     });
     if (!result) return;
     return result;
   });
 
-  app.get("/v1/tenants/:tenantId/homes/:homeId/things", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/homes/:homeId/things"), async (request, reply) => {
     const params = request.params as { tenantId: string; homeId: string };
     const query = request.raw.url?.split("?")[1];
     const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
       tenantId: params.tenantId,
-      path: `/v1/homes/${params.homeId}/things${query ? `?${query}` : ""}`,
+      path: clawApiPath(`homes/${params.homeId}/things${query ? `?${query}` : ""}`),
     });
     if (!result) return;
     return result;
   });
 
-  app.get("/v1/tenants/:tenantId/homes/:homeId/state", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/homes/:homeId/state"), async (request, reply) => {
     const params = request.params as { tenantId: string; homeId: string };
     const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
       tenantId: params.tenantId,
-      path: `/v1/homes/${params.homeId}/state`,
+      path: clawApiPath(`homes/${params.homeId}/state`),
     });
     if (!result) return;
     return result;
   });
 
-  app.post("/v1/tenants/:tenantId/homes/:homeId/actions", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/homes/:homeId/actions"), async (request, reply) => {
     const params = request.params as { tenantId: string; homeId: string };
     const result = await forwardIotJson(request, reply, auth, config, "workspace:data", {
       tenantId: params.tenantId,
       method: "POST",
-      path: `/v1/homes/${params.homeId}/actions`,
+      path: clawApiPath(`homes/${params.homeId}/actions`),
       body: await readRequestBody(request),
     });
     if (!result) return;
     return result;
   });
 
-  app.get("/v1/tenants/:tenantId/homes/:homeId/scenes", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/homes/:homeId/scenes"), async (request, reply) => {
     const params = request.params as { tenantId: string; homeId: string };
     const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
       tenantId: params.tenantId,
-      path: `/v1/homes/${params.homeId}/scenes`,
+      path: clawApiPath(`homes/${params.homeId}/scenes`),
     });
     if (!result) return;
     return result;
   });
 
-  app.post("/v1/tenants/:tenantId/homes/:homeId/scenes/:sceneId/activate", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/homes/:homeId/scenes/:sceneId/activate"), async (request, reply) => {
     const params = request.params as { tenantId: string; homeId: string; sceneId: string };
     const result = await forwardIotJson(request, reply, auth, config, "workspace:data", {
       tenantId: params.tenantId,
       method: "POST",
-      path: `/v1/homes/${params.homeId}/scenes/${params.sceneId}/activate`,
+      path: clawApiPath(`homes/${params.homeId}/scenes/${params.sceneId}/activate`),
     });
     if (!result) return;
     return result;
   });
 
-  app.get("/v1/tenants/:tenantId/homes/:homeId/automations", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/homes/:homeId/automations"), async (request, reply) => {
     const params = request.params as { tenantId: string; homeId: string };
     const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
       tenantId: params.tenantId,
-      path: `/v1/homes/${params.homeId}/automations`,
+      path: clawApiPath(`homes/${params.homeId}/automations`),
     });
     if (!result) return;
     return result;
   });
 
-  app.post("/v1/tenants/:tenantId/homes/:homeId/automations/:automationId/run", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/homes/:homeId/automations/:automationId/run"), async (request, reply) => {
     const params = request.params as { tenantId: string; homeId: string; automationId: string };
     const result = await forwardIotJson(request, reply, auth, config, "workspace:data", {
       tenantId: params.tenantId,
       method: "POST",
-      path: `/v1/homes/${params.homeId}/automations/${params.automationId}/run`,
+      path: clawApiPath(`homes/${params.homeId}/automations/${params.automationId}/run`),
     });
     if (!result) return;
     return result;
   });
 
-  app.get("/v1/tenants/:tenantId/homes/:homeId/approvals", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/homes/:homeId/approvals"), async (request, reply) => {
     const params = request.params as { tenantId: string; homeId: string };
     const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
       tenantId: params.tenantId,
-      path: `/v1/homes/${params.homeId}/approvals`,
+      path: clawApiPath(`homes/${params.homeId}/approvals`),
     });
     if (!result) return;
     return result;
   });
 
-  app.post("/v1/tenants/:tenantId/homes/:homeId/approvals/:approvalId/approve", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/homes/:homeId/approvals/:approvalId/approve"), async (request, reply) => {
     const params = request.params as { tenantId: string; homeId: string; approvalId: string };
     const result = await forwardIotJson(request, reply, auth, config, "workspace:data", {
       tenantId: params.tenantId,
       method: "POST",
-      path: `/v1/homes/${params.homeId}/approvals/${params.approvalId}/approve`,
+      path: clawApiPath(`homes/${params.homeId}/approvals/${params.approvalId}/approve`),
     });
     if (!result) return;
     return result;
   });
 
-  app.get("/v1/tenants/:tenantId/homes/:homeId/events/stream", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/homes/:homeId/events/stream"), async (request, reply) => {
     const params = request.params as { tenantId: string; homeId: string };
     return await forwardIotEventStream(request, reply, auth, config, {
       tenantId: params.tenantId,
-      path: `/v1/homes/${params.homeId}/events/stream`,
+      path: clawApiPath(`homes/${params.homeId}/events/stream`),
     });
   });
 

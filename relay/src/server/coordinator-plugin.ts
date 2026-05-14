@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import type { AuthClaims } from "../shared/protocol.ts";
@@ -63,13 +64,13 @@ export async function registerCoordinatorPlugin(
   const magicLink = new MagicLinkService(db, logger, loadMagicLinkConfig(config));
   const preauthKeys = new PreauthKeyService(db);
 
-  app.get("/v1/coordinator/health", async () => ({
+  app.get(clawApiPath("coordinator/health"), async () => ({
     ok: true,
     service: "clawjs-relay-coordinator",
     irohRelay: irohRelayHost.describe(),
   }));
 
-  app.get("/v1/coordinator/metadata", async () => ({
+  app.get(clawApiPath("coordinator/metadata"), async () => ({
     coordinatorUrl: config.publicBaseUrl,
     irohRelay: irohRelayHost.describe(),
     heartbeatIntervalMs: config.heartbeatIntervalMs,
@@ -83,7 +84,7 @@ export async function registerCoordinatorPlugin(
     deviceLabel?: string;
     platform?: string;
   } }>(
-    "/v1/auth/magic-link/start",
+    clawApiPath("auth/magic-link/start"),
     async (request, reply) => {
       const body = request.body ?? ({} as { email: string });
       if (!body || typeof body.email !== "string" || !body.email.includes("@")) {
@@ -102,7 +103,7 @@ export async function registerCoordinatorPlugin(
   );
 
   app.post<{ Body: { token: string; deviceLabel?: string; platform?: string; platformVersion?: string; irohNodeId?: string } }>(
-    "/v1/auth/magic-link/consume",
+    clawApiPath("auth/magic-link/consume"),
     async (request, reply) => {
       const body = request.body ?? ({} as { token: string });
       if (!body || typeof body.token !== "string" || body.token.length < 10) {
@@ -149,7 +150,7 @@ export async function registerCoordinatorPlugin(
     },
   );
 
-  app.get("/v1/auth/magic-link/callback", async (request, reply) => {
+  app.get(clawApiPath("auth/magic-link/callback"), async (request, reply) => {
     const url = new URL(request.url, "http://relay.local");
     const token = url.searchParams.get("token");
     if (!token) {
@@ -171,7 +172,7 @@ export async function registerCoordinatorPlugin(
     maxUses?: number;
     ttlSec?: number;
   } }>(
-    "/v1/auth/preauth-keys",
+    clawApiPath("auth/preauth-keys"),
     async (request, reply) => {
       const claims = await requireUserClaims(request, reply, auth);
       if (!claims) return;
@@ -193,14 +194,14 @@ export async function registerCoordinatorPlugin(
     },
   );
 
-  app.get("/v1/auth/preauth-keys", async (request, reply) => {
+  app.get(clawApiPath("auth/preauth-keys"), async (request, reply) => {
     const claims = await requireUserClaims(request, reply, auth);
     if (!claims) return;
     await reply.send({ items: preauthKeys.list(claims.tenantId) });
   });
 
   app.delete<{ Params: { keyId: string } }>(
-    "/v1/auth/preauth-keys/:keyId",
+    clawApiPath("auth/preauth-keys/:keyId"),
     async (request, reply) => {
       const claims = await requireUserClaims(request, reply, auth);
       if (!claims) return;
@@ -210,7 +211,7 @@ export async function registerCoordinatorPlugin(
   );
 
   app.post<{ Body: { token: string; label?: string; platform?: string; platformVersion?: string; irohNodeId?: string; email?: string } }>(
-    "/v1/devices/register-preauth",
+    clawApiPath("devices/register-preauth"),
     async (request, reply) => {
       const body = request.body ?? ({} as { token: string });
       if (!body || typeof body.token !== "string") {
@@ -258,7 +259,7 @@ export async function registerCoordinatorPlugin(
     },
   );
 
-  app.get("/v1/devices", async (request, reply) => {
+  app.get(clawApiPath("devices"), async (request, reply) => {
     const claims = await requireUserClaims(request, reply, auth);
     if (!claims) return;
     const devices = db.listTenantDevices(claims.tenantId);
@@ -266,7 +267,7 @@ export async function registerCoordinatorPlugin(
   });
 
   app.delete<{ Params: { deviceId: string } }>(
-    "/v1/devices/:deviceId",
+    clawApiPath("devices/:deviceId"),
     async (request, reply) => {
       const claims = await requireUserClaims(request, reply, auth);
       if (!claims) return;
@@ -281,7 +282,7 @@ export async function registerCoordinatorPlugin(
   );
 
   app.post<{ Body: { irohNodeId?: string; relayUrl?: string; publicAddrs?: string[] } }>(
-    "/v1/devices/heartbeat",
+    clawApiPath("devices/heartbeat"),
     async (request, reply) => {
       const claims = await requireUserClaims(request, reply, auth);
       if (!claims) return;
@@ -310,7 +311,7 @@ export async function registerCoordinatorPlugin(
     },
   );
 
-  app.get("/v1/peers", async (request, reply) => {
+  app.get(clawApiPath("peers"), async (request, reply) => {
     const claims = await requireUserClaims(request, reply, auth);
     if (!claims) return;
     const peers = db.listPeerEndpointsForTenant(
@@ -324,7 +325,7 @@ export async function registerCoordinatorPlugin(
   });
 
   app.post<{ Body: { toDeviceId: string; payload: unknown; ttlSec?: number } }>(
-    "/v1/signaling/send",
+    clawApiPath("signaling/send"),
     async (request, reply) => {
       const claims = await requireUserClaims(request, reply, auth);
       if (!claims) return;
@@ -353,7 +354,7 @@ export async function registerCoordinatorPlugin(
     },
   );
 
-  app.get("/v1/signaling/pull", async (request, reply) => {
+  app.get(clawApiPath("signaling/pull"), async (request, reply) => {
     const claims = await requireUserClaims(request, reply, auth);
     if (!claims) return;
     if (!claims.deviceId) {
@@ -364,7 +365,7 @@ export async function registerCoordinatorPlugin(
     await reply.send({ items });
   });
 
-  app.get("/v1/tenants/:tenantId/members", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/members"), async (request, reply) => {
     const claims = await requireUserClaims(request, reply, auth);
     if (!claims) return;
     const params = request.params as { tenantId: string };

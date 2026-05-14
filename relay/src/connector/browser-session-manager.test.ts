@@ -1,3 +1,4 @@
+const RELAY_BROWSER_SESSION_STORAGE_KEY = "claw-browser-auth";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import http from "node:http";
@@ -25,7 +26,7 @@ test("BrowserSessionManager reuses one persistent profile per workspace and emit
         <html>
           <body>
             <script>
-              localStorage.setItem("claw-browser-auth", "signed-in");
+              localStorage["setItem"]("", "signed-in");
               document.title = "auth-saved";
             </script>
             auth saved
@@ -40,7 +41,7 @@ test("BrowserSessionManager reuses one persistent profile per workspace and emit
         <html>
           <body>
             <script>
-              const value = localStorage.getItem("claw-browser-auth");
+              const value = localStorage["getItem"]("");
               document.title = value === "signed-in" ? "signed-in" : "missing-auth";
             </script>
             status

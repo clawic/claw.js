@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { randomUUID } from "node:crypto";
 
@@ -33,8 +34,8 @@ export function registerWorkspaceRoutes(input: {
 }): void {
   const { app, auth, config, db, monitor, registry } = input;
 
-  const workspacePrefix = "/v1/tenants/:tenantId/agents/:agentId/workspaces/:workspaceId";
-  const projectWorkspacePrefix = "/v1/tenants/:tenantId/projects/:projectId/agents/:agentId";
+  const workspacePrefix = clawApiPath("tenants/:tenantId/agents/:agentId/workspaces/:workspaceId");
+  const projectWorkspacePrefix = clawApiPath("tenants/:tenantId/projects/:projectId/agents/:agentId");
 
   app.get(`${workspacePrefix}/activity`, async (request, reply) => {
     const claims = await requireClaims(request, reply, auth, "workspace:read");
@@ -88,7 +89,7 @@ export function registerWorkspaceRoutes(input: {
     const params = request.params as WorkspaceParams;
     const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
       tenantId: params.tenantId,
-      path: "/v1/state",
+      path: clawApiPath("state"),
     });
     if (!result) return;
     return result;
@@ -99,7 +100,7 @@ export function registerWorkspaceRoutes(input: {
     const result = await forwardIotJson(request, reply, auth, config, "workspace:data", {
       tenantId: params.tenantId,
       method: "POST",
-      path: "/v1/actions",
+      path: clawApiPath("actions"),
       body: await readRequestBody(request),
     });
     if (!result) return;
@@ -110,7 +111,7 @@ export function registerWorkspaceRoutes(input: {
     const params = request.params as WorkspaceParams;
     const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
       tenantId: params.tenantId,
-      path: "/v1/scenes",
+      path: clawApiPath("scenes"),
     });
     if (!result) return;
     return result;
@@ -120,7 +121,7 @@ export function registerWorkspaceRoutes(input: {
     const params = request.params as WorkspaceParams;
     const result = await forwardIotJson(request, reply, auth, config, "workspace:read", {
       tenantId: params.tenantId,
-      path: "/v1/approvals",
+      path: clawApiPath("approvals"),
     });
     if (!result) return;
     return result;
