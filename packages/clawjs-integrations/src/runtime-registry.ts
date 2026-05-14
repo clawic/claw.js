@@ -647,6 +647,7 @@ const DISCORD_SOURCE_FIXTURE_NAMES = [
   "message-update",
   "message-delete",
   "message-delete-bulk",
+  "message-reaction-add",
   "message-reaction-remove",
   "message-reaction-remove-all",
   "message-reaction-remove-emoji",

@@ -34,6 +34,7 @@ const DISCORD_SOURCE_OPERATIONS = [
   source("discord.source.message-update", "Message Update"),
   source("discord.source.message-delete", "Message Delete"),
   source("discord.source.message-delete-bulk", "Message Delete Bulk"),
+  source("discord.source.message-reaction-add", "Message Reaction Add"),
   source("discord.source.message-reaction-remove", "Message Reaction Remove"),
   source("discord.source.message-reaction-remove-all", "Message Reaction Remove All"),
   source("discord.source.message-reaction-remove-emoji", "Message Reaction Remove Emoji"),

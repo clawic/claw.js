@@ -26,6 +26,7 @@ export type DiscordSourceOperation =
   | "message-update"
   | "message-delete"
   | "message-delete-bulk"
+  | "message-reaction-add"
   | "message-reaction-remove"
   | "message-reaction-remove-all"
   | "message-reaction-remove-emoji"
@@ -101,6 +102,7 @@ const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "message-update",
   "message-delete",
   "message-delete-bulk",
+  "message-reaction-add",
   "message-reaction-remove",
   "message-reaction-remove-all",
   "message-reaction-remove-emoji",
