@@ -1,5 +1,6 @@
 "use client";
 
+import { clawNotifyEventTypes } from "@clawjs/core";
 import * as React from "react";
 import {
   Bell,
@@ -191,7 +192,7 @@ export function NotifyDashboard() {
     title: "Manual notification",
     body: "Triggered from the Notify admin panel.",
     agentId: "manual-agent",
-    eventType: "manual.triggered",
+    eventType: clawNotifyEventTypes.manualTriggered,
     severity: "info",
     projectId: "manual-project",
   });

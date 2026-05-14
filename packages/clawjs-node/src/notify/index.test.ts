@@ -1,3 +1,4 @@
+import { clawNotifyEventTypes } from "@clawjs/core";
 import { test } from "vitest";
 import assert from "node:assert/strict";
 
@@ -59,7 +60,7 @@ test("NotifyClient can send notifications and sync the client feed", async () =>
       context: {
         tenantId: "tenant-sdk",
         agentId: "sdk-agent",
-        eventType: "sdk.alert",
+        eventType: clawNotifyEventTypes.sdkAlert,
       },
       delivery: {
         mode: "alert",

@@ -1,3 +1,4 @@
+import { clawApiPath, clawNotifyEventTypes } from "@clawjs/core";
 import type { NotifyDashboardData, NotifyPreferences, NotifyQuietHours } from "./notify-types";
 
 interface NotifyServerConfig {
@@ -74,11 +75,11 @@ async function ensureSourceApp(config: NotifyServerConfig, adminToken: string, i
   const sourceApps = await adminRequest<{ items: Array<{ id: string }> }>(
     config,
     adminToken,
-    `/v1/admin/source-apps?tenantId=${encodeURIComponent(config.tenantId)}`,
+    clawApiPath(`admin/source-apps?tenantId=${encodeURIComponent(config.tenantId)}`),
   );
   const exists = sourceApps.items.find((item) => item.id === input.id);
   if (!exists) {
-    return await adminRequest<{ record: { id: string }; token: string }>(config, adminToken, "/v1/source-apps", {
+    return await adminRequest<{ record: { id: string }; token: string }>(config, adminToken, clawApiPath("source-apps"), {
       method: "POST",
       body: JSON.stringify({
         tenantId: config.tenantId,
@@ -91,7 +92,7 @@ async function ensureSourceApp(config: NotifyServerConfig, adminToken: string, i
   const rotated = await adminRequest<{ sourceAppId: string; token: string }>(
     config,
     adminToken,
-    `/v1/source-apps/${encodeURIComponent(input.id)}/rotate-token`,
+    clawApiPath(`source-apps/${encodeURIComponent(input.id)}/rotate-token`),
     { method: "POST" },
   );
   return {
@@ -109,10 +110,10 @@ async function ensureClientApp(config: NotifyServerConfig, adminToken: string, i
   const clientApps = await adminRequest<{ items: Array<{ id: string }> }>(
     config,
     adminToken,
-    `/v1/admin/client-apps?tenantId=${encodeURIComponent(config.tenantId)}`,
+    clawApiPath(`admin/client-apps?tenantId=${encodeURIComponent(config.tenantId)}`),
   );
   if (clientApps.items.some((item) => item.id === input.id)) return;
-  await adminRequest(config, adminToken, "/v1/client-apps", {
+  await adminRequest(config, adminToken, clawApiPath("client-apps"), {
     method: "POST",
     body: JSON.stringify({
       tenantId: config.tenantId,
@@ -125,7 +126,7 @@ async function ensureInstallations(config: NotifyServerConfig, adminToken: strin
   const devices = await adminRequest<{ installations: Array<{ id: string }> }>(
     config,
     adminToken,
-    `/v1/admin/users/${encodeURIComponent(config.userId)}/devices?tenantId=${encodeURIComponent(config.tenantId)}`,
+    clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/devices?tenantId=${encodeURIComponent(config.tenantId)}`),
   );
   if (devices.installations.length > 0) return devices.installations;
   await fetch(`${config.baseUrl}/v1/client/installations/register`, {
@@ -153,7 +154,7 @@ async function ensureInstallations(config: NotifyServerConfig, adminToken: strin
   const refreshed = await adminRequest<{ installations: Array<{ id: string }> }>(
     config,
     adminToken,
-    `/v1/admin/users/${encodeURIComponent(config.userId)}/devices?tenantId=${encodeURIComponent(config.tenantId)}`,
+    clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/devices?tenantId=${encodeURIComponent(config.tenantId)}`),
   );
   return refreshed.installations;
 }
@@ -166,13 +167,13 @@ async function ensureDemoSubscriptions(config: NotifyServerConfig, adminToken: s
   const current = await adminRequest<{ subscriptions: Array<{ id: string }> }>(
     config,
     adminToken,
-    `/v1/admin/users/${encodeURIComponent(config.userId)}/preferences?tenantId=${encodeURIComponent(config.tenantId)}`,
+    clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/preferences?tenantId=${encodeURIComponent(config.tenantId)}`),
   );
   if (current.subscriptions.length > 0) return;
   await adminRequest(
     config,
     adminToken,
-    `/v1/admin/users/${encodeURIComponent(config.userId)}/subscriptions`,
+    clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/subscriptions`),
     {
       method: "PUT",
       body: JSON.stringify({
@@ -187,7 +188,7 @@ async function ensureDemoSubscriptions(config: NotifyServerConfig, adminToken: s
   await adminRequest(
     config,
     adminToken,
-    `/v1/admin/users/${encodeURIComponent(config.userId)}/subscriptions`,
+    clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/subscriptions`),
     {
       method: "PUT",
       body: JSON.stringify({
@@ -204,14 +205,14 @@ async function ensureDemoPreferences(config: NotifyServerConfig, adminToken: str
   const current = await adminRequest<{ preferences: NotifyPreferences }>(
     config,
     adminToken,
-    `/v1/admin/users/${encodeURIComponent(config.userId)}/preferences?tenantId=${encodeURIComponent(config.tenantId)}`,
+    clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/preferences?tenantId=${encodeURIComponent(config.tenantId)}`),
   );
   const quietHours = current.preferences.quietHours;
   if (quietHours?.enabled) return;
   await adminRequest(
     config,
     adminToken,
-    `/v1/admin/users/${encodeURIComponent(config.userId)}/preferences`,
+    clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/preferences`),
     {
       method: "PUT",
       body: JSON.stringify({
@@ -233,7 +234,7 @@ async function ensureDemoTraffic(config: NotifyServerConfig, adminToken: string,
   const notifications = await adminRequest<{ items: Array<{ id: string }> }>(
     config,
     adminToken,
-    `/v1/admin/notifications?tenantId=${encodeURIComponent(config.tenantId)}&limit=10`,
+    clawApiPath(`admin/notifications?tenantId=${encodeURIComponent(config.tenantId)}&limit=10`),
   );
   if (notifications.items.length >= 3) return;
 
@@ -241,7 +242,7 @@ async function ensureDemoTraffic(config: NotifyServerConfig, adminToken: string,
     notification: { id: string };
     deliveries: Array<{ id: string; installationId: string }>;
     receipt: { id: string } | null;
-  }>(config, sourceToken, "/v1/notifications", {
+  }>(config, sourceToken, clawApiPath("notifications"), {
     method: "POST",
     body: JSON.stringify({
       idempotencyKey: "hub-demo-critical",
@@ -253,7 +254,7 @@ async function ensureDemoTraffic(config: NotifyServerConfig, adminToken: string,
         projectId: "alpha",
         agentId: "deploy-agent",
         workspaceId: "alpha-ops",
-        eventType: "deployment.failed",
+        eventType: clawNotifyEventTypes.deploymentFailed,
         severity: "error",
       },
       delivery: {
@@ -269,18 +270,18 @@ async function ensureDemoTraffic(config: NotifyServerConfig, adminToken: string,
     }),
   });
 
-  await adminRequest(config, adminToken, `/v1/admin/deliveries/${encodeURIComponent(critical.deliveries[0]?.id ?? "")}/read`, {
+  await adminRequest(config, adminToken, clawApiPath(`admin/deliveries/${encodeURIComponent(critical.deliveries[0]?.id ?? "")}/read`), {
     method: "POST",
     body: JSON.stringify({ tenantId: config.tenantId }),
   });
   if (critical.receipt && installationIds[1]) {
-    await adminRequest(config, adminToken, `/v1/admin/receipts/${encodeURIComponent(critical.receipt.id)}/ack`, {
+    await adminRequest(config, adminToken, clawApiPath(`admin/receipts/${encodeURIComponent(critical.receipt.id)}/ack`), {
       method: "POST",
       body: JSON.stringify({ installationId: installationIds[1] }),
     });
   }
 
-  await sourceRequest(config, sourceToken, "/v1/notifications", {
+  await sourceRequest(config, sourceToken, clawApiPath("notifications"), {
     method: "POST",
     body: JSON.stringify({
       idempotencyKey: "hub-demo-recovered",
@@ -291,7 +292,7 @@ async function ensureDemoTraffic(config: NotifyServerConfig, adminToken: string,
         projectId: "alpha",
         agentId: "deploy-agent",
         workspaceId: "alpha-ops",
-        eventType: "deployment.recovered",
+        eventType: clawNotifyEventTypes.deploymentRecovered,
         severity: "info",
       },
       delivery: {
@@ -306,7 +307,7 @@ async function ensureDemoTraffic(config: NotifyServerConfig, adminToken: string,
     }),
   });
 
-  await sourceRequest(config, sourceToken, "/v1/notifications", {
+  await sourceRequest(config, sourceToken, clawApiPath("notifications"), {
     method: "POST",
     body: JSON.stringify({
       idempotencyKey: "hub-demo-summary",
@@ -317,7 +318,7 @@ async function ensureDemoTraffic(config: NotifyServerConfig, adminToken: string,
         projectId: "research",
         agentId: "summarizer-agent",
         workspaceId: "analysis-deck",
-        eventType: "summary.ready",
+        eventType: clawNotifyEventTypes.summaryReady,
         severity: "info",
       },
       delivery: {
@@ -331,7 +332,7 @@ async function ensureDemoTraffic(config: NotifyServerConfig, adminToken: string,
     }),
   });
 
-  await sourceRequest(config, sourceToken, "/v1/glances/fleet", {
+  await sourceRequest(config, sourceToken, clawApiPath("glances/fleet"), {
     method: "PUT",
     body: JSON.stringify({
       tenantId: config.tenantId,
@@ -379,47 +380,47 @@ export async function fetchNotifyDashboard(): Promise<NotifyDashboardData> {
     adminRequest<{ metrics: NotifyDashboardData["metrics"] }>(
       config,
       adminToken,
-      `/v1/admin/metrics/summary?tenantId=${encodeURIComponent(config.tenantId)}`,
+      clawApiPath(`admin/metrics/summary?tenantId=${encodeURIComponent(config.tenantId)}`),
     ),
     adminRequest<{ items: NotifyDashboardData["sourceApps"] }>(
       config,
       adminToken,
-      `/v1/admin/source-apps?tenantId=${encodeURIComponent(config.tenantId)}`,
+      clawApiPath(`admin/source-apps?tenantId=${encodeURIComponent(config.tenantId)}`),
     ),
     adminRequest<{ items: NotifyDashboardData["clientApps"] }>(
       config,
       adminToken,
-      `/v1/admin/client-apps?tenantId=${encodeURIComponent(config.tenantId)}`,
+      clawApiPath(`admin/client-apps?tenantId=${encodeURIComponent(config.tenantId)}`),
     ),
     adminRequest<{ installations: NotifyDashboardData["installations"] }>(
       config,
       adminToken,
-      `/v1/admin/users/${encodeURIComponent(config.userId)}/devices?tenantId=${encodeURIComponent(config.tenantId)}`,
+      clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/devices?tenantId=${encodeURIComponent(config.tenantId)}`),
     ),
     adminRequest<{ preferences: NotifyDashboardData["preferences"]; subscriptions: NotifyDashboardData["subscriptions"] }>(
       config,
       adminToken,
-      `/v1/admin/users/${encodeURIComponent(config.userId)}/preferences?tenantId=${encodeURIComponent(config.tenantId)}`,
+      clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/preferences?tenantId=${encodeURIComponent(config.tenantId)}`),
     ),
     adminRequest<{ items: NotifyDashboardData["feed"] }>(
       config,
       adminToken,
-      `/v1/admin/users/${encodeURIComponent(config.userId)}/feed?tenantId=${encodeURIComponent(config.tenantId)}&limit=30`,
+      clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/feed?tenantId=${encodeURIComponent(config.tenantId)}&limit=30`),
     ),
     adminRequest<{ items: NotifyDashboardData["notifications"] }>(
       config,
       adminToken,
-      `/v1/admin/notifications?tenantId=${encodeURIComponent(config.tenantId)}&limit=30`,
+      clawApiPath(`admin/notifications?tenantId=${encodeURIComponent(config.tenantId)}&limit=30`),
     ),
     adminRequest<{ items: NotifyDashboardData["deliveries"] }>(
       config,
       adminToken,
-      `/v1/admin/deliveries?tenantId=${encodeURIComponent(config.tenantId)}&limit=40`,
+      clawApiPath(`admin/deliveries?tenantId=${encodeURIComponent(config.tenantId)}&limit=40`),
     ),
     adminRequest<{ glances: NotifyDashboardData["glances"] }>(
       config,
       adminToken,
-      `/v1/admin/users/${encodeURIComponent(config.userId)}/glances?tenantId=${encodeURIComponent(config.tenantId)}`,
+      clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/glances?tenantId=${encodeURIComponent(config.tenantId)}`),
     ),
   ]);
 
@@ -448,7 +449,7 @@ export async function mutateNotifyDashboard(input: Record<string, unknown>) {
     return await adminRequest(
       config,
       adminToken,
-      `/v1/admin/users/${encodeURIComponent(config.userId)}/preferences`,
+      clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/preferences`),
       {
         method: "PUT",
         body: JSON.stringify({
@@ -464,7 +465,7 @@ export async function mutateNotifyDashboard(input: Record<string, unknown>) {
     return await adminRequest(
       config,
       adminToken,
-      `/v1/admin/users/${encodeURIComponent(config.userId)}/subscriptions`,
+      clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/subscriptions`),
       {
         method: "PUT",
         body: JSON.stringify({
@@ -479,7 +480,7 @@ export async function mutateNotifyDashboard(input: Record<string, unknown>) {
     return await adminRequest(
       config,
       adminToken,
-      `/v1/admin/users/${encodeURIComponent(config.userId)}/subscriptions/${encodeURIComponent(String(input.id ?? ""))}?tenantId=${encodeURIComponent(config.tenantId)}`,
+      clawApiPath(`admin/users/${encodeURIComponent(config.userId)}/subscriptions/${encodeURIComponent(String(input.id ?? ""))}?tenantId=${encodeURIComponent(config.tenantId)}`),
       { method: "DELETE" },
     );
   }
@@ -488,7 +489,7 @@ export async function mutateNotifyDashboard(input: Record<string, unknown>) {
     return await adminRequest(
       config,
       adminToken,
-      `/v1/admin/deliveries/${encodeURIComponent(String(input.deliveryId ?? ""))}/read`,
+      clawApiPath(`admin/deliveries/${encodeURIComponent(String(input.deliveryId ?? ""))}/read`),
       {
         method: "POST",
         body: JSON.stringify({ tenantId: config.tenantId }),
@@ -500,7 +501,7 @@ export async function mutateNotifyDashboard(input: Record<string, unknown>) {
     return await adminRequest(
       config,
       adminToken,
-      `/v1/admin/receipts/${encodeURIComponent(String(input.receiptId ?? ""))}/ack`,
+      clawApiPath(`admin/receipts/${encodeURIComponent(String(input.receiptId ?? ""))}/ack`),
       {
         method: "POST",
         body: JSON.stringify({ installationId: input.installationId }),
@@ -512,7 +513,7 @@ export async function mutateNotifyDashboard(input: Record<string, unknown>) {
     return await adminRequest(
       config,
       adminToken,
-      `/v1/admin/installations/${encodeURIComponent(String(input.installationId ?? ""))}/unregister`,
+      clawApiPath(`admin/installations/${encodeURIComponent(String(input.installationId ?? ""))}/unregister`),
       {
         method: "POST",
         body: JSON.stringify({ tenantId: config.tenantId }),
@@ -521,7 +522,7 @@ export async function mutateNotifyDashboard(input: Record<string, unknown>) {
   }
 
   if (intent === "createSourceApp") {
-    return await adminRequest(config, adminToken, "/v1/source-apps", {
+    return await adminRequest(config, adminToken, clawApiPath("source-apps"), {
       method: "POST",
       body: JSON.stringify({
         tenantId: config.tenantId,
@@ -536,13 +537,13 @@ export async function mutateNotifyDashboard(input: Record<string, unknown>) {
     return await adminRequest(
       config,
       adminToken,
-      `/v1/source-apps/${encodeURIComponent(String(input.sourceAppId ?? ""))}/rotate-token`,
+      clawApiPath(`source-apps/${encodeURIComponent(String(input.sourceAppId ?? ""))}/rotate-token`),
       { method: "POST" },
     );
   }
 
   if (intent === "createClientApp") {
-    return await adminRequest(config, adminToken, "/v1/client-apps", {
+    return await adminRequest(config, adminToken, clawApiPath("client-apps"), {
       method: "POST",
       body: JSON.stringify({
         tenantId: config.tenantId,
@@ -559,7 +560,7 @@ export async function mutateNotifyDashboard(input: Record<string, unknown>) {
       id: String(input.sourceAppId ?? "ops-center"),
       displayName: "Ops Center",
     });
-    return await sourceRequest(config, source.token, "/v1/notifications", {
+    return await sourceRequest(config, source.token, clawApiPath("notifications"), {
       method: "POST",
       body: JSON.stringify({
         idempotencyKey: `manual-${Date.now()}`,
@@ -569,7 +570,7 @@ export async function mutateNotifyDashboard(input: Record<string, unknown>) {
           tenantId: config.tenantId,
           agentId: input.agentId ?? "manual-agent",
           projectId: input.projectId ?? "manual-project",
-          eventType: input.eventType ?? "manual.triggered",
+          eventType: input.eventType ?? clawNotifyEventTypes.manualTriggered,
           severity: input.severity ?? "info",
         },
         receiptPolicy: input.priority === "critical" ? { kind: "critical", retrySec: 60, expireSec: 900 } : { kind: "none" },

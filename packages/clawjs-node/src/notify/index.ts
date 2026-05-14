@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 export type {
   DeliveryState,
   DeviceInstallation,
@@ -106,14 +107,14 @@ export class NotifyClient {
     return await this.request<{
       record: { id: string; tenantId: string };
       token: string;
-    }>("/v1/source-apps", {
+    }>(clawApiPath("source-apps"), {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async rotateSourceAppToken(sourceAppId: string) {
-    return await this.request<{ sourceAppId: string; token: string }>(`/v1/source-apps/${sourceAppId}/rotate-token`, {
+    return await this.request<{ sourceAppId: string; token: string }>(clawApiPath(`source-apps/${sourceAppId}/rotate-token`), {
       method: "POST",
     });
   }
@@ -131,7 +132,7 @@ export class NotifyClient {
       tenantId: string;
       platform: "ios" | "android";
       bundleId: string;
-    }>("/v1/client-apps", {
+    }>(clawApiPath("client-apps"), {
       method: "POST",
       body: JSON.stringify(input),
     });
@@ -147,7 +148,7 @@ export class NotifyClient {
     return await this.request<{
       record: { id: string; tenantId: string; userId: string; clientAppId: string };
       token: string;
-    }>("/v1/client/installations/register", {
+    }>(clawApiPath("client/installations/register"), {
       method: "POST",
       body: JSON.stringify(input),
     });
@@ -159,7 +160,7 @@ export class NotifyClient {
       notification: { id: string };
       deliveries: Array<{ id: string; installationId: string; state: string }>;
       receipt: { id: string; status: string } | null;
-    }>("/v1/notifications", {
+    }>(clawApiPath("notifications"), {
       method: "POST",
       body: JSON.stringify(input),
     });
@@ -169,7 +170,7 @@ export class NotifyClient {
     return await this.request<{
       notification: { id: string; status: string };
       deliveries: Array<{ id: string; state: string }>;
-    }>(`/v1/notifications/${notificationId}/cancel`, {
+    }>(clawApiPath(`notifications/${notificationId}/cancel`), {
       method: "POST",
     });
   }
@@ -178,7 +179,7 @@ export class NotifyClient {
     return await this.request<{
       receipt: { id: string; status: string };
       notification: { id: string } | null;
-    }>(`/v1/receipts/${receiptId}`);
+    }>(clawApiPath(`receipts/${receiptId}`));
   }
 
   async feed(limit?: number) {
@@ -191,65 +192,65 @@ export class NotifyClient {
         receipt: { id: string; status: string } | null;
       }>;
       glances: Array<{ scope: string; data: Record<string, unknown> }>;
-    }>(`/v1/client/feed${suffix}`);
+    }>(clawApiPath(`client/feed${suffix}`));
   }
 
   async preferences() {
     return await this.request<{
       preferences: UserNotificationPreferences;
       subscriptions: Array<{ id: string; action: string }>;
-    }>("/v1/client/preferences");
+    }>(clawApiPath("client/preferences"));
   }
 
   async updatePreferences(input: UpdateUserPreferencesInput) {
-    return await this.request<{ preferences: UserNotificationPreferences }>("/v1/client/preferences", {
+    return await this.request<{ preferences: UserNotificationPreferences }>(clawApiPath("client/preferences"), {
       method: "PUT",
       body: JSON.stringify(input),
     });
   }
 
   async devices() {
-    return await this.request<{ installations: DeviceInstallation[] }>("/v1/client/devices");
+    return await this.request<{ installations: DeviceInstallation[] }>(clawApiPath("client/devices"));
   }
 
   async unregisterInstallation(installationId: string) {
-    return await this.request<{ ok: boolean }>(`/v1/client/installations/${installationId}/unregister`, {
+    return await this.request<{ ok: boolean }>(clawApiPath(`client/installations/${installationId}/unregister`), {
       method: "POST",
     });
   }
 
   async glances() {
-    return await this.request<{ glances: Array<{ scope: string; data: Record<string, unknown> }> }>("/v1/client/glances");
+    return await this.request<{ glances: Array<{ scope: string; data: Record<string, unknown> }> }>(clawApiPath("client/glances"));
   }
 
   async markRead(notificationId: string) {
-    return await this.request<{ delivery: { state: string } }>(`/v1/client/notifications/${notificationId}/read`, {
+    return await this.request<{ delivery: { state: string } }>(clawApiPath(`client/notifications/${notificationId}/read`), {
       method: "POST",
     });
   }
 
   async acknowledgeReceipt(receiptId: string) {
-    return await this.request<{ receipt: { id: string; status: string } }>(`/v1/client/receipts/${receiptId}/ack`, {
+    return await this.request<{ receipt: { id: string; status: string } }>(clawApiPath(`client/receipts/${receiptId}/ack`), {
       method: "POST",
     });
   }
 
   async updatePushToken(installationId: string, pushToken: string) {
-    return await this.request<{ installation: { id: string; pushToken: string } }>(`/v1/client/installations/${installationId}/push-token`, {
+    return await this.request<{ installation: { id: string; pushToken: string } }>(clawApiPath(`client/installations/${installationId}/push-token`), {
       method: "POST",
       body: JSON.stringify({ pushToken }),
     });
   }
 
   async upsertSubscription(input: UpsertSubscriptionInput) {
-    return await this.request<{ subscription: { id: string } }>("/v1/subscriptions", {
+    return await this.request<{ subscription: { id: string } }>(clawApiPath("subscriptions"), {
       method: "PUT",
       body: JSON.stringify(input),
     });
   }
 
   async deleteSubscription(id: string) {
-    return await this.request<{ ok: boolean }>(`/v1/subscriptions/${id}`, {
+    return await this.request<{ ok: boolean }>(clawApiPath(`subscriptions/${id}`), {
       method: "DELETE",
     });
   }
@@ -260,7 +261,7 @@ export class NotifyClient {
     clientAppId?: string;
     data: Record<string, unknown>;
   }) {
-    return await this.request<{ glance: { id: string; scope: string } }>(`/v1/glances/${encodeURIComponent(scope)}`, {
+    return await this.request<{ glance: { id: string; scope: string } }>(clawApiPath(`glances/${encodeURIComponent(scope)}`), {
       method: "PUT",
       body: JSON.stringify(input),
     });
