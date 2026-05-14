@@ -375,8 +375,6 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_knowledge
   claw_cli_command_profile["profile\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_profile
-  claw_cli_command_user["user\ncliCommand"]
-  claw_contracts_cli --> claw_cli_command_user
   claw_cli_command_health["health\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_health
   claw_cli_command_travel["travel\ncliCommand"]
@@ -1002,7 +1000,6 @@ flowchart TD
 | `claw.cli.command.publications` | cliCommand | cli | claw |  |  |  | `publications` |
 | `claw.cli.command.knowledge` | cliCommand | cli | claw |  |  |  | `knowledge` |
 | `claw.cli.command.profile` | cliCommand | cli | claw |  |  |  | `profile` |
-| `claw.cli.command.user` | cliCommand | cli | claw |  |  |  | `user` |
 | `claw.cli.command.health` | cliCommand | cli | claw |  |  |  | `health` |
 | `claw.cli.command.travel` | cliCommand | cli | claw |  |  |  | `travel` |
 | `claw.cli.command.career` | cliCommand | cli | claw |  |  |  | `career` |

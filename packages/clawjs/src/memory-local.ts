@@ -109,22 +109,22 @@ const MEMORY_INDEXES: IndexDefinition[] = [
 
 export function buildMemoryUsage(binName = "claw"): string {
   return [
-    "First-class memory commands:",
-    `  ${binName} memory capabilities [--json]`,
-    `  ${binName} memory status [--json]`,
-    `  ${binName} memory save <content> [--title TEXT] [--kind semantic|episodic|procedural|archival]`,
-    `  ${binName} memory list [--kind KIND] [--include-history] [--json]`,
-    `  ${binName} memory get <id> [--json]`,
-    `  ${binName} memory update <id> [--content TEXT] [--title TEXT] [--confidence N]`,
-    `  ${binName} memory delete <id> [--json]`,
-    `  ${binName} memory search <query> [--strategy keyword|semantic|hybrid|auto] [--source local|runtime|all]`,
-    `  ${binName} memory context <query> [--limit N] [--include-low-confidence]`,
+    "Knowledge memory commands:",
+    `  ${binName} knowledge memories capabilities [--json]`,
+    `  ${binName} knowledge memories status [--json]`,
+    `  ${binName} knowledge memories save <content> [--title TEXT] [--kind semantic|episodic|procedural|archival]`,
+    `  ${binName} knowledge memories list [--kind KIND] [--include-history] [--json]`,
+    `  ${binName} knowledge memories get <id> [--json]`,
+    `  ${binName} knowledge memories update <id> [--content TEXT] [--title TEXT] [--confidence N]`,
+    `  ${binName} knowledge memories delete <id> [--json]`,
+    `  ${binName} knowledge memories search <query> [--strategy keyword|semantic|hybrid|auto] [--source local|runtime|all]`,
+    `  ${binName} knowledge memories context <query> [--limit N] [--include-low-confidence]`,
     "",
     "Examples:",
-    `  ${binName} memory save "User prefers concise answers" --title "Response style" --tags preference`,
-    `  ${binName} memory search concise --json`,
-    `  ${binName} memory context "answer style" --json`,
-    `  ${binName} memory search deploy --source runtime --json`,
+    `  ${binName} knowledge memories save "User prefers concise answers" --title "Response style" --tags preference`,
+    `  ${binName} knowledge memories search concise --json`,
+    `  ${binName} knowledge memories context "answer style" --json`,
+    `  ${binName} knowledge memories search deploy --source runtime --json`,
   ].join("\n");
 }
 
@@ -250,9 +250,7 @@ function buildStatus(input: MemoryCliInput) {
 
 function saveMemory(input: MemoryCliInput): number {
   const content = input.flags.content || input.flags.text || joinedPositionals(input.positionals, 2);
-  if (!content) {
-    return usageError(input, "Usage: claw memory save <content> [--title TEXT]");
-  }
+  if (!content) return usageError(input, `Usage: ${input.binName} knowledge memories save <content> [--title TEXT]`);
   const now = new Date().toISOString();
   const title = input.flags.title || deriveTitle(content);
   const memory = normalizeMemoryPayload(input, {
@@ -293,7 +291,7 @@ async function listMemory(input: MemoryCliInput): Promise<number> {
 
 function getMemory(input: MemoryCliInput): number {
   const id = input.positionals[2] || input.flags.id;
-  if (!id) return usageError(input, `Usage: claw memory ${input.positionals[1]} <id>`);
+  if (!id) return usageError(input, `Usage: ${input.binName} knowledge memories ${input.positionals[1]} <id>`);
   const store = ensureMemoryStore(input);
   const record = store.getRecord(namespaceId(input), MEMORY_COLLECTION, id);
   if (!record) {
@@ -306,7 +304,7 @@ function getMemory(input: MemoryCliInput): number {
 
 function updateMemory(input: MemoryCliInput): number {
   const id = input.positionals[2] || input.flags.id;
-  if (!id) return usageError(input, "Usage: claw memory update <id> [--content TEXT] [--title TEXT]");
+  if (!id) return usageError(input, `Usage: ${input.binName} knowledge memories update <id> [--content TEXT] [--title TEXT]`);
   const store = ensureMemoryStore(input);
   const current = store.getRecord(namespaceId(input), MEMORY_COLLECTION, id);
   if (!current) {
@@ -341,7 +339,7 @@ function updateMemory(input: MemoryCliInput): number {
 
 function deleteMemory(input: MemoryCliInput): number {
   const id = input.positionals[2] || input.flags.id;
-  if (!id) return usageError(input, "Usage: claw memory delete <id>");
+  if (!id) return usageError(input, `Usage: ${input.binName} knowledge memories delete <id>`);
   const store = ensureMemoryStore(input);
   const removed = store.deleteRecord(namespaceId(input), MEMORY_COLLECTION, id);
   if (!removed) {
@@ -411,7 +409,7 @@ function stringFromMetadata(metadata: Record<string, unknown>, key: string): str
 
 async function searchMemory(input: MemoryCliInput): Promise<number> {
   const query = readQuery(input, 2);
-  if (!query) return usageError(input, "Usage: claw memory search <query> [--source local|runtime|all]");
+  if (!query) return usageError(input, `Usage: ${input.binName} knowledge memories search <query> [--source local|runtime|all]`);
 
   const source = readSource(input);
   const strategy = readStrategy(input.flags.strategy);
@@ -436,7 +434,7 @@ async function searchMemory(input: MemoryCliInput): Promise<number> {
 
 async function contextMemory(input: MemoryCliInput): Promise<number> {
   const query = readQuery(input, 2);
-  if (!query) return usageError(input, "Usage: claw memory context <query>");
+  if (!query) return usageError(input, `Usage: ${input.binName} knowledge memories context <query>`);
   const limit = readPositiveInteger(input.flags.limit, 6);
   const includeLowConfidence = input.argv.includes("--include-low-confidence");
   const strategy = readStrategy(input.flags.strategy);
@@ -745,7 +743,7 @@ function arrayOfStrings(value: unknown): string[] {
 function memoryJsonMeta(input: MemoryCliInput): Record<string, unknown> {
   return {
     subcommand: input.positionals[1] ?? "unknown",
-    invokedCommand: "memory",
+    invokedCommand: "knowledge",
   };
 }
 

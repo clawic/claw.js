@@ -818,7 +818,7 @@ export async function runMagicDbCli(input: {
   }
 
   if (rawCollection === "memory" && rawAction === "search") {
-    writeDbError(input, "usage_error", "Use `claw memory search <query>` for memory search.", DB_EXIT_USAGE, dbJsonMeta(input, rawCollection, rawAction));
+    writeDbError(input, "usage_error", "Use `claw knowledge memories search <query>` for memory search.", DB_EXIT_USAGE, dbJsonMeta(input, rawCollection, rawAction));
     return DB_EXIT_USAGE;
   }
 

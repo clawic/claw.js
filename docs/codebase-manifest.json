@@ -58260,7 +58260,7 @@
     {
       "path": "packages/clawjs-core/src/cli-command-registry.ts",
       "language": "typescript",
-      "lines": 329,
+      "lines": 328,
       "test": false,
       "entrypoint": false,
       "imports": [],
@@ -93547,7 +93547,7 @@
     {
       "path": "packages/clawjs/bin/claw.mjs",
       "language": "javascript",
-      "lines": 84,
+      "lines": 80,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -93556,7 +93556,6 @@
         "./database-server-launcher.mjs",
         "./drive-server-launcher.mjs",
         "./index-server-launcher.mjs",
-        "./memory-commands.mjs",
         "./memory-server-launcher.mjs",
         "./secrets-commands.mjs",
         "./secrets-server-launcher.mjs",
@@ -95060,7 +95059,7 @@
     {
       "path": "packages/clawjs/src/cli-discovery.test.ts",
       "language": "typescript",
-      "lines": 230,
+      "lines": 238,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -96683,7 +96682,7 @@
     {
       "path": "packages/clawjs/src/cli-surface.ts",
       "language": "typescript",
-      "lines": 182,
+      "lines": 184,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -97758,7 +97757,7 @@
     {
       "path": "packages/clawjs/src/index-data.test.ts",
       "language": "typescript",
-      "lines": 726,
+      "lines": 727,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -97818,7 +97817,7 @@
     {
       "path": "packages/clawjs/src/index-memory-runtime.test.ts",
       "language": "typescript",
-      "lines": 956,
+      "lines": 960,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -98086,7 +98085,7 @@
     {
       "path": "packages/clawjs/src/index.ts",
       "language": "typescript",
-      "lines": 1998,
+      "lines": 1999,
       "test": false,
       "entrypoint": true,
       "imports": [
@@ -98440,7 +98439,7 @@
     {
       "path": "packages/clawjs/src/memory-local.ts",
       "language": "typescript",
-      "lines": 795,
+      "lines": 793,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -115413,7 +115412,7 @@
     {
       "path": "scripts/verify-cli-registry-router-parity.mjs",
       "language": "javascript",
-      "lines": 183,
+      "lines": 185,
       "test": false,
       "entrypoint": false,
       "imports": [

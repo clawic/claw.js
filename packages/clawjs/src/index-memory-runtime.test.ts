@@ -70,21 +70,21 @@ test("runCli can search sessions through OpenClaw memory search", async (t) => {
   });
 });
 
-test("runCli memory lifecycle is local-first and agent-friendly", async (t) => {
+test("runCli knowledge memories lifecycle is local-first and agent-friendly", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-local-"));
   useIsolatedMainData(t, workspaceRoot);
 
   const helpStdout = captureStream();
-  assert.equal(await runCli(["memory", "--help"], {
+  assert.equal(await runCli(["knowledge", "memories", "--help"], {
     stdout: helpStdout.stream,
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  assert.match(helpStdout.getOutput(), /Usage: claw <command>/);
-  assert.match(helpStdout.getOutput(), /knowledge\s+portal/);
+  assert.match(helpStdout.getOutput(), /Usage: claw knowledge/);
+  assert.match(helpStdout.getOutput(), /private memory implementation/);
 
   const capabilitiesStdout = captureStream();
-  assert.equal(await runCli(["memory", "capabilities", "--workspace", workspaceRoot, "--json"], {
+  assert.equal(await runCli(["knowledge", "memories", "capabilities", "--workspace", workspaceRoot, "--json"], {
     stdout: capabilitiesStdout.stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
@@ -93,13 +93,14 @@ test("runCli memory lifecycle is local-first and agent-friendly", async (t) => {
   assert.equal(capabilities.ok, true);
   assert.equal(capabilities.meta.canonicalCommand, "knowledge");
   assert.equal(capabilities.meta.subcommand, "capabilities");
-  assert.equal(capabilities.meta.invokedCommand, "memory");
+  assert.equal(capabilities.meta.invokedCommand, "knowledge");
   assert.equal(capabilities.data.write, true);
   assert.equal(capabilities.data.defaultSource, "local");
 
   const saveStdout = captureStream();
   assert.equal(await runCli([
-    "memory",
+    "knowledge",
+    "memories",
     "save",
     "User prefers concise answers with citations",
     "--workspace", workspaceRoot,
@@ -118,7 +119,7 @@ test("runCli memory lifecycle is local-first and agent-friendly", async (t) => {
   assert.equal(saved.data.importance, 0.5);
 
   const listStdout = captureStream();
-  assert.equal(await runCli(["memory", "list", "--workspace", workspaceRoot, "--json"], {
+  assert.equal(await runCli(["knowledge", "memories", "list", "--workspace", workspaceRoot, "--json"], {
     stdout: listStdout.stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
@@ -128,7 +129,7 @@ test("runCli memory lifecycle is local-first and agent-friendly", async (t) => {
   assert.equal(listed.data.results.some((item) => item.id === saved.data.id), true);
 
   const getStdout = captureStream();
-  assert.equal(await runCli(["memory", "get", saved.data.id, "--workspace", workspaceRoot, "--json"], {
+  assert.equal(await runCli(["knowledge", "memories", "get", saved.data.id, "--workspace", workspaceRoot, "--json"], {
     stdout: getStdout.stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
@@ -136,7 +137,7 @@ test("runCli memory lifecycle is local-first and agent-friendly", async (t) => {
   assert.equal((JSON.parse(getStdout.getOutput()) as { data: { id: string } }).data.id, saved.data.id);
 
   const updateStdout = captureStream();
-  assert.equal(await runCli(["memory", "update", saved.data.id, "--workspace", workspaceRoot, "--content", "User prefers concise answers with source citations.", "--confidence", "0.9", "--json"], {
+  assert.equal(await runCli(["knowledge", "memories", "update", saved.data.id, "--workspace", workspaceRoot, "--content", "User prefers concise answers with source citations.", "--confidence", "0.9", "--json"], {
     stdout: updateStdout.stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
@@ -144,7 +145,7 @@ test("runCli memory lifecycle is local-first and agent-friendly", async (t) => {
   assert.equal((JSON.parse(updateStdout.getOutput()) as { data: { confidence: number } }).data.confidence, 0.9);
 
   const searchStdout = captureStream();
-  assert.equal(await runCli(["memory", "search", "concise citations", "--workspace", workspaceRoot, "--json"], {
+  assert.equal(await runCli(["knowledge", "memories", "search", "concise citations", "--workspace", workspaceRoot, "--json"], {
     stdout: searchStdout.stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
@@ -158,7 +159,7 @@ test("runCli memory lifecycle is local-first and agent-friendly", async (t) => {
   assert.equal(search.data.results[0]?.matchedFields.includes("content"), true);
 
   const contextStdout = captureStream();
-  assert.equal(await runCli(["memory", "context", "--query", "answer style", "--workspace", workspaceRoot, "--json"], {
+  assert.equal(await runCli(["knowledge", "memories", "context", "--query", "answer style", "--workspace", workspaceRoot, "--json"], {
     stdout: contextStdout.stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
@@ -169,13 +170,13 @@ test("runCli memory lifecycle is local-first and agent-friendly", async (t) => {
   assert.equal(context.data.citations.some((item) => item.id === saved.data.id), true);
   assert.match(context.data.summary, /Response preference/);
 
-  await runCli(["memory", "save", "Experimental low confidence memory", "--workspace", workspaceRoot, "--confidence", "0.1", "--json"], {
+  await runCli(["knowledge", "memories", "save", "Experimental low confidence memory", "--workspace", workspaceRoot, "--confidence", "0.1", "--json"], {
     stdout: captureStream().stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
   });
   const lowContextStdout = captureStream();
-  assert.equal(await runCli(["memory", "context", "Experimental", "--workspace", workspaceRoot, "--json"], {
+  assert.equal(await runCli(["knowledge", "memories", "context", "Experimental", "--workspace", workspaceRoot, "--json"], {
     stdout: lowContextStdout.stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
@@ -183,7 +184,7 @@ test("runCli memory lifecycle is local-first and agent-friendly", async (t) => {
   assert.equal((JSON.parse(lowContextStdout.getOutput()) as { data: { memories: unknown[] } }).data.memories.length, 0);
 
   const emptyStdout = captureStream();
-  assert.equal(await runCli(["memory", "search", "does-not-match", "--workspace", workspaceRoot, "--json"], {
+  assert.equal(await runCli(["knowledge", "memories", "search", "does-not-match", "--workspace", workspaceRoot, "--json"], {
     stdout: emptyStdout.stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
@@ -196,12 +197,12 @@ test("runCli memory lifecycle is local-first and agent-friendly", async (t) => {
       canonicalCommand: "knowledge",
       jsonSchemaId: "claw.cli.knowledge.v1",
       subcommand: "search",
-      invokedCommand: "memory",
+      invokedCommand: "knowledge",
     },
   });
 
   const missingStdout = captureStream();
-  assert.equal(await runCli(["memory", "get", "missing", "--workspace", workspaceRoot, "--json"], {
+  assert.equal(await runCli(["knowledge", "memories", "get", "missing", "--workspace", workspaceRoot, "--json"], {
     stdout: missingStdout.stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
@@ -209,7 +210,7 @@ test("runCli memory lifecycle is local-first and agent-friendly", async (t) => {
   assert.equal((JSON.parse(missingStdout.getOutput()) as { ok: boolean; error: { code: string } }).error.code, "not_found");
 
   const deleteStdout = captureStream();
-  assert.equal(await runCli(["memory", "delete", saved.data.id, "--workspace", workspaceRoot, "--json"], {
+  assert.equal(await runCli(["knowledge", "memories", "delete", saved.data.id, "--workspace", workspaceRoot, "--json"], {
     stdout: deleteStdout.stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
@@ -265,20 +266,20 @@ test("runCli rules compiles scoped active rules and ignores pending rules", asyn
   assert.equal(result.omitted.some((entry) => entry.rule.id === "northstar-pending" && entry.reason === "status:pending"), true);
 });
 
-test("runCli memory search keeps workspaces and runtime source separate", async (t) => {
+test("runCli knowledge memories search keeps workspaces and runtime source separate", async (t) => {
   const workspaceA = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-a-"));
   const workspaceB = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-b-"));
   useIsolatedMainData(t, workspaceA);
   const { binDir, openclawLog } = createFakeOpenClawToolchain();
 
-  await runCli(["memory", "save", "Workspace alpha prefers tabs", "--workspace", workspaceA, "--json"], {
+  await runCli(["knowledge", "memories", "save", "Workspace alpha prefers tabs", "--workspace", workspaceA, "--json"], {
     stdout: captureStream().stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
   });
 
   const searchAStdout = captureStream();
-  assert.equal(await runCli(["memory", "search", "tabs", "--workspace", workspaceA, "--json"], {
+  assert.equal(await runCli(["knowledge", "memories", "search", "tabs", "--workspace", workspaceA, "--json"], {
     stdout: searchAStdout.stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
@@ -286,7 +287,7 @@ test("runCli memory search keeps workspaces and runtime source separate", async 
   assert.equal((JSON.parse(searchAStdout.getOutput()) as { data: { count: number } }).data.count, 1);
 
   const searchBStdout = captureStream();
-  assert.equal(await runCli(["memory", "search", "tabs", "--workspace", workspaceB, "--json"], {
+  assert.equal(await runCli(["knowledge", "memories", "search", "tabs", "--workspace", workspaceB, "--json"], {
     stdout: searchBStdout.stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
@@ -299,7 +300,8 @@ test("runCli memory search keeps workspaces and runtime source separate", async 
   }, async () => {
     const runtimeListStdout = captureStream();
     assert.equal(await runCli([
-      "memory",
+      "knowledge",
+      "memories",
       "list",
       "--workspace", workspaceA,
       "--runtime", "demo",
@@ -314,7 +316,8 @@ test("runCli memory search keeps workspaces and runtime source separate", async 
 
     const runtimeStdout = captureStream();
     const exitCode = await runCli([
-      "memory",
+      "knowledge",
+      "memories",
       "search",
       "--workspace", workspaceA,
       "--workspace-id", "demo-memory-search",
@@ -337,19 +340,19 @@ test("runCli memory search keeps workspaces and runtime source separate", async 
         canonicalCommand: "knowledge",
         jsonSchemaId: "claw.cli.knowledge.v1",
         subcommand: "search",
-        invokedCommand: "memory",
+        invokedCommand: "knowledge",
       },
     });
     assert.match(fs.readFileSync(openclawLog, "utf8"), /memory search --agent demo-memory-search --query unknown --json/);
   });
 });
 
-test("runCli memory JSON errors are parseable and db memory search is not a create alias", async (t) => {
+test("runCli knowledge memories JSON errors are parseable and db memory search is not a create alias", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-errors-"));
   useIsolatedMainData(t, workspaceRoot);
 
   const missingQueryStdout = captureStream();
-  assert.equal(await runCli(["memory", "search", "--workspace", workspaceRoot, "--json"], {
+  assert.equal(await runCli(["knowledge", "memories", "search", "--workspace", workspaceRoot, "--json"], {
     stdout: missingQueryStdout.stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
@@ -357,7 +360,7 @@ test("runCli memory JSON errors are parseable and db memory search is not a crea
   assert.equal((JSON.parse(missingQueryStdout.getOutput()) as { ok: boolean; error: { code: string } }).error.code, "usage_error");
 
   const invalidStdout = captureStream();
-  assert.equal(await runCli(["memory", "unknown", "--workspace", workspaceRoot, "--json"], {
+  assert.equal(await runCli(["knowledge", "memories", "unknown", "--workspace", workspaceRoot, "--json"], {
     stdout: invalidStdout.stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
@@ -393,7 +396,7 @@ test("runCli memory JSON errors are parseable and db memory search is not a crea
   });
 });
 
-test("runCli runtime memory search returns ok for empty results when explicitly requested", async (t) => {
+test("runCli runtime knowledge memories search returns ok for empty results when explicitly requested", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-search-"));
   useIsolatedMainData(t, workspaceRoot);
   const { binDir, openclawLog } = createFakeOpenClawToolchain();
@@ -404,7 +407,8 @@ test("runCli runtime memory search returns ok for empty results when explicitly 
   }, async () => {
     const stdout = captureStream();
     const exitCode = await runCli([
-      "memory",
+      "knowledge",
+      "memories",
       "search",
       "--workspace", workspaceRoot,
       "--workspace-id", "demo-memory-search",
@@ -427,7 +431,7 @@ test("runCli runtime memory search returns ok for empty results when explicitly 
         canonicalCommand: "knowledge",
         jsonSchemaId: "claw.cli.knowledge.v1",
         subcommand: "search",
-        invokedCommand: "memory",
+        invokedCommand: "knowledge",
       },
     });
     assert.match(fs.readFileSync(openclawLog, "utf8"), /memory search --agent demo-memory-search --query unknown --json/);

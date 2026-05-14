@@ -37,7 +37,7 @@ import { runStyleCli } from "./styles/index.ts";
 import { runTemplateCli } from "./templates/index.ts";
 import { runReferenceCli } from "./references/index.ts";
 import { runV1DataCli } from "./v1-data.ts";
-import { CLI_USAGE, DEFAULT_CLI_BIN, PUBLIC_PORTAL_HELP_ONLY, REMOVED_RUNTIME_COMMANDS, REMOVED_V1_CRUD_COMMANDS, buildCliUsage, buildCommandHelp, normalizePublicCliArgv, removedPublicCommandMessage } from "./cli-surface.ts";
+import { CLI_USAGE, DEFAULT_CLI_BIN, PUBLIC_PORTAL_HELP_ONLY, REMOVED_RUNTIME_COMMANDS, REMOVED_V1_CRUD_COMMANDS, buildCliUsage, buildCommandHelp, normalizePublicCliArgv, relatedCliMatches, removedPublicCommandMessage } from "./cli-surface.ts";
 import { inferBrokerDeclaredFields } from "./broker-http.ts";
 import { runInspectCli } from "./inspect-cli.ts";
 import { CLI_TEMPLATE_ROOT } from "./cli-constants.ts";
@@ -498,11 +498,12 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const usage = buildCliUsage(binName, { all: argv.includes("--all") });
   const wantsHelp = argv.includes("--help") || argv.includes("-h");
   const writeRootJson = (payload: unknown, canonicalCommand = group === "db" ? "database" : group === "provider" ? "providers" : group === "style" ? "styles" : group === "template" ? "templates" : group === "ref" ? "references" : group === "image" ? "images" : group ?? "claw") => writeCommandJsonOk(context.stdout, canonicalCommand, payload, { invokedCommand: group ?? canonicalCommand, subcommand: command ?? null, ...(subcommand ? { operation: subcommand } : {}) });
-  const writeRootJsonError = (error: unknown, canonicalCommand = group === "db" ? "database" : group === "provider" ? "providers" : group === "style" ? "styles" : group === "template" ? "templates" : group === "ref" ? "references" : group === "image" ? "images" : group ?? "claw") => writeCommandJsonError(context.stdout, canonicalCommand, error, { invokedCommand: group ?? canonicalCommand, subcommand: command ?? null, ...(subcommand ? { operation: subcommand } : {}) });
+  const writeRootJsonError = (error: unknown, canonicalCommand = group === "db" ? "database" : group === "provider" ? "providers" : group === "style" ? "styles" : group === "template" ? "templates" : group === "ref" ? "references" : group === "image" ? "images" : group ?? "claw", extraMeta: Record<string, unknown> = {}) => writeCommandJsonError(context.stdout, canonicalCommand, error, { invokedCommand: group ?? canonicalCommand, subcommand: command ?? null, ...(subcommand ? { operation: subcommand } : {}), ...extraMeta });
 
   const removedMessage = group ? removedPublicCommandMessage(group, binName) : null;
   if (removedMessage) {
-    context.stderr.write(`${removedMessage}\n`);
+    if (wantsJson) writeRootJsonError(new CliHandledError("removed_public_command", removedMessage, CLI_EXIT_USAGE), group, { related: relatedCliMatches(group, { limit: 12 }) });
+    else context.stderr.write(`${removedMessage}\n`);
     return CLI_EXIT_USAGE;
   }
 
@@ -623,14 +624,14 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     });
   }
 
-  if (group === "memory") {
+  if (group === "knowledge" && (command === "memory" || command === "memories")) {
     const memoryWorkspaceRoot = flags.workspace || context.cwd;
     const memoryWorkspaceId = flags["workspace-id"] || pathSafeBasename(memoryWorkspaceRoot);
     const memoryAgentId = flags["agent-id"] || memoryWorkspaceId;
     const memoryRuntimeAdapterId = resolveRuntimeAdapterId(flags);
     return await runMemoryCli({
-      argv,
-      positionals,
+      argv: ["knowledge", ...argv.slice(2)],
+      positionals: ["knowledge", ...positionals.slice(2)],
       flags,
       workspaceRoot: memoryWorkspaceRoot,
       workspaceId: memoryWorkspaceId,

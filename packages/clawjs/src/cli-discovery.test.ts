@@ -104,16 +104,24 @@ test("runCli returns rules JSON in the common envelope", async () => {
   assert.equal(payload.meta.subcommand, "compile");
 });
 
-test("runCli returns user JSON in the common envelope", async () => {
-  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-user-json-"));
-  const result = await runCliCapture(["user", "list", "--workspace", workspaceRoot, "--runtime", "demo", "--json"], process.cwd());
-  assert.equal(result.code, CLI_EXIT_OK);
-  const payload = JSON.parse(result.stdout) as { ok: boolean; data: { users: unknown[] }; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
-  assert.equal(payload.ok, true);
-  assert.equal(payload.meta.canonicalCommand, "user");
-  assert.equal(payload.meta.invokedCommand, "user");
-  assert.equal(payload.meta.subcommand, "list");
-  assert.equal(Array.isArray(payload.data.users), true);
+test("runCli hard-blocks standalone user and memory legacy commands", async () => {
+  const user = await runCliCapture(["user", "list", "--json"], process.cwd());
+  assert.equal(user.code, CLI_EXIT_USAGE);
+  const userPayload = JSON.parse(user.stdout) as { ok: boolean; error: { code: string }; meta: { canonicalCommand: string; invokedCommand: string; related: Array<{ canonicalCommand?: string }> } };
+  assert.equal(userPayload.ok, false);
+  assert.equal(userPayload.error.code, "removed_public_command");
+  assert.equal(userPayload.meta.canonicalCommand, "user");
+  assert.equal(userPayload.meta.invokedCommand, "user");
+  assert.equal(userPayload.meta.related.some((entry) => entry.canonicalCommand === "profile"), true);
+
+  const memory = await runCliCapture(["memory", "search", "x", "--json"], process.cwd());
+  assert.equal(memory.code, CLI_EXIT_USAGE);
+  const memoryPayload = JSON.parse(memory.stdout) as { ok: boolean; error: { code: string }; meta: { canonicalCommand: string; invokedCommand: string; related: Array<{ canonicalCommand?: string }> } };
+  assert.equal(memoryPayload.ok, false);
+  assert.equal(memoryPayload.error.code, "removed_public_command");
+  assert.equal(memoryPayload.meta.canonicalCommand, "memory");
+  assert.equal(memoryPayload.meta.invokedCommand, "memory");
+  assert.equal(memoryPayload.meta.related.some((entry) => entry.canonicalCommand === "knowledge"), true);
 });
 
 test("runCli returns primary productivity JSON in the common envelope", { concurrency: false }, async (t) => {

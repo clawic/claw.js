@@ -18,6 +18,8 @@ const removedPublicCommands = new Set([
   "export",
   "import",
   "backup",
+  "memory",
+  "user",
   "delegation-plane",
   "badger",
   "clawix-relay",

@@ -673,7 +673,8 @@ test("runCli mirrors local memory into V2 knowledge and profile projection", asy
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-memory-workspace-"));
     const saveStdout = captureStream();
     assert.equal(await runCli([
-      "memory",
+      "knowledge",
+      "memories",
       "save",
       "User prefers concise answers with citations",
       "--workspace", workspaceRoot,
@@ -709,7 +710,7 @@ test("runCli mirrors local memory into V2 knowledge and profile projection", asy
     assert.equal(profile.items[0]?.section, "preference");
     assert.match(profile.items[0]?.contentText ?? "", /concise answers/);
 
-    assert.equal(await runCli(["memory", "delete", saved.data.id, "--workspace", workspaceRoot, "--json"], {
+    assert.equal(await runCli(["knowledge", "memories", "delete", saved.data.id, "--workspace", workspaceRoot, "--json"], {
       stdout: captureStream().stream,
       stderr: captureStream().stream,
       cwd: process.cwd(),

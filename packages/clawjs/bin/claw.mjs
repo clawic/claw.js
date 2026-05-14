@@ -6,7 +6,6 @@ import { fileURLToPath } from "node:url";
 import { runSecretsCli, CLAW_SECRETS_GROUPS } from "./secrets-commands.mjs";
 import { runOpenSecrets } from "./secrets-server-launcher.mjs";
 import { runOpenDatabase } from "./database-server-launcher.mjs";
-import { runMemoryCli, CLAW_MEMORY_GROUPS } from "./memory-commands.mjs";
 import { runOpenMemory } from "./memory-server-launcher.mjs";
 import { runOpenDrive } from "./drive-server-launcher.mjs";
 import { runOpenTelegram } from "./telegram-server-launcher.mjs";
@@ -21,18 +20,15 @@ const publicBinName = invokedBinName === "claw.mjs" ? "claw" : invokedBinName;
 
 const args = process.argv.slice(2);
 
-// Secrets/Memory subcommands first (small router; the heavy CLI lives in dist/index.js).
+// Secrets subcommands first (small router; the heavy CLI lives in dist/index.js).
 const first = args[0];
 if (first && CLAW_SECRETS_GROUPS.has(first)) {
   process.exit(await runSecretsCli(args));
 }
-if (first && CLAW_MEMORY_GROUPS.has(first)) {
-  process.exit(await runMemoryCli(args));
-}
 if (first && CATALOG_GROUPS.has(first)) {
   process.exit(await runCatalogCli(args));
 }
-if (first && first !== "domains" && BUILTIN_COLLECTIONS_BY_ALIAS.has(first.toLowerCase()) && !isStableClawCliCommand(first)) {
+if (first && first !== "domains" && first !== "memory" && first !== "user" && BUILTIN_COLLECTIONS_BY_ALIAS.has(first.toLowerCase()) && !isStableClawCliCommand(first)) {
   const canonical = BUILTIN_COLLECTIONS_BY_ALIAS.get(first.toLowerCase());
   const verb = args[1] ?? "list";
   const rest = args.slice(2);

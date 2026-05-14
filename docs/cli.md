@@ -252,9 +252,10 @@ claw business --help
 claw social --help
 
 claw knowledge search response_style --json
+claw knowledge memories search response_style --json
 claw profile get --json
 claw profile refresh --json
-claw user --help
+claw profile --help
 claw health --help
 claw travel --help
 claw career --help
@@ -346,8 +347,8 @@ These historical names are intentionally not part of the public CLI:
 
 - Standalone package bins other than `claw`: `memory`, `user`, `delegation`,
   `publishing`, and `clawix-relay`.
-- Top-level namespaces: `data`, `app-state`, `signals`, `ops`, `infra`,
-  `workspace-search`, and `workspace-index`.
+- Top-level namespaces: `data`, `app-state`, `signals`, `memory`, `user`,
+  `ops`, `infra`, `workspace-search`, and `workspace-index`.
 - Top-level snapshot verbs: `export`, `import`, and `backup`.
 - V1 CRUD under `business` and `social`.
 - Runtime sidecar verbs: `runtime queue`, `runtime job`, `runtime event`, and
