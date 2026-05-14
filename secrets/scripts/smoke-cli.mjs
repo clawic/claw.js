@@ -64,6 +64,27 @@ console.log = origLog;
 if (code === 0 && captured.includes("unlocked")) ok("secrets state");
 else ko("secrets state");
 
+captured = "";
+console.log = (...a) => { captured += a.join(" ") + "\n"; };
+code = await runSecretsCli(["secrets", "--help"]);
+console.log = origLog;
+if (code === 0 && !captured.includes("secrets backup export") && !captured.includes("secrets backup import")) {
+  ok("secrets CLI does not advertise backup export/import");
+} else {
+  ko("secrets CLI hides backup commands", { code, captured: captured.slice(0, 500) });
+}
+
+const origError = console.error;
+let capturedError = "";
+console.error = (...a) => { capturedError += a.join(" ") + "\n"; };
+code = await runSecretsCli(["secrets", "backup", "export", "--file", path.join(tmpDir, "backup.clawsecrets")]);
+console.error = origError;
+if (code === 1 && capturedError.includes("requires signed host UI reauthentication")) {
+  ok("secrets CLI backup export requires signed host UI");
+} else {
+  ko("secrets CLI backup export fail-closed", { code, capturedError: capturedError.slice(0, 300) });
+}
+
 await app.close();
 fs.rmSync(tmpDir, { recursive: true, force: true });
 console.log(`\n${pass} passed, ${fail} failed`);

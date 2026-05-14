@@ -1,7 +1,6 @@
 // Secrets subcommands for the Clawix CLI. Implemented as a small HTTP
 // client against the local Secrets server (default 127.0.0.1:24103).
 
-import readline from "node:readline/promises";
 import process from "node:process";
 
 const DEFAULT_BASE = process.env.CLAW_SECRETS_BASE_URL ?? process.env.CLAW_SECRETS_BASE ?? "http://127.0.0.1:24103";
@@ -43,44 +42,17 @@ async function fetchJson(path, init = {}) {
   return { status: res.status, ok: res.ok, body };
 }
 
-async function prompt(question, hidden = false) {
-  if (hidden && process.stdin.isTTY) {
-    process.stdout.write(question);
-    return await new Promise((resolve) => {
-      const stdin = process.stdin;
-      const previous = stdin.isRaw;
-      stdin.setRawMode?.(true);
-      stdin.resume();
-      let data = "";
-      const onData = (chunk) => {
-        const s = chunk.toString("utf8");
-        if (s === "\n" || s === "\r" || s === "\r\n" || s === "") {
-          stdin.removeListener("data", onData);
-          stdin.setRawMode?.(previous ?? false);
-          stdin.pause();
-          process.stdout.write("\n");
-          resolve(data);
-        } else if (s === "") {
-          process.exit(130);
-        } else if (s === "" || s === "\b") {
-          if (data.length > 0) data = data.slice(0, -1);
-        } else {
-          data += s;
-        }
-      };
-      stdin.on("data", onData);
-    });
-  }
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  try { return await rl.question(question); } finally { rl.close(); }
-}
-
 function fmt(value) {
   return JSON.stringify(value, null, 2);
 }
 
 function signedHostOnly(command) {
   console.error(`secrets ${command} requires the signed host UI; the public CLI must not handle master passwords or recovery phrases.`);
+  return 1;
+}
+
+function sensitiveHostOnly(command) {
+  console.error(`secrets ${command} requires signed host UI reauthentication; the public CLI must not perform this sensitive operation.`);
   return 1;
 }
 
@@ -126,8 +98,6 @@ const HELP = `claw secrets <command>
   secrets broker-http --method <m> --url <url> --risk-tier <tier> [--agent <id>] [--header <k:v>] [--body <file>] [--timeout-ms <n>]
   secrets types                            list registered typeIds
   secrets plugins                          list registered plugins
-  secrets backup export --file <path>
-  secrets backup import --file <path>
 
   secrets grants issue --secret <name> --agent <id> --capability <kind> [--scope <json>] [--secrets-caps <list>] [--reason <r>] [--minutes <n>]
   secrets grants list
@@ -442,37 +412,6 @@ async function auditVerify() {
   return res.ok ? 0 : 1;
 }
 
-async function backupExport(args) {
-  const file = args.flags.file;
-  if (!file) { console.error("--file required"); return 1; }
-  const passphrase = await prompt("Backup passphrase: ", true);
-  const confirm = await prompt("Confirm backup passphrase: ", true);
-  if (passphrase !== confirm) { console.error("Passphrases do not match."); return 1; }
-  const res = await fetchJson("/v1/secrets/backup/export", {
-    method: "POST",
-    body: JSON.stringify({ passphrase }),
-  });
-  if (!res.ok) { console.error(fmt(res.body)); return 1; }
-  const fs = await import("node:fs");
-  fs.writeFileSync(String(file), JSON.stringify(res.body.backup, null, 2));
-  console.log(`Secrets backup exported to ${file}`);
-  return 0;
-}
-
-async function backupImport(args) {
-  const file = args.flags.file;
-  if (!file) { console.error("--file required"); return 1; }
-  const passphrase = await prompt("Backup passphrase: ", true);
-  const fs = await import("node:fs");
-  const backup = JSON.parse(fs.readFileSync(String(file), "utf8"));
-  const res = await fetchJson("/v1/secrets/backup/import", {
-    method: "POST",
-    body: JSON.stringify({ passphrase, backup }),
-  });
-  console.log(fmt(res.body));
-  return res.ok ? 0 : 1;
-}
-
 export async function runSecretsCli(rawArgs) {
   if (rawArgs.length === 0 || rawArgs[0] === "--help" || rawArgs[0] === "-h") {
     console.log(HELP);
@@ -483,6 +422,10 @@ export async function runSecretsCli(rawArgs) {
     return 1;
   }
   const [, sub, nested, ...rest] = rawArgs;
+  if (sub === "--help" || sub === "-h" || sub === undefined) {
+    console.log(HELP);
+    return 0;
+  }
   const args = parseFlags([sub ?? "", nested ?? "", ...rest].filter(Boolean));
 
   try {
@@ -514,8 +457,8 @@ export async function runSecretsCli(rawArgs) {
       case "plugins": return await secretsPlugins();
       case "backup":
         switch (nested) {
-          case "export": return await backupExport(args);
-          case "import": return await backupImport(args);
+          case "export": return sensitiveHostOnly("backup export");
+          case "import": return sensitiveHostOnly("backup import");
           default: console.log(HELP); return 1;
         }
       case "grants":

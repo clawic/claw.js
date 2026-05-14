@@ -36,7 +36,41 @@ function defaultClawjsDataRoot(flags) {
   return expandHome(resolveClawPersistentSurfacePath("claw.global.data"));
 }
 
+async function readBootstrapConfigFromStdin() {
+  if (process.env.CLAW_SECRETS_BOOTSTRAP_STDIN !== "1") return null;
+  const chunks = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  const raw = Buffer.concat(chunks).toString("utf8").trim();
+  if (!raw) throw new Error("CLAW_SECRETS_BOOTSTRAP_STDIN was set but no bootstrap payload was received");
+  const parsed = JSON.parse(raw);
+  const adminToken = typeof parsed.adminToken === "string" && parsed.adminToken.length > 0 ? parsed.adminToken : undefined;
+  const signedHostToken = typeof parsed.signedHostToken === "string" && parsed.signedHostToken.length > 0 ? parsed.signedHostToken : undefined;
+  return { ...(adminToken ? { adminToken } : {}), ...(signedHostToken ? { signedHostToken } : {}) };
+}
+
+function envForChildBootstrap() {
+  const env = { ...process.env };
+  delete env.CLAW_SECRETS_ADMIN_TOKEN;
+  delete env.CLAW_SECRETS_TOKEN;
+  delete env.CLAW_SECRETS_SIGNED_HOST_TOKEN;
+  env.CLAW_SECRETS_BOOTSTRAP_STDIN = "1";
+  return env;
+}
+
+function writeBootstrapToChild(child, bootstrapConfig) {
+  child.stdin.end(`${JSON.stringify(bootstrapConfig)}\n`);
+}
+
 export async function runOpenSecrets(args) {
+  const bootstrapConfig = await readBootstrapConfigFromStdin();
+  if (bootstrapConfig) {
+    delete process.env.CLAW_SECRETS_ADMIN_TOKEN;
+    delete process.env.CLAW_SECRETS_TOKEN;
+    delete process.env.CLAW_SECRETS_SIGNED_HOST_TOKEN;
+  }
+
   const flags = {};
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -73,18 +107,20 @@ export async function runOpenSecrets(args) {
     const { spawn } = await import("node:child_process");
     const tsx = path.join(HERE, "../../../node_modules/.bin/tsx");
     const child = spawn(tsx, [entry, ...args], {
-      stdio: "inherit",
-      env: { ...process.env },
+      stdio: bootstrapConfig ? ["pipe", "inherit", "inherit"] : "inherit",
+      env: bootstrapConfig ? envForChildBootstrap() : { ...process.env },
     });
+    if (bootstrapConfig) writeBootstrapToChild(child, bootstrapConfig);
     return await new Promise((resolve) => child.on("close", (code) => resolve(code ?? 1)));
   }
 
   if (entry.endsWith("/secrets/dist/server.js")) {
     const { spawn } = await import("node:child_process");
     const child = spawn(process.execPath, [entry, ...args], {
-      stdio: "inherit",
-      env: { ...process.env },
+      stdio: bootstrapConfig ? ["pipe", "inherit", "inherit"] : "inherit",
+      env: bootstrapConfig ? envForChildBootstrap() : { ...process.env },
     });
+    if (bootstrapConfig) writeBootstrapToChild(child, bootstrapConfig);
     return await new Promise((resolve) => child.on("close", (code) => resolve(code ?? 1)));
   }
 
@@ -97,6 +133,7 @@ export async function runOpenSecrets(args) {
       ...(overrides.config ?? {}),
       dataDir,
       dbPath: process.env.CLAW_SECRETS_DB_PATH,
+      ...(bootstrapConfig ?? {}),
     };
     if (flags["status-file"]) overrides.statusFile = flags["status-file"];
     const { config } = await mod.startSecretsServer(overrides);

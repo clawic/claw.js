@@ -100,6 +100,9 @@ const describedNoPublic = await fetchJson(`${base}/v1/tenants/clawix-local/secre
 if (describedNoPublic.ok && describedNoPublic.body.secret?.fields?.find((f) => f.fieldName === "username")?.publicValue === null) ok("metadata omits public values by default");
 else ko("metadata omits public values by default", describedNoPublic.body);
 
+const localProcessList = await fetchJson(`${base}/v1/tenants/clawix-local/secrets`);
+if (localProcessList.status === 401) ok("local process without bearer cannot list secrets"); else ko("local process without bearer cannot list secrets", localProcessList.body);
+
 const describedPublicWithoutHost = await fetchJson(`${base}/v1/tenants/clawix-local/secrets/github_main?includePublicValues=true`, {
   headers: authHeaders,
 });
@@ -117,6 +120,19 @@ const revealWithoutHost = await fetchJson(`${base}/v1/tenants/clawix-local/secre
   body: JSON.stringify({ field: "token", reauthSatisfied: true }),
 });
 if (revealWithoutHost.status === 403) ok("reveal requires signed host"); else ko("reveal requires signed host", revealWithoutHost.body);
+
+const localProcessReveal = await fetchJson(`${base}/v1/tenants/clawix-local/secrets/github_main/reveal-field`, {
+  method: "POST",
+  body: JSON.stringify({ field: "token", reauthSatisfied: true }),
+});
+if (localProcessReveal.status === 403) ok("local process without host token cannot reveal"); else ko("local process without host token cannot reveal", localProcessReveal.body);
+
+const signedHostWithoutBearerReveal = await fetchJson(`${base}/v1/tenants/clawix-local/secrets/github_main/reveal-field`, {
+  method: "POST",
+  headers: signedHostHeaders,
+  body: JSON.stringify({ field: "token", reauthSatisfied: true }),
+});
+if (signedHostWithoutBearerReveal.status === 401) ok("signed host token alone cannot reveal"); else ko("signed host token alone cannot reveal", signedHostWithoutBearerReveal.body);
 
 const revealWithoutReauth = await fetchJson(`${base}/v1/tenants/clawix-local/secrets/github_main/reveal-field`, {
   method: "POST",
@@ -224,10 +240,31 @@ if (brokerRedirect.ok && brokerRedirect.body.status === 302 && redirectFollowed 
 }
 await new Promise((resolve) => targetServer.close(resolve));
 
-const backupExport = await fetchJson(`${base}/v1/secrets/backup/export`, {
+const backupExportWithoutHost = await fetchJson(`${base}/v1/secrets/backup/export`, {
   method: "POST",
   headers: authHeaders,
   body: JSON.stringify({ passphrase: "backup-passphrase" }),
+});
+if (backupExportWithoutHost.status === 403) ok("backup export requires signed host"); else ko("backup export requires signed host", backupExportWithoutHost.body);
+
+const backupExportWithoutBearer = await fetchJson(`${base}/v1/secrets/backup/export`, {
+  method: "POST",
+  headers: signedHostHeaders,
+  body: JSON.stringify({ passphrase: "backup-passphrase", reauthSatisfied: true }),
+});
+if (backupExportWithoutBearer.status === 401) ok("signed host token alone cannot export backup"); else ko("signed host token alone cannot export backup", backupExportWithoutBearer.body);
+
+const backupExportWithoutReauth = await fetchJson(`${base}/v1/secrets/backup/export`, {
+  method: "POST",
+  headers: { ...authHeaders, ...signedHostHeaders },
+  body: JSON.stringify({ passphrase: "backup-passphrase" }),
+});
+if (backupExportWithoutReauth.status === 403) ok("backup export requires fresh reauth"); else ko("backup export requires fresh reauth", backupExportWithoutReauth.body);
+
+const backupExport = await fetchJson(`${base}/v1/secrets/backup/export`, {
+  method: "POST",
+  headers: { ...authHeaders, ...signedHostHeaders },
+  body: JSON.stringify({ passphrase: "backup-passphrase", reauthSatisfied: true }),
 });
 if (backupExport.ok && backupExport.body.format === "clawix-secrets-backup-v1" && backupExport.body.backup?.aead?.ciphertext) {
   ok("backup export encrypted");
@@ -235,10 +272,17 @@ if (backupExport.ok && backupExport.body.format === "clawix-secrets-backup-v1" &
   ko("backup export", backupExport.body);
 }
 
+const backupImportWithoutReauth = await fetchJson(`${base}/v1/secrets/backup/import`, {
+  method: "POST",
+  headers: { ...authHeaders, ...signedHostHeaders },
+  body: JSON.stringify({ passphrase: "backup-passphrase", backup: backupExport.body.backup }),
+});
+if (backupImportWithoutReauth.status === 403) ok("backup import requires fresh reauth"); else ko("backup import requires fresh reauth", backupImportWithoutReauth.body);
+
 const backupImport = await fetchJson(`${base}/v1/secrets/backup/import`, {
   method: "POST",
-  headers: authHeaders,
-  body: JSON.stringify({ passphrase: "backup-passphrase", backup: backupExport.body.backup }),
+  headers: { ...authHeaders, ...signedHostHeaders },
+  body: JSON.stringify({ passphrase: "backup-passphrase", backup: backupExport.body.backup, reauthSatisfied: true }),
 });
 if (backupImport.ok && backupImport.body.imported?.secrets === 3 && backupImport.body.state?.unlocked === false) {
   ok("backup import restores and locks");
@@ -285,6 +329,25 @@ if (doc.body.capabilities?.audit?.status === "ready") ok("doctor: audit ready");
 const plugins = await fetchJson(`${base}/v1/plugins`);
 if (plugins.body.types >= 20 && plugins.body.executors >= 8) ok("plugins endpoint reports counts");
 else ko("plugins endpoint", plugins.body);
+
+const externalPluginsDir = path.join(tmpDir, "external-plugins");
+fs.mkdirSync(externalPluginsDir, { recursive: true });
+fs.writeFileSync(
+  path.join(externalPluginsDir, "unsafe-plugin.js"),
+  "globalThis.__clawSecretsExternalPluginLoaded = true; export default { id: 'unsafe.external', version: '0.0.0', types: [{ typeId: 'unsafe.external', label: 'Unsafe External', fields: [] }] };\n",
+);
+delete process.env.CLAW_SECRETS_ENABLE_UNSAFE_EXTERNAL_PLUGINS;
+delete globalThis.__clawSecretsExternalPluginLoaded;
+const { bootPluginRegistry } = await import("../src/plugins/loader.ts");
+const safeRegistry = await bootPluginRegistry({ externalPluginsDir });
+if (!globalThis.__clawSecretsExternalPluginLoaded && !safeRegistry.getType("unsafe.external")) {
+  ok("external plugins disabled by default");
+} else {
+  ko("external plugins disabled by default", {
+    loaded: Boolean(globalThis.__clawSecretsExternalPluginLoaded),
+    registered: Boolean(safeRegistry.getType("unsafe.external")),
+  });
+}
 
 await app.close();
 fs.rmSync(tmpDir, { recursive: true, force: true });

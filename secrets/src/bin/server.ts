@@ -1,5 +1,19 @@
 import { startSecretsServer } from "../server/app.ts";
 
+async function readBootstrapConfigFromStdin(): Promise<{ adminToken?: string; signedHostToken?: string }> {
+  if (process.env.CLAW_SECRETS_BOOTSTRAP_STDIN !== "1") return {};
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  const raw = Buffer.concat(chunks).toString("utf8").trim();
+  if (!raw) throw new Error("CLAW_SECRETS_BOOTSTRAP_STDIN was set but no bootstrap payload was received");
+  const parsed = JSON.parse(raw) as { adminToken?: unknown; signedHostToken?: unknown };
+  const adminToken = typeof parsed.adminToken === "string" && parsed.adminToken.length > 0 ? parsed.adminToken : undefined;
+  const signedHostToken = typeof parsed.signedHostToken === "string" && parsed.signedHostToken.length > 0 ? parsed.signedHostToken : undefined;
+  return { ...(adminToken ? { adminToken } : {}), ...(signedHostToken ? { signedHostToken } : {}) };
+}
+
 const args = process.argv.slice(2);
 const flags: Record<string, string> = {};
 for (let i = 0; i < args.length; i++) {
@@ -19,6 +33,11 @@ if (flags.workspace && !process.env.CLAW_SECRETS_DATA_DIR && !process.env.CLAW_S
   overrides.config = { ...(overrides.config ?? {}), dataDir: flags.workspace, dbPath: `${flags.workspace}/vault.sqlite` };
 }
 if (flags["status-file"]) overrides.statusFile = flags["status-file"];
+
+const bootstrapConfig = await readBootstrapConfigFromStdin();
+if (bootstrapConfig.adminToken || bootstrapConfig.signedHostToken) {
+  overrides.config = { ...(overrides.config ?? {}), ...bootstrapConfig };
+}
 
 startSecretsServer(overrides)
   .then(({ config }) => {

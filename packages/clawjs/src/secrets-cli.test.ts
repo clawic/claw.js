@@ -104,7 +104,7 @@ test("public secrets CLI keeps password and recovery phrase commands host-only",
   console.log = (...args: unknown[]) => { output.push(args.join(" ")); };
   console.error = (...args: unknown[]) => { output.push(args.join(" ")); };
   try {
-    assert.equal(await runSecretsCli(["secrets", "--help"]), 1);
+    assert.equal(await runSecretsCli(["secrets", "--help"]), 0);
     assert.doesNotMatch(output.join("\n"), /^  secrets (setup|unlock|recover|change-password)\b/m);
     output.length = 0;
     for (const command of ["setup", "unlock", "recover", "change-password"]) {

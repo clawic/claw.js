@@ -122,6 +122,12 @@ plaintext execution outside the broker. Legacy plugin interfaces that still
 mention `resolvedFields` are compatibility declarations only; they must not be
 exposed as a public production execution path.
 
+External plugin loading is disabled by default. Loading a plugin from a local
+`.js` file executes code at import time, so it is not an acceptable trust
+boundary for untrusted plugins. Development-only external loading requires an
+explicit unsafe opt-in and still must not be treated as a production secret
+execution path.
+
 Connection credentials follow the same rule. Framework connection records may
 store opaque `secretRef` values, but they must not store reversible local auth
 files. Legacy `auth.encrypted` files are treated as unsafe compatibility
@@ -194,6 +200,11 @@ Master password, unlock, recovery phrase, and password rotation flows are
 signed-host UI flows. Public CLI commands must not prompt for those values or
 print recovery material.
 
+Encrypted backup export/import is also a signed-host UI flow because it
+requires fresh native reauthentication. The public CLI must not prompt for the
+backup passphrase and call backup endpoints directly; it may only point the
+user at the signed host flow or fail closed.
+
 SDK and API helpers must follow the same rule. They may expose reference
 creation, metadata, policy setup, typed brokered actions, redacted results,
 doctor checks, encrypted import/export, and grant lifecycle. They must not
@@ -251,6 +262,8 @@ The current ClawJS baseline implements the required safe public path:
 - generic action execution routes return `410 Gone`;
 - public CLI setup, unlock, recovery, and password rotation commands are
   signed-host only and do not prompt for master passwords or recovery phrases;
+- public CLI backup export/import is not advertised and fails closed because
+  backup flows require signed-host UI reauthentication;
 - reveal-field API calls require a signed-host token, a human user principal,
   and fresh reauthentication;
 - describe/list metadata omit `publicValue` by default; only signed-host
@@ -258,25 +271,37 @@ The current ClawJS baseline implements the required safe public path:
 - Clawix keeps Secrets admin and signed-host tokens in memory only, removes
   stale Secrets `.admin-token` files before launch, and does not adopt an
   existing Secrets sidecar through a disk bearer token;
+- Clawix bootstraps Secrets admin and signed-host tokens over an anonymous
+  stdin channel instead of environment variables, so process environment
+  inspection does not expose bearer material;
+- loopback callers without bearer credentials cannot list secrets, and callers
+  with only signed-host evidence but no bearer principal cannot reveal or
+  export backups;
 - Clawix migrates legacy connection `auth.encrypted` files into the encrypted
   Secrets vault during unlock/mount and treats the old plaintext-equivalent
   reader as migration-only;
 - broker HTTP calls require capability, risk tier, agent identity, declared
   fields, host, placement, approval/VPN context, and strict governance;
 - connector runners reject `secretRefs` execution outside brokered flows;
+- external `.js` plugin loading is disabled by default and requires an
+  explicit unsafe development opt-in;
 - the agents connection store keeps only opaque `secretRef` values and disables
   legacy `auth.encrypted` plaintext-equivalent helpers;
 - broker and lease issuance increment usage, enforce max uses, and block
   compromised, locked, trashed, expired, or policy-denied secrets;
-- audit events use minimal payloads and broker results are redacted.
+- audit events use minimal payloads and broker results are redacted;
+- backup export/import is encrypted-only, requires a separate backup
+  passphrase, and requires signed-host fresh reauthentication before the
+  backend will export or restore.
 
 The following patterns remain transitional and must not be expanded:
 
 - legacy plugin executor/session/brand-sync TypeScript interfaces still carry
   `resolvedFields` for compatibility; they are not a production-safe execution
   boundary and new integrations must use broker handles;
-- compatibility sidecar process/browser flows require final physical
-  signed-host validation before they count as hostile-local-process proof;
+- compatibility sidecar process/browser flows require final native IPC or
+  code-signing validation before they count as complete hostile-local-process
+  proof;
 - signed-host authorization currently uses a configured host token in ClawJS
   tests and an in-memory host token in Clawix local server flows; native
   Claw.app/Clawix identity, XPC/signature, Keychain/Secure Enclave, and
@@ -318,7 +343,7 @@ agents can verify changes without re-deriving the policy.
 
 | Decision | Requirement | Current status |
 | --- | --- | --- |
-| `local_threat_model` | Same-user local processes are hostile. | Implemented in policy and Clawix no longer persists/adopts Secrets disk tokens; physical host/IPC validation remains `EXTERNAL PENDING`. |
+| `local_threat_model` | Same-user local processes are hostile. | Implemented in policy, loopback auth tests, no Secrets disk tokens, and no token-bearing Secrets environment; native XPC/code-signing validation remains `EXTERNAL PENDING`. |
 | `audit_output` | Produce and implement hardening, not only a report. | Implemented through broker, CLI, audit, lifecycle, and docs hardening. |
 | `audit_scope` | Cover Clawix, ClawJS, remote hosts, vault, broker, connectors, daemon, and third parties. | Partially implemented; ClawJS paths are covered, native host/remotes need physical validation. |
 | `secret_material_policy` | Human UI may reveal; agents/processes/plugins/connectors do not view plaintext. | Implemented for public CLI, broker, SDK tests, and connector runners; legacy plugin interfaces are compatibility-only. |
@@ -329,13 +354,13 @@ agents can verify changes without re-deriving the policy.
 | `automation_secret_use` | Automation executes brokered actions without seeing values. | Implemented through `broker.http` with redacted result contract. |
 | `master_key_protection` | Portable password root plus Keychain/Secure Enclave/biometrics locally. | Password/recovery crypto exists; platform protection is host integration `EXTERNAL PENDING`. |
 | `secret_sync_model` | Future sync must be end-to-end encrypted. | Policy documented; no plaintext sync surface exists in V1. |
-| `plugin_trust_model` | Plugins/connectors are untrusted, declarative, scoped, and not all-fields plaintext. | Public execution disabled; legacy `resolvedFields` interfaces are deprecated compatibility declarations. |
+| `plugin_trust_model` | Plugins/connectors are untrusted, declarative, scoped, and not all-fields plaintext. | Public execution and external plugin loading are disabled by default; legacy `resolvedFields` interfaces are deprecated compatibility declarations. |
 | `host_allowlist_policy` | Exact hosts by default; limited safe wildcards only. | Implemented in strict governance and tests. |
 | `risk_approval_policy` | Mandatory `read`, `write`, `destructive`, `cost`, `system` risk tiers. | Broker request requires `riskTier`; non-read tiers require approval. |
 | `rotation_policy` | Rotation/compromise revokes grants and leases and blocks new use. | Implemented for archive/compromise and governance blocks. |
 | `canonical_storage` | Canonical vault belongs to framework global `~/.claw`; hosts keep only host state. | Implemented for Clawix Secrets service data; connection credentials migrate into the encrypted Secrets vault and legacy readers no longer return plaintext. |
 | `audit_visibility` | Minimal audit; no fields, bodies, headers, public values, arbitrary payloads. | Implemented for current ClawJS audit events and smoke tests. |
 | `migration_priority` | V1 may break unsafe legacy compatibility. | Applied by disabling generic action execution and direct public CLI flows. |
-| `export_backup_policy` | Encrypted backup/export only with separate passphrase and strong reauth. | Encrypted backup is implemented and tested; native reauth proof is host-owned. |
+| `export_backup_policy` | Encrypted backup/export only with separate passphrase and strong reauth. | Implemented and tested: backend requires signed-host fresh reauth, Clawix export/import calls native reauth first, public CLI backup fails closed, and smoke tests verify encrypted-only backup behavior. |
 | `cli_secret_surface` | No CLI reveal or print-secret surface. | Implemented and tested. |
 | `failure_policy` | Missing host, placement, risk, agent, capability, or policy fails closed. | Implemented in strict broker/governance tests. |

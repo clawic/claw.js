@@ -19,6 +19,9 @@ export async function bootPluginRegistry(opts: LoaderOptions = {}): Promise<Plug
 
   const externalDir = opts.externalPluginsDir;
   if (externalDir && fs.existsSync(externalDir)) {
+    if (process.env.CLAW_SECRETS_ENABLE_UNSAFE_EXTERNAL_PLUGINS !== "1") {
+      return registry;
+    }
     const entries = fs.readdirSync(externalDir, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isFile() || !entry.name.endsWith(".js")) continue;

@@ -18,7 +18,6 @@
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
-
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
@@ -46,6 +45,7 @@ import { AuditStore } from "./audit.ts";
 import { CLAW_SECRETS_CAPABILITIES } from "./capabilities.ts";
 import { evaluateGovernance, type RiskTier } from "./governance.ts";
 import { SecretsSession } from "./session.ts";
+import { requireFreshHostReauth } from "./host-reauth.ts";
 import { bootPluginRegistry } from "../plugins/loader.ts";
 import { redactString } from "../plugins/redaction.ts";
 import type { PluginRegistry } from "../plugins/registry.ts";
@@ -416,12 +416,11 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     };
   });
 
-  // ---------- Encrypted backup / restore ----------
-
   app.post("/v1/secrets/backup/export", async (req, reply) => {
+    if (!requireFreshHostReauth(req, reply, requireSignedHost)) return;
     await requirePrincipalOrUser(req, reply);
     session.requireKeys();
-    const body = (req.body ?? {}) as { passphrase?: string };
+    const body = (req.body ?? {}) as { passphrase?: string; reauthSatisfied?: boolean };
     if (!body.passphrase) return reply.code(400).send({ error: "passphrase required" });
     try {
       const backup = encryptBackup(db, body.passphrase);
@@ -437,9 +436,10 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   app.post("/v1/secrets/backup/import", async (req, reply) => {
+    if (!requireFreshHostReauth(req, reply, requireSignedHost)) return;
     await requirePrincipalOrUser(req, reply);
     session.requireKeys();
-    const body = (req.body ?? {}) as { passphrase?: string; backup?: unknown };
+    const body = (req.body ?? {}) as { passphrase?: string; backup?: unknown; reauthSatisfied?: boolean };
     if (!body.passphrase || !body.backup) return reply.code(400).send({ error: "passphrase, backup required" });
     try {
       const logical = decryptBackup(body.backup, body.passphrase);
