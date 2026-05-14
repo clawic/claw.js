@@ -4,7 +4,7 @@
   "maxNewFileLines": 1200,
   "files": {
     "packages/clawjs/src/index.ts": {
-      "lines": 14144,
+      "lines": 13917,
       "reason": "Existing public surface barrel or command surface; split by domain before expanding."
     },
     "packages/clawjs-workspace/src/index.ts": {
