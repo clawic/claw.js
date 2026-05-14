@@ -169,6 +169,27 @@ test("runCli returns productivity database JSON in the common envelope", { concu
   assert.equal(payload.meta.collection, "tasks");
   assert.equal(payload.meta.subcommand, "schema");
   assert.equal(payload.data.collection.name, "tasks");
+
+  const canonicalResult = await runCliCapture(["tasks", "schema", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(canonicalResult.code, CLI_EXIT_OK);
+  const canonicalPayload = JSON.parse(canonicalResult.stdout) as { ok: boolean; data: { collection: { name: string } }; meta: { canonicalCommand: string; invokedCommand: string; collection: string; subcommand: string } };
+  assert.equal(canonicalPayload.ok, true);
+  assert.equal(canonicalPayload.meta.canonicalCommand, "tasks");
+  assert.equal(canonicalPayload.meta.invokedCommand, "tasks");
+  assert.equal(canonicalPayload.meta.collection, "tasks");
+  assert.equal(canonicalPayload.meta.subcommand, "schema");
+  assert.equal(canonicalPayload.data.collection.name, "tasks");
+
+  assert.equal((await runCliCapture(["tasks", "create", "Canonical query task", "--workspace", workspaceRoot, "--runtime", "demo", "--json"], process.cwd())).code, CLI_EXIT_OK);
+  const queryResult = await runCliCapture(["tasks", "query", "Canonical", "--workspace", workspaceRoot, "--runtime", "demo", "--json"], process.cwd());
+  assert.equal(queryResult.code, CLI_EXIT_OK);
+  const queryPayload = JSON.parse(queryResult.stdout) as { ok: boolean; data: Array<{ title: string }>; meta: { canonicalCommand: string; invokedCommand: string; collection: string; subcommand: string } };
+  assert.equal(queryPayload.ok, true);
+  assert.equal(queryPayload.meta.canonicalCommand, "tasks");
+  assert.equal(queryPayload.meta.invokedCommand, "tasks");
+  assert.equal(queryPayload.meta.collection, "tasks");
+  assert.equal(queryPayload.meta.subcommand, "query");
+  assert.equal(queryPayload.data.some((item) => item.title === "Canonical query task"), true);
 });
 
 test("runCli returns advanced productivity JSON in the common envelope", { concurrency: false }, async (t) => {

@@ -173,6 +173,23 @@ export async function runPrimaryProductivityCli(input: {
     });
   }
 
+  const primaryCollectionGroupMap: Record<string, string> = { tasks: "tasks", projects: "projects", goals: "goals", reminders: "reminders", deadlines: "deadlines", notes: "notes", people: "people" };
+  if (group && primaryCollectionGroupMap[group] && (command === "schema" || command === "query")) {
+    return await runCoreProductivityDbCli({
+      argv,
+      positionals: [group, primaryCollectionGroupMap[group], ...positionals.slice(1)],
+      flags,
+      workspaceRoot,
+      stdout: context.stdout,
+      stderr: context.stderr,
+      wantsJson,
+      appId,
+      workspaceId,
+      agentId,
+      contextCwd: context.cwd,
+    });
+  }
+
   if (group === "areas") {
     const claw = await createCliWorkspaceClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, context.cwd);
     if (command === "list") {
