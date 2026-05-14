@@ -22,6 +22,7 @@ import {
   buildSuggestedTopicPrompt,
   fileIcon,
   isImageType,
+  normalizeTopicKey,
   pickVisibleTopics,
   processCrisisMarkers,
 } from "./chat-page-helpers";

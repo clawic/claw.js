@@ -392,7 +392,7 @@ export const DEFAULT_SUGGESTED_TOPICS_BY_LOCALE: Record<string, string[]> = {
 
 export const VISIBLE_SUGGESTED_TOPIC_COUNT = 6;
 
-function normalizeTopicKey(topic: string): string {
+export function normalizeTopicKey(topic: string): string {
   return topic.trim().toLocaleLowerCase();
 }
 
