@@ -113,6 +113,14 @@ if (consumed.consumed_at) ok("lease consumed");
 try { resolver.leases.consume(leaseRes.token); ko("lease cant be consumed twice"); }
 catch { ok("lease cant be consumed twice"); }
 
+const revocableLease = resolver.leases.issue({
+  tenantId: "clawix-local", secretId: secret.id, mode: "process", durationMinutes: 5,
+});
+if (resolver.grants.revokeForSecret(secret.id) >= 1) ok("revokes active grants for secret");
+else ko("revokes active grants for secret");
+if (resolver.leases.revokeForSecret(secret.id) >= 1) ok("revokes active leases for secret");
+else ko("revokes active leases for secret", revocableLease);
+
 // Governance: blocked when host not in allowlist.
 const dec1 = evaluateGovernance(secret, { host: "evil.example.com" });
 if (!dec1.allowed && dec1.reasons.includes("host_not_allowed")) ok("blocks unknown host");
@@ -121,8 +129,73 @@ else ko("blocks unknown host", dec1);
 const dec2 = evaluateGovernance(secret, { host: "api.github.com", headers: { Authorization: "Bearer x" } });
 if (dec2.allowed) ok("allows whitelisted host+header"); else ko("allows whitelisted", dec2);
 
+const decStrictMissing = evaluateGovernance(secret, { requireCompleteContext: true });
+if (!decStrictMissing.allowed && decStrictMissing.reasons.includes("missing_context")) ok("strict governance fails closed on missing context");
+else ko("strict governance fails closed on missing context", decStrictMissing);
+
+const decStrictRead = evaluateGovernance(secret, {
+  host: "api.github.com",
+  headers: { Authorization: "Bearer x" },
+  placements: ["header"],
+  riskTier: "read",
+  agent: "claude-code",
+  requireCompleteContext: true,
+});
+if (decStrictRead.allowed) ok("strict governance allows complete read context"); else ko("strict governance allows complete read context", decStrictRead);
+
+const wildcardSecret = resolver.secrets.create({
+  tenantId: "clawix-local",
+  masterKey: setup.masterKey,
+  draft: {
+    internalName: "wildcard_token",
+    title: "Wildcard Token",
+    fields: [{ fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, secretValue: "wildcard" }],
+    governance: {
+      allowedHosts: ["*.example.com"],
+      allowedHeaders: ["Authorization"],
+      approvalMode: "auto",
+    },
+  },
+});
+const decWildcard = evaluateGovernance(wildcardSecret, {
+  host: "api.example.com",
+  headers: { Authorization: "Bearer x" },
+  placements: ["header"],
+  riskTier: "read",
+  agent: "claude-code",
+  requireCompleteContext: true,
+});
+const decWildcardRoot = evaluateGovernance(wildcardSecret, {
+  host: "example.com",
+  headers: { Authorization: "Bearer x" },
+  placements: ["header"],
+  riskTier: "read",
+  agent: "claude-code",
+  requireCompleteContext: true,
+});
+if (decWildcard.allowed && !decWildcardRoot.allowed && decWildcardRoot.reasons.includes("host_not_allowed")) ok("wildcard host matches subdomains only");
+else ko("wildcard host matches subdomains only", { decWildcard, decWildcardRoot });
+
 // Compromise & TTL exhausted reasons.
+const activeGrant = resolver.grants.issue({
+  tenantId: "clawix-local",
+  agent: "rotation-check",
+  secretId: secret.id,
+  capability: { kind: "github.git_push", repository: "ivan/clawix" },
+  secretsCapabilities: ["broker.http"],
+  reason: "Revocation check",
+  durationMinutes: 10,
+});
+const activeLease = resolver.leases.issue({
+  tenantId: "clawix-local", secretId: secret.id, mode: "process", durationMinutes: 5,
+});
 resolver.secrets.setCompromised(secret.id, true, "leaked in screenshot");
+resolver.grants.revokeForSecret(secret.id);
+resolver.leases.revokeForSecret(secret.id);
+const revokedGrant = resolver.grants.list("clawix-local").find((row) => row.id === activeGrant.grant.id);
+const revokedLease = resolver.leases.list("clawix-local").find((row) => row.id === activeLease.lease.id);
+if (revokedGrant?.revoked_at && revokedLease?.revoked_at) ok("compromise revokes active grants and leases");
+else ko("compromise revokes active grants and leases", { revokedGrant, revokedLease });
 const reloaded = resolver.secrets.get(secret.id);
 const dec3 = evaluateGovernance(reloaded, { host: "api.github.com", headers: { Authorization: "Bearer x" } });
 if (!dec3.allowed && dec3.reasons.includes("secret_compromised")) ok("blocks compromised secret");

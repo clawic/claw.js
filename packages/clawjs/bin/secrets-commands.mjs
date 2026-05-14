@@ -79,6 +79,28 @@ function fmt(value) {
   return JSON.stringify(value, null, 2);
 }
 
+function inferBrokerDeclaredFields(input) {
+  const template = /\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g;
+  const declared = new Map();
+  const add = (text, placement) => {
+    if (!text) return;
+    for (const match of text.matchAll(template)) {
+      const ref = match[1];
+      const fieldSeparator = ref.lastIndexOf(".");
+      if (fieldSeparator <= 0 || fieldSeparator === ref.length - 1) {
+        throw new Error(`Secret placeholder ${match[0]} must include an explicit field`);
+      }
+      const secretName = ref.slice(0, fieldSeparator);
+      const fieldName = ref.slice(fieldSeparator + 1);
+      declared.set(`${secretName}.${fieldName}:${placement}`, { secretName, fieldName, placement });
+    }
+  };
+  add(input.url, "query");
+  add(input.body, "body");
+  for (const value of Object.values(input.headers ?? {})) add(value, "header");
+  return [...declared.values()];
+}
+
 const HELP = `claw secrets <command>
 
   secrets setup                              initialize the secrets (interactive password)
@@ -102,7 +124,7 @@ const HELP = `claw secrets <command>
   secrets trash <name>
   secrets restore <name>
   secrets execute <name> --executor <id> --args <args.json>
-  secrets broker-http --method <m> --url <url> [--header <k:v>] [--body <file>] [--timeout-ms <n>]
+  secrets broker-http --method <m> --url <url> --risk-tier <tier> [--agent <id>] [--header <k:v>] [--body <file>] [--timeout-ms <n>]
   secrets sync <name>                      trigger brand sync
   secrets types                            list registered typeIds
   secrets plugins                          list registered plugins
@@ -337,6 +359,8 @@ async function secretsBrokerHttp(args) {
   const method = args.flags.method;
   const url = args.flags.url;
   if (!method || !url) { console.error("--method and --url required"); return 1; }
+  const riskTier = args.flags["risk-tier"] ?? args.flags.risk;
+  if (!riskTier) { console.error("--risk-tier required"); return 1; }
   const fs = await import("node:fs");
   const headers = {};
   const headerFlags = args.flags.header === undefined
@@ -348,13 +372,19 @@ async function secretsBrokerHttp(args) {
     headers[String(entry).slice(0, idx).trim()] = String(entry).slice(idx + 1).trim();
   }
   const body = args.flags.body ? fs.readFileSync(String(args.flags.body), "utf8") : undefined;
+  const declaredFields = inferBrokerDeclaredFields({ url: String(url), headers, body });
   const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/broker/http`, {
     method: "POST",
     body: JSON.stringify({
       method: String(method),
       url: String(url),
+      capability: "broker.http",
+      agent: args.flags.agent ? String(args.flags.agent) : "claw-secrets-cli",
+      riskTier: String(riskTier),
+      declaredFields,
       headers,
       ...(body !== undefined ? { body } : {}),
+      ...(args.flags["approval-satisfied"] === "true" ? { approvalSatisfied: true } : {}),
       ...(args.flags["timeout-ms"] ? { timeoutMs: Number(args.flags["timeout-ms"]) } : {}),
     }),
   });

@@ -88,8 +88,14 @@ export interface SecretLeaseRecord {
 export interface SecretBrokerHttpInput {
   method: string;
   url: string;
+  capability: "broker.http";
+  agent: string;
+  riskTier: "read" | "write" | "destructive" | "cost" | "system";
+  declaredFields: Array<{ secretName: string; fieldName: string; placement: "query" | "body" | "header" }>;
   headers?: Record<string, string>;
   body?: string;
+  approvalSatisfied?: boolean;
+  vpnSatisfied?: boolean;
 }
 
 export interface SecretBrokerHttpResult {

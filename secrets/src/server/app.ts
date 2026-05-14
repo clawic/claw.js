@@ -44,7 +44,7 @@ import {
 import { SecretsResolver } from "./resolver.ts";
 import { AuditStore } from "./audit.ts";
 import { CLAW_SECRETS_CAPABILITIES } from "./capabilities.ts";
-import { evaluateGovernance } from "./governance.ts";
+import { evaluateGovernance, type RiskTier } from "./governance.ts";
 import { SecretsSession } from "./session.ts";
 import { bootPluginRegistry } from "../plugins/loader.ts";
 import { redactString } from "../plugins/redaction.ts";
@@ -52,6 +52,12 @@ import type { PluginRegistry } from "../plugins/registry.ts";
 import { decryptBackup, encryptBackup, restoreLogicalBackup, CLAW_SECRETS_BACKUP_FORMAT } from "./backup.ts";
 
 const DEFAULT_TENANT_ID = "clawix-local";
+const RISK_TIERS = new Set<RiskTier>(["read", "write", "destructive", "cost", "system"]);
+type BrokerPlacement = "query" | "body" | "header";
+
+function placementKey(secretName: string, fieldName: string, placement: BrokerPlacement): string {
+  return `${secretName}.${fieldName}:${placement}`;
+}
 
 function hasIndexHtml(dir: string): boolean {
   return fs.existsSync(path.join(dir, "index.html"));
@@ -643,7 +649,12 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     if (!row) return reply.code(404).send({ error: "Not found" });
     const body = (req.body ?? {}) as { archived?: boolean };
     const updated = resolver.secrets.setArchived(row.id, body.archived === true);
-    return { secret: updated ? resolver.describeSecret(updated) : null };
+    const revokedGrants = body.archived === true ? resolver.grants.revokeForSecret(row.id) : 0;
+    const revokedLeases = body.archived === true ? resolver.leases.revokeForSecret(row.id) : 0;
+    return {
+      secret: updated ? resolver.describeSecret(updated) : null,
+      revoked: { grants: revokedGrants, leases: revokedLeases },
+    };
   });
 
   app.post("/v1/tenants/:tenantId/secrets/:name/compromise", async (req, reply) => {
@@ -653,7 +664,12 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     if (!row) return reply.code(404).send({ error: "Not found" });
     const body = (req.body ?? {}) as { compromised?: boolean; reason?: string };
     const updated = resolver.secrets.setCompromised(row.id, body.compromised !== false, body.reason ?? null);
-    return { secret: updated ? resolver.describeSecret(updated) : null };
+    const revokedGrants = body.compromised === false ? 0 : resolver.grants.revokeForSecret(row.id);
+    const revokedLeases = body.compromised === false ? 0 : resolver.leases.revokeForSecret(row.id);
+    return {
+      secret: updated ? resolver.describeSecret(updated) : null,
+      revoked: { grants: revokedGrants, leases: revokedLeases },
+    };
   });
 
   app.delete("/v1/tenants/:tenantId/secrets/:name", async (req, reply) => {
@@ -725,18 +741,38 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       body?: string;
       timeoutMs?: number;
       agent?: string;
+      capability?: string;
+      riskTier?: string;
+      declaredFields?: Array<{ secretName?: string; fieldName?: string; placement?: BrokerPlacement }>;
       approvalSatisfied?: boolean;
       vpnSatisfied?: boolean;
     };
     if (!body.method || !body.url) return reply.code(400).send({ error: "method, url required" });
+    if (body.capability !== "broker.http") return reply.code(400).send({ error: "capability broker.http required" });
+    if (!body.riskTier || !RISK_TIERS.has(body.riskTier as RiskTier)) {
+      return reply.code(400).send({ error: "valid riskTier required" });
+    }
+    const requestAgent = body.agent ?? (actor.kind === "principal" ? actor.principal.id : undefined);
+    if (!requestAgent) return reply.code(400).send({ error: "agent required" });
+    if (!Array.isArray(body.declaredFields) || body.declaredFields.length === 0) {
+      return reply.code(400).send({ error: "declaredFields required" });
+    }
 
     const requestHeaders = body.headers ?? {};
     const urlBefore = body.url;
     const bodyBefore = body.body ?? "";
-    const template = /\{\{\s*([a-zA-Z0-9_.-]+)(?:\.([a-zA-Z0-9_]+))?\s*\}\}/g;
+    const template = /\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g;
     const textForDiscovery = [urlBefore, bodyBefore, ...Object.values(requestHeaders)].join("\n");
     const matches = [...textForDiscovery.matchAll(template)];
     if (matches.length === 0) return reply.code(400).send({ error: "No secret placeholders found" });
+
+    const declared = new Set<string>();
+    for (const field of body.declaredFields) {
+      if (!field.secretName || !field.fieldName || !field.placement) {
+        return reply.code(400).send({ error: "declaredFields entries require secretName, fieldName, placement" });
+      }
+      declared.add(placementKey(field.secretName, field.fieldName, field.placement));
+    }
 
     const resolvedByToken = new Map<string, string>();
     const redactionValues: string[] = [];
@@ -744,11 +780,13 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     for (const match of matches) {
       const token = match[0];
       if (resolvedByToken.has(token)) continue;
-      const secretName = match[1];
-      const fieldName = match[2];
-      if (!fieldName) {
-        return reply.code(400).send({ error: "Secret placeholders must name an explicit field", secretName });
+      const ref = match[1];
+      const fieldSeparator = ref.lastIndexOf(".");
+      if (fieldSeparator <= 0 || fieldSeparator === ref.length - 1) {
+        return reply.code(400).send({ error: "Secret placeholders must name an explicit field", secretRef: ref });
       }
+      const secretName = ref.slice(0, fieldSeparator);
+      const fieldName = ref.slice(fieldSeparator + 1);
       if (!isCapabilityAllowed(actor, tenantId, secretName, "broker.http")) {
         return reply.code(403).send({ error: "broker.http denied", secretName });
       }
@@ -758,18 +796,25 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
         urlBefore.includes(token) ? "query" : null,
         bodyBefore.includes(token) ? "body" : null,
         Object.values(requestHeaders).some((value) => value.includes(token)) ? "header" : null,
-      ].filter(Boolean) as Array<"query" | "body" | "header">;
+      ].filter(Boolean) as BrokerPlacement[];
+      for (const placement of placements) {
+        if (!declared.has(placementKey(secretName, fieldName, placement))) {
+          return reply.code(400).send({ error: "Secret placeholder was not declared for placement", secretName, fieldName, placement });
+        }
+      }
       const decision = evaluateGovernance(row, {
         host: target.host,
         method: body.method,
         headers: Object.fromEntries(Object.entries(requestHeaders).filter(([, value]) => value.includes(token))),
         placements,
+        riskTier: body.riskTier as RiskTier,
         insecureTransport: target.protocol === "http:",
         localNetwork: isLocalNetworkHost(target.hostname),
-        agent: body.agent ?? (actor.kind === "principal" ? actor.principal.id : undefined),
+        agent: requestAgent,
         requireCompleteContext: true,
         approvalSatisfied: body.approvalSatisfied === true,
         vpnSatisfied: body.vpnSatisfied === true,
+        writeIntent: body.riskTier !== "read",
       });
       if (!decision.allowed) return reply.code(400).send({ error: "Blocked by governance", secretName, reasons: decision.reasons });
       const { value } = resolver.revealField({ secret: row, masterKey: keys.masterKey, fieldName });

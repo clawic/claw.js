@@ -342,9 +342,14 @@ async function postJson(
     const result = await brokerSecretHttp(noopRunner, {
       method: "POST",
       url,
+      capability: "broker.http",
+      agent: gatewayConfig.env?.CLAW_AGENT_ID ?? "claw-runtime",
+      riskTier: "write",
+      approvalSatisfied: gatewayConfig.permissionMode === "workspace-write" || gatewayConfig.permissionMode === "danger-full-access",
+      declaredFields: [{ secretName: config.provider.secretRef, fieldName: "api_key", placement: "header" }],
       headers: {
         ...config.provider.headers,
-        Authorization: `Bearer {{${config.provider.secretRef}}}`,
+        Authorization: `Bearer {{${config.provider.secretRef}.api_key}}`,
       },
       body: JSON.stringify(body),
     }, { env: gatewayConfig.env });

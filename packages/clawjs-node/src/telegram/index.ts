@@ -230,14 +230,21 @@ export async function downloadTelegramFile(
     }
     const normalizedBase = normalizeApiBaseUrl(apiBaseUrl);
     const fileBase = normalizedBase.replace(/\/api\/?$/, "");
-    const url = `${fileBase}/file/bot{{${secretName}}}/${filePath.replace(/^\/+/, "")}`;
+    const url = `${fileBase}/file/bot{{${secretName}.token}}/${filePath.replace(/^\/+/, "")}`;
     const response = await fetch(`${baseUrl}/v1/tenants/${tenantId}/broker/http`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ method: "GET", url }),
+      body: JSON.stringify({
+        method: "GET",
+        url,
+        capability: "broker.http",
+        agent: "telegram-file-download",
+        riskTier: "read",
+        declaredFields: [{ secretName, fieldName: "token", placement: "query" }],
+      }),
     });
     const payload = await response.json() as { ok?: boolean; status?: number; bodyText?: string; bodyBase64?: string };
     if (!response.ok || payload.ok === false) {
@@ -250,7 +257,7 @@ export async function downloadTelegramFile(
   const spec = resolveSecretsCommandSpec(env);
   const normalizedBase = normalizeApiBaseUrl(apiBaseUrl);
   const fileBase = normalizedBase.replace(/\/api\/?$/, "");
-  const url = `${fileBase}/file/bot{{${secretName}}}/${filePath.replace(/^\/+/, "")}`;
+  const url = `${fileBase}/file/bot{{${secretName}.token}}/${filePath.replace(/^\/+/, "")}`;
   const args = [
     ...spec.argsPrefix,
     "request",

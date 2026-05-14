@@ -6,27 +6,34 @@ import { once } from "node:events";
 
 import { expect, test as base } from "@playwright/test";
 
-import { buildSecretsApp } from "../../src/server/app.ts";
+import { startSecretsServer as startSecretsHttpServer } from "../../src/server/app.ts";
 
 export async function startSecretsServer(prefix = "secrets-e2e") {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), `${prefix}-`));
-  const { app } = buildSecretsApp({
+  const { app } = await startSecretsHttpServer({
     config: {
       host: "127.0.0.1",
       port: 0,
       dataDir: path.join(rootDir, ".data"),
       dbPath: path.join(rootDir, ".data", "vault.sqlite"),
       jwtSecret: "secrets-test-secret",
+      adminToken: "secrets-admin",
       publicBaseUrl: "http://127.0.0.1:0",
       uiDistDir: path.join(process.cwd(), "ui", "dist"),
     },
   });
-  await app.listen({ host: "127.0.0.1", port: 0 });
   const address = app.server.address();
   const port = typeof address === "object" && address ? address.port : 24103;
+  const baseUrl = `http://127.0.0.1:${port}`;
+  const setup = await fetch(`${baseUrl}/v1/secrets/setup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password: "secrets-e2e-password" }),
+  });
+  if (!setup.ok && setup.status !== 409) throw new Error(await setup.text());
   return {
     rootDir,
-    baseUrl: `http://127.0.0.1:${port}`,
+    baseUrl,
     async close() {
       await app.close();
       fs.rmSync(rootDir, { recursive: true, force: true });

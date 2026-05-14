@@ -113,7 +113,8 @@ CLAW_SECRETS_TENANT_ID=demo-tenant \
 node secrets/dist/sidecar.js request \
   --method POST \
   --url https://slack.com/api/auth.test \
-  --header "Authorization: Bearer {{slack_bot_token}}"
+  --risk-tier read \
+  --header "Authorization: Bearer {{slack_bot_token.token}}"
 ```
 
 And it can request host-bound leases:

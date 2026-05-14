@@ -15,6 +15,7 @@ export interface ResolveContext {
   method?: string;
   headers?: Record<string, string>;
   placements?: Placement[]; // where the resolved value will be injected
+  riskTier?: RiskTier;
   insecureTransport?: boolean;
   localNetwork?: boolean;
   agent?: string;
@@ -23,6 +24,8 @@ export interface ResolveContext {
   vpnSatisfied?: boolean;
   writeIntent?: boolean;
 }
+
+export type RiskTier = "read" | "write" | "destructive" | "cost" | "system";
 
 export type GovernanceDenialReason =
   | "host_not_allowed"
@@ -123,6 +126,9 @@ export function evaluateGovernance(secret: SecretRow, ctx: ResolveContext): Gove
   if (ctx.requireCompleteContext === true && !ctx.placements) {
     reasons.push("missing_context");
   }
+  if (ctx.requireCompleteContext === true && !ctx.riskTier) {
+    reasons.push("missing_context");
+  }
   if (ctx.placements) {
     for (const placement of ctx.placements) {
       if (placement === "query" && secret.allow_in_url === 0) {
@@ -162,6 +168,9 @@ export function evaluateGovernance(secret: SecretRow, ctx: ResolveContext): Gove
   const needsApproval = approvalMode === "every-use" || approvalMode === "window";
   const needsVpn = secret.requires_vpn === 1;
   if (needsApproval && ctx.approvalSatisfied !== true) {
+    reasons.push("approval_required");
+  }
+  if (ctx.riskTier && ctx.riskTier !== "read" && ctx.approvalSatisfied !== true) {
     reasons.push("approval_required");
   }
   if (needsVpn && ctx.vpnSatisfied !== true) {

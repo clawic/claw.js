@@ -58,6 +58,7 @@ import { runV1DataCli } from "./v1-data.ts";
 import { activeHost, readHostRegistry, registerHost, resolveHostRegistryFile, useHost } from "./host-registry.ts";
 import { HostClientError, sendHostCommand } from "./host-client.ts";
 import { CLI_USAGE, DEFAULT_CLI_BIN, PUBLIC_PORTAL_HELP_ONLY, REMOVED_RUNTIME_COMMANDS, REMOVED_V1_CRUD_COMMANDS, buildCliUsage, buildCommandHelp, normalizePublicCliArgv, removedPublicCommandMessage } from "./cli-surface.ts";
+import { inferBrokerDeclaredFields } from "./broker-http.ts";
 export { CLI_USAGE, DEFAULT_CLI_BIN, buildCliUsage } from "./cli-surface.ts";
 
 export interface CliContext {
@@ -7469,12 +7470,24 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     }
     const method = flags.method || "GET";
     const headers = parseJsonFlag<Record<string, string>>(flags["headers-json"], "--headers-json");
+    const riskTier = flags["risk-tier"] || flags.risk;
+    if (!riskTier) {
+      context.stderr.write("--risk-tier is required\n");
+      return CLI_EXIT_USAGE;
+    }
+    const body = flags.body;
+    const declaredFields = inferBrokerDeclaredFields({ url, headers, body });
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const payload = await claw.secrets.brokerHttp({
       method,
       url,
+      capability: "broker.http",
+      agent: flags.agent || agentId || "claw-cli",
+      riskTier: riskTier as "read" | "write" | "destructive" | "cost" | "system",
+      declaredFields,
+      ...(flags["approval-satisfied"] === "true" ? { approvalSatisfied: true } : {}),
       ...(headers ? { headers } : {}),
-      ...(flags.body ? { body: flags.body } : {}),
+      ...(body ? { body } : {}),
     });
     if (wantsJson) {
       writeJson(context.stdout, payload);

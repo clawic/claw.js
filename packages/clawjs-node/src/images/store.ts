@@ -639,8 +639,13 @@ export function createImageLibraryStore(options: CreateImageLibraryStoreOptions 
       const brokered = await options.brokerHttp({
         method: "POST",
         url: openAIUrl(profile, endpoint),
+        capability: "broker.http",
+        agent: "image-generation",
+        riskTier: "cost",
+        approvalSatisfied: true,
+        declaredFields: [{ secretName: profile.secretRef, fieldName: "api_key", placement: "header" }],
         headers: {
-          Authorization: `Bearer {{${profile.secretRef}}}`,
+          Authorization: `Bearer {{${profile.secretRef}.api_key}}`,
           "Content-Type": "application/json",
         },
         body,

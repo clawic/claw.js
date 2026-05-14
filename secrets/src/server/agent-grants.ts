@@ -144,6 +144,13 @@ export class AgentGrantStore {
     return this.db.prepare("SELECT * FROM agent_grants WHERE id = ?").get(id) as AgentGrantRow | undefined;
   }
 
+  revokeForSecret(secretId: string): number {
+    const result = this.db
+      .prepare("UPDATE agent_grants SET revoked_at = ? WHERE secret_id = ? AND revoked_at IS NULL")
+      .run(nowIso(), secretId);
+    return result.changes;
+  }
+
   listActive(tenantId: string): AgentGrantRow[] {
     return this.db
       .prepare(

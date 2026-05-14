@@ -217,12 +217,16 @@ test("secrets broker enforces deny precedence and host constraints", async () =>
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        secretName: "slack_bot",
-        secretValue: "xoxb-secret-123",
-        allowedHosts: [upstreamHost],
-        allowedHeaderNames: ["Authorization"],
-        allowLocalNetwork: true,
-        leaseModes: ["process"],
+        draft: {
+          internalName: "slack_bot",
+          title: "Slack Bot",
+          fields: [{ fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, secretValue: "xoxb-secret-123" }],
+          governance: {
+            allowedHosts: [upstreamHost],
+            allowedHeaders: ["Authorization"],
+            allowLocalNetwork: true,
+          },
+        },
       }),
     });
     assert.equal(create.status, 201);
@@ -250,6 +254,10 @@ test("secrets broker enforces deny precedence and host constraints", async () =>
       body: JSON.stringify({
         method: "POST",
         url: `${upstream.baseUrl}/echo`,
+        capability: "broker.http",
+        agent: "secrets-broker-e2e",
+        riskTier: "read",
+        declaredFields: [{ secretName: "slack_bot", fieldName: "token", placement: "header" }],
         headers: {
           Authorization: "Bearer {{slack_bot.token}}",
           "Content-Type": "application/json",
@@ -278,6 +286,10 @@ test("secrets broker enforces deny precedence and host constraints", async () =>
       body: JSON.stringify({
         method: "GET",
         url: `${upstream.baseUrl}/echo`,
+        capability: "broker.http",
+        agent: "secrets-broker-e2e",
+        riskTier: "read",
+        declaredFields: [{ secretName: "slack_bot", fieldName: "token", placement: "header" }],
         headers: {
           Authorization: "Bearer {{slack_bot.token}}",
         },
@@ -294,6 +306,10 @@ test("secrets broker enforces deny precedence and host constraints", async () =>
       body: JSON.stringify({
         method: "GET",
         url: "https://example.com/echo",
+        capability: "broker.http",
+        agent: "secrets-broker-e2e",
+        riskTier: "read",
+        declaredFields: [{ secretName: "slack_bot", fieldName: "token", placement: "header" }],
         headers: {
           Authorization: "Bearer {{slack_bot.token}}",
         },

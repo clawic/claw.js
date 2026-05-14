@@ -599,8 +599,12 @@ await claw.secrets.actions("my_bot_token");
 await claw.secrets.brokerHttp({
   method: "POST",
   url: "https://slack.com/api/auth.test",
+  capability: "broker.http",
+  agent: "demo-agent",
+  riskTier: "read",
+  declaredFields: [{ secretName: "slack_bot_token", fieldName: "token", placement: "header" }],
   headers: {
-    Authorization: "Bearer {{slack_bot_token}}",
+    Authorization: "Bearer {{slack_bot_token.token}}",
   },
 });
 await claw.secrets.runAction("revenuecat_admin", "revenuecat.projects.list");

@@ -78,6 +78,13 @@ export class LeaseStore {
     return this.db.prepare("SELECT * FROM leases WHERE id = ?").get(id) as LeaseRow | undefined;
   }
 
+  revokeForSecret(secretId: string): number {
+    const result = this.db
+      .prepare("UPDATE leases SET revoked_at = ? WHERE secret_id = ? AND revoked_at IS NULL")
+      .run(nowIso(), secretId);
+    return result.changes;
+  }
+
   list(tenantId: string): LeaseRow[] {
     return this.db
       .prepare("SELECT * FROM leases WHERE tenant_id = ? ORDER BY created_at DESC")

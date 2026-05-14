@@ -321,6 +321,10 @@ test("secrets backend brokers generic HTTP and typed actions without exposing pl
     const generic = await brokerSecretHttp(runner, {
       method: "POST",
       url: "http://127.0.0.1:9999/echo",
+      capability: "broker.http",
+      agent: "secrets-index-test",
+      riskTier: "read",
+      declaredFields: [{ secretName: "slack_bot", fieldName: "token", placement: "header" }],
       headers: {
         Authorization: "Bearer {{slack_bot.token}}",
         "Content-Type": "application/json",
