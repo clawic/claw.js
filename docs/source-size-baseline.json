@@ -20,8 +20,8 @@
       "reason": "English locale, locale registry, and brand override assembly after locale table extraction; add new translations in locale-specific modules."
     },
     "packages/clawjs-workspace/src/index.ts": {
-      "lines": 2062,
-      "reason": "Workspace runtime assembly after indexing, human activity, context, work session, and productivity facade extraction; split new app/state domains before expanding."
+      "lines": 1977,
+      "reason": "Workspace runtime shell after indexing, human activity, context, work session, productivity, and instance assembly extraction; split new domains before expanding."
     },
     "examples/showcase/src/app/settings/page.tsx": {
       "lines": 1996,
