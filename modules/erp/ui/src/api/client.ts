@@ -1,3 +1,7 @@
+const ERP_TOKEN_STORAGE_KEY = ERP_TOKEN_STORAGE_KEY;
+const ERP_TENANT_STORAGE_KEY = ERP_TENANT_STORAGE_KEY;
+const ERP_ENTITY_STORAGE_KEY = ERP_ENTITY_STORAGE_KEY;
+import { clawApiPath } from "@clawjs/core";
 export interface ErrorEnvelope {
   code: string;
   message: string;
@@ -25,25 +29,25 @@ class ApiClient {
 
   setToken(token: string | null) {
     this.token = token;
-    if (token) localStorage.setItem("erp_token", token);
-    else localStorage.removeItem("erp_token");
+    if (token) localStorage.setItem(ERP_TOKEN_STORAGE_KEY, token);
+    else localStorage.removeItem(ERP_TOKEN_STORAGE_KEY);
   }
 
   getToken(): string | null {
-    if (!this.token) this.token = localStorage.getItem("erp_token");
+    if (!this.token) this.token = localStorage.getItem(ERP_TOKEN_STORAGE_KEY);
     return this.token;
   }
 
   setContext(tenantId: string, legalEntityId: string) {
     this.tenantId = tenantId;
     this.legalEntityId = legalEntityId;
-    localStorage.setItem("erp_tenant", tenantId);
-    localStorage.setItem("erp_entity", legalEntityId);
+    localStorage.setItem(ERP_TENANT_STORAGE_KEY, tenantId);
+    localStorage.setItem(ERP_ENTITY_STORAGE_KEY, legalEntityId);
   }
 
   getContext(): { tenantId: string | null; legalEntityId: string | null } {
-    if (!this.tenantId) this.tenantId = localStorage.getItem("erp_tenant");
-    if (!this.legalEntityId) this.legalEntityId = localStorage.getItem("erp_entity");
+    if (!this.tenantId) this.tenantId = localStorage.getItem(ERP_TENANT_STORAGE_KEY);
+    if (!this.legalEntityId) this.legalEntityId = localStorage.getItem(ERP_ENTITY_STORAGE_KEY);
     return { tenantId: this.tenantId, legalEntityId: this.legalEntityId };
   }
 
@@ -57,7 +61,7 @@ class ApiClient {
   private scopedPath(suffix: string): string {
     const { tenantId, legalEntityId } = this.getContext();
     if (!tenantId || !legalEntityId) throw new Error("No tenant/entity context set");
-    return `/v1/tenants/${tenantId}/legal-entities/${legalEntityId}${suffix}`;
+    return clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}${suffix}`);
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -90,12 +94,12 @@ class ApiClient {
 
   // Auth
   async login(email: string, password: string): Promise<{ accessToken: string }> {
-    return this.post("/v1/auth/admin/login", { email, password });
+    return this.post(clawApiPath("auth/admin/login"), { email, password });
   }
 
   // Health
   async health(): Promise<{ ok: boolean }> {
-    return this.get("/v1/health");
+    return this.get(clawApiPath("health"));
   }
 
   // App meta
@@ -104,39 +108,39 @@ class ApiClient {
     const params = new URLSearchParams();
     if (tenantId) params.set("tenantId", tenantId);
     if (legalEntityId) params.set("legalEntityId", legalEntityId);
-    return this.get(`/v1/app/meta?${params}`);
+    return this.get(clawApiPath(`app/meta?${params}`));
   }
 
   async dashboard(): Promise<DashboardData> {
     const { tenantId, legalEntityId } = this.getContext();
-    return this.get(`/v1/app/dashboard?tenantId=${tenantId}&legalEntityId=${legalEntityId}`);
+    return this.get(clawApiPath(`app/dashboard?tenantId=${tenantId}&legalEntityId=${legalEntityId}`));
   }
 
   async frontendContract(): Promise<unknown> {
-    return this.get("/v1/app/frontend-contract");
+    return this.get(clawApiPath("app/frontend-contract"));
   }
 
   async formSchema(formId: string): Promise<FormSchema> {
-    return this.get(`/v1/app/forms/${formId}`);
+    return this.get(clawApiPath(`app/forms/${formId}`));
   }
 
   async documentDetail(documentId: string): Promise<DocumentDetail> {
     const { tenantId, legalEntityId } = this.getContext();
-    return this.get(`/v1/app/documents/${documentId}?tenantId=${tenantId}&legalEntityId=${legalEntityId}`);
+    return this.get(clawApiPath(`app/documents/${documentId}?tenantId=${tenantId}&legalEntityId=${legalEntityId}`));
   }
 
   // Tenants
   async listTenants(): Promise<{ tenants: TenantRecord[] }> {
-    return this.get("/v1/tenants");
+    return this.get(clawApiPath("tenants"));
   }
 
   async bootstrapTenant(data: Record<string, unknown>): Promise<unknown> {
-    return this.post("/v1/tenants/bootstrap", data);
+    return this.post(clawApiPath("tenants/bootstrap"), data);
   }
 
   // Legal entities
   async listLegalEntities(tenantId: string): Promise<{ legalEntities: LegalEntityRecord[] }> {
-    return this.get(`/v1/tenants/${tenantId}/legal-entities`);
+    return this.get(clawApiPath(`tenants/${tenantId}/legal-entities`));
   }
 
   // Scoped reads

@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import { expect, saveBrowserScreenshot, test } from "./helpers.ts";
 
 /**
@@ -32,7 +33,7 @@ async function apiGet(url: string) {
 test.describe.serial("ERP UI E2E", () => {
   test("bootstrap: login and create test data", async () => {
     // Login
-    const loginRes = await apiPost("/v1/auth/admin/login", {
+    const loginRes = await apiPost(clawApiPath("auth/admin/login"), {
       email: "admin@erp.local",
       password: "erp-admin",
     });
@@ -40,18 +41,18 @@ test.describe.serial("ERP UI E2E", () => {
     expect(accessToken).toBeTruthy();
 
     // Check for existing tenants first
-    const tenantsRes = await apiGet("/v1/tenants");
+    const tenantsRes = await apiGet(clawApiPath("tenants"));
     if (tenantsRes.tenants && tenantsRes.tenants.length > 0) {
       // Use existing tenant
       tenantId = tenantsRes.tenants[0].id;
-      const entitiesRes = await apiGet(`/v1/tenants/${tenantId}/legal-entities`);
+      const entitiesRes = await apiGet(clawApiPath(`tenants/${tenantId}/legal-entities`));
       legalEntityId = entitiesRes.legalEntities[0].id;
-      const branchesRes = await apiGet(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/branches`);
+      const branchesRes = await apiGet(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/branches`));
       branchId = branchesRes.branches[0].id;
     } else {
       // Bootstrap tenant
       const slug = `test-corp-${Date.now()}`;
-      const bootstrapRes = await apiPost("/v1/tenants/bootstrap", {
+      const bootstrapRes = await apiPost(clawApiPath("tenants/bootstrap"), {
         name: "Test Corp",
         slug,
         baseCurrency: "USD",
@@ -63,33 +64,33 @@ test.describe.serial("ERP UI E2E", () => {
 
     // Create items (ignore errors if already exists)
     try {
-      await apiPost(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/items`, {
+      await apiPost(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/items`), {
         sku: "WIDGET-01", name: "Widget Alpha", kind: "stock",
       });
     } catch { /* may already exist */ }
 
     // Create a sales quote
-    await apiPost(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/sales/quotes`, {
+    await apiPost(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/sales/quotes`), {
       branchId, customerName: "Acme Inc", currency: "USD", totalAmountCents: 150000,
     });
 
     // Create employee
-    await apiPost(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/employees`, {
+    await apiPost(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/employees`), {
       displayName: "Jane Smith",
     });
 
     // Create a support ticket
-    await apiPost(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/support/tickets`, {
+    await apiPost(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/support/tickets`), {
       branchId, customerName: "Acme Inc", title: "Widget issue",
     });
 
     // Create project
-    await apiPost(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/projects`, {
+    await apiPost(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/projects`), {
       name: "Project Alpha",
     });
 
     // Post a customer invoice (creates GL entries too)
-    await apiPost(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/ar/invoices`, {
+    await apiPost(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/ar/invoices`), {
       branchId, customerName: "Acme Inc", currency: "USD", totalAmountCents: 50000,
     });
   });

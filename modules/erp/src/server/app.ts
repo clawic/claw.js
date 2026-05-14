@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -65,9 +66,9 @@ function placeholderHtml(): string {
     "<div class='card' data-testid='erp-placeholder-contracts'>",
     "<h2>Reserved frontend mount</h2>",
     "<ul>",
-    "<li><a href='/v1/app/frontend-contract'>Frontend contract</a></li>",
-    "<li><a href='/v1/app/screens'>Screen definitions</a></li>",
-    "<li><a href='/v1/app/forms/sales.quote.create'>Form schema example</a></li>",
+    `<li><a href='${clawApiPath("app/frontend-contract")}'>Frontend contract</a></li>`,
+    `<li><a href='${clawApiPath("app/screens")}'>Screen definitions</a></li>`,
+    `<li><a href='${clawApiPath("app/forms/sales.quote.create")}'>Form schema example</a></li>`,
     "<li><a href='/docs/frontend-checklist.md'>Frontend checklist</a></li>",
     "<li><a href='/docs/api-openapi.json'>OpenAPI</a></li>",
     "</ul>",
@@ -191,7 +192,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
   });
   app.register(async (wsApp) => {
     await wsApp.register(websocket);
-    wsApp.get("/v1/events/ws", { websocket: true }, async (socket) => {
+    wsApp.get(clawApiPath("events/ws"), { websocket: true }, async (socket) => {
       realtime.attachSocket(socket);
       socket.send(JSON.stringify({ type: "ready", at: new Date().toISOString() }));
     });
@@ -209,14 +210,14 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     await reply.code(204).send();
   });
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     service: "erp",
     host: config.host,
     port: config.port,
   }));
 
-  app.post("/v1/auth/admin/login", async (request, reply) => {
+  app.post(clawApiPath("auth/admin/login"), async (request, reply) => {
     const body = readBody(request);
     const email = typeof body.email === "string" ? body.email : "";
     const password = typeof body.password === "string" ? body.password : "";
@@ -232,7 +233,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     await reply.send({ accessToken });
   });
 
-  app.get("/v1/events/stream", async (request, reply) => {
+  app.get(clawApiPath("events/stream"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return reply;
     reply.raw.writeHead(200, {
@@ -245,7 +246,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     return reply;
   });
 
-  app.get("/v1/tenants", async (request, reply) => {
+  app.get(clawApiPath("tenants"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -255,7 +256,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.post("/v1/tenants/bootstrap", async (request, reply) => {
+  app.post(clawApiPath("tenants/bootstrap"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -272,7 +273,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.get("/v1/tenants/:tenantId/legal-entities", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/legal-entities"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -283,7 +284,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.post("/v1/tenants/:tenantId/legal-entities/:legalEntityId/localizations/install", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/localizations/install"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -302,7 +303,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.get("/v1/tenants/:tenantId/legal-entities/:legalEntityId/accounts", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/accounts"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -313,7 +314,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.get("/v1/tenants/:tenantId/legal-entities/:legalEntityId/periods", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/periods"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -324,7 +325,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.post("/v1/tenants/:tenantId/legal-entities/:legalEntityId/periods/:periodId/close", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/periods/:periodId/close"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -337,7 +338,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.get("/v1/tenants/:tenantId/legal-entities/:legalEntityId/gl/entries", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/gl/entries"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -348,7 +349,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.post("/v1/tenants/:tenantId/legal-entities/:legalEntityId/gl/entries/:entryId/reverse", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/gl/entries/:entryId/reverse"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -359,7 +360,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.post("/v1/tenants/:tenantId/legal-entities/:legalEntityId/items", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/items"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -379,7 +380,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.get("/v1/tenants/:tenantId/legal-entities/:legalEntityId/inventory/balances", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/inventory/balances"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -406,7 +407,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     });
   };
 
-  documentPost("/v1/tenants/:tenantId/legal-entities/:legalEntityId/sales/quotes", (params, body) => ({
+  documentPost(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/sales/quotes"), (params, body) => ({
     quote: store.createSalesQuote({
       ...params,
       branchId: String(body.branchId ?? ""),
@@ -418,7 +419,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }),
   }));
 
-  documentPost("/v1/tenants/:tenantId/legal-entities/:legalEntityId/sales/shipments", (params, body) => ({
+  documentPost(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/sales/shipments"), (params, body) => ({
     shipment: store.postShipment({
       ...params,
       branchId: String(body.branchId ?? ""),
@@ -430,7 +431,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }),
   }));
 
-  documentPost("/v1/tenants/:tenantId/legal-entities/:legalEntityId/ar/invoices", (params, body) => ({
+  documentPost(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/ar/invoices"), (params, body) => ({
     invoice: store.postCustomerInvoice({
       ...params,
       branchId: String(body.branchId ?? ""),
@@ -441,7 +442,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }),
   }));
 
-  documentPost("/v1/tenants/:tenantId/legal-entities/:legalEntityId/ar/payments", (params, body) => ({
+  documentPost(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/ar/payments"), (params, body) => ({
     payment: store.registerCustomerPayment({
       ...params,
       branchId: String(body.branchId ?? ""),
@@ -451,7 +452,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }),
   }));
 
-  documentPost("/v1/tenants/:tenantId/legal-entities/:legalEntityId/purchase/orders", (params, body) => ({
+  documentPost(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/purchase/orders"), (params, body) => ({
     order: store.createPurchaseOrder({
       ...params,
       branchId: String(body.branchId ?? ""),
@@ -463,7 +464,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }),
   }));
 
-  documentPost("/v1/tenants/:tenantId/legal-entities/:legalEntityId/purchase/receipts", (params, body) => ({
+  documentPost(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/purchase/receipts"), (params, body) => ({
     receipt: store.postReceipt({
       ...params,
       branchId: String(body.branchId ?? ""),
@@ -475,7 +476,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }),
   }));
 
-  documentPost("/v1/tenants/:tenantId/legal-entities/:legalEntityId/ap/bills", (params, body) => ({
+  documentPost(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/ap/bills"), (params, body) => ({
     bill: store.postVendorBill({
       ...params,
       branchId: String(body.branchId ?? ""),
@@ -485,7 +486,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }),
   }));
 
-  documentPost("/v1/tenants/:tenantId/legal-entities/:legalEntityId/ap/payments", (params, body) => ({
+  documentPost(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/ap/payments"), (params, body) => ({
     payment: store.registerVendorPayment({
       ...params,
       branchId: String(body.branchId ?? ""),
@@ -495,21 +496,21 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }),
   }));
 
-  documentPost("/v1/tenants/:tenantId/legal-entities/:legalEntityId/projects", (params, body) => ({
+  documentPost(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/projects"), (params, body) => ({
     project: store.createProject({
       ...params,
       name: String(body.name ?? ""),
     }),
   }));
 
-  documentPost("/v1/tenants/:tenantId/legal-entities/:legalEntityId/employees", (params, body) => ({
+  documentPost(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/employees"), (params, body) => ({
     employee: store.createEmployee({
       ...params,
       displayName: String(body.displayName ?? ""),
     }),
   }));
 
-  app.get("/v1/tenants/:tenantId/legal-entities/:legalEntityId/employees", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/employees"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -520,7 +521,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.post("/v1/tenants/:tenantId/legal-entities/:legalEntityId/sales/quotes/:quoteId/confirm-order", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/sales/quotes/:quoteId/confirm-order"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -531,7 +532,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.post("/v1/tenants/:tenantId/legal-entities/:legalEntityId/projects/:projectId/timesheets/invoice", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/projects/:projectId/timesheets/invoice"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -553,7 +554,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  documentPost("/v1/tenants/:tenantId/legal-entities/:legalEntityId/payroll/runs", (params, body) => ({
+  documentPost(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/payroll/runs"), (params, body) => ({
     run: store.createPayrollRun({
       ...params,
       branchId: String(body.branchId ?? ""),
@@ -562,7 +563,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }),
   }));
 
-  app.post("/v1/tenants/:tenantId/legal-entities/:legalEntityId/payroll/runs/:runId/post", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/payroll/runs/:runId/post"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -573,7 +574,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  documentPost("/v1/tenants/:tenantId/legal-entities/:legalEntityId/mrp/orders", (params, body) => ({
+  documentPost(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/mrp/orders"), (params, body) => ({
     order: store.createProductionOrder({
       ...params,
       branchId: String(body.branchId ?? ""),
@@ -586,7 +587,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }),
   }));
 
-  app.post("/v1/tenants/:tenantId/legal-entities/:legalEntityId/mrp/orders/:orderId/post", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/mrp/orders/:orderId/post"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -597,7 +598,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  documentPost("/v1/tenants/:tenantId/legal-entities/:legalEntityId/support/tickets", (params, body) => ({
+  documentPost(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/support/tickets"), (params, body) => ({
     ticket: store.createSupportTicket({
       ...params,
       branchId: String(body.branchId ?? ""),
@@ -606,7 +607,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }),
   }));
 
-  documentPost("/v1/tenants/:tenantId/legal-entities/:legalEntityId/agents/actions", (params, body) => ({
+  documentPost(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/agents/actions"), (params, body) => ({
     approval: store.requestAgentAction({
       ...params,
       requestedBy: String(body.requestedBy ?? "agent:unknown"),
@@ -616,7 +617,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }),
   }));
 
-  app.get("/v1/tenants/:tenantId/legal-entities/:legalEntityId/approvals", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/approvals"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -627,7 +628,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.post("/v1/tenants/:tenantId/legal-entities/:legalEntityId/approvals/:approvalId/approve", async (request, reply) => {
+  app.post(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/approvals/:approvalId/approve"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -638,7 +639,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.get("/v1/tenants/:tenantId/legal-entities/:legalEntityId/audit", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/audit"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -649,7 +650,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.get("/v1/tenants/:tenantId/legal-entities/:legalEntityId/branches", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/branches"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -660,7 +661,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.get("/v1/tenants/:tenantId/legal-entities/:legalEntityId/warehouses", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/warehouses"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -671,7 +672,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.get("/v1/tenants/:tenantId/legal-entities/:legalEntityId/items", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/items"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -682,7 +683,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.get("/v1/tenants/:tenantId/legal-entities/:legalEntityId/projects", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/projects"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -693,7 +694,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.get("/v1/tenants/:tenantId/legal-entities/:legalEntityId/jobs", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/jobs"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -704,7 +705,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.get("/v1/tenants/:tenantId/legal-entities/:legalEntityId/documents", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/documents"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -720,7 +721,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.get("/v1/tenants/:tenantId/legal-entities/:legalEntityId/documents/:documentId", async (request, reply) => {
+  app.get(clawApiPath("tenants/:tenantId/legal-entities/:legalEntityId/documents/:documentId"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -731,15 +732,15 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.get("/v1/app/frontend-contract", async (_request, reply) => {
+  app.get(clawApiPath("app/frontend-contract"), async (_request, reply) => {
     await reply.send(frontendContract);
   });
 
-  app.get("/v1/app/screens", async (_request, reply) => {
+  app.get(clawApiPath("app/screens"), async (_request, reply) => {
     await reply.send({ screens: frontendContract.screens });
   });
 
-  app.get("/v1/app/forms/:formId", async (request, reply) => {
+  app.get(clawApiPath("app/forms/:formId"), async (request, reply) => {
     try {
       const { formId } = request.params as { formId: string };
       const schema = staticFormSchemas[formId];
@@ -750,7 +751,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.get("/v1/app/meta", async (request, reply) => {
+  app.get(clawApiPath("app/meta"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -761,7 +762,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.get("/v1/app/dashboard", async (request, reply) => {
+  app.get(clawApiPath("app/dashboard"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {
@@ -772,7 +773,7 @@ export function buildErpApp(options: BuildErpAppOptions = {}) {
     }
   });
 
-  app.get("/v1/app/documents/:documentId", async (request, reply) => {
+  app.get(clawApiPath("app/documents/:documentId"), async (request, reply) => {
     const principal = await requireAdmin(request, reply, auth);
     if (!principal) return;
     try {

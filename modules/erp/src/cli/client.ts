@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 type JsonValue = Record<string, unknown> | unknown[] | string | number | boolean | null;
 
 export interface ErpCliOptions {
@@ -25,67 +26,67 @@ export class ErpApiClient {
   }
 
   login(email: string, password: string): Promise<JsonValue> {
-    return this.request("/v1/auth/admin/login", {
+    return this.request(clawApiPath("auth/admin/login"), {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
   }
 
   listTenants(): Promise<JsonValue> {
-    return this.request("/v1/tenants");
+    return this.request(clawApiPath("tenants"));
   }
 
   bootstrapTenant(payload: Record<string, unknown>): Promise<JsonValue> {
-    return this.request("/v1/tenants/bootstrap", {
+    return this.request(clawApiPath("tenants/bootstrap"), {
       method: "POST",
       body: JSON.stringify(payload),
     });
   }
 
   listLegalEntities(tenantId: string): Promise<JsonValue> {
-    return this.request(`/v1/tenants/${tenantId}/legal-entities`);
+    return this.request(clawApiPath(`tenants/${tenantId}/legal-entities`));
   }
 
   installLocalization(tenantId: string, legalEntityId: string, packKey: string): Promise<JsonValue> {
-    return this.request(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/localizations/install`, {
+    return this.request(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/localizations/install`), {
       method: "POST",
       body: JSON.stringify({ packKey }),
     });
   }
 
   listAccounts(tenantId: string, legalEntityId: string): Promise<JsonValue> {
-    return this.request(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/accounts`);
+    return this.request(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/accounts`));
   }
 
   listPeriods(tenantId: string, legalEntityId: string): Promise<JsonValue> {
-    return this.request(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/periods`);
+    return this.request(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/periods`));
   }
 
   closePeriod(tenantId: string, legalEntityId: string, periodId: string): Promise<JsonValue> {
-    return this.request(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/periods/${periodId}/close`, {
+    return this.request(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/periods/${periodId}/close`), {
       method: "POST",
     });
   }
 
   listEntries(tenantId: string, legalEntityId: string): Promise<JsonValue> {
-    return this.request(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/gl/entries`);
+    return this.request(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/gl/entries`));
   }
 
   reverseEntry(tenantId: string, legalEntityId: string, entryId: string): Promise<JsonValue> {
-    return this.request(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/gl/entries/${entryId}/reverse`, {
+    return this.request(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/gl/entries/${entryId}/reverse`), {
       method: "POST",
     });
   }
 
   createItem(tenantId: string, legalEntityId: string, payload: Record<string, unknown>): Promise<JsonValue> {
-    return this.request(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/items`, {
+    return this.request(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/items`), {
       method: "POST",
       body: JSON.stringify(payload),
     });
   }
 
   balances(tenantId: string, legalEntityId: string): Promise<JsonValue> {
-    return this.request(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/inventory/balances`);
+    return this.request(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/inventory/balances`));
   }
 
   createDocument(path: string, payload: Record<string, unknown>): Promise<JsonValue> {
@@ -96,24 +97,24 @@ export class ErpApiClient {
   }
 
   listApprovals(tenantId: string, legalEntityId: string): Promise<JsonValue> {
-    return this.request(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/approvals`);
+    return this.request(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/approvals`));
   }
 
   approve(tenantId: string, legalEntityId: string, approvalId: string): Promise<JsonValue> {
-    return this.request(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/approvals/${approvalId}/approve`, {
+    return this.request(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/approvals/${approvalId}/approve`), {
       method: "POST",
     });
   }
 
   audit(tenantId: string, legalEntityId: string): Promise<JsonValue> {
-    return this.request(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/audit`);
+    return this.request(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/audit`));
   }
 
   documents(tenantId: string, legalEntityId: string): Promise<JsonValue> {
-    return this.request(`/v1/tenants/${tenantId}/legal-entities/${legalEntityId}/documents`);
+    return this.request(clawApiPath(`tenants/${tenantId}/legal-entities/${legalEntityId}/documents`));
   }
 
   dashboard(tenantId: string, legalEntityId: string): Promise<JsonValue> {
-    return this.request(`/v1/app/dashboard?tenantId=${encodeURIComponent(tenantId)}&legalEntityId=${encodeURIComponent(legalEntityId)}`);
+    return this.request(clawApiPath(`app/dashboard?tenantId=${encodeURIComponent(tenantId)}&legalEntityId=${encodeURIComponent(legalEntityId)}`));
   }
 }

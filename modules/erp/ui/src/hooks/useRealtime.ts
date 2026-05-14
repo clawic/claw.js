@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import { useEffect, useRef } from "react";
 import { api } from "../api/client";
 
@@ -12,7 +13,7 @@ export function useRealtime(onEvent: (event: Record<string, unknown>) => void) {
     let es: EventSource | null = null;
     try {
       // Use SSE for simplicity
-      es = new EventSource(`/v1/events/stream`);
+      es = new EventSource(clawApiPath(`events/stream`));
       // SSE requires auth header which EventSource doesn't support.
       // Fall back to WebSocket.
       es.close();
