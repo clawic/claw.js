@@ -27,7 +27,6 @@ function captureStream() {
     },
   };
 }
-
 function runCommand(command: string, args: string[], options: { cwd: string }): string {
   const executable = command === "npm" ? "/bin/zsh" : command;
   const shellQuote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;

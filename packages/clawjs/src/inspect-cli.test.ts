@@ -4,7 +4,8 @@ import path from "path";
 import { test } from "vitest";
 import assert from "node:assert/strict";
 
-import { CLI_EXIT_OK, runCli } from "./index.ts";
+import { runCli } from "./index.ts";
+import { CLI_EXIT_OK } from "./cli-errors.ts";
 
 function captureStream() {
   let output = "";
