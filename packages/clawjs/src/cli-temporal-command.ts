@@ -262,20 +262,8 @@ export async function runTemporalCli(input: {
   }
 
   if (group === "reminders") {
-    const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
-    if (command === "list" || !command) {
-      const payload = await claw.time.list({
-        kind: "reminder",
-        workspaceId: flags["workspace-id"] || workspaceId,
-        ...(flags.status ? { status: flags.status as TemporalItem["status"] } : {}),
-        ...(flags["project-id"] ? { projectId: flags["project-id"] } : {}),
-        ...(flags["agent-id"] ? { agentId: flags["agent-id"] } : {}),
-      });
-      if (wantsJson) writeJson(context.stdout, payload);
-      else writeTemporalItems(context.stdout, payload.items, { empty: "No reminders" });
-      return CLI_EXIT_OK;
-    }
     if (command === "after") {
+      const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
       const expression = subcommand;
       const title = joinedPositionals(positionals, 3) || flags.title;
       if (!expression || !title) {
@@ -293,37 +281,11 @@ export async function runTemporalCli(input: {
         workspaceId,
         ...(flags["project-id"] ? { projectId: flags["project-id"] } : {}),
         ...(flags["agent-id"] ? { agentId: flags["agent-id"] } : {}),
+        ...(flags["anchor-type"] ? { anchorType: flags["anchor-type"] as never } : {}),
+        ...(flags["anchor-id"] ? { anchorId: flags["anchor-id"] } : {}),
+        ...(flags["anchor-at"] ? { anchorAt: flags["anchor-at"] } : {}),
       });
       if (wantsJson) writeJson(context.stdout, payload);
-      else writeTemporalItems(context.stdout, [payload.item]);
-      return CLI_EXIT_OK;
-    }
-    if (command === "get") {
-      const id = subcommand || flags.id;
-      if (!id) {
-        context.stderr.write("Usage: claw reminders get <id>\n");
-        return CLI_EXIT_USAGE;
-      }
-      const payload = await claw.time.get(id);
-      if (wantsJson) writeJson(context.stdout, payload);
-      else writeTemporalItems(context.stdout, [payload.item]);
-      return CLI_EXIT_OK;
-    }
-    if (command === "pause" || command === "resume" || command === "archive" || command === "delete") {
-      const id = subcommand || flags.id;
-      if (!id) {
-        context.stderr.write(`Usage: claw reminders ${command} <id>\n`);
-        return CLI_EXIT_USAGE;
-      }
-      const payload = command === "pause"
-        ? await claw.time.update(id, { status: "paused" })
-        : command === "resume"
-          ? await claw.time.update(id, { status: "active" })
-          : command === "archive"
-            ? await claw.time.update(id, { status: "cancelled" })
-            : await claw.time.delete(id);
-      if (wantsJson) writeJson(context.stdout, payload);
-      else if (command === "delete") context.stdout.write("ok\n");
       else writeTemporalItems(context.stdout, [payload.item]);
       return CLI_EXIT_OK;
     }
