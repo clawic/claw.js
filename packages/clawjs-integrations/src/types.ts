@@ -66,6 +66,42 @@ export interface ConnectorOperationAnnotations {
   openWorldHint?: boolean;
 }
 
+export type ConnectorSupportState =
+  | "supported"
+  | "unsupported"
+  | "partial"
+  | "external_pending"
+  | "host_required"
+  | "auth_required"
+  | "cost_risk";
+
+export interface ConnectorSupportDeclaration {
+  state: ConnectorSupportState;
+  reason: string;
+  testOrScenario?: string;
+}
+
+export type ConnectorExternalSchemaStatus = "complete" | "partial" | "missing" | "external_pending";
+
+export interface ConnectorExternalSchemaReference {
+  status: ConnectorExternalSchemaStatus;
+  source: string;
+  providerVersion?: string;
+  evidence: string[];
+  inputSchema?: IntegrationJson;
+  outputSchema?: IntegrationJson;
+}
+
+export interface ConnectorExecutionPolicy {
+  readOnly: boolean;
+  requiresAuth: boolean;
+  requiresHostApproval: boolean;
+  destructive: boolean;
+  costRisk: boolean;
+  dryRunSupported: boolean;
+  auditRequired: boolean;
+}
+
 export interface ConnectorAdditionalPropsMetadata {
   mode: "object" | "function";
   fieldNames: string[];
@@ -121,6 +157,9 @@ export interface ConnectorOperationDefinition {
   version?: string;
   fields: ConnectorFieldDefinition[];
   authFieldNames: string[];
+  support?: ConnectorSupportDeclaration;
+  externalSchema?: ConnectorExternalSchemaReference;
+  executionPolicy?: ConnectorExecutionPolicy;
   annotations?: ConnectorOperationAnnotations;
   runtime?: ConnectorOperationRuntime;
   source?: ConnectorSourceCapabilities;
@@ -138,6 +177,8 @@ export interface ConnectorAppDefinition {
   authType?: string;
   authFieldNames: string[];
   fields: ConnectorFieldDefinition[];
+  support?: ConnectorSupportDeclaration;
+  externalSchema?: ConnectorExternalSchemaReference;
   operations: ConnectorOperationDefinition[];
 }
 
@@ -173,6 +214,15 @@ export interface ConnectorCatalogSummary {
   propDefinitionFields: number;
   contextualPropFields: number;
   annotatedOperations: number;
+  supportedOperations: number;
+  partialOperations: number;
+  externalPendingOperations: number;
+  completeExternalSchemas: number;
+  partialExternalSchemas: number;
+  missingExternalSchemas: number;
+  hostApprovalOperations: number;
+  authRequiredOperations: number;
+  costRiskOperations: number;
   destructiveOperations: number;
   readOnlyOperations: number;
   openWorldOperations: number;

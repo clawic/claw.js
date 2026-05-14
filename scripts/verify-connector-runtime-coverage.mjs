@@ -7,6 +7,7 @@ import {
   buildConnectorRuntimeAudit,
   ConnectorRuntimeCoverageError,
   loadConnectorCatalogFromFile,
+  verifyStableConnectorCatalog,
   verifyConnectorRuntimeCoverage,
   verifyConnectorRuntimeOfflineExecutions,
 } from "../packages/clawjs-integrations/dist/index.js";
@@ -25,6 +26,7 @@ if (!catalogPath || !fs.existsSync(catalogPath)) {
 const catalog = loadConnectorCatalogFromFile(catalogPath);
 
 try {
+  const stableReport = verifyStableConnectorCatalog(catalog, { evidenceRoot: rootDir });
   const report = verifyConnectorRuntimeCoverage(catalog, { allowUnsupportedReasons, evidenceRoot: rootDir });
   if (executeOffline) {
     const offlineReport = await verifyConnectorRuntimeOfflineExecutions(catalog, {
@@ -35,6 +37,7 @@ try {
     console.error("connector runtime offline executions passed");
   }
   writeReportIfRequested({ catalog, report });
+  console.error(`stableOperations=${stableReport.stableOperations} completeExternalSchemas=${stableReport.completeExternalSchemas}`);
   console.error(summaryLine(report.summary));
   console.error("connector runtime coverage passed");
 } catch (error) {

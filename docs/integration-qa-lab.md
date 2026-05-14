@@ -16,6 +16,10 @@ Each connector profile must include:
   `deprecated`.
 - Fixture harness: request plans, response parsing, source extraction,
   pagination, idempotency, error payloads, and rate-limit metadata.
+- Operational catalog: each action/source declares support state
+  (`supported`, `unsupported`, `partial`, `external_pending`,
+  `host_required`, `auth_required`, or `cost_risk`), execution policy,
+  and external schema coverage.
 - Live harness: opt-in only, brokered credential leases, disposable provider
   state, and no plaintext token exposure.
 - Package/live harness: install the candidate package in a temporary consumer
@@ -36,6 +40,14 @@ operator approval and `CLAW_TEST_LIVE=1`.
 Secrets are references. Live connector execution resolves them through a
 capability broker and short-lived lease. Plaintext secret resolution inside an
 ordinary connector runtime is a policy failure.
+
+Stable connector operations require `externalSchema.status=complete`, a
+provider source/version when known, repository-local evidence, and both input
+and output schemas. Without that evidence, the operation must remain
+`partial`, `external_pending`, `auth_required`, `cost_risk`, or `unsupported`.
+Supported operations with auth fields must declare `executionPolicy.requiresAuth`;
+destructive operations must require host approval, dry-run/audit coverage, and
+policy-gated execution.
 
 `npm run test:package-live` is the package/live install check. It packs and
 installs `@clawjs/integrations` into a temporary project, verifies the installed

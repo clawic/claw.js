@@ -14,6 +14,7 @@ export {
   normalizeConnectorCatalog,
   searchConnectorCatalog,
   summarizeConnectorCatalog,
+  verifyStableConnectorCatalog,
 } from "./catalog.js";
 export { IntegrationManager } from "./manager.js";
 export { runConnectorOperation } from "./operation-runner.js";
@@ -72,6 +73,8 @@ export {
 export type {
   ConnectorCatalogSearchOptions,
   ConnectorCatalogSearchResult,
+  StableConnectorCatalogReport,
+  VerifyStableConnectorCatalogOptions,
 } from "./catalog.js";
 export type {
   IntegrationManagerOptions,
@@ -229,12 +232,17 @@ export type {
   ConnectorCatalogSummary,
   ConnectorComponentKind,
   ConnectorAdditionalPropsMetadata,
+  ConnectorExecutionPolicy,
+  ConnectorExternalSchemaReference,
+  ConnectorExternalSchemaStatus,
   ConnectorFieldDefinition,
   ConnectorFieldDynamicOptions,
   ConnectorFieldOption,
   ConnectorFieldPropDefinitionMetadata,
   ConnectorOperationDefinition,
   ConnectorOperationRuntime,
+  ConnectorSupportDeclaration,
+  ConnectorSupportState,
   ConnectorUnsupportedRealRuntimeReason,
   ConnectorOperationInput,
   ConnectorSourceCapabilities,

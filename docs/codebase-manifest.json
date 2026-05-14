@@ -65875,7 +65875,7 @@
     {
       "path": "packages/clawjs-integrations/src/catalog.test.ts",
       "language": "typescript",
-      "lines": 506,
+      "lines": 597,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -65899,29 +65899,38 @@
     {
       "path": "packages/clawjs-integrations/src/catalog.ts",
       "language": "typescript",
-      "lines": 482,
+      "lines": 650,
       "test": false,
       "entrypoint": false,
       "imports": [
         "./types.js",
-        "node:fs"
+        "node:fs",
+        "node:path"
       ],
       "exports": [
         "ConnectorCatalogError",
         "ConnectorCatalogSearchOptions",
         "ConnectorCatalogSearchResult",
+        "StableConnectorCatalogReport",
+        "VerifyStableConnectorCatalogOptions",
         "findConnectorApp",
         "findConnectorOperation",
         "loadConnectorCatalogFromFile",
         "normalizeConnectorCatalog",
         "searchConnectorCatalog",
-        "summarizeConnectorCatalog"
+        "summarizeConnectorCatalog",
+        "verifyStableConnectorCatalog"
       ],
       "declarations": [
         {
           "kind": "class",
           "name": "ConnectorCatalogError",
           "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "evidencePathErrors",
+          "exported": false
         },
         {
           "kind": "function",
@@ -66010,6 +66019,16 @@
         },
         {
           "kind": "function",
+          "name": "optionalExecutionPolicy",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "optionalExternalSchema",
+          "exported": false
+        },
+        {
+          "kind": "function",
           "name": "optionalPropDefinition",
           "exported": false
         },
@@ -66026,6 +66045,11 @@
         {
           "kind": "function",
           "name": "optionalSource",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "optionalSupport",
           "exported": false
         },
         {
@@ -66054,6 +66078,11 @@
           "exported": true
         },
         {
+          "kind": "function",
+          "name": "verifyStableConnectorCatalog",
+          "exported": true
+        },
+        {
           "kind": "interface",
           "name": "ConnectorCatalogSearchOptions",
           "exported": true
@@ -66061,6 +66090,16 @@
         {
           "kind": "interface",
           "name": "ConnectorCatalogSearchResult",
+          "exported": true
+        },
+        {
+          "kind": "interface",
+          "name": "StableConnectorCatalogReport",
+          "exported": true
+        },
+        {
+          "kind": "interface",
+          "name": "VerifyStableConnectorCatalogOptions",
           "exported": true
         }
       ]
@@ -68891,7 +68930,7 @@
     {
       "path": "packages/clawjs-integrations/src/index.ts",
       "language": "typescript",
-      "lines": 247,
+      "lines": 255,
       "test": false,
       "entrypoint": true,
       "imports": [
@@ -68934,7 +68973,10 @@
         "ConnectorCredentialLeasePurpose",
         "ConnectorCredentialLeaseRequest",
         "ConnectorExecutionContext",
+        "ConnectorExecutionPolicy",
         "ConnectorExecutor",
+        "ConnectorExternalSchemaReference",
+        "ConnectorExternalSchemaStatus",
         "ConnectorFieldDefinition",
         "ConnectorFieldDynamicOptions",
         "ConnectorFieldOption",
@@ -68994,6 +69036,8 @@
         "ConnectorSourceSubscription",
         "ConnectorSourceSubscriptionBlockReason",
         "ConnectorSourceSubscriptionStatus",
+        "ConnectorSupportDeclaration",
+        "ConnectorSupportState",
         "ConnectorUnsupportedRealRuntimeReason",
         "IntegrationAdapter",
         "IntegrationDeliveryContext",
@@ -69014,6 +69058,7 @@
         "RunConnectorOperationOptions",
         "RunConnectorSourceOptions",
         "RunTelegramBrokeredLiveSmokeOptions",
+        "StableConnectorCatalogReport",
         "TELEGRAM_LIVE_SMOKE_SCENARIOS",
         "TELEGRAM_OFFICIAL_API_COVERAGE",
         "TELEGRAM_OFFICIAL_API_MATRIX",
@@ -69041,6 +69086,7 @@
         "TelegramUpdateCoverageEntry",
         "VerifyConnectorRuntimeCoverageOptions",
         "VerifyConnectorRuntimeOfflineExecutionOptions",
+        "VerifyStableConnectorCatalogOptions",
         "auditCredentialLeaseEvent",
         "buildConnectorCredentialLeaseRequest",
         "buildConnectorOperationRuntimePlan",
@@ -69086,7 +69132,8 @@
         "verifyConnectorCredentialLease",
         "verifyConnectorRuntimeCoverage",
         "verifyConnectorRuntimeOfflineExecutions",
-        "verifyOfficialApiCoverageMatrix"
+        "verifyOfficialApiCoverageMatrix",
+        "verifyStableConnectorCatalog"
       ],
       "declarations": []
     },
@@ -72754,7 +72801,7 @@
     {
       "path": "packages/clawjs-integrations/src/types.ts",
       "language": "typescript",
-      "lines": 250,
+      "lines": 300,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -72767,6 +72814,9 @@
         "ConnectorCatalogSummary",
         "ConnectorComponentKind",
         "ConnectorEventSummaryMetadata",
+        "ConnectorExecutionPolicy",
+        "ConnectorExternalSchemaReference",
+        "ConnectorExternalSchemaStatus",
         "ConnectorFieldDefinition",
         "ConnectorFieldDynamicOptions",
         "ConnectorFieldOption",
@@ -72778,6 +72828,8 @@
         "ConnectorSampleEventMetadata",
         "ConnectorSourceCapabilities",
         "ConnectorSourceDeliveryMode",
+        "ConnectorSupportDeclaration",
+        "ConnectorSupportState",
         "ConnectorUnsupportedRealRuntimeReason",
         "IntegrationAdapter",
         "IntegrationInboundMessage",
@@ -72808,6 +72860,16 @@
         {
           "kind": "interface",
           "name": "ConnectorEventSummaryMetadata",
+          "exported": true
+        },
+        {
+          "kind": "interface",
+          "name": "ConnectorExecutionPolicy",
+          "exported": true
+        },
+        {
+          "kind": "interface",
+          "name": "ConnectorExternalSchemaReference",
           "exported": true
         },
         {
@@ -72862,6 +72924,11 @@
         },
         {
           "kind": "interface",
+          "name": "ConnectorSupportDeclaration",
+          "exported": true
+        },
+        {
+          "kind": "interface",
           "name": "ConnectorUnsupportedRealRuntimeReason",
           "exported": true
         },
@@ -72887,7 +72954,17 @@
         },
         {
           "kind": "type",
+          "name": "ConnectorExternalSchemaStatus",
+          "exported": true
+        },
+        {
+          "kind": "type",
           "name": "ConnectorSourceDeliveryMode",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "ConnectorSupportState",
           "exported": true
         },
         {
@@ -115726,7 +115803,7 @@
     {
       "path": "scripts/verify-connector-runtime-coverage.mjs",
       "language": "javascript",
-      "lines": 77,
+      "lines": 80,
       "test": false,
       "entrypoint": false,
       "imports": [

@@ -6,6 +6,7 @@ import {
   normalizeConnectorCatalog,
   searchConnectorCatalog,
   summarizeConnectorCatalog,
+  verifyStableConnectorCatalog,
 } from "./catalog.ts";
 import { runConnectorOperation } from "./operation-runner.ts";
 import {
@@ -58,6 +59,28 @@ function fixtureCatalog(): ConnectorCatalog {
               },
             ],
             authFieldNames: ["bot", "license"],
+            support: {
+              state: "supported",
+              reason: "Offline request fixtures cover the stable send-message action.",
+              testOrScenario: "packages/clawjs-integrations/src/catalog.test.ts",
+            },
+            externalSchema: {
+              status: "complete",
+              source: "https://api.example.invalid/openapi.json",
+              providerVersion: "2026-05-14",
+              evidence: ["packages/clawjs-integrations/src/catalog.test.ts"],
+              inputSchema: { type: "object", required: ["channel", "text"] },
+              outputSchema: { type: "object", required: ["id"] },
+            },
+            executionPolicy: {
+              readOnly: false,
+              requiresAuth: true,
+              requiresHostApproval: false,
+              destructive: false,
+              costRisk: false,
+              dryRunSupported: true,
+              auditRequired: true,
+            },
             annotations: {
               destructiveHint: false,
               readOnlyHint: false,
@@ -90,6 +113,16 @@ function fixtureCatalog(): ConnectorCatalog {
               { name: "http", type: "$.interface.http", optional: false, managed: true, customResponse: true },
             ],
             authFieldNames: ["bot"],
+            support: {
+              state: "external_pending",
+              reason: "Webhook delivery needs provider-side registration before it can be stable.",
+              testOrScenario: "EXTERNAL PENDING provider webhook endpoint",
+            },
+            externalSchema: {
+              status: "external_pending",
+              source: "https://api.example.invalid/openapi.json",
+              evidence: ["packages/clawjs-integrations/src/catalog.test.ts"],
+            },
             runtime: {
               hasRun: true,
               hasHooks: true,
@@ -179,6 +212,15 @@ describe("connector catalog", () => {
       propDefinitionFields: 1,
       contextualPropFields: 1,
       annotatedOperations: 1,
+      supportedOperations: 1,
+      partialOperations: 0,
+      externalPendingOperations: 1,
+      completeExternalSchemas: 1,
+      partialExternalSchemas: 1,
+      missingExternalSchemas: 0,
+      hostApprovalOperations: 0,
+      authRequiredOperations: 1,
+      costRiskOperations: 0,
       destructiveOperations: 0,
       readOnlyOperations: 0,
       openWorldOperations: 1,
@@ -200,6 +242,55 @@ describe("connector catalog", () => {
     assert.equal(searchConnectorCatalog(catalog, { query: "send", kind: "action" }).length, 1);
     assert.equal(searchConnectorCatalog(catalog, { query: "send", kind: "source" }).length, 0);
     assert.equal(findConnectorOperation(catalog, "chat_service.action.send-message")?.operation.name, "Send Message");
+    assert.deepEqual(verifyStableConnectorCatalog(catalog, { evidenceRoot: process.cwd() }), {
+      stableOperations: 1,
+      completeExternalSchemas: 1,
+      errors: [],
+    });
+  });
+
+  it("rejects stable connector operations without complete external schemas", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "chat_service",
+        name: "Chat Service",
+        authFieldNames: ["bot"],
+        fields: [],
+        operations: [{
+          id: "chat_service.action.send-message",
+          appId: "chat_service",
+          kind: "action",
+          name: "Send Message",
+          fields: [{ name: "text", type: "string", optional: false }],
+          authFieldNames: ["bot"],
+          support: {
+            state: "supported",
+            reason: "The action is part of the public connector surface.",
+          },
+          externalSchema: {
+            status: "partial",
+            source: "https://api.example.invalid/openapi.json",
+            evidence: ["packages/clawjs-integrations/src/catalog.test.ts"],
+            inputSchema: { type: "object" },
+          },
+          executionPolicy: {
+            readOnly: false,
+            requiresAuth: false,
+            requiresHostApproval: false,
+            destructive: false,
+            costRisk: false,
+            dryRunSupported: true,
+            auditRequired: true,
+          },
+        }],
+      }],
+    });
+
+    assert.throws(
+      () => verifyStableConnectorCatalog(catalog, { evidenceRoot: process.cwd() }),
+      /requiresAuth.*requires complete external schema status.*requires an output schema/s,
+    );
   });
 
   it("reports missing required values and secrets without executing", async () => {

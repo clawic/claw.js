@@ -1,12 +1,16 @@
 import fs from "node:fs";
+import path from "node:path";
 
 import type {
   ConnectorAppDefinition,
   ConnectorCatalog,
   ConnectorCatalogSummary,
   ConnectorComponentKind,
+  ConnectorExecutionPolicy,
+  ConnectorExternalSchemaReference,
   ConnectorFieldDefinition,
   ConnectorOperationDefinition,
+  ConnectorSupportDeclaration,
   IntegrationJson,
 } from "./types.js";
 
@@ -20,6 +24,16 @@ export interface ConnectorCatalogSearchOptions {
 export interface ConnectorCatalogSearchResult {
   app: ConnectorAppDefinition;
   operation: ConnectorOperationDefinition;
+}
+
+export interface VerifyStableConnectorCatalogOptions {
+  evidenceRoot?: string;
+}
+
+export interface StableConnectorCatalogReport {
+  stableOperations: number;
+  completeExternalSchemas: number;
+  errors: string[];
 }
 
 export class ConnectorCatalogError extends Error {
@@ -117,6 +131,15 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
         summary.contextualPropFields += operation.fields.filter((field) => field.propDefinition?.contextKeys.length).length;
         summary.dynamicOptionFields += operation.fields.filter((field) => field.dynamicOptions).length;
         if (operation.annotations) summary.annotatedOperations += 1;
+        if (operation.support?.state === "supported") summary.supportedOperations += 1;
+        if (operation.support?.state === "partial") summary.partialOperations += 1;
+        if (operation.support?.state === "external_pending") summary.externalPendingOperations += 1;
+        if (operation.externalSchema?.status === "complete") summary.completeExternalSchemas += 1;
+        if (operation.externalSchema?.status === "partial" || operation.externalSchema?.status === "external_pending") summary.partialExternalSchemas += 1;
+        if (!operation.externalSchema || operation.externalSchema.status === "missing") summary.missingExternalSchemas += 1;
+        if (operation.executionPolicy?.requiresHostApproval === true) summary.hostApprovalOperations += 1;
+        if (operation.executionPolicy?.requiresAuth === true) summary.authRequiredOperations += 1;
+        if (operation.executionPolicy?.costRisk === true) summary.costRiskOperations += 1;
         if (operation.annotations?.destructiveHint === true) summary.destructiveOperations += 1;
         if (operation.annotations?.readOnlyHint === true) summary.readOnlyOperations += 1;
         if (operation.annotations?.openWorldHint === true) summary.openWorldOperations += 1;
@@ -163,6 +186,15 @@ export function summarizeConnectorCatalog(catalog: ConnectorCatalog): ConnectorC
       propDefinitionFields: 0,
       contextualPropFields: 0,
       annotatedOperations: 0,
+      supportedOperations: 0,
+      partialOperations: 0,
+      externalPendingOperations: 0,
+      completeExternalSchemas: 0,
+      partialExternalSchemas: 0,
+      missingExternalSchemas: 0,
+      hostApprovalOperations: 0,
+      authRequiredOperations: 0,
+      costRiskOperations: 0,
       destructiveOperations: 0,
       readOnlyOperations: 0,
       openWorldOperations: 0,
@@ -215,6 +247,70 @@ export function searchConnectorCatalog(
   return results;
 }
 
+export function verifyStableConnectorCatalog(
+  catalog: ConnectorCatalog,
+  options: VerifyStableConnectorCatalogOptions = {},
+): StableConnectorCatalogReport {
+  const evidenceRoot = path.resolve(options.evidenceRoot ?? process.cwd());
+  const errors: string[] = [];
+  let stableOperations = 0;
+  let completeExternalSchemas = 0;
+
+  for (const app of catalog.apps) {
+    for (const operation of app.operations) {
+      if (operation.support?.state !== "supported") continue;
+      stableOperations += 1;
+      if (!operation.support.reason.trim()) {
+        errors.push(`${operation.id} supported operation requires a support reason`);
+      }
+      if (!operation.executionPolicy) {
+        errors.push(`${operation.id} supported operation requires an execution policy`);
+      }
+      if (operation.authFieldNames.length > 0 && operation.executionPolicy?.requiresAuth !== true) {
+        errors.push(`${operation.id} uses auth fields and must set executionPolicy.requiresAuth`);
+      }
+      if (operation.annotations?.destructiveHint === true && operation.executionPolicy?.requiresHostApproval !== true) {
+        errors.push(`${operation.id} is destructive and must require host approval`);
+      }
+      const schema = operation.externalSchema;
+      if (!schema) {
+        errors.push(`${operation.id} supported operation requires an external schema reference`);
+        continue;
+      }
+      if (schema.status !== "complete") {
+        errors.push(`${operation.id} supported operation requires complete external schema status`);
+      }
+      if (!schema.source.trim()) {
+        errors.push(`${operation.id} external schema requires a source`);
+      }
+      if (!schema.evidence.some((item) => item.trim())) {
+        errors.push(`${operation.id} external schema requires evidence`);
+      }
+      if (!schema.inputSchema) {
+        errors.push(`${operation.id} external schema requires an input schema`);
+      }
+      if (!schema.outputSchema) {
+        errors.push(`${operation.id} external schema requires an output schema`);
+      }
+      errors.push(...evidencePathErrors(`${operation.id} external schema`, schema.evidence, evidenceRoot));
+      if (
+        schema.status === "complete"
+        && schema.source.trim()
+        && schema.evidence.some((item) => item.trim())
+        && schema.inputSchema
+        && schema.outputSchema
+      ) {
+        completeExternalSchemas += 1;
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new ConnectorCatalogError(`Stable connector catalog failed with ${errors.length} error(s): ${errors.join("; ")}`);
+  }
+  return { stableOperations, completeExternalSchemas, errors };
+}
+
 function normalizeApp(input: unknown): ConnectorAppDefinition {
   if (!isRecord(input)) {
     throw new ConnectorCatalogError("App entry must be an object.");
@@ -229,6 +325,8 @@ function normalizeApp(input: unknown): ConnectorAppDefinition {
     ...(typeof input.authType === "string" ? { authType: input.authType } : {}),
     authFieldNames: normalizeStringArray(input.authFieldNames),
     fields,
+    ...optionalSupport(input.support),
+    ...optionalExternalSchema(input.externalSchema),
     operations: (Array.isArray(input.operations) ? input.operations : [])
       .map((operation) => normalizeOperation(operation, id))
       .sort((left, right) => left.name.localeCompare(right.name)),
@@ -253,6 +351,9 @@ function normalizeOperation(input: unknown, appId: string): ConnectorOperationDe
     ...(typeof input.version === "string" ? { version: input.version } : {}),
     fields: normalizeFields(input.fields),
     authFieldNames: normalizeStringArray(input.authFieldNames),
+    ...optionalSupport(input.support),
+    ...optionalExternalSchema(input.externalSchema),
+    ...optionalExecutionPolicy(input.executionPolicy),
     ...optionalAnnotations(input.annotations),
     ...optionalRuntime(input.runtime),
     ...optionalSource(input.source),
@@ -260,6 +361,56 @@ function normalizeOperation(input: unknown, appId: string): ConnectorOperationDe
     ...optionalEventSummary(input.eventSummary),
     ...optionalUnsupportedRealRuntimeReason(input.unsupported_real_runtime_reason),
     ...(typeof input.sourcePath === "string" ? { sourcePath: input.sourcePath } : {}),
+  };
+}
+
+function optionalSupport(input: unknown): { support?: ConnectorSupportDeclaration } {
+  if (!isRecord(input)) return {};
+  const state = ["supported", "unsupported", "partial", "external_pending", "host_required", "auth_required", "cost_risk"].includes(String(input.state))
+    ? input.state as ConnectorSupportDeclaration["state"]
+    : null;
+  const reason = stringValue(input.reason);
+  if (!state || !reason) return {};
+  return {
+    support: {
+      state,
+      reason,
+      ...(typeof input.testOrScenario === "string" && input.testOrScenario.trim() ? { testOrScenario: input.testOrScenario.trim() } : {}),
+    },
+  };
+}
+
+function optionalExternalSchema(input: unknown): { externalSchema?: ConnectorExternalSchemaReference } {
+  if (!isRecord(input)) return {};
+  const status = ["complete", "partial", "missing", "external_pending"].includes(String(input.status))
+    ? input.status as ConnectorExternalSchemaReference["status"]
+    : null;
+  const source = stringValue(input.source);
+  if (!status || !source) return {};
+  return {
+    externalSchema: {
+      status,
+      source,
+      ...(typeof input.providerVersion === "string" && input.providerVersion.trim() ? { providerVersion: input.providerVersion.trim() } : {}),
+      evidence: normalizeStringArray(input.evidence),
+      ...(isJson(input.inputSchema) ? { inputSchema: input.inputSchema } : {}),
+      ...(isJson(input.outputSchema) ? { outputSchema: input.outputSchema } : {}),
+    },
+  };
+}
+
+function optionalExecutionPolicy(input: unknown): { executionPolicy?: ConnectorExecutionPolicy } {
+  if (!isRecord(input)) return {};
+  return {
+    executionPolicy: {
+      readOnly: input.readOnly === true,
+      requiresAuth: input.requiresAuth === true,
+      requiresHostApproval: input.requiresHostApproval === true,
+      destructive: input.destructive === true,
+      costRisk: input.costRisk === true,
+      dryRunSupported: input.dryRunSupported === true,
+      auditRequired: input.auditRequired === true,
+    },
   };
 }
 
@@ -478,4 +629,21 @@ function isJson(value: unknown): value is IntegrationJson {
   if (Array.isArray(value)) return value.every(isJson);
   if (isRecord(value)) return Object.values(value).every(isJson);
   return false;
+}
+
+function evidencePathErrors(label: string, evidence: readonly string[], evidenceRoot: string): string[] {
+  const errors: string[] = [];
+  for (const item of evidence) {
+    const evidencePath = item.trim();
+    if (!evidencePath) continue;
+    const normalized = path.normalize(evidencePath);
+    if (path.isAbsolute(normalized) || normalized === ".." || normalized.startsWith(`..${path.sep}`)) {
+      errors.push(`${label} evidence must be a repository-relative file path: ${evidencePath}`);
+      continue;
+    }
+    if (!fs.existsSync(path.join(evidenceRoot, normalized))) {
+      errors.push(`${label} evidence file not found: ${evidencePath}`);
+    }
+  }
+  return errors;
 }
