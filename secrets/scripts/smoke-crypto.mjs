@@ -4,6 +4,7 @@
 import {
   secretsSetup,
   secretsUnlock,
+  secretsUnlockWithPlatformKey,
   secretsRecover,
   secretsRecoverAndRotate,
   secretsChangePassword,
@@ -107,6 +108,13 @@ try {
   recovered.masterKey.zero();
   recovered.auditMacKey.zero();
 } catch (e) { ko("recover with phrase", e); }
+
+try {
+  const local = secretsUnlockWithPlatformKey(setup.meta, platformKey);
+  ok("local platform unlock");
+  local.masterKey.zero();
+  local.auditMacKey.zero();
+} catch (e) { ko("local platform unlock", e); }
 
 try {
   const recovered = secretsRecoverAndRotate(setup.meta, setup.recoveryPhrase, "recovered-master-pw", platformKey);

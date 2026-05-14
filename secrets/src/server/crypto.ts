@@ -454,6 +454,25 @@ export function secretsUnlock(
   return { masterKey, auditMacKey };
 }
 
+export function secretsUnlockWithPlatformKey(meta: SecretsMetaSnapshot, platformKey: Uint8Array): SecretsUnlockResult {
+  if (!meta.platformKeyWrap) throw new Error("Local platform unlock is not enrolled");
+  assertPlatformKey(platformKey);
+  const masterKeyBytes = aeadOpen(platformKey, meta.platformKeyWrap, "secrets.master-key|platform-kek");
+  const verifier = computeVerifier(masterKeyBytes);
+  if (!constantTimeEqual(verifier, meta.verifier)) {
+    masterKeyBytes.fill(0);
+    throw new Error("Secrets verifier mismatch");
+  }
+
+  const auditMacKeyBytes = aeadOpen(masterKeyBytes, meta.auditMacKeyWrap, "secrets.audit-mac-key");
+  const masterKey = LockableSecret.fromBytes(masterKeyBytes);
+  const auditMacKey = LockableSecret.fromBytes(auditMacKeyBytes);
+  masterKeyBytes.fill(0);
+  auditMacKeyBytes.fill(0);
+
+  return { masterKey, auditMacKey };
+}
+
 export function secretsRecover(meta: SecretsMetaSnapshot, recoveryPhrase: string): SecretsUnlockResult {
   if (!validateMnemonic(recoveryPhrase)) {
     throw new Error("Invalid BIP39 recovery phrase");

@@ -336,6 +336,25 @@ if (unlockAfterImport.ok) ok("unlock after backup import"); else ko("unlock afte
 const lockRes = await fetchJson(`${base}/v1/secrets/lock`, { method: "POST" });
 if (lockRes.ok) ok("lock"); else ko("lock", { status: lockRes.status, body: lockRes.body });
 
+const localUnlockWithoutReauth = await fetchJson(`${base}/v1/secrets/unlock-local`, {
+  method: "POST",
+  headers: signedHostHeaders,
+  body: JSON.stringify({}),
+});
+if (localUnlockWithoutReauth.status === 403) ok("local unlock requires native reauth evidence");
+else ko("local unlock requires native reauth evidence", localUnlockWithoutReauth.body);
+
+const localUnlock = await fetchJson(`${base}/v1/secrets/unlock-local`, {
+  method: "POST",
+  headers: signedHostHeaders,
+  body: JSON.stringify({ reauthSatisfied: true }),
+});
+if (localUnlock.ok) ok("local platform unlock");
+else ko("local platform unlock", localUnlock.body);
+
+const lockAfterLocalUnlock = await fetchJson(`${base}/v1/secrets/lock`, { method: "POST" });
+if (lockAfterLocalUnlock.ok) ok("lock after local unlock"); else ko("lock after local unlock", lockAfterLocalUnlock.body);
+
 // Re-unlock with wrong password.
 const unlockWithoutSecretKey = await fetchJson(`${base}/v1/secrets/unlock`, {
   method: "POST",

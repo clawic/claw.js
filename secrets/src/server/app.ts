@@ -26,6 +26,7 @@ import {
   secretsRecoverAndRotate,
   secretsSetup,
   secretsUnlock,
+  secretsUnlockWithPlatformKey,
   SECRETS_SCHEMA_VERSION,
   type SecretsMetaSnapshot,
   withPlatformKeyWrap,
@@ -315,6 +316,28 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       return { ok: true };
     } catch {
       return reply.code(401).send({ error: "Invalid password" });
+    }
+  });
+
+  app.post(clawApiPath("secrets/unlock-local"), async (req, reply) => {
+    if (!requireSignedHost(req, reply)) return;
+    if (!platformKey) return reply.code(403).send({ error: "local platform unlock unavailable" });
+    const meta = metaStore.load(DEFAULT_TENANT_ID);
+    if (!meta) return reply.code(404).send({ error: "Secrets not initialized" });
+    const body = (req.body ?? {}) as { reauthSatisfied?: boolean };
+    if (body.reauthSatisfied !== true) return reply.code(403).send({ error: "fresh native reauthentication required" });
+    try {
+      const { masterKey, auditMacKey } = secretsUnlockWithPlatformKey(meta, platformKey);
+      session.setUnlocked({ tenantId: DEFAULT_TENANT_ID, masterKey, auditMacKey });
+      audit.append({
+        tenantId: DEFAULT_TENANT_ID,
+        meta,
+        auditMacKey,
+        event: { kind: "secretsLocalUnlock", source: "system", success: true, payload: {} },
+      });
+      return { ok: true };
+    } catch {
+      return reply.code(401).send({ error: "Local unlock failed" });
     }
   });
 
