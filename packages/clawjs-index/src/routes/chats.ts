@@ -1,9 +1,12 @@
-// Chat routes: /v1/chats/*.
+// Chat routes under the registered public API prefix.
 //
 // One thread per peer (RootKey). Messages are mailbox-v2-dr ciphertext under
 // the hood; the API exposes already-decrypted plaintexts for the local owner.
 
 import type { FastifyInstance } from "fastify";
+import { clawPublicApiPrefix } from "@clawjs/core";
+
+const INDEX_API = clawPublicApiPrefix;
 
 export interface ChatThread {
   peerRootPubkey: Uint8Array;
@@ -32,11 +35,11 @@ export interface ChatDeps {
 }
 
 export function registerChatRoutes(app: FastifyInstance, deps: ChatDeps): void {
-  app.get("/v1/chats", async () => ({
+  app.get(`${INDEX_API}/chats`, async () => ({
     threads: deps.listThreads().map(serializeThread),
   }));
 
-  app.get("/v1/chats/:peer/messages", async (req) => {
+  app.get(`${INDEX_API}/chats/:peer/messages`, async (req) => {
     const { peer } = req.params as { peer: string };
     const q = (req.query ?? {}) as { limit?: string; before?: string };
     const limit = q.limit ? Number(q.limit) : 50;
@@ -44,7 +47,7 @@ export function registerChatRoutes(app: FastifyInstance, deps: ChatDeps): void {
     return { messages: deps.listMessages(peer, { limit, before }).map(serializeMessage) };
   });
 
-  app.post("/v1/chats/:peer/messages", async (req, reply) => {
+  app.post(`${INDEX_API}/chats/:peer/messages`, async (req, reply) => {
     const { peer } = req.params as { peer: string };
     const body = (req.body ?? {}) as { body?: string };
     if (!body.body) return reply.code(400).send({ error: "body required" });
@@ -52,7 +55,7 @@ export function registerChatRoutes(app: FastifyInstance, deps: ChatDeps): void {
     return { message: serializeMessage(msg) };
   });
 
-  app.post("/v1/chats/:peer/read", async (req) => {
+  app.post(`${INDEX_API}/chats/:peer/read`, async (req) => {
     const { peer } = req.params as { peer: string };
     deps.markRead(peer);
     return { ok: true };

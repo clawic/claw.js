@@ -3,6 +3,7 @@ import fs from "node:fs";
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
+import { clawPublicApiPrefix } from "@clawjs/core";
 
 import { IndexAuthService, loadEphemeralAdminToken, type AuthPrincipal } from "./auth.ts";
 import { loadIndexConfig, type IndexServiceConfig } from "./config.ts";
@@ -11,6 +12,8 @@ import { IndexRealtimeHub } from "./realtime.ts";
 import { IndexScheduler, type SchedulerHooks } from "./scheduler.ts";
 import { describeCron, nextCronFire } from "./cron.ts";
 import type { AlertRule, JsonSchema, UiHints } from "./types.ts";
+
+const INDEX_API = clawPublicApiPrefix;
 
 function parseBearerToken(request: FastifyRequest): string | null {
   const header = request.headers.authorization;
@@ -71,16 +74,16 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   app.register(cors as any, { origin: config.corsOrigins.length > 0 ? config.corsOrigins : true });
   app.register(async (wsApp) => {
     await wsApp.register(websocket, { errorHandler(_e, socket) { socket.terminate(); } });
-    wsApp.get("/v1/realtime", { websocket: true }, async (socket, request) => {
+    wsApp.get(`${INDEX_API}/realtime`, { websocket: true }, async (socket, request) => {
       const principal = await resolvePrincipal(request as FastifyRequest, auth);
       realtime.attach(socket, principal != null);
     });
   });
 
-  app.get("/v1/health", async () => ({ ok: true, service: "index", host: config.host, port: config.port }));
+  app.get(`${INDEX_API}/health`, async () => ({ ok: true, service: "index", host: config.host, port: config.port }));
 
-  app.get("/v1/types", async (req, reply) => { if (!(await requirePrincipal(req, reply, auth))) return; return { types: store.listTypes() }; });
-  app.post("/v1/types", async (req, reply) => {
+  app.get(`${INDEX_API}/types`, async (req, reply) => { if (!(await requirePrincipal(req, reply, auth))) return; return { types: store.listTypes() }; });
+  app.post(`${INDEX_API}/types`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     if (typeof body.name !== "string" || !body.schema || !body.identityFields) return reply.code(400).send({ error: "name, schema and identityFields required" });
@@ -94,7 +97,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     return { type };
   });
 
-  app.post("/v1/entities/upsert", async (req, reply) => {
+  app.post(`${INDEX_API}/entities/upsert`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     if (typeof body.type !== "string" || typeof body.data !== "object" || body.data === null) {
@@ -113,7 +116,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
       return reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
     }
   });
-  app.get("/v1/entities/:id", async (req, reply) => {
+  app.get(`${INDEX_API}/entities/:id`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const id = (req.params as { id: string }).id;
     const entity = store.getEntity(id);
@@ -126,14 +129,14 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
       tags: store.listEntityTags(id),
     };
   });
-  app.get("/v1/entities/:id/history", async (req, reply) => {
+  app.get(`${INDEX_API}/entities/:id/history`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const id = (req.params as { id: string }).id;
     const field = (req.query as { field?: string }).field;
     if (!field) return reply.code(400).send({ error: "field required" });
     return { history: store.getFieldHistory(id, field, 500) };
   });
-  app.post("/v1/entities/query", async (req, reply) => {
+  app.post(`${INDEX_API}/entities/query`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     return {
@@ -148,19 +151,19 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
       }),
     };
   });
-  app.get("/v1/entities/counts", async (req, reply) => {
+  app.get(`${INDEX_API}/entities/counts`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     return { counts: store.countByType() };
   });
-  app.post("/v1/entities/search", async (req, reply) => {
+  app.post(`${INDEX_API}/entities/search`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     if (typeof body.fullText !== "string") return reply.code(400).send({ error: "fullText required" });
     return { entities: store.searchEntitiesFullText(body.fullText, body.type as string | undefined, (body.limit as number | undefined) ?? 50) };
   });
 
-  app.get("/v1/searches", async (req, reply) => { if (!(await requirePrincipal(req, reply, auth))) return; return { searches: store.listSearches() }; });
-  app.post("/v1/searches", async (req, reply) => {
+  app.get(`${INDEX_API}/searches`, async (req, reply) => { if (!(await requirePrincipal(req, reply, auth))) return; return { searches: store.listSearches() }; });
+  app.post(`${INDEX_API}/searches`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     return { search: store.createSearch({
@@ -170,7 +173,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
       promptTemplate: (body.promptTemplate as string | null) ?? null,
     }) };
   });
-  app.patch("/v1/searches/:id", async (req, reply) => {
+  app.patch(`${INDEX_API}/searches/:id`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const id = (req.params as { id: string }).id;
     const body = readBody(req);
@@ -182,12 +185,12 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     if (!fresh) return reply.code(404).send({ error: "not found" });
     return { search: fresh };
   });
-  app.delete("/v1/searches/:id", async (req, reply) => {
+  app.delete(`${INDEX_API}/searches/:id`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     store.deleteSearch((req.params as { id: string }).id);
     return { ok: true };
   });
-  app.post("/v1/searches/:id/run", async (req, reply) => {
+  app.post(`${INDEX_API}/searches/:id/run`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const id = (req.params as { id: string }).id;
     const body = readBody(req);
@@ -195,11 +198,11 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     catch (error) { return reply.code(400).send({ error: error instanceof Error ? error.message : String(error) }); }
   });
 
-  app.get("/v1/monitors", async (req, reply) => {
+  app.get(`${INDEX_API}/monitors`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     return { monitors: store.listMonitors().map((m) => ({ ...m, cronHuman: describeCron(m.cronExpr) })) };
   });
-  app.post("/v1/monitors", async (req, reply) => {
+  app.post(`${INDEX_API}/monitors`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     if (typeof body.searchId !== "string" || typeof body.cronExpr !== "string") return reply.code(400).send({ error: "searchId and cronExpr required" });
@@ -213,7 +216,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
       nextFireAt: nextFire.toISOString(),
     }) };
   });
-  app.patch("/v1/monitors/:id", async (req, reply) => {
+  app.patch(`${INDEX_API}/monitors/:id`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const id = (req.params as { id: string }).id;
     const body = readBody(req);
@@ -229,12 +232,12 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     if (!fresh) return reply.code(404).send({ error: "not found" });
     return { monitor: fresh };
   });
-  app.delete("/v1/monitors/:id", async (req, reply) => {
+  app.delete(`${INDEX_API}/monitors/:id`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     store.deleteMonitor((req.params as { id: string }).id);
     return { ok: true };
   });
-  app.post("/v1/monitors/:id/fire", async (req, reply) => {
+  app.post(`${INDEX_API}/monitors/:id/fire`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const id = (req.params as { id: string }).id;
     const monitor = store.getMonitor(id);
@@ -242,19 +245,19 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     return { run: await scheduler.fireNow(monitor) };
   });
 
-  app.get("/v1/runs", async (req, reply) => {
+  app.get(`${INDEX_API}/runs`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const monitorId = (req.query as { monitorId?: string }).monitorId;
     return { runs: monitorId ? store.listRunsForMonitor(monitorId) : store.listRuns() };
   });
-  app.get("/v1/runs/:id", async (req, reply) => {
+  app.get(`${INDEX_API}/runs/:id`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const id = (req.params as { id: string }).id;
     const run = store.getRun(id);
     if (!run) return reply.code(404).send({ error: "not found" });
     return { run, entities: store.listEntitiesForRun(id) };
   });
-  app.post("/v1/runs/:id/attach", async (req, reply) => {
+  app.post(`${INDEX_API}/runs/:id/attach`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const id = (req.params as { id: string }).id;
     const body = readBody(req);
@@ -263,32 +266,32 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     return { ok: true };
   });
 
-  app.get("/v1/alerts", async (req, reply) => {
+  app.get(`${INDEX_API}/alerts`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     return { alerts: store.listAlerts(), unread: store.countUnackedAlerts() };
   });
-  app.post("/v1/alerts/:id/ack", async (req, reply) => {
+  app.post(`${INDEX_API}/alerts/:id/ack`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     store.ackAlert((req.params as { id: string }).id);
     return { ok: true };
   });
 
-  app.get("/v1/tags", async (req, reply) => { if (!(await requirePrincipal(req, reply, auth))) return; return { tags: store.listTags() }; });
-  app.post("/v1/tags/apply", async (req, reply) => {
+  app.get(`${INDEX_API}/tags`, async (req, reply) => { if (!(await requirePrincipal(req, reply, auth))) return; return { tags: store.listTags() }; });
+  app.post(`${INDEX_API}/tags/apply`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     if (typeof body.entityId !== "string" || typeof body.name !== "string") return reply.code(400).send({ error: "entityId and name required" });
     return { tag: store.applyTag(body.entityId as string, body.name as string, body.color as string | undefined) };
   });
-  app.post("/v1/tags/remove", async (req, reply) => {
+  app.post(`${INDEX_API}/tags/remove`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     store.removeTag(body.entityId as string, body.tagId as string);
     return { ok: true };
   });
 
-  app.get("/v1/collections", async (req, reply) => { if (!(await requirePrincipal(req, reply, auth))) return; return { collections: store.listCollections() }; });
-  app.post("/v1/collections", async (req, reply) => {
+  app.get(`${INDEX_API}/collections`, async (req, reply) => { if (!(await requirePrincipal(req, reply, auth))) return; return { collections: store.listCollections() }; });
+  app.post(`${INDEX_API}/collections`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     return { collection: store.createCollection({
@@ -298,14 +301,14 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
       criteria: body.criteria as Record<string, unknown> | undefined,
     }) };
   });
-  app.post("/v1/collections/:id/add", async (req, reply) => {
+  app.post(`${INDEX_API}/collections/:id/add`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const id = (req.params as { id: string }).id;
     const body = readBody(req);
     store.addToCollection(id, body.entityId as string);
     return { ok: true };
   });
-  app.post("/v1/collections/:id/remove", async (req, reply) => {
+  app.post(`${INDEX_API}/collections/:id/remove`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const id = (req.params as { id: string }).id;
     const body = readBody(req);
@@ -313,7 +316,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     return { ok: true };
   });
 
-  app.post("/v1/relations", async (req, reply) => {
+  app.post(`${INDEX_API}/relations`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     if (typeof body.fromEntityId !== "string" || typeof body.toEntityId !== "string" || typeof body.relationType !== "string") return reply.code(400).send({ error: "fromEntityId, toEntityId and relationType required" });
@@ -325,13 +328,13 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     }) };
   });
 
-  app.post("/v1/devices", async (req, reply) => {
+  app.post(`${INDEX_API}/devices`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     if ((body.platform !== "macos" && body.platform !== "ios") || typeof body.token !== "string") return reply.code(400).send({ error: "platform and token required" });
     return { device: store.registerDeviceToken({ platform: body.platform as "macos" | "ios", token: body.token as string, label: body.label as string | undefined }) };
   });
-  app.get("/v1/devices", async (req, reply) => { if (!(await requirePrincipal(req, reply, auth))) return; return { devices: store.listDeviceTokens() }; });
+  app.get(`${INDEX_API}/devices`, async (req, reply) => { if (!(await requirePrincipal(req, reply, auth))) return; return { devices: store.listDeviceTokens() }; });
 
   // ===========================================================================
   // marketplace/1.0.0 · marketplace protocol endpoints
@@ -352,11 +355,11 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   }
 
   // --- root keys ---
-  app.get("/v1/marketplace/identity/roots", async (req, reply) => {
+  app.get(`${INDEX_API}/marketplace/identity/roots`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     return { roots: store.marketplace.listRootKeys().map((r) => ({ ...r, pubkey: bytesToB64(r.pubkey) })) };
   });
-  app.post("/v1/marketplace/identity/roots", async (req, reply) => {
+  app.post(`${INDEX_API}/marketplace/identity/roots`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     const pubkey = b64ToBytes(body.pubkey);
@@ -369,7 +372,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     });
     return { root: { ...row, pubkey: bytesToB64(row.pubkey) } };
   });
-  app.get("/v1/marketplace/identity/roots/:id/secret", async (req, reply) => {
+  app.get(`${INDEX_API}/marketplace/identity/roots/:id/secret`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const out = store.marketplace.getEncryptedRoot((req.params as { id: string }).id);
     if (!out) return reply.code(404).send({ error: "not found" });
@@ -377,12 +380,12 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   });
 
   // --- device keys ---
-  app.get("/v1/marketplace/identity/devices", async (req, reply) => {
+  app.get(`${INDEX_API}/marketplace/identity/devices`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const rootKeyId = (req.query as { rootKeyId?: string }).rootKeyId;
     return { devices: store.marketplace.listDeviceKeys(rootKeyId).map((d) => ({ ...d, pubkey: bytesToB64(d.pubkey), certificateCbor: bytesToB64(d.certificateCbor) })) };
   });
-  app.post("/v1/marketplace/identity/devices", async (req, reply) => {
+  app.post(`${INDEX_API}/marketplace/identity/devices`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     const pubkey = b64ToBytes(body.pubkey);
@@ -400,12 +403,12 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   });
 
   // --- role keys ---
-  app.get("/v1/marketplace/identity/roles", async (req, reply) => {
+  app.get(`${INDEX_API}/marketplace/identity/roles`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const q = req.query as { rootKeyId?: string; vertical?: string };
     return { roles: store.marketplace.listRoleKeys(q).map((r) => ({ ...r, pubkey: bytesToB64(r.pubkey), certificateCbor: bytesToB64(r.certificateCbor) })) };
   });
-  app.post("/v1/marketplace/identity/roles", async (req, reply) => {
+  app.post(`${INDEX_API}/marketplace/identity/roles`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     const pubkey = b64ToBytes(body.pubkey);
@@ -421,14 +424,14 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     });
     return { role: { ...row, pubkey: bytesToB64(row.pubkey), certificateCbor: bytesToB64(row.certificateCbor) } };
   });
-  app.post("/v1/marketplace/identity/roles/:id/revoke", async (req, reply) => {
+  app.post(`${INDEX_API}/marketplace/identity/roles/:id/revoke`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     store.marketplace.revokeRoleKey((req.params as { id: string }).id);
     return { ok: true };
   });
 
   // --- intents ---
-  app.get("/v1/marketplace/intents", async (req, reply) => {
+  app.get(`${INDEX_API}/marketplace/intents`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const q = req.query as { side?: "offer" | "want"; vertical?: string; status?: string; provenance?: "native" | "observed"; roleKeyId?: string };
     return { intents: store.marketplace.listIntents(q).map((i) => ({
@@ -440,7 +443,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
       signatureDevice: bytesToB64(i.signatureDevice),
     })) };
   });
-  app.post("/v1/marketplace/intents", async (req, reply) => {
+  app.post(`${INDEX_API}/marketplace/intents`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     const intentIdHash = b64ToBytes(body.intentIdHash);
@@ -470,14 +473,14 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
     });
     return { intent: { ...row, intentIdHash: bytesToB64(row.intentIdHash), payloadCbor: bytesToB64(row.payloadCbor) } };
   });
-  app.patch("/v1/marketplace/intents/:id/status", async (req, reply) => {
+  app.patch(`${INDEX_API}/marketplace/intents/:id/status`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     if (typeof body.status !== "string") return reply.code(400).send({ error: "status required" });
     store.marketplace.updateIntentStatus((req.params as { id: string }).id, body.status as any);
     return { ok: true };
   });
-  app.get("/v1/marketplace/intents/:id", async (req, reply) => {
+  app.get(`${INDEX_API}/marketplace/intents/:id`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const intent = store.marketplace.getIntent((req.params as { id: string }).id);
     if (!intent) return reply.code(404).send({ error: "not found" });
@@ -491,12 +494,12 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   });
 
   // --- peer levels ---
-  app.get("/v1/marketplace/peer-levels", async (req, reply) => {
+  app.get(`${INDEX_API}/marketplace/peer-levels`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const q = req.query as { myRoleKeyId?: string; intentId?: string };
     return { peers: store.marketplace.listPeerLevels(q).map((p) => ({ ...p, peerPubkey: bytesToB64(p.peerPubkey) })) };
   });
-  app.post("/v1/marketplace/peer-levels", async (req, reply) => {
+  app.post(`${INDEX_API}/marketplace/peer-levels`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     const peerPubkey = b64ToBytes(body.peerPubkey);
@@ -513,7 +516,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   });
 
   // --- mailbox ---
-  app.get("/v1/marketplace/mailbox/inbound", async (req, reply) => {
+  app.get(`${INDEX_API}/marketplace/mailbox/inbound`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const q = req.query as { recipientRoleKeyId?: string; intentIdRef?: string; limit?: number };
     return { messages: store.marketplace.listInbound(q).map((m) => ({
@@ -524,7 +527,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
       signature: bytesToB64(m.signature),
     })) };
   });
-  app.post("/v1/marketplace/mailbox/inbound", async (req, reply) => {
+  app.post(`${INDEX_API}/marketplace/mailbox/inbound`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     const senderPubkey = b64ToBytes(body.senderPubkey);
@@ -546,12 +549,12 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
       signature: bytesToB64(row.signature),
     } };
   });
-  app.post("/v1/marketplace/mailbox/inbound/:id/read", async (req, reply) => {
+  app.post(`${INDEX_API}/marketplace/mailbox/inbound/:id/read`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     store.marketplace.markInboundRead((req.params as { id: string }).id);
     return { ok: true };
   });
-  app.get("/v1/marketplace/mailbox/outbound", async (req, reply) => {
+  app.get(`${INDEX_API}/marketplace/mailbox/outbound`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const q = req.query as { senderRoleKeyId?: string; limit?: number };
     return { messages: store.marketplace.listOutbound(q).map((m) => ({
@@ -563,7 +566,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
       signature: bytesToB64(m.signature),
     })) };
   });
-  app.post("/v1/marketplace/mailbox/outbound", async (req, reply) => {
+  app.post(`${INDEX_API}/marketplace/mailbox/outbound`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     const recipientPubkey = b64ToBytes(body.recipientPubkey);
@@ -589,7 +592,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   });
 
   // --- match receipts ---
-  app.get("/v1/marketplace/match-receipts", async (req, reply) => {
+  app.get(`${INDEX_API}/marketplace/match-receipts`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const q = req.query as { myRoleKeyId?: string; status?: any };
     return { receipts: store.marketplace.listMatchReceipts(q).map((r) => ({
@@ -601,7 +604,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
       payloadCbor: bytesToB64(r.payloadCbor),
     })) };
   });
-  app.post("/v1/marketplace/match-receipts", async (req, reply) => {
+  app.post(`${INDEX_API}/marketplace/match-receipts`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     const receiptHash = b64ToBytes(body.receiptHash);
@@ -632,7 +635,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
       payloadCbor: bytesToB64(row.payloadCbor),
     } };
   });
-  app.patch("/v1/marketplace/match-receipts/:id", async (req, reply) => {
+  app.patch(`${INDEX_API}/marketplace/match-receipts/:id`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     const updated = store.marketplace.updateMatchReceipt((req.params as { id: string }).id, {
@@ -657,12 +660,12 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   });
 
   // --- brokers ---
-  app.get("/v1/marketplace/brokers", async (req, reply) => {
+  app.get(`${INDEX_API}/marketplace/brokers`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const q = req.query as { vertical?: string };
     return { brokers: store.marketplace.listBrokers(q).map((b) => ({ ...b, brokerPubkey: bytesToB64(b.brokerPubkey) })) };
   });
-  app.post("/v1/marketplace/brokers", async (req, reply) => {
+  app.post(`${INDEX_API}/marketplace/brokers`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     const brokerPubkey = b64ToBytes(body.brokerPubkey);
@@ -678,7 +681,7 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   });
 
   // --- revocations ---
-  app.post("/v1/marketplace/revocations", async (req, reply) => {
+  app.post(`${INDEX_API}/marketplace/revocations`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
     const revokedPubkey = b64ToBytes(body.revokedPubkey);

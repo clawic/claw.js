@@ -1,4 +1,4 @@
-// Profile routes: /v1/profile/*, /v1/peers/*.
+// Profile and peer routes under the registered public API prefix.
 //
 // Mounted on the existing Fastify daemon. The route bundle takes a
 // `ProfileDeps` object so it doesn't reach into `IndexStore` directly; that
@@ -6,11 +6,14 @@
 // fake test stub) and to keep the daemon module-agnostic.
 
 import type { FastifyInstance } from "fastify";
+import { clawPublicApiPrefix } from "@clawjs/core";
 
 import type {
   Block, CapabilityRef, Group, Profile,
 } from "@clawjs/profile";
 import type { Handle } from "@clawjs/marketplace/handles";
+
+const INDEX_API = clawPublicApiPrefix;
 
 export interface ProfileDeps {
   init(input: { mnemonic?: string; passphrase?: string; alias: string }): Promise<{ profile: Profile; mnemonic: string }>;
@@ -40,8 +43,8 @@ export interface ProfileDeps {
   pairByFingerprint(input: { pairingLink: string }): Handle;
 }
 
-const PROFILE_PREFIX = "/v1/profile";
-const PEERS_PREFIX = "/v1/peers";
+const PROFILE_PREFIX = `${INDEX_API}/profile`;
+const PEERS_PREFIX = `${INDEX_API}/peers`;
 
 export function registerProfileRoutes(app: FastifyInstance, deps: ProfileDeps): void {
   app.post(`${PROFILE_PREFIX}/init`, async (req, reply) => {

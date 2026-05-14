@@ -1,12 +1,15 @@
-// Feed routes: /v1/feed.
+// Feed routes under the registered public API prefix.
 //
 // Reads blocks from peers the owner follows (members of any group), filters
 // by vertical / keywords / timestamp, and emits a stream of new entries over
-// WebSocket via `/v1/feed/stream`.
+// the registered feed stream.
 
 import type { FastifyInstance } from "fastify";
+import { clawPublicApiPrefix } from "@clawjs/core";
 import type { CborValue } from "@clawjs/marketplace/cbor";
 import type { Block } from "@clawjs/profile";
+
+const INDEX_API = clawPublicApiPrefix;
 
 export interface FeedEntry {
   blockId: Uint8Array;
@@ -23,7 +26,7 @@ export interface FeedDeps {
 }
 
 export function registerFeedRoutes(app: FastifyInstance, deps: FeedDeps): void {
-  app.get("/v1/feed", async (req) => {
+  app.get(`${INDEX_API}/feed`, async (req) => {
     const q = (req.query ?? {}) as { vertical?: string; groupId?: string; keywords?: string; limit?: string; offset?: string };
     const limit = q.limit ? Number(q.limit) : 50;
     const offset = q.offset ? Number(q.offset) : 0;
