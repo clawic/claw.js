@@ -94,6 +94,30 @@ const rules = [
     pattern: /appendingPathComponent\("[^"]*(?:Clawix|\.clawix|\.claw|\.sqlite|bridge-status|dictation-audio)[^"]*"/,
     message: "durable Swift path components must be registered through persistent surface builders",
   },
+  {
+    id: "kotlin.direct-api-route",
+    extensions: [".kt", ".kts", ".java"],
+    pattern: /"\/v\d+\/[A-Za-z0-9_/${}().-]+"/,
+    message: "stable Kotlin/Java API routes must be registered through stable surface builders",
+  },
+  {
+    id: "kotlin.direct-serial-name",
+    extensions: [".kt", ".kts", ".java"],
+    pattern: /@SerialName\("(?:schemaVersion|protocolVersion|sessionId|recordId|runtimeId|agentId|type)"\)/,
+    message: "wire Kotlin serial names must be registered through stable surface builders",
+  },
+  {
+    id: "csharp.direct-api-route",
+    extensions: [".cs"],
+    pattern: /"\/v\d+\/[A-Za-z0-9_/${}().-]+"/,
+    message: "stable C# API routes must be registered through stable surface builders",
+  },
+  {
+    id: "csharp.direct-json-property",
+    extensions: [".cs"],
+    pattern: /JsonPropertyName\("(?:schemaVersion|protocolVersion|sessionId|recordId|runtimeId|agentId|type)"\)/,
+    message: "wire C# JSON property names must be registered through stable surface builders",
+  },
 ];
 
 function isBuilderFile(filePath, body) {
@@ -169,7 +193,7 @@ function listFiles(targetPath) {
   const stat = fs.statSync(targetPath);
   if (stat.isFile()) return [targetPath];
   return fs.readdirSync(targetPath, { withFileTypes: true }).flatMap((entry) => {
-    if (["node_modules", "dist", ".git", ".build", "build"].includes(entry.name)) return [];
+    if (["node_modules", "dist", ".git", ".build", "build", ".next", "coverage", "artifacts"].includes(entry.name)) return [];
     const next = path.join(targetPath, entry.name);
     return entry.isDirectory() ? listFiles(next) : [next];
   });
@@ -179,6 +203,8 @@ function runSelfTest() {
   const tempRoot = fs.mkdtempSync(path.join(fs.realpathSync("/tmp"), "persistent-surface-guard-"));
   const badTs = path.join(tempRoot, "bad.ts");
   const badSwift = path.join(tempRoot, "Bad.swift");
+  const badKt = path.join(tempRoot, "Bad.kt");
+  const badCs = path.join(tempRoot, "Bad.cs");
   const builderSwift = path.join(tempRoot, "PersistentSurfaceRegistry.swift");
   fs.writeFileSync(badTs, [
     "const db = new Database(path.join(home, '.claw', 'data', 'core.sqlite'));",
@@ -199,10 +225,18 @@ function runSelfTest() {
     "let db = try DatabaseQueue(path: url.path)",
   ].join("\n"));
   fs.writeFileSync(builderSwift, "enum ClawixPersistentSurfaceRegistry { static let nodes: [String] = [] }\n");
+  fs.writeFileSync(badKt, [
+    "val route = \"/v1/mesh/jobs\"",
+    "@SerialName(\"schemaVersion\") val version: Int = 1",
+  ].join("\n"));
+  fs.writeFileSync(badCs, [
+    "const string Route = \"/v1/mesh/jobs\";",
+    "[JsonPropertyName(\"schemaVersion\")] public int SchemaVersion { get; set; }",
+  ].join("\n"));
 
-  const findings = [...scanFile(badTs), ...scanFile(badSwift, "registeredKey"), ...scanFile(builderSwift)];
+  const findings = [...scanFile(badTs), ...scanFile(badSwift, "registeredKey"), ...scanFile(badKt), ...scanFile(badCs), ...scanFile(builderSwift)];
   const foundRules = new Set(findings.map((finding) => finding.rule));
-  for (const expected of ["ts.direct-api-route", "ts.direct-event-topic", "ts.direct-schema-version-field", "ts.direct-database-path", "ts.local-storage-literal", "ts.ddl-literal", "swift.direct-api-route", "swift.direct-coding-key", "swift.app-storage-literal", "swift.user-defaults-literal", "swift.user-defaults-suite-literal", "swift.sidebar-prefs-literal", "swift.unregistered-persistent-key", "swift.database-queue-path"]) {
+  for (const expected of ["ts.direct-api-route", "ts.direct-event-topic", "ts.direct-schema-version-field", "ts.direct-database-path", "ts.local-storage-literal", "ts.ddl-literal", "swift.direct-api-route", "swift.direct-coding-key", "swift.app-storage-literal", "swift.user-defaults-literal", "swift.user-defaults-suite-literal", "swift.sidebar-prefs-literal", "swift.unregistered-persistent-key", "swift.database-queue-path", "kotlin.direct-api-route", "kotlin.direct-serial-name", "csharp.direct-api-route", "csharp.direct-json-property"]) {
     if (!foundRules.has(expected)) {
       throw new Error(`self-test did not trigger ${expected}`);
     }
@@ -245,7 +279,12 @@ if (targets.length === 0) {
 }
 
 const allFiles = targets.flatMap((target) => listFiles(path.resolve(rootDir, target)));
-const registryBody = allFiles
+const canonicalRegistryFiles = [
+  path.join(rootDir, "packages/clawjs-core/src/surface-registry.ts"),
+  path.join(rootDir, "../Clawix/clawix/macos/Sources/Clawix/Persistence/PersistentSurfaceRegistry.swift"),
+  path.join(rootDir, "../Clawix/clawix/ios/Sources/Clawix/Persistence/PersistentSurfaceRegistry.swift"),
+].filter((filePath) => fs.existsSync(filePath));
+const registryBody = [...allFiles, ...canonicalRegistryFiles]
   .filter((filePath) => filePath.endsWith("PersistentSurfaceRegistry.swift") || filePath.endsWith("surface-registry.ts"))
   .map((filePath) => fs.readFileSync(filePath, "utf8"))
   .join("\n");

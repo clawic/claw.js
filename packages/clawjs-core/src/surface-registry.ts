@@ -251,6 +251,11 @@ export const clawPublicApiPrefix = "/v1";
 export const clawPrivateAppApiPrefix = "/api";
 export const clawEventsPath = "/v1/events";
 
+export function clawApiPath(path = ""): string {
+  const suffix = path.replace(/^\/+/, "");
+  return suffix ? `${clawPublicApiPrefix}/${suffix}` : clawPublicApiPrefix;
+}
+
 export const clawCommonJsonFields = {
   schemaVersion: "schemaVersion",
   protocolVersion: "protocolVersion",
@@ -657,6 +662,13 @@ const stableJsonFields = [
 
 export const clawRegisteredDdlSources = [
   "packages/clawjs-database/src/store.ts",
+  "packages/clawjs-audio/src/store.ts",
+  "packages/clawjs-mcp/src/store.ts",
+  "packages/clawjs-runtime/src/store.ts",
+  "packages/clawjs-sandbox/src/store.ts",
+  "packages/clawjs-sessions/src/store.ts",
+  "packages/clawjs-user-model/src/store.ts",
+  "packages/clawjs-voice/src/store.ts",
   "drive/src/server/db.ts",
   "packages/clawjs-index/src/db/schema.sql",
 ] as const;
