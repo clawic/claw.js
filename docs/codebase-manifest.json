@@ -95060,7 +95060,7 @@
     {
       "path": "packages/clawjs/src/cli-discovery.test.ts",
       "language": "typescript",
-      "lines": 105,
+      "lines": 117,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -97081,7 +97081,7 @@
     {
       "path": "packages/clawjs/src/cli-temporal-command.ts",
       "language": "typescript",
-      "lines": 573,
+      "lines": 581,
       "test": false,
       "entrypoint": false,
       "imports": [

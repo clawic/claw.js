@@ -5,7 +5,7 @@ import type { CliContext } from "./index.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { extractPositionals, joinedPositionals } from "./cli-flag-parsers.ts";
-import { writeJson } from "./cli-json.ts";
+import { writeCommandJsonOk } from "./cli-json.ts";
 import { buildRoutineHeartbeat, parseRoutineStaggerMs, parseSimpleDurationMs, parseWatchTarget, writeTemporalExecutions, writeTemporalItems } from "./cli-temporal-utils.ts";
 
 export async function runTemporalCli(input: {
@@ -24,6 +24,14 @@ export async function runTemporalCli(input: {
   agentId: string;
 }): Promise<number | null> {
   const { argv, group, command, subcommand, positionals, flags, context, wantsJson, runtimeAdapterId, workspaceRoot, appId, workspaceId, agentId } = input;
+  const writeTemporalJson = (payload: unknown) => {
+    const canonicalCommand = group === "scheduler" ? "time" : group ?? "time";
+    writeCommandJsonOk(context.stdout, canonicalCommand, payload, {
+      invokedCommand: group ?? canonicalCommand,
+      subcommand: command ?? null,
+      ...(subcommand ? { operation: subcommand } : {}),
+    });
+  };
 
   if (group === "calendar") {
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
@@ -34,7 +42,7 @@ export async function runTemporalCli(input: {
         ...(flags["project-id"] ? { projectId: flags["project-id"] } : {}),
         ...(flags["agent-id"] ? { agentId: flags["agent-id"] } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else writeTemporalItems(context.stdout, payload.items, { empty: "No calendar events" });
       return CLI_EXIT_OK;
     }
@@ -55,7 +63,7 @@ export async function runTemporalCli(input: {
         ...(flags["project-id"] ? { projectId: flags["project-id"] } : {}),
         ...(flags["agent-id"] ? { agentId: flags["agent-id"] } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else writeTemporalItems(context.stdout, [payload.item]);
       return CLI_EXIT_OK;
     }
@@ -77,7 +85,7 @@ export async function runTemporalCli(input: {
         ...(flags["agent-id"] ? { agentId: flags["agent-id"] } : {}),
         schedule: { mode: "one_off", timezone: flags.timezone || "UTC", startsAt: flags["starts-at"] },
       });
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else writeTemporalItems(context.stdout, [payload.item]);
       return CLI_EXIT_OK;
     }
@@ -88,7 +96,7 @@ export async function runTemporalCli(input: {
         return CLI_EXIT_USAGE;
       }
       const payload = await claw.calendar.get(id);
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else writeTemporalItems(context.stdout, [payload.item]);
       return CLI_EXIT_OK;
     }
@@ -107,7 +115,7 @@ export async function runTemporalCli(input: {
         ...(flags.timezone ? { timezone: flags.timezone } : {}),
         ...(flags["starts-at"] ? { schedule: { mode: "one_off", timezone: flags.timezone || "UTC", startsAt: flags["starts-at"] } } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else writeTemporalItems(context.stdout, [payload.item]);
       return CLI_EXIT_OK;
     }
@@ -118,7 +126,7 @@ export async function runTemporalCli(input: {
         return CLI_EXIT_USAGE;
       }
       const payload = await claw.calendar.delete(id);
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else context.stdout.write("ok\n");
       return CLI_EXIT_OK;
     }
@@ -133,7 +141,7 @@ export async function runTemporalCli(input: {
         ...(flags["project-id"] ? { projectId: flags["project-id"] } : {}),
         ...(flags["agent-id"] ? { agentId: flags["agent-id"] } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else writeTemporalItems(context.stdout, payload.items, { empty: "No routines" });
       return CLI_EXIT_OK;
     }
@@ -160,7 +168,7 @@ export async function runTemporalCli(input: {
         ...(flags["project-id"] ? { projectId: flags["project-id"] } : {}),
         ...(flags["agent-id"] ? { agentId: flags["agent-id"] } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else writeTemporalItems(context.stdout, [payload.item]);
       return CLI_EXIT_OK;
     }
@@ -186,7 +194,7 @@ export async function runTemporalCli(input: {
           ...(staggerMs !== undefined ? { staggerMs } : {}),
         },
       });
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else writeTemporalItems(context.stdout, [payload.item]);
       return CLI_EXIT_OK;
     }
@@ -197,7 +205,7 @@ export async function runTemporalCli(input: {
         return CLI_EXIT_USAGE;
       }
       const payload = await claw.routines.get(id);
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else writeTemporalItems(context.stdout, [payload.item]);
       return CLI_EXIT_OK;
     }
@@ -223,7 +231,7 @@ export async function runTemporalCli(input: {
             }
           : {}),
       });
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else writeTemporalItems(context.stdout, [payload.item]);
       return CLI_EXIT_OK;
     }
@@ -234,7 +242,7 @@ export async function runTemporalCli(input: {
         return CLI_EXIT_USAGE;
       }
       const payload = await claw.routines.delete(id);
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else context.stdout.write("ok\n");
       return CLI_EXIT_OK;
     }
@@ -249,13 +257,13 @@ export async function runTemporalCli(input: {
         : command === "disable"
           ? await claw.routines.disable(id)
           : await claw.routines.run(id);
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else writeTemporalItems(context.stdout, [payload.item]);
       return CLI_EXIT_OK;
     }
     if (command === "history") {
       const payload = await claw.routines.history(subcommand || flags.id || flags["item-id"]);
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else writeTemporalExecutions(context.stdout, payload.executions);
       return CLI_EXIT_OK;
     }
@@ -285,7 +293,7 @@ export async function runTemporalCli(input: {
         ...(flags["anchor-id"] ? { anchorId: flags["anchor-id"] } : {}),
         ...(flags["anchor-at"] ? { anchorAt: flags["anchor-at"] } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else writeTemporalItems(context.stdout, [payload.item]);
       return CLI_EXIT_OK;
     }
@@ -300,7 +308,7 @@ export async function runTemporalCli(input: {
         ...(flags["project-id"] ? { projectId: flags["project-id"] } : {}),
         ...(flags["agent-id"] ? { agentId: flags["agent-id"] } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else writeTemporalItems(context.stdout, payload.items, { empty: "No watches" });
       return CLI_EXIT_OK;
     }
@@ -311,7 +319,7 @@ export async function runTemporalCli(input: {
         return CLI_EXIT_USAGE;
       }
       const payload = await claw.watch.get(id);
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else writeTemporalItems(context.stdout, [payload.item]);
       return CLI_EXIT_OK;
     }
@@ -322,7 +330,7 @@ export async function runTemporalCli(input: {
         return CLI_EXIT_USAGE;
       }
       const payload = command === "enable" ? await claw.watch.enable(id) : await claw.watch.disable(id);
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else writeTemporalItems(context.stdout, [payload.item]);
       return CLI_EXIT_OK;
     }
@@ -333,7 +341,7 @@ export async function runTemporalCli(input: {
         return CLI_EXIT_USAGE;
       }
       const payload = await claw.watch.delete(id);
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else context.stdout.write("ok\n");
       return CLI_EXIT_OK;
     }
@@ -365,7 +373,7 @@ export async function runTemporalCli(input: {
       anchorId: target.anchorId,
       anchorAt: flags["anchor-at"],
     });
-    if (wantsJson) writeJson(context.stdout, payload);
+    if (wantsJson) writeTemporalJson(payload);
     else writeTemporalItems(context.stdout, [payload.item]);
     return CLI_EXIT_OK;
   }
@@ -374,7 +382,7 @@ export async function runTemporalCli(input: {
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const schedulers = await claw.scheduler.list();
     if (wantsJson) {
-      writeJson(context.stdout, schedulers);
+      writeTemporalJson(schedulers);
     } else {
       context.stdout.write(`${schedulers.map((entry) => `${entry.enabled ? "*" : "-"} ${entry.id}`).join("\n")}\n`);
     }
@@ -392,7 +400,7 @@ export async function runTemporalCli(input: {
     if (command === "enable") await claw.scheduler.enable(id);
     if (command === "disable") await claw.scheduler.disable(id);
     if (wantsJson) {
-      writeJson(context.stdout, { ok: true, id, command });
+      writeTemporalJson({ ok: true, id, command });
     } else {
       context.stdout.write("ok\n");
     }
@@ -411,7 +419,7 @@ export async function runTemporalCli(input: {
         ...(flags["owner-id"] ? { ownerId: flags["owner-id"] } : {}),
         ...(flags["source-provider"] ? { sourceProvider: flags["source-provider"] } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else context.stdout.write(`${payload.items.map((item) => `${item.id} ${item.kind} ${item.status} ${item.title}`).join("\n")}\n`);
       return payload.items.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -422,7 +430,7 @@ export async function runTemporalCli(input: {
         return CLI_EXIT_USAGE;
       }
       const payload = await claw.time.get(id);
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else context.stdout.write(`${payload.item.id} ${payload.item.title}\n`);
       return CLI_EXIT_OK;
     }
@@ -466,7 +474,7 @@ export async function runTemporalCli(input: {
             }
           : {}),
       });
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else context.stdout.write(`${payload.item.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -485,7 +493,7 @@ export async function runTemporalCli(input: {
         endsAt: flags["ends-at"],
         ...(flags.timezone ? { timezone: flags.timezone } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else context.stdout.write(`${payload.item.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -496,7 +504,7 @@ export async function runTemporalCli(input: {
         return CLI_EXIT_USAGE;
       }
       const payload = await claw.time.delete(id);
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else context.stdout.write(`${payload.ok}\n`);
       return payload.ok ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
     }
@@ -511,25 +519,25 @@ export async function runTemporalCli(input: {
         : command === "resume"
           ? await claw.time.resume(id)
           : await claw.time.runNow(id);
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else context.stdout.write(`${"item" in payload ? payload.item.id : "ok"}\n`);
       return CLI_EXIT_OK;
     }
     if (command === "executions") {
       const payload = await claw.time.listExecutions(flags["item-id"]);
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else context.stdout.write(`${payload.executions.map((entry) => `${entry.itemId} ${entry.status} ${entry.scheduledFor}`).join("\n")}\n`);
       return payload.executions.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
     if (command === "calendar") {
       const payload = await claw.time.calendarView({ start: flags.start, end: flags.end });
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else context.stdout.write(`${payload.items.map((item) => `${item.title} ${item.startsAt || item.nextRunAt}`).join("\n")}\n`);
       return payload.items.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
     if (command === "timeline") {
       const payload = await claw.time.timelineView({ start: flags.start, end: flags.end });
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
       else context.stdout.write(`${payload.items.map((item) => `${item.title} ${item.startsAt || item.nextRunAt}`).join("\n")}\n`);
       return payload.items.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -563,7 +571,7 @@ export async function runTemporalCli(input: {
         anchorAt: flags["anchor-at"] ?? (command === "after" && durationMs !== null ? new Date(Date.now() + durationMs).toISOString() : undefined),
       },
     });
-    if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeTemporalJson(payload);
     else context.stdout.write(`${payload.item.id}\n`);
     return CLI_EXIT_OK;
   }

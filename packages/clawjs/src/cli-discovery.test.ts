@@ -81,6 +81,18 @@ test("runCli returns code JSON in the common envelope", async () => {
   assert.deepEqual(payload.data.projects, []);
 });
 
+test("runCli returns temporal JSON in the common envelope", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-temporal-json-"));
+  const result = await runCliCapture(["calendar", "list", "--workspace", workspaceRoot, "--runtime", "demo", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; data: { items: unknown[] }; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
+  assert.equal(payload.ok, true);
+  assert.equal(payload.meta.canonicalCommand, "calendar");
+  assert.equal(payload.meta.invokedCommand, "calendar");
+  assert.equal(payload.meta.subcommand, "list");
+  assert.deepEqual(payload.data.items, []);
+});
+
 test("runCli searches registered local docs and ADR contents", async () => {
   const result = await runCliCapture(["search", "Stable JSON output uses", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
