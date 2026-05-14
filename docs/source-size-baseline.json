@@ -24,7 +24,7 @@
       "reason": "Workspace runtime assembly after indexing, human activity, context, work session, and productivity facade extraction; split new app/state domains before expanding."
     },
     "examples/showcase/src/app/settings/page.tsx": {
-      "lines": 1994,
+      "lines": 1996,
       "reason": "Settings page shell after extracting persona, profile, advanced, OpenClaw, integrations, and tools tabs; route-level state/wiring only, split new tabs before expanding."
     },
     "relay/src/server/app.ts": {
