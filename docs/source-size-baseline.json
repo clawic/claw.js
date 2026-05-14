@@ -20,7 +20,7 @@
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     },
     "packages/clawjs-workspace/src/index.ts": {
-      "lines": 6241,
+      "lines": 6238,
       "reason": "Existing workspace runtime implementation; contracts have been extracted and remaining runtime should split by domain before expanding."
     },
     "examples/showcase/src/app/settings/page.tsx": {
