@@ -618,7 +618,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       tenantId,
       meta,
       auditMacKey: keys.auditMacKey,
-      event: { kind: "adminCreate", source: "admin", secretId: created.id, payload: { internalName: created.internal_name } },
+      event: { kind: "adminCreate", source: "admin", secretId: created.id, payload: {} },
     });
     return { secret: resolver.describeSecret(created) };
   });
@@ -644,6 +644,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.post("/v1/tenants/:tenantId/secrets/:name/archive", async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
+    const keys = session.requireKeys();
     const { tenantId, name } = req.params as { tenantId: string; name: string };
     const row = resolver.secrets.getByInternalName(tenantId, name);
     if (!row) return reply.code(404).send({ error: "Not found" });
@@ -651,6 +652,12 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     const updated = resolver.secrets.setArchived(row.id, body.archived === true);
     const revokedGrants = body.archived === true ? resolver.grants.revokeForSecret(row.id) : 0;
     const revokedLeases = body.archived === true ? resolver.leases.revokeForSecret(row.id) : 0;
+    audit.append({
+      tenantId,
+      meta: metaStore.load(tenantId)!,
+      auditMacKey: keys.auditMacKey,
+      event: { kind: "adminArchive", source: "admin", secretId: row.id, payload: {} },
+    });
     return {
       secret: updated ? resolver.describeSecret(updated) : null,
       revoked: { grants: revokedGrants, leases: revokedLeases },
@@ -659,6 +666,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.post("/v1/tenants/:tenantId/secrets/:name/compromise", async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
+    const keys = session.requireKeys();
     const { tenantId, name } = req.params as { tenantId: string; name: string };
     const row = resolver.secrets.getByInternalName(tenantId, name);
     if (!row) return reply.code(404).send({ error: "Not found" });
@@ -666,6 +674,12 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     const updated = resolver.secrets.setCompromised(row.id, body.compromised !== false, body.reason ?? null);
     const revokedGrants = body.compromised === false ? 0 : resolver.grants.revokeForSecret(row.id);
     const revokedLeases = body.compromised === false ? 0 : resolver.leases.revokeForSecret(row.id);
+    audit.append({
+      tenantId,
+      meta: metaStore.load(tenantId)!,
+      auditMacKey: keys.auditMacKey,
+      event: { kind: "adminCompromise", source: "admin", secretId: row.id, payload: {} },
+    });
     return {
       secret: updated ? resolver.describeSecret(updated) : null,
       revoked: { grants: revokedGrants, leases: revokedLeases },
@@ -674,19 +688,33 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.delete("/v1/tenants/:tenantId/secrets/:name", async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
+    const keys = session.requireKeys();
     const { tenantId, name } = req.params as { tenantId: string; name: string };
     const row = resolver.secrets.getByInternalName(tenantId, name);
     if (!row) return reply.code(404).send({ error: "Not found" });
     const updated = resolver.secrets.trash(row.id);
+    audit.append({
+      tenantId,
+      meta: metaStore.load(tenantId)!,
+      auditMacKey: keys.auditMacKey,
+      event: { kind: "adminTrash", source: "admin", secretId: row.id, payload: {} },
+    });
     return { secret: updated ? resolver.describeSecret(updated) : null };
   });
 
   app.post("/v1/tenants/:tenantId/secrets/:name/restore", async (req, reply) => {
     await requirePrincipalOrUser(req, reply);
+    const keys = session.requireKeys();
     const { tenantId, name } = req.params as { tenantId: string; name: string };
     const row = resolver.secrets.getByInternalName(tenantId, name);
     if (!row) return reply.code(404).send({ error: "Not found" });
     const updated = resolver.secrets.restore(row.id);
+    audit.append({
+      tenantId,
+      meta: metaStore.load(tenantId)!,
+      auditMacKey: keys.auditMacKey,
+      event: { kind: "adminEdit", source: "admin", secretId: row.id, payload: {} },
+    });
     return { secret: updated ? resolver.describeSecret(updated) : null };
   });
 
@@ -776,6 +804,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
     const resolvedByToken = new Map<string, string>();
     const redactionValues: string[] = [];
+    const auditedSecretIds = new Set<string>();
     const target = new URL(urlBefore.replace(template, "placeholder"));
     for (const match of matches) {
       const token = match[0];
@@ -820,6 +849,15 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       const { value } = resolver.revealField({ secret: row, masterKey: keys.masterKey, fieldName });
       resolvedByToken.set(token, value);
       redactionValues.push(value);
+      if (!auditedSecretIds.has(row.id)) {
+        auditedSecretIds.add(row.id);
+        audit.append({
+          tenantId,
+          meta: metaStore.load(tenantId)!,
+          auditMacKey: keys.auditMacKey,
+          event: { kind: "proxyRequest", source: "proxy", secretId: row.id, payload: {} },
+        });
+      }
     }
 
     const replaceSecrets = (input: string) => {
@@ -907,7 +945,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       tenantId,
       meta: metaStore.load(tenantId)!,
       auditMacKey: keys.auditMacKey,
-      event: { kind: "grantIssued", source: "admin", secretId: row.id, payload: { grantId: issued.grant.id, agent: body.agent } },
+      event: { kind: "grantIssued", source: "admin", secretId: row.id, payload: {} },
     });
     return { grant: resolver.describeGrant(issued.grant), token: issued.token };
   });
@@ -928,7 +966,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       tenantId,
       meta: metaStore.load(tenantId)!,
       auditMacKey: keys.auditMacKey,
-      event: { kind: "grantRevoked", source: "admin", secretId: row.secret_id, payload: { grantId: row.id } },
+      event: { kind: "grantRevoked", source: "admin", secretId: row.secret_id, payload: {} },
     });
     return { grant: resolver.describeGrant(row) };
   });
@@ -1070,6 +1108,9 @@ export async function startSecretsServer(input: { config?: Partial<SecretsConfig
   const externalDir = process.env.CLAW_SECRETS_PLUGINS_DIR;
   const registry = await bootPluginRegistry(externalDir ? { externalPluginsDir: externalDir } : {});
   const app = await buildSecretsApp({ config, db, registry });
+  app.addHook("onClose", async () => {
+    db.close();
+  });
   await app.listen({ host: config.host, port: config.port });
 
   if (input.statusFile) {

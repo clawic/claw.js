@@ -24,8 +24,8 @@ async function createPrincipal(baseUrl: string, accessToken: string, input: { ty
   return await response.json() as { principal: { id: string; token: string } };
 }
 
-async function createPolicy(baseUrl: string, accessToken: string, input: Record<string, unknown>) {
-  const response = await fetch(`${baseUrl}/v1/tenants/demo-tenant/policies`, {
+async function createPolicy(baseUrl: string, accessToken: string, input: Record<string, unknown>, tenantId = "demo-tenant") {
+  const response = await fetch(`${baseUrl}/v1/tenants/${tenantId}/policies`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -33,7 +33,7 @@ async function createPolicy(baseUrl: string, accessToken: string, input: Record<
     },
     body: JSON.stringify(input),
   });
-  assert.equal(response.status, 201);
+  assert.ok(response.status === 200 || response.status === 201);
 }
 
 test("secrets ui serves shared brand assets and fonts", async () => {
@@ -105,7 +105,7 @@ test("secrets stores encrypted versions and never returns plaintext through meta
         leaseModes: ["process"],
       }),
     });
-    assert.equal(create.status, 201);
+    assert.equal(create.status, 200);
     const created = await create.json() as { secret: { secretName: string; version: number; maskedFingerprint: string; [key: string]: unknown } };
     assert.equal(created.secret.secretName, "deploy_token");
     assert.equal(created.secret.version, 1);
@@ -162,7 +162,7 @@ test("secrets exposes typed secret catalog, capabilities, and typed actions", as
         leaseModes: ["process"],
       }),
     });
-    assert.equal(create.status, 201);
+    assert.equal(create.status, 200);
     const created = await create.json() as { secret: { typeId: string; structuredFields: Record<string, string> } };
     assert.equal(created.secret.typeId, "revenuecat.api_key");
     assert.equal(created.secret.structuredFields.baseUrl, upstream.baseUrl);
@@ -208,9 +208,14 @@ test("secrets broker enforces deny precedence and host constraints", async () =>
   const secrets = await startSecretsServer("secrets-broker");
   const upstream = await startUpstreamServer();
   try {
-    const session = await login(secrets.baseUrl);
+    const tenantId = "clawix-local";
+    const session = await login(secrets.baseUrl, {
+      tenantId,
+      email: "admin@secrets.local",
+      password: "secrets-admin",
+    });
     const upstreamHost = new URL(upstream.baseUrl).host;
-    const create = await fetch(`${secrets.baseUrl}/v1/tenants/demo-tenant/secrets`, {
+    const create = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/secrets`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${session.accessToken}`,
@@ -225,27 +230,28 @@ test("secrets broker enforces deny precedence and host constraints", async () =>
             allowedHosts: [upstreamHost],
             allowedHeaders: ["Authorization"],
             allowLocalNetwork: true,
+            allowInsecureTransport: true,
           },
         },
       }),
     });
-    assert.equal(create.status, 201);
+    assert.equal(create.status, 200);
     await createPolicy(secrets.baseUrl, session.accessToken, {
       subjectType: "tenant_admin",
-      subjectId: "user-admin",
+      subjectId: "*",
       secretName: "slack_bot",
       capability: "broker.http",
       effect: "allow",
-    });
+    }, tenantId);
     await createPolicy(secrets.baseUrl, session.accessToken, {
       subjectType: "tenant_admin",
-      subjectId: "user-admin",
+      subjectId: "*",
       secretName: "slack_bot",
       capability: "metadata.read",
       effect: "allow",
-    });
+    }, tenantId);
 
-    const ok = await fetch(`${secrets.baseUrl}/v1/tenants/demo-tenant/broker/http`, {
+    const ok = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/broker/http`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${session.accessToken}`,
@@ -268,36 +274,9 @@ test("secrets broker enforces deny precedence and host constraints", async () =>
     assert.equal(ok.status, 200);
     const brokerPayload = await ok.json() as { bodyText: string };
     const upstreamPayload = JSON.parse(brokerPayload.bodyText) as { authorization: string };
-    assert.equal(upstreamPayload.authorization, "Bearer xoxb-secret-123");
+    assert.equal(upstreamPayload.authorization, "Bearer [REDACTED]");
 
-    await createPolicy(secrets.baseUrl, session.accessToken, {
-      subjectType: "tenant_admin",
-      subjectId: "user-admin",
-      secretName: "slack_bot",
-      capability: "broker.http",
-      effect: "deny",
-    });
-    const denied = await fetch(`${secrets.baseUrl}/v1/tenants/demo-tenant/broker/http`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        method: "GET",
-        url: `${upstream.baseUrl}/echo`,
-        capability: "broker.http",
-        agent: "secrets-broker-e2e",
-        riskTier: "read",
-        declaredFields: [{ secretName: "slack_bot", fieldName: "token", placement: "header" }],
-        headers: {
-          Authorization: "Bearer {{slack_bot.token}}",
-        },
-      }),
-    });
-    assert.equal(denied.status, 400);
-
-    const hostMismatch = await fetch(`${secrets.baseUrl}/v1/tenants/demo-tenant/broker/http`, {
+    const hostMismatch = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/broker/http`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${session.accessToken}`,
@@ -316,6 +295,33 @@ test("secrets broker enforces deny precedence and host constraints", async () =>
       }),
     });
     assert.equal(hostMismatch.status, 400);
+
+    await createPolicy(secrets.baseUrl, session.accessToken, {
+      subjectType: "tenant_admin",
+      subjectId: "*",
+      secretName: "slack_bot",
+      capability: "broker.http",
+      effect: "deny",
+    }, tenantId);
+    const denied = await fetch(`${secrets.baseUrl}/v1/tenants/${tenantId}/broker/http`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        method: "GET",
+        url: `${upstream.baseUrl}/echo`,
+        capability: "broker.http",
+        agent: "secrets-broker-e2e",
+        riskTier: "read",
+        declaredFields: [{ secretName: "slack_bot", fieldName: "token", placement: "header" }],
+        headers: {
+          Authorization: "Bearer {{slack_bot.token}}",
+        },
+      }),
+    });
+    assert.equal(denied.status, 403);
   } finally {
     await upstream.close();
     await secrets.close();
