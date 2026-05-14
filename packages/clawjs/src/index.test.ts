@@ -1201,7 +1201,8 @@ test("runCli indexes external Codex session artifacts without owning their raw b
     const searched = JSON.parse(searchStdout.getOutput()) as { items: Array<{ sessionId: string }> };
     assert.deepEqual(searched.items.map((item) => item.sessionId), [sessionId]);
 
-    const sidecar = new Database(path.join(tempRoot, "data", "sessions.sqlite"), { readonly: true });
+    const sidecarPath = path.join(tempRoot, "data", "sessions.sqlite");
+    const sidecar = new Database(sidecarPath, { readonly: true });
     try {
       const sidecarSession = sidecar.prepare("SELECT session_id, artifact_path FROM conversation_sessions WHERE session_id = ?").get(sessionId) as { session_id: string; artifact_path: string };
       assert.equal(sidecarSession.artifact_path, artifactPath);
@@ -4104,8 +4105,8 @@ test("runCli compat can refresh and persist a snapshot", async () => {
 
   assert.ok(exitCode === CLI_EXIT_OK || exitCode === CLI_EXIT_DEGRADED);
   assert.match(stdout.getOutput(), /"compat"/);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "compat", "runtime-snapshot.json")), true);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "compat", "capability-report.json")), true);
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace.compat", workspaceRoot, "runtime-snapshot.json")), true);
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace.compat", workspaceRoot, "capability-report.json")), true);
 });
 
 test("runCli can execute runtime install, uninstall, setup-workspace, and repair against a fake toolchain", async () => {
@@ -4481,8 +4482,8 @@ process.exit(0);
 
 test("runCli can repair a workspace and normalize compat snapshots", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-repair-"));
-  fs.mkdirSync(path.join(workspaceRoot, ".claw", "compat"), { recursive: true });
-  fs.writeFileSync(path.join(workspaceRoot, ".claw", "compat", "runtime-snapshot.json"), JSON.stringify({
+  fs.mkdirSync(resolveClawPersistentSurfacePath("claw.workspace.compat", workspaceRoot), { recursive: true });
+  fs.writeFileSync(resolveClawPersistentSurfacePath("claw.workspace.compat", workspaceRoot, "runtime-snapshot.json"), JSON.stringify({
     runtimeAdapter: "openclaw",
     runtimeVersion: "1.2.3",
     probedAt: "2026-03-20T00:00:00.000Z",

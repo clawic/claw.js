@@ -172,7 +172,7 @@ test("workspace mutations respect the workspace lock", () => {
 
 test("workspace file helpers read, preview, write and inspect managed blocks", () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-workspace-files-"));
-  const relativePath = path.join(".claw", "notes.md");
+  const relativePath = path.relative(workspaceDir, resolveClawWorkspaceSurfacePath("claw.workspace", workspaceDir, "notes.md"));
   const filePath = path.join(workspaceDir, relativePath);
 
   assert.equal(readWorkspaceFile(workspaceDir, relativePath), null);
@@ -209,7 +209,7 @@ test("workspace file helpers read, preview, write and inspect managed blocks", (
   const managedBlock = inspectManagedWorkspaceFile(workspaceDir, relativePath, "persona");
   assert.equal(managedBlock.exists, true);
   assert.equal(managedBlock.innerContent, "alpha");
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "observed")), false);
+  assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.workspace.observedState", workspaceDir)), false);
 });
 
 test("writeWorkspaceFilePreservingManagedBlocks keeps original managed blocks intact", () => {
