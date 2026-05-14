@@ -42,7 +42,7 @@ test("runCli returns open list JSON in the common envelope", async () => {
 });
 
 test("runCli returns registry help JSON when a command needs a subcommand", async () => {
-  for (const command of ["database", "sessions", "search", "templates"]) {
+  for (const command of ["database", "sessions", "search", "templates", "mcp", "plan", "erp"]) {
     const result = await runCliCapture([command, "--json"], process.cwd());
     assert.equal(result.code, CLI_EXIT_OK, command);
     const payload = JSON.parse(result.stdout) as { ok: boolean; data: { command: string; help: string }; meta: { canonicalCommand: string; invokedCommand: string } };

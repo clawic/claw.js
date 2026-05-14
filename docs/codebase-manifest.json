@@ -96511,7 +96511,7 @@
     {
       "path": "packages/clawjs/src/cli-public-portal-routes.ts",
       "language": "typescript",
-      "lines": 112,
+      "lines": 124,
       "test": false,
       "entrypoint": false,
       "imports": [
