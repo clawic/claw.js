@@ -78,7 +78,7 @@ import { openBrowser, openStateDir, openStatePath, readOpenState, repoRootFromCl
 import { portIsOpen, processIsAlive, waitForUrl, writeProgress } from "./cli-process-utils.ts";
 import { parseRuleHints, parseRuleReferences } from "./cli-rule-utils.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
-import { collectFlagValues, joinedPositionals, parseCsvFlag, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
+import { collectFlagValues, extractPositionals, formatCliTable, joinedPositionals, parseCsvFlag, parseFlags, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { inferAudioExtension, inferMimeTypeFromPath, parseContextBlock, parseInferenceMessages, pathSafeBasename, readJsonFile, resolveRuntimeAdapterId, timelineRange, type GenerationCliMediaKind } from "./cli-runtime-utils.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
 import {
@@ -1079,54 +1079,6 @@ async function runDomainsCli(input: {
 
   input.context.stderr.write(`Usage: ${input.binName} domains install|status|uninstall|serve\n`);
   return CLI_EXIT_USAGE;
-}
-
-function parseFlags(argv: string[]): Record<string, string> {
-  const flags: Record<string, string> = {};
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-    if (!token?.startsWith("--")) continue;
-    const equalsIndex = token.indexOf("=");
-    if (equalsIndex > 2) {
-      flags[token.slice(2, equalsIndex)] = token.slice(equalsIndex + 1);
-      continue;
-    }
-    const next = argv[index + 1];
-    if (!next || next.startsWith("--")) continue;
-    flags[token.slice(2)] = next;
-  }
-  return flags;
-}
-
-function extractPositionals(argv: string[]): string[] {
-  const positionals: string[] = [];
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-    if (!token?.startsWith("--")) {
-      positionals.push(token);
-      continue;
-    }
-    if (token.includes("=")) continue;
-    const next = argv[index + 1];
-    if (next && !next.startsWith("--")) {
-      index += 1;
-    }
-  }
-  return positionals;
-}
-
-function formatCliTable(rows: Array<Record<string, string>>): string {
-  if (rows.length === 0) return "";
-  const columns = Object.keys(rows[0] ?? {});
-  const widths = Object.fromEntries(columns.map((column) => [
-    column,
-    Math.max(column.length, ...rows.map((row) => (row[column] ?? "").length)),
-  ]));
-  return [
-    columns.map((column) => column.padEnd(widths[column])).join("  "),
-    columns.map((column) => "-".repeat(widths[column])).join("  "),
-    ...rows.map((row) => columns.map((column) => (row[column] ?? "").padEnd(widths[column])).join("  ")),
-  ].join("\n");
 }
 
 function hostRegistryOptions(flags: Record<string, string>): { clawHome?: string } {
