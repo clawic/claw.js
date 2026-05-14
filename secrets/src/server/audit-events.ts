@@ -26,6 +26,7 @@ export type AuditEventKind =
   // Secrets lifecycle
   | "secretsSetup"
   | "secretsUnlock"
+  | "secretsLocalUnlock"
   | "secretsLock"
   | "secretsFailedUnlock"
   | "secretsPasswordChange"
