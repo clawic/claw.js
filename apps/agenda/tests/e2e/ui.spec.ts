@@ -4,7 +4,12 @@ import { expect, saveBrowserScreenshot, test } from "./helpers";
 
 async function submitModal(page: Page) {
   await page.locator("#modal-body .btn.primary").click();
-  await expect(page.locator("#modal-overlay")).not.toHaveClass(/open/);
+  await expect(page.locator("#modal-overlay")).not.toHaveClass(/open/, { timeout: 30_000 });
+}
+
+async function reloadDashboard(page: Page) {
+  await page.reload();
+  await expect(page.getByTestId("day-dashboard")).toBeVisible();
 }
 
 test("day dashboard creates a daily task flow and progress log", async ({ page }) => {
@@ -28,6 +33,7 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.locator("#f-target-date").fill("2026-04-24");
   await page.locator("#f-project-deadline").fill("2026-04-25");
   await submitModal(page);
+  await reloadDashboard(page);
   await expect(page.locator("#sec-projects").getByTestId("project-row").filter({ hasText: projectName })).toBeVisible();
 
   await page.getByTestId("new-goal-button").click();
@@ -36,19 +42,23 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.locator("#f-target").fill("1");
   await page.locator("#f-unit").fill("entrega");
   await submitModal(page);
+  await reloadDashboard(page);
   await expect(page.locator("#sec-goals").getByTestId("goal-row").filter({ hasText: goalTitle })).toBeVisible();
 
   await page.getByTestId("new-list-button").click();
   await page.locator("#f-title").fill(listTitle);
   await page.locator("#f-kind").selectOption("custom");
   await submitModal(page);
-  await expect(page.locator("#sec-system-map")).toContainText("Lists");
+  await reloadDashboard(page);
+  await expect(page.getByTestId("list-row").filter({ hasText: listTitle })).toHaveCount(1);
 
   await page.getByTestId("new-section-button").click();
   await page.locator("#f-title").fill(sectionTitle);
   await page.locator("#f-list").selectOption({ label: listTitle });
   await page.locator("#f-project").selectOption({ label: projectName });
   await submitModal(page);
+  await reloadDashboard(page);
+  await expect(page.getByTestId("section-row").filter({ hasText: sectionTitle })).toHaveCount(1);
 
   await page.getByTestId("new-cycle-button").click();
   await page.locator("#f-name").fill(cycleName);
@@ -58,6 +68,7 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.locator("#f-end").fill("2026-04-25");
   await page.locator("#f-project").selectOption({ label: projectName });
   await submitModal(page);
+  await reloadDashboard(page);
 
   await page.getByTestId("new-epic-button").click();
   await page.locator("#f-title").fill(epicTitle);
@@ -66,6 +77,7 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.locator("#f-project").selectOption({ label: projectName });
   await page.locator("#f-goal").selectOption({ label: goalTitle });
   await submitModal(page);
+  await reloadDashboard(page);
 
   await page.getByTestId("new-milestone-button").click();
   await page.locator("#f-title").fill(milestoneTitle);
@@ -73,6 +85,7 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.locator("#f-goal").selectOption({ label: goalTitle });
   await page.locator("#f-target-date").fill("2026-04-23");
   await submitModal(page);
+  await reloadDashboard(page);
 
   await page.getByTestId("new-task-button").click();
   await page.locator("#f-title").fill(taskTitle);

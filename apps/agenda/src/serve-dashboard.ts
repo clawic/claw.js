@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import http from "node:http";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -50,7 +51,7 @@ const server = http.createServer(async (req, res) => {
   const url = requestUrl.pathname;
 
   try {
-    if (method === "GET" && url === "/v1/health") {
+    if (method === "GET" && url === clawApiPath("health")) {
       return json(res, 200, {
         ok: true,
         service: "claw-day",

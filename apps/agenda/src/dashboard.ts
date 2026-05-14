@@ -2,6 +2,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 
 import { initializeWorkspace } from "@clawjs/claw";
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { createWorkspaceClaw, type WorkspaceClawInstance } from "@clawjs/workspace";
 
 export const APP_ID = "claw-day";
@@ -44,7 +45,7 @@ export function resolveRoot(flags: CliFlags) {
 export function ensureWorkspace(rootDir: string) {
   mkdirSync(rootDir, { recursive: true });
 
-  const manifestPath = path.join(rootDir, ".claw", "manifest.json");
+  const manifestPath = resolveClawPersistentSurfacePath("claw.workspace.manifest", rootDir);
   if (existsSync(manifestPath)) return;
 
   initializeWorkspace(

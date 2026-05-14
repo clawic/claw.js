@@ -12,6 +12,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { createClaw, resolveOpenClawContext } from "@clawjs/claw";
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 import type {
   Company,
@@ -43,7 +44,7 @@ function envPath(name: string, fallback: string): string {
 export function resolveCompanyWorkspaceDir(): string {
   return envPath(
     "CLAW_COMPANY_WORKSPACE_DIR",
-    path.join(os.homedir(), ".claw", "apps", "company", "workspace"),
+    path.join(resolveHome(resolveClawPersistentSurfacePath("claw.global.root")), "apps", "company", "workspace"),
   );
 }
 
