@@ -33,7 +33,7 @@ For preview builds from `next`, run prereleases with the npm dist-tag `next` ins
 7. Update [CHANGELOG.md](CHANGELOG.md) in that release PR if the top-level note needs curation.
 8. Merge the release PR into `main`.
 9. Publish packages manually only after confirming the dry run and authentication state.
-10. Create the `v<semver>` tag manually after publishing.
+10. Tag the release as `v<semver>` manually after publishing.
 11. Copy the changelog entry into the GitHub release notes if you want a manually curated GitHub release body.
 
 ## Package map
