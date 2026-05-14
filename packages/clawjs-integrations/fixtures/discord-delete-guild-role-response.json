@@ -1,4 +1,7 @@
 {
-  "id": "delete-guild-role-sample",
-  "name": "sample"
+  "runtimeResponse": {
+    "status": 204,
+    "body": "",
+    "bodyEncoding": "text"
+  }
 }

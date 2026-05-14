@@ -1885,7 +1885,39 @@ describe("discord operation runtime", () => {
       },
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.create-guild-ban"), {
+      guildId: "456",
+      userId: "123",
+      deleteMessageSeconds: 60,
+    }), {
+      method: "PUT",
+      endpoint: "guilds/456/bans/123",
+      auth,
+      headers,
+      query: {
+        delete_message_seconds: 60,
+      },
+      body: {},
+      responseSchema: {
+        type: "null",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.remove-guild-ban"), {
+      guildId: "456",
+      userId: "123",
+    }), {
+      method: "DELETE",
+      endpoint: "guilds/456/bans/123",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "null",
       },
     });
 
@@ -1985,7 +2017,7 @@ describe("discord operation runtime", () => {
       },
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -2250,7 +2282,7 @@ describe("discord operation runtime", () => {
       },
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -2269,7 +2301,7 @@ describe("discord operation runtime", () => {
       },
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -2366,7 +2398,7 @@ describe("discord operation runtime", () => {
       },
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -3103,6 +3135,24 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["id", "guild_id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-auto-moderation-rule"), {
+      guildId: "456",
+      autoModerationRuleId: "rule-123",
+      auditLogReason: "remove obsolete rule",
+    }), {
+      method: "DELETE",
+      endpoint: "guilds/456/auto-moderation/rules/rule-123",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "remove obsolete rule",
+      },
+      body: {},
+      responseSchema: {
+        type: "null",
       },
     });
 

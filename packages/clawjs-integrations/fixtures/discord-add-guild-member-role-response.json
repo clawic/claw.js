@@ -1,8 +1,7 @@
 {
-  "id": "add-guild-member-role-sample",
-  "name": "sample",
-  "user": {
-    "id": "sample",
-    "username": "sample"
+  "runtimeResponse": {
+    "status": 204,
+    "body": "",
+    "bodyEncoding": "text"
   }
 }
