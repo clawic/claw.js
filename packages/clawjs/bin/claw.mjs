@@ -76,4 +76,4 @@ const exitCode = await runCli(args, {
   binName: publicBinName,
 });
 
-process.exit(exitCode);
+process.exitCode = exitCode;
