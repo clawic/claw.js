@@ -56,6 +56,11 @@ const DISCORD_SOURCE_OPERATIONS = [
   source("discord.source.stage-instance-delete", "Stage Instance Delete"),
   source("discord.source.interaction-create", "Interaction Create"),
   source("discord.source.thread-create", "Thread Create"),
+  source("discord.source.thread-update", "Thread Update"),
+  source("discord.source.thread-delete", "Thread Delete"),
+  source("discord.source.thread-list-sync", "Thread List Sync"),
+  source("discord.source.thread-member-update", "Thread Member Update"),
+  source("discord.source.thread-members-update", "Thread Members Update"),
   source("discord.source.reaction-add", "Reaction Add"),
 ];
 

@@ -669,6 +669,11 @@ const DISCORD_SOURCE_FIXTURE_NAMES = [
   "stage-instance-delete",
   "interaction-create",
   "thread-create",
+  "thread-update",
+  "thread-delete",
+  "thread-list-sync",
+  "thread-member-update",
+  "thread-members-update",
   "reaction-add",
 ] as const;
 

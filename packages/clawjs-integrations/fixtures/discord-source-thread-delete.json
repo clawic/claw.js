@@ -1,0 +1,6 @@
+{
+  "id": "thread-sample",
+  "type": 11,
+  "guild_id": "guild-sample",
+  "parent_id": "channel-sample"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "thread-list-sync-sample",
+  "guild_id": "guild-sample",
+  "channel_ids": [
+    "channel-sample"
+  ],
+  "threads": [
+    {
+      "id": "thread-sample",
+      "type": 11,
+      "guild_id": "guild-sample",
+      "parent_id": "channel-sample",
+      "name": "sample"
+    }
+  ],
+  "members": [
+    {
+      "id": "thread-sample",
+      "user_id": "user-sample",
+      "join_timestamp": "2026-01-01T00:00:00.000000+00:00",
+      "flags": 0
+    }
+  ]
+}

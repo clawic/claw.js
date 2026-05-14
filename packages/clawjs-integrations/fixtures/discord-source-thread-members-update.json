@@ -1,0 +1,16 @@
+{
+  "id": "thread-sample",
+  "guild_id": "guild-sample",
+  "member_count": 2,
+  "added_members": [
+    {
+      "id": "thread-sample",
+      "user_id": "user-sample",
+      "join_timestamp": "2026-01-01T00:00:00.000000+00:00",
+      "flags": 0
+    }
+  ],
+  "removed_member_ids": [
+    "removed-user-sample"
+  ]
+}

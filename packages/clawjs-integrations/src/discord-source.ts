@@ -48,6 +48,11 @@ export type DiscordSourceOperation =
   | "stage-instance-delete"
   | "interaction-create"
   | "thread-create"
+  | "thread-update"
+  | "thread-delete"
+  | "thread-list-sync"
+  | "thread-member-update"
+  | "thread-members-update"
   | "reaction-add";
 
 const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
@@ -93,6 +98,11 @@ const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "stage-instance-delete",
   "interaction-create",
   "thread-create",
+  "thread-update",
+  "thread-delete",
+  "thread-list-sync",
+  "thread-member-update",
+  "thread-members-update",
   "reaction-add",
 ]);
 
