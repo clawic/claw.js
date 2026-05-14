@@ -13,6 +13,7 @@ import {
   assertRecord,
   isArchived,
   toId,
+  removeUndefined,
 } from "./workspace-utils.ts";
 import { temporalToDeadlineRecord, temporalToEventRecord, temporalToReminderRecord, productivityStatusToTemporalStatus } from "./workspace-temporal.ts";
 import {

@@ -41,6 +41,7 @@ import type {
   ProductivityTimelineTaskItem,
   WorkspaceClawInstance,
 } from "./workspace-contracts.ts";
+import { removeUndefined } from "./workspace-utils.ts";
 
 export function createWorkspaceProductivityFacades(locals: Record<string, any>): {
   agendaApi: WorkspaceClawInstance["agenda"];
