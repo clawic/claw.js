@@ -45,7 +45,12 @@ for (const packageDir of fs.readdirSync(path.join(rootDir, "packages"))) {
   }
 }
 
+const builtWorkspaces = [];
+
 for (const workspace of workspaces) {
+  for (const builtWorkspace of builtWorkspaces) {
+    waitForWorkspaceTypes(builtWorkspace);
+  }
   const args = ["run", "build", "--workspace", workspace];
   if (usesTsup(workspace) && !hasBuildTsconfig(workspace)) {
     args.push("--", "--tsconfig", writePackageTsconfig(workspace));
@@ -55,21 +60,23 @@ for (const workspace of workspaces) {
     process.exit(result.status ?? 1);
   }
   waitForWorkspaceTypes(workspace);
+  builtWorkspaces.push(workspace);
 }
 
 function runWorkspaceBuild(args, workspace) {
-  let result = spawnSync("npm", args, {
-    cwd: rootDir,
-    stdio: "inherit",
-  });
-  if (result.status === 0) return result;
+  let result;
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    result = spawnSync("npm", args, {
+      cwd: rootDir,
+      stdio: "inherit",
+    });
+    if (result.status === 0) return result;
 
-  console.error(`Workspace ${workspace} build failed; retrying once after dependency type outputs settle.`);
-  sleep(1000);
-  result = spawnSync("npm", args, {
-    cwd: rootDir,
-    stdio: "inherit",
-  });
+    if (attempt < 4) {
+      console.error(`Workspace ${workspace} build failed; retrying after dependency type outputs settle (${attempt}/3).`);
+      sleep(1000 * attempt);
+    }
+  }
   return result;
 }
 
