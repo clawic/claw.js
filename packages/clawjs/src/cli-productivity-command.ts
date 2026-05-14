@@ -94,7 +94,7 @@ export async function runCoreProductivityDbCli(input: {
   }
 
   if (action === "query") {
-    const query = (flags.query || joinedPositionals(positionals, 3)).trim().toLowerCase();
+    const query = (flags.query || joinedPositionals(positionals, 3) || "").trim().toLowerCase();
     if (!query) throw new CliHandledError("usage_error", "Usage: claw db <collection> query <text>", CLI_EXIT_USAGE);
     const allItems = await api.list({
       ...(flags.limit ? { limit: Number(flags.limit) } : {}),
