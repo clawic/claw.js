@@ -58260,10 +58260,12 @@
     {
       "path": "packages/clawjs-core/src/cli-command-registry.ts",
       "language": "typescript",
-      "lines": 328,
+      "lines": 339,
       "test": false,
       "entrypoint": false,
-      "imports": [],
+      "imports": [
+        "./builtins/index.ts"
+      ],
       "exports": [
         "ClawCliCommandRegistry",
         "ClawCliCommandRegistryEntry",
@@ -95060,7 +95062,7 @@
     {
       "path": "packages/clawjs/src/cli-discovery.test.ts",
       "language": "typescript",
-      "lines": 318,
+      "lines": 335,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -98131,7 +98133,7 @@
     {
       "path": "packages/clawjs/src/index.ts",
       "language": "typescript",
-      "lines": 1991,
+      "lines": 1994,
       "test": false,
       "entrypoint": true,
       "imports": [
@@ -98311,7 +98313,7 @@
     {
       "path": "packages/clawjs/src/inspect-cli.test.ts",
       "language": "typescript",
-      "lines": 332,
+      "lines": 334,
       "test": true,
       "entrypoint": false,
       "imports": [

@@ -8,7 +8,7 @@ import { buildCodexCommand, buildSetDefaultModelCommand, createClaw, createLocal
 import type { ClawInstance, TelegramSendMediaInput, TelegramSendMessageInput, VoiceNoteStatus } from "@clawjs/claw";
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
-import { resolveClawPersistentSurfacePath, semanticPlanSchema } from "@clawjs/core";
+import { resolveBuiltinCollectionName, resolveClawPersistentSurfacePath, semanticPlanSchema } from "@clawjs/core";
 import type { ClawDomain, CommitmentKind, CommitmentStatus, ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, SemanticPlan, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserPackId, UserRecordType } from "@clawjs/core";
 import { runMagicDbCli } from "./database-magic.ts";
 import { runMemoryCli } from "./memory-local.ts";
@@ -1969,6 +1969,9 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group && HOST_FORWARD_DOMAINS.has(group as ClawDomain)) {
     return await runDirectHostDomainCli({ positionals, flags, context, wantsJson });
   }
+
+  const collectionAlias = group ? resolveBuiltinCollectionName(group) : undefined;
+  if (collectionAlias) return await runCliUnsafe(["db", collectionAlias, ...(command ? argv.slice(1) : ["list", ...argv.slice(1)])], context);
 
   return handleUnknownCliCommand({ group, context, wantsJson, usage });
 }

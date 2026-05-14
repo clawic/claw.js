@@ -1,3 +1,5 @@
+import { BUILTIN_COLLECTIONS_BY_ALIAS } from "./builtins/index.ts";
+
 export const clawCliCommandRegistryVersion = 1;
 
 export type ClawCliSurfaceKind = "canonical" | "portal" | "alias";
@@ -240,23 +242,28 @@ export function isStableClawCliCommand(name: string | undefined): boolean {
   return !!entry && entry.kind !== "alias";
 }
 
-export function listClawCliAliases(): Array<{ alias: string; canonicalName: string; kind: ClawCliSurfaceKind; source: "command" | "collection" }> {
-  const aliases: Array<{ alias: string; canonicalName: string; kind: ClawCliSurfaceKind; source: "command" | "collection" }> = [];
+export function listClawCliAliases(): Array<{ alias: string; canonicalName: string; kind: ClawCliSurfaceKind; source: "command" | "collection"; shadowedByCommand?: string }> {
+  const aliases: Array<{ alias: string; canonicalName: string; kind: ClawCliSurfaceKind; source: "command" | "collection"; shadowedByCommand?: string }> = [];
   for (const entry of clawCliCommandRegistry.commands) {
     if (entry.kind === "alias" && entry.target) aliases.push({ alias: entry.name, canonicalName: entry.target, kind: entry.kind, source: "command" });
     for (const alias of entry.aliases ?? []) aliases.push({ alias, canonicalName: entry.name, kind: "alias", source: "command" });
+  }
+  for (const [alias, canonicalName] of BUILTIN_COLLECTIONS_BY_ALIAS) {
+    aliases.push({ alias, canonicalName, kind: "alias", source: "collection", ...(clawCliCommandsByName.has(alias) ? { shadowedByCommand: alias } : {}) });
   }
   return aliases.sort((a, b) => a.alias.localeCompare(b.alias));
 }
 
 export interface ClawCliSearchResult {
-  type: "command" | "alias" | "doc" | "adr" | "test" | "source";
+  type: "command" | "alias" | "collection" | "doc" | "adr" | "test" | "source";
   name: string;
   canonicalName?: string;
   score: number;
   summary: string;
   command?: ClawCliCommandRegistryEntry;
   path?: string;
+  source?: "command" | "collection";
+  shadowedByCommand?: string;
 }
 
 function scoreText(query: string, text: string): number {
@@ -320,6 +327,10 @@ export function searchClawCliRegistry(query: string, options: { limit?: number }
     }
     const sourceScore = scoreText(query, entry.source.file);
     if (sourceScore > 0) results.push({ type: "source", name: entry.source.file, canonicalName: entry.name, score: sourceScore, summary: `Implementation source for ${entry.name}.`, command: entry, path: entry.source.file });
+  }
+  for (const alias of listClawCliAliases().filter((record) => record.source === "collection")) {
+    const score = Math.max(scoreText(query, alias.alias), scoreText(query, alias.canonicalName));
+    if (score > 0) results.push({ type: "alias", name: alias.alias, canonicalName: alias.canonicalName, score: score + 4, summary: `Collection alias for ${alias.canonicalName}.`, source: "collection", shadowedByCommand: alias.shadowedByCommand });
   }
   return results
     .sort((a, b) => b.score - a.score || a.type.localeCompare(b.type) || a.name.localeCompare(b.name))

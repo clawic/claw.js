@@ -23,6 +23,11 @@ test("runCli searches the registered CLI discovery surface", async () => {
   assert.equal(payload.ok, true);
   assert.equal(payload.meta.canonicalCommand, "search");
   assert.equal(payload.data.results.some((entry) => entry.canonicalName === "host"), true);
+
+  const collection = await runCliCapture(["search", "lead", "--json"], process.cwd());
+  assert.equal(collection.code, CLI_EXIT_OK);
+  const collectionPayload = JSON.parse(collection.stdout) as { data: { results: Array<{ canonicalName?: string; source?: string }> } };
+  assert.equal(collectionPayload.data.results.some((entry) => entry.canonicalName === "leads" && entry.source === "collection"), true);
 });
 
 test("runCli returns open list JSON in the common envelope", async () => {
@@ -190,6 +195,18 @@ test("runCli returns productivity database JSON in the common envelope", { concu
   assert.equal(queryPayload.meta.collection, "tasks");
   assert.equal(queryPayload.meta.subcommand, "query");
   assert.equal(queryPayload.data.some((item) => item.title === "Canonical query task"), true);
+});
+
+test("runCli routes unique built-in collection aliases through database CRUD", { concurrency: false }, async (t) => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-collection-alias-json-"));
+  useIsolatedMainData(t, workspaceRoot);
+  const result = await runCliCapture(["lead", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; meta: { canonicalCommand: string; collection: string; subcommand: string } };
+  assert.equal(payload.ok, true);
+  assert.equal(payload.meta.canonicalCommand, "database");
+  assert.equal(payload.meta.collection, "leads");
+  assert.equal(payload.meta.subcommand, "leads list");
 });
 
 test("runCli returns advanced productivity JSON in the common envelope", { concurrency: false }, async (t) => {
