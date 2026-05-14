@@ -76,7 +76,7 @@ import { buildImageCommonInput, buildMediaListInput, buildMediaMetadata } from "
 import { OPEN_SURFACES, allOpenSurfaceHostnames, buildOpenUsage, openSurfaceRows, parseClawHostSurface, resolveOpenSurface, surfacePrimaryClawUrl, type OpenSurface, type OpenSurfaceState } from "./cli-open-surfaces.ts";
 import { openBrowser, openStateDir, openStatePath, readOpenState, repoRootFromCliPackage, writeOpenState } from "./cli-open-state.ts";
 import { portIsOpen, processIsAlive, waitForUrl, writeProgress } from "./cli-process-utils.ts";
-import { CLAW_DOMAINS_BEGIN, CLAW_DOMAINS_END, CLAW_DOMAINS_LABEL, buildDomainsPlist, buildDomainsProxyScript, domainHostsBlock, domainsHostsFile, domainsPlistPath, domainsProxyConfigPath, domainsProxyScriptPath, domainsServiceDir, replaceDomainHostsBlock } from "./cli-domains-config.ts";
+import { CLAW_DOMAINS_BEGIN, CLAW_DOMAINS_END, CLAW_DOMAINS_LABEL, buildDomainsPlist, buildDomainsProxyScript, domainHostsBlock, domainsHostsFile, domainsPlistPath, domainsProxyConfigPath, domainsProxyScriptPath, domainsServiceDir, parseSurfacePortOverrides, replaceDomainHostsBlock, surfaceTargetPort } from "./cli-domains-config.ts";
 import { runPrivilegedScript } from "./cli-domains-privileges.ts";
 import { parseRuleHints, parseRuleReferences } from "./cli-rule-utils.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
@@ -203,24 +203,6 @@ async function readDomainsStatus(flags: Record<string, string>): Promise<ClawDom
     plistFile: plan.plistFile,
     proxyUrl: plan.proxyUrl,
   };
-}
-
-function parseSurfacePortOverrides(value: string | undefined): Record<string, number> {
-  const ports: Record<string, number> = {};
-  for (const entry of parseCsvFlag(value)) {
-    const [name, rawPort] = entry.split("=");
-    const surface = resolveOpenSurface(name);
-    const port = Number(rawPort);
-    if (!surface || !Number.isInteger(port) || port <= 0 || port > 65_535) {
-      throw new CliHandledError("usage_error", `Invalid --surface-port entry "${entry}". Use surface=port.`, CLI_EXIT_USAGE);
-    }
-    ports[surface.id] = port;
-  }
-  return ports;
-}
-
-function surfaceTargetPort(surface: OpenSurface, flags: Record<string, string>): number {
-  return parseSurfacePortOverrides(flags["surface-port"])[surface.id] ?? surface.port;
 }
 
 async function proxyHttpResponse(input: {

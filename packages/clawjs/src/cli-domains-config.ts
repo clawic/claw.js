@@ -1,6 +1,8 @@
 import path from "path";
 
-import { allOpenSurfaceHostnames } from "./cli-open-surfaces.ts";
+import { CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
+import { parseCsvFlag } from "./cli-flag-parsers.ts";
+import { allOpenSurfaceHostnames, resolveOpenSurface, type OpenSurface } from "./cli-open-surfaces.ts";
 
 export const CLAW_DOMAINS_BEGIN = "# BEGIN CLAWJS DOMAINS";
 export const CLAW_DOMAINS_END = "# END CLAWJS DOMAINS";
@@ -210,4 +212,22 @@ const server = http.createServer((request, response) => {
 
 server.listen(config.port, config.host);
 `;
+}
+
+export function parseSurfacePortOverrides(value: string | undefined): Record<string, number> {
+  const ports: Record<string, number> = {};
+  for (const entry of parseCsvFlag(value)) {
+    const [name, rawPort] = entry.split("=");
+    const surface = resolveOpenSurface(name);
+    const port = Number(rawPort);
+    if (!surface || !Number.isInteger(port) || port <= 0 || port > 65_535) {
+      throw new CliHandledError("usage_error", `Invalid --surface-port entry "${entry}". Use surface=port.`, CLI_EXIT_USAGE);
+    }
+    ports[surface.id] = port;
+  }
+  return ports;
+}
+
+export function surfaceTargetPort(surface: OpenSurface, flags: Record<string, string>): number {
+  return parseSurfacePortOverrides(flags["surface-port"])[surface.id] ?? surface.port;
 }
