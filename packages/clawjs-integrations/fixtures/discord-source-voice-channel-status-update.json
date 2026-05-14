@@ -1,0 +1,6 @@
+{
+  "id": "voice-channel-status-update-sample",
+  "guild_id": "guild-sample",
+  "channel_id": "channel-sample",
+  "status": "sample"
+}

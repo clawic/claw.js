@@ -21,7 +21,10 @@ export type DiscordSourceOperation =
   | "channel-create"
   | "channel-update"
   | "channel-delete"
+  | "channel-info"
   | "channel-pins-update"
+  | "voice-channel-status-update"
+  | "voice-channel-start-time-update"
   | "message-create"
   | "message-update"
   | "message-delete"
@@ -106,7 +109,10 @@ const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "channel-create",
   "channel-update",
   "channel-delete",
+  "channel-info",
   "channel-pins-update",
+  "voice-channel-status-update",
+  "voice-channel-start-time-update",
   "message-create",
   "message-update",
   "message-delete",

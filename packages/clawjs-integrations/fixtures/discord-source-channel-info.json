@@ -1,0 +1,7 @@
+{
+  "id": "channel-info-sample",
+  "guild_id": "guild-sample",
+  "channel_id": "channel-sample",
+  "status": "sample",
+  "voice_start_time": "2026-01-01T00:00:00.000000+00:00"
+}
