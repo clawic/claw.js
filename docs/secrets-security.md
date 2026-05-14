@@ -249,6 +249,9 @@ The current ClawJS baseline implements the required safe public path:
   and fresh reauthentication;
 - describe/list metadata omit `publicValue` by default; only signed-host
   requests may opt in to public values for human UI rendering;
+- Clawix keeps Secrets admin and signed-host tokens in memory only, removes
+  stale Secrets `.admin-token` files before launch, and does not adopt an
+  existing Secrets sidecar through a disk bearer token;
 - broker HTTP calls require capability, risk tier, agent identity, declared
   fields, host, placement, approval/VPN context, and strict governance;
 - connector runners reject `secretRefs` execution outside brokered flows;
@@ -266,9 +269,9 @@ The following patterns remain transitional and must not be expanded:
 - compatibility sidecar process/browser flows require final physical
   signed-host validation before they count as hostile-local-process proof;
 - signed-host authorization currently uses a configured host token in ClawJS
-  tests and local server flows; native Claw.app/Clawix identity, XPC/signature,
-  Keychain/Secure Enclave, and biometric validation remain host integration
-  obligations;
+  tests and an in-memory host token in Clawix local server flows; native
+  Claw.app/Clawix identity, XPC/signature, Keychain/Secure Enclave, and
+  biometric validation remain host integration obligations;
 - dev-only seeded credentials or local defaults must never be mistaken for
   production authentication.
 
@@ -306,7 +309,7 @@ agents can verify changes without re-deriving the policy.
 
 | Decision | Requirement | Current status |
 | --- | --- | --- |
-| `local_threat_model` | Same-user local processes are hostile. | Implemented in policy; physical host/IPC validation remains `EXTERNAL PENDING`. |
+| `local_threat_model` | Same-user local processes are hostile. | Implemented in policy and Clawix no longer persists/adopts Secrets disk tokens; physical host/IPC validation remains `EXTERNAL PENDING`. |
 | `audit_output` | Produce and implement hardening, not only a report. | Implemented through broker, CLI, audit, lifecycle, and docs hardening. |
 | `audit_scope` | Cover Clawix, ClawJS, remote hosts, vault, broker, connectors, daemon, and third parties. | Partially implemented; ClawJS paths are covered, native host/remotes need physical validation. |
 | `secret_material_policy` | Human UI may reveal; agents/processes/plugins/connectors do not view plaintext. | Implemented for public CLI, broker, SDK tests, and connector runners; legacy plugin interfaces are compatibility-only. |
@@ -321,7 +324,7 @@ agents can verify changes without re-deriving the policy.
 | `host_allowlist_policy` | Exact hosts by default; limited safe wildcards only. | Implemented in strict governance and tests. |
 | `risk_approval_policy` | Mandatory `read`, `write`, `destructive`, `cost`, `system` risk tiers. | Broker request requires `riskTier`; non-read tiers require approval. |
 | `rotation_policy` | Rotation/compromise revokes grants and leases and blocks new use. | Implemented for archive/compromise and governance blocks. |
-| `canonical_storage` | Canonical vault belongs to framework global `~/.claw`; hosts keep only host state. | Policy documented; final host storage audit remains part of Clawix validation. |
+| `canonical_storage` | Canonical vault belongs to framework global `~/.claw`; hosts keep only host state. | Implemented for Clawix Secrets service data; connection credentials migrate into the encrypted Secrets vault. |
 | `audit_visibility` | Minimal audit; no fields, bodies, headers, public values, arbitrary payloads. | Implemented for current ClawJS audit events and smoke tests. |
 | `migration_priority` | V1 may break unsafe legacy compatibility. | Applied by disabling generic action execution and direct public CLI flows. |
 | `export_backup_policy` | Encrypted backup/export only with separate passphrase and strong reauth. | Encrypted backup is implemented and tested; native reauth proof is host-owned. |
