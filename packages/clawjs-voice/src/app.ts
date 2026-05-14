@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
@@ -56,7 +57,7 @@ export function buildVoiceApp(options: BuildVoiceAppOptions = {}) {
 
   app.addHook("onClose", async () => { store.close(); });
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     service: "voice",
     host: config.host,
@@ -65,7 +66,7 @@ export function buildVoiceApp(options: BuildVoiceAppOptions = {}) {
     stt: Object.values(sttProviders).map((provider) => ({ id: provider.id, available: provider.available })),
   }));
 
-  app.get("/v1/voice/providers", async (request, reply) => {
+  app.get(clawApiPath("voice/providers"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     return {
       tts: Object.values(ttsProviders).map((provider) => ({ id: provider.id, available: provider.available, description: provider.description })),
@@ -73,7 +74,7 @@ export function buildVoiceApp(options: BuildVoiceAppOptions = {}) {
     };
   });
 
-  app.post("/v1/voice/say", async (request, reply) => {
+  app.post(clawApiPath("voice/say"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const body = readBody(request);
     const providerId = asString(body.provider) ?? config.defaultTtsProvider;
@@ -97,7 +98,7 @@ export function buildVoiceApp(options: BuildVoiceAppOptions = {}) {
     return result;
   });
 
-  app.post("/v1/voice/transcribe", async (request, reply) => {
+  app.post(clawApiPath("voice/transcribe"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const body = readBody(request);
     const providerId = asString(body.provider) ?? config.defaultSttProvider;
@@ -117,7 +118,7 @@ export function buildVoiceApp(options: BuildVoiceAppOptions = {}) {
     return result;
   });
 
-  app.get("/v1/voice/runs", async (request, reply) => {
+  app.get(clawApiPath("voice/runs"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     const filter: ListVoiceRunsFilter = {

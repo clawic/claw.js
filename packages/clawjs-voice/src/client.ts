@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import type { STTRequest, STTResult, TTSRequest, TTSResult } from "./types.ts";
 
 export interface VoiceApiClientOptions { baseUrl: string; token: string; fetchImpl?: typeof fetch; }
@@ -30,11 +31,11 @@ export class VoiceApiClient {
     return (await response.json()) as T;
   }
 
-  health(): Promise<unknown> { return this.call("GET", "/v1/health"); }
-  providers(): Promise<{ tts: Array<{ id: string; available: boolean; description: string }>; stt: Array<{ id: string; available: boolean; description: string }> }> { return this.call("GET", "/v1/voice/providers"); }
-  say(request: TTSRequest): Promise<TTSResult> { return this.call("POST", "/v1/voice/say", request); }
-  transcribe(request: STTRequest): Promise<STTResult> { return this.call("POST", "/v1/voice/transcribe", request); }
+  health(): Promise<unknown> { return this.call("GET", clawApiPath("health")); }
+  providers(): Promise<{ tts: Array<{ id: string; available: boolean; description: string }>; stt: Array<{ id: string; available: boolean; description: string }> }> { return this.call("GET", clawApiPath("voice/providers")); }
+  say(request: TTSRequest): Promise<TTSResult> { return this.call("POST", clawApiPath("voice/say"), request); }
+  transcribe(request: STTRequest): Promise<STTResult> { return this.call("POST", clawApiPath("voice/transcribe"), request); }
   runs(filter: { kind?: "tts" | "stt"; provider?: string; limit?: number; offset?: number } = {}): Promise<{ items: Array<TTSResult | STTResult> }> {
-    return this.call("GET", `/v1/voice/runs${buildQuery(filter)}`);
+    return this.call("GET", clawApiPath(`voice/runs${buildQuery(filter)}`));
   }
 }
