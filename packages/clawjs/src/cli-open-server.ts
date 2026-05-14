@@ -3,7 +3,7 @@ import http from "http";
 import path from "path";
 
 import { createLocalStorageStore, createStorageHttpHandler } from "@clawjs/claw";
-import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { clawStorageApiRoutes, resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { buildDatabaseApp } from "@clawjs/database";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
@@ -64,7 +64,7 @@ export async function runOpenServerCommand(input: { positionals: string[]; flags
     const uiRoot = path.join(repoRootFromCliPackage(), "storage", "ui", "dist");
     const server = http.createServer(async (request, response) => {
       const requestUrl = new URL(request.url ?? "/", `http://${request.headers.host ?? host}`);
-      if (requestUrl.pathname.startsWith("/v1/storage/") || requestUrl.pathname.startsWith("/shared/storage/")) {
+      if (requestUrl.pathname.startsWith(clawStorageApiRoutes.apiPrefix) || requestUrl.pathname.startsWith(clawStorageApiRoutes.sharedPrefix)) {
         await storageHandler(request, response);
         return;
       }

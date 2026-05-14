@@ -2,6 +2,8 @@ import fs from "fs";
 import http, { type IncomingMessage, type ServerResponse } from "http";
 import path from "path";
 
+import { clawStorageApiRoutes } from "@clawjs/core";
+
 import type { LocalStorageStore, StorageShare } from "./store.ts";
 
 export interface StorageOwnerTokenOptions {
@@ -50,7 +52,7 @@ function sendError(response: ServerResponse, status: number, message: string): v
 }
 
 function objectRoute(url: URL): { bucket: string; key: string } | null {
-  const prefix = "/v1/storage/objects/";
+  const prefix = clawStorageApiRoutes.objectPrefix;
   if (!url.pathname.startsWith(prefix)) return null;
   const rest = url.pathname.slice(prefix.length);
   const slash = rest.indexOf("/");
@@ -97,7 +99,7 @@ export function createStorageHttpHandler(
   return async (request, response) => {
     const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "127.0.0.1"}`);
     try {
-      if (request.method === "GET" && url.pathname === "/v1/storage/owner-token") {
+      if (request.method === "GET" && url.pathname === clawStorageApiRoutes.ownerToken) {
         if (!options.ownerToken) return sendError(response, 404, "owner_token_disabled");
         if (!isLoopbackRequest(request)) return sendError(response, 403, "loopback_only");
         let token: string;
@@ -112,7 +114,7 @@ export function createStorageHttpHandler(
         return sendJson(response, 200, { token });
       }
 
-      if (request.method === "GET" && url.pathname === "/v1/storage/buckets") {
+      if (request.method === "GET" && url.pathname === clawStorageApiRoutes.buckets) {
         const token = bearerToken(request);
         if (!token) return sendError(response, 401, "missing_token");
         const scoped = options.store.scopedTokenStore(token);
@@ -124,7 +126,7 @@ export function createStorageHttpHandler(
         }
       }
 
-      if (request.method === "GET" && url.pathname === "/v1/storage/objects") {
+      if (request.method === "GET" && url.pathname === clawStorageApiRoutes.objects) {
         const token = bearerToken(request);
         if (!token) return sendError(response, 401, "missing_token");
         const scoped = options.store.scopedTokenStore(token);
@@ -184,7 +186,7 @@ export function createStorageHttpHandler(
         }
       }
 
-      if (request.method === "POST" && url.pathname === "/v1/storage/shares") {
+      if (request.method === "POST" && url.pathname === clawStorageApiRoutes.shares) {
         const token = bearerToken(request);
         if (!token) return sendError(response, 401, "missing_token");
         const scoped = options.store.scopedTokenStore(token);
