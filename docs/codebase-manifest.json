@@ -97777,7 +97777,7 @@
     {
       "path": "packages/clawjs/src/index-memory-runtime.test.ts",
       "language": "typescript",
-      "lines": 903,
+      "lines": 936,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -98387,12 +98387,13 @@
     {
       "path": "packages/clawjs/src/memory-local.ts",
       "language": "typescript",
-      "lines": 790,
+      "lines": 795,
       "test": false,
       "entrypoint": false,
       "imports": [
+        "./cli-errors.ts",
+        "./cli-json.ts",
         "./v1-data.ts",
-        "@clawjs/claw",
         "@clawjs/database",
         "better-sqlite3"
       ],
@@ -98518,6 +98519,11 @@
         {
           "kind": "function",
           "name": "listMemory",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "memoryJsonMeta",
           "exported": false
         },
         {
@@ -98678,11 +98684,6 @@
         {
           "kind": "function",
           "name": "writeError",
-          "exported": false
-        },
-        {
-          "kind": "function",
-          "name": "writeJson",
           "exported": false
         },
         {

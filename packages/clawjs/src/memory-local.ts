@@ -4,8 +4,9 @@ import {
   type IndexDefinition,
   type RecordEnvelope,
 } from "@clawjs/database";
-import { redactSecrets } from "@clawjs/claw";
 import { openMainDataStore } from "./v1-data.ts";
+import { CliHandledError } from "./cli-errors.ts";
+import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import type Database from "better-sqlite3";
 
 export const MEMORY_EXIT_OK = 0;
@@ -75,6 +76,7 @@ interface MemorySearchResult extends MemoryRecord {
 }
 
 const MEMORY_COLLECTION = "memory";
+const MEMORY_CANONICAL_COMMAND = "knowledge";
 const LOW_CONFIDENCE_THRESHOLD = 0.25;
 
 const MEMORY_FIELDS: FieldDefinition[] = [
@@ -138,10 +140,10 @@ export async function runMemoryCli(input: MemoryCliInput): Promise<number> {
   try {
     switch (command) {
       case "capabilities":
-        writeSuccess(input.stdout, input.wantsJson, buildCapabilities(input));
+        writeSuccess(input, buildCapabilities(input));
         return MEMORY_EXIT_OK;
       case "status":
-        writeSuccess(input.stdout, input.wantsJson, buildStatus(input));
+        writeSuccess(input, buildStatus(input));
         return MEMORY_EXIT_OK;
       case "save":
         return saveMemory(input);
@@ -274,7 +276,7 @@ function saveMemory(input: MemoryCliInput): number {
   const store = ensureMemoryStore(input);
   const record = store.createRecord(namespaceId(input), MEMORY_COLLECTION, memory);
   mirrorMemoryToKnowledge(store.sqlite, record.id, toMemoryRecord(record));
-  writeSuccess(input.stdout, input.wantsJson, toMemoryRecord(record));
+  writeSuccess(input, toMemoryRecord(record));
   return MEMORY_EXIT_OK;
 }
 
@@ -285,7 +287,7 @@ async function listMemory(input: MemoryCliInput): Promise<number> {
     ? []
     : (await input.runtime.list()).map(runtimeToMemoryRecord);
   const results = filterMemories(input, [...local, ...runtime]);
-  writeResults(input.stdout, input.wantsJson, results);
+  writeResults(input, results);
   return MEMORY_EXIT_OK;
 }
 
@@ -298,7 +300,7 @@ function getMemory(input: MemoryCliInput): number {
     writeError(input, "not_found", `Memory not found: ${id}`, MEMORY_EXIT_FAILURE);
     return MEMORY_EXIT_FAILURE;
   }
-  writeSuccess(input.stdout, input.wantsJson, toMemoryRecord(record));
+  writeSuccess(input, toMemoryRecord(record));
   return MEMORY_EXIT_OK;
 }
 
@@ -333,7 +335,7 @@ function updateMemory(input: MemoryCliInput): number {
   });
   const updated = store.updateRecord(namespaceId(input), MEMORY_COLLECTION, id, patch);
   mirrorMemoryToKnowledge(store.sqlite, updated.id, toMemoryRecord(updated));
-  writeSuccess(input.stdout, input.wantsJson, toMemoryRecord(updated));
+  writeSuccess(input, toMemoryRecord(updated));
   return MEMORY_EXIT_OK;
 }
 
@@ -347,7 +349,7 @@ function deleteMemory(input: MemoryCliInput): number {
     return MEMORY_EXIT_FAILURE;
   }
   deleteKnowledgeMirror(store.sqlite, id);
-  writeSuccess(input.stdout, input.wantsJson, { deleted: true, id });
+  writeSuccess(input, { deleted: true, id });
   return MEMORY_EXIT_OK;
 }
 
@@ -428,7 +430,7 @@ async function searchMemory(input: MemoryCliInput): Promise<number> {
     .sort((left, right) => right.score - left.score || right.updatedAt.localeCompare(left.updatedAt))
     .slice(0, limit);
 
-  writeResults(input.stdout, input.wantsJson, deduped, { query, strategy: effectiveStrategy(strategy) });
+  writeResults(input, deduped, { query, strategy: effectiveStrategy(strategy) });
   return MEMORY_EXIT_OK;
 }
 
@@ -450,7 +452,7 @@ async function contextMemory(input: MemoryCliInput): Promise<number> {
   const summary = memories.length === 0
     ? `No local memories matched "${query}".`
     : memories.map((memory) => `- ${memory.title}: ${memory.snippet}`).join("\n");
-  writeSuccess(input.stdout, input.wantsJson, {
+  writeSuccess(input, {
     query,
     strategy: effectiveStrategy(strategy),
     summary,
@@ -740,29 +742,36 @@ function arrayOfStrings(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
 }
 
-function writeSuccess(stdout: Writable, wantsJson: boolean, data: unknown): void {
-  if (wantsJson) {
-    writeJson(stdout, { ok: true, data });
-    return;
-  }
-  stdout.write(`${renderHuman(data)}\n`);
+function memoryJsonMeta(input: MemoryCliInput): Record<string, unknown> {
+  return {
+    subcommand: input.positionals[1] ?? "unknown",
+    invokedCommand: "memory",
+  };
 }
 
-function writeResults(stdout: Writable, wantsJson: boolean, results: unknown[], extra: Record<string, unknown> = {}): void {
-  if (wantsJson) {
-    writeJson(stdout, { ok: true, ...extra, results, count: results.length });
+function writeSuccess(input: MemoryCliInput, data: unknown): void {
+  if (input.wantsJson) {
+    writeCommandJsonOk(input.stdout, MEMORY_CANONICAL_COMMAND, data, memoryJsonMeta(input));
+    return;
+  }
+  input.stdout.write(`${renderHuman(data)}\n`);
+}
+
+function writeResults(input: MemoryCliInput, results: unknown[], extra: Record<string, unknown> = {}): void {
+  if (input.wantsJson) {
+    writeCommandJsonOk(input.stdout, MEMORY_CANONICAL_COMMAND, { ...extra, results, count: results.length }, memoryJsonMeta(input));
     return;
   }
   if (results.length === 0) {
-    stdout.write("No memories found\n");
+    input.stdout.write("No memories found\n");
     return;
   }
-  stdout.write(`${results.map((entry) => renderHuman(entry)).join("\n")}\n`);
+  input.stdout.write(`${results.map((entry) => renderHuman(entry)).join("\n")}\n`);
 }
 
-function writeError(input: MemoryCliInput, code: string, message: string, _exitCode: number): void {
+function writeError(input: MemoryCliInput, code: string, message: string, exitCode: number): void {
   if (input.wantsJson) {
-    writeJson(input.stdout, { ok: false, error: { code, message } });
+    writeCommandJsonError(input.stdout, MEMORY_CANONICAL_COMMAND, new CliHandledError(code, message, exitCode), memoryJsonMeta(input));
   } else {
     input.stderr.write(`${message}\n`);
   }
@@ -771,10 +780,6 @@ function writeError(input: MemoryCliInput, code: string, message: string, _exitC
 function usageError(input: MemoryCliInput, message: string): number {
   writeError(input, "usage_error", message, MEMORY_EXIT_USAGE);
   return MEMORY_EXIT_USAGE;
-}
-
-function writeJson(stream: Writable, payload: unknown): void {
-  stream.write(`${JSON.stringify(redactSecrets(payload), null, 2)}\n`);
 }
 
 function renderHuman(value: unknown): string {
