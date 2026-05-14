@@ -1233,7 +1233,7 @@ describe("discord operation runtime", () => {
       },
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
