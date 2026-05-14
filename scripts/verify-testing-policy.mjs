@@ -5,11 +5,14 @@ import path from "node:path";
 const root = process.cwd();
 const requiredFiles = [
   "docs/adr/0002-testing-architecture.md",
+  "docs/adr/0006-integration-qa-lab.md",
+  "docs/integration-qa-lab.md",
   "docs/testing.md",
   "docs/testing-matrix.md",
   "qa/coverage-budgets.json",
   "qa/quarantine.json",
   "qa/scenarios/external-pending.md",
+  "qa/scenarios/telegram-integration-qa-lab.md",
   "qa/scenarios/testing-release-gate.md",
   "scripts/test-lane.mjs",
   "vitest.config.ts",
@@ -95,6 +98,7 @@ if (!Array.isArray(coverageBudgets.budgets)) {
     "host-and-permissions",
     "device-clients",
     "live-integrations",
+    "connector-official-api-coverage",
   ];
   const seen = new Set();
   for (const budget of coverageBudgets.budgets) {
