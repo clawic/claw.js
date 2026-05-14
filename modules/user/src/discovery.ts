@@ -1,3 +1,4 @@
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -21,7 +22,7 @@ function resolveClawjsDataRoot(): string {
   if (process.env.CLAW_DATA_DIR) return expandHome(process.env.CLAW_DATA_DIR);
   if (process.env.CLAWIX_CLAW_DATA_DIR) return expandHome(process.env.CLAWIX_CLAW_DATA_DIR);
   if (process.platform === "darwin") {
-    return path.join(os.homedir(), ".claw", "data");
+    return expandHome(resolveClawPersistentSurfacePath("claw.global.data"));
   }
   if (process.platform === "win32") {
     return path.join(process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
@@ -124,7 +125,7 @@ export function discoverSources(workspace: string): SourceLocation[] {
       id: "telegram",
       label: "Telegram",
       kind: "telegram",
-      candidates: [path.join(workspace, ".clawjs", "observed", "channels.json")],
+      candidates: [resolveClawPersistentSurfacePath("claw.legacy.workspace.clawjs", workspace, "observed", "channels.json")],
     },
   ];
 

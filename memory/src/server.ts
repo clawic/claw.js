@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
@@ -208,7 +209,7 @@ export function startServer(
         return;
       }
 
-      if (pathname === "/v1/health" || pathname === "/health" || pathname === "/healthz") {
+      if (pathname === clawApiPath("health") || pathname === "/health" || pathname === "/healthz") {
         sendJson(res, { ok: true, service: "memory", host, port });
         return;
       }

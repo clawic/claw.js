@@ -1,3 +1,4 @@
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
@@ -355,7 +356,7 @@ function seedMemory(workspace: string, userId: string, reports: SeedReport[]): v
 }
 
 function seedTelegram(workspace: string, userId: string, reports: SeedReport[]): void {
-  const file = path.join(workspace, ".clawjs", "observed", "channels.json");
+  const file = resolveClawPersistentSurfacePath("claw.legacy.workspace.clawjs", workspace, "observed", "channels.json");
   if (!fs.existsSync(file)) {
     recordSkip(reports, "telegram", "accounts", ".clawjs/observed/channels.json not present");
     return;
