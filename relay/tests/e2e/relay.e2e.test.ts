@@ -900,10 +900,24 @@ describe("relay e2e", () => {
     const socket = startFakeConnector(baseUrl, connectorToken, "browser-agent");
     await new Promise((resolve) => socket.once("message", () => resolve(null)));
 
+    const grantWorkspace = await fetch(`${baseUrl}/v1/admin/tenants/demo-tenant/workspace-grants`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${adminTokens.accessToken}`,
+      },
+      body: JSON.stringify({
+        deviceId: userTokens.deviceId,
+        agentId: "browser-agent",
+        workspaceId: "main",
+      }),
+    });
+    assert.equal(grantWorkspace.status, 200);
+
     const idleResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/browser-agent/workspaces/main/browser/session`, {
       headers: { Authorization: `Bearer ${userTokens.accessToken}` },
     });
-    assert.equal(idleResponse.status, 200);
+    if (idleResponse.status !== 200) assert.fail(await idleResponse.text());
     const idlePayload = await idleResponse.json() as { session: { status: string; active: boolean } };
     assert.equal(idlePayload.session.status, "idle");
     assert.equal(idlePayload.session.active, false);
