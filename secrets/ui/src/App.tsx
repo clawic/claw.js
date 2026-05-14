@@ -28,20 +28,22 @@ type Secret = {
 
 type SecretType = {
   typeId: string;
-  label: string;
-  description: string;
+  label?: string;
+  description?: string;
   kind: string;
-  defaultAllowedHosts: string[];
-  defaultAllowedHeaderNames: string[];
-  defaultAllowInURL: boolean;
-  defaultAllowInRequestBody: boolean;
-  defaultAllowLocalNetwork: boolean;
-  defaultReadOnly: boolean;
-  defaultLeaseModes: string[];
+  governanceDefaults?: {
+    allowedHosts?: string[];
+    allowedHeaders?: string[];
+    allowInUrl?: boolean;
+    allowInBody?: boolean;
+    allowLocalNetwork?: boolean;
+  };
   fields: Array<{
-    id: string;
-    label: string;
+    name: string;
+    label?: string;
     kind: string;
+    placement?: string;
+    isSecret?: boolean;
     required: boolean;
     description?: string;
   }>;
@@ -98,11 +100,21 @@ type Lease = {
 type AuditEvent = {
   id: string;
   action: string;
+  kind?: string;
   secretName?: string | null;
   status: string;
   detail: string;
   createdAt: string;
 };
+
+function normalizeSecret(secret: Secret & { internalName?: string; versionNumber?: number; fields?: Array<{ hasCiphertext?: boolean }> }): Secret {
+  return {
+    ...secret,
+    secretName: secret.secretName ?? secret.internalName ?? "",
+    version: secret.version ?? secret.versionNumber ?? 0,
+    maskedFingerprint: secret.maskedFingerprint ?? (secret.fields?.some((field) => field.hasCiphertext) ? "encrypted" : ""),
+  };
+}
 
 type Session = {
   accessToken: string;
@@ -201,11 +213,14 @@ export function App() {
         return await response.json() as { types: SecretType[] };
       }),
     ]);
-    setSecrets(secretPayload.secrets);
+    setSecrets(secretPayload.secrets.map((secret) => normalizeSecret(secret)));
     setPolicies(policyPayload.policies);
     setPrincipals(principalPayload.principals);
     setLeases(leasePayload.leases);
-    setEvents(auditPayload.events);
+    setEvents(auditPayload.events.map((event) => ({
+      ...event,
+      action: event.action ?? event.kind ?? "",
+    })));
     setSecretTypes(secretTypePayload.types);
   }
 
@@ -241,8 +256,8 @@ export function App() {
     if (!query) return secretTypes;
     return secretTypes.filter((entry) => (
       entry.typeId.toLowerCase().includes(query)
-      || entry.label.toLowerCase().includes(query)
-      || entry.description.toLowerCase().includes(query)
+      || (entry.label ?? "").toLowerCase().includes(query)
+      || (entry.description ?? "").toLowerCase().includes(query)
     ));
   }, [secretTypes, typeSearch]);
 
@@ -270,16 +285,33 @@ export function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...secretForm,
-          structuredFields: secretForm.baseUrl.trim() ? { baseUrl: secretForm.baseUrl.trim() } : {},
-          allowedHosts: secretForm.allowedHosts.split(",").map((entry) => entry.trim()).filter(Boolean),
-          allowedHeaderNames: secretForm.allowedHeaderNames.split(",").map((entry) => entry.trim()).filter(Boolean),
-          leaseModes: secretForm.leaseModes.split(",").map((entry) => entry.trim()).filter(Boolean),
+          draft: {
+            typeId: secretForm.typeId,
+            internalName: secretForm.secretName,
+            title: secretForm.label || secretForm.secretName,
+            notes: secretForm.notes,
+            fields: (selectedType?.fields.length ? selectedType.fields : [{ name: "token", kind: "password", placement: "header", isSecret: true }]).map((field, index) => ({
+              fieldName: field.name,
+              fieldKind: field.kind === "password" ? "password" : "text",
+              placement: field.placement ?? (index === 0 ? "header" : "none"),
+              isSecret: field.isSecret ?? field.kind === "password",
+              ...(field.isSecret ?? field.kind === "password" ? { secretValue: secretForm.secretValue } : {}),
+              ...(field.name === "baseUrl" && secretForm.baseUrl.trim() ? { publicValue: secretForm.baseUrl.trim() } : {}),
+            })),
+            governance: {
+              allowedHosts: secretForm.allowedHosts.split(",").map((entry) => entry.trim()).filter(Boolean),
+              allowedHeaders: secretForm.allowedHeaderNames.split(",").map((entry) => entry.trim()).filter(Boolean),
+              allowInUrl: secretForm.allowInURL,
+              allowInBody: secretForm.allowInRequestBody,
+              allowLocalNetwork: secretForm.allowLocalNetwork,
+            },
+          },
         }),
       });
-      setSelectedSecret(payload.secret.secretName);
-      setPolicyForm((current) => ({ ...current, secretName: payload.secret.secretName }));
-      setLeaseForm((current) => ({ ...current, secretName: payload.secret.secretName }));
+      const nextSecret = normalizeSecret(payload.secret);
+      setSelectedSecret(nextSecret.secretName);
+      setPolicyForm((current) => ({ ...current, secretName: nextSecret.secretName }));
+      setLeaseForm((current) => ({ ...current, secretName: nextSecret.secretName }));
       await refreshAll(activeSession);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
@@ -317,12 +349,12 @@ export function App() {
   async function createPrincipal() {
     try {
       setError("");
-      const payload = await api<{ principal: Principal }>(activeSession, clawApiPath(`tenants/${activeSession.tenantId}/principals`), {
+      const payload = await api<{ principal: Principal; token?: string }>(activeSession, clawApiPath(`tenants/${activeSession.tenantId}/principals`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(principalForm),
       });
-      setNewPrincipalToken(payload.principal.token ?? "");
+      setNewPrincipalToken(payload.token ?? payload.principal.token ?? "");
       setSelectedPrincipal(payload.principal.id);
       setPolicyForm((current) => ({ ...current, subjectId: payload.principal.id }));
       await refreshAll(activeSession);
@@ -409,22 +441,20 @@ export function App() {
                     ...current,
                     typeId: event.target.value,
                     kind: nextType?.kind ?? current.kind,
-                    allowedHosts: nextType?.defaultAllowedHosts.join(",") ?? current.allowedHosts,
-                    allowedHeaderNames: nextType?.defaultAllowedHeaderNames.join(",") ?? current.allowedHeaderNames,
-                    allowInURL: nextType?.defaultAllowInURL ?? current.allowInURL,
-                    allowInRequestBody: nextType?.defaultAllowInRequestBody ?? current.allowInRequestBody,
-                    allowLocalNetwork: nextType?.defaultAllowLocalNetwork ?? current.allowLocalNetwork,
-                    readOnly: nextType?.defaultReadOnly ?? current.readOnly,
-                    leaseModes: nextType?.defaultLeaseModes.join(",") || current.leaseModes,
+                    allowedHosts: nextType?.governanceDefaults?.allowedHosts?.join(",") ?? current.allowedHosts,
+                    allowedHeaderNames: nextType?.governanceDefaults?.allowedHeaders?.join(",") ?? current.allowedHeaderNames,
+                    allowInURL: nextType?.governanceDefaults?.allowInUrl ?? current.allowInURL,
+                    allowInRequestBody: nextType?.governanceDefaults?.allowInBody ?? current.allowInRequestBody,
+                    allowLocalNetwork: nextType?.governanceDefaults?.allowLocalNetwork ?? current.allowLocalNetwork,
                   }));
                 }}>
                   {filteredTypes.map((type) => (
-                    <option key={type.typeId} value={type.typeId}>{type.label}</option>
+                    <option key={type.typeId} value={type.typeId}>{type.label ?? type.typeId}</option>
                   ))}
                 </select></label>
                 <label>Secret name<input data-testid="secret-name-input" value={secretForm.secretName} onChange={(event) => setSecretForm({ ...secretForm, secretName: event.target.value })} /></label>
                 <label>Secret value<textarea data-testid="secret-value-input" value={secretForm.secretValue} onChange={(event) => setSecretForm({ ...secretForm, secretValue: event.target.value })} /></label>
-                {selectedType?.fields.some((field) => field.id === "baseUrl") ? (
+                {selectedType?.fields.some((field) => field.name === "baseUrl") ? (
                   <label>Base URL override<input data-testid="secret-base-url-input" value={secretForm.baseUrl} onChange={(event) => setSecretForm({ ...secretForm, baseUrl: event.target.value })} /></label>
                 ) : null}
                 <label>Allowed hosts<input value={secretForm.allowedHosts} onChange={(event) => setSecretForm({ ...secretForm, allowedHosts: event.target.value })} /></label>

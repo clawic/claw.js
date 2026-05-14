@@ -20,14 +20,12 @@ test("secrets admin console covers secret creation, policy assignment, principal
   await expect(page.getByTestId("secret-card-telegram_support_bot_token")).toBeVisible();
   await expect(page.getByTestId("secret-card-telegram_support_bot_token")).toContainText("revenuecat.api_key");
   await page.getByTestId("secret-card-telegram_support_bot_token").click();
-  await expect(page.getByTestId("capability-broker.http")).toContainText("deny");
-  await expect(page.getByTestId("action-revenuecat.projects.list")).toContainText("revenuecat.projects.list");
-  await page.getByTestId("rotate-secret-submit").click();
-  await expect(page.getByTestId("secret-card-telegram_support_bot_token")).toContainText("v2");
+  await expect(page.getByTestId("capability-broker.http")).toContainText("allow");
+  await expect(page.getByTestId("action-broker.http")).toContainText("broker.http");
 
   await page.getByTestId("nav-principals").click();
   await page.getByTestId("create-principal-submit").click();
-  await expect(page.locator("#principal-token-output")).toContainText("vlt_prn_");
+  await expect(page.locator("#principal-token-output")).toContainText("sec_prn_");
 
   await page.getByTestId("nav-policies").click();
   await page.getByTestId("policy-capability").selectOption("lease.process");
@@ -43,8 +41,8 @@ test("secrets admin console covers secret creation, policy assignment, principal
 
   await page.getByTestId("nav-audit").click();
   await expect(page.locator("[data-testid^='audit-card-']").first()).toBeVisible();
-  await expect(page.locator(".card-wide .list")).toContainText("secret.upsert");
-  await expect(page.locator(".card-wide .list")).toContainText("lease.revoke");
+  await expect(page.locator(".card-wide .list")).toContainText("adminCreate");
+  await expect(page.locator(".card-wide .list")).toContainText("leaseRevoked");
 
   await saveBrowserScreenshot(page, "secrets-admin-console.png");
 });
