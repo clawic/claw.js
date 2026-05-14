@@ -81,6 +81,8 @@ const DISCORD_SOURCE_OPERATIONS = [
   source("discord.source.guild-soundboard-sounds-update", "Guild Soundboard Sounds Update"),
   source("discord.source.soundboard-sounds", "Soundboard Sounds"),
   source("discord.source.voice-channel-effect-send", "Voice Channel Effect Send"),
+  source("discord.source.voice-state-update", "Voice State Update"),
+  source("discord.source.voice-server-update", "Voice Server Update"),
   source("discord.source.stage-instance-create", "Stage Instance Create"),
   source("discord.source.stage-instance-update", "Stage Instance Update"),
   source("discord.source.stage-instance-delete", "Stage Instance Delete"),

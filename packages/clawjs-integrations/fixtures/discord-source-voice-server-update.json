@@ -1,0 +1,6 @@
+{
+  "id": "voice-server-update-sample",
+  "guild_id": "guild-sample",
+  "token": "voice-server-sample",
+  "endpoint": "voice.example.invalid"
+}

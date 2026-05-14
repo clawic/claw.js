@@ -694,6 +694,8 @@ const DISCORD_SOURCE_FIXTURE_NAMES = [
   "guild-soundboard-sounds-update",
   "soundboard-sounds",
   "voice-channel-effect-send",
+  "voice-state-update",
+  "voice-server-update",
   "stage-instance-create",
   "stage-instance-update",
   "stage-instance-delete",

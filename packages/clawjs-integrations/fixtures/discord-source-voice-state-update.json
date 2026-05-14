@@ -1,0 +1,11 @@
+{
+  "id": "voice-state-update-sample",
+  "guild_id": "guild-sample",
+  "channel_id": "channel-sample",
+  "user_id": "user-sample",
+  "session_id": "session-sample",
+  "deaf": false,
+  "mute": false,
+  "self_deaf": false,
+  "self_mute": false
+}
