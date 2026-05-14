@@ -1,3 +1,8 @@
+import type { clawDatabaseRecordEvents } from "@clawjs/core";
+
+export type DatabaseRecordChangeEventType =
+  (typeof clawDatabaseRecordEvents)[keyof typeof clawDatabaseRecordEvents];
+
 export type FieldType =
   | "text"
   | "number"
@@ -122,7 +127,7 @@ export interface FileAsset {
 }
 
 export interface RecordChangeEvent {
-  type: "record.created" | "record.updated" | "record.deleted";
+  type: DatabaseRecordChangeEventType;
   namespaceId: string;
   collectionName: string;
   recordId: string;

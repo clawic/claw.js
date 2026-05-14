@@ -7,7 +7,7 @@ import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import websocket from "@fastify/websocket";
-import { clawDatabaseApiRoutePatterns } from "@clawjs/core";
+import { clawDatabaseApiRoutePatterns, clawDatabaseRecordEvents } from "@clawjs/core";
 
 import { DatabaseAuthService, loadEphemeralAdminToken, type AuthPrincipal } from "./auth.ts";
 import { loadDatabaseConfig, type DatabaseServiceConfig } from "./config.ts";
@@ -495,7 +495,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     try {
       const record = store.createRecord(params.namespaceId, params.collectionName, readBody(request));
       emitChange({
-        type: "record.created",
+        type: clawDatabaseRecordEvents.created,
         namespaceId: params.namespaceId,
         collectionName: params.collectionName,
         recordId: record.id,
@@ -534,7 +534,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     try {
       const record = store.updateRecord(params.namespaceId, params.collectionName, params.recordId, readBody(request));
       emitChange({
-        type: "record.updated",
+        type: clawDatabaseRecordEvents.updated,
         namespaceId: params.namespaceId,
         collectionName: params.collectionName,
         recordId: record.id,
@@ -558,7 +558,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     const ok = store.deleteRecord(params.namespaceId, params.collectionName, params.recordId);
     if (ok) {
       emitChange({
-        type: "record.deleted",
+        type: clawDatabaseRecordEvents.deleted,
         namespaceId: params.namespaceId,
         collectionName: params.collectionName,
         recordId: params.recordId,
