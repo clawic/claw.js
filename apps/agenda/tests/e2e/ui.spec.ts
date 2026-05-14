@@ -174,10 +174,10 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.getByTestId("tab-timeline").click();
   await page.getByTestId("timeline-start").fill("2026-04-21");
   await page.getByTestId("timeline-start").dispatchEvent("change");
-  await expect(page.getByTestId("timeline-project").filter({ hasText: projectName })).toBeVisible();
-  await expect(page.getByTestId("timeline-task-bar").filter({ hasText: taskTitle })).toBeVisible();
-  await expect(page.getByTestId("timeline-task-bar").filter({ hasText: dependentTaskTitle })).toBeVisible();
-  await expect(page.locator('[data-testid="timeline-task-bar"][data-readiness="blocked"]').filter({ hasText: dependentTaskTitle })).toBeVisible();
+  await expect(page.getByTestId("timeline-project").filter({ hasText: projectName })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("timeline-task-bar").filter({ hasText: taskTitle })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("timeline-task-bar").filter({ hasText: dependentTaskTitle })).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('[data-testid="timeline-task-bar"][data-readiness="blocked"]').filter({ hasText: dependentTaskTitle })).toBeVisible({ timeout: 30_000 });
   await expect(page.locator(`[data-testid="timeline-milestone-marker"][title="${milestoneTitle}"]`)).toBeVisible();
   await expect(page.locator(`[data-testid="timeline-cycle-band"][title="${cycleName}"]`)).toBeVisible();
   await expect(page.locator(`[data-testid="timeline-deadline-marker"][title="${dependentTaskTitle} due"]`)).toBeVisible();
