@@ -126,7 +126,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
   async function requirePrincipalOrUser(req: FastifyRequest, _reply: FastifyReply) {
     const header = req.headers.authorization;
     if (!header || !header.toLowerCase().startsWith("bearer ")) {
-      throw app.httpErrors?.unauthorized?.("Bearer token required") ?? Object.assign(new Error("unauthorized"), { statusCode: 401 });
+      throw Object.assign(new Error("Bearer token required"), { statusCode: 401 });
     }
     const token = header.slice("bearer ".length).trim();
     if (config.adminToken && token === config.adminToken) {
@@ -1168,7 +1168,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.setErrorHandler((err, _req, reply) => {
     const status = (err as { statusCode?: number }).statusCode ?? 500;
-    reply.code(status).send({ error: err.message });
+    reply.code(status).send({ error: err instanceof Error ? err.message : String(err) });
   });
 
   return app;

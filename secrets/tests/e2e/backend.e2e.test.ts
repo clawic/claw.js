@@ -80,6 +80,7 @@ test("secrets resolves the built UI path for the packaged server entrypoint", ()
       dbPath: path.join(process.cwd(), ".data", "vault.sqlite"),
       jwtSecret: "secrets-test-secret",
       publicBaseUrl: "http://127.0.0.1:24103",
+      corsOrigins: [],
       uiDistDir: path.join(process.cwd(), ".missing-ui"),
     },
     new URL(`file://${path.join(process.cwd(), "dist", "server.js")}`).href,

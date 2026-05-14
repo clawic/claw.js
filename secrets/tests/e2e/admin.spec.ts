@@ -1,4 +1,4 @@
-import { expect, saveBrowserScreenshot, test } from "./helpers";
+import { expect, saveBrowserScreenshot, test } from "./helpers.js";
 
 test("secrets admin console covers secret creation, policy assignment, principal issuance, lease revocation, and audit", async ({ page }) => {
   await page.goto("/");

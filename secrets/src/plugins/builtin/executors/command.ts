@@ -29,7 +29,7 @@ export const commandExecutor: ExecutorPlugin = {
   description: "Spawn a process with secrets in env, in stdin, or in 0600 files.",
   capabilities: ["broker.http"],
   async execute(ctx): Promise<ExecutorOutput> {
-    const args = ctx.args as CommandArgs;
+    const args = ctx.args as unknown as CommandArgs;
     const env: NodeJS.ProcessEnv = { ...process.env, ...(args.extraEnv ?? {}) };
     const cleanups: (() => void)[] = [];
     const secretValues: string[] = [];

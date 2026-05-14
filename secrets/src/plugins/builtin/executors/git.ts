@@ -84,7 +84,7 @@ export const gitPushExecutor: ExecutorPlugin = {
   description: "Run `git push` injecting the token via GIT_ASKPASS, with credential helpers disabled.",
   capabilities: ["broker.http"],
   async execute(ctx): Promise<ExecutorOutput> {
-    const args = ctx.args as GitArgs;
+    const args = ctx.args as unknown as GitArgs;
     const tokenField = args.tokenField ?? "token";
     const token = ctx.resolvedFields[tokenField];
     if (!token) return { ok: false, detail: `Missing field ${tokenField} on secret` };

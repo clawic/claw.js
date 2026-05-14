@@ -22,7 +22,7 @@ export const githubReleaseExecutor: ExecutorPlugin = {
   description: "POST /repos/:owner/:repo/releases with the resolved token.",
   capabilities: ["broker.http"],
   async execute(ctx): Promise<ExecutorOutput> {
-    const args = ctx.args as GithubReleaseArgs;
+    const args = ctx.args as unknown as GithubReleaseArgs;
     const tokenField = args.tokenField ?? "token";
     const token = ctx.resolvedFields[tokenField];
     if (!token) return { ok: false, detail: `Missing field ${tokenField}` };

@@ -43,7 +43,7 @@ export const sshConnectExecutor: ExecutorPlugin = {
     const validation = this.validate?.(ctx);
     if (validation && !validation.ok) return { ok: false, detail: validation.reason };
 
-    const args = ctx.args as SshConnectArgs;
+    const args = ctx.args as unknown as SshConnectArgs;
     const privateKeyPath = args.privateKeyPath ?? ctx.resolvedFields["private_key_path"];
     if (!privateKeyPath) return { ok: false, detail: "private_key_path missing" };
     const knownHosts = args.knownHosts ?? ctx.resolvedFields["known_hosts"] ?? "";

@@ -48,7 +48,7 @@ export const openaiImageExecutor: ExecutorPlugin = {
   description: "Generate images via OpenAI with an hourly quota guard.",
   capabilities: ["broker.http"],
   async execute(ctx): Promise<ExecutorOutput> {
-    const args = ctx.args as OpenAiImageArgs;
+    const args = ctx.args as unknown as OpenAiImageArgs;
     const apiKeyField = args.apiKeyField ?? "api_key";
     const apiKey = ctx.resolvedFields[apiKeyField];
     if (!apiKey) return { ok: false, detail: `Missing field ${apiKeyField}` };

@@ -59,7 +59,7 @@ export const npmPublishExecutor: ExecutorPlugin = {
   description: "Publish a package after verifying expectedVersion matches package.json.",
   capabilities: ["broker.http"],
   async execute(ctx): Promise<ExecutorOutput> {
-    const args = ctx.args as NpmPublishArgs;
+    const args = ctx.args as unknown as NpmPublishArgs;
     const tokenField = args.tokenField ?? "token";
     const token = ctx.resolvedFields[tokenField];
     if (!token) return { ok: false, detail: `Missing field ${tokenField}` };

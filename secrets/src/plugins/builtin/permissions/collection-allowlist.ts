@@ -4,7 +4,7 @@
 
 import type { PermissionModel } from "../../types.ts";
 
-const STANDARD_ACTIONS = [
+const STANDARD_ACTIONS: ReadonlyArray<{ id: string; label: string; isMutation?: boolean }> = [
   { id: "read", label: "Read records" },
   { id: "list", label: "List records" },
   { id: "create", label: "Create records", isMutation: true },
