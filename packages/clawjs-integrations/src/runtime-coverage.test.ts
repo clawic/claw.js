@@ -614,6 +614,56 @@ describe("connector runtime coverage", () => {
     });
   });
 
+  it("accepts alternate response schemas in request plans", () => {
+    const catalog = normalizeConnectorCatalog({
+      version: 1,
+      apps: [{
+        id: "fixture_service",
+        name: "Fixture Service",
+        authFieldNames: ["apiKey"],
+        fields: [{ name: "apiKey", type: "string", optional: false, secret: true }],
+        operations: [{
+          id: "fixture_service.action.send-message",
+          appId: "fixture_service",
+          kind: "action",
+          name: "Send Message",
+          fields: [],
+          authFieldNames: ["apiKey"],
+        }],
+      }],
+    });
+    const registry: ConnectorRuntimeImplementation[] = [{
+      appId: "fixture_service",
+      kind: "action",
+      executorId: "fixture.action.http",
+      baseUrl: "https://api.example.invalid/",
+      offlineValidated: true,
+      evidence: ["packages/clawjs-integrations/src/runtime-coverage.test.ts"],
+      fixtures: [ACTION_REQUEST_FIXTURE, ACTION_RESPONSE_FIXTURE],
+      planKinds: ["request"],
+      supports: (operation) => operation.id === "fixture_service.action.send-message",
+      buildPlan: (operation) => ({
+        requestPlan: {
+          method: "POST",
+          endpoint: "messages",
+          auth: operation.authFieldNames.map((field) => ({ type: "secret", field, placement: "bearer" })),
+          body: {},
+          responseSchema: {
+            oneOf: [
+              { type: "object", requiredPaths: ["ok"] },
+              { type: "null" },
+            ],
+          },
+        },
+      }),
+    }];
+
+    const coverage = verifyConnectorRuntimeCoverage(catalog, { registry });
+
+    assert.equal(coverage.summary.missing, 0);
+    assert.equal(coverage.summary.implemented, 1);
+  });
+
   it("requires operation-scoped fixtures when one runtime supports multiple operations", () => {
     const catalog = normalizeConnectorCatalog({
       version: 1,
