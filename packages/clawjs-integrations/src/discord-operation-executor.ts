@@ -771,7 +771,7 @@ export function buildDiscordOperationRequest(
     case "edit-webhook-message":
       return webhookMessagePlan("PATCH", `webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, values, false, { type: "object", requiredPaths: ["id"] }, removeEmptyValues({ thread_id: optionalString(values.threadId), with_components: values.withComponents }));
     case "delete-webhook-message":
-      return deletePlan(`webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, { type: "object" }, removeEmptyValues({ thread_id: optionalString(values.threadId) }));
+      return deletePlan(`webhooks/${webhookId(values)}/${pathSegment(requiredString(values.webhookToken, "webhookToken"))}/messages/${messageId(values)}`, [], headers, { type: "null" }, removeEmptyValues({ thread_id: optionalString(values.threadId) }));
     case "create-interaction-response":
       return bodyPlan("POST", `interactions/${interactionId(values)}/${interactionToken(values)}/callback`, [], headers, interactionResponseBody(values), { type: "object", requiredPaths: ["interaction"] }, removeEmptyValues({ with_response: values.withResponse }));
     case "get-original-interaction-response":
@@ -779,7 +779,7 @@ export function buildDiscordOperationRequest(
     case "edit-original-interaction-response":
       return webhookMessagePlan("PATCH", `webhooks/${applicationId(values)}/${interactionToken(values)}/messages/@original`, [], headers, values, false, { type: "object", requiredPaths: ["id"] });
     case "delete-original-interaction-response":
-      return deletePlan(`webhooks/${applicationId(values)}/${interactionToken(values)}/messages/@original`, [], headers, { type: "object" });
+      return deletePlan(`webhooks/${applicationId(values)}/${interactionToken(values)}/messages/@original`, [], headers, { type: "null" });
     case "create-followup-message":
       return webhookMessagePlan("POST", `webhooks/${applicationId(values)}/${interactionToken(values)}`, [], headers, values, true, { type: "object", requiredPaths: ["id"] });
     case "get-followup-message":
@@ -787,7 +787,7 @@ export function buildDiscordOperationRequest(
     case "edit-followup-message":
       return webhookMessagePlan("PATCH", `webhooks/${applicationId(values)}/${interactionToken(values)}/messages/${messageId(values)}`, [], headers, values, false, { type: "object", requiredPaths: ["id"] });
     case "delete-followup-message":
-      return deletePlan(`webhooks/${applicationId(values)}/${interactionToken(values)}/messages/${messageId(values)}`, [], headers, { type: "object" });
+      return deletePlan(`webhooks/${applicationId(values)}/${interactionToken(values)}/messages/${messageId(values)}`, [], headers, { type: "null" });
     case "list-global-application-commands":
       return getPlan(`applications/${applicationId(values)}/commands`, auth, headers, { type: "array" }, removeEmptyValues({ with_localizations: values.withLocalizations }));
     case "create-global-application-command":
