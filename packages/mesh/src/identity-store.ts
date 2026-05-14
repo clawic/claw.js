@@ -1,3 +1,4 @@
+// @clawjs-persistent-surface-ddl-source
 import { randomUUID } from "node:crypto";
 
 import type Database from "better-sqlite3";

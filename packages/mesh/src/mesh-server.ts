@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import type {
   FastifyInstance,
   FastifyPluginAsync,
@@ -172,7 +173,7 @@ export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
       }
     };
 
-    app.get("/v1/mesh/identity", async (request, reply) => {
+    app.get(clawApiPath("mesh/identity"), async (request, reply) => {
       const identity = requireBearer(request);
       if (!identity) {
         audit("bridgeAuth", "deny", { context: { route: "identity" } });
@@ -192,17 +193,17 @@ export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
       reply.send(body);
     });
 
-    app.get("/v1/mesh/peers", async (request, reply) => {
+    app.get(clawApiPath("mesh/peers"), async (request, reply) => {
       if (!ensureLoopback(request, reply)) return;
       reply.send({ peers: deps.hostStore.list({ includeRevoked: true }) });
     });
 
-    app.get("/v1/mesh/workspaces", async (request, reply) => {
+    app.get(clawApiPath("mesh/workspaces"), async (request, reply) => {
       if (!ensureLoopback(request, reply)) return;
       reply.send({ workspaces: deps.workspaceStore.list() });
     });
 
-    app.post("/v1/mesh/link", async (request, reply) => {
+    app.post(clawApiPath("mesh/link"), async (request, reply) => {
       if (!ensureLoopback(request, reply)) return;
       const parsed = MeshLinkBodySchema.safeParse(request.body);
       if (!parsed.success) {
@@ -254,7 +255,7 @@ export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
       }
     });
 
-    app.post("/v1/mesh/pair", async (request, reply) => {
+    app.post(clawApiPath("mesh/pair"), async (request, reply) => {
       const identity = deps.identityStore.get();
       if (!identity) {
         reply.code(503).send({ error: "identity not initialized" });
@@ -300,7 +301,7 @@ export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
       reply.send(body);
     });
 
-    app.post("/v1/mesh/jobs", async (request, reply) => {
+    app.post(clawApiPath("mesh/jobs"), async (request, reply) => {
       const identity = deps.identityStore.get();
       if (!identity) {
         reply.code(503).send({ error: "identity not initialized" });
@@ -355,7 +356,7 @@ export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
       reply.send({ ok: true, ...result });
     });
 
-    app.post("/v1/mesh/remote-jobs", async (request, reply) => {
+    app.post(clawApiPath("mesh/remote-jobs"), async (request, reply) => {
       if (!ensureLoopback(request, reply)) return;
       const parsed = MeshRemoteJobBodySchema.safeParse(request.body);
       if (!parsed.success) {
@@ -369,7 +370,7 @@ export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
       });
     });
 
-    app.post("/v1/mesh/hosts", async (request, reply) => {
+    app.post(clawApiPath("mesh/hosts"), async (request, reply) => {
       if (!ensureLoopback(request, reply)) return;
       const parsed = HostUpsertBodySchema.safeParse(request.body);
       if (!parsed.success) {
@@ -401,7 +402,7 @@ export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
     });
 
     app.delete<{ Params: { id: string } }>(
-      "/v1/mesh/hosts/:id",
+      clawApiPath("mesh/hosts/:id"),
       async (request, reply) => {
         if (!ensureLoopback(request, reply)) return;
         const id = request.params.id;
@@ -419,7 +420,7 @@ export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
     );
 
     app.post<{ Params: { id: string } }>(
-      "/v1/mesh/hosts/:id/revoke",
+      clawApiPath("mesh/hosts/:id/revoke"),
       async (request, reply) => {
         if (!ensureLoopback(request, reply)) return;
         const id = request.params.id;
@@ -433,7 +434,7 @@ export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
     );
 
     app.post<{ Params: { id: string } }>(
-      "/v1/mesh/hosts/:id/unrevoke",
+      clawApiPath("mesh/hosts/:id/unrevoke"),
       async (request, reply) => {
         if (!ensureLoopback(request, reply)) return;
         const id = request.params.id;
@@ -446,7 +447,7 @@ export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
       },
     );
 
-    app.get("/v1/mesh/ssh/secrets", async (request, reply) => {
+    app.get(clawApiPath("mesh/ssh/secrets"), async (request, reply) => {
       if (!ensureLoopback(request, reply)) return;
       if (!deps.sshSecretStore) {
         reply.send({ secrets: [] });
@@ -456,7 +457,7 @@ export const meshServerPlugin = (deps: MeshServerDeps): FastifyPluginAsync =>
     });
 
     app.delete<{ Params: { id: string } }>(
-      "/v1/mesh/ssh/secrets/:id",
+      clawApiPath("mesh/ssh/secrets/:id"),
       async (request, reply) => {
         if (!ensureLoopback(request, reply)) return;
         if (!deps.sshSecretStore) {

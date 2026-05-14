@@ -1,3 +1,4 @@
+// @clawjs-persistent-surface-ddl-source
 import type Database from "better-sqlite3";
 import { z } from "zod";
 
