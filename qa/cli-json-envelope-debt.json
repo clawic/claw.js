@@ -6,7 +6,6 @@
     "packages/clawjs/src/cli-media-generation-command.ts": 41,
     "packages/clawjs/src/cli-productivity-command.ts": 37,
     "packages/clawjs/src/cli-productivity-extended-command.ts": 93,
-    "packages/clawjs/src/cli-productivity-primary-command.ts": 34,
     "packages/clawjs/src/index.ts": 49
   }
 }

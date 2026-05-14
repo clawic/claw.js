@@ -10,6 +10,11 @@ import { clawCommonJsonFields, resolveClawPersistentSurfacePath } from "@clawjs/
 import { CLI_EXIT_OK, runCli } from "./index.ts";
 import { captureStream, useIsolatedMainData } from "./index-test-utils.ts";
 
+function parseCliData<T>(text: string): T {
+  const payload = JSON.parse(text) as T | { data: T };
+  return typeof payload === "object" && payload !== null && "data" in payload ? payload.data : payload;
+}
+
 test("runCli add workspace and workspace command groups operate on local productivity data", async (t) => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-workspace-"));
   useIsolatedMainData(t, tempRoot);
@@ -55,7 +60,7 @@ test("runCli add workspace and workspace command groups operate on local product
     stderr: captureStream().stream,
     cwd: tempRoot,
   }), CLI_EXIT_OK);
-  const createdTask = JSON.parse(createStdout.getOutput()) as { id: string };
+  const createdTask = parseCliData<{ id: string }>(createStdout.getOutput());
 
   const listStdout = captureStream();
   assert.equal(await runCli([
@@ -88,7 +93,7 @@ test("runCli add workspace and workspace command groups operate on local product
     stderr: captureStream().stream,
     cwd: tempRoot,
   }), CLI_EXIT_OK);
-  assert.equal((JSON.parse(getStdout.getOutput()) as { title: string }).title, "Ship workspace");
+  assert.equal(parseCliData<{ title: string }>(getStdout.getOutput()).title, "Ship workspace");
 });
 
 test("runCli zero-config productivity commands bootstrap local sqlite in an empty directory", { concurrency: false }, async (t) => {
@@ -124,7 +129,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const lead = JSON.parse(magicLeadStdout.getOutput()) as { title: string; metadata?: { website?: string } };
+  const lead = parseCliData<{ title: string; metadata?: { website?: string } }>(magicLeadStdout.getOutput());
   assert.equal(lead.title, "Ada");
   assert.equal(lead.metadata?.website, "https://ada.dev");
 
@@ -139,7 +144,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const aliasTask = JSON.parse(magicAliasStdout.getOutput()) as { id: string; title: string };
+  const aliasTask = parseCliData<{ id: string; title: string }>(magicAliasStdout.getOutput());
   assert.equal(aliasTask.title, "Alias task");
 
   const magicTasksListStdout = captureStream();
@@ -152,7 +157,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const tasksList = JSON.parse(magicTasksListStdout.getOutput()) as Array<{ id: string }>;
+  const tasksList = parseCliData<Array<{ id: string }>>(magicTasksListStdout.getOutput());
   assert.equal(tasksList.some((item) => item.id === taskId), true);
   assert.equal(tasksList.some((item) => item.id === aliasTask.id), true);
 
@@ -167,7 +172,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const schema = JSON.parse(magicSchemaStdout.getOutput()) as { exists: boolean; collection: { name: string; fields: Array<{ name: string }> } };
+  const schema = parseCliData<{ exists: boolean; collection: { name: string; fields: Array<{ name: string }> } }>(magicSchemaStdout.getOutput());
   assert.equal(schema.exists, true);
   assert.equal(schema.collection.name, "leads");
   assert.equal(schema.collection.fields.some((field) => field.name === "title"), true);
@@ -189,7 +194,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const area = JSON.parse(areaStdout.getOutput()) as { id: string; status?: string };
+  const area = parseCliData<{ id: string; status?: string }>(areaStdout.getOutput());
   assert.equal(area.status, "active");
 
   const personStdout = captureStream();
@@ -204,7 +209,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const person = JSON.parse(personStdout.getOutput()) as { id: string };
+  const person = parseCliData<{ id: string }>(personStdout.getOutput());
 
   const projectStdout = captureStream();
   assert.equal(await runCli([
@@ -220,7 +225,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const project = JSON.parse(projectStdout.getOutput()) as { id: string; ownerPersonId?: string; areaId?: string };
+  const project = parseCliData<{ id: string; ownerPersonId?: string; areaId?: string }>(projectStdout.getOutput());
   assert.equal(project.ownerPersonId, person.id);
   assert.equal(project.areaId, area.id);
 
@@ -242,7 +247,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const goal = JSON.parse(goalStdout.getOutput()) as { id: string; projectId?: string; areaId?: string; reviewCadence?: string };
+  const goal = parseCliData<{ id: string; projectId?: string; areaId?: string; reviewCadence?: string }>(goalStdout.getOutput());
   assert.equal(goal.projectId, project.id);
   assert.equal(goal.areaId, area.id);
   assert.equal(goal.reviewCadence, "weekly");
@@ -263,7 +268,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const milestone = JSON.parse(milestoneStdout.getOutput()) as { id: string; projectId?: string; areaId?: string };
+  const milestone = parseCliData<{ id: string; projectId?: string; areaId?: string }>(milestoneStdout.getOutput());
   assert.equal(milestone.projectId, project.id);
   assert.equal(milestone.areaId, area.id);
 
@@ -285,7 +290,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const task = JSON.parse(taskStdout.getOutput()) as {
+  const task = parseCliData<{
     id: string;
     status?: string;
     projectId?: string;
@@ -294,7 +299,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     estimateMinutes?: number;
     blockedReason?: string;
     checklist?: Array<{ text: string }>;
-  };
+  }>(taskStdout.getOutput());
   assert.equal(task.projectId, project.id);
   assert.equal(task.goalId, goal.id);
   assert.equal(task.areaId, area.id);
@@ -318,7 +323,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const blocker = JSON.parse(blockerStdout.getOutput()) as { id: string; taskId?: string; kind?: string };
+  const blocker = parseCliData<{ id: string; taskId?: string; kind?: string }>(blockerStdout.getOutput());
   assert.equal(blocker.taskId, task.id);
   assert.equal(blocker.kind, "policy_block");
 
@@ -336,7 +341,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const artifact = JSON.parse(artifactStdout.getOutput()) as { id: string; taskId?: string; kind?: string };
+  const artifact = parseCliData<{ id: string; taskId?: string; kind?: string }>(artifactStdout.getOutput());
   assert.equal(artifact.taskId, task.id);
   assert.equal(artifact.kind, "screenshot");
 
@@ -356,7 +361,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const decision = JSON.parse(decisionStdout.getOutput()) as { id: string; status?: string; artifactIds?: string[] };
+  const decision = parseCliData<{ id: string; status?: string; artifactIds?: string[] }>(decisionStdout.getOutput());
   assert.equal(decision.status, "accepted");
   assert.equal(decision.artifactIds?.includes(artifact.id), true);
 
@@ -374,7 +379,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const workSession = JSON.parse(sessionStdout.getOutput()) as { id: string; taskIds?: string[]; blockerIds?: string[]; status?: string };
+  const workSession = parseCliData<{ id: string; taskIds?: string[]; blockerIds?: string[]; status?: string }>(sessionStdout.getOutput());
   assert.equal(workSession.status, "active");
   assert.equal(workSession.taskIds?.includes(task.id), true);
   assert.equal(workSession.blockerIds?.includes(blocker.id), true);
@@ -395,7 +400,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const assignment = JSON.parse(assignmentStdout.getOutput()) as { id: string; taskId?: string; assignedToAgentId?: string; status?: string };
+  const assignment = parseCliData<{ id: string; taskId?: string; assignedToAgentId?: string; status?: string }>(assignmentStdout.getOutput());
   assert.equal(assignment.taskId, task.id);
   assert.equal(assignment.assignedToAgentId, "reviewer");
   assert.equal(assignment.status, "accepted");
@@ -418,7 +423,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const handoff = JSON.parse(handoffStdout.getOutput()) as { id: string; taskId?: string; toAgentId?: string; artifactIds?: string[] };
+  const handoff = parseCliData<{ id: string; taskId?: string; toAgentId?: string; artifactIds?: string[] }>(handoffStdout.getOutput());
   assert.equal(handoff.taskId, task.id);
   assert.equal(handoff.toAgentId, "reviewer");
   assert.equal(handoff.artifactIds?.includes(artifact.id), true);
@@ -442,7 +447,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const approval = JSON.parse(approvalStdout.getOutput()) as { id: string; taskId?: string; kind?: string; status?: string };
+  const approval = parseCliData<{ id: string; taskId?: string; kind?: string; status?: string }>(approvalStdout.getOutput());
   assert.equal(approval.taskId, task.id);
   assert.equal(approval.kind, "publish");
   assert.equal(approval.status, "pending");
@@ -465,7 +470,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const capacity = JSON.parse(capacityStdout.getOutput()) as { id: string; agentId?: string };
+  const capacity = parseCliData<{ id: string; agentId?: string }>(capacityStdout.getOutput());
   assert.equal(capacity.agentId, "reviewer");
 
   const reminderStdout = captureStream();
@@ -482,7 +487,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const reminder = JSON.parse(reminderStdout.getOutput()) as { id: string; anchorId?: string; status?: string };
+  const reminder = parseCliData<{ id: string; anchorId?: string; status?: string }>(reminderStdout.getOutput());
   assert.equal(reminder.anchorId, task.id);
 
   const deadlineStdout = captureStream();
@@ -501,7 +506,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     cwd: workspaceRoot,
   });
   assert.equal(deadlineExitCode, CLI_EXIT_OK, `${deadlineStdout.getOutput()}\n${deadlineStderr.getOutput()}`);
-  const deadline = JSON.parse(deadlineStdout.getOutput()) as { id: string; anchorId?: string };
+  const deadline = parseCliData<{ id: string; anchorId?: string }>(deadlineStdout.getOutput());
   assert.equal(deadline.anchorId, project.id);
 
   const noteStdout = captureStream();
@@ -517,7 +522,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const note = JSON.parse(noteStdout.getOutput()) as { id: string };
+  const note = parseCliData<{ id: string }>(noteStdout.getOutput());
 
   const eventStdout = captureStream();
   assert.equal(await runCli([
@@ -532,7 +537,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const event = JSON.parse(eventStdout.getOutput()) as { id: string };
+  const event = parseCliData<{ id: string }>(eventStdout.getOutput());
   assert.ok(event.id);
 
   const inboxStdout = captureStream();
@@ -548,7 +553,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const thread = JSON.parse(inboxStdout.getOutput()) as { thread: { id: string } };
+  const thread = parseCliData<{ thread: { id: string } }>(inboxStdout.getOutput());
   assert.ok(thread.thread.id);
 
   const inboxProcessStdout = captureStream();
@@ -569,12 +574,12 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const processed = JSON.parse(inboxProcessStdout.getOutput()) as {
+  const processed = parseCliData<{
     thread: { id: string; linkedTaskIds?: string[]; linkedNoteIds?: string[] };
     task?: { id: string };
     note?: { id: string };
     reminder?: { id: string };
-  };
+  }>(inboxProcessStdout.getOutput());
   assert.equal(processed.thread.id, thread.thread.id);
   assert.equal(processed.thread.linkedTaskIds?.includes(processed.task?.id || ""), true);
   assert.equal(processed.thread.linkedNoteIds?.includes(processed.note?.id || ""), true);
@@ -758,7 +763,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     cwd: workspaceRoot,
   });
   assert.equal(exportExitCode, CLI_EXIT_OK, `${exportStdout.getOutput()}\n${exportStderr.getOutput()}`);
-  const exported = JSON.parse(exportStdout.getOutput()) as { path: string };
+  const exported = parseCliData<{ path: string }>(exportStdout.getOutput());
   assert.equal(fs.existsSync(exported.path), true);
 
   const backupStdout = captureStream();
@@ -773,7 +778,7 @@ test("runCli zero-config productivity commands bootstrap local sqlite in an empt
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const backup = JSON.parse(backupStdout.getOutput()) as { files: string[] };
+  const backup = parseCliData<{ files: string[] }>(backupStdout.getOutput());
   assert.equal(backup.files.length > 0, true);
 
   const inspectStdout = captureStream();

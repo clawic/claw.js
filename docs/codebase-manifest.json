@@ -95060,7 +95060,7 @@
     {
       "path": "packages/clawjs/src/cli-discovery.test.ts",
       "language": "typescript",
-      "lines": 140,
+      "lines": 152,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -96374,7 +96374,7 @@
     {
       "path": "packages/clawjs/src/cli-productivity-primary-command.ts",
       "language": "typescript",
-      "lines": 711,
+      "lines": 719,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -97818,7 +97818,7 @@
     {
       "path": "packages/clawjs/src/index-productivity.test.ts",
       "language": "typescript",
-      "lines": 848,
+      "lines": 853,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -97833,7 +97833,13 @@
         "vitest"
       ],
       "exports": [],
-      "declarations": []
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "parseCliData",
+          "exported": false
+        }
+      ]
     },
     {
       "path": "packages/clawjs/src/index-telegram.test.ts",
