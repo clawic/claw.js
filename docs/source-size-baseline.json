@@ -159,6 +159,10 @@
       "lines": 1325,
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     },
+    "packages/clawjs/src/v1-data-surface.ts": {
+      "lines": 1315,
+      "reason": "Extracted canonical v1 data schema and persistent surface contract; split tables, codecs, and fixtures before expanding."
+    },
     "examples/showcase/src/app/api/chat/route.ts": {
       "lines": 1311,
       "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."

@@ -3,6 +3,7 @@ import path from "path";
 
 import { clawPersistentSurfaceRegistry, findClawPersistentSurfaceNode, listClawPersistentSurfaceNodes, withSurfaceChildren } from "@clawjs/core";
 import type { ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry } from "@clawjs/core";
+import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 
 interface CliContext {
   stdout: NodeJS.WritableStream;
@@ -47,11 +48,11 @@ interface InspectCliInput {
 }
 
 function inspectNodes(): ClawPersistentSurfaceNode[] {
-  return withSurfaceChildren(clawPersistentSurfaceRegistry.nodes);
+  return withSurfaceChildren([...clawPersistentSurfaceRegistry.nodes, ...v1MainSchemaSurfaceNodes]);
 }
 
 function inspectRegistry(input: InspectCliInput): ClawPersistentSurfaceRegistry {
-  const nodes = [...clawPersistentSurfaceRegistry.nodes];
+  const nodes = [...clawPersistentSurfaceRegistry.nodes, ...v1MainSchemaSurfaceNodes];
   for (const manifestPath of manifestPaths(input.flags)) {
     const manifest = readManifest(manifestPath, input.context.cwd);
     nodes.push(...manifest.nodes);
