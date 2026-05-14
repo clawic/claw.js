@@ -1,0 +1,13 @@
+export const LEARNING_TARGETS = new Set(["user", "agent", "project", "workflow", "runtime", "ui"]);
+export const LEARNING_KINDS = new Set(["preference", "observation", "correction", "workflow", "failure"]);
+export const LEARNING_STATUSES = new Set(["active", "archived", "promoted"]);
+export const LEARNING_SENTIMENTS = new Set(["positive", "negative", "neutral"]);
+export const LEARNING_PROMOTION_TARGETS = new Set(["rule", "user", "soul", "skill", "memory"]);
+export const CONTEXT_PURPOSES = new Set(["judgment", "prompt", "task", "session", "manual"]);
+export const CONTEXT_STATUSES = new Set(["active", "archived"]);
+export const COMMITMENT_KINDS = new Set(["promise", "follow_up", "delivery"]);
+export const COMMITMENT_STATUSES = new Set(["active", "fulfilled", "missed", "cancelled"]);
+export const JUDGMENT_STATUSES = new Set(["prepared", "decided", "superseded", "archived"]);
+export const JUDGMENT_IMPACTS = new Set(["low", "medium", "high", "critical"]);
+export const OUTCOME_RESULTS = new Set(["worked", "failed", "mixed"]);
+export const OUTCOME_STATUSES = new Set(["active", "archived"]);

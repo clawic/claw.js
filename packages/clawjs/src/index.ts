@@ -26,7 +26,7 @@ import { buildDatabaseApp } from "@clawjs/database";
 import type { ClawInstance, ImageOperation, ImageProvenance, ImageType, TelegramSendMediaInput, TelegramSendMessageInput, VoiceNoteStatus } from "@clawjs/claw";
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
-import { clawAppPorts, clawCommandRequestSchema, clawContractVersionV1, clawCorePorts, semanticPlanSchema } from "@clawjs/core";
+import { clawAppPorts, clawCommandRequestSchema, clawContractVersionV1, clawCorePorts, resolveClawPersistentSurfacePath, semanticPlanSchema } from "@clawjs/core";
 import type { ClawCommandResponse, ClawDomain, CommitmentKind, CommitmentStatus, ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
 import { runEmbeddedDatabaseCli } from "./database-advanced.ts";
 import { runMagicDbCli } from "./database-magic.ts";
@@ -61,6 +61,21 @@ import { CLI_USAGE, DEFAULT_CLI_BIN, PUBLIC_PORTAL_HELP_ONLY, REMOVED_RUNTIME_CO
 import { inferBrokerDeclaredFields } from "./broker-http.ts";
 import { runInspectCli } from "./inspect-cli.ts";
 import { CLI_TEMPLATE_ROOT, CORE_PRODUCTIVITY_DB_COLLECTIONS, LOCAL_FIRST_PRODUCTIVITY_GROUPS, RUNTIME_ADAPTER_IDS } from "./cli-constants.ts";
+import { COMMITMENT_KINDS, COMMITMENT_STATUSES, CONTEXT_PURPOSES, CONTEXT_STATUSES, JUDGMENT_IMPACTS, JUDGMENT_STATUSES, LEARNING_KINDS, LEARNING_PROMOTION_TARGETS, LEARNING_SENTIMENTS, LEARNING_STATUSES, LEARNING_TARGETS, OUTCOME_RESULTS, OUTCOME_STATUSES } from "./cli-knowledge-constants.ts";
+import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
+import {
+  buildFallbackSemanticPlan,
+  createDelegationGraphForPlan,
+  evaluatePlanPolicy,
+  formatPlan,
+  nowIso,
+  planId,
+  readAgentPlanState,
+  statusFromDecision,
+  writeAgentPlanState,
+  type AgentPlanPolicyRule,
+  type AgentPlanRecord,
+} from "./cli-agent-plan.ts";
 export { CLI_USAGE, DEFAULT_CLI_BIN, buildCliUsage } from "./cli-surface.ts";
 export interface CliContext {
   stdout: NodeJS.WritableStream;
@@ -1989,58 +2004,6 @@ function buildRoutineHeartbeat(argv: string[], flags: Record<string, string>): P
   };
 }
 
-function channelListenerId(provider: string, accountId?: string): string {
-  return `${provider}:${accountId?.trim() || "default"}`;
-}
-
-function channelListenerPaths(workspaceRoot: string, provider: string, accountId?: string): { runDir: string; pidPath: string; stopPath: string; logPath: string } {
-  const safeId = channelListenerId(provider, accountId).replace(/[^A-Za-z0-9._-]+/g, "_");
-  const runDir = path.join(workspaceRoot, ".claw", "run", "channels");
-  return {
-    runDir,
-    pidPath: path.join(runDir, `${safeId}.pid`),
-    stopPath: path.join(runDir, `${safeId}.stop`),
-    logPath: path.join(runDir, `${safeId}.log`),
-  };
-}
-
-function isProcessRunning(pid: number | undefined): boolean {
-  if (!pid || !Number.isSafeInteger(pid) || pid <= 0) return false;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function readListenerPid(pidPath: string): number | undefined {
-  try {
-    const value = Number(fs.readFileSync(pidPath, "utf8").trim());
-    return Number.isSafeInteger(value) ? value : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-async function waitForListenerPid(pidPath: string, timeoutMs = 5_000): Promise<number | undefined> {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt <= timeoutMs) {
-    const pid = readListenerPid(pidPath);
-    if (pid && isProcessRunning(pid)) return pid;
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  return undefined;
-}
-
-function readTail(filePath: string, lines: number): string {
-  try {
-    return fs.readFileSync(filePath, "utf8").split(/\r?\n/).slice(-Math.max(1, lines)).join("\n");
-  } catch {
-    return "";
-  }
-}
-
 const LOCAL_CLI_ALLOWED_FLAGS = new Set([
   "json",
   "workspace",
@@ -2345,287 +2308,12 @@ function pathSafeBasename(value: string): string {
   return parts[parts.length - 1] || "clawjs-workspace";
 }
 
-type AgentPlanStatus = "draft" | "pending" | "approved" | "rejected" | "blocked" | "running" | "succeeded" | "failed" | "cancelled";
-type AgentPlanDecision = "auto_run" | "require_approval" | "assign_reviewer" | "block" | "pending";
-
-interface AgentPlanPolicyRule {
-  id: string;
-  when: Record<string, unknown>;
-  then: {
-    decision: AgentPlanDecision;
-    approver?: "human_owner" | string;
-    reviewerAgentId?: string;
-    reason?: string;
-  };
-}
-
-interface AgentPlanRecord {
-  schemaVersion: 1;
-  id: string;
-  objective: string;
-  status: AgentPlanStatus;
-  creatorAgentId: string;
-  executorAgentId?: string;
-  approverAgentId?: string;
-  reviewerAgentId?: string;
-  tags: string[];
-  semanticPlan: SemanticPlan;
-  policyDecision: AgentPlanDecision;
-  policyRuleId?: string;
-  policyReason: string;
-  delegationGraphId?: string;
-  createdAt: string;
-  updatedAt: string;
-  completedAt?: string;
-  decisionReason?: string;
-  reviewReason?: string;
-  lastRunError?: string;
-}
-
-interface AgentPlanState {
-  schemaVersion: 1;
-  plans: AgentPlanRecord[];
-  policies: AgentPlanPolicyRule[];
-}
-
-function nowIso(): string {
-  return new Date().toISOString();
-}
-
-function planStatePath(workspaceRoot: string): string {
-  return path.join(workspaceRoot, ".claw", "data", "agent-plans.json");
-}
-
-function readAgentPlanState(workspaceRoot: string): AgentPlanState {
-  const filePath = planStatePath(workspaceRoot);
-  try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as Partial<AgentPlanState>;
-    return {
-      schemaVersion: 1,
-      plans: Array.isArray(parsed.plans) ? parsed.plans as AgentPlanRecord[] : [],
-      policies: Array.isArray(parsed.policies) ? parsed.policies as AgentPlanPolicyRule[] : [],
-    };
-  } catch {
-    return { schemaVersion: 1, plans: [], policies: [] };
-  }
-}
-
-function writeAgentPlanState(workspaceRoot: string, state: AgentPlanState): void {
-  const filePath = planStatePath(workspaceRoot);
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(state, null, 2)}\n`);
-}
-
-function planId(): string {
-  return `plan_${randomBytes(8).toString("hex")}`;
-}
-
-function riskRank(risk: string | undefined): number {
-  if (risk === "high") return 3;
-  if (risk === "medium") return 2;
-  if (risk === "low") return 1;
-  return 0;
-}
-
-function maxSemanticPlanRisk(plan: SemanticPlan): "low" | "medium" | "high" {
-  const risks = [
-    ...plan.actions.map((action) => action.risk),
-    ...plan.effects.map((effect) => effect.risk),
-    ...plan.permissions.map((permission) => permission.risk),
-  ];
-  if (risks.some((risk) => risk === "high")) return "high";
-  if (risks.some((risk) => risk === "medium")) return "medium";
-  return "low";
-}
-
-function planRequiresHumanApproval(plan: SemanticPlan): boolean {
-  return plan.actions.some((action) => action.requiresHumanApproval)
-    || plan.permissions.some((permission) => permission.requiresHumanApproval);
-}
-
-function conditionValues(plan: SemanticPlan, key: string, record: Pick<AgentPlanRecord, "creatorAgentId" | "tags">): string[] {
-  if (key === "actions.type") return plan.actions.map((action) => action.type);
-  if (key === "effects.kind") return plan.effects.map((effect) => effect.kind);
-  if (key === "permissions.capability") return plan.permissions.map((permission) => permission.capability);
-  if (key === "objects.kind") return plan.objects.map((object) => object.kind);
-  if (key === "agent") return [record.creatorAgentId];
-  if (key === "tags") return record.tags;
-  return [];
-}
-
-function planMatchesPolicy(rule: AgentPlanPolicyRule, plan: SemanticPlan, record: Pick<AgentPlanRecord, "creatorAgentId" | "tags">): boolean {
-  for (const [key, rawExpected] of Object.entries(rule.when)) {
-    if (key === "maxRisk") {
-      if (riskRank(maxSemanticPlanRisk(plan)) > riskRank(String(rawExpected))) return false;
-      continue;
-    }
-    if (key === "requiresHumanApproval") {
-      if (planRequiresHumanApproval(plan) !== Boolean(rawExpected)) return false;
-      continue;
-    }
-    const expected = Array.isArray(rawExpected) ? rawExpected.map(String) : [String(rawExpected)];
-    const values = conditionValues(plan, key, record);
-    if (!expected.some((value) => values.includes(value))) return false;
-  }
-  return true;
-}
-
-function defaultPlanDecision(plan: SemanticPlan): { decision: AgentPlanDecision; reason: string; approver?: string } {
-  const maxRisk = maxSemanticPlanRisk(plan);
-  if (maxRisk === "high" || planRequiresHumanApproval(plan)) {
-    return { decision: "require_approval", approver: "human_owner", reason: "High risk or explicit approval requirement." };
-  }
-  if (maxRisk === "medium") {
-    return { decision: "pending", reason: "Medium risk plans require review by default." };
-  }
-  return { decision: "auto_run", reason: "Low risk plan with no explicit approval requirement." };
-}
-
-function evaluatePlanPolicy(
-  policies: AgentPlanPolicyRule[],
-  plan: SemanticPlan,
-  record: Pick<AgentPlanRecord, "creatorAgentId" | "tags">,
-): { decision: AgentPlanDecision; reason: string; ruleId?: string; approverAgentId?: string; reviewerAgentId?: string } {
-  const matched = policies.find((rule) => planMatchesPolicy(rule, plan, record));
-  if (matched) {
-    const approver = matched.then.approver === "human_owner" ? undefined : matched.then.approver;
-    return {
-      decision: matched.then.decision,
-      reason: matched.then.reason ?? `Matched policy ${matched.id}.`,
-      ruleId: matched.id,
-      approverAgentId: matched.then.decision === "require_approval" ? approver : undefined,
-      reviewerAgentId: matched.then.reviewerAgentId ?? (matched.then.decision === "assign_reviewer" ? approver : undefined),
-    };
-  }
-  const fallback = defaultPlanDecision(plan);
-  return { decision: fallback.decision, reason: fallback.reason, approverAgentId: fallback.approver === "human_owner" ? undefined : fallback.approver };
-}
-
-function statusFromDecision(decision: AgentPlanDecision): AgentPlanStatus {
-  if (decision === "auto_run") return "approved";
-  if (decision === "block") return "blocked";
-  return "pending";
-}
-
-function buildFallbackSemanticPlan(objective: string, creatorAgentId: string, tags: string[]): SemanticPlan {
-  const publishLike = /\b(deploy|publish|push|release|ship)\b/i.test(objective);
-  const designLike = tags.includes("design") || tags.includes("web") || /\b(ui|design|frontend|home|page|screen)\b/i.test(objective);
-  const risk = publishLike ? "high" : designLike ? "medium" : "low";
-  return semanticPlanSchema.parse({
-    schemaVersion: 1,
-    intent: {
-      id: "intent-main",
-      summary: objective,
-      requestedBy: creatorAgentId,
-      constraints: publishLike ? ["publishing requires approval"] : [],
-    },
-    objects: [
-      { id: "workspace", kind: "repository", label: "Current workspace" },
-      { id: "work", kind: "task", label: objective },
-    ],
-    actions: [
-      {
-        id: "inspect",
-        type: "inspect",
-        label: "Inspect relevant context",
-        objectIds: ["workspace"],
-        effectIds: ["read-workspace"],
-        permissionIds: ["workspace-read"],
-        risk: "low",
-      },
-      {
-        id: "propose",
-        type: "propose",
-        label: "Prepare proposed work",
-        objectIds: ["work"],
-        effectIds: ["prepare-work"],
-        permissionIds: ["workspace-write"],
-        risk,
-        requiresHumanApproval: publishLike,
-      },
-    ],
-    effects: [
-      {
-        id: "read-workspace",
-        kind: "read",
-        description: "Read local workspace context",
-        objectIds: ["workspace"],
-        reversible: true,
-        risk: "low",
-      },
-      {
-        id: "prepare-work",
-        kind: publishLike ? "publication" : "write",
-        description: publishLike ? "May publish or deploy externally" : "May prepare local changes",
-        objectIds: ["work"],
-        reversible: !publishLike,
-        risk,
-      },
-    ],
-    permissions: [
-      {
-        id: "workspace-read",
-        capability: "workspace.read",
-        scope: "current workspace",
-        risk: "low",
-      },
-      {
-        id: "workspace-write",
-        capability: publishLike ? "workspace.publish" : "workspace.write",
-        scope: "current workspace",
-        risk,
-        requiresHumanApproval: publishLike,
-      },
-    ],
-    receipts: [],
-    provenance: ["claw plan create"],
-  });
-}
-
 function readJsonFile<TValue>(filePath: string, label: string): TValue {
   try {
     return JSON.parse(fs.readFileSync(filePath, "utf8")) as TValue;
   } catch (error) {
     throw new CliHandledError("invalid_json", `Invalid ${label}: ${error instanceof Error ? error.message : "parse error"}`, CLI_EXIT_USAGE);
   }
-}
-
-function formatPlan(plan: AgentPlanRecord): string {
-  return [
-    `${plan.id} ${plan.status}`,
-    `objective: ${plan.objective}`,
-    `agent: ${plan.creatorAgentId}`,
-    `decision: ${plan.policyDecision} (${plan.policyReason})`,
-    `risk: ${maxSemanticPlanRisk(plan.semanticPlan)}`,
-    "actions:",
-    ...plan.semanticPlan.actions.map((action) => `- ${action.type}: ${action.label} [${action.risk}${action.requiresHumanApproval ? ", approval" : ""}]`),
-    "effects:",
-    ...plan.semanticPlan.effects.map((effect) => `- ${effect.kind}: ${effect.description} [${effect.risk}]`),
-    "permissions:",
-    ...plan.semanticPlan.permissions.map((permission) => `- ${permission.capability} (${permission.scope}) [${permission.risk}${permission.requiresHumanApproval ? ", approval" : ""}]`),
-    ...(plan.delegationGraphId ? [`delegation: ${plan.delegationGraphId}`] : []),
-  ].join("\n");
-}
-
-async function createDelegationGraphForPlan(plan: AgentPlanRecord, flags: Record<string, string>): Promise<string> {
-  const url = (flags["delegation-url"] ?? process.env.DELEGATION_PLANE_URL ?? "http://127.0.0.1:4520").replace(/\/$/, "");
-  const response = await fetch(`${url}/v1/graphs`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      objective: plan.objective,
-      creator: plan.creatorAgentId,
-      semanticPlan: plan.semanticPlan,
-      root: {
-        agentType: plan.executorAgentId ?? plan.creatorAgentId,
-        adapter: flags.adapter ?? "deterministic",
-      },
-    }),
-  });
-  const text = await response.text();
-  const parsed = text ? JSON.parse(text) as { graph?: { id?: string }; error?: string } : {};
-  if (!response.ok || !parsed.graph?.id) throw new Error(parsed.error ?? text ?? `HTTP ${response.status}`);
-  return parsed.graph.id;
 }
 
 function timelineRange(mode: "day" | "week", startValue?: string): { start: string; end: string } {
@@ -4101,20 +3789,6 @@ async function archiveOrRemoveProductivityRecord(
   const record = await api.archive(id);
   return { ok: true, deleted: false, archived: true, record };
 }
-
-const LEARNING_TARGETS = new Set(["user", "agent", "project", "workflow", "runtime", "ui"]);
-const LEARNING_KINDS = new Set(["preference", "observation", "correction", "workflow", "failure"]);
-const LEARNING_STATUSES = new Set(["active", "archived", "promoted"]);
-const LEARNING_SENTIMENTS = new Set(["positive", "negative", "neutral"]);
-const LEARNING_PROMOTION_TARGETS = new Set(["rule", "user", "soul", "skill", "memory"]);
-const CONTEXT_PURPOSES = new Set(["judgment", "prompt", "task", "session", "manual"]);
-const CONTEXT_STATUSES = new Set(["active", "archived"]);
-const COMMITMENT_KINDS = new Set(["promise", "follow_up", "delivery"]);
-const COMMITMENT_STATUSES = new Set(["active", "fulfilled", "missed", "cancelled"]);
-const JUDGMENT_STATUSES = new Set(["prepared", "decided", "superseded", "archived"]);
-const JUDGMENT_IMPACTS = new Set(["low", "medium", "high", "critical"]);
-const OUTCOME_RESULTS = new Set(["worked", "failed", "mixed"]);
-const OUTCOME_STATUSES = new Set(["active", "archived"]);
 
 function requireOneOf<T extends string>(value: string | undefined, values: Set<string>, label: string): T {
   if (!value || !values.has(value)) {
