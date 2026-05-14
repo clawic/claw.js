@@ -157,8 +157,8 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
     data: { name: "Launch checklist", entityType: "project", body: { tasks: ["close loop"] } },
   });
   await page.reload();
-  await expect(page.locator("#sec-focus").getByTestId("task-row").filter({ hasText: "1 comments" })).toBeVisible();
-  await expect(page.locator("#sec-focus").getByTestId("task-row").filter({ hasText: "1 files" })).toBeVisible();
+  await expect(page.locator("#sec-focus").getByTestId("task-row").filter({ hasText: taskTitle }).filter({ hasText: "1 comments" })).toBeVisible();
+  await expect(page.locator("#sec-focus").getByTestId("task-row").filter({ hasText: taskTitle }).filter({ hasText: "1 files" })).toBeVisible();
 
   await page.getByTestId("tab-planning").click();
   await expect(page.getByTestId("list-row").filter({ hasText: listTitle })).toBeVisible();
