@@ -89,6 +89,13 @@ function decodeCell(value: BackupScalar, isBlob: boolean): unknown {
   return value;
 }
 
+function scrubHostBoundMeta(row: Record<string, BackupScalar>): Record<string, BackupScalar> {
+  if (typeof row.snapshot_json !== "string") return row;
+  const snapshot = JSON.parse(row.snapshot_json) as { platformKeyWrap?: unknown };
+  delete snapshot.platformKeyWrap;
+  return { ...row, snapshot_json: JSON.stringify(snapshot) };
+}
+
 export function exportLogicalBackup(db: SqliteDb): LogicalBackup {
   const schema = db.prepare("SELECT version FROM schema_version LIMIT 1").get() as { version: number } | undefined;
   const tables = BACKUP_TABLES.map((table) => {
@@ -98,7 +105,7 @@ export function exportLogicalBackup(db: SqliteDb): LogicalBackup {
       for (const [key, value] of Object.entries(row)) {
         out[key] = encodeCell(value, blobColumns.has(key));
       }
-      return out;
+      return table === "secrets_meta" ? scrubHostBoundMeta(out) : out;
     });
     return { name: table, blobColumns: [...blobColumns], rows };
   });
