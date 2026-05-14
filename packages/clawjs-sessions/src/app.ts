@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
@@ -92,14 +93,14 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     store.close();
   });
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     service: "sessions",
     host: config.host,
     port: config.port,
   }));
 
-  app.get("/v1/events", async (request, reply) => {
+  app.get(clawApiPath("events"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     void reply.raw.writeHead(200, {
       "content-type": "text/event-stream",
@@ -113,7 +114,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     });
   });
 
-  app.post("/v1/projects", async (request, reply) => {
+  app.post(clawApiPath("projects"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     try {
       const body = readBody(request);
@@ -135,7 +136,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     }
   });
 
-  app.get("/v1/projects", async (request, reply) => {
+  app.get(clawApiPath("projects"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     const filter: ListProjectsFilter = {
@@ -147,7 +148,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     return store.listProjects(filter);
   });
 
-  app.get("/v1/projects/:id", async (request, reply) => {
+  app.get(clawApiPath("projects/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const project = store.getProject(params.id);
@@ -155,7 +156,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     return project;
   });
 
-  app.patch("/v1/projects/:id", async (request, reply) => {
+  app.patch(clawApiPath("projects/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const body = readBody(request);
@@ -172,7 +173,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     return project;
   });
 
-  app.delete("/v1/projects/:id", async (request, reply) => {
+  app.delete(clawApiPath("projects/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const deleted = store.deleteProject(params.id);
@@ -180,7 +181,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     return { deleted };
   });
 
-  app.post("/v1/sessions", async (request, reply) => {
+  app.post(clawApiPath("sessions"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     try {
       const body = readBody(request);
@@ -210,7 +211,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     }
   });
 
-  app.get("/v1/sessions/:id", async (request, reply) => {
+  app.get(clawApiPath("sessions/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const query = readQuery(request);
@@ -225,7 +226,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     return session;
   });
 
-  app.get("/v1/sessions", async (request, reply) => {
+  app.get(clawApiPath("sessions"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     const filter: ListSessionsFilter = {
@@ -247,7 +248,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     return store.listSessions(filter);
   });
 
-  app.get("/v1/sessions/search", async (request, reply) => {
+  app.get(clawApiPath("sessions/search"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     const q = asString(query.q);
@@ -262,7 +263,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     return { items: store.searchMessages(input) };
   });
 
-  app.patch("/v1/sessions/:id", async (request, reply) => {
+  app.patch(clawApiPath("sessions/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const body = readBody(request);
@@ -279,13 +280,13 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     return session;
   });
 
-  app.delete("/v1/sessions/:id", async (request, reply) => {
+  app.delete(clawApiPath("sessions/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     return { deleted: store.deleteSession(params.id) };
   });
 
-  app.post("/v1/sessions/:id/messages", async (request, reply) => {
+  app.post(clawApiPath("sessions/:id/messages"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     try {
       const params = request.params as { id: string };
@@ -316,7 +317,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     }
   });
 
-  app.get("/v1/sessions/:id/messages", async (request, reply) => {
+  app.get(clawApiPath("sessions/:id/messages"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const query = readQuery(request);
@@ -325,7 +326,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     };
   });
 
-  app.patch("/v1/sessions/:sessionId/messages/:messageId", async (request, reply) => {
+  app.patch(clawApiPath("sessions/:sessionId/messages/:messageId"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { sessionId: string; messageId: string };
     const body = readBody(request);
@@ -345,7 +346,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     return message;
   });
 
-  app.post("/v1/sessions/:id/turns", async (request, reply) => {
+  app.post(clawApiPath("sessions/:id/turns"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     try {
       const params = request.params as { id: string };
@@ -430,7 +431,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     }
   });
 
-  app.post("/v1/sessions/:id/interrupt", async (request, reply) => {
+  app.post(clawApiPath("sessions/:id/interrupt"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     interruptedTurns.add(params.id);
@@ -440,13 +441,13 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     return { interrupted: true, session };
   });
 
-  app.get("/v1/sessions/:id/origins", async (request, reply) => {
+  app.get(clawApiPath("sessions/:id/origins"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     return { items: store.listOrigins(params.id) };
   });
 
-  app.get("/v1/sessions/export", async (request, reply) => {
+  app.get(clawApiPath("sessions/export"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     const items = store.exportTrajectories({
@@ -463,7 +464,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     return { items };
   });
 
-  app.post("/v1/sessions/import/codex", async (request, reply) => {
+  app.post(clawApiPath("sessions/import/codex"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     try {
       const body = readBody(request);

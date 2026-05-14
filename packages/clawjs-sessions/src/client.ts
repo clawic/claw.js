@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import type {
   AppendMessageInput,
   CreateProjectInput,
@@ -71,48 +72,48 @@ export class SessionsApiClient {
   }
 
   health(): Promise<{ ok: boolean; service: string }> {
-    return this.call("GET", "/v1/health");
+    return this.call("GET", clawApiPath("health"));
   }
 
   createProject(input: CreateProjectInput): Promise<ProjectRecord> {
-    return this.call("POST", "/v1/projects", input);
+    return this.call("POST", clawApiPath("projects"), input);
   }
 
   getProject(id: string): Promise<ProjectRecord> {
-    return this.call("GET", `/v1/projects/${encodeURIComponent(id)}`);
+    return this.call("GET", clawApiPath(`projects/${encodeURIComponent(id)}`));
   }
 
   listProjects(filter: ListProjectsFilter = {}): Promise<ListProjectsResult> {
-    return this.call("GET", `/v1/projects${buildQuery({
+    return this.call("GET", clawApiPath(`projects${buildQuery({
       hidden: filter.hidden,
       archived: filter.archived,
       limit: filter.limit,
       offset: filter.offset,
-    })}`);
+    })}`));
   }
 
   updateProject(id: string, patch: UpdateProjectInput): Promise<ProjectRecord> {
-    return this.call("PATCH", `/v1/projects/${encodeURIComponent(id)}`, patch);
+    return this.call("PATCH", clawApiPath(`projects/${encodeURIComponent(id)}`), patch);
   }
 
   deleteProject(id: string): Promise<{ deleted: boolean }> {
-    return this.call("DELETE", `/v1/projects/${encodeURIComponent(id)}`);
+    return this.call("DELETE", clawApiPath(`projects/${encodeURIComponent(id)}`));
   }
 
   createSession(input: CreateSessionInput): Promise<SessionRecord> {
-    return this.call("POST", "/v1/sessions", input);
+    return this.call("POST", clawApiPath("sessions"), input);
   }
 
   getSession(id: string): Promise<SessionRecord> {
-    return this.call("GET", `/v1/sessions/${encodeURIComponent(id)}`);
+    return this.call("GET", clawApiPath(`sessions/${encodeURIComponent(id)}`));
   }
 
   getSessionWithMessages(id: string, limit?: number): Promise<SessionWithMessages> {
-    return this.call("GET", `/v1/sessions/${encodeURIComponent(id)}${buildQuery({ includeMessages: true, limit })}`);
+    return this.call("GET", clawApiPath(`sessions/${encodeURIComponent(id)}${buildQuery({ includeMessages: true, limit })}`));
   }
 
   list(filter: ListSessionsFilter = {}): Promise<ListSessionsResult> {
-    return this.call("GET", `/v1/sessions${buildQuery({
+    return this.call("GET", clawApiPath(`sessions${buildQuery({
       agent: filter.agent,
       runtime: filter.runtime,
       machine: filter.machine,
@@ -127,17 +128,17 @@ export class SessionsApiClient {
       toCreatedAt: filter.toCreatedAt,
       limit: filter.limit,
       offset: filter.offset,
-    })}`);
+    })}`));
   }
 
   search(input: SearchSessionsInput): Promise<{ items: SessionSearchHit[] }> {
-    return this.call("GET", `/v1/sessions/search${buildQuery({
+    return this.call("GET", clawApiPath(`sessions/search${buildQuery({
       q: input.query,
       agent: input.agent,
       projectId: input.projectId,
       projectPath: input.projectPath,
       limit: input.limit,
-    })}`);
+    })}`));
   }
 
   update(id: string, patch: {
@@ -149,27 +150,27 @@ export class SessionsApiClient {
     projectPath?: string | null;
     status?: string;
   }): Promise<SessionRecord> {
-    return this.call("PATCH", `/v1/sessions/${encodeURIComponent(id)}`, patch);
+    return this.call("PATCH", clawApiPath(`sessions/${encodeURIComponent(id)}`), patch);
   }
 
   delete(id: string): Promise<{ deleted: boolean }> {
-    return this.call("DELETE", `/v1/sessions/${encodeURIComponent(id)}`);
+    return this.call("DELETE", clawApiPath(`sessions/${encodeURIComponent(id)}`));
   }
 
   appendMessage(sessionId: string, input: Omit<AppendMessageInput, "sessionId">): Promise<SessionMessageRecord> {
-    return this.call("POST", `/v1/sessions/${encodeURIComponent(sessionId)}/messages`, input);
+    return this.call("POST", clawApiPath(`sessions/${encodeURIComponent(sessionId)}/messages`), input);
   }
 
   updateMessage(sessionId: string, messageId: string, patch: Partial<Omit<AppendMessageInput, "id" | "sessionId" | "role" | "timestamp" | "sourceNativeId">>): Promise<SessionMessageRecord> {
-    return this.call("PATCH", `/v1/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}`, patch);
+    return this.call("PATCH", clawApiPath(`sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}`), patch);
   }
 
   listMessages(sessionId: string, opts: { limit?: number; offset?: number } = {}): Promise<{ items: SessionMessageRecord[] }> {
-    return this.call("GET", `/v1/sessions/${encodeURIComponent(sessionId)}/messages${buildQuery(opts)}`);
+    return this.call("GET", clawApiPath(`sessions/${encodeURIComponent(sessionId)}/messages${buildQuery(opts)}`));
   }
 
   importCodex(input: { dir?: string; forceReimport?: boolean; machine?: string } = {}): Promise<ImportCodexResult> {
-    return this.call("POST", "/v1/sessions/import/codex", input);
+    return this.call("POST", clawApiPath("sessions/import/codex"), input);
   }
 
   startTurn(sessionId: string, input: Omit<StartTurnInput, "sessionId">): Promise<{
@@ -177,22 +178,23 @@ export class SessionsApiClient {
     userMessage: SessionMessageRecord;
     assistantMessage: SessionMessageRecord | null;
   }> {
-    return this.call("POST", `/v1/sessions/${encodeURIComponent(sessionId)}/turns`, input);
+    return this.call("POST", clawApiPath(`sessions/${encodeURIComponent(sessionId)}/turns`), input);
   }
 
   interrupt(sessionId: string): Promise<{ interrupted: boolean; session: SessionRecord }> {
-    return this.call("POST", `/v1/sessions/${encodeURIComponent(sessionId)}/interrupt`, {});
+    return this.call("POST", clawApiPath(`sessions/${encodeURIComponent(sessionId)}/interrupt`), {});
   }
 
   async *events(signal?: AbortSignal): AsyncGenerator<SessionEvent> {
-    const response = await this.fetchImpl(`${this.baseUrl}/v1/events`, {
+    const path = clawApiPath("events");
+    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
       method: "GET",
       headers: { authorization: `Bearer ${this.token}` },
       signal,
     });
     if (!response.ok || !response.body) {
       const text = await response.text();
-      throw new Error(`sessions api GET /v1/events -> ${response.status}: ${text}`);
+      throw new Error(`sessions api GET ${path} -> ${response.status}: ${text}`);
     }
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -213,20 +215,21 @@ export class SessionsApiClient {
   }
 
   async exportTrajectories(options: { agent?: string; since?: number; includeFailed?: boolean; tag?: string; format?: "json" | "jsonl" } = {}): Promise<unknown> {
-    const url = `${this.baseUrl}/v1/sessions/export${buildQuery({
+    const path = clawApiPath(`sessions/export${buildQuery({
       agent: options.agent,
       since: options.since,
       includeFailed: options.includeFailed,
       tag: options.tag,
       format: options.format,
-    })}`;
+    })}`);
+    const url = `${this.baseUrl}${path}`;
     const response = await this.fetchImpl(url, {
       method: "GET",
       headers: { authorization: `Bearer ${this.token}` },
     });
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`sessions api GET /v1/sessions/export -> ${response.status}: ${text}`);
+      throw new Error(`sessions api GET ${path} -> ${response.status}: ${text}`);
     }
     if (options.format === "jsonl") {
       return await response.text();
