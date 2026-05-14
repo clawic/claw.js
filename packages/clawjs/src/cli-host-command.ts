@@ -3,7 +3,7 @@ import path from "path";
 import { activeHost, readHostRegistry, registerHost, resolveHostRegistryFile, useHost } from "./host-registry.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
-import { writeJson } from "./cli-json.ts";
+import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { runDomainsCli } from "./cli-domains-command.ts";
 import type { OpenSurface } from "./cli-open-surfaces.ts";
 import type { CliContext } from "./index.ts";
@@ -39,7 +39,7 @@ export async function runHostCli(input: {
   if (command === "list" || !command) {
     const registry = readHostRegistry(options);
     if (input.wantsJson) {
-      writeJson(input.context.stdout, { ...registry, registryPath: resolveHostRegistryFile(options) });
+      writeCommandJsonOk(input.context.stdout, "host", { ...registry, registryPath: resolveHostRegistryFile(options) }, { subcommand: "list" });
     } else {
       const rows = registry.hosts.map((host) => ({
         active: registry.activeHostId === host.id ? "*" : "",
@@ -84,7 +84,7 @@ export async function runHostCli(input: {
       ...(endpoint ? { endpoint } : {}),
     }, options, input.argv.includes("--use"));
     const host = registry.hosts.find((entry) => entry.id === id);
-    if (input.wantsJson) writeJson(input.context.stdout, { ok: true, host, registryPath: resolveHostRegistryFile(options), activeHostId: registry.activeHostId });
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "host", { host, registryPath: resolveHostRegistryFile(options), activeHostId: registry.activeHostId }, { subcommand: "register" });
     else input.context.stdout.write(`registered ${id}${registry.activeHostId === id ? " and set active" : ""}\n`);
     return CLI_EXIT_OK;
   }
@@ -93,7 +93,7 @@ export async function runHostCli(input: {
     const hostId = hostIdArg ?? input.flags.id;
     if (!hostId) throw new CliHandledError("usage_error", `Usage: ${input.binName} host use <id>`, CLI_EXIT_USAGE);
     const registry = useHost(hostId, options);
-    if (input.wantsJson) writeJson(input.context.stdout, { ok: true, activeHostId: registry.activeHostId, registryPath: resolveHostRegistryFile(options) });
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "host", { activeHostId: registry.activeHostId, registryPath: resolveHostRegistryFile(options) }, { subcommand: "use" });
     else input.context.stdout.write(`active host: ${registry.activeHostId}\n`);
     return CLI_EXIT_OK;
   }
@@ -103,13 +103,10 @@ export async function runHostCli(input: {
     const host = hostIdArg ? registry.hosts.find((entry) => entry.id === hostIdArg) ?? null : activeHost(registry);
     const ok = !!host;
     if (input.wantsJson) {
-      writeJson(input.context.stdout, {
-        ok,
-        activeHostId: registry.activeHostId,
-        host,
-        registryPath: resolveHostRegistryFile(options),
-        error: ok ? undefined : { code: "host_unavailable", message: hostIdArg ? `Host not registered: ${hostIdArg}` : "No active host configured." },
-      });
+      const data = { activeHostId: registry.activeHostId, host, registryPath: resolveHostRegistryFile(options) };
+      const meta = { subcommand: command };
+      if (ok) writeCommandJsonOk(input.context.stdout, "host", data, meta);
+      else writeCommandJsonError(input.context.stdout, "host", new CliHandledError("host_unavailable", hostIdArg ? `Host not registered: ${hostIdArg}` : "No active host configured.", CLI_EXIT_DEGRADED), meta);
     } else if (host) {
       input.context.stdout.write(`host: ${host.id}\nname: ${host.displayName}\nkind: ${host.kind}\ntransport: ${host.endpoint?.transport ?? "not configured"}\n`);
     } else {

@@ -35,19 +35,27 @@ test("host registry CLI registers, selects, and reports the active host", async 
 
   assert.equal(registered.code, CLI_EXIT_OK, registered.stderr);
   const registeredPayload = JSON.parse(registered.stdout);
-  assert.equal(registeredPayload.activeHostId, "claw");
-  assert.equal(registeredPayload.host.endpoint.transport, "xpc");
+  assert.equal(registeredPayload.ok, true);
+  assert.equal(registeredPayload.meta.canonicalCommand, "host");
+  assert.equal(registeredPayload.meta.jsonSchemaId, "claw.cli.host.v1");
+  assert.equal(registeredPayload.meta.subcommand, "register");
+  assert.equal(registeredPayload.data.activeHostId, "claw");
+  assert.equal(registeredPayload.data.host.endpoint.transport, "xpc");
 
   const status = await runCliCapture(["host", "status", "--claw-home", clawHome, "--json"], workspaceRoot);
   assert.equal(status.code, CLI_EXIT_OK, status.stderr);
   const statusPayload = JSON.parse(status.stdout);
-  assert.equal(statusPayload.host.id, "claw");
+  assert.equal(statusPayload.ok, true);
+  assert.equal(statusPayload.meta.subcommand, "status");
+  assert.equal(statusPayload.data.host.id, "claw");
 
   const listed = await runCliCapture(["host", "list", "--claw-home", clawHome, "--json"], workspaceRoot);
   assert.equal(listed.code, CLI_EXIT_OK, listed.stderr);
   const listPayload = JSON.parse(listed.stdout);
-  assert.equal(listPayload.hosts.length, 1);
-  assert.match(listPayload.registryPath, /hosts\/registry\.json$/);
+  assert.equal(listPayload.ok, true);
+  assert.equal(listPayload.meta.subcommand, "list");
+  assert.equal(listPayload.data.hosts.length, 1);
+  assert.match(listPayload.data.registryPath, /hosts\/registry\.json$/);
 });
 
 test("host registry CLI fails clearly when no active host exists", async () => {
@@ -58,6 +66,8 @@ test("host registry CLI fails clearly when no active host exists", async () => {
   const payload = JSON.parse(status.stdout);
   assert.equal(payload.ok, false);
   assert.equal(payload.error.code, "host_unavailable");
+  assert.equal(payload.meta.canonicalCommand, "host");
+  assert.equal(payload.meta.subcommand, "status");
 });
 
 test("direct domain CLI forwards v1 requests to the active host", async () => {

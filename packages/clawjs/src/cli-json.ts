@@ -34,6 +34,16 @@ export function writeCommandJsonOk(stream: NodeJS.WritableStream, canonicalComma
   });
 }
 
+export function writeCommandJsonError(stream: NodeJS.WritableStream, canonicalCommand: string, error: unknown, meta: CliJsonMeta = {}): void {
+  const command = resolveClawCliCommand(canonicalCommand);
+  writeJsonError(stream, error, {
+    schemaVersion: command?.schemaVersion ?? 1,
+    canonicalCommand,
+    ...(command?.jsonSchemaId ? { jsonSchemaId: command.jsonSchemaId } : {}),
+    ...meta,
+  });
+}
+
 export function writeJsonError(stream: NodeJS.WritableStream, error: unknown, meta: CliJsonMeta = {}): void {
   const handled = error instanceof CliHandledError
     ? error

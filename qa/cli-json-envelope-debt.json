@@ -7,7 +7,6 @@
     "packages/clawjs/src/cli-code-command.ts": 31,
     "packages/clawjs/src/cli-domains-command.ts": 5,
     "packages/clawjs/src/cli-file-session-document-command.ts": 20,
-    "packages/clawjs/src/cli-host-command.ts": 4,
     "packages/clawjs/src/cli-host-forward.ts": 2,
     "packages/clawjs/src/cli-media-generation-command.ts": 41,
     "packages/clawjs/src/cli-preview-share.ts": 3,
