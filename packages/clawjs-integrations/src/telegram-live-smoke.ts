@@ -5,7 +5,7 @@ import {
   verifyConnectorCredentialLease,
   type ConnectorCredentialLeaseBroker,
 } from "./credential-lease-broker.ts";
-import { sendTelegramRequest } from "./telegram-operation-executor.ts";
+import { TelegramBotApiError, sendTelegramRequest } from "./telegram-operation-executor.ts";
 import type { IntegrationJson } from "./types.ts";
 
 export type TelegramLiveSmokeResultStatus =
@@ -78,6 +78,13 @@ export const TELEGRAM_LIVE_SMOKE_SCENARIOS: readonly TelegramLiveSmokeScenario[]
     notes: "Sends and deletes one synthetic media message.",
   },
   {
+    id: "telegram.rate-error-handling",
+    officialMethods: ["getUpdates"],
+    lane: "brokered_live",
+    requires: ["synthetic Telegram 429 fixture"],
+    notes: "Exercises Telegram error parsing without intentionally rate-limiting a real bot.",
+  },
+  {
     id: "telegram.webhook-loopback",
     officialMethods: ["setWebhook", "getWebhookInfo", "deleteWebhook"],
     lane: "manual_only",
@@ -144,6 +151,9 @@ export async function runTelegramBrokeredLiveSmoke(
         body: { timeout: 0, allowed_updates: ["message", "edited_message", "channel_post", "edited_channel_post"] },
         fetchImpl: options.fetchImpl,
       });
+    });
+    await runSmokeStep(results, "telegram.rate-error-handling", [], async () => {
+      await runSyntheticRateLimitProbe(token);
     });
     if (options.chatId == null) {
       results.push(externalPending("telegram.send-edit-delete-text", ["disposable private chat or group"]));
@@ -230,6 +240,37 @@ async function runSyntheticPhoto(
     });
   });
 }
+
+async function runSyntheticRateLimitProbe(token: string): Promise<void> {
+  try {
+    await sendTelegramRequest({
+      token,
+      endpoint: "getUpdates",
+      body: { timeout: 0 },
+      fetchImpl: syntheticRateLimitFetch,
+    });
+  } catch (error) {
+    if (
+      error instanceof TelegramBotApiError
+      && error.endpoint === "getUpdates"
+      && error.status === 429
+      && error.retryAfter === 3
+    ) {
+      return;
+    }
+    throw error;
+  }
+  throw new Error("Telegram synthetic rate-limit probe did not fail.");
+}
+
+const syntheticRateLimitFetch = (async () => new Response(JSON.stringify({
+  ok: false,
+  description: "Too Many Requests: retry after 3",
+  parameters: { retry_after: 3 },
+}), {
+  status: 429,
+  headers: { "content-type": "application/json" },
+})) as typeof fetch;
 
 async function runSmokeStep(
   results: TelegramLiveSmokeResult[],
