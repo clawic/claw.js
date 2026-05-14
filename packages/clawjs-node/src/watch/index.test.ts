@@ -6,6 +6,7 @@ import path from "path";
 
 import { watchWorkspaceFile } from "./index.ts";
 import { NodeFileSystemHost } from "../host/filesystem.ts";
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 
 test("watchWorkspaceFile emits a callback when the file changes", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-watch-"));
@@ -30,9 +31,9 @@ test("watchWorkspaceFile emits a callback when the file changes", async () => {
 
 test("watchWorkspaceFile can observe creation of a missing file inside an existing directory", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-watch-create-"));
-  const nestedDir = path.join(workspaceDir, ".claw", "sessions");
+  const nestedDir = resolveClawWorkspaceSurfacePath("claw.workspace.sessions", workspaceDir);
   fs.mkdirSync(nestedDir, { recursive: true });
-  const fileName = path.join(".claw", "sessions", "session-1.jsonl");
+  const fileName = path.relative(workspaceDir, resolveClawWorkspaceSurfacePath("claw.workspace.sessions", workspaceDir, "session-1.jsonl"));
   const filePath = path.join(workspaceDir, fileName);
 
   const event = await new Promise<{ eventType: string; filePath: string }>((resolve) => {

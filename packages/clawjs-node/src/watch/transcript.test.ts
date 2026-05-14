@@ -5,10 +5,11 @@ import os from "os";
 import path from "path";
 
 import { watchSessionTranscript } from "./transcript.ts";
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 
 test("watchSessionTranscript observes transcript changes", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-watch-transcript-"));
-  const transcriptDir = path.join(workspaceDir, ".claw", "sessions");
+  const transcriptDir = resolveClawWorkspaceSurfacePath("claw.workspace.sessions", workspaceDir);
   fs.mkdirSync(transcriptDir, { recursive: true });
   const sessionId = "session-1";
   const transcriptPath = path.join(transcriptDir, `${sessionId}.jsonl`);

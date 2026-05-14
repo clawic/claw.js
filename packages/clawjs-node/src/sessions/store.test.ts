@@ -6,6 +6,7 @@ import path from "path";
 import childProcess from "child_process";
 
 import { SessionStore, resolveSessionPath } from "./store.ts";
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 
 function createStore() {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-sessions-"));
@@ -18,7 +19,7 @@ test("createSession writes a new transcript and listSessions returns it", () => 
 
   assert.match(session.sessionId, /^clawjs-/);
   assert.equal(session.title, "my new session");
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "sessions", `${session.sessionId}.jsonl`)), true);
+  assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.workspace.sessions", workspaceDir, `${session.sessionId}.jsonl`)), true);
 
   const sessions = store.listSessions();
   assert.equal(sessions.length, 1);

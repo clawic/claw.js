@@ -4,6 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 import {
   attachWorkspace,
   buildWorkspaceResetPlan,
@@ -37,9 +38,9 @@ test("initializeWorkspace creates manifest, runtime files and internal directori
   assert.equal(validateWorkspace(workspaceDir).missingFiles.length, 0);
   assert.equal(validateWorkspace(workspaceDir).missingDirectories.length, 0);
   assert.equal(validateWorkspace(workspaceDir).ok, true);
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "observed")), true);
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "projections")), true);
-  assert.equal(fs.existsSync(path.join(workspaceDir, ".claw", "intents")), true);
+  assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.workspace.observedState", workspaceDir)), true);
+  assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.workspace.projections", workspaceDir)), true);
+  assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.workspace.intents", workspaceDir)), true);
 });
 
 test("listManagedFiles and resetWorkspace only target ClawJS-managed paths", () => {

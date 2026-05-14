@@ -5,6 +5,7 @@ import os from "os";
 import path from "path";
 import childProcess from "child_process";
 import { WorkspaceAuditLog } from "./audit.ts";
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 
 test("audit log appends records inside the workspace", () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-audit-"));
@@ -63,7 +64,7 @@ test("audit log keeps every line under cross-process contention", async () => {
     })),
   );
 
-  const auditPath = path.join(workspaceDir, ".claw", "audit", "audit.jsonl");
+  const auditPath = resolveClawWorkspaceSurfacePath("claw.workspace.audit", workspaceDir, "audit.jsonl");
   const lines = fs.readFileSync(auditPath, "utf8").trim().split("\n");
   assert.equal(lines.length, totalChildren);
   const indexes = lines.map((line) => Number((JSON.parse(line) as { detail?: { index?: number } }).detail?.index)).sort((a, b) => a - b);
