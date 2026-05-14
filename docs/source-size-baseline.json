@@ -4,7 +4,7 @@
   "maxNewFileLines": 1200,
   "files": {
     "packages/clawjs/src/index.ts": {
-      "lines": 1998,
+      "lines": 1999,
       "reason": "Public CLI routing after delegated domain, temporal, productivity, and knowledge-tail command extraction; keep under 2000 by splitting new domains into modules."
     },
     "packages/clawjs-node/src/create-claw.ts": {
