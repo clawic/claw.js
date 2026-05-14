@@ -3684,6 +3684,20 @@ describe("discord operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-global-application-command"), {
+      applicationId: "app-123",
+      commandId: "command-123",
+    }), {
+      method: "DELETE",
+      endpoint: "applications/app-123/commands/command-123",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "null",
+      },
+    });
+
     assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.bulk-overwrite-global-application-commands"), {
       applicationId: "app-123",
       commands: [{
@@ -3728,6 +3742,21 @@ describe("discord operation runtime", () => {
       }],
       responseSchema: {
         type: "array",
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-guild-application-command"), {
+      applicationId: "app-123",
+      guildId: "guild-123",
+      commandId: "command-123",
+    }), {
+      method: "DELETE",
+      endpoint: "applications/app-123/guilds/guild-123/commands/command-123",
+      auth,
+      headers,
+      body: {},
+      responseSchema: {
+        type: "null",
       },
     });
 
