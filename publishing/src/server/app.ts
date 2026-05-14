@@ -48,6 +48,7 @@ import { registerRoutes } from "./routes/v1/index.ts";
 
 export interface BuildAppOptions {
   config?: Partial<PublishingConfig>;
+  adminToken?: string | null;
 }
 
 export interface BuiltApp {
@@ -104,7 +105,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<BuiltApp>
   fs.mkdirSync(config.dataDir, { recursive: true });
 
   const db = openDatabase(config.dbPath);
-  const auth = new AuthService(db, config.tokenStorePath);
+  const auth = new AuthService(db, config.tokenStorePath, options.adminToken);
   const audit = new AuditLog(db);
   const vault = createVaultClient({
     baseUrl: config.vaultBaseUrl,

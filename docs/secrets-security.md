@@ -291,10 +291,10 @@ The current ClawJS baseline implements the required safe public path:
 - Clawix bootstraps Secrets admin and signed-host tokens over an anonymous
   stdin channel instead of environment variables, so process environment
   inspection does not expose bearer material;
-- Clawix bootstraps Database, Drive, Index, Audio, and Sessions per-session
-  admin/shared tokens over anonymous stdin as well; those integrated local
-  services must not receive bearer material through process environment
-  variables or `.admin-token` disk files;
+- Clawix bootstraps Database, Drive, Index, Audio, Sessions, and Publishing
+  per-session admin/shared tokens over anonymous stdin as well; those
+  integrated local services must not receive bearer material through process
+  environment variables or `.admin-token` disk files;
 - Clawix stores a device-local Secrets platform KEK in macOS Keychain and
   bootstraps it over the same anonymous stdin channel; ClawJS uses it to write
   `platformKeyWrap`, so password unlock for a wrapped vault also requires the
@@ -375,7 +375,7 @@ agents can verify changes without re-deriving the policy.
 
 | Decision | Requirement | Current status |
 | --- | --- | --- |
-| `local_threat_model` | Same-user local processes are hostile. | Implemented in policy, loopback auth tests, no Secrets disk tokens, no token-bearing Secrets environment, and stdin bootstrap for integrated Database/Drive/Index/Audio/Sessions tokens; native XPC/code-signing validation and legacy Publishing token-store replacement remain `EXTERNAL PENDING`. |
+| `local_threat_model` | Same-user local processes are hostile. | Implemented in policy, loopback auth tests, no Secrets disk tokens, no token-bearing Secrets environment, and stdin bootstrap for integrated Database/Drive/Index/Audio/Sessions/Publishing tokens; native XPC/code-signing validation remains `EXTERNAL PENDING`. |
 | `audit_output` | Produce and implement hardening, not only a report. | Implemented through broker, CLI, audit, lifecycle, and docs hardening. |
 | `audit_scope` | Cover Clawix, ClawJS, remote hosts, vault, broker, connectors, daemon, and third parties. | Partially implemented; ClawJS paths are covered, native host/remotes need physical validation. |
 | `secret_material_policy` | Human UI may reveal; agents/processes/plugins/connectors do not view plaintext. | Implemented for public CLI, broker, SDK tests, and connector runners; legacy plugin interfaces are compatibility-only. |

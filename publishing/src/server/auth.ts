@@ -26,11 +26,15 @@ export interface TokenRecord {
 
 export class AuthService {
   private readonly tokenStorePath: string;
+  private readonly hostManagedToken: boolean;
   private ephemeralToken: string;
 
-  constructor(private readonly db: DB, tokenStorePath: string) {
+  constructor(private readonly db: DB, tokenStorePath: string, ephemeralToken?: string | null) {
     this.tokenStorePath = tokenStorePath;
-    this.ephemeralToken = this.loadOrCreateEphemeralToken();
+    this.hostManagedToken = Boolean(ephemeralToken);
+    this.ephemeralToken = ephemeralToken && ephemeralToken.length >= 32
+      ? ephemeralToken
+      : this.loadOrCreateEphemeralToken();
   }
 
   private loadOrCreateEphemeralToken(): string {
@@ -54,7 +58,9 @@ export class AuthService {
 
   rotateEphemeralAdminToken(): string {
     const token = `publishing_admin_${crypto.randomBytes(24).toString("hex")}`;
-    fs.writeFileSync(this.tokenStorePath, token, { mode: 0o600 });
+    if (!this.hostManagedToken) {
+      fs.writeFileSync(this.tokenStorePath, token, { mode: 0o600 });
+    }
     this.ephemeralToken = token;
     return token;
   }
