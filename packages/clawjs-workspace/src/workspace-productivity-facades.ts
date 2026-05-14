@@ -1,3 +1,6 @@
+import fs from "fs";
+import path from "path";
+
 import type {
   ActivityEntryRecord,
   AgentRecord,
@@ -43,7 +46,7 @@ export function createWorkspaceProductivityFacades(locals: Record<string, any>):
   reviewApi: WorkspaceClawInstance["review"];
   productivityApi: WorkspaceClawInstance["productivity"];
 } {
-  const { nowIso, isOverdue, toTimestamp, timelineOverlaps, minIso, maxIso, temporalToEventRecord, temporalStatusToProductivityStatus, tasksApi, eventsApi, remindersApi, deadlinesApi, inboxApi, blockersApi, decisionsApi, assignmentsApi, handoffsApi, approvalsApi, capacityApi, agentsApi, releasesApi, incidentsApi, feedbackApi, checksApi, projectsApi, milestonesApi, goalsApi, areasApi, activityApi, notesApi, peopleApi, useTimeService, claw } = locals;
+  const { nowIso, isOverdue, toTimestamp, timelineOverlaps, minIso, maxIso, temporalToEventRecord, temporalStatusToProductivityStatus, data, workspaceDir, readMeta, writeMeta, rebuildIndexes, PRODUCTIVITY_SCHEMA_VERSION, PRODUCTIVITY_SCHEMA_HASH, areasCollection, listsCollection, sectionsCollection, tasksCollection, goalsCollection, projectsCollection, commentsCollection, attachmentsCollection, savedViewsCollection, recurrencesCollection, cyclesCollection, epicsCollection, customFieldsCollection, fieldValuesCollection, templatesCollection, milestonesCollection, activityCollection, blockersCollection, artifactsCollection, decisionsCollection, workSessionsCollection, assignmentsCollection, handoffsCollection, approvalsCollection, capacityCollection, agentsCollection, releasesCollection, incidentsCollection, feedbackCollection, checksCollection, notesCollection, peopleCollection, inboxThreadsCollection, inboxMessagesCollection, eventsCollection, remindersCollection, deadlinesCollection, indexCollection, embeddingCollection, workSessionsApi, tasksApi, eventsApi, remindersApi, deadlinesApi, inboxApi, blockersApi, decisionsApi, assignmentsApi, handoffsApi, approvalsApi, capacityApi, agentsApi, releasesApi, incidentsApi, feedbackApi, checksApi, projectsApi, milestonesApi, goalsApi, areasApi, activityApi, notesApi, peopleApi, useTimeService, claw } = locals;
   const agendaApi: WorkspaceClawInstance["agenda"] = {
     list: async (input = {}) => {
       const start = input.start ?? new Date().toISOString();
