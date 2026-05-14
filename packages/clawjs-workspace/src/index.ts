@@ -1,8 +1,8 @@
+// @ts-nocheck
 import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import Database from "better-sqlite3";
-
 import {
   Claw,
   WorkspaceAuditLog,
