@@ -78,6 +78,9 @@ export type DiscordSourceOperation =
   | "stage-instance-create"
   | "stage-instance-update"
   | "stage-instance-delete"
+  | "subscription-create"
+  | "subscription-update"
+  | "subscription-delete"
   | "interaction-create"
   | "thread-create"
   | "thread-update"
@@ -160,6 +163,9 @@ const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "stage-instance-create",
   "stage-instance-update",
   "stage-instance-delete",
+  "subscription-create",
+  "subscription-update",
+  "subscription-delete",
   "interaction-create",
   "thread-create",
   "thread-update",
