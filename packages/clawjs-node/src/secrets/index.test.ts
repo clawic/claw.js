@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import { test } from "vitest";
 import assert from "node:assert/strict";
 import fs from "fs";
@@ -88,12 +89,12 @@ process.exit(1);
 async function createFakeSecretsServer() {
   const server = http.createServer(async (request, response) => {
     const url = new URL(request.url || "/", "http://127.0.0.1");
-    if (url.pathname === "/v1/health") {
+    if (url.pathname === clawApiPath("health")) {
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({ ok: true, service: "secrets", host: "127.0.0.1", port: 0 }));
       return;
     }
-    if (url.pathname === "/v1/secret-types") {
+    if (url.pathname === clawApiPath("secret-types")) {
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({
         types: [{
@@ -115,7 +116,7 @@ async function createFakeSecretsServer() {
       }));
       return;
     }
-    if (url.pathname === "/v1/tenants/demo-tenant/secrets") {
+    if (url.pathname === clawApiPath("tenants/demo-tenant/secrets")) {
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({
         secrets: [{
@@ -137,7 +138,7 @@ async function createFakeSecretsServer() {
       }));
       return;
     }
-    if (url.pathname === "/v1/tenants/demo-tenant/secrets/revenuecat_primary") {
+    if (url.pathname === clawApiPath("tenants/demo-tenant/secrets/revenuecat_primary")) {
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({
         secret: {
@@ -160,7 +161,7 @@ async function createFakeSecretsServer() {
       }));
       return;
     }
-    if (url.pathname === "/v1/tenants/demo-tenant/secrets/revenuecat_primary/capabilities") {
+    if (url.pathname === clawApiPath("tenants/demo-tenant/secrets/revenuecat_primary/capabilities")) {
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({
         secret: { secretName: "revenuecat_primary", typeId: "revenuecat.api_key" },
@@ -171,7 +172,7 @@ async function createFakeSecretsServer() {
       }));
       return;
     }
-    if (url.pathname === "/v1/tenants/demo-tenant/secrets/revenuecat_primary/actions") {
+    if (url.pathname === clawApiPath("tenants/demo-tenant/secrets/revenuecat_primary/actions")) {
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({
         secret: { secretName: "revenuecat_primary", typeId: "revenuecat.api_key" },
@@ -181,12 +182,12 @@ async function createFakeSecretsServer() {
       }));
       return;
     }
-    if (url.pathname === "/v1/tenants/demo-tenant/leases") {
+    if (url.pathname === clawApiPath("tenants/demo-tenant/leases")) {
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({ leases: [] }));
       return;
     }
-    if (url.pathname === "/v1/tenants/demo-tenant/broker/http" && request.method === "POST") {
+    if (url.pathname === clawApiPath("tenants/demo-tenant/broker/http") && request.method === "POST") {
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({
         status: 200,
@@ -196,7 +197,7 @@ async function createFakeSecretsServer() {
       }));
       return;
     }
-    if (url.pathname === "/v1/tenants/demo-tenant/secrets/slack_bot/actions/slack.authTest" && request.method === "POST") {
+    if (url.pathname === clawApiPath("tenants/demo-tenant/secrets/slack_bot/actions/slack.authTest") && request.method === "POST") {
       response.statusCode = 410;
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({

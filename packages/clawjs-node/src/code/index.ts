@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import fs from "fs";
 import http from "http";
 import os from "os";
@@ -1514,11 +1515,11 @@ export async function startCodeServer(index: CodeGlobalIndex, options: CodeServe
       const url = new URL(request.url || "/", `http://${request.headers.host || `${host}:${port}`}`);
       const parts = url.pathname.split("/").filter(Boolean);
       try {
-        if (request.method === "GET" && url.pathname === "/v1/projects") {
+        if (request.method === "GET" && url.pathname === clawApiPath("projects")) {
           sendCodeJson(response, 200, { projects: index.listProjects() });
           return;
         }
-        if (request.method === "POST" && url.pathname === "/v1/projects") {
+        if (request.method === "POST" && url.pathname === clawApiPath("projects")) {
           const body = await parseRequestJson(request);
           sendCodeJson(response, 200, { project: index.addProject({
             rootDir: stringInput(body, "rootDir") || stringInput(body, "path") || "",
@@ -1527,7 +1528,7 @@ export async function startCodeServer(index: CodeGlobalIndex, options: CodeServe
           }) });
           return;
         }
-        if (request.method === "POST" && url.pathname === "/v1/projects/discover") {
+        if (request.method === "POST" && url.pathname === clawApiPath("projects/discover")) {
           const body = await parseRequestJson(request);
           sendCodeJson(response, 200, { projects: index.discoverProjects({
             rootDir: stringInput(body, "rootDir") || stringInput(body, "path") || "",
@@ -1539,12 +1540,12 @@ export async function startCodeServer(index: CodeGlobalIndex, options: CodeServe
           sendCodeJson(response, 200, { project: index.requireProject(parts[2]) });
           return;
         }
-        if (request.method === "GET" && url.pathname === "/v1/agents") {
+        if (request.method === "GET" && url.pathname === clawApiPath("agents")) {
           const offlineAfterMs = url.searchParams.get("offlineAfterMs");
           sendCodeJson(response, 200, { agents: index.listAgents({ ...(offlineAfterMs ? { offlineAfterMs: Number(offlineAfterMs) } : {}) }) });
           return;
         }
-        if (request.method === "POST" && url.pathname === "/v1/agents/register") {
+        if (request.method === "POST" && url.pathname === clawApiPath("agents/register")) {
           const body = await parseRequestJson(request);
           sendCodeJson(response, 200, { agent: index.registerAgent({
             id: stringInput(body, "id") || "",
@@ -1556,7 +1557,7 @@ export async function startCodeServer(index: CodeGlobalIndex, options: CodeServe
           }) });
           return;
         }
-        if (request.method === "POST" && url.pathname === "/v1/agents/heartbeat") {
+        if (request.method === "POST" && url.pathname === clawApiPath("agents/heartbeat")) {
           const body = await parseRequestJson(request);
           sendCodeJson(response, 200, { agent: index.heartbeatAgent({
             id: stringInput(body, "id") || "",
@@ -1567,7 +1568,7 @@ export async function startCodeServer(index: CodeGlobalIndex, options: CodeServe
           }) });
           return;
         }
-        if (request.method === "GET" && url.pathname === "/v1/intents") {
+        if (request.method === "GET" && url.pathname === clawApiPath("intents")) {
           sendCodeJson(response, 200, { intents: index.listIntents({
             projectId: url.searchParams.get("projectId") || undefined,
             agentId: url.searchParams.get("agentId") || undefined,
@@ -1575,7 +1576,7 @@ export async function startCodeServer(index: CodeGlobalIndex, options: CodeServe
           }) });
           return;
         }
-        if (request.method === "POST" && url.pathname === "/v1/intents") {
+        if (request.method === "POST" && url.pathname === clawApiPath("intents")) {
           const body = await parseRequestJson(request);
           const detail = index.startIntent(stringInput(body, "projectId") || "", {
             kind: stringInput(body, "kind") as CodeChangeKind,
@@ -1589,35 +1590,35 @@ export async function startCodeServer(index: CodeGlobalIndex, options: CodeServe
           sendCodeJson(response, 200, detail);
           return;
         }
-        if (request.method === "GET" && url.pathname === "/v1/reservations") {
+        if (request.method === "GET" && url.pathname === clawApiPath("reservations")) {
           sendCodeJson(response, 200, { reservations: index.listReservations(url.searchParams.get("projectId") || undefined) });
           return;
         }
-        if (request.method === "GET" && url.pathname === "/v1/policy") {
+        if (request.method === "GET" && url.pathname === clawApiPath("policy")) {
           sendCodeJson(response, 200, { policy: index.policy(url.searchParams.get("projectId") || "") });
           return;
         }
-        if (request.method === "PUT" && url.pathname === "/v1/policy") {
+        if (request.method === "PUT" && url.pathname === clawApiPath("policy")) {
           const body = await parseRequestJson(request);
           const projectId = stringInput(body, "projectId") || "";
           const policyInput = body.policy && typeof body.policy === "object" && !Array.isArray(body.policy) ? body.policy as Record<string, unknown> : body;
           sendCodeJson(response, 200, { policy: index.setPolicy(projectId, policyInput) });
           return;
         }
-        if (request.method === "POST" && url.pathname === "/v1/gate") {
+        if (request.method === "POST" && url.pathname === clawApiPath("gate")) {
           const body = await parseRequestJson(request);
           sendCodeJson(response, 200, { gate: index.gate(stringInput(body, "projectId") || "", stringInput(body, "intentId") || "") });
           return;
         }
-        if (request.method === "GET" && url.pathname === "/v1/gates") {
+        if (request.method === "GET" && url.pathname === clawApiPath("gates")) {
           sendCodeJson(response, 200, { gates: index.listGateRuns(url.searchParams.get("projectId") || "", url.searchParams.get("intentId") || "") });
           return;
         }
-        if (request.method === "GET" && url.pathname === "/v1/queue") {
+        if (request.method === "GET" && url.pathname === clawApiPath("queue")) {
           sendCodeJson(response, 200, { queue: index.listQueue(url.searchParams.get("projectId") || undefined) });
           return;
         }
-        if (request.method === "POST" && url.pathname === "/v1/evidence") {
+        if (request.method === "POST" && url.pathname === clawApiPath("evidence")) {
           const body = await parseRequestJson(request);
           sendCodeJson(response, 200, { evidence: index.addEvidence(stringInput(body, "projectId") || "", {
             intentId: stringInput(body, "intentId") || "",
@@ -1628,7 +1629,7 @@ export async function startCodeServer(index: CodeGlobalIndex, options: CodeServe
           }) });
           return;
         }
-        if (request.method === "POST" && url.pathname === "/v1/checks") {
+        if (request.method === "POST" && url.pathname === clawApiPath("checks")) {
           const body = await parseRequestJson(request);
           const projectId = stringInput(body, "projectId") || "";
           const command = stringInput(body, "command");
@@ -1642,7 +1643,7 @@ export async function startCodeServer(index: CodeGlobalIndex, options: CodeServe
           sendCodeJson(response, 200, { check });
           return;
         }
-        if (request.method === "POST" && url.pathname === "/v1/reviews") {
+        if (request.method === "POST" && url.pathname === clawApiPath("reviews")) {
           const body = await parseRequestJson(request);
           sendCodeJson(response, 200, { review: index.review(stringInput(body, "projectId") || "", {
             intentId: stringInput(body, "intentId") || "",
@@ -1652,11 +1653,11 @@ export async function startCodeServer(index: CodeGlobalIndex, options: CodeServe
           }) });
           return;
         }
-        if (request.method === "GET" && url.pathname === "/v1/status") {
+        if (request.method === "GET" && url.pathname === clawApiPath("status")) {
           sendCodeJson(response, 200, index.status());
           return;
         }
-        if (request.method === "POST" && url.pathname === "/v1/sync/github") {
+        if (request.method === "POST" && url.pathname === clawApiPath("sync/github")) {
           const body = await parseRequestJson(request);
           sendCodeJson(response, 200, { sync: index.syncGithub(stringInput(body, "projectId") || "", {
             intentId: stringInput(body, "intentId") || "",

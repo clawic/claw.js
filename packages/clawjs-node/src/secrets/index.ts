@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import os from "os";
 import path from "path";
 
@@ -250,7 +251,7 @@ export async function listSecrets(
     const { tenantId } = resolveSecretsConfig(options.env);
     const query = options.search?.trim() ? `?search=${encodeURIComponent(options.search.trim())}` : "";
     const payload = await runSecretsJsonRequest<{ secrets: Array<Record<string, unknown>> }>(options.env, {
-      pathname: `/v1/tenants/${tenantId}/secrets${query}`,
+      pathname: clawApiPath(`tenants/${tenantId}/secrets${query}`),
     });
     return payload.secrets.map(normalizeSecretMetadata);
   }
@@ -274,7 +275,7 @@ export async function describeSecret(
     const { tenantId } = resolveSecretsConfig(options.env);
     try {
       const payload = await runSecretsJsonRequest<{ secret: Record<string, unknown> }>(options.env, {
-        pathname: `/v1/tenants/${tenantId}/secrets/${encodeURIComponent(options.name.trim())}`,
+        pathname: clawApiPath(`tenants/${tenantId}/secrets/${encodeURIComponent(options.name.trim())}`),
       });
       return normalizeSecretMetadata(payload.secret);
     } catch (error) {
@@ -301,7 +302,7 @@ export async function listSecretTypes(
 ): Promise<SecretTypeDescriptor[]> {
   const query = options.search?.trim() ? `?search=${encodeURIComponent(options.search.trim())}` : "";
   const payload = await runSecretsJsonRequest<{ types: SecretTypeDescriptor[] }>(options.env, {
-    pathname: `/v1/secret-types${query}`,
+    pathname: clawApiPath(`secret-types${query}`),
   });
   return payload.types;
 }
@@ -312,7 +313,7 @@ export async function getSecretCapabilities(
 ): Promise<{ secret: SecretProxyMetadata; capabilities: SecretCapabilityStatus[] }> {
   const { tenantId } = resolveSecretsConfig(options.env);
   const payload = await runSecretsJsonRequest<{ secret: Record<string, unknown>; capabilities: SecretCapabilityStatus[] }>(options.env, {
-    pathname: `/v1/tenants/${tenantId}/secrets/${encodeURIComponent(options.name.trim())}/capabilities`,
+    pathname: clawApiPath(`tenants/${tenantId}/secrets/${encodeURIComponent(options.name.trim())}/capabilities`),
   });
   return {
     secret: normalizeSecretMetadata(payload.secret),
@@ -326,7 +327,7 @@ export async function listSecretActions(
 ): Promise<{ secret: SecretProxyMetadata; actions: SecretTypedActionDescriptor[] }> {
   const { tenantId } = resolveSecretsConfig(options.env);
   const payload = await runSecretsJsonRequest<{ secret: Record<string, unknown>; actions: SecretTypedActionDescriptor[] }>(options.env, {
-    pathname: `/v1/tenants/${tenantId}/secrets/${encodeURIComponent(options.name.trim())}/actions`,
+    pathname: clawApiPath(`tenants/${tenantId}/secrets/${encodeURIComponent(options.name.trim())}/actions`),
   });
   return {
     secret: normalizeSecretMetadata(payload.secret),
@@ -341,7 +342,7 @@ export async function brokerSecretHttp(
 ): Promise<SecretBrokerHttpResult> {
   const { tenantId } = resolveSecretsConfig(options.env);
   return await runSecretsJsonRequest<SecretBrokerHttpResult>(options.env, {
-    pathname: `/v1/tenants/${tenantId}/broker/http`,
+    pathname: clawApiPath(`tenants/${tenantId}/broker/http`),
     method: "POST",
     body: input,
   });
@@ -353,7 +354,7 @@ export async function runSecretAction(
 ): Promise<{ action: SecretTypedActionDescriptor; result: SecretBrokerHttpResult }> {
   const { tenantId } = resolveSecretsConfig(options.env);
   return await runSecretsJsonRequest<{ action: SecretTypedActionDescriptor; result: SecretBrokerHttpResult }>(options.env, {
-    pathname: `/v1/tenants/${tenantId}/secrets/${encodeURIComponent(options.name.trim())}/actions/${encodeURIComponent(options.actionId)}`,
+    pathname: clawApiPath(`tenants/${tenantId}/secrets/${encodeURIComponent(options.name.trim())}/actions/${encodeURIComponent(options.actionId)}`),
     method: "POST",
   });
 }
@@ -364,7 +365,7 @@ export async function listSecretLeases(
 ): Promise<SecretLeaseRecord[]> {
   const { tenantId } = resolveSecretsConfig(options.env);
   const payload = await runSecretsJsonRequest<{ leases: SecretLeaseRecord[] }>(options.env, {
-    pathname: `/v1/tenants/${tenantId}/leases`,
+    pathname: clawApiPath(`tenants/${tenantId}/leases`),
   });
   return payload.leases;
 }
@@ -376,7 +377,7 @@ export async function doctorKeychain(
   if (usesSecretsBackend(options.env)) {
     try {
       const payload = await runSecretsJsonRequest<{ ok: boolean; service: string; host: string; port: number }>(options.env, {
-        pathname: "/v1/health",
+        pathname: clawApiPath("health"),
       });
       return {
         ok: payload.ok === true,
