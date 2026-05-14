@@ -21,9 +21,9 @@ export const DB_EXIT_DEGRADED = 2;
 export const DB_EXIT_USAGE = 64;
 
 type Writable = NodeJS.WritableStream;
-type DbAction = "list" | "get" | "create" | "update" | "delete" | "schema";
+type DbAction = "list" | "get" | "create" | "update" | "delete" | "schema" | "query";
 
-const DB_ACTIONS = new Set<DbAction>(["list", "get", "create", "update", "delete", "schema"]);
+const DB_ACTIONS = new Set<DbAction>(["list", "get", "create", "update", "delete", "schema", "query"]);
 
 const PRODUCTIVITY_COLLECTION_ALIASES: Record<string, string> = {
   task: "tasks",
@@ -337,6 +337,7 @@ function buildMagicDbUsage(binName = "claw"): string {
     `  ${binName} db <collection> <title>`,
     `  ${binName} db <collection> create [title] [--set key=value ...] [--data JSON]`,
     `  ${binName} db <collection> list`,
+    `  ${binName} db <collection> query <text>`,
     `  ${binName} db <collection> get <id>`,
     `  ${binName} db <collection> update <id> [title] [--set key=value ...] [--data JSON]`,
     `  ${binName} db <collection> delete <id>`,
@@ -854,6 +855,22 @@ export async function runMagicDbCli(input: {
     else if (items.length === 0) stdout.write(`No ${collectionName} yet\n${buildCreateHint(collectionName, binName)}\n`);
     else stdout.write(`${renderRecordTable(items, collectionName)}\n`);
     return DB_EXIT_OK;
+  }
+
+  if (action === "query") {
+    const query = (flags.query || positionals.slice(3).join(" ")).trim().toLowerCase();
+    if (!query) {
+      writeDbError(stdout, stderr, wantsJson, "usage_error", "Usage: claw db <collection> query <text>");
+      return DB_EXIT_USAGE;
+    }
+    const records = await runtime.listRecords(namespaceId, collectionName);
+    const items = records.items
+      .filter((record) => readBooleanFlag(argv, flags, "include-archived", false) || !record.archivedAt)
+      .filter((record) => JSON.stringify(record).toLowerCase().includes(query));
+    if (wantsJson) writeJson(stdout, items);
+    else if (items.length === 0) stdout.write(`No ${collectionName} match "${query}"\n`);
+    else stdout.write(`${renderRecordTable(items, collectionName)}\n`);
+    return items.length > 0 ? DB_EXIT_OK : DB_EXIT_DEGRADED;
   }
 
   if (action === "get") {

@@ -21,7 +21,7 @@ import { collectFlagValues, joinedPositionals, parseCsvFlag, readBooleanFlag } f
 import { cliErrorFromUnknown, writeCliError, writeJson } from "./cli-json.ts";
 import { COMMITMENT_KINDS, COMMITMENT_STATUSES, CONTEXT_PURPOSES, CONTEXT_STATUSES, JUDGMENT_IMPACTS, JUDGMENT_STATUSES, LEARNING_KINDS, LEARNING_PROMOTION_TARGETS, LEARNING_SENTIMENTS, LEARNING_STATUSES, LEARNING_TARGETS, OUTCOME_RESULTS, OUTCOME_STATUSES } from "./cli-knowledge-constants.ts";
 import { createCliClaw, createCliWorkspaceClaw } from "./cli-claw-factory.ts";
-import { coreProductivityCollection, mergeCoreDbInput, pickCoreTitle, singularCoreCollection } from "./cli-productivity-utils.ts";
+import { coreProductivityCollection, getCoreProductivitySchema, mergeCoreDbInput, pickCoreTitle, singularCoreCollection, validateCoreDbPayload } from "./cli-productivity-utils.ts";
 import { resolveRuntimeAdapterId } from "./cli-runtime-utils.ts";
 
 export async function runCoreProductivityDbCli(input: {
@@ -44,11 +44,26 @@ export async function runCoreProductivityDbCli(input: {
     throw new CliHandledError("usage_error", "Unknown productivity collection.", CLI_EXIT_USAGE);
   }
   const rawAction = positionals[2];
-  const dbActions = new Set(["list", "get", "create", "update", "delete", "schema"]);
+  const dbActions = new Set(["list", "get", "create", "update", "delete", "schema", "query"]);
   const action = dbActions.has(rawAction || "") ? rawAction! : "create";
   if (!dbActions.has(rawAction || "")) {
     positionals = [positionals[0], positionals[1], "create", ...positionals.slice(2)];
   }
+
+  if (action === "schema") {
+    const schema = getCoreProductivitySchema(collectionName);
+    writeJson(stdout, {
+      exists: true,
+      collection: {
+        ...(schema ?? { name: collectionName, displayName: collectionName, fields: [], indexes: [], coreFieldNames: [] }),
+        builtin: true,
+        protected: true,
+      },
+      autoCreateOnWrite: false,
+    });
+    return CLI_EXIT_OK;
+  }
+
   const claw = await createCliWorkspaceClaw(resolveRuntimeAdapterId(flags), flags, workspaceRoot, appId, workspaceId, agentId, contextCwd);
   if (!wantsJson) stderr.write("Using local database for this project\n");
 
@@ -61,28 +76,6 @@ export async function runCoreProductivityDbCli(input: {
   const api = (claw as unknown as Record<string, any>)[apiName];
   if (!api) {
     throw new CliHandledError("usage_error", `Unsupported productivity collection "${collectionName}".`, CLI_EXIT_USAGE);
-  }
-
-  if (action === "schema") {
-    const primary = collectionName === "people" ? "displayName" : ["projects", "cycles", "saved_views", "custom_fields", "templates"].includes(collectionName) ? "name" : collectionName === "field_values" ? "fieldId" : collectionName === "comments" ? "body" : "title";
-    writeJson(stdout, {
-      exists: true,
-      collection: {
-        name: collectionName,
-        builtin: true,
-        protected: true,
-        fields: [
-          { name: "id", type: "text", required: true },
-          { name: primary, type: "text", required: true },
-          { name: "status", type: "text" },
-          { name: "createdAt", type: "datetime" },
-          { name: "updatedAt", type: "datetime" },
-          { name: "archivedAt", type: "datetime" },
-        ],
-      },
-      autoCreateOnWrite: false,
-    });
-    return CLI_EXIT_OK;
   }
 
   if (action === "list") {
@@ -98,6 +91,19 @@ export async function runCoreProductivityDbCli(input: {
     if (wantsJson) writeJson(stdout, items);
     else stdout.write(`${items.map((item: any) => `${item.status ?? ""} ${item.id} ${item.title ?? item.name ?? item.displayName ?? ""}`.trim()).join("\n")}\n`);
     return CLI_EXIT_OK;
+  }
+
+  if (action === "query") {
+    const query = (flags.query || joinedPositionals(positionals, 3)).trim().toLowerCase();
+    if (!query) throw new CliHandledError("usage_error", "Usage: claw db <collection> query <text>", CLI_EXIT_USAGE);
+    const allItems = await api.list({
+      ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+      includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
+    });
+    const items = allItems.filter((item: Record<string, unknown>) => JSON.stringify(item).toLowerCase().includes(query));
+    if (wantsJson) writeJson(stdout, items);
+    else stdout.write(`${items.map((item: any) => `${item.status ?? ""} ${item.id} ${item.title ?? item.name ?? item.displayName ?? ""}`.trim()).join("\n")}\n`);
+    return items.length > 0 ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
   }
 
   if (action === "get") {
@@ -131,6 +137,7 @@ export async function runCoreProductivityDbCli(input: {
   }
 
   const { recordId, payload } = mergeCoreDbInput(action as "create" | "update", collectionName, positionals, flags, argv);
+  validateCoreDbPayload(collectionName, payload);
   if (action === "update" && !recordId) {
     throw new CliHandledError("usage_error", "Usage: claw db <collection> update <id> [--set key=value ...]", CLI_EXIT_USAGE);
   }

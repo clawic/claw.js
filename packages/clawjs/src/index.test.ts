@@ -178,6 +178,35 @@ test("runCli supports implicit db create, schema inspection, human output, and a
   }), CLI_EXIT_OK);
   assert.equal((JSON.parse(recordsStdout.getOutput()) as { id: string }).id, taskId);
 
+  const updateStdout = captureStream();
+  assert.equal(await runCli(["db", "tasks", "update", taskId, "--set", "priority=urgent", "--set", "estimateMinutes=15", "--json"], {
+    stdout: updateStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const updatedTask = JSON.parse(updateStdout.getOutput()) as { priority?: string; estimateMinutes?: number };
+  assert.equal(updatedTask.priority, "urgent");
+  assert.equal(updatedTask.estimateMinutes, 15);
+
+  const queryStdout = captureStream();
+  assert.equal(await runCli(["db", "tasks", "query", "Comprar", "--json"], {
+    stdout: queryStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.equal((JSON.parse(queryStdout.getOutput()) as Array<{ id: string }>).some((item) => item.id === taskId), true);
+
+  const invalidFieldStdout = captureStream();
+  assert.equal(await runCli(["db", "tasks", "update", taskId, "--set", "priority=never", "--json"], {
+    stdout: invalidFieldStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_USAGE);
+  const invalidField = JSON.parse(invalidFieldStdout.getOutput()) as { ok: boolean; error: { code: string; message: string } };
+  assert.equal(invalidField.ok, false);
+  assert.equal(invalidField.error.code, "invalid_field_value");
+  assert.match(invalidField.error.message, /low, medium, high, urgent/);
+
   const aliasStdout = captureStream();
   assert.equal(await runCli(["tasks", "create", "Alias task"], {
     stdout: aliasStdout.stream,
@@ -212,6 +241,16 @@ test("runCli supports implicit db create, schema inspection, human output, and a
   }), CLI_EXIT_OK);
   assert.match(schemaStdout.getOutput(), /collection: leads/);
   assert.match(schemaStdout.getOutput(), /protected: yes/);
+
+  const taskSchemaStdout = captureStream();
+  assert.equal(await runCli(["db", "tasks", "schema", "--json"], {
+    stdout: taskSchemaStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const taskSchema = JSON.parse(taskSchemaStdout.getOutput()) as { collection: { fields: Array<{ name: string; type: string; options?: string[] }> } };
+  assert.equal(taskSchema.collection.fields.some((field) => field.name === "priority" && field.options?.includes("urgent")), true);
+  assert.equal(taskSchema.collection.fields.some((field) => field.name === "estimateMinutes" && field.type === "number"), true);
 
 });
 

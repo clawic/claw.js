@@ -114,6 +114,7 @@ claw db <collection> get record-123
 claw db <collection> create --set title=Task
 claw db <collection> update record-123 --set status=done
 claw db <collection> delete record-123
+claw db <collection> query "blocked auth"
 claw db <collection> schema
 claw db tasks list
 claw db leads create --set name=Ada --set website=https://ada.dev
@@ -127,8 +128,15 @@ claw records <collection> get record-123
 claw records <collection> create --set title=Task
 claw records <collection> update record-123 --set status=done
 claw records <collection> delete record-123
+claw records <collection> query "blocked auth"
 claw records tasks list
 ```
+
+`claw db`, `claw collections`, and `claw records` use the canonical
+collection catalog for stable local collections. `--set field=value` validates
+field names, primitive types, enum values, and relation-id strings before
+writing. `schema` returns the same registered field catalog agents should use
+for planning writes.
 
 ## Work
 

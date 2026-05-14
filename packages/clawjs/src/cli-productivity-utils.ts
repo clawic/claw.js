@@ -1,11 +1,38 @@
+import { PRODUCTIVITY_COLLECTION_DEFINITIONS, type ProductivityCollectionDefinition, type ProductivityFieldDefinition } from "@clawjs/core";
+
 import { CORE_PRODUCTIVITY_DB_COLLECTIONS, LOCAL_FIRST_PRODUCTIVITY_GROUPS } from "./cli-constants.ts";
 import { CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { joinedPositionals, parseCsvFlag } from "./cli-flag-parsers.ts";
 import { parseLooseCliValue, parseObjectFlag, parseSetFlags } from "./cli-value-utils.ts";
 
+const CORE_COLLECTION_DEFINITIONS = new Map(PRODUCTIVITY_COLLECTION_DEFINITIONS.map((collection) => [collection.name, collection]));
+const SYSTEM_FIELDS: ProductivityFieldDefinition[] = [
+  { name: "id", type: "text", required: true },
+  { name: "createdAt", type: "date" },
+  { name: "updatedAt", type: "date" },
+];
+const SYSTEM_MUTATION_FIELDS = new Set(["id", "createdAt", "updatedAt"]);
+
 export function coreProductivityCollection(rawCollection: string | undefined): string | null {
   if (!rawCollection) return null;
   return CORE_PRODUCTIVITY_DB_COLLECTIONS[rawCollection.trim().toLowerCase()] ?? null;
+}
+
+export function getCoreProductivityCollectionDefinition(collectionName: string): ProductivityCollectionDefinition | undefined {
+  return CORE_COLLECTION_DEFINITIONS.get(collectionName);
+}
+
+export function getCoreProductivitySchema(collectionName: string): ProductivityCollectionDefinition | undefined {
+  const definition = getCoreProductivityCollectionDefinition(collectionName);
+  if (!definition) return undefined;
+  const fieldNames = new Set(definition.fields.map((field) => field.name));
+  return {
+    ...definition,
+    fields: [
+      ...SYSTEM_FIELDS.filter((field) => !fieldNames.has(field.name)),
+      ...definition.fields,
+    ],
+  };
 }
 
 export function singularCoreCollection(collectionName: string): string {
@@ -316,4 +343,82 @@ export function mergeCoreDbInput(
   return action === "create"
     ? { payload }
     : { recordId: positionals[3] || flags.id, payload };
+}
+
+export function validateCoreDbPayload(collectionName: string, payload: Record<string, unknown>): void {
+  const definition = getCoreProductivityCollectionDefinition(collectionName);
+  if (!definition) return;
+  const fields = new Map(definition.fields.map((field) => [field.name, field]));
+  for (const [key, value] of Object.entries(payload)) {
+    if (value === undefined) continue;
+    if (SYSTEM_MUTATION_FIELDS.has(key)) {
+      validateCoreDbSystemField(key, value);
+      continue;
+    }
+    const field = fields.get(key);
+    if (!field) {
+      throw new CliHandledError("invalid_field", `Field "${key}" is not part of the ${collectionName} schema. Run: claw db ${collectionName} schema`, CLI_EXIT_USAGE);
+    }
+    validateCoreDbField(collectionName, field, value);
+  }
+}
+
+function validateCoreDbSystemField(key: string, value: unknown): void {
+  if (key === "id") {
+    if (typeof value !== "string" || !value.trim()) {
+      throw new CliHandledError("invalid_field_type", "Field \"id\" must be a non-empty string.", CLI_EXIT_USAGE);
+    }
+    return;
+  }
+  if (typeof value !== "string" || Number.isNaN(Date.parse(value))) {
+    throw new CliHandledError("invalid_field_type", `Field "${key}" must be an ISO date string.`, CLI_EXIT_USAGE);
+  }
+}
+
+function validateCoreDbField(collectionName: string, field: ProductivityFieldDefinition, value: unknown): void {
+  if (value === null) return;
+  switch (field.type) {
+    case "text":
+    case "file":
+      if (typeof value !== "string") {
+        throw new CliHandledError("invalid_field_type", `Field "${field.name}" on ${collectionName} must be text.`, CLI_EXIT_USAGE);
+      }
+      return;
+    case "email":
+      if (typeof value !== "string" || !value.includes("@")) {
+        throw new CliHandledError("invalid_field_type", `Field "${field.name}" on ${collectionName} must be an email string.`, CLI_EXIT_USAGE);
+      }
+      return;
+    case "number":
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        throw new CliHandledError("invalid_field_type", `Field "${field.name}" on ${collectionName} must be a number.`, CLI_EXIT_USAGE);
+      }
+      return;
+    case "boolean":
+      if (typeof value !== "boolean") {
+        throw new CliHandledError("invalid_field_type", `Field "${field.name}" on ${collectionName} must be true or false.`, CLI_EXIT_USAGE);
+      }
+      return;
+    case "select":
+      if (typeof value !== "string" || (field.options && !field.options.includes(value))) {
+        throw new CliHandledError("invalid_field_value", `Field "${field.name}" on ${collectionName} must be one of: ${(field.options ?? []).join(", ")}`, CLI_EXIT_USAGE);
+      }
+      return;
+    case "relation":
+      if (typeof value !== "string" || !value.trim()) {
+        throw new CliHandledError("invalid_field_type", `Field "${field.name}" on ${collectionName} must be a ${field.relation?.collectionName ?? "record"} id string.`, CLI_EXIT_USAGE);
+      }
+      return;
+    case "date":
+      if (typeof value !== "string" || Number.isNaN(Date.parse(value))) {
+        throw new CliHandledError("invalid_field_type", `Field "${field.name}" on ${collectionName} must be an ISO date string.`, CLI_EXIT_USAGE);
+      }
+      return;
+    case "json":
+      return;
+    default: {
+      const exhaustive: never = field.type;
+      throw new CliHandledError("invalid_field_type", `Unsupported field type ${exhaustive}.`, CLI_EXIT_USAGE);
+    }
+  }
 }

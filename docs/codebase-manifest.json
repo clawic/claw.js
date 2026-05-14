@@ -96125,7 +96125,7 @@
     {
       "path": "packages/clawjs/src/cli-productivity-command.ts",
       "language": "typescript",
-      "lines": 789,
+      "lines": 796,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -96249,21 +96249,25 @@
     {
       "path": "packages/clawjs/src/cli-productivity-utils.ts",
       "language": "typescript",
-      "lines": 320,
+      "lines": 425,
       "test": false,
       "entrypoint": false,
       "imports": [
         "./cli-constants.ts",
         "./cli-errors.ts",
         "./cli-flag-parsers.ts",
-        "./cli-value-utils.ts"
+        "./cli-value-utils.ts",
+        "@clawjs/core"
       ],
       "exports": [
         "assertAllowedLocalFlags",
         "coreProductivityCollection",
+        "getCoreProductivityCollectionDefinition",
+        "getCoreProductivitySchema",
         "mergeCoreDbInput",
         "pickCoreTitle",
-        "singularCoreCollection"
+        "singularCoreCollection",
+        "validateCoreDbPayload"
       ],
       "declarations": [
         {
@@ -96288,6 +96292,16 @@
         },
         {
           "kind": "function",
+          "name": "getCoreProductivityCollectionDefinition",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "getCoreProductivitySchema",
+          "exported": true
+        },
+        {
+          "kind": "function",
           "name": "mergeCoreDbInput",
           "exported": true
         },
@@ -96300,6 +96314,21 @@
           "kind": "function",
           "name": "singularCoreCollection",
           "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "validateCoreDbField",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "validateCoreDbPayload",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "validateCoreDbSystemField",
+          "exported": false
         }
       ]
     },
@@ -97153,7 +97182,7 @@
     {
       "path": "packages/clawjs/src/database-magic.ts",
       "language": "typescript",
-      "lines": 1076,
+      "lines": 1093,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -97844,7 +97873,7 @@
     {
       "path": "packages/clawjs/src/index.test.ts",
       "language": "typescript",
-      "lines": 1541,
+      "lines": 1580,
       "test": true,
       "entrypoint": false,
       "imports": [
