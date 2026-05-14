@@ -337,7 +337,7 @@ export function buildDiscordOperationRequest(
     case "update-guild-soundboard-sound":
       return bodyPlan("PATCH", `guilds/${guildId(values)}/soundboard-sounds/${soundboardSoundId(values)}`, auth, auditHeaders(headers, values), soundboardSoundBody(values, false), { type: "object", requiredPaths: ["sound_id", "name"] });
     case "delete-guild-soundboard-sound":
-      return deletePlan(`guilds/${guildId(values)}/soundboard-sounds/${soundboardSoundId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+      return deletePlan(`guilds/${guildId(values)}/soundboard-sounds/${soundboardSoundId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "get-current-application":
       return getPlan("applications/@me", auth, headers, { type: "object", requiredPaths: ["id", "name", "description", "verify_key"] });
     case "edit-current-application":
@@ -427,7 +427,7 @@ export function buildDiscordOperationRequest(
     case "update-guild-sticker":
       return bodyPlan("PATCH", `guilds/${guildId(values)}/stickers/${stickerId(values)}`, auth, auditHeaders(headers, values), stickerBody(values, false), { type: "object", requiredPaths: ["id", "name"] });
     case "delete-guild-sticker":
-      return deletePlan(`guilds/${guildId(values)}/stickers/${stickerId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+      return deletePlan(`guilds/${guildId(values)}/stickers/${stickerId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "list-voice-regions":
       return getPlan("voice/regions", auth, headers, { type: "array" });
     case "get-current-user-voice-state":
