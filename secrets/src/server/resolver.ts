@@ -38,7 +38,7 @@ import {
   type GovernanceDenialReason,
   type ResolveContext,
 } from "./governance.ts";
-import type { SecretsCapability } from "./capabilities.ts";
+import type { ClawSecretsCapability } from "./capabilities.ts";
 
 // ---------- Public DTOs (over the wire) ----------
 

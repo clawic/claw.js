@@ -17,7 +17,7 @@ import {
 import {
   type BusinessCapability,
   type CapabilityCheck,
-  type SecretsCapability,
+  type ClawSecretsCapability,
   deserializeBusinessCapability,
   matchesScope,
   serializeBusinessCapability,
@@ -34,7 +34,7 @@ export interface AgentGrantSummary {
   agent: string;
   secretId: string;
   capability: BusinessCapability;
-  secretsCapabilities: SecretsCapability[];
+  secretsCapabilities: ClawSecretsCapability[];
   reason: string;
   createdAt: string;
   expiresAt: string;
@@ -51,7 +51,7 @@ export class AgentGrantStore {
     agent: string;
     secretId: string;
     capability: BusinessCapability;
-    secretsCapabilities: SecretsCapability[];
+    secretsCapabilities: ClawSecretsCapability[];
     reason: string;
     durationMinutes: number;
   }): IssuedAgentToken {
@@ -123,7 +123,7 @@ export class AgentGrantStore {
         }
       }
       if (check.requiredSecretsCapabilities && check.requiredSecretsCapabilities.length > 0) {
-        const have = JSON.parse(row.secrets_capabilities_json) as SecretsCapability[];
+        const have = JSON.parse(row.secrets_capabilities_json) as ClawSecretsCapability[];
         const missing = check.requiredSecretsCapabilities.filter((c) => !have.includes(c));
         if (missing.length > 0) {
           throw new Error(`Grant missing secrets capabilities: ${missing.join(", ")}`);
@@ -179,7 +179,7 @@ export class AgentGrantStore {
       agent: row.agent,
       secretId: row.secret_id,
       capability: deserializeBusinessCapability(row.capability_kind, row.capability_scope_json),
-      secretsCapabilities: JSON.parse(row.secrets_capabilities_json) as SecretsCapability[],
+      secretsCapabilities: JSON.parse(row.secrets_capabilities_json) as ClawSecretsCapability[],
       reason: row.reason,
       createdAt: row.created_at,
       expiresAt: row.expires_at,

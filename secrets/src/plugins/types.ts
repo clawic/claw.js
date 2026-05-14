@@ -11,7 +11,7 @@
 
 import type { SecretRow } from "../server/db.ts";
 import type { LockableSecret } from "../server/lockable-secret.ts";
-import type { SecretsCapability } from "../server/capabilities.ts";
+import type { ClawSecretsCapability } from "../server/capabilities.ts";
 
 // ---------- Field declaration ----------
 
@@ -79,7 +79,7 @@ export interface ExecutorPlugin {
   id: string;
   label: string;
   description?: string;
-  capabilities: SecretsCapability[];
+  capabilities: ClawSecretsCapability[];
   validate?(ctx: ExecutorContext): { ok: true } | { ok: false; reason: string };
   execute(ctx: ExecutorContext): Promise<ExecutorOutput>;
   redact?(output: ExecutorOutput, secrets: Record<string, string>): ExecutorOutput;
