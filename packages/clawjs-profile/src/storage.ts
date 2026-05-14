@@ -1,3 +1,4 @@
+// @clawjs-persistent-surface-ddl-source
 // SQLite-backed storage for the Clawix Profile.
 //
 // One Profile per database (per device). Multi-device sync (Capa 6 of the
