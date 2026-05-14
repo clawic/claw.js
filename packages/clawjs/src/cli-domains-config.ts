@@ -1,5 +1,9 @@
 import path from "path";
 
+import { allOpenSurfaceHostnames } from "./cli-open-surfaces.ts";
+
+export const CLAW_DOMAINS_BEGIN = "# BEGIN CLAWJS DOMAINS";
+export const CLAW_DOMAINS_END = "# END CLAWJS DOMAINS";
 export const CLAW_DOMAINS_LABEL = "com.claw.domains";
 const CLAW_DOMAINS_SERVICE_DIR = "/Library/Application Support/ClawJS/domains";
 
@@ -64,3 +68,19 @@ export function buildDomainsPlist(flags: Record<string, string>): string {
     "",
   ].join("\n");
 }
+
+export function domainHostsBlock(): string {
+  return [
+    CLAW_DOMAINS_BEGIN,
+    `127.0.0.1 ${allOpenSurfaceHostnames().join(" ")}`,
+    CLAW_DOMAINS_END,
+  ].join("\n");
+}
+
+export function replaceDomainHostsBlock(current: string, nextBlock: string | null): string {
+  const pattern = new RegExp(`${CLAW_DOMAINS_BEGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[\\s\\S]*?${CLAW_DOMAINS_END.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\n?`, "m");
+  const without = current.replace(pattern, "").replace(/\n{3,}/g, "\n\n").trimEnd();
+  if (!nextBlock) return without ? `${without}\n` : "";
+  return `${without ? `${without}\n\n` : ""}${nextBlock}\n`;
+}
+

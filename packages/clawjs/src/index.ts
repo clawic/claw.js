@@ -76,9 +76,10 @@ import { buildImageCommonInput, buildMediaListInput, buildMediaMetadata } from "
 import { OPEN_SURFACES, allOpenSurfaceHostnames, buildOpenUsage, openSurfaceRows, parseClawHostSurface, resolveOpenSurface, surfacePrimaryClawUrl, type OpenSurface, type OpenSurfaceState } from "./cli-open-surfaces.ts";
 import { openBrowser, openStateDir, openStatePath, readOpenState, repoRootFromCliPackage, writeOpenState } from "./cli-open-state.ts";
 import { portIsOpen, processIsAlive, waitForUrl, writeProgress } from "./cli-process-utils.ts";
-import { CLAW_DOMAINS_LABEL, buildDomainsPlist, domainsHostsFile, domainsPlistPath, domainsProxyConfigPath, domainsProxyScriptPath, domainsServiceDir } from "./cli-domains-config.ts";
+import { CLAW_DOMAINS_BEGIN, CLAW_DOMAINS_END, CLAW_DOMAINS_LABEL, buildDomainsPlist, domainHostsBlock, domainsHostsFile, domainsPlistPath, domainsProxyConfigPath, domainsProxyScriptPath, domainsServiceDir, replaceDomainHostsBlock } from "./cli-domains-config.ts";
 import { parseRuleHints, parseRuleReferences } from "./cli-rule-utils.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
+export { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { collectFlagValues, extractPositionals, formatCliTable, joinedPositionals, parseCsvFlag, parseFlags, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { inferAudioExtension, inferMimeTypeFromPath, parseContextBlock, parseInferenceMessages, pathSafeBasename, readJsonFile, resolveRuntimeAdapterId, timelineRange, type GenerationCliMediaKind } from "./cli-runtime-utils.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
@@ -126,10 +127,6 @@ type CliMediaClaw = ClawInstance & {
     };
   };
 };
-
-const CLAW_DOMAINS_BEGIN = "# BEGIN CLAWJS DOMAINS";
-const CLAW_DOMAINS_END = "# END CLAWJS DOMAINS";
-
 interface ClawDomainsStatus {
   installed: boolean;
   hostsConfigured: boolean;
@@ -151,21 +148,6 @@ function isClawDomainConfigured(flags: Record<string, string>): boolean {
   } catch {
     return false;
   }
-}
-
-function domainHostsBlock(): string {
-  return [
-    CLAW_DOMAINS_BEGIN,
-    `127.0.0.1 ${allOpenSurfaceHostnames().join(" ")}`,
-    CLAW_DOMAINS_END,
-  ].join("\n");
-}
-
-function replaceDomainHostsBlock(current: string, nextBlock: string | null): string {
-  const pattern = new RegExp(`${CLAW_DOMAINS_BEGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[\\s\\S]*?${CLAW_DOMAINS_END.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\n?`, "m");
-  const without = current.replace(pattern, "").replace(/\n{3,}/g, "\n\n").trimEnd();
-  if (!nextBlock) return without ? `${without}\n` : "";
-  return `${without ? `${without}\n\n` : ""}${nextBlock}\n`;
 }
 
 function domainsInstallPlan(flags: Record<string, string>) {
