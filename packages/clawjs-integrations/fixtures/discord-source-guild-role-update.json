@@ -1,0 +1,8 @@
+{
+  "id": "guild-role-update-sample",
+  "guild_id": "guild-sample",
+  "role": {
+    "id": "role-sample",
+    "name": "sample-updated"
+  }
+}

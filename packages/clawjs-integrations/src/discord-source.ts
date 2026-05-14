@@ -32,7 +32,13 @@ export type DiscordSourceOperation =
   | "typing-start"
   | "message-poll-vote-add"
   | "message-poll-vote-remove"
+  | "guild-create"
+  | "guild-update"
+  | "guild-delete"
   | "guild-audit-log-entry-create"
+  | "guild-ban-add"
+  | "guild-ban-remove"
+  | "guild-integrations-update"
   | "auto-moderation-rule-create"
   | "auto-moderation-rule-update"
   | "auto-moderation-rule-delete"
@@ -41,6 +47,11 @@ export type DiscordSourceOperation =
   | "guild-stickers-update"
   | "guild-member-add"
   | "guild-member-remove"
+  | "guild-member-update"
+  | "guild-members-chunk"
+  | "guild-role-create"
+  | "guild-role-update"
+  | "guild-role-delete"
   | "guild-scheduled-event-create"
   | "guild-scheduled-event-update"
   | "guild-scheduled-event-delete"
@@ -89,7 +100,13 @@ const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "typing-start",
   "message-poll-vote-add",
   "message-poll-vote-remove",
+  "guild-create",
+  "guild-update",
+  "guild-delete",
   "guild-audit-log-entry-create",
+  "guild-ban-add",
+  "guild-ban-remove",
+  "guild-integrations-update",
   "auto-moderation-rule-create",
   "auto-moderation-rule-update",
   "auto-moderation-rule-delete",
@@ -98,6 +115,11 @@ const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "guild-stickers-update",
   "guild-member-add",
   "guild-member-remove",
+  "guild-member-update",
+  "guild-members-chunk",
+  "guild-role-create",
+  "guild-role-update",
+  "guild-role-delete",
   "guild-scheduled-event-create",
   "guild-scheduled-event-update",
   "guild-scheduled-event-delete",

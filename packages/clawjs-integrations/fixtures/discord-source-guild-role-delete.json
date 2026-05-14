@@ -1,0 +1,5 @@
+{
+  "id": "guild-role-delete-sample",
+  "guild_id": "guild-sample",
+  "role_id": "role-sample"
+}

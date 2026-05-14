@@ -1,0 +1,17 @@
+{
+  "id": "guild-members-chunk-sample",
+  "guild_id": "guild-sample",
+  "members": [
+    {
+      "user": {
+        "id": "user-sample",
+        "username": "sample"
+      },
+      "roles": [
+        "role-sample"
+      ]
+    }
+  ],
+  "chunk_index": 0,
+  "chunk_count": 1
+}

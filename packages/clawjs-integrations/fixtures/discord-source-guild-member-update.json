@@ -1,0 +1,12 @@
+{
+  "id": "guild-member-update-sample",
+  "guild_id": "guild-sample",
+  "roles": [
+    "role-sample"
+  ],
+  "user": {
+    "id": "user-sample",
+    "username": "sample"
+  },
+  "joined_at": "2026-01-01T00:00:00.000000+00:00"
+}
