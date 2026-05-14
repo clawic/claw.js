@@ -77,6 +77,7 @@ import { OPEN_SURFACES, allOpenSurfaceHostnames, buildOpenUsage, openSurfaceRows
 import { openBrowser, openStateDir, openStatePath, readOpenState, repoRootFromCliPackage, writeOpenState } from "./cli-open-state.ts";
 import { portIsOpen, processIsAlive, waitForUrl, writeProgress } from "./cli-process-utils.ts";
 import { CLAW_DOMAINS_BEGIN, CLAW_DOMAINS_END, CLAW_DOMAINS_LABEL, buildDomainsPlist, buildDomainsProxyScript, domainHostsBlock, domainsHostsFile, domainsPlistPath, domainsProxyConfigPath, domainsProxyScriptPath, domainsServiceDir, replaceDomainHostsBlock } from "./cli-domains-config.ts";
+import { runPrivilegedScript } from "./cli-domains-privileges.ts";
 import { parseRuleHints, parseRuleReferences } from "./cli-rule-utils.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 export { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
@@ -179,42 +180,6 @@ function buildDomainsServiceConfig(flags: Record<string, string>, cwd: string): 
       aliases: surface.aliases ?? [],
     })),
   }, null, 2)}\n`;
-}
-
-function sudoScript(script: string): void {
-  const result = spawnSync("sudo", [
-    ...(process.stdin.isTTY ? [] : ["-n"]),
-    "sh",
-    "-c",
-    script,
-  ], { stdio: "inherit" });
-  if (result.status !== 0) {
-    throw new CliHandledError("domains_install_failed", "Failed to update local .claw domain configuration.");
-  }
-}
-
-function appleScriptQuote(value: string): string {
-  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"")}"`;
-}
-
-function runPrivilegedScript(script: string, flags: Record<string, string>): void {
-  if (process.platform !== "darwin" || flags.auth === "sudo" || flags["no-gui"]) {
-    sudoScript(script);
-    return;
-  }
-  const helperPath = path.join(os.tmpdir(), `clawjs-domains-privileged-${process.pid}.sh`);
-  fs.writeFileSync(helperPath, `#!/bin/sh\nset -eu\n${script}\n`, { mode: 0o700 });
-  const result = spawnSync("osascript", [
-    "-e",
-    `do shell script ${appleScriptQuote(`/bin/sh ${shellQuote(helperPath)}`)} with administrator privileges`,
-  ], {
-    encoding: "utf8",
-  });
-  fs.rmSync(helperPath, { force: true });
-  if (result.status !== 0) {
-    const message = (result.stderr || result.stdout || "").trim();
-    throw new CliHandledError("domains_install_failed", message || "Failed to update local .claw domain configuration.");
-  }
 }
 
 async function readDomainsStatus(flags: Record<string, string>): Promise<ClawDomainsStatus> {
