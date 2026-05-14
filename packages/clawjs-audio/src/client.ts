@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import type {
   AttachTranscriptInput,
   AudioAssetWithTranscripts,
@@ -51,30 +52,30 @@ export class AudioApiClient {
   }
 
   register(input: RegisterAudioInput): Promise<AudioAssetWithTranscripts> {
-    return this.request({ method: "POST", path: "/v1/audio", body: input });
+    return this.request({ method: "POST", path: clawApiPath("audio"), body: input });
   }
 
   attachTranscript(audioId: string, input: AttachTranscriptInput): Promise<AudioTranscript> {
-    return this.request({ method: "POST", path: `/v1/audio/${encodeURIComponent(audioId)}/transcripts`, body: input });
+    return this.request({ method: "POST", path: clawApiPath(`audio/${encodeURIComponent(audioId)}/transcripts`), body: input });
   }
 
   get(audioId: string, appId: string): Promise<AudioAssetWithTranscripts> {
-    return this.request({ method: "GET", path: `/v1/audio/${encodeURIComponent(audioId)}${buildQuery({ appId })}` });
+    return this.request({ method: "GET", path: clawApiPath(`audio/${encodeURIComponent(audioId)}${buildQuery({ appId })}`) });
   }
 
   getBytes(audioId: string, appId: string): Promise<AudioBytes> {
-    return this.request({ method: "GET", path: `/v1/audio/${encodeURIComponent(audioId)}/bytes${buildQuery({ appId })}` });
+    return this.request({ method: "GET", path: clawApiPath(`audio/${encodeURIComponent(audioId)}/bytes${buildQuery({ appId })}`) });
   }
 
   list(filter: ListAudioFilter): Promise<ListAudioResult> {
-    return this.request({ method: "GET", path: `/v1/audio${buildQuery(filter as unknown as Record<string, unknown>)}` });
+    return this.request({ method: "GET", path: clawApiPath(`audio${buildQuery(filter as unknown as Record<string, unknown>)}`) });
   }
 
   listGlobal(filter: ListGlobalAudioFilter): Promise<ListAudioResult> {
-    return this.request({ method: "GET", path: `/v1/audio-global${buildQuery(filter as unknown as Record<string, unknown>)}` });
+    return this.request({ method: "GET", path: clawApiPath(`audio-global${buildQuery(filter as unknown as Record<string, unknown>)}`) });
   }
 
   delete(audioId: string, appId: string): Promise<{ deleted: boolean }> {
-    return this.request({ method: "DELETE", path: `/v1/audio/${encodeURIComponent(audioId)}${buildQuery({ appId })}` });
+    return this.request({ method: "DELETE", path: clawApiPath(`audio/${encodeURIComponent(audioId)}${buildQuery({ appId })}`) });
   }
 }

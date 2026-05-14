@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
@@ -63,14 +64,14 @@ export function buildAudioApp(options: BuildAudioAppOptions = {}) {
     store.close();
   });
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     service: "audio",
     host: config.host,
     port: config.port,
   }));
 
-  app.post("/v1/audio", async (request, reply) => {
+  app.post(clawApiPath("audio"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     try {
       const body = readBody(request);
@@ -98,7 +99,7 @@ export function buildAudioApp(options: BuildAudioAppOptions = {}) {
     }
   });
 
-  app.post("/v1/audio/:id/transcripts", async (request, reply) => {
+  app.post(clawApiPath("audio/:id/transcripts"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     try {
       const params = request.params as { id: string };
@@ -117,7 +118,7 @@ export function buildAudioApp(options: BuildAudioAppOptions = {}) {
     }
   });
 
-  app.get("/v1/audio/:id", async (request, reply) => {
+  app.get(clawApiPath("audio/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const query = readQuery(request);
@@ -128,7 +129,7 @@ export function buildAudioApp(options: BuildAudioAppOptions = {}) {
     return result;
   });
 
-  app.get("/v1/audio/:id/bytes", async (request, reply) => {
+  app.get(clawApiPath("audio/:id/bytes"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const query = readQuery(request);
@@ -139,7 +140,7 @@ export function buildAudioApp(options: BuildAudioAppOptions = {}) {
     return result;
   });
 
-  app.get("/v1/audio", async (request, reply) => {
+  app.get(clawApiPath("audio"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     const appId = asString(query.appId);
@@ -160,7 +161,7 @@ export function buildAudioApp(options: BuildAudioAppOptions = {}) {
     return store.list(filter);
   });
 
-  app.get("/v1/audio-global", async (request, reply) => {
+  app.get(clawApiPath("audio-global"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     const filter: ListGlobalAudioFilter = {
@@ -179,7 +180,7 @@ export function buildAudioApp(options: BuildAudioAppOptions = {}) {
     return store.listGlobal(filter);
   });
 
-  app.delete("/v1/audio/:id", async (request, reply) => {
+  app.delete(clawApiPath("audio/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const query = readQuery(request);
