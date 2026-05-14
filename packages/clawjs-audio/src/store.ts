@@ -4,6 +4,8 @@ import { randomUUID } from "node:crypto";
 
 import Database from "better-sqlite3";
 
+// @clawjs-persistent-surface-ddl-source
+
 import type {
   AttachTranscriptInput,
   AudioAsset,
