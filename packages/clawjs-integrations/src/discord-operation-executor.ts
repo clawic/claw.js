@@ -515,7 +515,7 @@ export function buildDiscordOperationRequest(
         limit: optionalNumber(values.limit),
       }));
     case "pin-message":
-      return putPlan(`channels/${channelId(values)}/messages/pins/${messageId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+      return putPlan(`channels/${channelId(values)}/messages/pins/${messageId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "unpin-message":
       return deletePlan(`channels/${channelId(values)}/messages/pins/${messageId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "create-reaction":
