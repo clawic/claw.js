@@ -97757,7 +97757,7 @@
     {
       "path": "packages/clawjs/src/index-data.test.ts",
       "language": "typescript",
-      "lines": 727,
+      "lines": 735,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -97773,7 +97773,13 @@
         "vitest"
       ],
       "exports": [],
-      "declarations": []
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "parseCliData",
+          "exported": false
+        }
+      ]
     },
     {
       "path": "packages/clawjs/src/index-host.test.ts",
@@ -100758,6 +100764,7 @@
       "test": false,
       "entrypoint": false,
       "imports": [
+        "./cli-json.ts",
         "./v1-data-surface.ts",
         "@clawjs/claw",
         "@clawjs/core",
@@ -101166,6 +101173,11 @@
           "kind": "function",
           "name": "usageError",
           "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "v1JsonMeta",
+          "exported": false
         },
         {
           "kind": "function",

@@ -9,7 +9,8 @@ import { DatabaseServiceStore } from "@clawjs/database";
 import type { FieldDefinition, IndexDefinition } from "@clawjs/database";
 import { redactSecrets } from "@clawjs/claw";
 import { V1_MAIN_SCHEMA_SQL, V1_SIDECAR_SCHEMA_SQL_BY_FILE } from "./v1-data-surface.ts";
-import { assertCodexReadOnlyPath, resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { assertCodexReadOnlyPath, resolveClawCliCommand, resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 
 export const V1_DATA_EXIT_OK = 0;
 export const V1_DATA_EXIT_FAILURE = 1;
@@ -1451,25 +1452,24 @@ export function usage(binName: string, group: string): string {
 }
 
 export function writeSuccess(input: V1DataCliInput, payload: unknown): void {
-  if (input.wantsJson) {
-    input.stdout.write(`${JSON.stringify(redactSecrets(payload), null, 2)}\n`);
-    return;
-  }
+  if (input.wantsJson) return writeCommandJsonOk(input.stdout, input.positionals[0] || "data", payload, v1JsonMeta(input));
   input.stdout.write(`${typeof payload === "string" ? payload : JSON.stringify(redactSecrets(payload), null, 2)}\n`);
 }
 
 export function writeUnredactedSuccess(input: V1DataCliInput, payload: unknown): void {
-  if (input.wantsJson) {
-    input.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-    return;
-  }
+  if (input.wantsJson) return void input.stdout.write(`${JSON.stringify({ ok: true, data: payload, meta: v1JsonMeta(input) }, null, 2)}\n`);
   input.stdout.write(`${typeof payload === "string" ? payload : JSON.stringify(payload, null, 2)}\n`);
 }
 
 export function writeError(input: V1DataCliInput, code: string, message: string): void {
-  const payload = { ok: false, error: { code, message } };
-  if (input.wantsJson) input.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  if (input.wantsJson) writeCommandJsonError(input.stdout, input.positionals[0] || "data", { code, message }, v1JsonMeta(input));
   else input.stderr.write(`${message}\n`);
+}
+
+function v1JsonMeta(input: V1DataCliInput): Record<string, unknown> {
+  const canonicalCommand = input.positionals[0] || "data";
+  const command = resolveClawCliCommand(canonicalCommand);
+  return { schemaVersion: command?.schemaVersion ?? 1, canonicalCommand, ...(command?.jsonSchemaId ? { jsonSchemaId: command.jsonSchemaId } : {}), invokedCommand: input.positionals[0] ?? null, subcommand: input.positionals[1] ?? null, operation: input.positionals[2] ?? null };
 }
 
 export function usageError(input: V1DataCliInput, message: string): number {
