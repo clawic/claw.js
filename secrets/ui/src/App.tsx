@@ -3,7 +3,7 @@ function clawApiPath(path = "") {
   const suffix = String(path).replace(/^\/+/, "");
   return suffix ? CLAW_PUBLIC_API_PREFIX + "/" + suffix : CLAW_PUBLIC_API_PREFIX;
 }
-const SECRETS_SESSION_STORAGE_KEY = SECRETS_SESSION_STORAGE_KEY;
+const SECRETS_SESSION_STORAGE_KEY = "clawjs.secrets.session";
 import { useEffect, useMemo, useState } from "react";
 
 type Secret = {

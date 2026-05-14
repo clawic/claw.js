@@ -1183,6 +1183,12 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
   if (hasIndexHtml(uiRoot)) {
     await app.register(fastifyStatic, {
       root: uiRoot,
+      prefix: "/static/",
+      decorateReply: false,
+      wildcard: false,
+    });
+    await app.register(fastifyStatic, {
+      root: uiRoot,
       prefix: "/",
       decorateReply: false,
       wildcard: true,

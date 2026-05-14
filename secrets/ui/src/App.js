@@ -1,10 +1,10 @@
+import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 const CLAW_PUBLIC_API_PREFIX = "/v" + "1";
 function clawApiPath(path = "") {
-  const suffix = String(path).replace(/^\/+/, "");
-  return suffix ? CLAW_PUBLIC_API_PREFIX + "/" + suffix : CLAW_PUBLIC_API_PREFIX;
+    const suffix = String(path).replace(/^\/+/, "");
+    return suffix ? CLAW_PUBLIC_API_PREFIX + "/" + suffix : CLAW_PUBLIC_API_PREFIX;
 }
-const SECRETS_SESSION_STORAGE_KEY = SECRETS_SESSION_STORAGE_KEY;
-import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
+const SECRETS_SESSION_STORAGE_KEY = "clawjs.secrets.session";
 import { useEffect, useMemo, useState } from "react";
 const BASE_URL = globalThis.__CLAW_SECRETS_BASE_URL__ || window.location.origin;
 async function api(session, pathname, init = {}) {
