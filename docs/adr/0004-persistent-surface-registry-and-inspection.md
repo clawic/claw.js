@@ -33,6 +33,11 @@ The first supported inspection commands are:
 
 Generated documentation, including `docs/persistent-surface.md`, must be regenerated from `claw inspect render --format markdown`; it is not an independent registry.
 
+The CLI may fuse additional static manifest files from other language builders
+with `--manifest <path>` or `CLAW_INSPECT_MANIFEST=path[,path...]`. Those
+manifests must use the same `ClawPersistentSurfaceRegistry` shape and remain
+read-only inputs to inspection.
+
 ## Rules
 
 Any code that introduces a new durable path, database, collection/table, durable field, preference key, app storage key, browser storage key, persistent temp location, cache intended to survive app restarts, host operational state, or external read-only source must register it through a typed builder in the persistent surface registry or a future language-specific builder that feeds the same registry contract.

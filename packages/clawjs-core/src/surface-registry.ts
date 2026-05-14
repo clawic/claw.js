@@ -54,6 +54,10 @@ export interface ClawPersistentSurfaceNode {
   id: string;
   kind: ClawPersistentSurfaceKind;
   owner: ClawPersistentSurfaceOwner;
+  repo?: string;
+  project?: string;
+  provider?: string;
+  language?: "typescript" | "swift" | "javascript" | "json" | "sql" | "markdown";
   name: string;
   path?: string;
   key?: string;

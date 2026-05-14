@@ -1,9 +1,13 @@
+import fs from "fs";
+import path from "path";
+
 import { clawPersistentSurfaceRegistry, findClawPersistentSurfaceNode, listClawPersistentSurfaceNodes, withSurfaceChildren } from "@clawjs/core";
-import type { ClawPersistentSurfaceNode } from "@clawjs/core";
+import type { ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry } from "@clawjs/core";
 
 interface CliContext {
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
+  cwd: string;
 }
 
 const CLI_EXIT_OK = 0;
@@ -46,6 +50,37 @@ function inspectNodes(): ClawPersistentSurfaceNode[] {
   return withSurfaceChildren(clawPersistentSurfaceRegistry.nodes);
 }
 
+function inspectRegistry(input: InspectCliInput): ClawPersistentSurfaceRegistry {
+  const nodes = [...clawPersistentSurfaceRegistry.nodes];
+  for (const manifestPath of manifestPaths(input.flags)) {
+    const manifest = readManifest(manifestPath, input.context.cwd);
+    nodes.push(...manifest.nodes);
+  }
+  return {
+    version: clawPersistentSurfaceRegistry.version,
+    nodes,
+  };
+}
+
+function manifestPaths(flags: Record<string, string>): string[] {
+  const raw = flags.manifest || process.env.CLAW_INSPECT_MANIFEST || "";
+  return raw.split(",").map((value) => value.trim()).filter(Boolean);
+}
+
+function readManifest(manifestPath: string, cwd: string): ClawPersistentSurfaceRegistry {
+  const absolutePath = path.resolve(cwd, manifestPath);
+  try {
+    const parsed = JSON.parse(fs.readFileSync(absolutePath, "utf8")) as ClawPersistentSurfaceRegistry;
+    if (!Array.isArray(parsed.nodes)) {
+      throw new Error("manifest does not contain a nodes array");
+    }
+    return parsed;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new InspectCliError("inspect_manifest_error", `Could not read inspect manifest ${manifestPath}: ${message}`, CLI_EXIT_USAGE);
+  }
+}
+
 function inspectPathToId(value: string): string {
   const normalized = value.trim();
   if (!normalized || normalized === "/") return "";
@@ -57,17 +92,17 @@ function inspectPathToId(value: string): string {
   return normalized.startsWith("/") ? normalized.slice(1).replace(/\//g, ".") : normalized;
 }
 
-function inspectFind(value: string): ClawPersistentSurfaceNode | undefined {
+function inspectFind(value: string, nodes = inspectNodes()): ClawPersistentSurfaceNode | undefined {
   const id = inspectPathToId(value);
   if (!id) return undefined;
-  return findClawPersistentSurfaceNode(id) ?? inspectNodes().find((node) => node.path === value || node.key === value);
+  return findClawPersistentSurfaceNode(id) ?? nodes.find((node) => node.id === id || node.path === value || node.key === value);
 }
 
-function inspectList(value: string | undefined): ClawPersistentSurfaceNode[] {
-  if (!value || value === "/") return inspectNodes().filter((node) => !node.parentId);
-  const node = inspectFind(value);
+function inspectList(value: string | undefined, nodes = inspectNodes()): ClawPersistentSurfaceNode[] {
+  if (!value || value === "/") return nodes.filter((node) => !node.parentId);
+  const node = inspectFind(value, nodes);
   if (!node) return [];
-  return listClawPersistentSurfaceNodes(node.id);
+  return withSurfaceChildren(nodes).filter((candidate) => candidate.parentId === node.id);
 }
 
 function inspectText(nodes: ClawPersistentSurfaceNode[]): string {
@@ -77,17 +112,17 @@ function inspectText(nodes: ClawPersistentSurfaceNode[]): string {
   }).join("\n");
 }
 
-function renderInspectMarkdown(): string {
-  const nodes = inspectNodes();
+function renderInspectMarkdown(nodes = inspectNodes()): string {
   const lines = [
     "# Claw persistent surface",
     "",
     "Generated from `claw inspect render --format markdown`. Do not edit by hand.",
+    "Use `claw inspect --manifest <path>` or `CLAW_INSPECT_MANIFEST=path[,path...]` to fuse static manifests from other language builders during inspection.",
     "",
     "## Tree",
     "",
     "```mermaid",
-    renderInspectMermaid(),
+    renderInspectMermaid(nodes),
     "```",
     "",
     "## Nodes",
@@ -101,8 +136,7 @@ function renderInspectMarkdown(): string {
   return `${lines.join("\n")}\n`;
 }
 
-function renderInspectMermaid(): string {
-  const nodes = inspectNodes();
+function renderInspectMermaid(nodes = inspectNodes()): string {
   const lines = ["flowchart TD"];
   for (const node of nodes) {
     const label = `${node.name}\\n${node.kind}`;
@@ -118,55 +152,57 @@ function mermaidId(value: string): string {
 
 async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
   const [, command = "tree", target] = input.positionals;
+  const registry = inspectRegistry(input);
+  const nodes = withSurfaceChildren(registry.nodes);
   if (command === "tree") {
-    const payload = { version: clawPersistentSurfaceRegistry.version, nodes: inspectNodes() };
+    const payload = { version: registry.version, nodes };
     if (input.wantsJson) writeJson(input.context.stdout, payload);
     else input.context.stdout.write(`${inspectText(payload.nodes)}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "list") {
-    const nodes = inspectList(target ?? "/");
-    if (nodes.length === 0 && target && target !== "/") {
+    const listed = inspectList(target ?? "/", nodes);
+    if (listed.length === 0 && target && target !== "/") {
       throw new InspectCliError("inspect_not_found", `No persistent surface node found for ${target}.`, CLI_EXIT_USAGE);
     }
-    if (input.wantsJson) writeJson(input.context.stdout, nodes);
-    else input.context.stdout.write(`${inspectText(nodes)}\n`);
+    if (input.wantsJson) writeJson(input.context.stdout, listed);
+    else input.context.stdout.write(`${inspectText(listed)}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "show") {
     if (!target) throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect show <id-or-path> [--json]`, CLI_EXIT_USAGE);
-    const node = inspectFind(target);
+    const node = inspectFind(target, nodes);
     if (!node) throw new InspectCliError("inspect_not_found", `No persistent surface node found for ${target}.`, CLI_EXIT_USAGE);
     if (input.wantsJson) writeJson(input.context.stdout, node);
     else input.context.stdout.write(`${inspectText([node])}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "database") {
-    const nodes = inspectNodes().filter((node) => node.kind === "database" || node.kind === "sidecar" || node.databaseId);
-    if (input.wantsJson) writeJson(input.context.stdout, nodes);
-    else input.context.stdout.write(`${inspectText(nodes)}\n`);
+    const selected = nodes.filter((node) => node.kind === "database" || node.kind === "sidecar" || node.databaseId);
+    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "storage") {
-    const nodes = inspectNodes().filter((node) => ["root", "folder", "file", "socket", "statusFile", "legacyPath", "externalReadOnlySource"].includes(node.kind));
-    if (input.wantsJson) writeJson(input.context.stdout, nodes);
-    else input.context.stdout.write(`${inspectText(nodes)}\n`);
+    const selected = nodes.filter((node) => ["root", "folder", "file", "socket", "statusFile", "legacyPath", "externalReadOnlySource"].includes(node.kind));
+    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "prefs") {
-    const nodes = inspectNodes().filter((node) => node.kind === "preferenceKey" || node.kind === "appStorageKey" || node.kind === "browserStorageKey");
-    if (input.wantsJson) writeJson(input.context.stdout, nodes);
-    else input.context.stdout.write(`${inspectText(nodes)}\n`);
+    const selected = nodes.filter((node) => node.kind === "preferenceKey" || node.kind === "appStorageKey" || node.kind === "browserStorageKey");
+    if (input.wantsJson) writeJson(input.context.stdout, selected);
+    else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "render") {
     const format = input.flags.format ?? "markdown";
     if (format === "mermaid") {
-      input.context.stdout.write(`${renderInspectMermaid()}\n`);
+      input.context.stdout.write(`${renderInspectMermaid(nodes)}\n`);
       return CLI_EXIT_OK;
     }
     if (format === "markdown") {
-      input.context.stdout.write(renderInspectMarkdown());
+      input.context.stdout.write(renderInspectMarkdown(nodes));
       return CLI_EXIT_OK;
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);

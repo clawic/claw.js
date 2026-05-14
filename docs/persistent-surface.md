@@ -1,6 +1,7 @@
 # Claw persistent surface
 
 Generated from `claw inspect render --format markdown`. Do not edit by hand.
+Use `claw inspect --manifest <path>` or `CLAW_INSPECT_MANIFEST=path[,path...]` to fuse static manifests from other language builders during inspection.
 
 ## Tree
 
