@@ -1,3 +1,5 @@
+// @clawjs-persistent-surface-ddl-source
+import { clawApiPath, resolveClawPersistentSurfacePath } from "@clawjs/core";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -115,7 +117,8 @@ export function loadChannelConfig(channelName: string, overrides: Partial<Channe
 function defaultClawjsDataRoot(): string {
   const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
-  return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
+  const home = process.env.CLAW_HOME ? expandHome(process.env.CLAW_HOME) : expandHome(resolveClawPersistentSurfacePath("claw.global.root"));
+  return path.join(home, "data");
 }
 
 function expandHome(value: string): string {
@@ -373,9 +376,9 @@ export function buildChannelApp(options: BuildChannelAppOptions): BuiltChannelAp
 
   app.addHook("onClose", async () => { store.close(); });
 
-  app.get("/v1/health", async () => ({ ok: true, service: options.channel, host: config.host, port: config.port }));
+  app.get(clawApiPath("health"), async () => ({ ok: true, service: options.channel, host: config.host, port: config.port }));
 
-  app.post(`/v1/${options.channel}/accounts`, async (request, reply) => {
+  app.post(clawApiPath(`${options.channel}/accounts`), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const body = readBody(request);
     if (!asString(body.name)) return await reply.code(400).send({ error: "name is required" });
@@ -387,18 +390,18 @@ export function buildChannelApp(options: BuildChannelAppOptions): BuiltChannelAp
     });
   });
 
-  app.get(`/v1/${options.channel}/accounts`, async (request, reply) => {
+  app.get(clawApiPath(`${options.channel}/accounts`), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     return { items: store.listAccounts() };
   });
 
-  app.delete(`/v1/${options.channel}/accounts/:id`, async (request, reply) => {
+  app.delete(clawApiPath(`${options.channel}/accounts/:id`), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     return { deleted: store.deleteAccount(params.id) };
   });
 
-  app.post(`/v1/${options.channel}/routing`, async (request, reply) => {
+  app.post(clawApiPath(`${options.channel}/routing`), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const body = readBody(request);
     const accountId = asString(body.accountId);
@@ -408,19 +411,19 @@ export function buildChannelApp(options: BuildChannelAppOptions): BuiltChannelAp
     return store.assignRouting({ accountId, targetId, agentId, id: asString(body.id) });
   });
 
-  app.get(`/v1/${options.channel}/routing`, async (request, reply) => {
+  app.get(clawApiPath(`${options.channel}/routing`), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     return { items: store.listRouting({ accountId: asString(query.accountId), agentId: asString(query.agentId) }) };
   });
 
-  app.delete(`/v1/${options.channel}/routing/:id`, async (request, reply) => {
+  app.delete(clawApiPath(`${options.channel}/routing/:id`), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     return { deleted: store.unassignRouting(params.id) };
   });
 
-  app.post(`/v1/${options.channel}/messages/send`, async (request, reply) => {
+  app.post(clawApiPath(`${options.channel}/messages/send`), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const body = readBody(request);
     const accountId = asString(body.accountId);
@@ -445,7 +448,7 @@ export function buildChannelApp(options: BuildChannelAppOptions): BuiltChannelAp
     });
   });
 
-  app.post(`/v1/${options.channel}/webhooks/inbound`, async (request, reply) => {
+  app.post(clawApiPath(`${options.channel}/webhooks/inbound`), async (request, reply) => {
     const body = readBody(request);
     const accountId = asString(body.accountId);
     const targetId = asString(body.targetId);
@@ -463,7 +466,7 @@ export function buildChannelApp(options: BuildChannelAppOptions): BuiltChannelAp
     });
   });
 
-  app.get(`/v1/${options.channel}/messages`, async (request, reply) => {
+  app.get(clawApiPath(`${options.channel}/messages`), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     return { items: store.listMessages({
@@ -507,22 +510,22 @@ export class ChannelApiClient {
     return (await response.json()) as T;
   }
 
-  health(): Promise<{ ok: boolean; service: string }> { return this.call("GET", "/v1/health"); }
-  createAccount(input: CreateAccountInput): Promise<ChannelAccount> { return this.call("POST", `/v1/${this.channel}/accounts`, input); }
-  listAccounts(): Promise<{ items: ChannelAccount[] }> { return this.call("GET", `/v1/${this.channel}/accounts`); }
-  deleteAccount(id: string): Promise<{ deleted: boolean }> { return this.call("DELETE", `/v1/${this.channel}/accounts/${encodeURIComponent(id)}`); }
-  assignRouting(input: AssignRoutingInput): Promise<ChannelRouting> { return this.call("POST", `/v1/${this.channel}/routing`, input); }
+  health(): Promise<{ ok: boolean; service: string }> { return this.call("GET", clawApiPath("health")); }
+  createAccount(input: CreateAccountInput): Promise<ChannelAccount> { return this.call("POST", clawApiPath(`${this.channel}/accounts`), input); }
+  listAccounts(): Promise<{ items: ChannelAccount[] }> { return this.call("GET", clawApiPath(`${this.channel}/accounts`)); }
+  deleteAccount(id: string): Promise<{ deleted: boolean }> { return this.call("DELETE", clawApiPath(`${this.channel}/accounts/${encodeURIComponent(id)}`)); }
+  assignRouting(input: AssignRoutingInput): Promise<ChannelRouting> { return this.call("POST", clawApiPath(`${this.channel}/routing`), input); }
   listRouting(filter: { accountId?: string; agentId?: string } = {}): Promise<{ items: ChannelRouting[] }> {
     const entries = Object.entries(filter).filter(([, value]) => value !== undefined && value !== null && value !== "");
     const query = entries.length ? `?${entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`).join("&")}` : "";
-    return this.call("GET", `/v1/${this.channel}/routing${query}`);
+    return this.call("GET", clawApiPath(`${this.channel}/routing${query}`));
   }
-  unassignRouting(id: string): Promise<{ deleted: boolean }> { return this.call("DELETE", `/v1/${this.channel}/routing/${encodeURIComponent(id)}`); }
-  sendMessage(input: SendMessageInput): Promise<ChannelMessage> { return this.call("POST", `/v1/${this.channel}/messages/send`, input); }
-  inboundWebhook(input: InboundWebhookInput): Promise<ChannelMessage> { return this.call("POST", `/v1/${this.channel}/webhooks/inbound`, input); }
+  unassignRouting(id: string): Promise<{ deleted: boolean }> { return this.call("DELETE", clawApiPath(`${this.channel}/routing/${encodeURIComponent(id)}`)); }
+  sendMessage(input: SendMessageInput): Promise<ChannelMessage> { return this.call("POST", clawApiPath(`${this.channel}/messages/send`), input); }
+  inboundWebhook(input: InboundWebhookInput): Promise<ChannelMessage> { return this.call("POST", clawApiPath(`${this.channel}/webhooks/inbound`), input); }
   listMessages(filter: { accountId?: string; targetId?: string; direction?: "inbound" | "outbound"; limit?: number } = {}): Promise<{ items: ChannelMessage[] }> {
     const entries = Object.entries(filter).filter(([, value]) => value !== undefined && value !== null && value !== "");
     const query = entries.length ? `?${entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`).join("&")}` : "";
-    return this.call("GET", `/v1/${this.channel}/messages${query}`);
+    return this.call("GET", clawApiPath(`${this.channel}/messages${query}`));
   }
 }

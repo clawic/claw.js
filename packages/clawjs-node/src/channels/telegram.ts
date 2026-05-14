@@ -1,3 +1,4 @@
+import { clawChannelEvents } from "@clawjs/core";
 import type {
   ChannelAccountDescriptor,
   ChannelMessageRecord,
@@ -401,7 +402,7 @@ export async function syncTelegramAccount(
     if (record) {
       records.push(record);
       options.registry.events.record({
-        type: "channel.message.received",
+        type: clawChannelEvents.messageReceived,
         provider: "telegram",
         accountId,
         targetId: record.targetId,
@@ -410,7 +411,7 @@ export async function syncTelegramAccount(
         payload: { text: record.text, threadId: record.threadId },
       });
       options.registry.events.record({
-        type: "channel.target.discovered",
+        type: clawChannelEvents.targetDiscovered,
         provider: "telegram",
         accountId,
         targetId: record.targetId,
@@ -478,7 +479,7 @@ export async function sendTelegramAccountMessage(
     accountId: normalizeAccountId(input.accountId),
   }, response);
   options.registry.events.record({
-    type: "channel.message.sent",
+    type: clawChannelEvents.messageSent,
     provider: "telegram",
     accountId: record.accountId,
     targetId: record.targetId,

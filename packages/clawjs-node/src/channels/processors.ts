@@ -1,3 +1,4 @@
+import { clawChannelEvents } from "@clawjs/core";
 import { spawn } from "child_process";
 
 import type { ChannelMessageRecord, ChannelProcessorDescriptor } from "@clawjs/core";
@@ -40,7 +41,7 @@ export type ChannelProcessorAction =
   | { type: "ignore"; reason?: string };
 
 export interface ChannelProcessorEvent {
-  type: "channel.message.received";
+  type: typeof clawChannelEvents.messageReceived;
   provider: string;
   accountId: string;
   targetId: string;

@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { clawChannelEvents } from "@clawjs/core";
 import fs from "fs";
 import path from "path";
 
@@ -282,8 +283,8 @@ export function createClawChannelRuntimeHelpers(locals: Record<string, any>): Re
       startedAt,
       lastHeartbeatAt: startedAt,
     });
-    channelsRegistry.events.record({ type: "channel.listener.started", provider, accountId, processorId: configuredProcessor?.id, status: "ok" });
-    eventBus.emit("channel.listener.started", { provider, accountId, processorId: configuredProcessor?.id, pid: process.pid });
+    channelsRegistry.events.record({ type: clawChannelEvents.listenerStarted, provider, accountId, processorId: configuredProcessor?.id, status: "ok" });
+    eventBus.emit(clawChannelEvents.listenerStarted, { provider, accountId, processorId: configuredProcessor?.id, pid: process.pid });
     appendChannelListenerLog(input.logPath, `listener started provider=${provider} account=${accountId} processor=${configuredProcessor?.id ?? "assigned"}`);
 
     while (true) {
@@ -319,7 +320,7 @@ export function createClawChannelRuntimeHelpers(locals: Record<string, any>): Re
           try {
             const processorMessage = await ingestTelegramVoiceNote(message);
             const result = await invokeChannelProcessor(processor, {
-              type: "channel.message.received",
+              type: clawChannelEvents.messageReceived,
               provider,
               accountId,
               targetId: processorMessage.targetId,
@@ -327,7 +328,7 @@ export function createClawChannelRuntimeHelpers(locals: Record<string, any>): Re
               processorId: processor.id,
             }, { env: secretsEnv, timeoutMs: input.processorTimeoutMs ?? 120_000 });
             channelsRegistry.events.record({
-              type: "channel.processor.invoked",
+              type: clawChannelEvents.processorInvoked,
               provider,
               accountId,
               targetId: processorMessage.targetId,
@@ -346,7 +347,7 @@ export function createClawChannelRuntimeHelpers(locals: Record<string, any>): Re
           } catch (error) {
             const messageText = error instanceof Error ? error.message : String(error);
             channelsRegistry.events.record({
-              type: "channel.processor.invoked",
+              type: clawChannelEvents.processorInvoked,
               provider,
               accountId,
               targetId: message.targetId,
@@ -360,7 +361,7 @@ export function createClawChannelRuntimeHelpers(locals: Record<string, any>): Re
         }
       } catch (error) {
         const messageText = error instanceof Error ? error.message : String(error);
-        channelsRegistry.events.record({ type: "channel.listener.error", provider, accountId, processorId: configuredProcessor?.id, status: "error", payload: { error: messageText } });
+        channelsRegistry.events.record({ type: clawChannelEvents.listenerError, provider, accountId, processorId: configuredProcessor?.id, status: "error", payload: { error: messageText } });
         listener = channelsRegistry.listeners.upsert({
           id: listenerId,
           provider,
@@ -398,8 +399,8 @@ export function createClawChannelRuntimeHelpers(locals: Record<string, any>): Re
       stoppedAt: new Date().toISOString(),
       lastHeartbeatAt: new Date().toISOString(),
     });
-    channelsRegistry.events.record({ type: "channel.listener.stopped", provider, accountId, processorId: configuredProcessor?.id, status: "ok" });
-    eventBus.emit("channel.listener.stopped", { provider, accountId, processorId: configuredProcessor?.id, pid: process.pid });
+    channelsRegistry.events.record({ type: clawChannelEvents.listenerStopped, provider, accountId, processorId: configuredProcessor?.id, status: "ok" });
+    eventBus.emit(clawChannelEvents.listenerStopped, { provider, accountId, processorId: configuredProcessor?.id, pid: process.pid });
     appendChannelListenerLog(input.logPath, `listener stopped provider=${provider} account=${accountId}`);
     return listener;
   }
