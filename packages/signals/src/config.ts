@@ -1,6 +1,8 @@
 import path from "node:path";
 import os from "node:os";
 
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+
 export interface SignalsServiceConfig {
   domain: string;
   host: string;
@@ -59,7 +61,8 @@ export function loadSignalsServiceConfig(
 function defaultClawjsDataRoot(): string {
   const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
-  return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
+  const home = process.env.CLAW_HOME ? expandHome(process.env.CLAW_HOME) : expandHome(resolveClawPersistentSurfacePath("claw.global.root"));
+  return path.join(home, "data");
 }
 
 function expandHome(value: string): string {

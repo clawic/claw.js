@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
@@ -103,9 +104,9 @@ export function buildTrackingApp(options: BuildTrackingAppOptions): BuiltTrackin
     store.close();
   });
 
-  const base = `/v1/${config.domain}`;
+  const base = clawApiPath(`${config.domain}`);
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     service: config.domain,
     host: config.host,

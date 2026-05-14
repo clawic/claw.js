@@ -1,3 +1,4 @@
+// @clawjs-persistent-surface-ddl-source
 import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
