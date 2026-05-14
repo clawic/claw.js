@@ -31,7 +31,7 @@ const rules = [
   {
     id: "swift.user-defaults-literal",
     extensions: [".swift"],
-    pattern: /UserDefaults(?:\.standard)?\.(?:set|string|stringArray|bool|object|integer|removeObject)\([^;\n]*forKey:\s*"[^"]+"/,
+    pattern: /UserDefaults(?:\.standard)?\.(?:set|string|stringArray|bool|object|integer|double|data|dictionary|removeObject)\([^;\n]*forKey:\s*"[^"]+"/,
     message: "UserDefaults keys must be registered as preferenceKey surfaces",
   },
   {
@@ -75,7 +75,39 @@ function lineNumber(body, index) {
   return body.slice(0, index).split("\n").length;
 }
 
-function scanFile(filePath) {
+function enclosingSwiftType(body, index) {
+  const prefix = body.slice(0, index);
+  const matches = [...prefix.matchAll(/\b(?:enum|struct|class|actor)\s+([A-Za-z_][A-Za-z0-9_]*)/g)];
+  return matches.at(-1)?.[1];
+}
+
+function isLikelyPersistentSwiftKey(value) {
+  return /^(?:clawix|Clawix|dictation|quickAsk|FeatureFlags|Sidebar|Terminal|Life|provider|feature)\b/.test(value)
+    || /(?:\.v\d+|Defaults|Storage|Panel|Mode|Key|Enabled|Disabled|Expanded|Visible|Hidden|Width|Height|TTL|URL|Path|Port|Token|Bearer)/.test(value);
+}
+
+function swiftRegisteredKeyFindings(filePath, body, registryBody) {
+  if (path.extname(filePath) !== ".swift" || !registryBody) return [];
+  const findings = [];
+  const pattern = /\b(?:private\s+|nonisolated\s+|static\s+|public\s+|internal\s+|fileprivate\s+)*let\s+([A-Za-z_][A-Za-z0-9_]*(?:Key|StorageKey|DefaultsKey|Suite|SuiteName|suiteName|defaultsKey|storageKey))\s*=\s*"([^"]+)"/g;
+  for (const match of body.matchAll(pattern)) {
+    const [, name, value] = match;
+    if (!isLikelyPersistentSwiftKey(value)) continue;
+    const typeName = enclosingSwiftType(body, match.index);
+    const qualified = typeName ? `${typeName}.${name}` : name;
+    if (!registryBody.includes(qualified) && !registryBody.includes(`.${name}`) && !registryBody.includes(value)) {
+      findings.push({
+        file: path.relative(rootDir, filePath),
+        line: lineNumber(body, match.index),
+        rule: "swift.unregistered-persistent-key",
+        message: "persistent Swift key constants must be registered in PersistentSurfaceRegistry",
+      });
+    }
+  }
+  return findings;
+}
+
+function scanFile(filePath, registryBody = "") {
   const ext = path.extname(filePath);
   const body = fs.readFileSync(filePath, "utf8");
   if (isBuilderFile(filePath, body)) return [];
@@ -92,6 +124,7 @@ function scanFile(filePath) {
       message: rule.message,
     });
   }
+  findings.push(...swiftRegisteredKeyFindings(filePath, body, registryBody));
   return findings;
 }
 
@@ -120,13 +153,14 @@ function runSelfTest() {
     "UserDefaults.standard.set(true, forKey: \"DictationEnabled\")",
     "let bridgeDefaults = UserDefaults(suiteName: \"clawix.bridge\")",
     "SidebarPrefs.store.set(true, forKey: \"TerminalPanelOpen\")",
+    "static let missingKey = \"quickAsk.missing\"",
     "let db = try DatabaseQueue(path: url.path)",
   ].join("\n"));
   fs.writeFileSync(builderSwift, "enum ClawixPersistentSurfaceRegistry { static let nodes: [String] = [] }\n");
 
-  const findings = [...scanFile(badTs), ...scanFile(badSwift), ...scanFile(builderSwift)];
+  const findings = [...scanFile(badTs), ...scanFile(badSwift, "registeredKey"), ...scanFile(builderSwift)];
   const foundRules = new Set(findings.map((finding) => finding.rule));
-  for (const expected of ["ts.direct-database-path", "ts.local-storage-literal", "ts.ddl-literal", "swift.app-storage-literal", "swift.user-defaults-literal", "swift.user-defaults-suite-literal", "swift.sidebar-prefs-literal", "swift.database-queue-path"]) {
+  for (const expected of ["ts.direct-database-path", "ts.local-storage-literal", "ts.ddl-literal", "swift.app-storage-literal", "swift.user-defaults-literal", "swift.user-defaults-suite-literal", "swift.sidebar-prefs-literal", "swift.unregistered-persistent-key", "swift.database-queue-path"]) {
     if (!foundRules.has(expected)) {
       throw new Error(`self-test did not trigger ${expected}`);
     }
@@ -135,7 +169,7 @@ function runSelfTest() {
     throw new Error("self-test incorrectly flagged builder registry file");
   }
   const summary = summarizeFindings(findings);
-  if (summary.total < 8 || summary.byRule["swift.database-queue-path"] !== 1) {
+  if (summary.total < 9 || summary.byRule["swift.database-queue-path"] !== 1) {
     throw new Error("self-test summary did not count expected findings");
   }
   console.log("persistent surface guard self-test passed");
@@ -168,7 +202,12 @@ if (targets.length === 0) {
   process.exit(64);
 }
 
-const findings = targets.flatMap((target) => listFiles(path.resolve(rootDir, target)).flatMap(scanFile));
+const allFiles = targets.flatMap((target) => listFiles(path.resolve(rootDir, target)));
+const registryBody = allFiles
+  .filter((filePath) => filePath.endsWith("PersistentSurfaceRegistry.swift"))
+  .map((filePath) => fs.readFileSync(filePath, "utf8"))
+  .join("\n");
+const findings = allFiles.flatMap((filePath) => scanFile(filePath, registryBody));
 if (wantsJson) {
   console.log(JSON.stringify({ ok: findings.length === 0, summary: summarizeFindings(findings), findings }, null, 2));
   process.exit(wantsReport || findings.length === 0 ? 0 : 1);
