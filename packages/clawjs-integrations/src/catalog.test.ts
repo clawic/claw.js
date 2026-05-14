@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import path from "node:path";
 import { describe, it } from "vitest";
 
 import {
@@ -16,6 +17,8 @@ import {
 } from "./source-runner.ts";
 import type { ConnectorRuntimeImplementation } from "./runtime-registry.ts";
 import type { ConnectorCatalog } from "./types.ts";
+
+const repoRoot = path.resolve(process.cwd(), "../..");
 
 function fixtureCatalog(): ConnectorCatalog {
   return normalizeConnectorCatalog({
@@ -242,7 +245,7 @@ describe("connector catalog", () => {
     assert.equal(searchConnectorCatalog(catalog, { query: "send", kind: "action" }).length, 1);
     assert.equal(searchConnectorCatalog(catalog, { query: "send", kind: "source" }).length, 0);
     assert.equal(findConnectorOperation(catalog, "chat_service.action.send-message")?.operation.name, "Send Message");
-    assert.deepEqual(verifyStableConnectorCatalog(catalog, { evidenceRoot: process.cwd() }), {
+    assert.deepEqual(verifyStableConnectorCatalog(catalog, { evidenceRoot: repoRoot }), {
       stableOperations: 1,
       completeExternalSchemas: 1,
       errors: [],
@@ -288,7 +291,7 @@ describe("connector catalog", () => {
     });
 
     assert.throws(
-      () => verifyStableConnectorCatalog(catalog, { evidenceRoot: process.cwd() }),
+      () => verifyStableConnectorCatalog(catalog, { evidenceRoot: repoRoot }),
       /requiresAuth.*requires complete external schema status.*requires an output schema/s,
     );
   });
