@@ -13,7 +13,6 @@ import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { buildTimeApp } from "../../../time/src/server/app.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CLI_USAGE, runCli } from "./index.ts";
 import { resolveClawjsDataRoot, resolveClawjsFilesDir, resolveClawjsMainDbPath, runV1DataCli } from "./v1-data.ts";
-
 function captureStream() {
   let output = "";
   return {
@@ -1431,7 +1430,8 @@ test("runCli reset covers V2 main DB legacy service tables when present", async 
       }), CLI_EXIT_OK);
     }
 
-    const readonly = new Database(path.join(tempRoot, "core.sqlite"), { readonly: true });
+    const readonlyPath = path.join(tempRoot, "core.sqlite");
+    const readonly = new Database(readonlyPath, { readonly: true });
     try {
       for (const table of tables) {
         assert.equal((readonly.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get() as { count: number }).count, 0, table);
@@ -4504,7 +4504,7 @@ test("runCli can repair a workspace and normalize compat snapshots", async () =>
 
   assert.equal(exitCode, CLI_EXIT_OK);
   assert.match(stdout.getOutput(), /compatSnapshotMigrated/);
-  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "compat", "runtime-snapshot.json")), true);
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace.compat", workspaceRoot, "runtime-snapshot.json")), true);
 });
 
 test("runCli supports workspace reset dry-run and execution results", async () => {

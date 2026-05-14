@@ -11,7 +11,7 @@
 //   permissions.yaml + delegation.yaml + audit.log
 // personalities/<id>/personality.yaml + prompt.md
 // skill-collections/<id>/collection.yaml
-// connections/<id>/connection.yaml + auth.encrypted
+// connections/<id>/connection.yaml
 // ```
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, appendFileSync } from "node:fs";
@@ -380,6 +380,7 @@ export class AgentStoreFS {
       service: (yamlString(yaml, "service", "telegram") as ConnectionService),
       label: yamlString(yaml, "label", "Connection"),
       scopes: yamlStringArray(yaml, "scopes"),
+      secretRef: yamlString(yaml, "secretRef") || undefined,
       lastSyncAt: lastSync || undefined,
       createdAt: yamlString(yaml, "createdAt", new Date(0).toISOString()),
       updatedAt: yamlString(yaml, "updatedAt", new Date(0).toISOString()),
@@ -397,42 +398,44 @@ export class AgentStoreFS {
       ["createdAt", toStr(c.createdAt)],
       ["updatedAt", toStr(c.updatedAt)],
     ];
+    if (c.secretRef) pairs.push(["secretRef", toStr(c.secretRef)]);
     if (c.lastSyncAt) pairs.push(["lastSyncAt", toStr(c.lastSyncAt)]);
     writeFileSync(join(folder, "connection.yaml"), emitSimpleYaml(pairs));
+    rmSync(join(folder, "auth.encrypted"), { force: true });
   }
 
   deleteConnection(id: string) {
     rmSync(this.connectionDir(id), { recursive: true, force: true });
   }
 
-  /** Persist the token / OAuth secret for a connection. XOR-obfuscated
-   * with a key derived from the connection id; mirrors the macOS app
-   * scheme. A future iteration plugs into the host keychain. */
-  writeConnectionAuth(connectionId: string, secret: string) {
-    const folder = this.connectionDir(connectionId);
-    mkdirSync(folder, { recursive: true });
-    const key = Buffer.from(connectionId, "utf8");
-    if (key.length === 0) return;
-    const data = Buffer.from(secret, "utf8");
-    const xored = Buffer.alloc(data.length);
-    for (let i = 0; i < data.length; i++) {
-      xored[i] = data[i] ^ key[i % key.length];
-    }
-    writeFileSync(join(folder, "auth.encrypted"), xored);
+  writeConnectionSecretRef(connectionId: string, secretRef: string) {
+    const current = this.readConnection(connectionId);
+    const now = new Date().toISOString();
+    this.writeConnection({
+      id: connectionId,
+      service: current?.service ?? "custom",
+      label: current?.label ?? connectionId,
+      scopes: current?.scopes ?? [],
+      secretRef,
+      createdAt: current?.createdAt ?? now,
+      updatedAt: now,
+    });
+  }
+
+  readConnectionSecretRef(connectionId: string): string | null {
+    return this.readConnection(connectionId)?.secretRef ?? null;
+  }
+
+  /** Legacy plaintext auth storage is intentionally disabled. Connection
+   * credentials must live in the canonical Secrets vault and be referenced via
+   * `secretRef`; agents and integrations cannot resolve plaintext locally. */
+  writeConnectionAuth(_connectionId: string, _secret: string) {
+    throw new Error("Connection auth plaintext storage is disabled; use writeConnectionSecretRef");
   }
 
   readConnectionAuth(connectionId: string): string | null {
-    const folder = this.connectionDir(connectionId);
-    const path = join(folder, "auth.encrypted");
-    if (!existsSync(path)) return null;
-    const key = Buffer.from(connectionId, "utf8");
-    if (key.length === 0) return null;
-    const data = readFileSync(path);
-    const xored = Buffer.alloc(data.length);
-    for (let i = 0; i < data.length; i++) {
-      xored[i] = data[i] ^ key[i % key.length];
-    }
-    return xored.toString("utf8");
+    rmSync(join(this.connectionDir(connectionId), "auth.encrypted"), { force: true });
+    return null;
   }
 
   appendAudit(agentId: string, entry: AgentAuditEntry) {

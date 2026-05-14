@@ -107,6 +107,8 @@ export interface Connection {
   service: ConnectionService;
   label: string;
   scopes: string[];
+  /** Opaque reference to a secret in the canonical Secrets vault. */
+  secretRef?: string;
   lastSyncAt?: string;
   createdAt: string;
   updatedAt: string;
