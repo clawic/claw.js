@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it } from "vitest";
 
 import {
@@ -18,7 +19,7 @@ import {
 import type { ConnectorRuntimeImplementation } from "./runtime-registry.ts";
 import type { ConnectorCatalog } from "./types.ts";
 
-const repoRoot = path.resolve(process.cwd(), "../..");
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
 function fixtureCatalog(): ConnectorCatalog {
   return normalizeConnectorCatalog({

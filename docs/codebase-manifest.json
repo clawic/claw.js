@@ -65875,7 +65875,7 @@
     {
       "path": "packages/clawjs-integrations/src/catalog.test.ts",
       "language": "typescript",
-      "lines": 600,
+      "lines": 601,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -65886,6 +65886,7 @@
         "./types.ts",
         "node:assert/strict",
         "node:path",
+        "node:url",
         "vitest"
       ],
       "exports": [],
