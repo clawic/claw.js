@@ -1,9 +1,10 @@
+import { clawApiPath } from "@clawjs/core";
 // Google Home (Smart Home Actions) adapter.
 //
 // Bidirectional bridge that lets Google Home / Assistant see Clawix
 // things as Google devices:
 //   - INBOUND: Google sends OAuth-authenticated POSTs to our
-//     fulfillment endpoint (`/v1/cloud/google/fulfillment`) when the
+//     fulfillment endpoint (clawApiPath(`cloud/google/fulfillment`)) when the
 //     user says "Hey Google, turn on the bedroom light". The adapter
 //     translates SYNC / QUERY / EXECUTE / DISCONNECT intents into
 //     `IotServiceStore` reads + writes.

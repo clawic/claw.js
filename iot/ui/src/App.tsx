@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import { useEffect, useState } from "react";
 
 type StatePayload = {
@@ -47,10 +48,10 @@ export default function App() {
 
   const load = async () => {
     const [statePayload, scenePayload, approvalPayload, eventPayload] = await Promise.all([
-      fetchJson<StatePayload>("/v1/state"),
-      fetchJson<ScenePayload>("/v1/scenes"),
-      fetchJson<ApprovalPayload>("/v1/approvals"),
-      fetchJson<EventPayload>("/v1/events?limit=8"),
+      fetchJson<StatePayload>(clawApiPath("state")),
+      fetchJson<ScenePayload>(clawApiPath("scenes")),
+      fetchJson<ApprovalPayload>(clawApiPath("approvals")),
+      fetchJson<EventPayload>(clawApiPath("events?limit=8")),
     ]);
     setState(statePayload);
     setScenes(scenePayload);
@@ -64,14 +65,14 @@ export default function App() {
 
   const activateScene = async (sceneId: string) => {
     setBusy(sceneId);
-    await fetch(`/v1/scenes/${sceneId}/activate`, { method: "POST" });
+    await fetch(clawApiPath(`scenes/${sceneId}/activate`), { method: "POST" });
     await load();
     setBusy(null);
   };
 
   const approve = async (approvalId: string) => {
     setBusy(approvalId);
-    await fetch(`/v1/approvals/${approvalId}/approve`, { method: "POST" });
+    await fetch(clawApiPath(`approvals/${approvalId}/approve`), { method: "POST" });
     await load();
     setBusy(null);
   };

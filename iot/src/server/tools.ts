@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 // Agent tools registry exposed by clawjs-iot.
 //
 // Every LLM-callable verb the daemon ships passes through this module.
@@ -10,7 +11,7 @@
 // IoT tools are the first feature to publish on this surface. Future
 // features (database mutations, calendar, notes, ...) register through
 // the same module in their own packages, and the daemon aggregates the
-// catalog under a single `/v1/tools/list` response.
+// catalog under a single clawApiPath(`tools/list`) response.
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
 
@@ -156,12 +157,12 @@ export async function invokeTool(
  * notices the duplicate wiring.
  */
 export function registerToolRoutes(app: FastifyInstance, context: ToolHandlerContext): void {
-  app.get("/v1/tools/list", async () => ({
+  app.get(clawApiPath("tools/list"), async () => ({
     generatedAt: new Date().toISOString(),
     tools: listTools(),
   }));
 
-  app.post("/v1/tools/:toolId/invoke", async (request: FastifyRequest) => {
+  app.post(clawApiPath("tools/:toolId/invoke"), async (request: FastifyRequest) => {
     const params = request.params as { toolId: string };
     const body = (request.body ?? {}) as { arguments?: Record<string, unknown>; invocationId?: string };
     const args = (body.arguments ?? {}) as Record<string, unknown>;

@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -97,7 +98,7 @@ test("iot backend exposes read-only agent tools", async () => {
     },
   });
   try {
-    const catalogResponse = await app.inject({ method: "GET", url: "/v1/tools/list" });
+    const catalogResponse = await app.inject({ method: "GET", url: clawApiPath("tools/list") });
     assert.equal(catalogResponse.statusCode, 200);
     const catalog = catalogResponse.json() as {
       tools: Array<{ id: string; riskLevel: string; parameters: { type: string } }>;
@@ -127,7 +128,7 @@ test("iot backend exposes read-only agent tools", async () => {
 
     const invokeResponse = await app.inject({
       method: "POST",
-      url: "/v1/tools/iot.things.list/invoke",
+      url: clawApiPath("tools/iot.things.list/invoke"),
       payload: { arguments: { area: "office" }, invocationId: "test-invoke" },
     });
     assert.equal(invokeResponse.statusCode, 200);

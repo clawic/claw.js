@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 type JsonValue = Record<string, unknown> | unknown[] | string | number | boolean | null;
 
 export interface IotCliClientOptions {
@@ -25,15 +26,15 @@ export class IotApiClient {
   }
 
   async listHomes() {
-    return await this.request("/v1/homes");
+    return await this.request(clawApiPath("homes"));
   }
 
   async listAreas(homeId?: string) {
-    return await this.request(homeId ? `/v1/homes/${homeId}/areas` : "/v1/areas");
+    return await this.request(homeId ? clawApiPath(`homes/${homeId}/areas`) : clawApiPath("areas"));
   }
 
   async listThings(options: { homeId?: string; kind?: string; q?: string; area?: string } = {}) {
-    const base = new URL(options.homeId ? `/v1/homes/${options.homeId}/things` : "/v1/things", this.options.baseUrl);
+    const base = new URL(options.homeId ? clawApiPath(`homes/${options.homeId}/things`) : clawApiPath("things"), this.options.baseUrl);
     if (options.kind) base.searchParams.set("kind", options.kind);
     if (options.q) base.searchParams.set("q", options.q);
     if (options.area) base.searchParams.set("area", options.area);
@@ -41,39 +42,39 @@ export class IotApiClient {
   }
 
   async state(homeId?: string) {
-    return await this.request(homeId ? `/v1/homes/${homeId}/state` : "/v1/state");
+    return await this.request(homeId ? clawApiPath(`homes/${homeId}/state`) : clawApiPath("state"));
   }
 
   async evaluate(input: Record<string, unknown>, homeId?: string) {
-    return await this.request(homeId ? `/v1/homes/${homeId}/policies/evaluate` : "/v1/policies/evaluate", {
+    return await this.request(homeId ? clawApiPath(`homes/${homeId}/policies/evaluate`) : clawApiPath("policies/evaluate"), {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async runAction(input: Record<string, unknown>, homeId?: string) {
-    return await this.request(homeId ? `/v1/homes/${homeId}/actions` : "/v1/actions", {
+    return await this.request(homeId ? clawApiPath(`homes/${homeId}/actions`) : clawApiPath("actions"), {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   async listScenes(homeId?: string) {
-    return await this.request(homeId ? `/v1/homes/${homeId}/scenes` : "/v1/scenes");
+    return await this.request(homeId ? clawApiPath(`homes/${homeId}/scenes`) : clawApiPath("scenes"));
   }
 
   async activateScene(sceneId: string, homeId?: string) {
-    return await this.request(homeId ? `/v1/homes/${homeId}/scenes/${sceneId}/activate` : `/v1/scenes/${sceneId}/activate`, {
+    return await this.request(homeId ? clawApiPath(`homes/${homeId}/scenes/${sceneId}/activate`) : clawApiPath(`scenes/${sceneId}/activate`), {
       method: "POST",
     });
   }
 
   async listAutomations(homeId?: string) {
-    return await this.request(homeId ? `/v1/homes/${homeId}/automations` : "/v1/automations");
+    return await this.request(homeId ? clawApiPath(`homes/${homeId}/automations`) : clawApiPath("automations"));
   }
 
   async createAutomation(input: Record<string, unknown>, homeId?: string) {
-    return await this.request(homeId ? `/v1/homes/${homeId}/automations` : "/v1/automations", {
+    return await this.request(homeId ? clawApiPath(`homes/${homeId}/automations`) : clawApiPath("automations"), {
       method: "POST",
       body: JSON.stringify(input),
     });
@@ -81,35 +82,35 @@ export class IotApiClient {
 
   async setAutomationEnabled(automationId: string, enabled: boolean, homeId?: string) {
     return await this.request(
-      homeId ? `/v1/homes/${homeId}/automations/${automationId}/${enabled ? "enable" : "disable"}` : `/v1/automations/${automationId}/${enabled ? "enable" : "disable"}`,
+      homeId ? clawApiPath(`homes/${homeId}/automations/${automationId}/${enabled ? "enable" : "disable"}`) : clawApiPath(`automations/${automationId}/${enabled ? "enable" : "disable"}`),
       { method: "POST" },
     );
   }
 
   async runAutomation(automationId: string, homeId?: string) {
-    return await this.request(homeId ? `/v1/homes/${homeId}/automations/${automationId}/run` : `/v1/automations/${automationId}/run`, {
+    return await this.request(homeId ? clawApiPath(`homes/${homeId}/automations/${automationId}/run`) : clawApiPath(`automations/${automationId}/run`), {
       method: "POST",
     });
   }
 
   async listApprovals(homeId?: string) {
-    return await this.request(homeId ? `/v1/homes/${homeId}/approvals` : "/v1/approvals");
+    return await this.request(homeId ? clawApiPath(`homes/${homeId}/approvals`) : clawApiPath("approvals"));
   }
 
   async approve(approvalId: string, homeId?: string) {
-    return await this.request(homeId ? `/v1/homes/${homeId}/approvals/${approvalId}/approve` : `/v1/approvals/${approvalId}/approve`, {
+    return await this.request(homeId ? clawApiPath(`homes/${homeId}/approvals/${approvalId}/approve`) : clawApiPath(`approvals/${approvalId}/approve`), {
       method: "POST",
     });
   }
 
   async deny(approvalId: string, homeId?: string) {
-    return await this.request(homeId ? `/v1/homes/${homeId}/approvals/${approvalId}/deny` : `/v1/approvals/${approvalId}/deny`, {
+    return await this.request(homeId ? clawApiPath(`homes/${homeId}/approvals/${approvalId}/deny`) : clawApiPath(`approvals/${approvalId}/deny`), {
       method: "POST",
     });
   }
 
   async rawInvoke(input: Record<string, unknown>) {
-    return await this.request("/v1/raw/invoke", {
+    return await this.request(clawApiPath("raw/invoke"), {
       method: "POST",
       body: JSON.stringify(input),
     });

@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import { expect, saveBrowserScreenshot, test } from "./helpers";
 
 test("iot console covers scenes, approvals, and timeline", async ({ page }) => {
@@ -8,7 +9,7 @@ test("iot console covers scenes, approvals, and timeline", async ({ page }) => {
   await expect(page.locator('link[rel="icon"]').first()).toHaveAttribute("href", "/brand/favicon.ico");
 
   await page.evaluate(async () => {
-    await fetch("/v1/actions", {
+    await fetch(clawApiPath("actions"), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ family: "lock", selector: "front door", action: "unlock" }),

@@ -1,3 +1,6 @@
+const STABLE_EVENT_TYPES = {
+  iotDiscoveryFound: "iot.discovery.found",
+} as const;
 // Discovery orchestrator.
 //
 // Two complementary discovery paths converge here:
@@ -203,7 +206,7 @@ export class DiscoveryOrchestrator {
     this.realtime.broadcast({
       id: `disc_${device.fingerprint}`,
       homeId,
-      type: "iot.discovery.found",
+      type: STABLE_EVENT_TYPES.iotDiscoveryFound,
       payload: { device, source, scanStartedAt: this.scanStartedAt },
       createdAt: device.discoveredAt,
     });

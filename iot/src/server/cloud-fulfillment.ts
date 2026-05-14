@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 // HTTP fulfillment endpoints for cloud adapters (Google Home, Alexa).
 //
 // Both Google and Alexa expect a single public URL that receives
@@ -22,7 +23,7 @@ export interface CloudFulfillmentContext {
 }
 
 export function registerCloudFulfillmentRoutes(app: FastifyInstance, context: CloudFulfillmentContext): void {
-  app.post("/v1/cloud/google/fulfillment", async (request, reply) => {
+  app.post(clawApiPath("cloud/google/fulfillment"), async (request, reply) => {
     if (!context.googleHome.authenticate(extractBearer(request))) {
       reply.code(401);
       return { errorCode: "authFailure" };
@@ -34,7 +35,7 @@ export function registerCloudFulfillmentRoutes(app: FastifyInstance, context: Cl
     return context.googleHome.handleFulfillment(body);
   });
 
-  app.post("/v1/cloud/alexa/fulfillment", async (request, reply) => {
+  app.post(clawApiPath("cloud/alexa/fulfillment"), async (request, reply) => {
     if (!context.alexa.authenticate(extractBearer(request))) {
       reply.code(401);
       return {

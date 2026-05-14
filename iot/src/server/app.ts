@@ -1,3 +1,7 @@
+const STABLE_EVENT_TYPES = {
+  iotAdapterFailed: "iot.adapter.failed",
+} as const;
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -98,7 +102,7 @@ export function buildIotApp(options: BuildIotAppOptions = {}) {
             realtime.broadcast({
               id: `adapter_${thing.id}_${Date.now()}`,
               homeId: home.id,
-              type: "iot.adapter.failed",
+              type: STABLE_EVENT_TYPES.iotAdapterFailed,
               payload: { thingId: thing.id, capability: capabilityKey, actor, note: result.note },
               createdAt: new Date().toISOString(),
             });
@@ -192,7 +196,7 @@ export function buildIotApp(options: BuildIotAppOptions = {}) {
     await reply.code(204).send();
   });
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     service: "iot",
     host: config.host,
@@ -216,27 +220,27 @@ export function buildIotApp(options: BuildIotAppOptions = {}) {
     await mqtt?.disconnect();
   });
 
-  app.get("/v1/homes", async () => ({
+  app.get(clawApiPath("homes"), async () => ({
     homes: store.listHomes(),
   }));
 
-  app.get("/v1/default-home", async () => ({
+  app.get(clawApiPath("default-home"), async () => ({
     home: store.resolveHome(),
   }));
 
-  app.get("/v1/homes/:homeId", async (request) => ({
+  app.get(clawApiPath("homes/:homeId"), async (request) => ({
     home: store.resolveHome((request.params as { homeId: string }).homeId),
   }));
 
-  app.get("/v1/areas", async () => ({
+  app.get(clawApiPath("areas"), async () => ({
     areas: store.listAreas(),
   }));
 
-  app.get("/v1/homes/:homeId/areas", async (request) => ({
+  app.get(clawApiPath("homes/:homeId/areas"), async (request) => ({
     areas: store.listAreas((request.params as { homeId: string }).homeId),
   }));
 
-  app.get("/v1/things", async (request) => {
+  app.get(clawApiPath("things"), async (request) => {
     const query = request.query as { kind?: string; q?: string; area?: string };
     return {
       things: store.listThings(undefined, {
@@ -247,7 +251,7 @@ export function buildIotApp(options: BuildIotAppOptions = {}) {
     };
   });
 
-  app.get("/v1/homes/:homeId/things", async (request) => {
+  app.get(clawApiPath("homes/:homeId/things"), async (request) => {
     const params = request.params as { homeId: string };
     const query = request.query as { kind?: string; q?: string; area?: string };
     return {
@@ -259,23 +263,23 @@ export function buildIotApp(options: BuildIotAppOptions = {}) {
     };
   });
 
-  app.get("/v1/state", async () => ({
+  app.get(clawApiPath("state"), async () => ({
     snapshot: store.getStateSnapshot(),
   }));
 
-  app.get("/v1/homes/:homeId/state", async (request) => ({
+  app.get(clawApiPath("homes/:homeId/state"), async (request) => ({
     snapshot: store.getStateSnapshot((request.params as { homeId: string }).homeId),
   }));
 
-  app.get("/v1/events", async (request) => ({
+  app.get(clawApiPath("events"), async (request) => ({
     events: store.listEvents(undefined, Number((request.query as { limit?: string }).limit ?? "50")),
   }));
 
-  app.get("/v1/homes/:homeId/events", async (request) => ({
+  app.get(clawApiPath("homes/:homeId/events"), async (request) => ({
     events: store.listEvents((request.params as { homeId: string }).homeId, Number((request.query as { limit?: string }).limit ?? "50")),
   }));
 
-  app.get("/v1/events/stream", async (_request, reply) => {
+  app.get(clawApiPath("events/stream"), async (_request, reply) => {
     const home = store.resolveHome();
     reply.raw.writeHead(200, {
       "content-type": "text/event-stream",
@@ -287,7 +291,7 @@ export function buildIotApp(options: BuildIotAppOptions = {}) {
     return reply;
   });
 
-  app.get("/v1/homes/:homeId/events/stream", async (request, reply) => {
+  app.get(clawApiPath("homes/:homeId/events/stream"), async (request, reply) => {
     const home = store.resolveHome((request.params as { homeId: string }).homeId);
     reply.raw.writeHead(200, {
       "content-type": "text/event-stream",
@@ -299,34 +303,34 @@ export function buildIotApp(options: BuildIotAppOptions = {}) {
     return reply;
   });
 
-  app.get("/v1/scenes", async () => ({
+  app.get(clawApiPath("scenes"), async () => ({
     scenes: store.listScenes(),
   }));
 
-  app.get("/v1/homes/:homeId/scenes", async (request) => ({
+  app.get(clawApiPath("homes/:homeId/scenes"), async (request) => ({
     scenes: store.listScenes((request.params as { homeId: string }).homeId),
   }));
 
-  app.post("/v1/scenes/:sceneId/activate", async (request) => ({
+  app.post(clawApiPath("scenes/:sceneId/activate"), async (request) => ({
     result: store.activateScene(undefined, (request.params as { sceneId: string }).sceneId, "ui"),
   }));
 
-  app.post("/v1/homes/:homeId/scenes/:sceneId/activate", async (request) => {
+  app.post(clawApiPath("homes/:homeId/scenes/:sceneId/activate"), async (request) => {
     const params = request.params as { homeId: string; sceneId: string };
     return {
       result: store.activateScene(params.homeId, params.sceneId, "ui"),
     };
   });
 
-  app.get("/v1/automations", async () => ({
+  app.get(clawApiPath("automations"), async () => ({
     automations: store.listAutomations(),
   }));
 
-  app.get("/v1/homes/:homeId/automations", async (request) => ({
+  app.get(clawApiPath("homes/:homeId/automations"), async (request) => ({
     automations: store.listAutomations((request.params as { homeId: string }).homeId),
   }));
 
-  app.post("/v1/automations", async (request) => {
+  app.post(clawApiPath("automations"), async (request) => {
     const body = readBody(request);
     return {
       automation: store.createAutomation(undefined, {
@@ -339,7 +343,7 @@ export function buildIotApp(options: BuildIotAppOptions = {}) {
     };
   });
 
-  app.post("/v1/homes/:homeId/automations", async (request) => {
+  app.post(clawApiPath("homes/:homeId/automations"), async (request) => {
     const body = readBody(request);
     return {
       automation: store.createAutomation((request.params as { homeId: string }).homeId, {
@@ -352,86 +356,86 @@ export function buildIotApp(options: BuildIotAppOptions = {}) {
     };
   });
 
-  app.post("/v1/automations/:automationId/enable", async (request) => ({
+  app.post(clawApiPath("automations/:automationId/enable"), async (request) => ({
     automation: store.setAutomationEnabled(undefined, (request.params as { automationId: string }).automationId, true),
   }));
 
-  app.post("/v1/homes/:homeId/automations/:automationId/enable", async (request) => {
+  app.post(clawApiPath("homes/:homeId/automations/:automationId/enable"), async (request) => {
     const params = request.params as { homeId: string; automationId: string };
     return {
       automation: store.setAutomationEnabled(params.homeId, params.automationId, true),
     };
   });
 
-  app.post("/v1/automations/:automationId/disable", async (request) => ({
+  app.post(clawApiPath("automations/:automationId/disable"), async (request) => ({
     automation: store.setAutomationEnabled(undefined, (request.params as { automationId: string }).automationId, false),
   }));
 
-  app.post("/v1/homes/:homeId/automations/:automationId/disable", async (request) => {
+  app.post(clawApiPath("homes/:homeId/automations/:automationId/disable"), async (request) => {
     const params = request.params as { homeId: string; automationId: string };
     return {
       automation: store.setAutomationEnabled(params.homeId, params.automationId, false),
     };
   });
 
-  app.post("/v1/automations/:automationId/run", async (request) => ({
+  app.post(clawApiPath("automations/:automationId/run"), async (request) => ({
     result: store.runAutomation(undefined, (request.params as { automationId: string }).automationId),
   }));
 
-  app.post("/v1/homes/:homeId/automations/:automationId/run", async (request) => {
+  app.post(clawApiPath("homes/:homeId/automations/:automationId/run"), async (request) => {
     const params = request.params as { homeId: string; automationId: string };
     return {
       result: store.runAutomation(params.homeId, params.automationId),
     };
   });
 
-  app.post("/v1/policies/evaluate", async (request) => ({
+  app.post(clawApiPath("policies/evaluate"), async (request) => ({
     evaluation: store.evaluatePolicy(undefined, readBody(request) as unknown as IoTActionRequest),
   }));
 
-  app.post("/v1/homes/:homeId/policies/evaluate", async (request) => ({
+  app.post(clawApiPath("homes/:homeId/policies/evaluate"), async (request) => ({
     evaluation: store.evaluatePolicy((request.params as { homeId: string }).homeId, readBody(request) as unknown as IoTActionRequest),
   }));
 
-  app.get("/v1/approvals", async () => ({
+  app.get(clawApiPath("approvals"), async () => ({
     approvals: store.listApprovals(),
   }));
 
-  app.get("/v1/homes/:homeId/approvals", async (request) => ({
+  app.get(clawApiPath("homes/:homeId/approvals"), async (request) => ({
     approvals: store.listApprovals((request.params as { homeId: string }).homeId),
   }));
 
-  app.post("/v1/approvals/:approvalId/approve", async (request) => ({
+  app.post(clawApiPath("approvals/:approvalId/approve"), async (request) => ({
     result: store.approveApproval(undefined, (request.params as { approvalId: string }).approvalId),
   }));
 
-  app.post("/v1/homes/:homeId/approvals/:approvalId/approve", async (request) => {
+  app.post(clawApiPath("homes/:homeId/approvals/:approvalId/approve"), async (request) => {
     const params = request.params as { homeId: string; approvalId: string };
     return {
       result: store.approveApproval(params.homeId, params.approvalId),
     };
   });
 
-  app.post("/v1/approvals/:approvalId/deny", async (request) => ({
+  app.post(clawApiPath("approvals/:approvalId/deny"), async (request) => ({
     approval: store.denyApproval(undefined, (request.params as { approvalId: string }).approvalId),
   }));
 
-  app.post("/v1/homes/:homeId/approvals/:approvalId/deny", async (request) => {
+  app.post(clawApiPath("homes/:homeId/approvals/:approvalId/deny"), async (request) => {
     const params = request.params as { homeId: string; approvalId: string };
     return {
       approval: store.denyApproval(params.homeId, params.approvalId),
     };
   });
 
-  app.post("/v1/actions", async (request) => ({
+  app.post(clawApiPath("actions"), async (request) => ({
     result: store.runAction(undefined, readBody(request) as unknown as IoTActionRequest),
   }));
 
-  app.post("/v1/homes/:homeId/actions", async (request) => ({
+  app.post(clawApiPath("homes/:homeId/actions"), async (request) => ({
     result: store.runAction((request.params as { homeId: string }).homeId, readBody(request) as unknown as IoTActionRequest),
   }));
 
-  app.post("/v1/raw/invoke", async (request) => {
+  app.post(clawApiPath("raw/invoke"), async (request) => {
     const body = readBody(request);
     return {
       result: store.rawInvoke({
