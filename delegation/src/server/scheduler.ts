@@ -1,3 +1,14 @@
+const STABLE_EVENT_TYPES = {
+  nodeHeartbeat: "node.heartbeat",
+  runLogged: "run.logged",
+  nodeWaiting: "node.waiting",
+  nodeSucceeded: "node.succeeded",
+  nodeRetryScheduled: "node.retry_scheduled",
+  nodeFailed: "node.failed",
+  nodeBlocked: "node.blocked",
+  nodeCancelled: "node.cancelled",
+  nodeContinuationCreated: "node.continuation_created",
+} as const;
 import type {
   AgentRun,
   ClaimedRun,
@@ -57,7 +68,7 @@ export class DelegationScheduler {
       nodeId: run.nodeId,
       runId,
       workerId: run.workerId,
-      type: "node.heartbeat",
+      type: STABLE_EVENT_TYPES.nodeHeartbeat,
       message: "Run heartbeat received.",
       data: { leaseExpiresAt },
     });
@@ -72,7 +83,7 @@ export class DelegationScheduler {
       nodeId: run.nodeId,
       runId,
       workerId: run.workerId,
-      type: "run.logged",
+      type: STABLE_EVENT_TYPES.runLogged,
       message: line,
       data: { stream },
     });
@@ -134,7 +145,7 @@ export class DelegationScheduler {
         nodeId: parent.id,
         runId: run.id,
         workerId: run.workerId,
-        type: "node.waiting",
+        type: STABLE_EVENT_TYPES.nodeWaiting,
         message: "Parent node is waiting for blocking children.",
         data: { childNodeId: child.id },
       });
@@ -163,7 +174,7 @@ export class DelegationScheduler {
       nodeId: run.nodeId,
       runId,
       workerId: run.workerId,
-      type: "node.succeeded",
+      type: STABLE_EVENT_TYPES.nodeSucceeded,
       message: "Node completed successfully.",
       data: output,
     });
@@ -197,7 +208,7 @@ export class DelegationScheduler {
         nodeId: node.id,
         runId,
         workerId: run.workerId,
-        type: "node.retry_scheduled",
+        type: STABLE_EVENT_TYPES.nodeRetryScheduled,
         message: "Node failed and was scheduled for retry.",
         data: { nextRunAt, errorMessage: input.errorMessage },
       });
@@ -213,7 +224,7 @@ export class DelegationScheduler {
         nodeId: node.id,
         runId,
         workerId: run.workerId,
-        type: "node.failed",
+        type: STABLE_EVENT_TYPES.nodeFailed,
         message: "Node failed terminally.",
         data: { retryable, errorMessage: input.errorMessage },
       });
@@ -240,7 +251,7 @@ export class DelegationScheduler {
       nodeId: run.nodeId,
       runId,
       workerId: run.workerId,
-      type: "node.blocked",
+      type: STABLE_EVENT_TYPES.nodeBlocked,
       message: "Node blocked by worker.",
       data: { reason },
     });
@@ -260,7 +271,7 @@ export class DelegationScheduler {
     this.db.appendEvent({
       graphId: node.graphId,
       nodeId,
-      type: "node.retry_scheduled",
+      type: STABLE_EVENT_TYPES.nodeRetryScheduled,
       message: "Node was manually retried.",
       data: {},
     });
@@ -277,7 +288,7 @@ export class DelegationScheduler {
     this.db.appendEvent({
       graphId: node.graphId,
       nodeId,
-      type: "node.cancelled",
+      type: STABLE_EVENT_TYPES.nodeCancelled,
       message: "Node was cancelled.",
       data: {},
     });
@@ -312,7 +323,7 @@ export class DelegationScheduler {
           nodeId: node.id,
           runId: run.id,
           workerId: run.workerId,
-          type: "node.retry_scheduled",
+          type: STABLE_EVENT_TYPES.nodeRetryScheduled,
           message: "Node lease expired and was scheduled for retry.",
           data: { nextRunAt },
         });
@@ -328,7 +339,7 @@ export class DelegationScheduler {
           nodeId: node.id,
           runId: run.id,
           workerId: run.workerId,
-          type: "node.failed",
+          type: STABLE_EVENT_TYPES.nodeFailed,
           message: "Node lease expired terminally.",
           data: {},
         });
@@ -359,7 +370,7 @@ export class DelegationScheduler {
         this.db.appendEvent({
           graphId: parent.graphId,
           nodeId: parent.id,
-          type: "node.failed",
+          type: STABLE_EVENT_TYPES.nodeFailed,
           message: "Parent failed because a blocking child failed.",
           data: {},
         });
@@ -402,7 +413,7 @@ export class DelegationScheduler {
       this.db.appendEvent({
         graphId: parent.graphId,
         nodeId: continuation.id,
-        type: "node.continuation_created",
+        type: STABLE_EVENT_TYPES.nodeContinuationCreated,
         message: "Continuation node created after blocking children finished.",
         data: { continuationOfNodeId: parent.id },
       });

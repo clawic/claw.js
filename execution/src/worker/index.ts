@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import { setTimeout as delay } from "node:timers/promises";
 import WebSocket from "ws";
 
@@ -25,7 +26,7 @@ interface RunExecutionWorkerOptions {
 }
 
 function toWebSocketUrl(baseUrl: string): string {
-  const url = new URL("/v1/workers/connect", baseUrl);
+  const url = new URL(clawApiPath("workers/connect"), baseUrl);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   return url.toString();
 }

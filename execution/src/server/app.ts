@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
@@ -118,9 +119,9 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     });
   }
 
-  app.get("/v1/health", async () => ({ ok: true }));
+  app.get(clawApiPath("health"), async () => ({ ok: true }));
 
-  app.post("/v1/auth/login", async (request, reply) => {
+  app.post(clawApiPath("auth/login"), async (request, reply) => {
     const body = (request.body ?? {}) as Record<string, unknown>;
     const email = String(body.email ?? "").trim().toLowerCase();
     const password = String(body.password ?? "");
@@ -146,7 +147,7 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     };
   });
 
-  app.post("/v1/auth/refresh", async (request, reply) => {
+  app.post(clawApiPath("auth/refresh"), async (request, reply) => {
     const body = (request.body ?? {}) as Record<string, unknown>;
     const refreshToken = String(body.refreshToken ?? "");
     const consumed = db.consumeRefreshToken(refreshToken);
@@ -169,19 +170,19 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     };
   });
 
-  app.post("/v1/auth/logout", async (request) => {
+  app.post(clawApiPath("auth/logout"), async (request) => {
     const body = (request.body ?? {}) as Record<string, unknown>;
     db.revokeRefreshToken(String(body.refreshToken ?? ""));
     return { ok: true };
   });
 
-  app.get("/v1/me", async (request, reply) => {
+  app.get(clawApiPath("me"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     return claims;
   });
 
-  app.get("/v1/workers", async (request, reply) => {
+  app.get(clawApiPath("workers"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     return {
@@ -197,20 +198,20 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     };
   });
 
-  app.get("/v1/projects", async (request, reply) => {
+  app.get(clawApiPath("projects"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     return { projects: db.listProjects(claims.tenantId) };
   });
 
-  app.post("/v1/projects", async (request, reply) => {
+  app.post(clawApiPath("projects"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const body = (request.body ?? {}) as Record<string, unknown>;
     return { project: db.createProject({ tenantId: claims.tenantId, name: String(body.name ?? "Untitled Project"), description: String(body.description ?? "") }) };
   });
 
-  app.get("/v1/projects/:projectId", async (request, reply) => {
+  app.get(clawApiPath("projects/:projectId"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const projectId = String((request.params as Record<string, unknown>).projectId ?? "");
@@ -219,14 +220,14 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     return { project };
   });
 
-  app.get("/v1/projects/:projectId/repositories", async (request, reply) => {
+  app.get(clawApiPath("projects/:projectId/repositories"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const projectId = String((request.params as Record<string, unknown>).projectId ?? "");
     return { repositories: db.listRepositories(claims.tenantId, projectId) };
   });
 
-  app.post("/v1/projects/:projectId/repositories", async (request, reply) => {
+  app.post(clawApiPath("projects/:projectId/repositories"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const projectId = String((request.params as Record<string, unknown>).projectId ?? "");
@@ -243,14 +244,14 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     };
   });
 
-  app.get("/v1/projects/:projectId/assets", async (request, reply) => {
+  app.get(clawApiPath("projects/:projectId/assets"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const projectId = String((request.params as Record<string, unknown>).projectId ?? "");
     return { assets: db.listAssets(claims.tenantId, projectId) };
   });
 
-  app.post("/v1/projects/:projectId/assets", async (request, reply) => {
+  app.post(clawApiPath("projects/:projectId/assets"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const projectId = String((request.params as Record<string, unknown>).projectId ?? "");
@@ -268,7 +269,7 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     };
   });
 
-  app.get("/v1/assets/:assetId", async (request, reply) => {
+  app.get(clawApiPath("assets/:assetId"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const assetId = String((request.params as Record<string, unknown>).assetId ?? "");
@@ -281,14 +282,14 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     };
   });
 
-  app.get("/v1/assets/:assetId/revisions", async (request, reply) => {
+  app.get(clawApiPath("assets/:assetId/revisions"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const assetId = String((request.params as Record<string, unknown>).assetId ?? "");
     return { revisions: db.listRevisions(claims.tenantId, assetId) };
   });
 
-  app.post("/v1/assets/:assetId/revisions", async (request, reply) => {
+  app.post(clawApiPath("assets/:assetId/revisions"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const assetId = String((request.params as Record<string, unknown>).assetId ?? "");
@@ -313,7 +314,7 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     };
   });
 
-  app.post("/v1/assets/:assetId/promote", async (request, reply) => {
+  app.post(clawApiPath("assets/:assetId/promote"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const assetId = String((request.params as Record<string, unknown>).assetId ?? "");
@@ -380,14 +381,14 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     return { asset: promotedAsset, revision };
   });
 
-  app.get("/v1/projects/:projectId/change-requests", async (request, reply) => {
+  app.get(clawApiPath("projects/:projectId/change-requests"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const projectId = String((request.params as Record<string, unknown>).projectId ?? "");
     return { changeRequests: db.listChangeRequests(claims.tenantId, projectId) };
   });
 
-  app.post("/v1/projects/:projectId/change-requests", async (request, reply) => {
+  app.post(clawApiPath("projects/:projectId/change-requests"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const projectId = String((request.params as Record<string, unknown>).projectId ?? "");
@@ -409,7 +410,7 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     };
   });
 
-  app.post("/v1/change-requests/:changeRequestId/reviews", async (request, reply) => {
+  app.post(clawApiPath("change-requests/:changeRequestId/reviews"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const changeRequestId = String((request.params as Record<string, unknown>).changeRequestId ?? "");
@@ -425,7 +426,7 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     };
   });
 
-  app.post("/v1/change-requests/:changeRequestId/merge", async (request, reply) => {
+  app.post(clawApiPath("change-requests/:changeRequestId/merge"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const changeRequestId = String((request.params as Record<string, unknown>).changeRequestId ?? "");
@@ -458,13 +459,13 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     return { ok: true, changeRequest: db.getChangeRequest(claims.tenantId, changeRequestId) };
   });
 
-  app.get("/v1/runs", async (request, reply) => {
+  app.get(clawApiPath("runs"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     return { runs: db.listRuns(claims.tenantId) };
   });
 
-  app.post("/v1/runs", async (request, reply) => {
+  app.post(clawApiPath("runs"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const body = (request.body ?? {}) as Record<string, unknown>;
@@ -486,7 +487,7 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     };
   });
 
-  app.get("/v1/runs/:runId", async (request, reply) => {
+  app.get(clawApiPath("runs/:runId"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const runId = String((request.params as Record<string, unknown>).runId ?? "");
@@ -495,7 +496,7 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     return { run };
   });
 
-  app.post("/v1/runs/:runId/cancel", async (request, reply) => {
+  app.post(clawApiPath("runs/:runId/cancel"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const runId = String((request.params as Record<string, unknown>).runId ?? "");
@@ -503,7 +504,7 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     return { ok: true };
   });
 
-  app.post("/v1/runs/:runId/rerun", async (request, reply) => {
+  app.post(clawApiPath("runs/:runId/rerun"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const runId = String((request.params as Record<string, unknown>).runId ?? "");
@@ -523,7 +524,7 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     };
   });
 
-  app.get("/v1/runs/:runId/logs", async (request, reply) => {
+  app.get(clawApiPath("runs/:runId/logs"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const runId = String((request.params as Record<string, unknown>).runId ?? "");
@@ -533,21 +534,21 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     };
   });
 
-  app.get("/v1/runs/:runId/artifacts", async (request, reply) => {
+  app.get(clawApiPath("runs/:runId/artifacts"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const runId = String((request.params as Record<string, unknown>).runId ?? "");
     return { artifacts: db.listArtifacts(runId) };
   });
 
-  app.get("/v1/projects/:projectId/workflows", async (request, reply) => {
+  app.get(clawApiPath("projects/:projectId/workflows"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const projectId = String((request.params as Record<string, unknown>).projectId ?? "");
     return { workflows: db.listWorkflows(claims.tenantId, projectId) };
   });
 
-  app.post("/v1/projects/:projectId/workflows", async (request, reply) => {
+  app.post(clawApiPath("projects/:projectId/workflows"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const projectId = String((request.params as Record<string, unknown>).projectId ?? "");
@@ -565,7 +566,7 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     };
   });
 
-  app.post("/v1/workflows/:workflowId/run", async (request, reply) => {
+  app.post(clawApiPath("workflows/:workflowId/run"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const workflowId = String((request.params as Record<string, unknown>).workflowId ?? "");
@@ -588,13 +589,13 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     };
   });
 
-  app.get("/v1/deployments", async (request, reply) => {
+  app.get(clawApiPath("deployments"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     return { deployments: db.listDeployments(claims.tenantId) };
   });
 
-  app.post("/v1/deployments", async (request, reply) => {
+  app.post(clawApiPath("deployments"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const body = (request.body ?? {}) as Record<string, unknown>;
@@ -633,7 +634,7 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     };
   });
 
-  app.post("/v1/deployments/:deploymentId/promote", async (request, reply) => {
+  app.post(clawApiPath("deployments/:deploymentId/promote"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const deploymentId = String((request.params as Record<string, unknown>).deploymentId ?? "");
@@ -641,7 +642,7 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     return { deployment: db.getDeployment(claims.tenantId, deploymentId) };
   });
 
-  app.post("/v1/deployments/:deploymentId/attach-domain", async (request, reply) => {
+  app.post(clawApiPath("deployments/:deploymentId/attach-domain"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const deploymentId = String((request.params as Record<string, unknown>).deploymentId ?? "");
@@ -649,7 +650,7 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     return { domain: db.attachDeploymentDomain(deploymentId, String(body.domain ?? "")) };
   });
 
-  app.post("/v1/deployments/:deploymentId/issue-certificate", async (request, reply) => {
+  app.post(clawApiPath("deployments/:deploymentId/issue-certificate"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const deploymentId = String((request.params as Record<string, unknown>).deploymentId ?? "");
@@ -658,7 +659,7 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     return { certificate: db.issueDeploymentCertificate(deploymentId, domain, domain.includes("localhost") || domain.endsWith(".local") ? "issued" : "pending") };
   });
 
-  app.post("/v1/deployments/:deploymentId/rollback", async (request, reply) => {
+  app.post(clawApiPath("deployments/:deploymentId/rollback"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     const deploymentId = String((request.params as Record<string, unknown>).deploymentId ?? "");
@@ -666,7 +667,7 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     return { deployment: db.getDeployment(claims.tenantId, deploymentId) };
   });
 
-  app.get("/v1/settings", async (request, reply) => {
+  app.get(clawApiPath("settings"), async (request, reply) => {
     const claims = await requireClaims(request, reply, auth);
     if (!claims) return;
     return {
@@ -692,7 +693,7 @@ export async function buildExecutionPlaneApp(options: ExecutionPlaneAppOptions =
     return reply.send(fs.readFileSync(target));
   });
 
-  app.get("/v1/workers/connect", { websocket: true }, (socket) => {
+  app.get(clawApiPath("workers/connect"), { websocket: true }, (socket) => {
     let activeKey: string | null = null;
     socket.on("message", (raw: RawData) => {
       const message = JSON.parse(raw.toString()) as WorkerInboundEnvelope;

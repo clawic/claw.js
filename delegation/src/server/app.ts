@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 
 import cors from "@fastify/cors";
@@ -41,14 +42,14 @@ export async function buildDelegationPlaneApp(options: BuildDelegationPlaneAppOp
     db.close();
   });
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     service: "delegation",
     host: config.host,
     port: config.port,
   }));
 
-  app.post("/v1/graphs", async (request, reply) => {
+  app.post(clawApiPath("graphs"), async (request, reply) => {
     const body = bodyRecord(request.body);
     try {
       const objective = String(body.objective ?? "").trim();
@@ -69,9 +70,9 @@ export async function buildDelegationPlaneApp(options: BuildDelegationPlaneAppOp
     }
   });
 
-  app.get("/v1/graphs", async () => ({ graphs: db.listGraphs() }));
+  app.get(clawApiPath("graphs"), async () => ({ graphs: db.listGraphs() }));
 
-  app.get("/v1/graphs/:graphId", async (request, reply) => {
+  app.get(clawApiPath("graphs/:graphId"), async (request, reply) => {
     const graphId = String((request.params as Record<string, unknown>).graphId ?? "");
     try {
       return db.getTree(graphId);
@@ -80,7 +81,7 @@ export async function buildDelegationPlaneApp(options: BuildDelegationPlaneAppOp
     }
   });
 
-  app.post("/v1/graphs/:graphId/cancel", async (request, reply) => {
+  app.post(clawApiPath("graphs/:graphId/cancel"), async (request, reply) => {
     const graphId = String((request.params as Record<string, unknown>).graphId ?? "");
     const graph = db.getGraph(graphId);
     if (!graph) return await reply.code(404).send({ error: "Graph not found" });
@@ -90,19 +91,19 @@ export async function buildDelegationPlaneApp(options: BuildDelegationPlaneAppOp
     return { graph: db.updateGraphStatus(graphId, "cancelled") };
   });
 
-  app.get("/v1/nodes", async (request) => {
+  app.get(clawApiPath("nodes"), async (request) => {
     const query = request.query as Record<string, string | undefined>;
     return { nodes: db.listNodes(query.graphId) };
   });
 
-  app.get("/v1/nodes/:nodeId", async (request, reply) => {
+  app.get(clawApiPath("nodes/:nodeId"), async (request, reply) => {
     const nodeId = String((request.params as Record<string, unknown>).nodeId ?? "");
     const node = db.getNode(nodeId);
     if (!node) return await reply.code(404).send({ error: "Node not found" });
     return { node };
   });
 
-  app.post("/v1/nodes/:nodeId/retry", async (request, reply) => {
+  app.post(clawApiPath("nodes/:nodeId/retry"), async (request, reply) => {
     const nodeId = String((request.params as Record<string, unknown>).nodeId ?? "");
     try {
       return { node: scheduler.retryNode(nodeId) };
@@ -111,7 +112,7 @@ export async function buildDelegationPlaneApp(options: BuildDelegationPlaneAppOp
     }
   });
 
-  app.post("/v1/nodes/:nodeId/cancel", async (request, reply) => {
+  app.post(clawApiPath("nodes/:nodeId/cancel"), async (request, reply) => {
     const nodeId = String((request.params as Record<string, unknown>).nodeId ?? "");
     try {
       return { node: scheduler.cancelNode(nodeId) };
@@ -120,7 +121,7 @@ export async function buildDelegationPlaneApp(options: BuildDelegationPlaneAppOp
     }
   });
 
-  app.post("/v1/workers/register", async (request, reply) => {
+  app.post(clawApiPath("workers/register"), async (request, reply) => {
     const body = bodyRecord(request.body);
     const worker = db.registerWorker({
       workerId: typeof body.workerId === "string" ? body.workerId : undefined,
@@ -132,16 +133,16 @@ export async function buildDelegationPlaneApp(options: BuildDelegationPlaneAppOp
     return await reply.code(201).send({ worker });
   });
 
-  app.get("/v1/workers", async () => ({ workers: db.listWorkers() }));
+  app.get(clawApiPath("workers"), async () => ({ workers: db.listWorkers() }));
 
-  app.post("/v1/workers/:workerId/heartbeat", async (request, reply) => {
+  app.post(clawApiPath("workers/:workerId/heartbeat"), async (request, reply) => {
     const workerId = String((request.params as Record<string, unknown>).workerId ?? "");
     const worker = db.getWorker(workerId);
     if (!worker) return await reply.code(404).send({ error: "Worker not found" });
     return { worker: db.markWorkerSeen(workerId) };
   });
 
-  app.post("/v1/workers/:workerId/claim", async (request, reply) => {
+  app.post(clawApiPath("workers/:workerId/claim"), async (request, reply) => {
     const workerId = String((request.params as Record<string, unknown>).workerId ?? "");
     try {
       return { claimed: scheduler.claim(workerId) };
@@ -150,18 +151,18 @@ export async function buildDelegationPlaneApp(options: BuildDelegationPlaneAppOp
     }
   });
 
-  app.get("/v1/runs", async (request) => {
+  app.get(clawApiPath("runs"), async (request) => {
     const query = request.query as Record<string, string | undefined>;
     return { runs: db.listRuns(query.graphId) };
   });
 
-  app.get("/v1/runs/:runId/logs", async (request, reply) => {
+  app.get(clawApiPath("runs/:runId/logs"), async (request, reply) => {
     const runId = String((request.params as Record<string, unknown>).runId ?? "");
     if (!db.getRun(runId)) return await reply.code(404).send({ error: "Run not found" });
     return { logs: db.listLogs(runId) };
   });
 
-  app.post("/v1/runs/:runId/heartbeat", async (request, reply) => {
+  app.post(clawApiPath("runs/:runId/heartbeat"), async (request, reply) => {
     const runId = String((request.params as Record<string, unknown>).runId ?? "");
     try {
       return { run: scheduler.heartbeatRun(runId) };
@@ -170,7 +171,7 @@ export async function buildDelegationPlaneApp(options: BuildDelegationPlaneAppOp
     }
   });
 
-  app.post("/v1/runs/:runId/logs", async (request, reply) => {
+  app.post(clawApiPath("runs/:runId/logs"), async (request, reply) => {
     const runId = String((request.params as Record<string, unknown>).runId ?? "");
     const body = bodyRecord(request.body);
     try {
@@ -186,7 +187,7 @@ export async function buildDelegationPlaneApp(options: BuildDelegationPlaneAppOp
     }
   });
 
-  app.post("/v1/runs/:runId/children", async (request, reply) => {
+  app.post(clawApiPath("runs/:runId/children"), async (request, reply) => {
     const runId = String((request.params as Record<string, unknown>).runId ?? "");
     const body = bodyRecord(request.body);
     try {
@@ -212,7 +213,7 @@ export async function buildDelegationPlaneApp(options: BuildDelegationPlaneAppOp
     }
   });
 
-  app.post("/v1/runs/:runId/complete", async (request, reply) => {
+  app.post(clawApiPath("runs/:runId/complete"), async (request, reply) => {
     const runId = String((request.params as Record<string, unknown>).runId ?? "");
     const body = bodyRecord(request.body);
     try {
@@ -222,7 +223,7 @@ export async function buildDelegationPlaneApp(options: BuildDelegationPlaneAppOp
     }
   });
 
-  app.post("/v1/runs/:runId/fail", async (request, reply) => {
+  app.post(clawApiPath("runs/:runId/fail"), async (request, reply) => {
     const runId = String((request.params as Record<string, unknown>).runId ?? "");
     const body = bodyRecord(request.body);
     try {
@@ -237,7 +238,7 @@ export async function buildDelegationPlaneApp(options: BuildDelegationPlaneAppOp
     }
   });
 
-  app.post("/v1/runs/:runId/block", async (request, reply) => {
+  app.post(clawApiPath("runs/:runId/block"), async (request, reply) => {
     const runId = String((request.params as Record<string, unknown>).runId ?? "");
     const body = bodyRecord(request.body);
     try {
@@ -247,7 +248,7 @@ export async function buildDelegationPlaneApp(options: BuildDelegationPlaneAppOp
     }
   });
 
-  app.post("/v1/scheduler/tick", async () => scheduler.tick());
+  app.post(clawApiPath("scheduler/tick"), async () => scheduler.tick());
 
   return {
     app,
