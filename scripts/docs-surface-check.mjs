@@ -277,6 +277,7 @@ const cliSourceFiles = fs.readdirSync(cliSourceDir)
   .map((entry) => path.join(cliSourceDir, entry));
 const cliSourceRaw = [
   read(path.join(cliSourceDir, "index.ts")),
+  read(path.join(rootDir, "packages", "clawjs-core", "src", "cli-command-registry.ts")),
   ...cliSourceFiles.map((filePath) => read(filePath)),
 ].join("\n");
 const cliDocRaw = read(path.join(rootDir, "docs", "cli.md"));

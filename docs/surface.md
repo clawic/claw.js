@@ -1128,6 +1128,17 @@ The docs check script validates that every current export from
     ClawCanonicalTermKey
     ClawCapability
     clawCapabilitySchema
+    ClawCliCommandRegistry
+    clawCliCommandRegistry
+    clawCliCommandRegistryVersion
+    ClawCliCommandRegistryEntry
+    clawCliCommandsByName
+    ClawCliCommandSource
+    ClawCliSearchResult
+    ClawCliSecurityPolicy
+    ClawCliSupportDeclaration
+    ClawCliSupportState
+    ClawCliSurfaceKind
     clawClientContextSchema
     clawCommandErrorSchema
     ClawCommandRequest
@@ -1314,6 +1325,7 @@ The docs check script validates that every current export from
     iotStateSnapshotSchema
     IoTThingKind
     isInsideCodexHome
+    isStableClawCliCommand
     JudgmentContextRefs
     judgmentContextRefsSchema
     JudgmentImpact
@@ -1380,6 +1392,8 @@ The docs check script validates that every current export from
     listBuiltinCollections
     listBuiltinFamilies
     listCatalogCoverageNeeds
+    listClawCliAliases
+    listClawCliCommands
     ListRecord
     listRecordSchema
     LUXURY_AND_COLLECTING_FAMILY
@@ -1508,6 +1522,7 @@ The docs check script validates that every current export from
     reminderRecordSchema
     REPRODUCTIVE_INTIMATE_FAMILY
     resolveBuiltinCollectionName
+    resolveClawCliCommand
     resolveClawGlobalDataDir
     resolveClawHostRegistryPath
     resolveClawHostStateDir
@@ -1563,6 +1578,7 @@ The docs check script validates that every current export from
     SchedulerDescriptor
     SchedulerStateSnapshot
     schedulerStateSnapshotSchema
+    searchClawCliRegistry
     SectionRecord
     sectionRecordSchema
     segmentTextForTts

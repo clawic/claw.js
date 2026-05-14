@@ -18,6 +18,29 @@ The public package also keeps `create-claw-app`, `create-claw-agent`,
 `create-claw-server`, `create-claw-plugin`, and the technical
 `claw-search-mcp` entrypoint. It does not expose a public `clawjs` bin.
 
+## Registry And JSON Contract
+
+`claw` is the agent-facing interface to the framework. Public commands,
+portals, aliases, support states, security policy, docs, ADRs, tests, and
+implementation sources are registered in the ClawJS CLI command registry and
+then consumed by help, inspection, search, docs, and tests.
+
+New stable JSON responses use:
+
+```json
+{ "ok": true, "data": {}, "meta": {} }
+```
+
+Errors use:
+
+```json
+{ "ok": false, "error": { "code": "...", "message": "..." }, "meta": {} }
+```
+
+Pre-V1 raw JSON responses that predate the registry are migration debt. New or
+materially changed stable commands must use the envelope and include command
+schema/version metadata.
+
 ## Project Flow
 
 ```bash
@@ -257,8 +280,13 @@ claw workspace repair
 ## Search And Diagnostics
 
 ```bash
+claw search people
+claw search "system capabilities" --json
 claw search query "release branch" --json
 claw search rebuild --json
+claw inspect aliases --json
+claw inspect why host --json
+claw inspect why claw.database.core --json
 claw doctor --json
 claw diagnostics --help
 claw logs --help

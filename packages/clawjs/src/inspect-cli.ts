@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import { clawPersistentSurfaceRegistry, findClawPersistentSurfaceNode, withSurfaceChildren } from "@clawjs/core";
+import { clawPersistentSurfaceRegistry, findClawPersistentSurfaceNode, listClawCliAliases, resolveClawCliCommand, searchClawCliRegistry, withSurfaceChildren } from "@clawjs/core";
 import type { ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry } from "@clawjs/core";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 
@@ -119,6 +119,7 @@ function renderInspectMarkdown(nodes = inspectNodes()): string {
     "",
     "Generated from `claw inspect render --format markdown`. Do not edit by hand.",
     "Use `claw inspect --manifest <path>` or `CLAW_INSPECT_MANIFEST=path[,path...]` to fuse static manifests from other language builders during inspection.",
+    "`claw inspect why <surface>` explains the docs, ADRs, tests, and source backing a CLI command or registered surface.",
     "",
     "## Tree",
     "",
@@ -240,6 +241,65 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     else input.context.stdout.write(`${inspectText(selected)}\n`);
     return CLI_EXIT_OK;
   }
+  if (command === "aliases") {
+    const aliases = listClawCliAliases();
+    if (input.wantsJson) writeJson(input.context.stdout, {
+      version: registry.version,
+      aliases,
+    });
+    else input.context.stdout.write(`${aliases.map((alias) => `${alias.alias}\t${alias.canonicalName}\t${alias.source}`).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "why") {
+    if (!target) throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect why <command-or-id> [--json]`, CLI_EXIT_USAGE);
+    const cliCommand = resolveClawCliCommand(target);
+    if (cliCommand) {
+      const payload = {
+        type: "cliCommand",
+        name: cliCommand.name,
+        canonicalName: cliCommand.target ?? cliCommand.name,
+        kind: cliCommand.kind,
+        summary: cliCommand.summary,
+        support: cliCommand.support,
+        securityPolicy: cliCommand.securityPolicy,
+        schemaVersion: cliCommand.schemaVersion,
+        jsonSchemaId: cliCommand.jsonSchemaId,
+        docs: cliCommand.docs,
+        adrs: cliCommand.adrs,
+        tests: cliCommand.tests,
+        source: cliCommand.source,
+      };
+      if (input.wantsJson) writeJson(input.context.stdout, payload);
+      else {
+        input.context.stdout.write([
+          `${payload.name}\t${payload.kind}\t${payload.securityPolicy}`,
+          `docs\t${payload.docs.join(", ")}`,
+          `adrs\t${payload.adrs.join(", ")}`,
+          `tests\t${payload.tests.join(", ")}`,
+          `source\t${payload.source.file}${payload.source.symbol ? `#${payload.source.symbol}` : ""}`,
+        ].join("\n") + "\n");
+      }
+      return CLI_EXIT_OK;
+    }
+    const node = inspectFind(target, nodes);
+    if (node) {
+      const payload = {
+        type: "surfaceNode",
+        id: node.id,
+        name: node.name,
+        kind: node.kind,
+        surfaceClass: node.surfaceClass ?? "persistent",
+        source: node.source,
+        notes: node.notes,
+        warnings: node.warnings ?? [],
+      };
+      if (input.wantsJson) writeJson(input.context.stdout, payload);
+      else input.context.stdout.write(`${node.id}\t${node.kind}\t${node.source?.file ?? "source-unregistered"}\n${node.notes ?? ""}\n`);
+      return CLI_EXIT_OK;
+    }
+    const related = searchClawCliRegistry(target, { limit: 5 });
+    throw new InspectCliError("inspect_not_found", `No CLI command or persistent surface node found for ${target}.${related.length ? ` Related: ${related.map((entry) => entry.name).join(", ")}` : ""}`, CLI_EXIT_USAGE);
+  }
   if (command === "external") {
     const selected = selectBySurface("external");
     if (input.wantsJson) writeJson(input.context.stdout, selected);
@@ -258,7 +318,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|why|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {

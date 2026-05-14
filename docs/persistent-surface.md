@@ -2,6 +2,7 @@
 
 Generated from `claw inspect render --format markdown`. Do not edit by hand.
 Use `claw inspect --manifest <path>` or `CLAW_INSPECT_MANIFEST=path[,path...]` to fuse static manifests from other language builders during inspection.
+`claw inspect why <surface>` explains the docs, ADRs, tests, and source backing a CLI command or registered surface.
 
 ## Tree
 
@@ -252,10 +253,20 @@ flowchart TD
   claw_contracts_api --> claw_port_clawixBridge
   claw_cli_command_host["host\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_host
+  claw_cli_command_system["system\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_system
   claw_cli_command_database["database\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_database
+  claw_cli_command_db["db\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_db
+  claw_cli_command_collections["collections\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_collections
+  claw_cli_command_records["records\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_records
   claw_cli_command_inspect["inspect\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_inspect
+  claw_cli_command_search["search\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_search
   claw_cli_command_work["work\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_work
   claw_cli_command_projects["projects\ncliCommand"]
@@ -272,6 +283,18 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_inbox
   claw_cli_command_approvals["approvals\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_approvals
+  claw_cli_command_blockers["blockers\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_blockers
+  claw_cli_command_decisions["decisions\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_decisions
+  claw_cli_command_assignments["assignments\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_assignments
+  claw_cli_command_handoffs["handoffs\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_handoffs
+  claw_cli_command_artifacts["artifacts\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_artifacts
+  claw_cli_command_commitments["commitments\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_commitments
   claw_cli_command_sessions["sessions\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_sessions
   claw_cli_command_skills["skills\ncliCommand"]
@@ -284,14 +307,56 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_auth
   claw_cli_command_time["time\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_time
+  claw_cli_command_calendar["calendar\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_calendar
+  claw_cli_command_reminders["reminders\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_reminders
+  claw_cli_command_deadlines["deadlines\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_deadlines
+  claw_cli_command_routines["routines\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_routines
+  claw_cli_command_schedule["schedule\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_schedule
+  claw_cli_command_watch["watch\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_watch
+  claw_cli_command_agenda["agenda\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_agenda
+  claw_cli_command_timeline["timeline\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_timeline
+  claw_cli_command_review["review\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_review
   claw_cli_command_channels["channels\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_channels
   claw_cli_command_telegram["telegram\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_telegram
   claw_cli_command_notify["notify\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_notify
+  claw_cli_command_messages["messages\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_messages
+  claw_cli_command_integrations["integrations\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_integrations
   claw_cli_command_media["media\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_media
+  claw_cli_command_documents["documents\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_documents
+  claw_cli_command_files["files\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_files
+  claw_cli_command_images["images\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_images
+  claw_cli_command_audio["audio\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_audio
+  claw_cli_command_video["video\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_video
+  claw_cli_command_slides["slides\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_slides
+  claw_cli_command_generations["generations\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_generations
+  claw_cli_command_templates["templates\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_templates
+  claw_cli_command_styles["styles\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_styles
+  claw_cli_command_references["references\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_references
   claw_cli_command_drive["drive\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_drive
   claw_cli_command_design["design\ncliCommand"]
@@ -300,12 +365,38 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_apps
   claw_cli_command_content["content\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_content
+  claw_cli_command_posts["posts\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_posts
+  claw_cli_command_campaigns["campaigns\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_campaigns
+  claw_cli_command_publications["publications\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_publications
   claw_cli_command_knowledge["knowledge\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_knowledge
   claw_cli_command_profile["profile\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_profile
-  claw_cli_command_search["search\ncliCommand"]
-  claw_contracts_cli --> claw_cli_command_search
+  claw_cli_command_user["user\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_user
+  claw_cli_command_health["health\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_health
+  claw_cli_command_travel["travel\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_travel
+  claw_cli_command_career["career\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_career
+  claw_cli_command_family["family\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_family
+  claw_cli_command_legal["legal\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_legal
+  claw_cli_command_finance["finance\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_finance
+  claw_cli_command_location["location\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_location
+  claw_cli_command_accounts["accounts\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_accounts
+  claw_cli_command_business["business\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_business
+  claw_cli_command_social["social\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_social
   claw_cli_command_runtime["runtime\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_runtime
   claw_cli_command_monitor["monitor\ncliCommand"]
@@ -314,10 +405,48 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_logs
   claw_cli_command_doctor["doctor\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_doctor
+  claw_cli_command_diagnostics["diagnostics\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_diagnostics
   claw_cli_command_mcp["mcp\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_mcp
   claw_cli_command_open["open\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_open
+  claw_cli_command_context["context\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_context
+  claw_cli_command_learning["learning\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_learning
+  claw_cli_command_judgment["judgment\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_judgment
+  claw_cli_command_outcomes["outcomes\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_outcomes
+  claw_cli_command_plan["plan\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_plan
+  claw_cli_command_code["code\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_code
+  claw_cli_command_rules["rules\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_rules
+  claw_cli_command_library["library\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_library
+  claw_cli_command_soul["soul\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_soul
+  claw_cli_command_erp["erp\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_erp
+  claw_cli_command_iot["iot\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_iot
+  claw_cli_command_tts["tts\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_tts
+  claw_cli_command_stt["stt\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_stt
+  claw_cli_command_voice_notes["voice-notes\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_voice_notes
+  claw_cli_command_inference["inference\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_inference
+  claw_cli_command_preview["preview\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_preview
+  claw_cli_command_browser["browser\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_browser
+  claw_cli_command_compat["compat\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_compat
   claw_cli_flag_json["--json\ncliFlag"]
   claw_contracts_cli --> claw_cli_flag_json
   claw_cli_flag_dry_run["--dry-run\ncliFlag"]
@@ -812,8 +941,13 @@ flowchart TD
 | `claw.port.channels` | port | config | claw | `24123` |
 | `claw.port.clawixBridge` | port | config | claw | `24080` |
 | `claw.cli.command.host` | cliCommand | cli | claw | `host` |
+| `claw.cli.command.system` | cliCommand | cli | claw | `system` |
 | `claw.cli.command.database` | cliCommand | cli | claw | `database` |
+| `claw.cli.command.db` | cliCommand | cli | claw | `db` |
+| `claw.cli.command.collections` | cliCommand | cli | claw | `collections` |
+| `claw.cli.command.records` | cliCommand | cli | claw | `records` |
 | `claw.cli.command.inspect` | cliCommand | cli | claw | `inspect` |
+| `claw.cli.command.search` | cliCommand | cli | claw | `search` |
 | `claw.cli.command.work` | cliCommand | cli | claw | `work` |
 | `claw.cli.command.projects` | cliCommand | cli | claw | `projects` |
 | `claw.cli.command.tasks` | cliCommand | cli | claw | `tasks` |
@@ -822,29 +956,88 @@ flowchart TD
 | `claw.cli.command.goals` | cliCommand | cli | claw | `goals` |
 | `claw.cli.command.inbox` | cliCommand | cli | claw | `inbox` |
 | `claw.cli.command.approvals` | cliCommand | cli | claw | `approvals` |
+| `claw.cli.command.blockers` | cliCommand | cli | claw | `blockers` |
+| `claw.cli.command.decisions` | cliCommand | cli | claw | `decisions` |
+| `claw.cli.command.assignments` | cliCommand | cli | claw | `assignments` |
+| `claw.cli.command.handoffs` | cliCommand | cli | claw | `handoffs` |
+| `claw.cli.command.artifacts` | cliCommand | cli | claw | `artifacts` |
+| `claw.cli.command.commitments` | cliCommand | cli | claw | `commitments` |
 | `claw.cli.command.sessions` | cliCommand | cli | claw | `sessions` |
 | `claw.cli.command.skills` | cliCommand | cli | claw | `skills` |
 | `claw.cli.command.models` | cliCommand | cli | claw | `models` |
 | `claw.cli.command.providers` | cliCommand | cli | claw | `providers` |
 | `claw.cli.command.auth` | cliCommand | cli | claw | `auth` |
 | `claw.cli.command.time` | cliCommand | cli | claw | `time` |
+| `claw.cli.command.calendar` | cliCommand | cli | claw | `calendar` |
+| `claw.cli.command.reminders` | cliCommand | cli | claw | `reminders` |
+| `claw.cli.command.deadlines` | cliCommand | cli | claw | `deadlines` |
+| `claw.cli.command.routines` | cliCommand | cli | claw | `routines` |
+| `claw.cli.command.schedule` | cliCommand | cli | claw | `schedule` |
+| `claw.cli.command.watch` | cliCommand | cli | claw | `watch` |
+| `claw.cli.command.agenda` | cliCommand | cli | claw | `agenda` |
+| `claw.cli.command.timeline` | cliCommand | cli | claw | `timeline` |
+| `claw.cli.command.review` | cliCommand | cli | claw | `review` |
 | `claw.cli.command.channels` | cliCommand | cli | claw | `channels` |
 | `claw.cli.command.telegram` | cliCommand | cli | claw | `telegram` |
 | `claw.cli.command.notify` | cliCommand | cli | claw | `notify` |
+| `claw.cli.command.messages` | cliCommand | cli | claw | `messages` |
+| `claw.cli.command.integrations` | cliCommand | cli | claw | `integrations` |
 | `claw.cli.command.media` | cliCommand | cli | claw | `media` |
+| `claw.cli.command.documents` | cliCommand | cli | claw | `documents` |
+| `claw.cli.command.files` | cliCommand | cli | claw | `files` |
+| `claw.cli.command.images` | cliCommand | cli | claw | `images` |
+| `claw.cli.command.audio` | cliCommand | cli | claw | `audio` |
+| `claw.cli.command.video` | cliCommand | cli | claw | `video` |
+| `claw.cli.command.slides` | cliCommand | cli | claw | `slides` |
+| `claw.cli.command.generations` | cliCommand | cli | claw | `generations` |
+| `claw.cli.command.templates` | cliCommand | cli | claw | `templates` |
+| `claw.cli.command.styles` | cliCommand | cli | claw | `styles` |
+| `claw.cli.command.references` | cliCommand | cli | claw | `references` |
 | `claw.cli.command.drive` | cliCommand | cli | claw | `drive` |
 | `claw.cli.command.design` | cliCommand | cli | claw | `design` |
 | `claw.cli.command.apps` | cliCommand | cli | claw | `apps` |
 | `claw.cli.command.content` | cliCommand | cli | claw | `content` |
+| `claw.cli.command.posts` | cliCommand | cli | claw | `posts` |
+| `claw.cli.command.campaigns` | cliCommand | cli | claw | `campaigns` |
+| `claw.cli.command.publications` | cliCommand | cli | claw | `publications` |
 | `claw.cli.command.knowledge` | cliCommand | cli | claw | `knowledge` |
 | `claw.cli.command.profile` | cliCommand | cli | claw | `profile` |
-| `claw.cli.command.search` | cliCommand | cli | claw | `search` |
+| `claw.cli.command.user` | cliCommand | cli | claw | `user` |
+| `claw.cli.command.health` | cliCommand | cli | claw | `health` |
+| `claw.cli.command.travel` | cliCommand | cli | claw | `travel` |
+| `claw.cli.command.career` | cliCommand | cli | claw | `career` |
+| `claw.cli.command.family` | cliCommand | cli | claw | `family` |
+| `claw.cli.command.legal` | cliCommand | cli | claw | `legal` |
+| `claw.cli.command.finance` | cliCommand | cli | claw | `finance` |
+| `claw.cli.command.location` | cliCommand | cli | claw | `location` |
+| `claw.cli.command.accounts` | cliCommand | cli | claw | `accounts` |
+| `claw.cli.command.business` | cliCommand | cli | claw | `business` |
+| `claw.cli.command.social` | cliCommand | cli | claw | `social` |
 | `claw.cli.command.runtime` | cliCommand | cli | claw | `runtime` |
 | `claw.cli.command.monitor` | cliCommand | cli | claw | `monitor` |
 | `claw.cli.command.logs` | cliCommand | cli | claw | `logs` |
 | `claw.cli.command.doctor` | cliCommand | cli | claw | `doctor` |
+| `claw.cli.command.diagnostics` | cliCommand | cli | claw | `diagnostics` |
 | `claw.cli.command.mcp` | cliCommand | cli | claw | `mcp` |
 | `claw.cli.command.open` | cliCommand | cli | claw | `open` |
+| `claw.cli.command.context` | cliCommand | cli | claw | `context` |
+| `claw.cli.command.learning` | cliCommand | cli | claw | `learning` |
+| `claw.cli.command.judgment` | cliCommand | cli | claw | `judgment` |
+| `claw.cli.command.outcomes` | cliCommand | cli | claw | `outcomes` |
+| `claw.cli.command.plan` | cliCommand | cli | claw | `plan` |
+| `claw.cli.command.code` | cliCommand | cli | claw | `code` |
+| `claw.cli.command.rules` | cliCommand | cli | claw | `rules` |
+| `claw.cli.command.library` | cliCommand | cli | claw | `library` |
+| `claw.cli.command.soul` | cliCommand | cli | claw | `soul` |
+| `claw.cli.command.erp` | cliCommand | cli | claw | `erp` |
+| `claw.cli.command.iot` | cliCommand | cli | claw | `iot` |
+| `claw.cli.command.tts` | cliCommand | cli | claw | `tts` |
+| `claw.cli.command.stt` | cliCommand | cli | claw | `stt` |
+| `claw.cli.command.voice-notes` | cliCommand | cli | claw | `voice-notes` |
+| `claw.cli.command.inference` | cliCommand | cli | claw | `inference` |
+| `claw.cli.command.preview` | cliCommand | cli | claw | `preview` |
+| `claw.cli.command.browser` | cliCommand | cli | claw | `browser` |
+| `claw.cli.command.compat` | cliCommand | cli | claw | `compat` |
 | `claw.cli.flag.json` | cliFlag | cli | claw | `--json` |
 | `claw.cli.flag.dry-run` | cliFlag | cli | claw | `--dry-run` |
 | `claw.cli.flag.workspace` | cliFlag | cli | claw | `--workspace` |

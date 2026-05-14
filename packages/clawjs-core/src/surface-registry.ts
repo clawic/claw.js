@@ -1,3 +1,5 @@
+import { clawCliCommandRegistry } from "./cli-command-registry.ts";
+
 export const clawSurfaceRegistryVersion = 1;
 
 export type ClawPersistentSurfaceKind =
@@ -646,42 +648,7 @@ const contractDefaults = {
   source: registrySource,
 };
 
-const cliCommands = [
-  "host",
-  "database",
-  "inspect",
-  "work",
-  "projects",
-  "tasks",
-  "notes",
-  "people",
-  "goals",
-  "inbox",
-  "approvals",
-  "sessions",
-  "skills",
-  "models",
-  "providers",
-  "auth",
-  "time",
-  "channels",
-  "telegram",
-  "notify",
-  "media",
-  "drive",
-  "design",
-  "apps",
-  "content",
-  "knowledge",
-  "profile",
-  "search",
-  "runtime",
-  "monitor",
-  "logs",
-  "doctor",
-  "mcp",
-  "open",
-] as const;
+const cliCommands = clawCliCommandRegistry.commands.map((entry) => entry.name);
 
 const corePublicRoutes = [
   ["claw.api.events", "GET", clawEventsPath, "Public framework event stream"],

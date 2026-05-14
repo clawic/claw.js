@@ -14,7 +14,7 @@ import { runOpenAudio } from "./audio-server-launcher.mjs";
 import { runOpenIndex } from "./index-server-launcher.mjs";
 import { runOpenSessions } from "./sessions-server-launcher.mjs";
 import { runCatalogCli, CATALOG_GROUPS } from "./catalog-commands.mjs";
-import { BUILTIN_COLLECTIONS_BY_ALIAS } from "@clawjs/core";
+import { BUILTIN_COLLECTIONS_BY_ALIAS, isStableClawCliCommand } from "@clawjs/core";
 
 const invokedBinName = path.basename(process.argv[1] || "claw");
 const publicBinName = invokedBinName === "claw.mjs" ? "claw" : invokedBinName;
@@ -32,7 +32,7 @@ if (first && CLAW_MEMORY_GROUPS.has(first)) {
 if (first && CATALOG_GROUPS.has(first)) {
   process.exit(await runCatalogCli(args));
 }
-if (first && BUILTIN_COLLECTIONS_BY_ALIAS.has(first.toLowerCase())) {
+if (first && BUILTIN_COLLECTIONS_BY_ALIAS.has(first.toLowerCase()) && !isStableClawCliCommand(first)) {
   const canonical = BUILTIN_COLLECTIONS_BY_ALIAS.get(first.toLowerCase());
   const verb = args[1] ?? "list";
   const rest = args.slice(2);

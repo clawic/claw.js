@@ -38,6 +38,7 @@ import {
   clawDomainOwnershipMatrixV1,
   clawDomainSchema,
   clawHostRegistrySchema,
+  clawCliCommandRegistry,
   clawJsonSchemasV1,
   agentRecordSchema,
   createCodexReadOnlySourceDescriptor,
@@ -71,6 +72,7 @@ import {
   resolveClawHostRegistryPath,
   resolveClawHostStateDir,
   resolveClawWorkspaceDir,
+  searchClawCliRegistry,
   taskRecordSchema,
   workSessionRecordSchema,
   stripMarkdownForTts,
@@ -243,6 +245,19 @@ test("persistent surface registry exposes framework and host storage nodes", () 
 
   const indexed = withSurfaceChildren(clawPersistentSurfaceRegistry.nodes);
   assert.deepEqual(indexed.find((node) => node.id === "claw.global")?.children?.includes("claw.database.core"), true);
+});
+
+test("CLI command registry is the source for stable CLI surface nodes", () => {
+  assert.equal(clawCliCommandRegistry.version, 1);
+  assert.equal(clawCliCommandRegistry.commands.some((entry) => entry.name === "host" && entry.securityPolicy === "signed_host_broker"), true);
+  assert.equal(clawCliCommandRegistry.commands.every((entry) => entry.docs.length > 0 && entry.adrs.includes("docs/adr/0007-cli-agent-interface.md")), true);
+
+  const cliNodes = clawPersistentSurfaceRegistry.nodes.filter((node) => node.kind === "cliCommand").map((node) => node.value).sort();
+  const registryCommands = clawCliCommandRegistry.commands.map((entry) => entry.name).sort();
+  assert.deepEqual(cliNodes, registryCommands);
+
+  const matches = searchClawCliRegistry("system capabilities");
+  assert.equal(matches.some((entry) => entry.canonicalName === "host"), true);
 });
 
 test("storage helpers resolve Claw roots and enforce Codex read-only policy", () => {

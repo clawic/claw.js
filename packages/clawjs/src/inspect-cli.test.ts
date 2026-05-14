@@ -78,6 +78,23 @@ test("runCli filters stable compatibility surface categories", async () => {
   assert.equal(JSON.parse(cli.stdout).some((node: { id: string; value?: string }) => node.id === "claw.cli.command.inspect" && node.value === "inspect"), true);
 });
 
+test("runCli exposes CLI aliases and decision sources through inspect", async () => {
+  const aliases = await runCliCapture(["inspect", "aliases", "--json"], process.cwd());
+  assert.equal(aliases.code, CLI_EXIT_OK);
+  const aliasPayload = JSON.parse(aliases.stdout) as { aliases: Array<{ alias: string; canonicalName: string }> };
+  assert.equal(aliasPayload.aliases.some((entry) => entry.alias === "db" && entry.canonicalName === "database"), true);
+  assert.equal(aliasPayload.aliases.some((entry) => entry.alias === "image" && entry.canonicalName === "images"), true);
+
+  const why = await runCliCapture(["inspect", "why", "host", "--json"], process.cwd());
+  assert.equal(why.code, CLI_EXIT_OK);
+  const whyPayload = JSON.parse(why.stdout) as { name: string; adrs: string[]; docs: string[]; tests: string[]; source: { file: string } };
+  assert.equal(whyPayload.name, "host");
+  assert.equal(whyPayload.adrs.includes("docs/adr/0007-cli-agent-interface.md"), true);
+  assert.equal(whyPayload.docs.includes("docs/cli.md"), true);
+  assert.equal(whyPayload.tests.includes("packages/clawjs/src/index.test.ts"), true);
+  assert.equal(whyPayload.source.file, "packages/clawjs/src/cli-host-command.ts");
+});
+
 test("runCli fuses static inspect manifests from other language builders", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-inspect-manifest-"));
   const manifestPath = path.join(tempRoot, "clawix-persistent-surface.json");

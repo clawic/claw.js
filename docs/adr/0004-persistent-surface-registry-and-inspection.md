@@ -55,6 +55,8 @@ The first supported inspection commands are:
 - `claw inspect tree`
 - `claw inspect list <id-or-path>`
 - `claw inspect show <id-or-path>`
+- `claw inspect why <command-or-id>`
+- `claw inspect aliases`
 - `claw inspect database`
 - `claw inspect storage`
 - `claw inspect prefs`

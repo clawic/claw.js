@@ -77,6 +77,8 @@ import { runExtendedProductivityCli } from "./cli-productivity-extended-command.
 import { runCodeCli } from "./cli-code-command.ts";
 import { runPlanCli } from "./cli-plan-command.ts";
 import { runKnowledgeTailCli } from "./cli-knowledge-tail-command.ts";
+import { runCliDiscoverySearch } from "./cli-search-command.ts";
+import { handleUnknownCliCommand } from "./cli-unknown-command.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
 import {
   buildFallbackSemanticPlan,
@@ -654,7 +656,9 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group === "code") {
     return await runCodeCli({ positionals, flags, argv, context, wantsJson, binName });
   }
-
+  if (group === "search" && command !== "query" && command !== "rebuild") {
+    return await runCliDiscoverySearch({ positionals, flags, context, wantsJson, binName, usage });
+  }
   if (group === "search" && command === "query") {
     const query = subcommand || flags.query;
     if (!query) {
@@ -682,7 +686,6 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     else context.stdout.write(`${results.map((result) => `${result.domain} ${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
     return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   }
-
   if (group === "search" && command === "rebuild") {
     const searchWorkspaceRoot = flags.workspace || context.cwd;
     const claw = await createCliWorkspaceClaw(
@@ -699,7 +702,6 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     else context.stdout.write(`reindexed=${result.reindexed} embeddings=${result.embeddings}\n`);
     return CLI_EXIT_OK;
   }
-
   {
     const v1DataExitCode = await runV1DataCli({
       argv,
@@ -1977,8 +1979,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runDirectHostDomainCli({ positionals, flags, context, wantsJson });
   }
 
-  context.stderr.write(`${usage}\n`);
-  return CLI_EXIT_USAGE;
+  return handleUnknownCliCommand({ group, context, wantsJson, usage });
 }
 
 export async function runCli(argv: string[], context: CliContext): Promise<number> {
