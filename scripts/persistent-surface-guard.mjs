@@ -31,8 +31,20 @@ const rules = [
   {
     id: "swift.user-defaults-literal",
     extensions: [".swift"],
-    pattern: /UserDefaults(?:\.standard)?\.(?:set|string|bool|object|integer|removeObject)\([^;\n]*forKey:\s*"[^"]+"/,
+    pattern: /UserDefaults(?:\.standard)?\.(?:set|string|stringArray|bool|object|integer|removeObject)\([^;\n]*forKey:\s*"[^"]+"/,
     message: "UserDefaults keys must be registered as preferenceKey surfaces",
+  },
+  {
+    id: "swift.user-defaults-suite-literal",
+    extensions: [".swift"],
+    pattern: /UserDefaults\s*\(\s*suiteName:\s*"[^"]+"/,
+    message: "UserDefaults suite names must be registered as preferenceKey surfaces",
+  },
+  {
+    id: "swift.sidebar-prefs-literal",
+    extensions: [".swift"],
+    pattern: /SidebarPrefs\.(?:bool|store\.set|store\.bool)\([^;\n]*forKey:\s*"[^"]+"/,
+    message: "SidebarPrefs keys must be registered as preferenceKey surfaces",
   },
   {
     id: "swift.app-storage-literal",
@@ -106,13 +118,15 @@ function runSelfTest() {
   fs.writeFileSync(badSwift, [
     "@AppStorage(\"SidebarViewMode\") var mode = \"all\"",
     "UserDefaults.standard.set(true, forKey: \"DictationEnabled\")",
+    "let bridgeDefaults = UserDefaults(suiteName: \"clawix.bridge\")",
+    "SidebarPrefs.store.set(true, forKey: \"TerminalPanelOpen\")",
     "let db = try DatabaseQueue(path: url.path)",
   ].join("\n"));
   fs.writeFileSync(builderSwift, "enum ClawixPersistentSurfaceRegistry { static let nodes: [String] = [] }\n");
 
   const findings = [...scanFile(badTs), ...scanFile(badSwift), ...scanFile(builderSwift)];
   const foundRules = new Set(findings.map((finding) => finding.rule));
-  for (const expected of ["ts.direct-database-path", "ts.local-storage-literal", "ts.ddl-literal", "swift.app-storage-literal", "swift.user-defaults-literal", "swift.database-queue-path"]) {
+  for (const expected of ["ts.direct-database-path", "ts.local-storage-literal", "ts.ddl-literal", "swift.app-storage-literal", "swift.user-defaults-literal", "swift.user-defaults-suite-literal", "swift.sidebar-prefs-literal", "swift.database-queue-path"]) {
     if (!foundRules.has(expected)) {
       throw new Error(`self-test did not trigger ${expected}`);
     }
@@ -121,7 +135,7 @@ function runSelfTest() {
     throw new Error("self-test incorrectly flagged builder registry file");
   }
   const summary = summarizeFindings(findings);
-  if (summary.total < 6 || summary.byRule["swift.database-queue-path"] !== 1) {
+  if (summary.total < 8 || summary.byRule["swift.database-queue-path"] !== 1) {
     throw new Error("self-test summary did not count expected findings");
   }
   console.log("persistent surface guard self-test passed");
