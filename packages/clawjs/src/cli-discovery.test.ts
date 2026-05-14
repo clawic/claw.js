@@ -182,6 +182,19 @@ test("runCli returns channel JSON in the common envelope", { concurrency: false 
   assert.equal(Array.isArray(payload.data), true);
 });
 
+test("runCli returns extended productivity JSON in the common envelope", { concurrency: false }, async (t) => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-extended-productivity-json-"));
+  useIsolatedMainData(t, workspaceRoot);
+  const result = await runCliCapture(["blockers", "list", "--workspace", workspaceRoot, "--runtime", "demo", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; data: unknown[]; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
+  assert.equal(payload.ok, true);
+  assert.equal(payload.meta.canonicalCommand, "blockers");
+  assert.equal(payload.meta.invokedCommand, "blockers");
+  assert.equal(payload.meta.subcommand, "list");
+  assert.deepEqual(payload.data, []);
+});
+
 test("runCli searches registered local docs and ADR contents", async () => {
   const result = await runCliCapture(["search", "Stable JSON output uses", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);

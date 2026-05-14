@@ -1,11 +1,10 @@
 // @ts-nocheck
 import type { RuntimeAdapterId } from "@clawjs/core";
-
 import type { CliContext } from "./index.ts";
 import { createCliWorkspaceClaw } from "./cli-claw-factory.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { joinedPositionals, parseCsvFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
-import { writeJson } from "./cli-json.ts";
+import { writeCommandJsonOk } from "./cli-json.ts";
 import { archiveOrRemoveProductivityRecord } from "./cli-productivity-command.ts";
 
 export async function runExtendedProductivityCli(input: {
@@ -24,6 +23,7 @@ export async function runExtendedProductivityCli(input: {
   agentId: string;
 }): Promise<number | null> {
   const { argv, group, command, subcommand, positionals, flags, context, wantsJson, runtimeAdapterId, workspaceRoot, appId, workspaceId, agentId } = input;
+  const writeExtendedJson = (payload: unknown) => writeCommandJsonOk(context.stdout, group ?? "work", payload, { invokedCommand: group ?? "work", subcommand: command ?? null, ...(subcommand ? { operation: subcommand } : {}) });
 
   if (group === "milestones") {
     const claw = await createCliWorkspaceClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, context.cwd);
@@ -36,7 +36,7 @@ export async function runExtendedProductivityCli(input: {
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
         includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
       });
-      if (wantsJson) writeJson(context.stdout, milestones);
+      if (wantsJson) writeExtendedJson(milestones);
       else context.stdout.write(`${milestones.map((milestone) => `${milestone.status} ${milestone.id} ${milestone.title}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -48,7 +48,7 @@ export async function runExtendedProductivityCli(input: {
       }
       const milestone = await claw.milestones.get(id);
       if (!milestone) return CLI_EXIT_FAILURE;
-      if (wantsJson) writeJson(context.stdout, milestone);
+      if (wantsJson) writeExtendedJson(milestone);
       else context.stdout.write(`${milestone.status} ${milestone.id} ${milestone.title}\n`);
       return CLI_EXIT_OK;
     }
@@ -68,7 +68,7 @@ export async function runExtendedProductivityCli(input: {
         targetDate: flags["target-date"],
         completedAt: flags["completed-at"],
       });
-      if (wantsJson) writeJson(context.stdout, milestone);
+      if (wantsJson) writeExtendedJson(milestone);
       else context.stdout.write(`${milestone.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -88,7 +88,7 @@ export async function runExtendedProductivityCli(input: {
         targetDate: flags["target-date"],
         completedAt: flags["completed-at"],
       });
-      if (wantsJson) writeJson(context.stdout, milestone);
+      if (wantsJson) writeExtendedJson(milestone);
       else context.stdout.write(`${milestone.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -99,7 +99,7 @@ export async function runExtendedProductivityCli(input: {
         return CLI_EXIT_USAGE;
       }
       const result = await archiveOrRemoveProductivityRecord(claw.milestones, id, argv, flags, "milestones");
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeExtendedJson(result);
       else context.stdout.write("ok\n");
       return CLI_EXIT_OK;
     }
@@ -113,7 +113,7 @@ export async function runExtendedProductivityCli(input: {
         strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, results);
+      if (wantsJson) writeExtendedJson(results);
       else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
       return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -130,7 +130,7 @@ export async function runExtendedProductivityCli(input: {
         threadId: flags["thread-id"],
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, activity);
+      if (wantsJson) writeExtendedJson(activity);
       else context.stdout.write(`${activity.map((entry) => `${entry.kind} ${entry.id} ${entry.title}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -142,7 +142,7 @@ export async function runExtendedProductivityCli(input: {
       }
       const entry = await claw.activity.get(id);
       if (!entry) return CLI_EXIT_FAILURE;
-      if (wantsJson) writeJson(context.stdout, entry);
+      if (wantsJson) writeExtendedJson(entry);
       else context.stdout.write(`${entry.kind} ${entry.id} ${entry.title}\n`);
       return CLI_EXIT_OK;
     }
@@ -156,7 +156,7 @@ export async function runExtendedProductivityCli(input: {
         strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, results);
+      if (wantsJson) writeExtendedJson(results);
       else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
       return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -174,7 +174,7 @@ export async function runExtendedProductivityCli(input: {
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
         includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
       });
-      if (wantsJson) writeJson(context.stdout, blockers);
+      if (wantsJson) writeExtendedJson(blockers);
       else context.stdout.write(`${blockers.map((blocker) => `${blocker.status} ${blocker.id} ${blocker.title}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -186,7 +186,7 @@ export async function runExtendedProductivityCli(input: {
       }
       const blocker = await claw.blockers.get(id);
       if (!blocker) return CLI_EXIT_FAILURE;
-      if (wantsJson) writeJson(context.stdout, blocker);
+      if (wantsJson) writeExtendedJson(blocker);
       else context.stdout.write(`${blocker.status} ${blocker.id} ${blocker.title}\n`);
       return CLI_EXIT_OK;
     }
@@ -211,7 +211,7 @@ export async function runExtendedProductivityCli(input: {
         resolvedAt: flags["resolved-at"],
         ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, blocker);
+      if (wantsJson) writeExtendedJson(blocker);
       else context.stdout.write(`${blocker.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -236,7 +236,7 @@ export async function runExtendedProductivityCli(input: {
         resolvedAt: flags["resolved-at"],
         ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, blocker);
+      if (wantsJson) writeExtendedJson(blocker);
       else context.stdout.write(`${blocker.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -247,7 +247,7 @@ export async function runExtendedProductivityCli(input: {
         return CLI_EXIT_USAGE;
       }
       const result = await archiveOrRemoveProductivityRecord(claw.blockers, id, argv, flags, "blockers");
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeExtendedJson(result);
       else context.stdout.write("ok\n");
       return CLI_EXIT_OK;
     }
@@ -261,7 +261,7 @@ export async function runExtendedProductivityCli(input: {
         strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, results);
+      if (wantsJson) writeExtendedJson(results);
       else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
       return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -280,7 +280,7 @@ export async function runExtendedProductivityCli(input: {
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
         includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
       });
-      if (wantsJson) writeJson(context.stdout, artifacts);
+      if (wantsJson) writeExtendedJson(artifacts);
       else context.stdout.write(`${artifacts.map((artifact) => `${artifact.kind} ${artifact.id} ${artifact.title}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -292,7 +292,7 @@ export async function runExtendedProductivityCli(input: {
       }
       const artifact = await claw.artifacts.get(id);
       if (!artifact) return CLI_EXIT_FAILURE;
-      if (wantsJson) writeJson(context.stdout, artifact);
+      if (wantsJson) writeExtendedJson(artifact);
       else context.stdout.write(`${artifact.kind} ${artifact.id} ${artifact.title}\n`);
       return CLI_EXIT_OK;
     }
@@ -315,7 +315,7 @@ export async function runExtendedProductivityCli(input: {
         content: flags.content,
         ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, artifact);
+      if (wantsJson) writeExtendedJson(artifact);
       else context.stdout.write(`${artifact.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -338,7 +338,7 @@ export async function runExtendedProductivityCli(input: {
         content: flags.content,
         ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, artifact);
+      if (wantsJson) writeExtendedJson(artifact);
       else context.stdout.write(`${artifact.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -349,7 +349,7 @@ export async function runExtendedProductivityCli(input: {
         return CLI_EXIT_USAGE;
       }
       const result = await archiveOrRemoveProductivityRecord(claw.artifacts, id, argv, flags, "artifacts");
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeExtendedJson(result);
       else context.stdout.write("ok\n");
       return CLI_EXIT_OK;
     }
@@ -363,7 +363,7 @@ export async function runExtendedProductivityCli(input: {
         strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, results);
+      if (wantsJson) writeExtendedJson(results);
       else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
       return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -382,7 +382,7 @@ export async function runExtendedProductivityCli(input: {
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
         includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
       });
-      if (wantsJson) writeJson(context.stdout, decisions);
+      if (wantsJson) writeExtendedJson(decisions);
       else context.stdout.write(`${decisions.map((decision) => `${decision.status} ${decision.id} ${decision.title}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -394,7 +394,7 @@ export async function runExtendedProductivityCli(input: {
       }
       const decision = await claw.decisions.get(id);
       if (!decision) return CLI_EXIT_FAILURE;
-      if (wantsJson) writeJson(context.stdout, decision);
+      if (wantsJson) writeExtendedJson(decision);
       else context.stdout.write(`${decision.status} ${decision.id} ${decision.title}\n`);
       return CLI_EXIT_OK;
     }
@@ -419,7 +419,7 @@ export async function runExtendedProductivityCli(input: {
         artifactIds: parseCsvFlag(flags["artifact-ids"]),
         ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, decision);
+      if (wantsJson) writeExtendedJson(decision);
       else context.stdout.write(`${decision.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -444,7 +444,7 @@ export async function runExtendedProductivityCli(input: {
         ...(flags["artifact-ids"] ? { artifactIds: parseCsvFlag(flags["artifact-ids"]) } : {}),
         ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, decision);
+      if (wantsJson) writeExtendedJson(decision);
       else context.stdout.write(`${decision.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -455,7 +455,7 @@ export async function runExtendedProductivityCli(input: {
         return CLI_EXIT_USAGE;
       }
       const result = await archiveOrRemoveProductivityRecord(claw.decisions, id, argv, flags, "decisions");
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeExtendedJson(result);
       else context.stdout.write("ok\n");
       return CLI_EXIT_OK;
     }
@@ -469,7 +469,7 @@ export async function runExtendedProductivityCli(input: {
         strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, results);
+      if (wantsJson) writeExtendedJson(results);
       else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
       return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -484,7 +484,7 @@ export async function runExtendedProductivityCli(input: {
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
         includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
       });
-      if (wantsJson) writeJson(context.stdout, sessions);
+      if (wantsJson) writeExtendedJson(sessions);
       else context.stdout.write(`${sessions.map((session) => `${session.status} ${session.id} ${session.title}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -496,7 +496,7 @@ export async function runExtendedProductivityCli(input: {
       }
       const session = await claw.workSessions.get(id);
       if (!session) return CLI_EXIT_FAILURE;
-      if (wantsJson) writeJson(context.stdout, session);
+      if (wantsJson) writeExtendedJson(session);
       else context.stdout.write(`${session.status} ${session.id} ${session.title}\n`);
       return CLI_EXIT_OK;
     }
@@ -519,7 +519,7 @@ export async function runExtendedProductivityCli(input: {
         ownerAgentId: flags["owner-agent-id"],
         ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, session);
+      if (wantsJson) writeExtendedJson(session);
       else context.stdout.write(`${session.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -542,7 +542,7 @@ export async function runExtendedProductivityCli(input: {
         ownerAgentId: flags["owner-agent-id"],
         ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, session);
+      if (wantsJson) writeExtendedJson(session);
       else context.stdout.write(`${session.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -555,7 +555,7 @@ export async function runExtendedProductivityCli(input: {
       const session = command === "complete"
         ? await claw.workSessions.complete(id, flags.outcome)
         : await claw.workSessions.cancel(id);
-      if (wantsJson) writeJson(context.stdout, session);
+      if (wantsJson) writeExtendedJson(session);
       else context.stdout.write(`${session.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -566,7 +566,7 @@ export async function runExtendedProductivityCli(input: {
         return CLI_EXIT_USAGE;
       }
       const result = await archiveOrRemoveProductivityRecord(claw.workSessions, id, argv, flags, "work-sessions");
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeExtendedJson(result);
       else context.stdout.write("ok\n");
       return CLI_EXIT_OK;
     }
@@ -580,7 +580,7 @@ export async function runExtendedProductivityCli(input: {
         strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, results);
+      if (wantsJson) writeExtendedJson(results);
       else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
       return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -598,7 +598,7 @@ export async function runExtendedProductivityCli(input: {
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
         includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
       });
-      if (wantsJson) writeJson(context.stdout, assignments);
+      if (wantsJson) writeExtendedJson(assignments);
       else context.stdout.write(`${assignments.map((assignment) => `${assignment.status} ${assignment.id} ${assignment.title}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -610,7 +610,7 @@ export async function runExtendedProductivityCli(input: {
       }
       const assignment = await claw.assignments.get(id);
       if (!assignment) return CLI_EXIT_FAILURE;
-      if (wantsJson) writeJson(context.stdout, assignment);
+      if (wantsJson) writeExtendedJson(assignment);
       else context.stdout.write(`${assignment.status} ${assignment.id} ${assignment.title}\n`);
       return CLI_EXIT_OK;
     }
@@ -640,7 +640,7 @@ export async function runExtendedProductivityCli(input: {
         priority: flags.priority as "low" | "medium" | "high" | "urgent" | undefined,
         ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, assignment);
+      if (wantsJson) writeExtendedJson(assignment);
       else context.stdout.write(`${assignment.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -669,7 +669,7 @@ export async function runExtendedProductivityCli(input: {
         priority: flags.priority as "low" | "medium" | "high" | "urgent" | undefined,
         ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, assignment);
+      if (wantsJson) writeExtendedJson(assignment);
       else context.stdout.write(`${assignment.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -680,7 +680,7 @@ export async function runExtendedProductivityCli(input: {
         return CLI_EXIT_USAGE;
       }
       const result = await archiveOrRemoveProductivityRecord(claw.assignments, id, argv, flags, "assignments");
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeExtendedJson(result);
       else context.stdout.write("ok\n");
       return CLI_EXIT_OK;
     }
@@ -694,7 +694,7 @@ export async function runExtendedProductivityCli(input: {
         strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, results);
+      if (wantsJson) writeExtendedJson(results);
       else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
       return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -713,7 +713,7 @@ export async function runExtendedProductivityCli(input: {
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
         includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
       });
-      if (wantsJson) writeJson(context.stdout, handoffs);
+      if (wantsJson) writeExtendedJson(handoffs);
       else context.stdout.write(`${handoffs.map((handoff) => `${handoff.status} ${handoff.id} ${handoff.title}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -725,7 +725,7 @@ export async function runExtendedProductivityCli(input: {
       }
       const handoff = await claw.handoffs.get(id);
       if (!handoff) return CLI_EXIT_FAILURE;
-      if (wantsJson) writeJson(context.stdout, handoff);
+      if (wantsJson) writeExtendedJson(handoff);
       else context.stdout.write(`${handoff.status} ${handoff.id} ${handoff.title}\n`);
       return CLI_EXIT_OK;
     }
@@ -756,7 +756,7 @@ export async function runExtendedProductivityCli(input: {
         completedAt: flags["completed-at"],
         ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, handoff);
+      if (wantsJson) writeExtendedJson(handoff);
       else context.stdout.write(`${handoff.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -787,7 +787,7 @@ export async function runExtendedProductivityCli(input: {
         completedAt: flags["completed-at"],
         ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, handoff);
+      if (wantsJson) writeExtendedJson(handoff);
       else context.stdout.write(`${handoff.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -798,7 +798,7 @@ export async function runExtendedProductivityCli(input: {
         return CLI_EXIT_USAGE;
       }
       const result = await archiveOrRemoveProductivityRecord(claw.handoffs, id, argv, flags, "handoffs");
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeExtendedJson(result);
       else context.stdout.write("ok\n");
       return CLI_EXIT_OK;
     }
@@ -812,7 +812,7 @@ export async function runExtendedProductivityCli(input: {
         strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, results);
+      if (wantsJson) writeExtendedJson(results);
       else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
       return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -832,7 +832,7 @@ export async function runExtendedProductivityCli(input: {
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
         includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
       });
-      if (wantsJson) writeJson(context.stdout, approvals);
+      if (wantsJson) writeExtendedJson(approvals);
       else context.stdout.write(`${approvals.map((approval) => `${approval.status} ${approval.id} ${approval.title}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -844,7 +844,7 @@ export async function runExtendedProductivityCli(input: {
       }
       const approval = await claw.approvals.get(id);
       if (!approval) return CLI_EXIT_FAILURE;
-      if (wantsJson) writeJson(context.stdout, approval);
+      if (wantsJson) writeExtendedJson(approval);
       else context.stdout.write(`${approval.status} ${approval.id} ${approval.title}\n`);
       return CLI_EXIT_OK;
     }
@@ -873,7 +873,7 @@ export async function runExtendedProductivityCli(input: {
         rejectedAt: flags["rejected-at"],
         ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, approval);
+      if (wantsJson) writeExtendedJson(approval);
       else context.stdout.write(`${approval.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -902,7 +902,7 @@ export async function runExtendedProductivityCli(input: {
         rejectedAt: flags["rejected-at"],
         ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, approval);
+      if (wantsJson) writeExtendedJson(approval);
       else context.stdout.write(`${approval.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -913,7 +913,7 @@ export async function runExtendedProductivityCli(input: {
         return CLI_EXIT_USAGE;
       }
       const result = await archiveOrRemoveProductivityRecord(claw.approvals, id, argv, flags, "approvals");
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeExtendedJson(result);
       else context.stdout.write("ok\n");
       return CLI_EXIT_OK;
     }
@@ -927,7 +927,7 @@ export async function runExtendedProductivityCli(input: {
         strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, results);
+      if (wantsJson) writeExtendedJson(results);
       else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
       return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -944,7 +944,7 @@ export async function runExtendedProductivityCli(input: {
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
         includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
       });
-      if (wantsJson) writeJson(context.stdout, capacity);
+      if (wantsJson) writeExtendedJson(capacity);
       else context.stdout.write(`${capacity.map((snapshot) => `${snapshot.status} ${snapshot.id} ${snapshot.title}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -956,7 +956,7 @@ export async function runExtendedProductivityCli(input: {
       }
       const snapshot = await claw.capacity.get(id);
       if (!snapshot) return CLI_EXIT_FAILURE;
-      if (wantsJson) writeJson(context.stdout, snapshot);
+      if (wantsJson) writeExtendedJson(snapshot);
       else context.stdout.write(`${snapshot.status} ${snapshot.id} ${snapshot.title}\n`);
       return CLI_EXIT_OK;
     }
@@ -987,7 +987,7 @@ export async function runExtendedProductivityCli(input: {
         snapshotAt: flags["snapshot-at"],
         ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, snapshot);
+      if (wantsJson) writeExtendedJson(snapshot);
       else context.stdout.write(`${snapshot.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -1017,7 +1017,7 @@ export async function runExtendedProductivityCli(input: {
         snapshotAt: flags["snapshot-at"],
         ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, snapshot);
+      if (wantsJson) writeExtendedJson(snapshot);
       else context.stdout.write(`${snapshot.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -1028,7 +1028,7 @@ export async function runExtendedProductivityCli(input: {
         return CLI_EXIT_USAGE;
       }
       const result = await archiveOrRemoveProductivityRecord(claw.capacity, id, argv, flags, "capacity");
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeExtendedJson(result);
       else context.stdout.write("ok\n");
       return CLI_EXIT_OK;
     }
@@ -1042,7 +1042,7 @@ export async function runExtendedProductivityCli(input: {
         strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, results);
+      if (wantsJson) writeExtendedJson(results);
       else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
       return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -1072,7 +1072,7 @@ export async function runExtendedProductivityCli(input: {
         ...(flags["anchor-id"] ? { anchorId: flags["anchor-id"] } : {}),
         ...(flags["anchor-at"] ? { anchorAt: flags["anchor-at"] } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, payload);
+      if (wantsJson) writeExtendedJson(payload);
       else writeTemporalItems(context.stdout, [payload.item]);
       return CLI_EXIT_OK;
     }
@@ -1086,7 +1086,7 @@ export async function runExtendedProductivityCli(input: {
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
         includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
       });
-      if (wantsJson) writeJson(context.stdout, reminders);
+      if (wantsJson) writeExtendedJson(reminders);
       else context.stdout.write(`${reminders.map((reminder) => `${reminder.status} ${reminder.id} ${reminder.title}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -1098,7 +1098,7 @@ export async function runExtendedProductivityCli(input: {
       }
       const reminder = await claw.reminders.get(id);
       if (!reminder) return CLI_EXIT_FAILURE;
-      if (wantsJson) writeJson(context.stdout, reminder);
+      if (wantsJson) writeExtendedJson(reminder);
       else context.stdout.write(`${reminder.status} ${reminder.id} ${reminder.title}\n`);
       return CLI_EXIT_OK;
     }
@@ -1117,7 +1117,7 @@ export async function runExtendedProductivityCli(input: {
         anchorId: flags["anchor-id"],
         channel: flags.channel,
       });
-      if (wantsJson) writeJson(context.stdout, reminder);
+      if (wantsJson) writeExtendedJson(reminder);
       else context.stdout.write(`${reminder.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -1136,7 +1136,7 @@ export async function runExtendedProductivityCli(input: {
         anchorId: flags["anchor-id"],
         channel: flags.channel,
       });
-      if (wantsJson) writeJson(context.stdout, reminder);
+      if (wantsJson) writeExtendedJson(reminder);
       else context.stdout.write(`${reminder.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -1149,7 +1149,7 @@ export async function runExtendedProductivityCli(input: {
       const reminder = command === "pause"
         ? await claw.reminders.pause(id)
         : await claw.reminders.resume(id);
-      if (wantsJson) writeJson(context.stdout, reminder);
+      if (wantsJson) writeExtendedJson(reminder);
       else context.stdout.write(`${reminder.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -1160,7 +1160,7 @@ export async function runExtendedProductivityCli(input: {
         return CLI_EXIT_USAGE;
       }
       const result = await archiveOrRemoveProductivityRecord(claw.reminders, id, argv, flags, "reminders");
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeExtendedJson(result);
       else context.stdout.write("ok\n");
       return CLI_EXIT_OK;
     }
@@ -1174,7 +1174,7 @@ export async function runExtendedProductivityCli(input: {
         strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, results);
+      if (wantsJson) writeExtendedJson(results);
       else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
       return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -1191,7 +1191,7 @@ export async function runExtendedProductivityCli(input: {
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
         includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
       });
-      if (wantsJson) writeJson(context.stdout, deadlines);
+      if (wantsJson) writeExtendedJson(deadlines);
       else context.stdout.write(`${deadlines.map((deadline) => `${deadline.status} ${deadline.id} ${deadline.title}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -1203,7 +1203,7 @@ export async function runExtendedProductivityCli(input: {
       }
       const deadline = await claw.deadlines.get(id);
       if (!deadline) return CLI_EXIT_FAILURE;
-      if (wantsJson) writeJson(context.stdout, deadline);
+      if (wantsJson) writeExtendedJson(deadline);
       else context.stdout.write(`${deadline.status} ${deadline.id} ${deadline.title}\n`);
       return CLI_EXIT_OK;
     }
@@ -1221,7 +1221,7 @@ export async function runExtendedProductivityCli(input: {
         anchorType: flags["anchor-type"] as "task" | "project" | "goal" | "event" | "thread" | "standalone" | undefined,
         anchorId: flags["anchor-id"],
       });
-      if (wantsJson) writeJson(context.stdout, deadline);
+      if (wantsJson) writeExtendedJson(deadline);
       else context.stdout.write(`${deadline.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -1239,7 +1239,7 @@ export async function runExtendedProductivityCli(input: {
         anchorType: flags["anchor-type"] as "task" | "project" | "goal" | "event" | "thread" | "standalone" | undefined,
         anchorId: flags["anchor-id"],
       });
-      if (wantsJson) writeJson(context.stdout, deadline);
+      if (wantsJson) writeExtendedJson(deadline);
       else context.stdout.write(`${deadline.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -1252,7 +1252,7 @@ export async function runExtendedProductivityCli(input: {
       const deadline = command === "pause"
         ? await claw.deadlines.pause(id)
         : await claw.deadlines.resume(id);
-      if (wantsJson) writeJson(context.stdout, deadline);
+      if (wantsJson) writeExtendedJson(deadline);
       else context.stdout.write(`${deadline.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -1263,7 +1263,7 @@ export async function runExtendedProductivityCli(input: {
         return CLI_EXIT_USAGE;
       }
       const result = await archiveOrRemoveProductivityRecord(claw.deadlines, id, argv, flags, "deadlines");
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeExtendedJson(result);
       else context.stdout.write("ok\n");
       return CLI_EXIT_OK;
     }
@@ -1277,7 +1277,7 @@ export async function runExtendedProductivityCli(input: {
         strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, results);
+      if (wantsJson) writeExtendedJson(results);
       else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
       return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -1290,7 +1290,7 @@ export async function runExtendedProductivityCli(input: {
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
         includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
       });
-      if (wantsJson) writeJson(context.stdout, notes);
+      if (wantsJson) writeExtendedJson(notes);
       else context.stdout.write(`${notes.map((note) => `${note.id} ${note.title}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -1302,7 +1302,7 @@ export async function runExtendedProductivityCli(input: {
       }
       const note = await claw.notes.get(id);
       if (!note) return CLI_EXIT_FAILURE;
-      if (wantsJson) writeJson(context.stdout, note);
+      if (wantsJson) writeExtendedJson(note);
       else context.stdout.write(`${note.id} ${note.title}\n`);
       return CLI_EXIT_OK;
     }
@@ -1318,7 +1318,7 @@ export async function runExtendedProductivityCli(input: {
         tags: parseCsvFlag(flags.tags),
         summary: flags.summary,
       });
-      if (wantsJson) writeJson(context.stdout, note);
+      if (wantsJson) writeExtendedJson(note);
       else context.stdout.write(`${note.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -1334,7 +1334,7 @@ export async function runExtendedProductivityCli(input: {
         ...(flags.tags ? { tags: parseCsvFlag(flags.tags) } : {}),
         summary: flags.summary,
       });
-      if (wantsJson) writeJson(context.stdout, note);
+      if (wantsJson) writeExtendedJson(note);
       else context.stdout.write(`${note.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -1348,7 +1348,7 @@ export async function runExtendedProductivityCli(input: {
         strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, results);
+      if (wantsJson) writeExtendedJson(results);
       else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
       return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -1361,7 +1361,7 @@ export async function runExtendedProductivityCli(input: {
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
         includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
       });
-      if (wantsJson) writeJson(context.stdout, people);
+      if (wantsJson) writeExtendedJson(people);
       else context.stdout.write(`${people.map((person) => `${person.id} ${person.displayName}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -1373,7 +1373,7 @@ export async function runExtendedProductivityCli(input: {
       }
       const person = await claw.people.get(id);
       if (!person) return CLI_EXIT_FAILURE;
-      if (wantsJson) writeJson(context.stdout, person);
+      if (wantsJson) writeExtendedJson(person);
       else context.stdout.write(`${person.id} ${person.displayName}\n`);
       return CLI_EXIT_OK;
     }
@@ -1396,7 +1396,7 @@ export async function runExtendedProductivityCli(input: {
         role: flags.role,
         organization: flags.organization,
       });
-      if (wantsJson) writeJson(context.stdout, person);
+      if (wantsJson) writeExtendedJson(person);
       else context.stdout.write(`${person.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -1409,7 +1409,7 @@ export async function runExtendedProductivityCli(input: {
       const results = await claw.people.search(query, {
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, results);
+      if (wantsJson) writeExtendedJson(results);
       else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
       return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -1423,7 +1423,7 @@ export async function runExtendedProductivityCli(input: {
         includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, threads);
+      if (wantsJson) writeExtendedJson(threads);
       else context.stdout.write(`${threads.map((thread) => `${thread.status} ${thread.id} ${thread.subject ?? ""}`.trim()).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -1435,7 +1435,7 @@ export async function runExtendedProductivityCli(input: {
       }
       const thread = await claw.inbox.readThread(id);
       if (!thread) return CLI_EXIT_FAILURE;
-      if (wantsJson) writeJson(context.stdout, thread);
+      if (wantsJson) writeExtendedJson(thread);
       else context.stdout.write(`${thread.thread.id} ${thread.messages.length}\n`);
       return CLI_EXIT_OK;
     }
@@ -1449,7 +1449,7 @@ export async function runExtendedProductivityCli(input: {
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
         strategy: flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
       });
-      if (wantsJson) writeJson(context.stdout, results);
+      if (wantsJson) writeExtendedJson(results);
       else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
       return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
@@ -1467,7 +1467,7 @@ export async function runExtendedProductivityCli(input: {
         content,
         participantPersonIds: parseCsvFlag(flags.participants),
       });
-      if (wantsJson) writeJson(context.stdout, thread);
+      if (wantsJson) writeExtendedJson(thread);
       else context.stdout.write(`${thread.thread.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -1478,7 +1478,7 @@ export async function runExtendedProductivityCli(input: {
         return CLI_EXIT_USAGE;
       }
       const thread = await claw.inbox.archive(id);
-      if (wantsJson) writeJson(context.stdout, thread);
+      if (wantsJson) writeExtendedJson(thread);
       else context.stdout.write(`${thread.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -1497,7 +1497,7 @@ export async function runExtendedProductivityCli(input: {
         projectId: flags["project-id"],
         goalId: flags["goal-id"],
       });
-      if (wantsJson) writeJson(context.stdout, processed);
+      if (wantsJson) writeExtendedJson(processed);
       else context.stdout.write(`${processed.thread.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -1511,7 +1511,7 @@ export async function runExtendedProductivityCli(input: {
         includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, events);
+      if (wantsJson) writeExtendedJson(events);
       else context.stdout.write(`${events.map((event) => `${event.id} ${event.title} ${event.startsAt}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -1523,7 +1523,7 @@ export async function runExtendedProductivityCli(input: {
       }
       const event = await claw.events.get(id);
       if (!event) return CLI_EXIT_FAILURE;
-      if (wantsJson) writeJson(context.stdout, event);
+      if (wantsJson) writeExtendedJson(event);
       else context.stdout.write(`${event.id} ${event.title}\n`);
       return CLI_EXIT_OK;
     }
@@ -1541,7 +1541,7 @@ export async function runExtendedProductivityCli(input: {
         description: flags.description,
         attendeePersonIds: parseCsvFlag(flags.attendees),
       });
-      if (wantsJson) writeJson(context.stdout, event);
+      if (wantsJson) writeExtendedJson(event);
       else context.stdout.write(`${event.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -1559,7 +1559,7 @@ export async function runExtendedProductivityCli(input: {
         description: flags.description,
         ...(flags.attendees ? { attendeePersonIds: parseCsvFlag(flags.attendees) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, event);
+      if (wantsJson) writeExtendedJson(event);
       else context.stdout.write(`${event.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -1572,7 +1572,7 @@ export async function runExtendedProductivityCli(input: {
       const results = await claw.events.search(query, {
         ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, results);
+      if (wantsJson) writeExtendedJson(results);
       else context.stdout.write(`${results.map((result) => `${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
       return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }

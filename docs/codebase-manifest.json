@@ -95060,7 +95060,7 @@
     {
       "path": "packages/clawjs/src/cli-discovery.test.ts",
       "language": "typescript",
-      "lines": 206,
+      "lines": 219,
       "test": true,
       "entrypoint": false,
       "imports": [
