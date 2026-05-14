@@ -1,3 +1,7 @@
+import { randomUUID } from "node:crypto";
+
+import Database from "better-sqlite3";
+
 const STABLE_EVENT_TYPES = {
   tenantBootstrapped: "tenant.bootstrapped",
   jobUpdated: "job.updated",
