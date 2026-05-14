@@ -1784,8 +1784,10 @@ describe("discord operation runtime", () => {
         deaf: true,
       },
       responseSchema: {
-        type: "object",
-        requiredPaths: ["user"],
+        oneOf: [
+          { type: "object", requiredPaths: ["user"] },
+          { type: "null" },
+        ],
       },
     });
 
