@@ -2425,6 +2425,24 @@ describe("discord operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-guild-soundboard-sound"), {
+      guildId: "456",
+      soundboardSoundId: "sound-123",
+      auditLogReason: "sound cleanup",
+    }), {
+      method: "DELETE",
+      endpoint: "guilds/456/soundboard-sounds/sound-123",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "sound cleanup",
+      },
+      body: {},
+      responseSchema: {
+        type: "null",
+      },
+    });
+
     assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-current-application"), {}), {
       method: "GET",
       endpoint: "applications/@me",
@@ -3122,6 +3140,24 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["id", "name"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-guild-sticker"), {
+      guildId: "456",
+      stickerId: "sticker-123",
+      auditLogReason: "sticker cleanup",
+    }), {
+      method: "DELETE",
+      endpoint: "guilds/456/stickers/sticker-123",
+      auth,
+      headers: {
+        ...headers,
+        "X-Audit-Log-Reason": "sticker cleanup",
+      },
+      body: {},
+      responseSchema: {
+        type: "null",
       },
     });
 
