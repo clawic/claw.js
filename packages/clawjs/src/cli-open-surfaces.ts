@@ -99,4 +99,3 @@ export function openSurfaceRows(useClawDomains = false): Array<Record<string, st
     aliases: (surface.aliases ?? []).join(","),
   }));
 }
-
