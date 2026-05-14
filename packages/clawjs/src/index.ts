@@ -74,6 +74,8 @@ import {
 } from "./cli-telegram-codex-constants.ts";
 import { parseImageOperation, parseImageProvenance, parseImageType } from "./cli-image-parsers.ts";
 import { OPEN_SURFACES, OPEN_SURFACE_BY_NAME, type OpenSurface, type OpenSurfaceState } from "./cli-open-surfaces.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
+import { collectFlagValues, parseCsvFlag, parseJsonFlag } from "./cli-flag-parsers.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
 import {
   buildFallbackSemanticPlan,
@@ -97,8 +99,6 @@ export interface CliContext {
   runCommand?: (command: string, args: string[], options: { cwd: string }) => Promise<void>;
 }
 
-export const CLI_EXIT_OK = 0, CLI_EXIT_FAILURE = 1, CLI_EXIT_DEGRADED = 2, CLI_EXIT_USAGE = 64;
-
 type CliMediaShare = { id: string; url: string };
 type CliTemporalExecution = {
   itemId: string;
@@ -121,17 +121,6 @@ type CliMediaClaw = ClawInstance & {
     };
   };
 };
-
-class CliHandledError extends Error {
-  readonly code: string;
-  readonly exitCode: number;
-
-  constructor(code: string, message: string, exitCode = CLI_EXIT_FAILURE) {
-    super(message);
-    this.code = code;
-    this.exitCode = exitCode;
-  }
-}
 
 const CLAW_DOMAINS_BEGIN = "# BEGIN CLAWJS DOMAINS";
 const CLAW_DOMAINS_END = "# END CLAWJS DOMAINS";
@@ -674,43 +663,6 @@ function parseRuleHints(flags: Record<string, string>): Omit<RulesCompileInput, 
     ...(flags["rules-limit"] ? { limit: Number(flags["rules-limit"]) } : {}),
   };
   return Object.keys(hints).length > 0 ? hints : undefined;
-}
-
-function parseJsonFlag<TValue>(value: string | undefined, label: string): TValue | undefined {
-  const trimmed = value?.trim();
-  if (!trimmed) return undefined;
-  try {
-    return JSON.parse(trimmed) as TValue;
-  } catch (error) {
-    throw new CliHandledError("invalid_json", `Invalid JSON for ${label}: ${error instanceof Error ? error.message : "parse error"}`);
-  }
-}
-
-function parseCsvFlag(value: string | undefined): string[] {
-  return (value ?? "")
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-}
-
-function collectFlagValues(argv: string[], name: string): string[] {
-  const values: string[] = [];
-  const prefix = `--${name}=`;
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-    if (token === `--${name}`) {
-      const next = argv[index + 1];
-      if (next && !next.startsWith("--")) {
-        values.push(...parseCsvFlag(next));
-        index += 1;
-      }
-      continue;
-    }
-    if (token?.startsWith(prefix)) {
-      values.push(...parseCsvFlag(token.slice(prefix.length)));
-    }
-  }
-  return values;
 }
 
 function parseRuleReferences(value: string | undefined): Array<{ kind: string; ref: string; label?: string }> {
