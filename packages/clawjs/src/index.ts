@@ -60,6 +60,7 @@ import { HostClientError, sendHostCommand } from "./host-client.ts";
 import { CLI_USAGE, DEFAULT_CLI_BIN, PUBLIC_PORTAL_HELP_ONLY, REMOVED_RUNTIME_COMMANDS, REMOVED_V1_CRUD_COMMANDS, buildCliUsage, buildCommandHelp, normalizePublicCliArgv, removedPublicCommandMessage } from "./cli-surface.ts";
 import { inferBrokerDeclaredFields } from "./broker-http.ts";
 import { runInspectCli } from "./inspect-cli.ts";
+import { CLI_TEMPLATE_ROOT, CORE_PRODUCTIVITY_DB_COLLECTIONS, LOCAL_FIRST_PRODUCTIVITY_GROUPS, RUNTIME_ADAPTER_IDS } from "./cli-constants.ts";
 export { CLI_USAGE, DEFAULT_CLI_BIN, buildCliUsage } from "./cli-surface.ts";
 export interface CliContext {
   stdout: NodeJS.WritableStream;
@@ -104,108 +105,6 @@ class CliHandledError extends Error {
     this.exitCode = exitCode;
   }
 }
-
-const RUNTIME_ADAPTER_IDS = new Set([
-  "demo",
-  "claw",
-  "openclaw",
-  "codex",
-  "zeroclaw",
-  "picoclaw",
-  "nanobot",
-  "nanoclaw",
-  "nullclaw",
-  "ironclaw",
-  "nemoclaw",
-  "hermes",
-]);
-
-const CORE_PRODUCTIVITY_DB_COLLECTIONS: Record<string, string> = {
-  task: "tasks",
-  tasks: "tasks",
-  list: "lists",
-  lists: "lists",
-  section: "sections",
-  sections: "sections",
-  project: "projects",
-  projects: "projects",
-  goal: "goals",
-  goals: "goals",
-  comment: "comments",
-  comments: "comments",
-  attachment: "attachments",
-  attachments: "attachments",
-  view: "saved_views",
-  views: "saved_views",
-  saved_view: "saved_views",
-  saved_views: "saved_views",
-  recurrence: "recurrences",
-  recurrences: "recurrences",
-  cycle: "cycles",
-  cycles: "cycles",
-  sprint: "cycles",
-  sprints: "cycles",
-  epic: "epics",
-  epics: "epics",
-  initiative: "epics",
-  initiatives: "epics",
-  custom_field: "custom_fields",
-  custom_fields: "custom_fields",
-  field_value: "field_values",
-  field_values: "field_values",
-  template: "templates",
-  templates: "templates",
-  reminder: "reminders",
-  reminders: "reminders",
-  deadline: "deadlines",
-  deadlines: "deadlines",
-  note: "notes",
-  notes: "notes",
-  person: "people",
-  people: "people",
-  event: "events",
-  events: "events",
-};
-
-const LOCAL_FIRST_PRODUCTIVITY_GROUPS = new Set([
-  "areas",
-  "lists",
-  "sections",
-  "tasks",
-  "goals",
-  "projects",
-  "comments",
-  "attachments",
-  "saved-views",
-  "recurrences",
-  "cycles",
-  "sprints",
-  "epics",
-  "initiatives",
-  "custom-fields",
-  "field-values",
-  "templates",
-  "milestones",
-  "activity",
-  "blockers",
-  "artifacts",
-  "decisions",
-  "work-sessions",
-  "assignments",
-  "handoffs",
-  "approvals",
-  "capacity",
-  "reminders",
-  "deadlines",
-  "notes",
-  "people",
-  "inbox",
-  "events",
-  "my-work",
-  "timeline",
-]);
-
-const CLI_TEMPLATE_ROOT = fileURLToPath(new URL("../templates", import.meta.url));
 
 type OpenSurfaceKind = "internal-database" | "internal-storage" | "cli-serve" | "server-script" | "memory" | "agenda" | "next";
 
