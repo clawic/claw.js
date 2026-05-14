@@ -1430,8 +1430,8 @@ test("runCli reset covers V2 main DB legacy service tables when present", async 
       }), CLI_EXIT_OK);
     }
 
-    const readonlyPath = path.join(tempRoot, "core.sqlite");
-    const readonly = new Database(readonlyPath, { readonly: true });
+    const readonlyCorePath = path.join(tempRoot, "core.sqlite");
+    const readonly = new Database(readonlyCorePath, { readonly: true });
     try {
       for (const table of tables) {
         assert.equal((readonly.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get() as { count: number }).count, 0, table);
