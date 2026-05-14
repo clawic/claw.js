@@ -7,7 +7,7 @@
     "dev": "tsx watch src/bin/start.ts",
     "build": "tsup src/bin/start.ts --format esm --target node20 --out-dir dist --clean",
     "start": "node dist/start.js",
-    "test": "tsx --test tests/**/*.test.ts"
+    "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
     "@clawjs/claw": "file:../packages/clawjs-node",

@@ -20,7 +20,7 @@
   "files": ["dist", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsup src/index.ts src/types.ts src/evaluator.ts src/audit.ts --format esm --dts --out-dir dist --clean --target node20",
-    "test": "node --test --import tsx tests/*.test.ts"
+    "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
     "@clawjs/marketplace": "*",

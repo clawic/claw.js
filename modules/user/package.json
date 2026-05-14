@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "build": "tsc -p tsconfig.json && cp src/ui.html dist/ui.html",
-    "test": "npm run build && node --test dist/test/*.spec.js"
+    "test": "npm run build && vitest run --config vitest.config.ts --passWithNoTests"
   },
   "dependencies": {
     "better-sqlite3": "^12.4.1"

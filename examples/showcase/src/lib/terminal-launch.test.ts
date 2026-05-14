@@ -24,7 +24,7 @@ test("buildShellCommand preserves cwd, env, and argument quoting", () => {
 
   assert.equal(
     command,
-    "cd '/tmp/claw demo'; env OPENCLAW_STATE_DIR='/tmp/openclaw state' '/usr/local/bin/openclaw' 'models' 'auth' 'login' '--provider' 'openai-codex'",
+    "cd '/tmp/claw demo'; env NODE_ENV='test' OPENCLAW_STATE_DIR='/tmp/openclaw state' '/usr/local/bin/openclaw' 'models' 'auth' 'login' '--provider' 'openai-codex'",
   );
 });
 

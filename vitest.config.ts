@@ -6,8 +6,10 @@ export default defineConfig({
     setupFiles: ["tests/setup/vitest-node-test-compat.ts"],
     include: [
       "packages/**/*.test.ts",
+      "apps/board/src/lib/**/*.test.ts",
       "bridge/tests/**/*.test.ts",
       "delegation/src/**/*.test.ts",
+      "examples/showcase/src/lib/**/*.test.ts",
       "publishing/tests/unit/**/*.test.ts",
       "relay/src/**/*.test.ts",
       "time/src/**/*.test.ts",
