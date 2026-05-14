@@ -207,6 +207,15 @@ function routeSnippet(route) {
   return `app.${route.method.toLowerCase()}("${route.path}"`;
 }
 
+function relayRouteSnippets(route) {
+  const method = route.method.toLowerCase();
+  const snippets = [routeSnippet(route)];
+  if (route.path.startsWith("/v1/")) {
+    snippets.push(`app.${method}(clawApiPath("${route.path.slice("/v1/".length)}")`);
+  }
+  return snippets;
+}
+
 const docFiles = docRoots.flatMap((targetPath) => listFiles(targetPath))
   .filter((filePath) => /\.(md|html)$/.test(filePath));
 
@@ -302,8 +311,7 @@ const relayRaw = [
   return fs.existsSync(filePath) ? read(filePath) : "";
 }).join("\n");
 for (const route of surfaceContract.relay.routes) {
-  const snippet = routeSnippet(route);
-  if (!relayRaw.includes(snippet)) {
+  if (!relayRouteSnippets(route).some((snippet) => relayRaw.includes(snippet))) {
     violations.push(`relay/src/server/app.ts is missing route ${route.method} ${route.path}`);
   }
 }

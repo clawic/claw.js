@@ -193,7 +193,7 @@ function listFiles(targetPath) {
   const stat = fs.statSync(targetPath);
   if (stat.isFile()) return [targetPath];
   return fs.readdirSync(targetPath, { withFileTypes: true }).flatMap((entry) => {
-    if (["node_modules", "dist", ".git", ".build", "build", ".next", "coverage", "artifacts"].includes(entry.name)) return [];
+    if (["node_modules", "dist", ".git", ".build", "build", ".next", ".tmp", "coverage", "artifacts", "test-results", "playwright-report"].includes(entry.name)) return [];
     const next = path.join(targetPath, entry.name);
     return entry.isDirectory() ? listFiles(next) : [next];
   });

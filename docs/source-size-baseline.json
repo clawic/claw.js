@@ -28,7 +28,7 @@
       "reason": "Settings page shell after extracting persona, profile, advanced, OpenClaw, integrations, and tools tabs; route-level state/wiring only, split new tabs before expanding."
     },
     "relay/src/server/app.ts": {
-      "lines": 1653,
+      "lines": 1659,
       "reason": "Relay application assembly and remaining auth/service/admin/browser routes after helper, monitor, and workspace route extraction."
     },
     "packages/clawjs/src/v1-data.ts": {
@@ -40,7 +40,7 @@
       "reason": "Canonical type surface after workspace, human, and library/rules type extraction; split new contract domains into focused type modules before expanding."
     },
     "packages/clawjs-core/src/surface-registry.ts": {
-      "lines": 1391,
+      "lines": 1401,
       "reason": "Stable surface registry after cross-surface enforcement expansion for routes, events, app/browser storage keys, and registered DDL sources; split route families into focused modules before expanding further."
     },
     "packages/clawjs-node/src/create-claw.test.ts": {
@@ -48,11 +48,11 @@
       "reason": "Remaining Claw SDK integration tests after helper and Telegram scenario split; add new scenario files instead of expanding broadly."
     },
     "memory/src/service.ts": {
-      "lines": 1885,
+      "lines": 1886,
       "reason": "Memory service orchestration after note validation extraction; split persistence, indexing, and active memory helpers before expanding."
     },
     "relay/tests/e2e/relay.e2e.test.ts": {
-      "lines": 1399,
+      "lines": 1402,
       "reason": "Relay E2E scenarios after fake connector utility extraction; split new scenario groups into separate tests before expanding."
     },
     "packages/clawjs-core/src/schemas.ts": {
@@ -80,7 +80,7 @@
       "reason": "Showcase E2E fixture runtime after type extraction; keep fixture types and large seed groups separate before expanding."
     },
     "modules/erp/src/server/db.ts": {
-      "lines": 1934,
+      "lines": 1946,
       "reason": "ERP database store after SQL prefix/helper extraction; keep database helpers outside the store before expanding."
     },
     "examples/showcase/src/app/tasks/page.tsx": {
@@ -116,7 +116,7 @@
       "reason": "Extracted public workspace contract surface; keep as capped exception and split by domain before expanding."
     },
     "relay/src/connector/runtime.ts": {
-      "lines": 1613,
+      "lines": 1614,
       "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
     },
     "packages/clawjs-integrations/src/runtime-registry.ts": {
@@ -132,7 +132,7 @@
       "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
     },
     "database/public/app.js": {
-      "lines": 1551,
+      "lines": 1557,
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     },
     "packages/clawjs/src/slides.ts": {
@@ -148,7 +148,7 @@
       "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
     },
     "content/src/server/db.ts": {
-      "lines": 1418,
+      "lines": 1419,
       "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
     },
     "tests/e2e/telegram-codex-bridge.spec.ts": {
@@ -168,7 +168,7 @@
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     },
     "secrets/src/server/app.ts": {
-      "lines": 1216,
+      "lines": 1217,
       "reason": "Existing secrets server app after broker redirect handling; split routes, auth helpers, and response serializers before expanding."
     },
     "packages/clawjs/src/v1-data-core.ts": {
@@ -176,7 +176,7 @@
       "reason": "V1 data maintenance, sidecar, page, search, MCP, and formatting helpers extracted from CLI routing; split by helper domain before expanding."
     },
     "relay/src/server/workspace-routes.ts": {
-      "lines": 1814,
+      "lines": 1815,
       "reason": "Workspace, chat, document, content, image, and skill route registration extracted from relay app; split by route domain before expanding."
     },
     "packages/clawjs/src/cli-productivity-extended-command.ts": {
