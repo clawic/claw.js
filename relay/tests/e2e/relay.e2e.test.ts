@@ -4,6 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import fs from "node:fs";
 
+import WebSocket from "ws";
+
 import { buildRelayApp } from "../../src/server/app.ts";
 import { RelayLogger } from "../../src/server/logger.ts";
 import { deriveAssignmentWorkspaceId, deriveRuntimeAgentId } from "../../src/shared/project-model.ts";
