@@ -143,6 +143,27 @@ const decStrictRead = evaluateGovernance(secret, {
 });
 if (decStrictRead.allowed) ok("strict governance allows complete read context"); else ko("strict governance allows complete read context", decStrictRead);
 
+const noHostSecret = resolver.secrets.create({
+  tenantId: "clawix-local",
+  masterKey: setup.masterKey,
+  draft: {
+    internalName: "no_host_token",
+    title: "No Host Token",
+    fields: [{ fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, secretValue: "nohost" }],
+    governance: { allowedHeaders: ["Authorization"], approvalMode: "auto" },
+  },
+});
+const decNoHost = evaluateGovernance(noHostSecret, {
+  host: "api.example.com",
+  headers: { Authorization: "Bearer x" },
+  placements: ["header"],
+  riskTier: "read",
+  agent: "claude-code",
+  requireCompleteContext: true,
+});
+if (!decNoHost.allowed && decNoHost.reasons.includes("host_not_allowed")) ok("strict governance requires explicit host allowlist");
+else ko("strict governance requires explicit host allowlist", decNoHost);
+
 const wildcardSecret = resolver.secrets.create({
   tenantId: "clawix-local",
   masterKey: setup.masterKey,

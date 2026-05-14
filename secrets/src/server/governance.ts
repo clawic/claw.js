@@ -99,6 +99,9 @@ export function evaluateGovernance(secret: SecretRow, ctx: ResolveContext): Gove
 
   // Host whitelist.
   const allowedHosts = parseJsonArray(secret.allowed_hosts_json);
+  if (ctx.requireCompleteContext === true && allowedHosts.length === 0) {
+    reasons.push("host_not_allowed");
+  }
   if (ctx.requireCompleteContext === true && allowedHosts.length > 0 && !ctx.host) {
     reasons.push("missing_context");
   }
