@@ -40,7 +40,7 @@ export interface FakeServerHandle {
 export async function startFakeSshServer(
   options: FakeServerOptions = {},
 ): Promise<FakeServerHandle> {
-  const keys = utils.generateKeyPairSync("ed25519");
+  const keys = utils.generateKeyPairSync("rsa", { bits: 2048 });
   const server = new Server({ hostKeys: [keys.private] }, (client) => {
     client.on("authentication", (ctx) => {
       if (ctx.method === "password") {
@@ -135,6 +135,6 @@ export async function startFakeSshServer(
 }
 
 export function makeClientKeyPair(): { publicKey: string; privateKey: string } {
-  const kp = utils.generateKeyPairSync("ed25519");
+  const kp = utils.generateKeyPairSync("rsa", { bits: 2048 });
   return { publicKey: kp.public, privateKey: kp.private };
 }
