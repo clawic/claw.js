@@ -94922,7 +94922,7 @@
     {
       "path": "packages/clawjs/src/cli-codex-agent-command.ts",
       "language": "typescript",
-      "lines": 50,
+      "lines": 58,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -94941,6 +94941,11 @@
           "kind": "function",
           "name": "runCodexAgentCli",
           "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "writeAgentsCodexJson",
+          "exported": false
         }
       ]
     },
@@ -95049,7 +95054,7 @@
     {
       "path": "packages/clawjs/src/cli-discovery.test.ts",
       "language": "typescript",
-      "lines": 57,
+      "lines": 68,
       "test": true,
       "entrypoint": false,
       "imports": [

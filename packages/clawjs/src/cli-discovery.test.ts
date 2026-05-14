@@ -33,6 +33,17 @@ test("runCli returns open list JSON in the common envelope", async () => {
   assert.equal(payload.data.dashboards.some((entry) => entry.surface === "database"), true);
 });
 
+test("runCli returns agents codex JSON in the common envelope", async () => {
+  const result = await runCliCapture(["agents", "codex", "status", "--runtime", "demo", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; data: { agentId: string; runtime: string }; meta: { canonicalCommand: string; subcommand: string } };
+  assert.equal(payload.ok, true);
+  assert.equal(payload.data.agentId, "codex");
+  assert.equal(payload.data.runtime, "demo");
+  assert.equal(payload.meta.canonicalCommand, "agents");
+  assert.equal(payload.meta.subcommand, "codex.status");
+});
+
 test("runCli searches registered local docs and ADR contents", async () => {
   const result = await runCliCapture(["search", "Stable JSON output uses", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
