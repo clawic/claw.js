@@ -190,6 +190,10 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     return true;
   }
 
+  function includePublicValues(req: FastifyRequest, reply: FastifyReply): boolean {
+    return (req.query as Record<string, string> | undefined)?.includePublicValues === "true" && requireSignedHost(req, reply);
+  }
+
   function isLocalNetworkHost(hostname: string): boolean {
     return hostname === "localhost"
       || hostname === "127.0.0.1"
@@ -532,8 +536,10 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // ---------- Secrets ----------
 
-  app.get("/v1/tenants/:tenantId/secrets", async (req) => {
-    await requirePrincipalOrUser(req, undefined as unknown as FastifyReply);
+  app.get("/v1/tenants/:tenantId/secrets", async (req, reply) => {
+    await requirePrincipalOrUser(req, reply);
+    const withPublicValues = includePublicValues(req, reply);
+    if ((req.query as Record<string, string> | undefined)?.includePublicValues === "true" && !withPublicValues) return;
     const { tenantId } = req.params as { tenantId: string };
     const q = req.query as Record<string, string> | undefined;
     const rows = resolver.secrets.list({
@@ -543,7 +549,7 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
       includeTrashed: q?.includeTrashed === "true",
       includeArchived: q?.includeArchived === "true",
     });
-    return { secrets: rows.map((r) => resolver.describeSecret(r)) };
+    return { secrets: rows.map((r) => resolver.describeSecret(r, { includePublicValues: withPublicValues })) };
   });
 
   app.get("/v1/tenants/:tenantId/secrets/:name", async (req, reply) => {
@@ -552,7 +558,9 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     if (!isCapabilityAllowed(actor, tenantId, name, "metadata.read")) return reply.code(403).send({ error: "metadata.read denied" });
     const row = resolver.secrets.getByInternalName(tenantId, name);
     if (!row) return reply.code(404).send({ error: "Not found" });
-    return { secret: resolver.describeSecret(row) };
+    const withPublicValues = includePublicValues(req, reply);
+    if ((req.query as Record<string, string> | undefined)?.includePublicValues === "true" && !withPublicValues) return;
+    return { secret: resolver.describeSecret(row, { includePublicValues: withPublicValues }) };
   });
 
   app.get("/v1/tenants/:tenantId/secrets/:name/versions", async (req, reply) => {

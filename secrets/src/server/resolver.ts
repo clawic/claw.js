@@ -118,6 +118,10 @@ export interface ResolutionOutput {
   decision: { allowed: boolean; reasons: GovernanceDenialReason[]; needsApproval: boolean; needsVpn: boolean };
 }
 
+export interface DescribeSecretOptions {
+  includePublicValues?: boolean;
+}
+
 // ---------- Resolver ----------
 
 export class SecretsResolver {
@@ -143,7 +147,7 @@ export class SecretsResolver {
 
   // ---- Describe / list ----
 
-  describeSecret(secret: SecretRow): DescribedSecret {
+  describeSecret(secret: SecretRow, options: DescribeSecretOptions = {}): DescribedSecret {
     const version = this.secrets.getCurrentVersion(secret.id);
     const fields: SecretFieldRow[] = version ? this.secrets.listFields(version.id) : [];
     const notes: SecretNotesRow | undefined = version
@@ -201,7 +205,7 @@ export class SecretsResolver {
         placement: f.placement,
         isSecret: f.is_secret === 1,
         isConcealed: f.is_concealed === 1,
-        publicValue: f.public_value,
+        publicValue: options.includePublicValues === true ? f.public_value : null,
         hasCiphertext: f.value_ciphertext !== null,
         otpPeriod: f.otp_period,
         otpDigits: f.otp_digits,

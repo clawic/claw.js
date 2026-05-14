@@ -170,6 +170,10 @@
     "scripts/extract-component-catalog.mjs": {
       "lines": 1233,
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "secrets/src/server/app.ts": {
+      "lines": 1207,
+      "reason": "Existing secrets server app crossed threshold during public-values routing; split routes, auth helpers, and response serializers before expanding."
     }
   }
 }

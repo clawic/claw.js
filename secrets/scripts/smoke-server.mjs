@@ -82,6 +82,7 @@ const draft = {
   title: "GitHub Main",
   fields: [
     { fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, isConcealed: true, secretValue: "ghp_smoke_secret" },
+    { fieldName: "username", fieldKind: "text", placement: "none", isSecret: false, publicValue: "octo" },
   ],
   governance: { allowedHosts: ["127.0.0.1"], allowedHeaders: ["Authorization"], allowLocalNetwork: true },
 };
@@ -91,6 +92,23 @@ const created = await fetchJson(`${base}/v1/tenants/clawix-local/secrets`, {
   body: JSON.stringify({ draft }),
 });
 if (created.ok && created.body.secret?.internalName === "github_main") ok("secret create with admin token"); else ko("secret create", created.body);
+
+const describedNoPublic = await fetchJson(`${base}/v1/tenants/clawix-local/secrets/github_main`, {
+  headers: authHeaders,
+});
+if (describedNoPublic.ok && describedNoPublic.body.secret?.fields?.find((f) => f.fieldName === "username")?.publicValue === null) ok("metadata omits public values by default");
+else ko("metadata omits public values by default", describedNoPublic.body);
+
+const describedPublicWithoutHost = await fetchJson(`${base}/v1/tenants/clawix-local/secrets/github_main?includePublicValues=true`, {
+  headers: authHeaders,
+});
+if (describedPublicWithoutHost.status === 403) ok("public values require signed host"); else ko("public values require signed host", describedPublicWithoutHost.body);
+
+const describedWithPublic = await fetchJson(`${base}/v1/tenants/clawix-local/secrets/github_main?includePublicValues=true`, {
+  headers: { ...authHeaders, ...signedHostHeaders },
+});
+if (describedWithPublic.ok && describedWithPublic.body.secret?.fields?.find((f) => f.fieldName === "username")?.publicValue === "octo") ok("signed host can request public values");
+else ko("signed host can request public values", describedWithPublic.body);
 
 const revealWithoutHost = await fetchJson(`${base}/v1/tenants/clawix-local/secrets/github_main/reveal-field`, {
   method: "POST",

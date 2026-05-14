@@ -93,6 +93,10 @@ Safe metadata must remain conservative. Labels, public values, field names,
 headers, URLs, notes titles, and user-entered "non-secret" fields can still
 contain secrets accidentally, so logs and public outputs must avoid copying
 them unless the field is explicitly classified as safe for that surface.
+ClawJS metadata DTOs therefore omit `publicValue` by default. The active signed
+host may opt in with `includePublicValues=true` for human UI rendering; agents,
+CLIs, connectors, plugins, and sibling local processes must treat public values
+as unavailable unless they go through that signed-host path.
 
 ## Agents, Automation, Connectors, And Plugins
 
@@ -237,6 +241,8 @@ The current ClawJS baseline implements the required safe public path:
   signed-host only and do not prompt for master passwords or recovery phrases;
 - reveal-field API calls require a signed-host token, a human user principal,
   and fresh reauthentication;
+- describe/list metadata omit `publicValue` by default; only signed-host
+  requests may opt in to public values for human UI rendering;
 - broker HTTP calls require capability, risk tier, agent identity, declared
   fields, host, placement, approval/VPN context, and strict governance;
 - connector runners reject `secretRefs` execution outside brokered flows;
