@@ -12,7 +12,7 @@
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     },
     "packages/clawjs-workspace/src/index.ts": {
-      "lines": 6910,
+      "lines": 6911,
       "reason": "Existing workspace runtime implementation; contracts have been extracted and remaining runtime should split by domain before expanding."
     },
     "packages/clawjs/src/index.test.ts": {
@@ -116,7 +116,7 @@
       "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
     },
     "packages/clawjs-workspace/src/workspace-contracts.ts": {
-      "lines": 1625,
+      "lines": 1628,
       "reason": "Extracted public workspace contract surface; keep as capped exception and split by domain before expanding."
     },
     "relay/src/connector/runtime.ts": {

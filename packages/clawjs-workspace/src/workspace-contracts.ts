@@ -1,7 +1,8 @@
 import type {
   Claw,
-  type ClawInstance,
-  type CreateClawOptions,
+  ClawInstance,
+  CreateClawOptions,
+  SessionStreamEvent,
 } from "@clawjs/claw";
 import type {
   ActivityEntryRecord,
@@ -9,6 +10,7 @@ import type {
   AssignmentRecord,
   ArtifactRecord,
   AreaRecord,
+  Attachment,
   AttachmentRecord,
   BlockerRecord,
   CapacityRecord,
