@@ -851,6 +851,68 @@ async function createWorkspaceExtension(
     search: async (query, options = {}) => searchWorkspace({ ...options, query, domains: ["approvals"] }),
   };
 
+  function buildDerivedCapacitySnapshot(input: {
+    agentId: string;
+    stored?: CapacityRecord;
+    assignments: AssignmentRecord[];
+    handoffs: HandoffRecord[];
+    approvals: ProductivityApprovalRecord[];
+    tasks: TaskRecord[];
+  }): CapacityRecord {
+    const timestamp = nowIso();
+    const assignedTaskIds = uniqueStrings(input.assignments.map((assignment) => assignment.taskId).filter(Boolean));
+    const pendingApprovalIds = input.approvals
+      .filter((approval) => approval.status === "pending")
+      .map((approval) => approval.id);
+    const pendingHandoffIds = input.handoffs
+      .filter((handoff) => handoff.status === "proposed" || handoff.status === "accepted" || handoff.status === "returned")
+      .map((handoff) => handoff.id);
+    const relatedTasks = input.tasks.filter((task) => assignedTaskIds.includes(task.id));
+    const currentWip = relatedTasks.filter((task) => task.status !== "done" && task.status !== "cancelled").length;
+    const blockedCount = relatedTasks.filter((task) => task.status === "blocked" || task.blockedByIds.length > 0).length;
+    const overdueCount = relatedTasks.filter((task) => isOverdue(task.dueAt) && task.status !== "done" && task.status !== "cancelled").length;
+    const maxWip = input.stored?.maxWip ?? 3;
+    const queueDepth = currentWip + pendingHandoffIds.length + pendingApprovalIds.length;
+    const utilizationRaw = maxWip > 0 ? currentWip / maxWip : 0;
+    const utilization = Math.max(0, Math.min(1, utilizationRaw));
+    const status: CapacityRecord["status"] = input.stored?.status === "offline"
+      ? "offline"
+      : utilizationRaw > 1 || blockedCount >= Math.max(2, maxWip)
+        ? "overloaded"
+        : utilizationRaw >= 0.75 || pendingApprovalIds.length > 0
+          ? "limited"
+          : "active";
+    const availability: CapacityRecord["availability"] = input.stored?.availability
+      ?? (status === "overloaded" ? "busy" : "available");
+    return {
+      id: input.stored?.id ?? `capacity-${input.agentId}`,
+      createdAt: input.stored?.createdAt ?? timestamp,
+      updatedAt: timestamp,
+      source: input.stored?.source ?? { kind: "derived" },
+      title: input.stored?.title ?? input.agentId,
+      status,
+      agentId: input.agentId,
+      ...(input.stored?.teamId ? { teamId: input.stored.teamId } : {}),
+      ...(input.stored?.role ? { role: input.stored.role } : {}),
+      availability,
+      ...(maxWip ? { maxWip } : {}),
+      currentWip,
+      queueDepth,
+      blockedCount,
+      overdueCount,
+      ...(input.stored?.responseLatencyMinutes !== undefined ? { responseLatencyMinutes: input.stored.responseLatencyMinutes } : {}),
+      utilization,
+      assignedTaskIds,
+      pendingApprovalIds,
+      pendingHandoffIds,
+      snapshotAt: input.stored?.snapshotAt ?? timestamp,
+      ...(input.stored?.confidence !== undefined ? { confidence: input.stored.confidence } : {}),
+      ...(input.stored?.links ? { links: input.stored.links } : {}),
+      ...(input.stored?.metadata ? { metadata: input.stored.metadata } : {}),
+      ...(input.stored?.archivedAt ? { archivedAt: input.stored.archivedAt } : {}),
+    };
+  }
+
   const capacityApi: WorkspaceClawInstance["capacity"] = {
     list: async (options = {}) => {
       const stored = capacityCollection.list()
