@@ -101,8 +101,9 @@ through a native macOS XPC service bundled only for Secrets. Clawix generates a
 per-launch assertion key, bootstraps it to the Secrets sidecar only through
 anonymous stdin, and separately bootstraps the bundled XPC service in memory.
 The XPC service verifies the caller code-signing identifier against the
-enclosing Clawix bundle identifier before it will issue assertions over method,
-path, timestamp, and nonce. The server rejects expired assertions and rejects
+enclosing Clawix bundle identifier and compares the caller TeamIdentifier with
+the signed service before it will issue assertions over method, path,
+timestamp, and nonce. The server rejects expired assertions and rejects
 nonce/mac replays inside the accepted clock window. This is the macOS
 Secrets-only host assertion boundary; other ClawJS sidecars must not inherit it
 by default.
