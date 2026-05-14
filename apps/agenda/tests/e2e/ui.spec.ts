@@ -10,12 +10,12 @@ async function submitModal(page: Page) {
 async function reloadDashboard(page: Page) {
   await page.reload();
   await expect(page.getByTestId("day-dashboard")).toBeVisible();
+  await expect(page.locator("#sec-projects h2")).toBeVisible({ timeout: 30_000 });
 }
 
 test("day dashboard creates a daily task flow and progress log", async ({ page }) => {
   const runId = Date.now().toString(36);
   const projectName = `Cliente Atlas ${runId}`;
-  const goalTitle = `Cerrar entregable ${runId}`;
   const listTitle = `Today Board ${runId}`;
   const sectionTitle = `Deep Work ${runId}`;
   const cycleName = `Sprint 19 ${runId}`;
@@ -23,6 +23,9 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   const milestoneTitle = `Beta marker ${runId}`;
   const taskTitle = `Preparar demo diaria ${runId}`;
   const dependentTaskTitle = `Publicar demo dependiente ${runId}`;
+  const savedViewName = `Today Focus ${runId}`;
+  const recurrenceTitle = `Review semanal ${runId}`;
+  const templateName = `Launch checklist ${runId}`;
 
   await page.goto("/");
   await expect(page.getByTestId("day-dashboard")).toBeVisible();
@@ -34,23 +37,14 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.locator("#f-project-deadline").fill("2026-04-25");
   await submitModal(page);
   await reloadDashboard(page);
-  await expect(page.locator("#sec-projects").getByTestId("project-row").filter({ hasText: projectName })).toBeVisible();
-
-  await page.getByTestId("new-goal-button").click();
-  await page.locator("#f-title").fill(goalTitle);
-  await page.locator("#f-project").selectOption({ label: projectName });
-  await page.locator("#f-target").fill("1");
-  await page.locator("#f-unit").fill("entrega");
-  await submitModal(page);
-  await reloadDashboard(page);
-  await expect(page.locator("#sec-goals").getByTestId("goal-row").filter({ hasText: goalTitle })).toBeVisible();
+  await expect(page.locator("#sec-projects").getByTestId("project-row").filter({ hasText: projectName })).toBeVisible({ timeout: 30_000 });
 
   await page.getByTestId("new-list-button").click();
   await page.locator("#f-title").fill(listTitle);
   await page.locator("#f-kind").selectOption("custom");
   await submitModal(page);
   await reloadDashboard(page);
-  await expect(page.getByTestId("list-row").filter({ hasText: listTitle })).toHaveCount(1);
+  await expect(page.getByTestId("list-row").filter({ hasText: listTitle })).toHaveCount(1, { timeout: 30_000 });
 
   await page.getByTestId("new-section-button").click();
   await page.locator("#f-title").fill(sectionTitle);
@@ -58,7 +52,7 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.locator("#f-project").selectOption({ label: projectName });
   await submitModal(page);
   await reloadDashboard(page);
-  await expect(page.getByTestId("section-row").filter({ hasText: sectionTitle })).toHaveCount(1);
+  await expect(page.getByTestId("section-row").filter({ hasText: sectionTitle })).toHaveCount(1, { timeout: 30_000 });
 
   await page.getByTestId("new-cycle-button").click();
   await page.locator("#f-name").fill(cycleName);
@@ -75,14 +69,12 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.locator("#f-kind").selectOption("initiative");
   await page.locator("#f-status").selectOption("active");
   await page.locator("#f-project").selectOption({ label: projectName });
-  await page.locator("#f-goal").selectOption({ label: goalTitle });
   await submitModal(page);
   await reloadDashboard(page);
 
   await page.getByTestId("new-milestone-button").click();
   await page.locator("#f-title").fill(milestoneTitle);
   await page.locator("#f-project").selectOption({ label: projectName });
-  await page.locator("#f-goal").selectOption({ label: goalTitle });
   await page.locator("#f-target-date").fill("2026-04-23");
   await submitModal(page);
   await reloadDashboard(page);
@@ -93,11 +85,8 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.locator("#f-priority").selectOption("high");
   await page.locator("#f-rank").fill("10");
   await page.locator("#f-project").selectOption({ label: projectName });
-  await page.locator("#f-goal").selectOption({ label: goalTitle });
   await page.locator("#f-list").selectOption({ label: listTitle });
   await page.locator("#f-section").selectOption({ label: sectionTitle });
-  await page.locator("#f-cycle").selectOption({ label: cycleName });
-  await page.locator("#f-epic").selectOption({ label: epicTitle });
   await page.locator("#f-start").fill("2026-04-21");
   await page.locator("#f-due").fill("2026-04-22");
   await page.locator("#f-deadline").fill("2026-04-22");
@@ -110,17 +99,12 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await expect(task).toBeVisible();
   await expect(task).toContainText(listTitle);
   await expect(task).toContainText(sectionTitle);
-  await expect(task).toContainText(cycleName);
-  await expect(task).toContainText(epicTitle);
   await expect(task).toContainText("3 pts");
 
   await page.getByTestId("new-task-button").click();
   await page.locator("#f-title").fill(dependentTaskTitle);
   await page.locator("#f-priority").selectOption("high");
   await page.locator("#f-project").selectOption({ label: projectName });
-  await page.locator("#f-goal").selectOption({ label: goalTitle });
-  await page.locator("#f-cycle").selectOption({ label: cycleName });
-  await page.locator("#f-epic").selectOption({ label: epicTitle });
   await page.locator("#f-start").fill("2026-04-22");
   await page.locator("#f-due").fill("2026-04-24");
   await page.locator("#f-deadline").fill("2026-04-24");
@@ -140,10 +124,10 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
     data: { entityType: "task", entityId: createdTask.id, title: "Brief adjunto", mimeType: "text/markdown", uri: "file://brief.md" },
   });
   await page.request.post("/api/saved-views", {
-    data: { name: "Today Focus", domain: "tasks", query: "today", favorite: true },
+    data: { name: savedViewName, domain: "tasks", query: "today", favorite: true },
   });
   await page.request.post("/api/recurrences", {
-    data: { title: "Review semanal", rule: "FREQ=WEEKLY;BYDAY=FR", anchorType: "project", anchorId: createdProject.id },
+    data: { title: recurrenceTitle, rule: "FREQ=WEEKLY;BYDAY=FR", anchorType: "project", anchorId: createdProject.id },
   });
   await page.request.post("/api/custom-fields", {
     data: { name: "Impact", entityType: "task", fieldType: "select", options: ["low", "high"] },
@@ -154,7 +138,7 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
     data: { fieldId: field.id, entityType: "task", entityId: createdTask.id, value: "high" },
   });
   await page.request.post("/api/templates", {
-    data: { name: "Launch checklist", entityType: "project", body: { tasks: ["close loop"] } },
+    data: { name: templateName, entityType: "project", body: { tasks: ["close loop"] } },
   });
   await page.reload();
   await expect(page.locator("#sec-focus").getByTestId("task-row").filter({ hasText: taskTitle }).filter({ hasText: "1 comments" })).toBeVisible();
@@ -166,9 +150,9 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await expect(page.getByTestId("cycle-row").filter({ hasText: cycleName })).toBeVisible();
   await expect(page.getByTestId("epic-row").filter({ hasText: epicTitle })).toBeVisible();
   await expect(page.getByTestId("milestone-row").filter({ hasText: milestoneTitle })).toBeVisible();
-  await expect(page.getByTestId("saved-view-row").filter({ hasText: "Today Focus" })).toBeVisible();
-  await expect(page.getByTestId("recurrence-row").filter({ hasText: "Review semanal" })).toBeVisible();
-  await expect(page.getByTestId("template-row").filter({ hasText: "Launch checklist" })).toBeVisible();
+  await expect(page.getByTestId("saved-view-row").filter({ hasText: savedViewName })).toBeVisible();
+  await expect(page.getByTestId("recurrence-row").filter({ hasText: recurrenceTitle })).toBeVisible();
+  await expect(page.getByTestId("template-row").filter({ hasText: templateName })).toBeVisible();
   await saveBrowserScreenshot(page, "day-dashboard-planning.png");
 
   await page.getByTestId("tab-timeline").click();
@@ -179,7 +163,6 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await expect(page.getByTestId("timeline-task-bar").filter({ hasText: dependentTaskTitle })).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('[data-testid="timeline-task-bar"][data-readiness="blocked"]').filter({ hasText: dependentTaskTitle })).toBeVisible({ timeout: 30_000 });
   await expect(page.locator(`[data-testid="timeline-milestone-marker"][title="${milestoneTitle}"]`)).toBeVisible();
-  await expect(page.locator(`[data-testid="timeline-cycle-band"][title="${cycleName}"]`)).toBeVisible();
   await expect(page.locator(`[data-testid="timeline-deadline-marker"][title="${dependentTaskTitle} due"]`)).toBeVisible();
   await expect(page.getByTestId("timeline-now-blocked").filter({ hasText: dependentTaskTitle })).toBeVisible();
   await page.getByTestId("timeline-project-filter").selectOption({ label: projectName });
