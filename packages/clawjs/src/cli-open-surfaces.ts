@@ -81,3 +81,22 @@ export function resolveOpenSurface(raw: string | undefined): OpenSurface | null 
   if (!raw) return null;
   return OPEN_SURFACE_BY_NAME.get(raw.trim().toLowerCase()) ?? null;
 }
+
+export function buildOpenUsage(binName: string): string {
+  const rows = OPEN_SURFACES.map((surface) => `  ${surface.id.padEnd(12)} http://127.0.0.1:${surface.port}`).join("\n");
+  return [
+    `Usage: ${binName} open <surface> [--no-browser] [--host HOST] [--port PORT]`,
+    "",
+    "Available dashboards:",
+    rows,
+  ].join("\n");
+}
+
+export function openSurfaceRows(useClawDomains = false): Array<Record<string, string>> {
+  return OPEN_SURFACES.map((surface) => ({
+    surface: surface.id,
+    url: useClawDomains ? surfacePrimaryClawUrl(surface) : `http://127.0.0.1:${surface.port}`,
+    aliases: (surface.aliases ?? []).join(","),
+  }));
+}
+

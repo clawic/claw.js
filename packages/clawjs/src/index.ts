@@ -73,7 +73,7 @@ import {
 } from "./cli-telegram-codex-constants.ts";
 import { parseImageOperation, parseImageProvenance, parseImageType } from "./cli-image-parsers.ts";
 import { buildImageCommonInput, buildMediaListInput, buildMediaMetadata } from "./cli-media-utils.ts";
-import { OPEN_SURFACES, allOpenSurfaceHostnames, parseClawHostSurface, resolveOpenSurface, surfacePrimaryClawUrl, type OpenSurface, type OpenSurfaceState } from "./cli-open-surfaces.ts";
+import { OPEN_SURFACES, allOpenSurfaceHostnames, buildOpenUsage, openSurfaceRows, parseClawHostSurface, resolveOpenSurface, surfacePrimaryClawUrl, type OpenSurface, type OpenSurfaceState } from "./cli-open-surfaces.ts";
 import { openBrowser, openStateDir, openStatePath, readOpenState, repoRootFromCliPackage, writeOpenState } from "./cli-open-state.ts";
 import { portIsOpen, processIsAlive, waitForUrl, writeProgress } from "./cli-process-utils.ts";
 import { parseRuleHints, parseRuleReferences } from "./cli-rule-utils.ts";
@@ -617,25 +617,6 @@ function cliErrorFromUnknown(error: unknown): CliHandledError {
     : new CliHandledError("internal_error", error instanceof Error ? error.message : String(error));
 }
 
-function buildOpenUsage(binName: string): string {
-  const rows = OPEN_SURFACES.map((surface) => `  ${surface.id.padEnd(12)} http://127.0.0.1:${surface.port}`).join("\n");
-  return [
-    `Usage: ${binName} open <surface> [--no-browser] [--host HOST] [--port PORT]`,
-    "",
-    "Available dashboards:",
-    rows,
-  ].join("\n");
-}
-
-function openSurfaceRows(flags: Record<string, string> = {}): Array<Record<string, string>> {
-  const useClawDomains = isClawDomainConfigured(flags);
-  return OPEN_SURFACES.map((surface) => ({
-    surface: surface.id,
-    url: useClawDomains ? surfacePrimaryClawUrl(surface) : `http://127.0.0.1:${surface.port}`,
-    aliases: (surface.aliases ?? []).join(","),
-  }));
-}
-
 function ensureSurfaceBuild(surface: OpenSurface): void {
   if (!surface.dir || !surface.buildCheck) return;
   const repoRoot = repoRootFromCliPackage();
@@ -776,9 +757,9 @@ async function runOpenCli(input: {
   const surfaceName = input.positionals[1];
   if (!surfaceName || surfaceName === "list") {
     if (input.wantsJson) {
-      writeJson(input.context.stdout, { dashboards: openSurfaceRows(input.flags) });
+      writeJson(input.context.stdout, { dashboards: openSurfaceRows(isClawDomainConfigured(input.flags)) });
     } else {
-      input.context.stdout.write(`${formatCliTable(openSurfaceRows(input.flags))}\n`);
+      input.context.stdout.write(`${formatCliTable(openSurfaceRows(isClawDomainConfigured(input.flags)))}\n`);
     }
     return CLI_EXIT_OK;
   }
