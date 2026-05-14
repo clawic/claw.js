@@ -10,6 +10,7 @@ export * from "./schemas.ts";
 export * from "./semantic.ts";
 export * from "./storage.ts";
 export * from "./surface-registry.ts";
+export * from "./catalog-coverage.ts";
 export * from "./terminology.ts";
 export * from "./tts.ts";
 export * from "./types.ts";
