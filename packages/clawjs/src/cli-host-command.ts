@@ -32,6 +32,7 @@ export async function runHostCli(input: {
       context: input.context,
       wantsJson: input.wantsJson,
       binName: input.binName,
+      invokedCommand: "host domains",
       ensureDomainSurfaceRunning: input.ensureDomainSurfaceRunning,
     });
   }

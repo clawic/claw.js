@@ -24,9 +24,27 @@ export function writeJsonOk(stream: NodeJS.WritableStream, data: unknown, meta: 
   });
 }
 
+export function writeJsonOkLine(stream: NodeJS.WritableStream, data: unknown, meta: CliJsonMeta = {}): void {
+  writeJsonLine(stream, {
+    ok: true,
+    data,
+    meta,
+  });
+}
+
 export function writeCommandJsonOk(stream: NodeJS.WritableStream, canonicalCommand: string, data: unknown, meta: CliJsonMeta = {}): void {
   const command = resolveClawCliCommand(canonicalCommand);
   writeJsonOk(stream, data, {
+    schemaVersion: command?.schemaVersion ?? 1,
+    canonicalCommand,
+    ...(command?.jsonSchemaId ? { jsonSchemaId: command.jsonSchemaId } : {}),
+    ...meta,
+  });
+}
+
+export function writeCommandJsonOkLine(stream: NodeJS.WritableStream, canonicalCommand: string, data: unknown, meta: CliJsonMeta = {}): void {
+  const command = resolveClawCliCommand(canonicalCommand);
+  writeJsonOkLine(stream, data, {
     schemaVersion: command?.schemaVersion ?? 1,
     canonicalCommand,
     ...(command?.jsonSchemaId ? { jsonSchemaId: command.jsonSchemaId } : {}),

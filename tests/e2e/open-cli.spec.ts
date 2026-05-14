@@ -78,8 +78,9 @@ test("open cli lists dashboards and reports unknown dashboards", async () => {
   expect(list.stdout).toContain("http://127.0.0.1:18273");
 
   const json = await runCli(rootDir, ["open", "list", "--json"]);
-  const payload = JSON.parse(json.stdout) as { dashboards: Array<{ surface: string; url: string; aliases: string }> };
-  expect(payload.dashboards.some((dashboard) => dashboard.surface === "database" && dashboard.aliases.includes("db"))).toBeTruthy();
+  const payload = JSON.parse(json.stdout) as { ok: boolean; data: { dashboards: Array<{ surface: string; url: string; aliases: string }> } };
+  expect(payload.ok).toBe(true);
+  expect(payload.data.dashboards.some((dashboard) => dashboard.surface === "database" && dashboard.aliases.includes("db"))).toBeTruthy();
 
   const unknown = await runCli(rootDir, ["open", "missing", "--json", "--no-browser"], { reject: false });
   expect(unknown.stdout).toContain("unknown_dashboard");
@@ -164,24 +165,29 @@ test("domains cli supports dry-run lifecycle and open prefers .claw when configu
   const plistFile = path.join(tempRoot, "clawjs-domains.plist");
   fs.writeFileSync(hostsFile, "127.0.0.1 localhost\n");
 
-  const status = JSON.parse((await runCli(rootDir, [
+  const statusEnvelope = JSON.parse((await runCli(rootDir, [
     "domains", "status",
     "--hosts-file", hostsFile,
     "--plist-file", plistFile,
     "--port", String(await freePort()),
     "--json",
-  ])).stdout) as { installed: boolean; hosts: string[] };
+  ])).stdout) as { ok: boolean; data: { installed: boolean; hosts: string[] }; meta: { canonicalCommand: string; subcommand: string } };
+  expect(statusEnvelope.ok).toBe(true);
+  expect(statusEnvelope.meta).toMatchObject({ canonicalCommand: "host", subcommand: "domains status" });
+  const status = statusEnvelope.data;
   expect(status.installed).toBe(false);
   expect(status.hosts).toContain("dashboard.claw");
   expect(status.hosts).toContain("memory.claw");
 
-  const install = JSON.parse((await runCli(rootDir, [
+  const installEnvelope = JSON.parse((await runCli(rootDir, [
     "domains", "install",
     "--dry-run",
     "--hosts-file", hostsFile,
     "--plist-file", plistFile,
     "--json",
-  ])).stdout) as { dryRun: boolean; hostsBlock: string; plist: string };
+  ])).stdout) as { ok: boolean; data: { dryRun: boolean; hostsBlock: string; plist: string } };
+  expect(installEnvelope.ok).toBe(true);
+  const install = installEnvelope.data;
   expect(install.dryRun).toBe(true);
   expect(install.hostsBlock).toContain("dashboard.claw");
   expect(install.hostsBlock).toContain("storage.claw");
@@ -195,16 +201,19 @@ test("domains cli supports dry-run lifecycle and open prefers .claw when configu
     "--domains-hosts-file", hostsFile,
     "--json",
   ]);
-  const payload = JSON.parse(open.stdout) as { dashboards: Array<{ surface: string; url: string }> };
-  expect(payload.dashboards.find((entry) => entry.surface === "memory")?.url).toBe("http://memory.claw");
+  const payload = JSON.parse(open.stdout) as { ok: boolean; data: { dashboards: Array<{ surface: string; url: string }> } };
+  expect(payload.ok).toBe(true);
+  expect(payload.data.dashboards.find((entry) => entry.surface === "memory")?.url).toBe("http://memory.claw");
 
-  const uninstall = JSON.parse((await runCli(rootDir, [
+  const uninstallEnvelope = JSON.parse((await runCli(rootDir, [
     "domains", "uninstall",
     "--dry-run",
     "--hosts-file", hostsFile,
     "--plist-file", plistFile,
     "--json",
-  ])).stdout) as { dryRun: boolean; action: string };
+  ])).stdout) as { ok: boolean; data: { dryRun: boolean; action: string } };
+  expect(uninstallEnvelope.ok).toBe(true);
+  const uninstall = uninstallEnvelope.data;
   expect(uninstall).toMatchObject({ dryRun: true, action: "uninstall" });
 });
 

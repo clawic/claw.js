@@ -95069,7 +95069,7 @@
     {
       "path": "packages/clawjs/src/cli-domains-command.ts",
       "language": "typescript",
-      "lines": 174,
+      "lines": 176,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -95414,7 +95414,7 @@
     {
       "path": "packages/clawjs/src/cli-host-command.ts",
       "language": "typescript",
-      "lines": 121,
+      "lines": 122,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -95553,7 +95553,7 @@
     {
       "path": "packages/clawjs/src/cli-json.ts",
       "language": "typescript",
-      "lines": 81,
+      "lines": 99,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -95567,10 +95567,12 @@
         "writeCliError",
         "writeCommandJsonError",
         "writeCommandJsonOk",
+        "writeCommandJsonOkLine",
         "writeJson",
         "writeJsonError",
         "writeJsonLine",
-        "writeJsonOk"
+        "writeJsonOk",
+        "writeJsonOkLine"
       ],
       "declarations": [
         {
@@ -95600,6 +95602,11 @@
         },
         {
           "kind": "function",
+          "name": "writeCommandJsonOkLine",
+          "exported": true
+        },
+        {
+          "kind": "function",
           "name": "writeJson",
           "exported": true
         },
@@ -95616,6 +95623,11 @@
         {
           "kind": "function",
           "name": "writeJsonOk",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "writeJsonOkLine",
           "exported": true
         },
         {
@@ -120205,7 +120217,7 @@
     {
       "path": "tests/e2e/open-cli.spec.ts",
       "language": "typescript",
-      "lines": 270,
+      "lines": 279,
       "test": true,
       "entrypoint": false,
       "imports": [

@@ -32,7 +32,7 @@ if (first && CLAW_MEMORY_GROUPS.has(first)) {
 if (first && CATALOG_GROUPS.has(first)) {
   process.exit(await runCatalogCli(args));
 }
-if (first && BUILTIN_COLLECTIONS_BY_ALIAS.has(first.toLowerCase()) && !isStableClawCliCommand(first)) {
+if (first && first !== "domains" && BUILTIN_COLLECTIONS_BY_ALIAS.has(first.toLowerCase()) && !isStableClawCliCommand(first)) {
   const canonical = BUILTIN_COLLECTIONS_BY_ALIAS.get(first.toLowerCase());
   const verb = args[1] ?? "list";
   const rest = args.slice(2);

@@ -545,11 +545,11 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   }
 
   if (group === "domains") {
-    return await runDomainsCli({ argv, positionals, flags, context, wantsJson, binName, ensureDomainSurfaceRunning });
+    return await runDomainsCli({ argv, positionals, flags, context, wantsJson, binName, invokedCommand: "domains", ensureDomainSurfaceRunning });
   }
 
   if (group === "host" && command === "domains") {
-    return await runDomainsCli({ argv: ["domains", ...argv.slice(2)], positionals: ["domains", ...positionals.slice(2)], flags, context, wantsJson, binName, ensureDomainSurfaceRunning });
+    return await runDomainsCli({ argv: ["domains", ...argv.slice(2)], positionals: ["domains", ...positionals.slice(2)], flags, context, wantsJson, binName, invokedCommand: "host domains", ensureDomainSurfaceRunning });
   }
 
   if (group === "host" && (command === "services" || command === "permissions" || command === "capabilities")) {

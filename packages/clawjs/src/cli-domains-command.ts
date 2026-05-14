@@ -4,7 +4,7 @@ import os from "os";
 import path from "path";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
-import { writeJson, writeJsonLine } from "./cli-json.ts";
+import { writeCommandJsonOk, writeCommandJsonOkLine } from "./cli-json.ts";
 import { currentCliEntryPath, repoRootFromCliPackage } from "./cli-open-state.ts";
 import { allOpenSurfaceHostnames, domainIndexHtml, parseClawHostSurface, type OpenSurface } from "./cli-open-surfaces.ts";
 import { portIsOpen } from "./cli-process-utils.ts";
@@ -36,13 +36,15 @@ export async function runDomainsCli(input: {
   context: CliContext;
   wantsJson: boolean;
   binName: string;
+  invokedCommand?: string;
   ensureDomainSurfaceRunning: (surface: OpenSurface, flags: Record<string, string>, workspace: string) => Promise<URL>;
 }): Promise<number> {
   const command = input.positionals[1] || "status";
   const dryRun = input.argv.includes("--dry-run");
+  const jsonMeta = { subcommand: `domains ${command}`, invokedCommand: input.invokedCommand ?? "domains" };
   if (command === "status") {
     const status = await readDomainsStatus(input.flags, portIsOpen);
-    if (input.wantsJson) writeJson(input.context.stdout, status);
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "host", status, jsonMeta);
     else input.context.stdout.write(`installed=${status.installed} proxy=${status.proxyReachable ? "running" : "stopped"}\n`);
     return CLI_EXIT_OK;
   }
@@ -53,7 +55,7 @@ export async function runDomainsCli(input: {
     const serviceConfig = buildDomainsServiceConfig(input.flags, input.context.cwd, { repoRoot: repoRootFromCliPackage(), cliEntryPath: currentCliEntryPath(), nodePath: process.execPath, uid: typeof process.getuid === "function" ? process.getuid() : undefined });
     const proxyScript = buildDomainsProxyScript();
     if (dryRun) {
-      if (input.wantsJson) writeJson(input.context.stdout, { ok: true, dryRun: true, action: "install", ...plan, hostsBlock: domainHostsBlock(), plist, serviceConfig });
+      if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "host", { dryRun: true, action: "install", ...plan, hostsBlock: domainHostsBlock(), plist, serviceConfig }, jsonMeta);
       else input.context.stdout.write(`install ${plan.hosts.length} hosts and ${plan.serviceLabel}\n`);
       return CLI_EXIT_OK;
     }
@@ -97,7 +99,7 @@ export async function runDomainsCli(input: {
       fs.rmSync(tempProxy, { force: true });
       fs.rmSync(tempConfig, { force: true });
     }
-    if (input.wantsJson) writeJson(input.context.stdout, { ok: true, action: "install", ...plan });
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "host", { action: "install", ...plan }, jsonMeta);
     else input.context.stdout.write("installed\n");
     return CLI_EXIT_OK;
   }
@@ -105,7 +107,7 @@ export async function runDomainsCli(input: {
   if (command === "uninstall") {
     const plan = domainsInstallPlan(input.flags);
     if (dryRun) {
-      if (input.wantsJson) writeJson(input.context.stdout, { ok: true, dryRun: true, action: "uninstall", ...plan });
+      if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "host", { dryRun: true, action: "uninstall", ...plan }, jsonMeta);
       else input.context.stdout.write(`uninstall ${plan.serviceLabel}\n`);
       return CLI_EXIT_OK;
     }
@@ -127,7 +129,7 @@ export async function runDomainsCli(input: {
       ].join("\n"), input.flags);
       fs.rmSync(tempHosts, { force: true });
     }
-    if (input.wantsJson) writeJson(input.context.stdout, { ok: true, action: "uninstall", ...plan });
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "host", { action: "uninstall", ...plan }, jsonMeta);
     else input.context.stdout.write("uninstalled\n");
     return CLI_EXIT_OK;
   }
@@ -158,7 +160,7 @@ export async function runDomainsCli(input: {
       server.once("error", reject);
       server.listen(port, host, () => resolve());
     });
-    if (input.wantsJson) writeJsonLine(input.context.stdout, { ok: true, url: `http://${host}:${port}`, hosts: allOpenSurfaceHostnames() });
+    if (input.wantsJson) writeCommandJsonOkLine(input.context.stdout, "host", { url: `http://${host}:${port}`, hosts: allOpenSurfaceHostnames() }, jsonMeta);
     else input.context.stdout.write(`http://${host}:${port}\n`);
     await new Promise<void>((resolve) => {
       const shutdown = () => server.close(() => resolve());
