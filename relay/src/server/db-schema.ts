@@ -1,3 +1,4 @@
+// @clawjs-persistent-surface-ddl-source
 export const RELAY_SCHEMA_SQL = `
       CREATE TABLE IF NOT EXISTS tenants (
         id TEXT PRIMARY KEY,

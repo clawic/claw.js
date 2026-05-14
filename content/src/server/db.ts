@@ -1,3 +1,4 @@
+// @clawjs-persistent-surface-ddl-source
 import crypto from "node:crypto";
 
 import Database from "better-sqlite3";

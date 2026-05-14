@@ -1,3 +1,4 @@
+// @clawjs-persistent-surface-ddl-source
 import { createHash } from "node:crypto";
 import Database from "better-sqlite3";
 

@@ -1,3 +1,10 @@
+const STABLE_EVENT_TYPES = {
+  graphCreated: "graph.created",
+  nodeCreated: "node.created",
+  workerRegistered: "worker.registered",
+  nodeClaimed: "node.claimed",
+} as const;
+// @clawjs-persistent-surface-ddl-source
 import { randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
 
@@ -335,7 +342,7 @@ export class DelegationPlaneDatabase {
         timeoutMs: policy.runTimeoutMs,
       });
       this.sqlite.prepare("UPDATE delegation_graphs SET root_node_id = ?, updated_at = ? WHERE id = ?").run(root.id, timestamp, graphId);
-      this.appendEvent({ graphId, nodeId: root.id, type: "graph.created", message: "Delegation graph created.", data: { objective: input.objective } });
+      this.appendEvent({ graphId, nodeId: root.id, type: STABLE_EVENT_TYPES.graphCreated, message: "Delegation graph created.", data: { objective: input.objective } });
       return this.getGraph(graphId)!;
     })();
     return graph;
@@ -404,7 +411,7 @@ export class DelegationPlaneDatabase {
       timestamp,
     );
     const node = this.getNode(nodeId)!;
-    this.appendEvent({ graphId: input.graphId, nodeId, type: "node.created", message: "Delegation node created.", data: { title: node.title, parentNodeId: node.parentNodeId } });
+    this.appendEvent({ graphId: input.graphId, nodeId, type: STABLE_EVENT_TYPES.nodeCreated, message: "Delegation node created.", data: { title: node.title, parentNodeId: node.parentNodeId } });
     return node;
   }
 
@@ -526,7 +533,7 @@ export class DelegationPlaneDatabase {
       timestamp,
     );
     const worker = this.getWorker(workerId)!;
-    this.appendEvent({ graphId: "system", workerId, type: "worker.registered", message: "Worker registered.", data: { adapter: worker.adapter } });
+    this.appendEvent({ graphId: "system", workerId, type: STABLE_EVENT_TYPES.workerRegistered, message: "Worker registered.", data: { adapter: worker.adapter } });
     return worker;
   }
 
@@ -675,7 +682,7 @@ export class DelegationPlaneDatabase {
         errorMessage: null,
       });
       const run = this.createRun({ graphId: graph.id, nodeId: node.id, workerId: worker.id, attempt, leaseExpiresAt });
-      this.appendEvent({ graphId: graph.id, nodeId: node.id, runId: run.id, workerId: worker.id, type: "node.claimed", message: "Node claimed by worker.", data: { attempt } });
+      this.appendEvent({ graphId: graph.id, nodeId: node.id, runId: run.id, workerId: worker.id, type: STABLE_EVENT_TYPES.nodeClaimed, message: "Node claimed by worker.", data: { attempt } });
       return { graph, node: this.getNode(node.id)!, run };
     })();
   }

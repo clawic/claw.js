@@ -1,3 +1,15 @@
+const STABLE_EVENT_TYPES = {
+  tenantBootstrapped: "tenant.bootstrapped",
+  jobUpdated: "job.updated",
+  payrollPosted: "payroll.posted",
+  approvalRequested: "approval.requested",
+  approvalDecided: "approval.decided",
+  ledgerEntryPosted: "ledger.entry.posted",
+  inventoryUpdated: "inventory.updated",
+  localizationInstalled: "localization.installed",
+  auditLogged: "audit.logged",
+} as const;
+// @clawjs-persistent-surface-ddl-source
 import { ErpError } from "../shared/errors.ts";
 import type { ErpRealtimeEvent } from "../shared/events.ts";
 import type {
@@ -202,7 +214,7 @@ export class ErpStore {
 
     const result = tx();
     this.emit({
-      type: "tenant.bootstrapped",
+      type: STABLE_EVENT_TYPES.tenantBootstrapped,
       tenantId: result.tenant.id,
       legalEntityId: result.legalEntity.id,
       entityType: "tenant",
@@ -253,7 +265,7 @@ export class ErpStore {
     });
     const job = tx();
     this.emit({
-      type: "job.updated",
+      type: STABLE_EVENT_TYPES.jobUpdated,
       tenantId: input.tenantId,
       legalEntityId: input.legalEntityId,
       entityType: "job",
@@ -898,7 +910,7 @@ export class ErpStore {
         ],
       });
       this.emit({
-        type: "payroll.posted",
+        type: STABLE_EVENT_TYPES.payrollPosted,
         tenantId: input.tenantId,
         legalEntityId: input.legalEntityId,
         entityType: "document",
@@ -974,7 +986,7 @@ export class ErpStore {
     });
     const approval = tx();
     this.emit({
-      type: "approval.requested",
+      type: STABLE_EVENT_TYPES.approvalRequested,
       tenantId: input.tenantId,
       legalEntityId: input.legalEntityId,
       entityType: "approval",
@@ -1011,7 +1023,7 @@ export class ErpStore {
     });
     const approval = tx();
     this.emit({
-      type: "approval.decided",
+      type: STABLE_EVENT_TYPES.approvalDecided,
       tenantId: input.tenantId,
       legalEntityId: input.legalEntityId,
       entityType: "approval",
@@ -1462,7 +1474,7 @@ export class ErpStore {
       ).run(`line_${randomUUID().slice(0, 8)}`, id, line.accountCode, line.side, line.amountCents, JSON.stringify(line.dimensions ?? {}));
     }
     this.emit({
-      type: "ledger.entry.posted",
+      type: STABLE_EVENT_TYPES.ledgerEntryPosted,
       tenantId: input.tenantId,
       legalEntityId: input.legalEntityId,
       entityType: "journal_entry",
@@ -1502,7 +1514,7 @@ export class ErpStore {
        DO UPDATE SET on_hand_qty = excluded.on_hand_qty, average_cost_cents = excluded.average_cost_cents, updated_at = excluded.updated_at`,
     ).run(input.tenantId, input.legalEntityId, input.warehouseId, input.itemSku, newQty, averageCostCents, nowIso());
     this.emit({
-      type: "inventory.updated",
+      type: STABLE_EVENT_TYPES.inventoryUpdated,
       tenantId: input.tenantId,
       legalEntityId: input.legalEntityId,
       entityType: "inventory_balance",
@@ -1537,7 +1549,7 @@ export class ErpStore {
       payload: { packKey: input.packKey, version: input.version },
     });
     this.emit({
-      type: "localization.installed",
+      type: STABLE_EVENT_TYPES.localizationInstalled,
       tenantId: input.tenantId,
       legalEntityId: input.legalEntityId,
       entityType: "localization",
@@ -1573,7 +1585,7 @@ export class ErpStore {
       createdAt,
     );
     this.emit({
-      type: "audit.logged",
+      type: STABLE_EVENT_TYPES.auditLogged,
       tenantId: input.tenantId,
       legalEntityId: input.legalEntityId,
       entityType: input.entityType,
