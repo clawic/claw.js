@@ -12,7 +12,6 @@ export default defineConfig({
       "examples/showcase/src/lib/**/*.test.ts",
       "publishing/tests/unit/**/*.test.ts",
       "relay/src/**/*.test.ts",
-      "time/src/**/*.test.ts",
       "scripts/**/*.test.mjs",
     ],
     exclude: [
