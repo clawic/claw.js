@@ -22,6 +22,13 @@ test("runCli searches the registered CLI discovery surface", async () => {
   assert.equal(payload.data.results.some((entry) => entry.canonicalName === "host"), true);
 });
 
+test("runCli searches registered local docs and ADR contents", async () => {
+  const result = await runCliCapture(["search", "Stable JSON output uses", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK);
+  const payload = JSON.parse(result.stdout) as { data: { results: Array<{ type: string; path?: string; summary: string }> } };
+  assert.equal(payload.data.results.some((entry) => entry.type === "adr" && entry.path === "docs/adr/0007-cli-agent-interface.md" && /Stable JSON output uses/.test(entry.summary)), true);
+});
+
 test("runCli prints related matches for unknown human commands", async () => {
   const result = await runCliCapture(["peopel"], process.cwd());
   assert.equal(result.code, CLI_EXIT_USAGE);
