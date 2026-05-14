@@ -40,8 +40,8 @@
       "reason": "Canonical type surface after workspace, human, and library/rules type extraction; split new contract domains into focused type modules before expanding."
     },
     "packages/clawjs-core/src/surface-registry.ts": {
-      "lines": 1257,
-      "reason": "Stable surface registry after route, event, and common JSON field catalog expansion; split route families into focused modules before expanding."
+      "lines": 1391,
+      "reason": "Stable surface registry after cross-surface enforcement expansion for routes, events, app/browser storage keys, and registered DDL sources; split route families into focused modules before expanding further."
     },
     "packages/clawjs-node/src/create-claw.test.ts": {
       "lines": 1994,
@@ -64,7 +64,7 @@
       "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
     },
     "packages/clawjs-node/src/code/index.ts": {
-      "lines": 1703,
+      "lines": 1704,
       "reason": "Code ledger and global index implementation after public type extraction; keep type contracts in code-types before expanding."
     },
     "relay/src/server/db.ts": {
