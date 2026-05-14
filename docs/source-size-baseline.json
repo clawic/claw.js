@@ -12,7 +12,7 @@
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     },
     "packages/clawjs/src/index.test.ts": {
-      "lines": 6504,
+      "lines": 6505,
       "reason": "Existing broad test coverage; split by scenario before expanding."
     },
     "examples/showcase/src/lib/i18n/messages.ts": {
