@@ -1745,7 +1745,7 @@ describe("discord operation runtime", () => {
         nick: "Guest",
       },
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -1759,7 +1759,7 @@ describe("discord operation runtime", () => {
       headers,
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
