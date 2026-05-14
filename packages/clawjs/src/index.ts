@@ -652,7 +652,6 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       },
     });
   }
-
   if (group === "code") {
     return await runCodeCli({ positionals, flags, argv, context, wantsJson, binName });
   }

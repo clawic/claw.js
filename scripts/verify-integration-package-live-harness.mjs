@@ -127,6 +127,12 @@ function runDockerSmoke(tarballPath) {
     console.error("EXTERNAL PENDING package/docker lane: docker is not available.");
     return;
   }
+  const dockerInfo = spawnSync("docker", ["info"], { encoding: "utf8" });
+  if (dockerInfo.status !== 0) {
+    const reason = (dockerInfo.stderr || dockerInfo.stdout || "docker daemon is not reachable").trim().split(/\r?\n/)[0];
+    console.error(`EXTERNAL PENDING package/docker lane: ${reason}`);
+    return;
+  }
   const mountDir = path.dirname(tarballPath);
   const tarballName = path.basename(tarballPath);
   runVisible("docker", [
