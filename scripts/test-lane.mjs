@@ -57,7 +57,25 @@ function changed() {
     npmRun("privacy:check");
     npmRun("privacy:test");
     npmRun("test:policy");
-    vitest(testFiles);
+    const packageScripts = new Set();
+    const rootVitestFiles = [];
+    for (const file of testFiles) {
+      if (file.startsWith("memory/")) {
+        packageScripts.add("memory:test");
+      } else if (file.startsWith("publishing/")) {
+        packageScripts.add("publishing:test");
+      } else if (file.startsWith("relay/")) {
+        packageScripts.add("relay:test");
+      } else {
+        rootVitestFiles.push(file);
+      }
+    }
+    if (rootVitestFiles.length > 0) {
+      vitest(rootVitestFiles);
+    }
+    for (const script of packageScripts) {
+      npmRun(script);
+    }
     npmRun("test:types");
     return;
   }

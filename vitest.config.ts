@@ -8,6 +8,8 @@ export default defineConfig({
       "packages/**/*.test.ts",
       "bridge/tests/**/*.test.ts",
       "delegation/src/**/*.test.ts",
+      "publishing/tests/unit/**/*.test.ts",
+      "relay/src/**/*.test.ts",
       "time/src/**/*.test.ts",
       "scripts/**/*.test.mjs",
     ],
