@@ -57,6 +57,16 @@ export function createAppRouter(onLogout: () => void) {
 
         // Finance
         { path: "finance", element: <FinanceIndex /> },
+        { path: "finance/accounts", element: <AccountsPage /> },
+        { path: "finance/journals", element: <JournalsPage /> },
+        { path: "finance/entries", element: <EntriesPage /> },
+        { path: "finance/entries/:entryId", element: <EntryDetailPage /> },
+        { path: "finance/periods", element: <PeriodsPage /> },
+        { path: "finance/taxes", element: <TaxesPage /> },
+        { path: "finance/banks", element: <BanksPage /> },
+        { path: "finance/reconciliation", element: <ReconciliationPage /> },
+        { path: "finance/assets", element: <AssetsPage /> },
+        { path: "finance/close", element: <PeriodClosePage /> },
         { path: "modules/finance/accounts", element: <AccountsPage /> },
         { path: "modules/finance/journals", element: <JournalsPage /> },
         { path: "modules/finance/entries", element: <EntriesPage /> },
