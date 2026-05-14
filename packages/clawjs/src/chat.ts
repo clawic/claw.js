@@ -19,6 +19,7 @@ import {
   type ClawRuntimeWire,
   type RuntimeAdapterOptions,
 } from "@clawjs/claw";
+import { writeCommandJsonOk } from "./cli-json.ts";
 
 export interface ChatCliContext {
   stdout: NodeJS.WritableStream;
@@ -84,8 +85,18 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-function writeJson(stream: NodeJS.WritableStream, payload: unknown): void {
-  stream.write(`${JSON.stringify(payload, null, 2)}\n`);
+function writeChatJson(stream: NodeJS.WritableStream, data: unknown, subcommand: string): void {
+  writeCommandJsonOk(stream, "sessions", data, {
+    subcommand,
+    invokedCommand: "chat",
+  });
+}
+
+function writeProviderJson(stream: NodeJS.WritableStream, data: unknown, subcommand: string): void {
+  writeCommandJsonOk(stream, "providers", data, {
+    subcommand,
+    invokedCommand: "provider",
+  });
 }
 
 function hasFlag(argv: string[], name: string): boolean {
@@ -542,7 +553,7 @@ export async function runChatCli(input: ChatCliInput): Promise<number> {
   }
   if (command === "list") {
     const sessions = listSessions(input.flags);
-    if (input.wantsJson) writeJson(input.context.stdout, { sessions });
+    if (input.wantsJson) writeChatJson(input.context.stdout, { sessions }, "list");
     else input.context.stdout.write(`${sessions.map(formatSessionLine).join("\n")}${sessions.length ? "\n" : ""}`);
     return CHAT_EXIT_OK;
   }
@@ -644,7 +655,7 @@ export async function runProviderCli(input: ChatCliInput): Promise<number> {
   if (command === "models") {
     const selection = providerSelectionFromFlags(input, providerId);
     const models = listClawRuntimeModels(buildRuntimeOptions(selection));
-    if (input.wantsJson) writeJson(input.context.stdout, { models });
+    if (input.wantsJson) writeProviderJson(input.context.stdout, { models }, "models");
     else input.context.stdout.write(`${models.map((model) => `${model.isDefault ? "*" : "-"} ${model.provider}/${model.modelId}`).join("\n")}\n`);
     return CHAT_EXIT_OK;
   }
@@ -652,7 +663,7 @@ export async function runProviderCli(input: ChatCliInput): Promise<number> {
   if (command === "use") {
     const selection = providerSelectionFromFlags(input, providerId);
     const configPath = writeRuntimeConfig(selection);
-    if (input.wantsJson) writeJson(input.context.stdout, { provider: selection.provider, model: selection.model, configPath });
+    if (input.wantsJson) writeProviderJson(input.context.stdout, { provider: selection.provider, model: selection.model, configPath }, "use");
     else input.context.stdout.write(`${selection.provider}/${selection.model}\n`);
     return CHAT_EXIT_OK;
   }
@@ -670,7 +681,7 @@ export async function runProviderCli(input: ChatCliInput): Promise<number> {
       secretRef: config.provider.secretRef ?? null,
       secretsStatus,
     };
-    if (input.wantsJson) writeJson(input.context.stdout, payload);
+    if (input.wantsJson) writeProviderJson(input.context.stdout, payload, "status");
     else input.context.stdout.write(`${payload.provider}:${payload.authSource}${payload.secretRef ? `:${payload.secretsStatus}` : ""}\n`);
     return config.authSource === "missing" || secretsStatus === "missing" ? CHAT_EXIT_DEGRADED : CHAT_EXIT_OK;
   }
@@ -709,14 +720,14 @@ export async function runProviderCli(input: ChatCliInput): Promise<number> {
     const selection = providerSelectionFromFlags(input, "deepseek");
     if (status === "configured") {
       const configPath = writeRuntimeConfig({ ...selection, secretRef });
-      if (input.wantsJson) writeJson(input.context.stdout, { provider: "deepseek", status, secretRef, configPath });
+      if (input.wantsJson) writeProviderJson(input.context.stdout, { provider: "deepseek", status, secretRef, configPath }, "login");
       else input.context.stdout.write(`deepseek secrets configured\n`);
       return CHAT_EXIT_OK;
     }
 
     writeRuntimeConfig(selection);
     if (input.wantsJson) {
-      writeJson(input.context.stdout, { provider: "deepseek", status, secretRef, configured: false });
+      writeProviderJson(input.context.stdout, { provider: "deepseek", status, secretRef, configured: false }, "login");
     } else {
       input.context.stdout.write(`deepseek ${status}\n`);
       writeDeepSeekSecretsInstructions(input.context, secretRef);

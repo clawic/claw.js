@@ -1,5 +1,8 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import fs from "fs";
+import os from "os";
+import path from "path";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 import { runCliCapture } from "./index-test-utils.ts";
@@ -42,6 +45,27 @@ test("runCli returns agents codex JSON in the common envelope", async () => {
   assert.equal(payload.data.runtime, "demo");
   assert.equal(payload.meta.canonicalCommand, "agents");
   assert.equal(payload.meta.subcommand, "codex.status");
+});
+
+test("runCli returns chat and provider JSON in the common envelope", async () => {
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-chat-json-"));
+  const chat = await runCliCapture(["chat", "list", "--home-dir", homeDir, "--json"], process.cwd());
+  assert.equal(chat.code, CLI_EXIT_OK);
+  const chatPayload = JSON.parse(chat.stdout) as { ok: boolean; data: { sessions: unknown[] }; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
+  assert.equal(chatPayload.ok, true);
+  assert.equal(chatPayload.meta.canonicalCommand, "sessions");
+  assert.equal(chatPayload.meta.invokedCommand, "chat");
+  assert.equal(chatPayload.meta.subcommand, "list");
+  assert.deepEqual(chatPayload.data.sessions, []);
+
+  const provider = await runCliCapture(["provider", "models", "deepseek", "--json"], process.cwd());
+  assert.equal(provider.code, CLI_EXIT_OK);
+  const providerPayload = JSON.parse(provider.stdout) as { ok: boolean; data: { models: unknown[] }; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
+  assert.equal(providerPayload.ok, true);
+  assert.equal(providerPayload.meta.canonicalCommand, "providers");
+  assert.equal(providerPayload.meta.invokedCommand, "provider");
+  assert.equal(providerPayload.meta.subcommand, "models");
+  assert.equal(providerPayload.data.models.length > 0, true);
 });
 
 test("runCli searches registered local docs and ADR contents", async () => {

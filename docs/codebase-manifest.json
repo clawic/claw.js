@@ -94353,10 +94353,11 @@
     {
       "path": "packages/clawjs/src/chat.ts",
       "language": "typescript",
-      "lines": 730,
+      "lines": 741,
       "test": false,
       "entrypoint": false,
       "imports": [
+        "./cli-json.ts",
         "@clawjs/claw",
         "crypto",
         "fs",
@@ -94557,6 +94558,11 @@
         },
         {
           "kind": "function",
+          "name": "writeChatJson",
+          "exported": false
+        },
+        {
+          "kind": "function",
           "name": "writeDeepSeekSecretsInstructions",
           "exported": false
         },
@@ -94567,7 +94573,7 @@
         },
         {
           "kind": "function",
-          "name": "writeJson",
+          "name": "writeProviderJson",
           "exported": false
         },
         {
@@ -95054,13 +95060,16 @@
     {
       "path": "packages/clawjs/src/cli-discovery.test.ts",
       "language": "typescript",
-      "lines": 68,
+      "lines": 92,
       "test": true,
       "entrypoint": false,
       "imports": [
         "./index-test-utils.ts",
         "./index.ts",
+        "fs",
         "node:assert/strict",
+        "os",
+        "path",
         "vitest"
       ],
       "exports": [],
@@ -119751,7 +119760,7 @@
     {
       "path": "tests/e2e/claw-chat-cli.spec.ts",
       "language": "typescript",
-      "lines": 208,
+      "lines": 210,
       "test": true,
       "entrypoint": false,
       "imports": [

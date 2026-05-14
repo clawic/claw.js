@@ -157,9 +157,11 @@ test("claw chat streams, persists sessions, handles slash commands, provider log
     expect(fakeProvider.calls.at(-1)?.body.tools.map((tool: { function?: { name?: string } }) => tool.function?.name)).toEqual(expect.arrayContaining(["read_file", "write_file", "list_dir", "shell"]));
 
     const listed = await runClaw(rootDir, ["chat", "list", "--json", ...baseArgs], env);
-    const sessions = JSON.parse(listed.stdout) as { sessions: Array<{ id: string; messages: unknown[] }> };
-    expect(sessions.sessions.length).toBeGreaterThanOrEqual(1);
-    const sessionId = sessions.sessions[0]!.id;
+    const sessions = JSON.parse(listed.stdout) as { ok: boolean; data: { sessions: Array<{ id: string; messages: unknown[] }> }; meta: { canonicalCommand: string; invokedCommand: string } };
+    expect(sessions.ok).toBe(true);
+    expect(sessions.meta).toMatchObject({ canonicalCommand: "sessions", invokedCommand: "chat" });
+    expect(sessions.data.sessions.length).toBeGreaterThanOrEqual(1);
+    const sessionId = sessions.data.sessions[0]!.id;
 
     const resumed = await runClaw(rootDir, ["chat", "resume", sessionId, "hello again", ...baseArgs], env);
     expect(resumed.stdout).toContain(`session=${sessionId}`);
