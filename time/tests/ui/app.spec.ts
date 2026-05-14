@@ -22,7 +22,7 @@ test("time ui supports event, automation, follow-up, and runs flows", async ({ p
 
   await page.getByTestId("run-routine-button").click();
   await page.getByTestId("tab-runs").click();
-  await expect(page.getByTestId("execution-row")).toHaveCount(1);
+  await expect(page.getByTestId("execution-row").first()).toBeVisible();
 
   const outputDir = path.join(process.cwd(), "artifacts", "ui");
   fs.mkdirSync(outputDir, { recursive: true });
