@@ -251,6 +251,33 @@ export const clawPublicApiPrefix = "/v1";
 export const clawPrivateAppApiPrefix = "/api";
 export const clawEventsPath = "/v1/events";
 
+export const clawCommonJsonFields = {
+  schemaVersion: "schemaVersion",
+  protocolVersion: "protocolVersion",
+  sessionId: "sessionId",
+  requestId: "requestId",
+  runtimeId: "runtimeId",
+  agentId: "agentId",
+  providerId: "providerId",
+  modelId: "modelId",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+} as const;
+
+export const clawHostApiRoutes = {
+  commands: "/v1/commands",
+} as const;
+
+export const clawStorageApiRoutes = {
+  ownerToken: "/v1/storage/owner-token",
+  buckets: "/v1/storage/buckets",
+  objects: "/v1/storage/objects",
+  objectPrefix: "/v1/storage/objects/",
+  shares: "/v1/storage/shares",
+  apiPrefix: "/v1/storage/",
+  sharedPrefix: "/shared/storage/",
+} as const;
+
 export const clawDatabaseApiRoutes = {
   realtime: "/v1/realtime",
   health: "/v1/health",
@@ -303,6 +330,12 @@ export const clawDatabaseApiRoutePatterns = {
   revokeToken: "/v1/namespaces/:namespaceId/tokens/:tokenId/revoke",
 } as const;
 
+export const clawDatabaseRecordEvents = {
+  created: "record.created",
+  updated: "record.updated",
+  deleted: "record.deleted",
+} as const;
+
 export const clawSearchApiRoutes = {
   realtime: "/v1/realtime",
   health: "/v1/health",
@@ -333,6 +366,126 @@ export const clawSearchApiRoutes = {
     return `/v1/alerts/${encodeURIComponent(id)}/ack`;
   },
   tagsApply: "/v1/tags/apply",
+} as const;
+
+export const clawTimeApiRoutes = {
+  items: "/v1/items",
+  item(id: string): string {
+    return `/v1/items/${encodeURIComponent(id)}`;
+  },
+  itemPause(id: string): string {
+    return `${this.item(id)}/pause`;
+  },
+  itemResume(id: string): string {
+    return `${this.item(id)}/resume`;
+  },
+  itemRun(id: string): string {
+    return `${this.item(id)}/run`;
+  },
+  executions: "/v1/executions",
+  runLog: "/v1/run-log",
+  calendarView: "/v1/views/calendar",
+  timelineView: "/v1/views/timeline",
+  signals: "/v1/signals",
+  legacyEvents: "/v1/legacy/events",
+  legacyRoutines: "/v1/legacy/routines",
+} as const;
+
+export const clawNotifyApiRoutes = {
+  notifications: "/v1/notifications",
+} as const;
+
+export const clawTemporalEvents = {
+  itemDue: "temporal.item.due",
+} as const;
+
+export const clawDriveApiRoutes = {
+  realtime: "/v1/realtime",
+  health: "/v1/health",
+  adminLogin: "/v1/auth/admin/login",
+  bootstrap: "/v1/bootstrap",
+  items: "/v1/items",
+  search: "/v1/search",
+  item(itemId: string): string {
+    return `/v1/items/${encodeURIComponent(itemId)}`;
+  },
+  itemMove(itemId: string): string {
+    return `${this.item(itemId)}/move`;
+  },
+  itemCopy(itemId: string): string {
+    return `${this.item(itemId)}/copy`;
+  },
+  itemContent(itemId: string): string {
+    return `${this.item(itemId)}/content`;
+  },
+  itemView(itemId: string): string {
+    return `${this.item(itemId)}/view`;
+  },
+  itemTrash(itemId: string): string {
+    return `${this.item(itemId)}/trash`;
+  },
+  itemRestore(itemId: string): string {
+    return `${this.item(itemId)}/restore`;
+  },
+  itemComments(itemId: string): string {
+    return `${this.item(itemId)}/comments`;
+  },
+  itemRevisions(itemId: string): string {
+    return `${this.item(itemId)}/revisions`;
+  },
+  itemRevisionRestore(itemId: string, revisionId: string): string {
+    return `${this.itemRevisions(itemId)}/${encodeURIComponent(revisionId)}/restore`;
+  },
+  itemShares(itemId: string): string {
+    return `${this.item(itemId)}/shares`;
+  },
+  itemShareRevoke(itemId: string, shareId: string): string {
+    return `${this.itemShares(itemId)}/${encodeURIComponent(shareId)}/revoke`;
+  },
+  tokens: "/v1/tokens",
+  tokenRevoke(tokenId: string): string {
+    return `/v1/tokens/${encodeURIComponent(tokenId)}/revoke`;
+  },
+  uploads: "/v1/uploads",
+  itemDownload(itemId: string): string {
+    return `${this.item(itemId)}/download`;
+  },
+  itemExport(itemId: string): string {
+    return `${this.item(itemId)}/export`;
+  },
+} as const;
+
+export const clawDriveApiRoutePatterns = {
+  realtime: clawDriveApiRoutes.realtime,
+  health: clawDriveApiRoutes.health,
+  adminLogin: clawDriveApiRoutes.adminLogin,
+  bootstrap: clawDriveApiRoutes.bootstrap,
+  items: clawDriveApiRoutes.items,
+  search: clawDriveApiRoutes.search,
+  item: "/v1/items/:itemId",
+  itemMove: "/v1/items/:itemId/move",
+  itemCopy: "/v1/items/:itemId/copy",
+  itemContent: "/v1/items/:itemId/content",
+  itemView: "/v1/items/:itemId/view",
+  itemTrash: "/v1/items/:itemId/trash",
+  itemRestore: "/v1/items/:itemId/restore",
+  itemComments: "/v1/items/:itemId/comments",
+  itemRevisions: "/v1/items/:itemId/revisions",
+  itemRevisionRestore: "/v1/items/:itemId/revisions/:revisionId/restore",
+  itemShares: "/v1/items/:itemId/shares",
+  itemShareRevoke: "/v1/items/:itemId/shares/:shareId/revoke",
+  itemSharesAll: "/v1/items/:itemId/shares/all",
+  tokens: clawDriveApiRoutes.tokens,
+  tokenRevoke: "/v1/tokens/:tokenId/revoke",
+  uploads: clawDriveApiRoutes.uploads,
+  itemDownload: "/v1/items/:itemId/download",
+  itemExport: "/v1/items/:itemId/export",
+  itemThumbnail: "/v1/items/:itemId/thumbnail",
+  itemExif: "/v1/items/:itemId/exif",
+  semanticSearch: "/v1/search/semantic",
+  audit: "/v1/audit",
+  encryptedFolders: "/v1/encrypted-folders",
+  projectEnsureFolder: "/v1/projects/:slug/ensure-folder",
 } as const;
 
 export const clawDeepLinkSchemes = {
@@ -462,30 +615,50 @@ const cliCommands = [
 
 const corePublicRoutes = [
   ["claw.api.events", "GET", clawEventsPath, "Public framework event stream"],
+  ["claw.api.host.commands", "POST", clawHostApiRoutes.commands, "Host command endpoint"],
+  ["claw.api.storage.ownerToken", "GET", clawStorageApiRoutes.ownerToken, "Storage owner token endpoint"],
+  ["claw.api.storage.buckets", "GET", clawStorageApiRoutes.buckets, "Storage bucket list"],
+  ["claw.api.storage.objects", "GET", clawStorageApiRoutes.objects, "Storage object list"],
+  ["claw.api.storage.shares", "POST", clawStorageApiRoutes.shares, "Storage share creation"],
   ["claw.api.database.namespaces", "GET", clawDatabaseApiRoutes.namespaces, "Database namespace list"],
   ["claw.api.database.collections", "GET", "/v1/namespaces/{namespace}/collections", "Database collection list"],
   ["claw.api.database.records", "GET", "/v1/namespaces/{namespace}/collections/{collection}/records", "Database record list"],
   ["claw.api.database.adminLogin", "POST", clawDatabaseApiRoutes.adminLogin, "Database admin login"],
   ["claw.api.database.realtime", "GET", clawDatabaseApiRoutes.realtime, "Database realtime websocket"],
+  ["claw.api.drive.health", "GET", clawDriveApiRoutes.health, "Drive health endpoint"],
+  ["claw.api.drive.login", "POST", clawDriveApiRoutes.adminLogin, "Drive admin login"],
+  ["claw.api.drive.items", "GET", clawDriveApiRoutes.items, "Drive item list"],
+  ["claw.api.drive.search", "GET", clawDriveApiRoutes.search, "Drive search endpoint"],
   ["claw.api.search.types", "GET", clawSearchApiRoutes.types, "Search/index type list"],
   ["claw.api.search.entitiesUpsert", "POST", clawSearchApiRoutes.entitiesUpsert, "Search/index entity upsert"],
   ["claw.api.search.searches", "GET", clawSearchApiRoutes.searches, "Search definition list"],
   ["claw.api.search.monitors", "GET", clawSearchApiRoutes.monitors, "Search monitor list"],
+  ["claw.api.time.items", "GET", clawTimeApiRoutes.items, "Time item list"],
+  ["claw.api.time.executions", "GET", clawTimeApiRoutes.executions, "Time execution list"],
+  ["claw.api.time.calendar", "GET", clawTimeApiRoutes.calendarView, "Time calendar view"],
+  ["claw.api.time.timeline", "GET", clawTimeApiRoutes.timelineView, "Time timeline view"],
+  ["claw.api.notify.notifications", "POST", clawNotifyApiRoutes.notifications, "Notification dispatch endpoint"],
   ["claw.api.webhooks.providerEvent", "POST", "/v1/webhooks/{provider}/{event}", "Provider webhook ingress"],
   ["claw.api.integrations.callback", "GET", "/v1/integrations/{provider}/callback", "OAuth integration callback"],
 ] as const;
 
 const stableJsonFields = [
-  ["claw.schema.common.field.schemaVersion", "schemaVersion", "Persisted/exported data version field"],
-  ["claw.schema.common.field.protocolVersion", "protocolVersion", "Wire protocol version field"],
-  ["claw.schema.common.field.sessionId", "sessionId", "Framework conversation identity"],
-  ["claw.schema.common.field.requestId", "requestId", "Request correlation identity"],
-  ["claw.schema.common.field.runtimeId", "runtimeId", "Runtime identity"],
-  ["claw.schema.common.field.agentId", "agentId", "Agent identity"],
-  ["claw.schema.common.field.providerId", "providerId", "Provider identity"],
-  ["claw.schema.common.field.modelId", "modelId", "Model identity"],
-  ["claw.schema.common.field.createdAt", "createdAt", "Creation instant"],
-  ["claw.schema.common.field.updatedAt", "updatedAt", "Update instant"],
+  ["claw.schema.common.field.schemaVersion", clawCommonJsonFields.schemaVersion, "Persisted/exported data version field"],
+  ["claw.schema.common.field.protocolVersion", clawCommonJsonFields.protocolVersion, "Wire protocol version field"],
+  ["claw.schema.common.field.sessionId", clawCommonJsonFields.sessionId, "Framework conversation identity"],
+  ["claw.schema.common.field.requestId", clawCommonJsonFields.requestId, "Request correlation identity"],
+  ["claw.schema.common.field.runtimeId", clawCommonJsonFields.runtimeId, "Runtime identity"],
+  ["claw.schema.common.field.agentId", clawCommonJsonFields.agentId, "Agent identity"],
+  ["claw.schema.common.field.providerId", clawCommonJsonFields.providerId, "Provider identity"],
+  ["claw.schema.common.field.modelId", clawCommonJsonFields.modelId, "Model identity"],
+  ["claw.schema.common.field.createdAt", clawCommonJsonFields.createdAt, "Creation instant"],
+  ["claw.schema.common.field.updatedAt", clawCommonJsonFields.updatedAt, "Update instant"],
+] as const;
+
+export const clawRegisteredDdlSources = [
+  "packages/clawjs-database/src/store.ts",
+  "drive/src/server/db.ts",
+  "packages/clawjs-index/src/db/schema.sql",
 ] as const;
 
 const stableIdNamespaces = [
@@ -573,6 +746,28 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       parentId: "claw.contracts.events",
       surfaceClass: "event",
       direction: "generated",
+    })),
+    ...Object.values(clawDatabaseRecordEvents).map((event) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: `claw.event.database.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
+      kind: "eventTopic",
+      name: event,
+      value: event,
+      parentId: "claw.contracts.events",
+      surfaceClass: "event",
+      direction: "generated",
+      notes: "Database realtime event topic emitted for persistent record changes.",
+    })),
+    ...Object.values(clawTemporalEvents).map((event) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: `claw.event.time.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
+      kind: "eventTopic",
+      name: event,
+      value: event,
+      parentId: "claw.contracts.events",
+      surfaceClass: "event",
+      direction: "generated",
+      notes: "Temporal runtime event emitted for due items and notification routing.",
     })),
     ...stableJsonFields.map(([id, field, name]) => clawPersistentSurface.contract({
       ...contractDefaults,

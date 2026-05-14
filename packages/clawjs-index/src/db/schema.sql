@@ -1,4 +1,5 @@
 -- @clawjs/index SQLite schema. Stable shape; future migrations append.
+-- @clawjs-persistent-surface-ddl-source
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 

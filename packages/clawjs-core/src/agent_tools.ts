@@ -109,7 +109,7 @@ export interface AgentToolInvocationError {
   detail?: Record<string, unknown>;
 }
 
-/** Listing payload returned by `/v1/tools/list`-style endpoints. */
+/** Listing payload returned by registered tool-list endpoints. */
 export interface AgentToolCatalog {
   /** ISO-8601 timestamp of when the catalog was assembled. */
   generatedAt: string;

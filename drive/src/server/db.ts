@@ -4,6 +4,8 @@ import path from "node:path";
 
 import Database from "better-sqlite3";
 
+// @clawjs-persistent-surface-ddl-source
+
 import { generateOpaqueToken, hashSecret } from "./auth.ts";
 import type {
   DriveAgentCapability,

@@ -5,6 +5,8 @@ import { randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
 import { BUILTIN_COLLECTIONS_BY_NAME } from "@clawjs/core";
 
+// @clawjs-persistent-surface-ddl-source
+
 import { generateOpaqueToken, hashSecret } from "./auth.ts";
 import type {
   CollectionDefinition,

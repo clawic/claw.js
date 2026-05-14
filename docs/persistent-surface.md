@@ -24,6 +24,16 @@ flowchart TD
   claw_contracts --> claw_contracts_external
   claw_api_events["Public framework event stream\napiRoute"]
   claw_contracts_api --> claw_api_events
+  claw_api_host_commands["Host command endpoint\napiRoute"]
+  claw_contracts_api --> claw_api_host_commands
+  claw_api_storage_ownerToken["Storage owner token endpoint\napiRoute"]
+  claw_contracts_api --> claw_api_storage_ownerToken
+  claw_api_storage_buckets["Storage bucket list\napiRoute"]
+  claw_contracts_api --> claw_api_storage_buckets
+  claw_api_storage_objects["Storage object list\napiRoute"]
+  claw_contracts_api --> claw_api_storage_objects
+  claw_api_storage_shares["Storage share creation\napiRoute"]
+  claw_contracts_api --> claw_api_storage_shares
   claw_api_database_namespaces["Database namespace list\napiRoute"]
   claw_contracts_api --> claw_api_database_namespaces
   claw_api_database_collections["Database collection list\napiRoute"]
@@ -34,6 +44,14 @@ flowchart TD
   claw_contracts_api --> claw_api_database_adminLogin
   claw_api_database_realtime["Database realtime websocket\napiRoute"]
   claw_contracts_api --> claw_api_database_realtime
+  claw_api_drive_health["Drive health endpoint\napiRoute"]
+  claw_contracts_api --> claw_api_drive_health
+  claw_api_drive_login["Drive admin login\napiRoute"]
+  claw_contracts_api --> claw_api_drive_login
+  claw_api_drive_items["Drive item list\napiRoute"]
+  claw_contracts_api --> claw_api_drive_items
+  claw_api_drive_search["Drive search endpoint\napiRoute"]
+  claw_contracts_api --> claw_api_drive_search
   claw_api_search_types["Search/index type list\napiRoute"]
   claw_contracts_api --> claw_api_search_types
   claw_api_search_entitiesUpsert["Search/index entity upsert\napiRoute"]
@@ -42,6 +60,16 @@ flowchart TD
   claw_contracts_api --> claw_api_search_searches
   claw_api_search_monitors["Search monitor list\napiRoute"]
   claw_contracts_api --> claw_api_search_monitors
+  claw_api_time_items["Time item list\napiRoute"]
+  claw_contracts_api --> claw_api_time_items
+  claw_api_time_executions["Time execution list\napiRoute"]
+  claw_contracts_api --> claw_api_time_executions
+  claw_api_time_calendar["Time calendar view\napiRoute"]
+  claw_contracts_api --> claw_api_time_calendar
+  claw_api_time_timeline["Time timeline view\napiRoute"]
+  claw_contracts_api --> claw_api_time_timeline
+  claw_api_notify_notifications["Notification dispatch endpoint\napiRoute"]
+  claw_contracts_api --> claw_api_notify_notifications
   claw_api_webhooks_providerEvent["Provider webhook ingress\napiRoute"]
   claw_contracts_api --> claw_api_webhooks_providerEvent
   claw_api_integrations_callback["OAuth integration callback\napiRoute"]
@@ -70,6 +98,14 @@ flowchart TD
   claw_contracts_events --> claw_event_models_default_set
   claw_event_auth_login_started["auth.login-started\neventTopic"]
   claw_contracts_events --> claw_event_auth_login_started
+  claw_event_database_record_created["record.created\neventTopic"]
+  claw_contracts_events --> claw_event_database_record_created
+  claw_event_database_record_updated["record.updated\neventTopic"]
+  claw_contracts_events --> claw_event_database_record_updated
+  claw_event_database_record_deleted["record.deleted\neventTopic"]
+  claw_contracts_events --> claw_event_database_record_deleted
+  claw_event_time_temporal_item_due["temporal.item.due\neventTopic"]
+  claw_contracts_events --> claw_event_time_temporal_item_due
   claw_schema_common_field_schemaVersion["Persisted/exported data version field\njsonField"]
   claw_contracts_schemas --> claw_schema_common_field_schemaVersion
   claw_schema_common_field_protocolVersion["Wire protocol version field\njsonField"]
@@ -580,15 +616,29 @@ flowchart TD
 | `claw.contracts.cli` | root | cli | claw | `contracts/cli` |
 | `claw.contracts.external` | root | external | claw | `contracts/external` |
 | `claw.api.events` | apiRoute | api | claw | `/v1/events` |
+| `claw.api.host.commands` | apiRoute | api | claw | `/v1/commands` |
+| `claw.api.storage.ownerToken` | apiRoute | api | claw | `/v1/storage/owner-token` |
+| `claw.api.storage.buckets` | apiRoute | api | claw | `/v1/storage/buckets` |
+| `claw.api.storage.objects` | apiRoute | api | claw | `/v1/storage/objects` |
+| `claw.api.storage.shares` | apiRoute | api | claw | `/v1/storage/shares` |
 | `claw.api.database.namespaces` | apiRoute | api | claw | `/v1/namespaces` |
 | `claw.api.database.collections` | apiRoute | api | claw | `/v1/namespaces/{namespace}/collections` |
 | `claw.api.database.records` | apiRoute | api | claw | `/v1/namespaces/{namespace}/collections/{collection}/records` |
 | `claw.api.database.adminLogin` | apiRoute | api | claw | `/v1/auth/admin/login` |
 | `claw.api.database.realtime` | apiRoute | api | claw | `/v1/realtime` |
+| `claw.api.drive.health` | apiRoute | api | claw | `/v1/health` |
+| `claw.api.drive.login` | apiRoute | api | claw | `/v1/auth/admin/login` |
+| `claw.api.drive.items` | apiRoute | api | claw | `/v1/items` |
+| `claw.api.drive.search` | apiRoute | api | claw | `/v1/search` |
 | `claw.api.search.types` | apiRoute | api | claw | `/v1/types` |
 | `claw.api.search.entitiesUpsert` | apiRoute | api | claw | `/v1/entities/upsert` |
 | `claw.api.search.searches` | apiRoute | api | claw | `/v1/searches` |
 | `claw.api.search.monitors` | apiRoute | api | claw | `/v1/monitors` |
+| `claw.api.time.items` | apiRoute | api | claw | `/v1/items` |
+| `claw.api.time.executions` | apiRoute | api | claw | `/v1/executions` |
+| `claw.api.time.calendar` | apiRoute | api | claw | `/v1/views/calendar` |
+| `claw.api.time.timeline` | apiRoute | api | claw | `/v1/views/timeline` |
+| `claw.api.notify.notifications` | apiRoute | api | claw | `/v1/notifications` |
 | `claw.api.webhooks.providerEvent` | apiRoute | api | claw | `/v1/webhooks/{provider}/{event}` |
 | `claw.api.integrations.callback` | apiRoute | api | claw | `/v1/integrations/{provider}/callback` |
 | `claw.protocol.hostCommand.v1` | protocol | protocol | claw | `host-command-v1` |
@@ -603,6 +653,10 @@ flowchart TD
 | `claw.event.telegram.webhook.configured` | eventTopic | event | claw | `telegram.webhook_configured` |
 | `claw.event.models.default.set` | eventTopic | event | claw | `models.default-set` |
 | `claw.event.auth.login.started` | eventTopic | event | claw | `auth.login-started` |
+| `claw.event.database.record.created` | eventTopic | event | claw | `record.created` |
+| `claw.event.database.record.updated` | eventTopic | event | claw | `record.updated` |
+| `claw.event.database.record.deleted` | eventTopic | event | claw | `record.deleted` |
+| `claw.event.time.temporal.item.due` | eventTopic | event | claw | `temporal.item.due` |
 | `claw.schema.common.field.schemaVersion` | jsonField | schema | claw | `schemaVersion` |
 | `claw.schema.common.field.protocolVersion` | jsonField | schema | claw | `protocolVersion` |
 | `claw.schema.common.field.sessionId` | jsonField | schema | claw | `sessionId` |

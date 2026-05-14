@@ -12,7 +12,7 @@
       "reason": "Claw runtime assembly after extracting runtime/workspace, intent, capability, session, data/watch, content/IoT, media/session, generation/image, skill/provider, and channel helpers; keep under 2000 by splitting new public facades before expanding."
     },
     "packages/clawjs/src/index.test.ts": {
-      "lines": 1535,
+      "lines": 1539,
       "reason": "Remaining CLI smoke and integration test surface after scenario split; add new scenario files instead of expanding broadly."
     },
     "examples/showcase/src/lib/i18n/messages.ts": {
@@ -38,6 +38,10 @@
     "packages/clawjs-core/src/types.ts": {
       "lines": 1348,
       "reason": "Canonical type surface after workspace, human, and library/rules type extraction; split new contract domains into focused type modules before expanding."
+    },
+    "packages/clawjs-core/src/surface-registry.ts": {
+      "lines": 1225,
+      "reason": "Stable surface registry after route, event, and common JSON field catalog expansion; split route families into focused modules before expanding."
     },
     "packages/clawjs-node/src/create-claw.test.ts": {
       "lines": 1994,
@@ -124,7 +128,7 @@
       "reason": "Existing broad test coverage; split by scenario before expanding."
     },
     "drive/src/server/db.ts": {
-      "lines": 1566,
+      "lines": 1568,
       "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
     },
     "database/public/app.js": {

@@ -101,6 +101,12 @@ function isBuilderFile(filePath, body) {
     || filePath.endsWith("persistent-surface-guard.mjs");
 }
 
+function isRegisteredDdlSource(filePath, body, registryBody) {
+  const relative = path.relative(rootDir, filePath);
+  return body.includes("@clawjs-persistent-surface-ddl-source")
+    && registryBody.includes(`"${relative}"`);
+}
+
 function lineNumber(body, index) {
   return body.slice(0, index).split("\n").length;
 }
@@ -145,6 +151,7 @@ function scanFile(filePath, registryBody = "") {
   const findings = [];
   for (const rule of rules) {
     if (!rule.extensions.includes(ext)) continue;
+    if (rule.id === "ts.ddl-literal" && isRegisteredDdlSource(filePath, body, registryBody)) continue;
     const match = rule.pattern.exec(body);
     if (!match) continue;
     findings.push({
@@ -239,7 +246,7 @@ if (targets.length === 0) {
 
 const allFiles = targets.flatMap((target) => listFiles(path.resolve(rootDir, target)));
 const registryBody = allFiles
-  .filter((filePath) => filePath.endsWith("PersistentSurfaceRegistry.swift"))
+  .filter((filePath) => filePath.endsWith("PersistentSurfaceRegistry.swift") || filePath.endsWith("surface-registry.ts"))
   .map((filePath) => fs.readFileSync(filePath, "utf8"))
   .join("\n");
 const findings = allFiles.flatMap((filePath) => scanFile(filePath, registryBody));

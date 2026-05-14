@@ -1874,6 +1874,7 @@ The docs check script validates that every current export from
     clawNotifyApiRoutes
     clawPortRange
     clawPortSubranges
+    clawRegisteredDdlSources
     clawPersistentSurface
     clawPersistentSurfaceRegistry
     clawStableSurface
