@@ -16,7 +16,8 @@ Coverage budgets live in `qa/coverage-budgets.json` and are enforced by
 | Browser UI | `test:e2e` | `test:release` | Playwright suites in `tests/e2e` and app-specific E2E roots |
 | Host and permissions | `test:host` | `test:release` | Signed host command hook or `EXTERNAL PENDING` QA scenario |
 | Device clients | `test:device` | `test:release` | Device hook or `EXTERNAL PENDING` QA scenario |
-| Live integrations | `test:live` | opt-in only | Requires `CLAW_TEST_LIVE=1` and synthetic or approved external state |
+| Live integrations | `test:live` | opt-in only | Requires `CLAW_TEST_LIVE=1`, brokered credential leases, disposable or approved external state, and an Integration QA Lab scenario |
+| Connector official API coverage | `test:fast`, `test:policy` | `test:release` | Integration QA Lab coverage matrices such as Telegram Bot API 10.0 under `packages/clawjs-integrations/src/*official-api-matrix*` |
 
 ## Completion Rules
 
@@ -24,6 +25,8 @@ Coverage budgets live in `qa/coverage-budgets.json` and are enforced by
 - `release` must include privacy, policy, fast, integration, build, docs, pack,
   E2E, and host/device state.
 - `live` is never part of default CI or release unless explicitly requested.
+- Connector completeness requires an official provider-surface matrix plus
+  fixture, brokered-live, manual-only, and policy-blocked classifications.
 - `QUARANTINED` entries must live in `qa/quarantine.json` with owner, reason,
   repair path, and expiry.
 - Expired quarantines fail `test:policy`.
