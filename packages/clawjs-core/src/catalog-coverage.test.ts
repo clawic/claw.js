@@ -52,6 +52,10 @@ const KNOWN_COLLECTION_NAMES = new Set([
   ...BUILTIN_COLLECTIONS_BY_NAME.keys(),
   ...PRODUCTIVITY_COLLECTION_DEFINITIONS.map((collection) => collection.name),
 ]);
+const KNOWN_COLLECTIONS = new Map([
+  ...BUILTIN_COLLECTIONS_BY_NAME.entries(),
+  ...PRODUCTIVITY_COLLECTION_DEFINITIONS.map((collection) => [collection.name, collection] as const),
+]);
 
 test("catalog coverage ledger seeds at least one thousand generic needs", () => {
   assert.equal(CATALOG_COVERAGE_WAVES.length, 12);
@@ -97,14 +101,58 @@ test("catalog coverage needs use supported evidence and relation semantics", () 
   }
 });
 
-test("catalog coverage candidate mappings point to existing built-in collections", () => {
+test("catalog coverage mappings point to existing canonical or custom collections", () => {
   for (const need of CATALOG_COVERAGE_NEEDS) {
-    assert.equal(need.coverage.status, "candidate_mapping");
+    assert.ok(
+      need.coverage.status === "canonical" || need.coverage.status === "custom_database",
+      `${need.id} uses non-final coverage status ${need.coverage.status}`,
+    );
     assert.ok(need.coverage.collectionNames.length > 0, `${need.id} has no candidate collections`);
     for (const collectionName of need.coverage.collectionNames) {
       assert.ok(
         KNOWN_COLLECTION_NAMES.has(collectionName),
         `${need.id} maps to missing collection ${collectionName}`,
+      );
+    }
+  }
+});
+
+test("catalog coverage mappings name fields and relation semantics", () => {
+  for (const need of CATALOG_COVERAGE_NEEDS) {
+    assert.ok(need.coverage.fieldNames && need.coverage.fieldNames.length > 0, `${need.id} has no field mapping`);
+    assert.ok(need.coverage.relationNames && need.coverage.relationNames.length > 0, `${need.id} has no relation mapping`);
+    const availableFields = new Set(
+      need.coverage.collectionNames.flatMap((collectionName) =>
+        (KNOWN_COLLECTIONS.get(collectionName)?.fields ?? []).map((field) => field.name),
+      ),
+    );
+
+    for (const fieldName of need.coverage.fieldNames) {
+      assert.match(fieldName, /^[a-z][A-Za-z0-9]*$/, `${need.id} field mapping ${fieldName} is not camelCase`);
+      assert.ok(availableFields.has(fieldName), `${need.id} maps missing field ${fieldName}`);
+    }
+    for (const relationName of need.coverage.relationNames) {
+      assert.match(relationName, /^[a-z0-9_]+$/, `${need.id} relation mapping ${relationName} is not snake_case`);
+    }
+  }
+});
+
+test("candidate coverage mappings include built-in relation examples for each required semantic kind", () => {
+  for (const need of CATALOG_COVERAGE_NEEDS) {
+    if (need.coverage.status === "custom_database") continue;
+
+    const relationKinds = new Set<BuiltinRelationKind>();
+    for (const collectionName of need.coverage.collectionNames) {
+      const collection = BUILTIN_COLLECTIONS_BY_NAME.get(collectionName);
+      for (const field of collection?.fields ?? []) {
+        if (field.type === "relation" && field.relation?.kind) relationKinds.add(field.relation.kind);
+      }
+    }
+
+    for (const relation of need.requiredRelationships) {
+      assert.ok(
+        relationKinds.has(relation.kind),
+        `${need.id} maps ${relation.kind} without a built-in relation example`,
       );
     }
   }

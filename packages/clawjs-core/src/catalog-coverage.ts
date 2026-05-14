@@ -52,24 +52,28 @@ interface CoverageScenarioSeed {
   label: string;
   humanValue: string;
   fields: string[];
+  coverageFields?: string[];
   relationKind: BuiltinRelationKind;
   fromEntity: string;
   toEntity: string;
+  collectionNames: string[];
+  coverageStatus?: CatalogCoverageStatus;
+  notes?: string;
 }
 
 export const CATALOG_COVERAGE_SCENARIOS: CoverageScenarioSeed[] = [
-  { id: "core_record", label: "core record lifecycle", humanValue: "create, update, archive, restore, and export durable records", fields: ["name", "status", "createdAt", "updatedAt", "archivedAt"], relationKind: "ownership", fromEntity: "workspace", toEntity: "record" },
-  { id: "participant_access", label: "participants and access", humanValue: "track who participates, owns, approves, or can act", fields: ["actorId", "role", "permission", "joinedAt", "leftAt"], relationKind: "participant", fromEntity: "actor", toEntity: "activity" },
-  { id: "membership_grouping", label: "membership and grouping", humanValue: "organize entities into teams, cohorts, lists, groups, or households", fields: ["groupName", "memberRole", "startsAt", "endsAt", "isPrimary"], relationKind: "membership", fromEntity: "member", toEntity: "group" },
-  { id: "line_item_breakdown", label: "line item breakdown", humanValue: "represent totals as explainable child rows with quantities and amounts", fields: ["quantity", "unitPrice", "subtotal", "taxAmount", "discountAmount"], relationKind: "line_item", fromEntity: "lineItem", toEntity: "parentRecord" },
-  { id: "source_import_sync", label: "source and import provenance", humanValue: "preserve where records came from and how they map to external sources", fields: ["sourceKind", "externalId", "importedAt", "syncedAt", "syncStatus"], relationKind: "source_import", fromEntity: "sourceRecord", toEntity: "canonicalRecord" },
-  { id: "attachment_documents", label: "attachments and documents", humanValue: "attach files, images, certificates, receipts, notes, and supporting media", fields: ["filename", "contentType", "sizeBytes", "uploadedAt", "caption"], relationKind: "attachment", fromEntity: "asset", toEntity: "record" },
-  { id: "place_availability", label: "place and availability", humanValue: "connect records to places, addresses, rooms, routes, and available slots", fields: ["address", "geoPoint", "timezone", "availableFrom", "availableUntil"], relationKind: "location", fromEntity: "record", toEntity: "place" },
-  { id: "scheduled_event", label: "scheduled event", humanValue: "represent bookings, appointments, deadlines, visits, and recurrences", fields: ["startsAt", "endsAt", "dueAt", "recurrenceRule", "timezone"], relationKind: "temporal_event", fromEntity: "event", toEntity: "subject" },
-  { id: "money_movement", label: "money movement", humanValue: "track monetary amounts, balances, payouts, refunds, fees, and settlement", fields: ["amount", "currency", "feeAmount", "settledAt", "balanceAfter"], relationKind: "financial_transaction", fromEntity: "transaction", toEntity: "account" },
-  { id: "observation_sample", label: "observation sample", humanValue: "record measurements, mood, progress, sensor values, and status samples", fields: ["observedAt", "value", "unit", "severity", "confidence"], relationKind: "observation_sample", fromEntity: "observation", toEntity: "subject" },
-  { id: "dependency_trace", label: "dependency and traceability", humanValue: "show blockers, prerequisites, derivations, audits, and downstream impact", fields: ["dependencyKind", "blockedReason", "resolvedAt", "auditNote", "impact"], relationKind: "dependency", fromEntity: "dependentRecord", toEntity: "dependencyRecord" },
-  { id: "custom_extension_boundary", label: "custom extension boundary", humanValue: "keep niche fields portable without forcing every private detail into the core catalog", fields: ["customFieldKey", "customFieldValue", "schemaVersion", "visibility", "notesBody"], relationKind: "generic", fromEntity: "customRecord", toEntity: "canonicalRecord" },
+  { id: "core_record", label: "core record lifecycle", humanValue: "create, update, archive, restore, and export durable records", fields: ["name", "status", "createdAt", "updatedAt", "archivedAt"], coverageFields: ["title", "status", "archivedAt", "source", "metadata"], relationKind: "ownership", fromEntity: "workspace", toEntity: "record", collectionNames: ["documents", "projects", "tasks"] },
+  { id: "participant_access", label: "participants and access", humanValue: "track who participates, owns, approves, or can act", fields: ["actorId", "role", "permission", "joinedAt", "leftAt"], coverageFields: ["actorId", "role", "joinedAt", "expiresAt", "displayName"], relationKind: "participant", fromEntity: "actor", toEntity: "activity", collectionNames: ["actors", "role_assignments", "team_memberships", "documents"] },
+  { id: "membership_grouping", label: "membership and grouping", humanValue: "organize entities into teams, cohorts, lists, groups, or households", fields: ["groupName", "memberRole", "startsAt", "endsAt", "isPrimary"], coverageFields: ["teamId", "actorId", "role", "joinedAt", "leftAt"], relationKind: "membership", fromEntity: "member", toEntity: "group", collectionNames: ["team_memberships", "cohort_memberships", "grocery_items", "communities_membership", "household_members"] },
+  { id: "line_item_breakdown", label: "line item breakdown", humanValue: "represent totals as explainable child rows with quantities and amounts", fields: ["quantity", "unitPrice", "subtotal", "taxAmount", "discountAmount"], coverageFields: ["quantity", "amountCents", "unitAmountCents", "discountCents", "description"], relationKind: "line_item", fromEntity: "lineItem", toEntity: "parentRecord", collectionNames: ["invoice_line_items", "order_line_items", "deal_line_items", "quote_line_items", "recipe_ingredients"] },
+  { id: "source_import_sync", label: "source and import provenance", humanValue: "preserve where records came from and how they map to external sources", fields: ["sourceKind", "externalId", "importedAt", "syncedAt", "syncStatus"], coverageFields: ["externalId", "externalSource", "lastSyncedAt", "syncDirection", "sourceMetadata"], relationKind: "source_import", fromEntity: "sourceRecord", toEntity: "canonicalRecord", collectionNames: ["actors", "synced_external_entities", "webhook_deliveries", "external_threads"] },
+  { id: "attachment_documents", label: "attachments and documents", humanValue: "attach files, images, certificates, receipts, notes, and supporting media", fields: ["filename", "contentType", "sizeBytes", "uploadedAt", "caption"], coverageFields: ["name", "mimeType", "sizeBytes", "uri", "file"], relationKind: "attachment", fromEntity: "asset", toEntity: "record", collectionNames: ["documents", "attachments", "medical_documents", "financial_documents", "travel_documents"] },
+  { id: "place_availability", label: "place and availability", humanValue: "connect records to places, addresses, rooms, routes, and available slots", fields: ["address", "geoPoint", "timezone", "availableFrom", "availableUntil"], coverageFields: ["address", "city", "country", "startsAt", "endsAt"], relationKind: "location", fromEntity: "record", toEntity: "place", collectionNames: ["document_properties", "places_visited", "property_listings", "availability_slots", "booking_slots", "running_routes"] },
+  { id: "scheduled_event", label: "scheduled event", humanValue: "represent bookings, appointments, deadlines, visits, and recurrences", fields: ["startsAt", "endsAt", "dueAt", "recurrenceRule", "timezone"], coverageFields: ["startsAt", "endsAt", "dueAt", "recurrenceRule", "status"], relationKind: "temporal_event", fromEntity: "event", toEntity: "subject", collectionNames: ["replays", "bookings", "medical_appointments", "meetings", "events", "availability_slots", "tasks"] },
+  { id: "money_movement", label: "money movement", humanValue: "track monetary amounts, balances, payouts, refunds, fees, and settlement", fields: ["amount", "currency", "feeAmount", "settledAt", "balanceAfter"], coverageFields: ["amountCents", "currency", "status", "paid", "balanceCents"], relationKind: "financial_transaction", fromEntity: "transaction", toEntity: "account", collectionNames: ["billing_customers", "transactions", "charges", "refunds", "payouts", "invoices"] },
+  { id: "observation_sample", label: "observation sample", humanValue: "record measurements, mood, progress, sensor values, and status samples", fields: ["observedAt", "value", "unit", "severity", "confidence"], coverageFields: ["loggedAt", "severity", "values", "bpm", "submittedAt"], relationKind: "observation_sample", fromEntity: "observation", toEntity: "subject", collectionNames: ["survey_responses", "symptom_logs", "mood_logs", "lab_results", "heart_rate_samples", "body_measurements"] },
+  { id: "dependency_trace", label: "dependency and traceability", humanValue: "show blockers, prerequisites, derivations, audits, and downstream impact", fields: ["dependencyKind", "blockedReason", "resolvedAt", "auditNote", "impact"], coverageFields: ["type", "description", "resolvedAt", "status", "dependencyTaskIds"], relationKind: "dependency", fromEntity: "dependentRecord", toEntity: "dependencyRecord", collectionNames: ["labels", "entity_relations", "blockers", "issue_sla_state", "pull_request_issues"] },
+  { id: "custom_extension_boundary", label: "custom extension boundary", humanValue: "keep niche fields portable without forcing every private detail into the core catalog", fields: ["customFieldKey", "customFieldValue", "schemaVersion", "visibility", "notesBody"], coverageFields: ["name", "fieldType", "value", "entityType", "metadata"], relationKind: "generic", fromEntity: "customRecord", toEntity: "canonicalRecord", collectionNames: ["custom_fields", "field_values", "templates", "activity_entries"], coverageStatus: "custom_database", notes: "Custom database boundary: canonical records stay portable while niche fields live in custom_fields and field_values." },
 ];
 
 export const CATALOG_COVERAGE_WAVES: CoverageWaveSeed[] = [
@@ -92,6 +96,7 @@ function slug(input: string): string {
 }
 
 function buildCoverageNeed(wave: CoverageWaveSeed, archetype: string, scenario: CoverageScenarioSeed): CatalogCoverageNeed {
+  const coverageStatus = scenario.coverageStatus ?? "canonical";
   return {
     id: `${wave.id}.${slug(archetype)}.${scenario.id}`,
     wave: wave.id,
@@ -104,11 +109,11 @@ function buildCoverageNeed(wave: CoverageWaveSeed, archetype: string, scenario: 
     requiredRelationships: [{ name: `${scenario.id}_relation`, kind: scenario.relationKind, from: scenario.fromEntity, to: scenario.toEntity }],
     evidence: wave.evidence,
     coverage: {
-      status: "candidate_mapping",
-      collectionNames: wave.collectionNames,
-      fieldNames: scenario.fields,
+      status: coverageStatus,
+      collectionNames: [...new Set([...wave.collectionNames, ...scenario.collectionNames])],
+      fieldNames: scenario.coverageFields ?? scenario.fields,
       relationNames: [`${scenario.id}_relation`],
-      notes: "Phase-1 coverage candidate; final waves must prove exact field and relation coverage or classify the need as canonical gap/custom database.",
+      notes: scenario.notes ?? "Phase-1 coverage candidate; final waves must prove exact field and relation coverage or classify the need as canonical gap/custom database.",
     },
   };
 }
