@@ -26,7 +26,7 @@ import type { ClawInstance, TelegramSendMediaInput, TelegramSendMessageInput, Vo
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
 import { clawCommandRequestSchema, clawContractVersionV1, resolveClawPersistentSurfacePath, semanticPlanSchema } from "@clawjs/core";
-import type { ClawCommandResponse, ClawDomain, CommitmentKind, CommitmentStatus, ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, RulesCompileInput, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
+import type { ClawCommandResponse, ClawDomain, CommitmentKind, CommitmentStatus, ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
 import { runEmbeddedDatabaseCli } from "./database-advanced.ts";
 import { runMagicDbCli } from "./database-magic.ts";
 import { runMemoryCli } from "./memory-local.ts";
@@ -76,6 +76,7 @@ import { buildImageCommonInput, buildMediaListInput, buildMediaMetadata } from "
 import { OPEN_SURFACES, allOpenSurfaceHostnames, parseClawHostSurface, resolveOpenSurface, surfacePrimaryClawUrl, type OpenSurface, type OpenSurfaceState } from "./cli-open-surfaces.ts";
 import { openBrowser, openStateDir, openStatePath, readOpenState, repoRootFromCliPackage, writeOpenState } from "./cli-open-state.ts";
 import { portIsOpen, processIsAlive, waitForUrl, writeProgress } from "./cli-process-utils.ts";
+import { parseRuleHints, parseRuleReferences } from "./cli-rule-utils.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { collectFlagValues, parseCsvFlag, parseJsonFlag } from "./cli-flag-parsers.ts";
 import { inferAudioExtension, inferMimeTypeFromPath, parseInferenceMessages, pathSafeBasename, readJsonFile, resolveRuntimeAdapterId, timelineRange, type GenerationCliMediaKind } from "./cli-runtime-utils.ts";
@@ -627,38 +628,6 @@ function parseContextBlock(value?: string): { title: string; content: string }[]
     title: trimmed.slice(0, separatorIndex).trim() || "Context",
     content: trimmed.slice(separatorIndex + 2).trim(),
   }];
-}
-
-function parseRuleHints(flags: Record<string, string>): Omit<RulesCompileInput, "prompt"> | undefined {
-  const hints: Omit<RulesCompileInput, "prompt"> = {
-    ...(flags.user ? { user: flags.user } : {}),
-    ...(flags.organization || flags.org ? { organization: flags.organization || flags.org } : {}),
-    ...(flags.brand ? { brand: flags.brand } : {}),
-    ...(flags.client ? { client: flags.client } : {}),
-    ...(flags.project ? { project: flags.project } : {}),
-    ...(flags.domain ? { domain: flags.domain } : {}),
-    ...(flags.service ? { service: flags.service } : {}),
-    ...(flags["task-type"] || flags.task ? { taskType: flags["task-type"] || flags.task } : {}),
-    ...(flags["output-format"] || flags.output ? { outputFormat: flags["output-format"] || flags.output } : {}),
-    ...(flags.agent ? { agent: flags.agent } : {}),
-    ...(flags.channel ? { channel: flags.channel } : {}),
-    ...(flags["rules-limit"] ? { limit: Number(flags["rules-limit"]) } : {}),
-  };
-  return Object.keys(hints).length > 0 ? hints : undefined;
-}
-
-function parseRuleReferences(value: string | undefined): Array<{ kind: string; ref: string; label?: string }> {
-  return parseCsvFlag(value).map((entry) => {
-    const [kind, ref, label] = entry.split(":");
-    if (!kind || !ref) {
-      throw new CliHandledError("usage_error", `Invalid rule reference "${entry}". Use kind:ref[:label].`, CLI_EXIT_USAGE);
-    }
-    return {
-      kind,
-      ref,
-      ...(label ? { label } : {}),
-    };
-  });
 }
 
 function buildOpenUsage(binName: string): string {
