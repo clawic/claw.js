@@ -9,6 +9,7 @@ import fs from "node:fs";
 import os from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { readLocalAdminBootstrap } from "./local-admin-bootstrap.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -37,6 +38,7 @@ function defaultClawjsDataRoot(flags) {
 }
 
 export async function runOpenDrive(args) {
+  const bootstrap = await readLocalAdminBootstrap();
   const flags = {};
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -92,6 +94,7 @@ export async function runOpenDrive(args) {
       dataDir,
       dbPath: process.env.CLAW_DRIVE_DB_PATH,
     };
+    if (bootstrap.adminToken) overrides.adminToken = bootstrap.adminToken;
     if (flags["status-file"]) overrides.statusFile = flags["status-file"];
     if (flags["ocr-sidecar"]) overrides.ocrSidecarPath = flags["ocr-sidecar"];
     if (flags["embed-sidecar"]) overrides.embedSidecarPath = flags["embed-sidecar"];

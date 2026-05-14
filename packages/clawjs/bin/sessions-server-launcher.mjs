@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { readLocalAdminBootstrap } from "./local-admin-bootstrap.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -75,6 +76,7 @@ function defaultClawjsDataRoot(flags) {
 
 export async function runOpenSessions(args) {
   const flags = parseFlags(args);
+  const bootstrap = await readLocalAdminBootstrap();
 
   const port = flags.port ? Number(flags.port) : Number(process.env.CLAW_SESSIONS_PORT ?? process.env.PORT ?? 24101);
   const host = flags.host ?? flags.bind ?? process.env.CLAW_SESSIONS_HOST ?? process.env.HOST ?? "127.0.0.1";
@@ -82,7 +84,7 @@ export async function runOpenSessions(args) {
   const dataDir = defaultClawjsDataRoot(flags);
   const dbPath = flags["db-path"] ?? process.env.CLAW_SESSIONS_DB_PATH ?? path.join(dataDir, "sessions.sqlite");
   const statusFile = flags["status-file"];
-  const sharedSecret = flags.secret ?? process.env.CLAW_SESSIONS_SHARED_SECRET;
+  const sharedSecret = flags.secret ?? bootstrap.adminToken ?? process.env.CLAW_SESSIONS_SHARED_SECRET;
 
   const buildSessionsApp = await loadBuildSessionsApp();
   if (!buildSessionsApp) {

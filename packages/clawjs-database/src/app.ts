@@ -179,6 +179,7 @@ async function readUpload(request: FastifyRequest): Promise<{
 
 export interface BuildDatabaseAppOptions {
   config?: Partial<DatabaseServiceConfig>;
+  adminToken?: string | null;
 }
 
 export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
@@ -187,8 +188,8 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
   fs.mkdirSync(config.filesDir, { recursive: true });
 
   const ephemeralAdminToken = loadEphemeralAdminToken({
-    dataDir: config.dataDir,
     envVarName: "CLAW_DATABASE_ADMIN_TOKEN",
+    token: options.adminToken,
   });
 
   const app = Fastify({ logger: false });

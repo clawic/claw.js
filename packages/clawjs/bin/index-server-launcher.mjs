@@ -8,6 +8,7 @@ import fs from "node:fs";
 import os from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { readLocalAdminBootstrap } from "./local-admin-bootstrap.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -75,6 +76,7 @@ function defaultClawjsDataRoot(flags) {
 
 export async function runOpenIndex(args) {
   const flags = parseFlags(args);
+  const bootstrap = await readLocalAdminBootstrap();
   const port = flags.port ? Number(flags.port) : Number(process.env.CLAW_SEARCH_PORT ?? 24106);
   const host = flags.host ?? flags.bind ?? process.env.CLAW_SEARCH_HOST ?? "127.0.0.1";
   const workspace = flags.workspace ?? process.env.CLAW_WORKSPACE ?? process.cwd();
@@ -90,6 +92,7 @@ export async function runOpenIndex(args) {
 
   fs.mkdirSync(dataDir, { recursive: true });
   const { app, config } = buildIndexApp({
+    ...(bootstrap.adminToken ? { adminToken: bootstrap.adminToken } : {}),
     config: {
       host, port, dataDir, dbPath,
       ...(flags.secret ? { jwtSecret: flags.secret } : {}),

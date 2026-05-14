@@ -52,12 +52,13 @@ export interface BuildIndexAppOptions {
   config?: Partial<IndexServiceConfig>;
   schedulerHooks?: SchedulerHooks;
   startScheduler?: boolean;
+  adminToken?: string | null;
 }
 
 export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   const config = loadIndexConfig(options.config);
   fs.mkdirSync(config.dataDir, { recursive: true });
-  const ephemeralAdminToken = loadEphemeralAdminToken({ dataDir: config.dataDir, envVarName: "CLAW_SEARCH_ADMIN_TOKEN" });
+  const ephemeralAdminToken = loadEphemeralAdminToken({ envVarName: "CLAW_SEARCH_ADMIN_TOKEN", token: options.adminToken });
   const app = Fastify({ logger: false });
   const auth = new IndexAuthService(config.jwtSecret, ephemeralAdminToken);
   const store = new IndexStore(config.dbPath);

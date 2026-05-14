@@ -268,6 +268,7 @@ async function readUpload(request: FastifyRequest): Promise<{
 
 export interface BuildDriveAppOptions {
   config?: Partial<DriveServiceConfig>;
+  adminToken?: string | null;
   /** Absolute path to the macOS Vision OCR sidecar binary. Skipped if missing. */
   ocrSidecarPath?: string;
   /** Absolute path to the CLIP embedding sidecar binary. Skipped if missing. */
@@ -281,8 +282,8 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
   fs.mkdirSync(config.dataDir, { recursive: true });
 
   const ephemeralAdminToken = loadEphemeralAdminToken({
-    dataDir: config.dataDir,
     envVarName: "CLAW_DRIVE_ADMIN_TOKEN",
+    token: options.adminToken,
   });
 
   const app = Fastify({ logger: false });

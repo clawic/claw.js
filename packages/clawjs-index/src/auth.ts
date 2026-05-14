@@ -1,6 +1,4 @@
-import { createSecretKey, randomBytes, timingSafeEqual } from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
+import { createSecretKey, timingSafeEqual } from "node:crypto";
 
 import { SignJWT, jwtVerify } from "jose";
 
@@ -57,18 +55,9 @@ export class IndexAuthService {
   }
 }
 
-export function loadEphemeralAdminToken(opts: { dataDir: string; envVarName: string }): string {
+export function loadEphemeralAdminToken(opts: { envVarName: string; token?: string | null }): string | null {
+  if (opts.token && opts.token.length >= 32) return opts.token;
   const fromEnv = process.env[opts.envVarName];
   if (fromEnv && fromEnv.length >= 32) return fromEnv;
-  const tokenPath = path.join(opts.dataDir, ".admin-token");
-  try {
-    const existing = fs.readFileSync(tokenPath, "utf8").trim();
-    if (existing.length >= 32) return existing;
-  } catch {
-    /* fall through */
-  }
-  const token = randomBytes(32).toString("base64url");
-  fs.mkdirSync(opts.dataDir, { recursive: true, mode: 0o700 });
-  fs.writeFileSync(tokenPath, token, { mode: 0o600 });
-  return token;
+  return null;
 }

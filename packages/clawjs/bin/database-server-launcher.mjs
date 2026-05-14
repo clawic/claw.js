@@ -11,6 +11,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { readLocalAdminBootstrap } from "./local-admin-bootstrap.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -74,6 +75,7 @@ function writeStatusFile(filePath, payload) {
 
 export async function runOpenDatabase(args) {
   const flags = parseFlags(args);
+  const bootstrap = await readLocalAdminBootstrap();
 
   const port = flags.port ? Number(flags.port) : Number(process.env.CLAW_DATABASE_PORT ?? 24102);
   const host = flags.host ?? flags.bind ?? process.env.CLAW_DATABASE_HOST ?? "127.0.0.1";
@@ -97,6 +99,7 @@ export async function runOpenDatabase(args) {
   fs.mkdirSync(filesDir, { recursive: true });
 
   const { app, config } = buildDatabaseApp({
+    ...(bootstrap.adminToken ? { adminToken: bootstrap.adminToken } : {}),
     config: {
       host,
       port,

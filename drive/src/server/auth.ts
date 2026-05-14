@@ -1,6 +1,4 @@
 import { createHash, createSecretKey, randomBytes, timingSafeEqual } from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
 
 import { SignJWT, jwtVerify } from "jose";
 
@@ -79,25 +77,14 @@ export function generateOpaqueToken(prefix: string): string {
 }
 
 /// Loads the per-session admin token used by the bundling app to authenticate
-/// against the loopback daemon without ever touching the system Keychain.
-/// Resolution: prefer the env var (set by the GUI on spawn), then a 0600 file
-/// inside the daemon data dir (used when the daemon is launched standalone).
-/// Generates and persists a fresh token if neither exists.
+/// against the loopback daemon. It may come from explicit host bootstrap or an
+/// environment variable for standalone development, but never from disk.
 export function loadEphemeralAdminToken(opts: {
-  dataDir: string;
   envVarName: string;
-}): string {
+  token?: string | null;
+}): string | null {
+  if (opts.token && opts.token.length >= 32) return opts.token;
   const fromEnv = process.env[opts.envVarName];
   if (fromEnv && fromEnv.length >= 32) return fromEnv;
-  const tokenPath = path.join(opts.dataDir, ".admin-token");
-  try {
-    const existing = fs.readFileSync(tokenPath, "utf8").trim();
-    if (existing.length >= 32) return existing;
-  } catch {
-    /* fall through to generation */
-  }
-  const token = randomBytes(32).toString("base64url");
-  fs.mkdirSync(opts.dataDir, { recursive: true, mode: 0o700 });
-  fs.writeFileSync(tokenPath, token, { mode: 0o600 });
-  return token;
+  return null;
 }
