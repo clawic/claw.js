@@ -404,6 +404,15 @@ export const clawTemporalEvents = {
   itemDue: "temporal.item.due",
 } as const;
 
+export const clawSessionEvents = {
+  projectUpdated: "project.updated",
+  updated: "session.updated",
+  messageAppended: "message.appended",
+  messageUpdated: "message.updated",
+  turnStarted: "turn.started",
+  turnFinished: "turn.finished",
+} as const;
+
 export const clawDriveApiRoutes = {
   realtime: "/v1/realtime",
   health: "/v1/health",
@@ -780,6 +789,17 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       surfaceClass: "event",
       direction: "generated",
       notes: "Temporal runtime event emitted for due items and notification routing.",
+    })),
+    ...Object.values(clawSessionEvents).map((event) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: `claw.event.sessions.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
+      kind: "eventTopic",
+      name: event,
+      value: event,
+      parentId: "claw.contracts.events",
+      surfaceClass: "event",
+      direction: "generated",
+      notes: "Sessions service event emitted over the registered session event stream.",
     })),
     ...stableJsonFields.map(([id, field, name]) => clawPersistentSurface.contract({
       ...contractDefaults,

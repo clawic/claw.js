@@ -1,4 +1,4 @@
-import { clawApiPath } from "@clawjs/core";
+import { clawApiPath, clawSessionEvents } from "@clawjs/core";
 import fs from "node:fs";
 
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
@@ -108,7 +108,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       connection: "keep-alive",
     });
     subscribers.add(reply);
-    writeSse(reply, { type: "session.updated", at: Date.now(), payload: { ready: true } });
+    writeSse(reply, { type: clawSessionEvents.updated, at: Date.now(), payload: { ready: true } });
     request.raw.on("close", () => {
       subscribers.delete(reply);
     });
@@ -129,7 +129,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       };
       if (!input.path) return await reply.code(400).send({ error: "path is required" });
       const project = store.createProject(input);
-      publish({ type: "project.updated", projectId: project.id, payload: project });
+      publish({ type: clawSessionEvents.projectUpdated, projectId: project.id, payload: project });
       return project;
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
@@ -169,7 +169,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     };
     const project = store.updateProject(params.id, patch);
     if (!project) return await reply.code(404).send({ error: "project_not_found" });
-    publish({ type: "project.updated", projectId: project.id, payload: project });
+    publish({ type: clawSessionEvents.projectUpdated, projectId: project.id, payload: project });
     return project;
   });
 
@@ -177,7 +177,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const deleted = store.deleteProject(params.id);
-    publish({ type: "project.updated", projectId: params.id, payload: { deleted } });
+    publish({ type: clawSessionEvents.projectUpdated, projectId: params.id, payload: { deleted } });
     return { deleted };
   });
 
@@ -204,7 +204,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       };
       if (!input.agent) return await reply.code(400).send({ error: "agent is required" });
       const session = store.createSession(input);
-      publish({ type: "session.updated", sessionId: session.id, payload: session });
+      publish({ type: clawSessionEvents.updated, sessionId: session.id, payload: session });
       return session;
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
@@ -276,7 +276,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     if (body.projectId === null || typeof body.projectId === "string") session = store.assignProjectById(params.id, body.projectId as string | null);
     if (body.projectPath === null || typeof body.projectPath === "string") session = store.assignProject(params.id, body.projectPath as string | null);
     if (typeof body.status === "string") session = store.setStatus(params.id, body.status as SessionStatus);
-    if (session) publish({ type: "session.updated", sessionId: session.id, payload: session });
+    if (session) publish({ type: clawSessionEvents.updated, sessionId: session.id, payload: session });
     return session;
   });
 
@@ -310,7 +310,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
         return await reply.code(400).send({ error: "role and contentText are required" });
       }
       const message = store.appendMessage(input);
-      publish({ type: "message.appended", sessionId: params.id, messageId: message.id, payload: message });
+      publish({ type: clawSessionEvents.messageAppended, sessionId: params.id, messageId: message.id, payload: message });
       return message;
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
@@ -342,7 +342,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     if (!message || message.sessionId !== params.sessionId) {
       return await reply.code(404).send({ error: "message_not_found" });
     }
-    publish({ type: "message.updated", sessionId: params.sessionId, messageId: message.id, payload: message });
+    publish({ type: clawSessionEvents.messageUpdated, sessionId: params.sessionId, messageId: message.id, payload: message });
     return message;
   });
 
@@ -377,7 +377,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
           title: input.title,
           status: "active",
         });
-        publish({ type: "session.updated", sessionId: session.id, payload: session });
+        publish({ type: clawSessionEvents.updated, sessionId: session.id, payload: session });
       }
 
       interruptedTurns.delete(session.id);
@@ -389,17 +389,17 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
         audioRef: input.audioRef ?? null,
         streamingState: "complete",
       });
-      publish({ type: "message.appended", sessionId: session.id, messageId: userMessage.id, payload: userMessage });
+      publish({ type: clawSessionEvents.messageAppended, sessionId: session.id, messageId: userMessage.id, payload: userMessage });
 
       const assistantMessage = store.appendMessage({
         sessionId: session.id,
         role: "assistant",
         contentText: "",
-        timeline: [{ kind: "turn.started", title: "Working", at: Date.now() }],
+        timeline: [{ kind: clawSessionEvents.turnStarted, title: "Working", at: Date.now() }],
         workSummary: { status: "working", text: "Working" },
         streamingState: "streaming",
       });
-      publish({ type: "message.appended", sessionId: session.id, messageId: assistantMessage.id, payload: assistantMessage });
+      publish({ type: clawSessionEvents.messageAppended, sessionId: session.id, messageId: assistantMessage.id, payload: assistantMessage });
 
       const fakeReply = input.fakeReply ?? process.env.SESSIONS_FAKE_CODEX_REPLY;
       const realTurnsEnabled = process.env.SESSIONS_ENABLE_REAL_CODEX_TURNS === "1";
@@ -414,16 +414,16 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
         timeline: [
           ...(assistantMessage.timeline ?? []),
           { kind: "tool", title: "Codex", status: realTurnsEnabled ? "ready" : "fixture", at: Date.now() },
-          { kind: "turn.finished", status: streamingState, at: Date.now() },
+          { kind: clawSessionEvents.turnFinished, status: streamingState, at: Date.now() },
         ],
         workSummary: { status: streamingState, text: streamingState === "complete" ? "Completed" : "Interrupted" },
         streamingState,
       });
       if (updated) {
-        publish({ type: "message.updated", sessionId: session.id, messageId: updated.id, payload: updated });
+        publish({ type: clawSessionEvents.messageUpdated, sessionId: session.id, messageId: updated.id, payload: updated });
       }
       const finished = store.setStatus(session.id, streamingState === "complete" ? "completed" : "interrupted");
-      if (finished) publish({ type: "turn.finished", sessionId: session.id, payload: { session: finished, message: updated } });
+      if (finished) publish({ type: clawSessionEvents.turnFinished, sessionId: session.id, payload: { session: finished, message: updated } });
       return { session: finished, userMessage, assistantMessage: updated };
     } catch (error) {
       publish({ type: "error", payload: { error: error instanceof Error ? error.message : String(error) } });
@@ -437,7 +437,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     interruptedTurns.add(params.id);
     const session = store.setStatus(params.id, "interrupted");
     if (!session) return await reply.code(404).send({ error: "session_not_found" });
-    publish({ type: "turn.finished", sessionId: params.id, payload: { interrupted: true, session } });
+    publish({ type: clawSessionEvents.turnFinished, sessionId: params.id, payload: { interrupted: true, session } });
     return { interrupted: true, session };
   });
 
