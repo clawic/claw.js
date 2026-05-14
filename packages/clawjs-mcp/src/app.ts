@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
@@ -53,9 +54,9 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
 
   app.addHook("onClose", async () => { store.close(); });
 
-  app.get("/v1/health", async () => ({ ok: true, service: "mcp", host: config.host, port: config.port, exposedTools: exposed.map((tool) => tool.name) }));
+  app.get(clawApiPath("health"), async () => ({ ok: true, service: "mcp", host: config.host, port: config.port, exposedTools: exposed.map((tool) => tool.name) }));
 
-  app.post("/v1/mcp/servers", async (request, reply) => {
+  app.post(clawApiPath("mcp/servers"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const body = readBody(request);
     const input: RegisterMCPServerInput = {
@@ -72,18 +73,18 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
     return store.registerServer(input);
   });
 
-  app.get("/v1/mcp/servers", async (request, reply) => {
+  app.get(clawApiPath("mcp/servers"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     return { items: store.listServers() };
   });
 
-  app.delete("/v1/mcp/servers/:id", async (request, reply) => {
+  app.delete(clawApiPath("mcp/servers/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     return { deleted: store.removeServer(params.id) };
   });
 
-  app.post("/v1/mcp/servers/:id/refresh", async (request, reply) => {
+  app.post(clawApiPath("mcp/servers/:id/refresh"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const server = store.getServer(params.id);
@@ -113,13 +114,13 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
     }
   });
 
-  app.get("/v1/mcp/tools", async (request, reply) => {
+  app.get(clawApiPath("mcp/tools"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     return { items: store.listTools(asString(query.server)) };
   });
 
-  app.post("/v1/mcp/tools/call", async (request, reply) => {
+  app.post(clawApiPath("mcp/tools/call"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const body = readBody(request) as MCPToolCallInput;
     if (!body.prefixedName) return await reply.code(400).send({ error: "prefixedName is required" });
@@ -131,12 +132,12 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
     return await protocol.callTool(tool.toolName, body.args ?? {});
   });
 
-  app.get("/v1/mcp/expose/tools", async (request, reply) => {
+  app.get(clawApiPath("mcp/expose/tools"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     return { items: exposed.map((tool) => ({ name: tool.name, description: tool.description, inputSchema: tool.inputSchema })) };
   });
 
-  app.post("/v1/mcp/expose/rpc", async (request, reply) => {
+  app.post(clawApiPath("mcp/expose/rpc"), async (request, reply) => {
     const body = readBody(request) as { jsonrpc?: string; id?: number | string; method?: string; params?: Record<string, unknown> };
     if (body.jsonrpc !== "2.0" || !body.method) {
       return await reply.code(400).send({ jsonrpc: "2.0", id: body.id ?? null, error: { code: -32600, message: "invalid request" } });

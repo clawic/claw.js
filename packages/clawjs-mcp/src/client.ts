@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import type { MCPServerRecord, MCPToolCallResult } from "./types.ts";
 
 interface JsonRpcRequest {
@@ -121,30 +122,30 @@ export class MCPApiClient {
     env?: Record<string, string> | null;
     enabled?: boolean;
   }): Promise<MCPServerRecord> {
-    return this.call("POST", "/v1/mcp/servers", input);
+    return this.call("POST", clawApiPath("mcp/servers"), input);
   }
 
   listServers(): Promise<{ items: MCPServerRecord[] }> {
-    return this.call("GET", "/v1/mcp/servers");
+    return this.call("GET", clawApiPath("mcp/servers"));
   }
 
   removeServer(id: string): Promise<{ deleted: boolean }> {
-    return this.call("DELETE", `/v1/mcp/servers/${encodeURIComponent(id)}`);
+    return this.call("DELETE", clawApiPath(`mcp/servers/${encodeURIComponent(id)}`));
   }
 
   refreshServer(id: string): Promise<{ tools: unknown[]; capabilities: unknown }> {
-    return this.call("POST", `/v1/mcp/servers/${encodeURIComponent(id)}/refresh`, {});
+    return this.call("POST", clawApiPath(`mcp/servers/${encodeURIComponent(id)}/refresh`), {});
   }
 
   listTools(serverId?: string): Promise<{ items: unknown[] }> {
-    return this.call("GET", `/v1/mcp/tools${buildQuery({ server: serverId })}`);
+    return this.call("GET", clawApiPath(`mcp/tools${buildQuery({ server: serverId })}`));
   }
 
   callTool(prefixedName: string, args: Record<string, unknown>): Promise<MCPToolCallResult> {
-    return this.call("POST", "/v1/mcp/tools/call", { prefixedName, args });
+    return this.call("POST", clawApiPath("mcp/tools/call"), { prefixedName, args });
   }
 
   exposed(): Promise<{ items: Array<{ name: string; description: string; inputSchema: Record<string, unknown> }> }> {
-    return this.call("GET", "/v1/mcp/expose/tools");
+    return this.call("GET", clawApiPath("mcp/expose/tools"));
   }
 }
