@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 // Drive subcommands for the Clawix CLI. Implemented as a small HTTP
 // client against the local Drive server (default 127.0.0.1:24104).
 
@@ -101,7 +102,7 @@ async function login(args) {
 }
 
 async function loginWith(email, password) {
-  const res = await fetchJson("/v1/auth/admin/login", {
+  const res = await fetchJson(clawApiPath("auth/admin/login"), {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
@@ -119,18 +120,18 @@ async function itemsCmd(args) {
     if (flags.view) params.set("view", String(flags.view));
     if (flags.parent) params.set("parentId", String(flags.parent));
     if (flags.query) params.set("q", String(flags.query));
-    const r = await fetchJson(`/v1/items?${params}`);
+    const r = await fetchJson(clawApiPath(`items?${params}`));
     console.log(fmt(r.body));
     return r.ok ? 0 : 1;
   }
   if (sub === "show") {
-    const r = await fetchJson(`/v1/items/${rest[0]}`);
+    const r = await fetchJson(clawApiPath(`items/${rest[0]}`));
     console.log(fmt(r.body));
     return r.ok ? 0 : 1;
   }
   if (sub === "move") {
     const { flags } = parseFlags(rest.slice(1));
-    const r = await fetchJson(`/v1/items/${rest[0]}/move`, {
+    const r = await fetchJson(clawApiPath(`items/${rest[0]}/move`), {
       method: "POST",
       body: JSON.stringify({ parentId: flags.parent ?? null }),
     });
@@ -139,7 +140,7 @@ async function itemsCmd(args) {
   }
   if (sub === "copy") {
     const { flags } = parseFlags(rest.slice(1));
-    const r = await fetchJson(`/v1/items/${rest[0]}/copy`, {
+    const r = await fetchJson(clawApiPath(`items/${rest[0]}/copy`), {
       method: "POST",
       body: JSON.stringify({ parentId: flags.parent ?? null }),
     });
@@ -147,7 +148,7 @@ async function itemsCmd(args) {
     return r.ok ? 0 : 1;
   }
   if (sub === "star") {
-    const r = await fetchJson(`/v1/items/${rest[0]}`, {
+    const r = await fetchJson(clawApiPath(`items/${rest[0]}`), {
       method: "PATCH",
       body: JSON.stringify({ starred: true }),
     });
@@ -155,17 +156,17 @@ async function itemsCmd(args) {
     return r.ok ? 0 : 1;
   }
   if (sub === "trash") {
-    const r = await fetchJson(`/v1/items/${rest[0]}/trash`, { method: "POST" });
+    const r = await fetchJson(clawApiPath(`items/${rest[0]}/trash`), { method: "POST" });
     console.log(fmt(r.body));
     return r.ok ? 0 : 1;
   }
   if (sub === "restore") {
-    const r = await fetchJson(`/v1/items/${rest[0]}/restore`, { method: "POST" });
+    const r = await fetchJson(clawApiPath(`items/${rest[0]}/restore`), { method: "POST" });
     console.log(fmt(r.body));
     return r.ok ? 0 : 1;
   }
   if (sub === "delete") {
-    const r = await fetchJson(`/v1/items/${rest[0]}`, { method: "DELETE" });
+    const r = await fetchJson(clawApiPath(`items/${rest[0]}`), { method: "DELETE" });
     console.log(fmt(r.body));
     return r.ok ? 0 : 1;
   }
@@ -177,7 +178,7 @@ async function foldersCmd(args) {
   const sub = args[0];
   if (sub === "create") {
     const { flags } = parseFlags(args.slice(1));
-    const r = await fetchJson("/v1/items", {
+    const r = await fetchJson(clawApiPath("items"), {
       method: "POST",
       body: JSON.stringify({ kind: "folder", name: flags.name ?? "Untitled folder", parentId: flags.parent ?? null }),
     });
@@ -188,7 +189,7 @@ async function foldersCmd(args) {
     const { flags } = parseFlags(args.slice(1));
     const params = new URLSearchParams({ view: "my-drive" });
     if (flags.parent) params.set("parentId", String(flags.parent));
-    const r = await fetchJson(`/v1/items?${params}`);
+    const r = await fetchJson(clawApiPath(`items?${params}`));
     console.log(fmt(r.body));
     return r.ok ? 0 : 1;
   }
@@ -208,7 +209,7 @@ async function uploadCmd(args) {
   const fd = new FormData();
   fd.append("file", new Blob([buffer]), fileName);
   if (flags.parent) fd.append("parentId", String(flags.parent));
-  const url = `/v1/uploads${flags.policy ? `?duplicatePolicy=${encodeURIComponent(String(flags.policy))}` : ""}`;
+  const url = clawApiPath(`uploads${flags.policy ? `?duplicatePolicy=${encodeURIComponent(String(flags.policy))}` : ""}`);
   const r = await fetchJson(url, { method: "POST", body: fd });
   console.log(fmt(r.body));
   return r.ok ? 0 : 1;
@@ -232,7 +233,7 @@ async function searchCmd(args) {
   const sub = args[0];
   if (sub === "semantic") {
     const { _: positional, flags } = parseFlags(args.slice(1));
-    const r = await fetchJson("/v1/search/semantic", {
+    const r = await fetchJson(clawApiPath("search/semantic"), {
       method: "POST",
       body: JSON.stringify({ query: positional.join(" "), limit: Number(flags.limit ?? 20) }),
     });
@@ -240,7 +241,7 @@ async function searchCmd(args) {
     return r.ok ? 0 : 1;
   }
   const { _: positional } = parseFlags(args);
-  const r = await fetchJson(`/v1/search?q=${encodeURIComponent(positional.join(" "))}`);
+  const r = await fetchJson(clawApiPath(`search?q=${encodeURIComponent(positional.join(" "))}`));
   console.log(fmt(r.body));
   return r.ok ? 0 : 1;
 }
@@ -260,7 +261,7 @@ async function thumbnailCmd(args) {
 }
 
 async function exifCmd(args) {
-  const r = await fetchJson(`/v1/items/${args[0]}/exif`);
+  const r = await fetchJson(clawApiPath(`items/${args[0]}/exif`));
   console.log(fmt(r.body));
   return r.ok ? 0 : 1;
 }
@@ -268,7 +269,7 @@ async function exifCmd(args) {
 async function sharesCmd(args) {
   const sub = args[0];
   if (sub === "list") {
-    const r = await fetchJson(`/v1/items/${args[1]}/shares/all`);
+    const r = await fetchJson(clawApiPath(`items/${args[1]}/shares/all`));
     console.log(fmt(r.body));
     return r.ok ? 0 : 1;
   }
@@ -283,7 +284,7 @@ async function sharesCmd(args) {
       reason: flags.reason ?? null,
       agentName: flags.agent ?? "agent",
     };
-    const r = await fetchJson(`/v1/items/${itemId}/shares`, {
+    const r = await fetchJson(clawApiPath(`items/${itemId}/shares`), {
       method: "POST",
       body: JSON.stringify(body),
     });
@@ -291,7 +292,7 @@ async function sharesCmd(args) {
     return r.ok ? 0 : 1;
   }
   if (sub === "revoke") {
-    const r = await fetchJson(`/v1/items/${args[1]}/shares/${args[2]}/revoke`, { method: "POST" });
+    const r = await fetchJson(clawApiPath(`items/${args[1]}/shares/${args[2]}/revoke`), { method: "POST" });
     console.log(fmt(r.body));
     return r.ok ? 0 : 1;
   }
@@ -302,14 +303,14 @@ async function sharesCmd(args) {
 async function tokensCmd(args) {
   const sub = args[0];
   if (sub === "list") {
-    const r = await fetchJson("/v1/tokens");
+    const r = await fetchJson(clawApiPath("tokens"));
     console.log(fmt(r.body));
     return r.ok ? 0 : 1;
   }
   if (sub === "create") {
     const { flags } = parseFlags(args.slice(1));
     const operations = String(flags.operations ?? "items:read").split(",").map((s) => s.trim());
-    const r = await fetchJson("/v1/tokens", {
+    const r = await fetchJson(clawApiPath("tokens"), {
       method: "POST",
       body: JSON.stringify({ label: flags.label ?? "Agent token", operations }),
     });
@@ -317,7 +318,7 @@ async function tokensCmd(args) {
     return r.ok ? 0 : 1;
   }
   if (sub === "revoke") {
-    const r = await fetchJson(`/v1/tokens/${args[1]}/revoke`, { method: "POST" });
+    const r = await fetchJson(clawApiPath(`tokens/${args[1]}/revoke`), { method: "POST" });
     console.log(fmt(r.body));
     return r.ok ? 0 : 1;
   }
@@ -333,7 +334,7 @@ async function auditCmd(args) {
     if (flags.kinds) params.set("kinds", String(flags.kinds));
     if (flags.itemId) params.set("itemId", String(flags.itemId));
     if (flags.limit) params.set("limit", String(flags.limit));
-    const r = await fetchJson(`/v1/audit?${params}`);
+    const r = await fetchJson(clawApiPath(`audit?${params}`));
     console.log(fmt(r.body));
     return r.ok ? 0 : 1;
   }
@@ -349,7 +350,7 @@ async function privateCmd(args) {
   const sub = args[0];
   if (sub === "set" || sub === "unset") {
     const folderId = args[1];
-    const r = await fetchJson("/v1/encrypted-folders", {
+    const r = await fetchJson(clawApiPath("encrypted-folders"), {
       method: "POST",
       body: JSON.stringify({ folderId, enabled: sub === "set" }),
     });
@@ -357,7 +358,7 @@ async function privateCmd(args) {
     return r.ok ? 0 : 1;
   }
   if (sub === "list") {
-    const r = await fetchJson("/v1/encrypted-folders");
+    const r = await fetchJson(clawApiPath("encrypted-folders"));
     console.log(fmt(r.body));
     return r.ok ? 0 : 1;
   }
@@ -369,7 +370,7 @@ async function projectsCmd(args) {
   const sub = args[0];
   if (sub === "ensure") {
     const slug = args[1];
-    const r = await fetchJson(`/v1/projects/${encodeURIComponent(slug)}/ensure-folder`, { method: "POST" });
+    const r = await fetchJson(clawApiPath(`projects/${encodeURIComponent(slug)}/ensure-folder`), { method: "POST" });
     console.log(fmt(r.body));
     return r.ok ? 0 : 1;
   }

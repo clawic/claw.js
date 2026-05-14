@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 // Secrets subcommands for the Clawix CLI. Implemented as a small HTTP
 // client against the local Secrets server (default 127.0.0.1:24103).
 
@@ -126,7 +127,7 @@ async function secretsUnlock() {
 }
 
 async function secretsLock() {
-  const res = await fetchJson("/v1/secrets/lock", { method: "POST" });
+  const res = await fetchJson(clawApiPath("secrets/lock"), { method: "POST" });
   console.log(res.ok ? "Secrets locked." : fmt(res.body));
   return res.ok ? 0 : 1;
 }
@@ -140,13 +141,13 @@ async function secretsChangePassword() {
 }
 
 async function secretsDoctor() {
-  const res = await fetchJson("/v1/secrets/doctor");
+  const res = await fetchJson(clawApiPath("secrets/doctor"));
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
 
 async function secretsState() {
-  const res = await fetchJson("/v1/secrets/state");
+  const res = await fetchJson(clawApiPath("secrets/state"));
   console.log(fmt(res.body));
   return 0;
 }
@@ -156,7 +157,7 @@ async function secretsList(flags) {
   if (flags.search) q.set("search", String(flags.search));
   if (flags.folder) q.set("folderId", String(flags.folder));
   if (flags["include-trashed"]) q.set("includeTrashed", "true");
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/secrets?${q.toString()}`);
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/secrets?${q.toString()}`));
   if (!res.ok) { console.error(fmt(res.body)); return 1; }
   for (const s of res.body.secrets ?? []) {
     console.log(`${s.internalName.padEnd(30)} ${s.title.padEnd(30)} ${s.typeId ?? "-"}`);
@@ -165,7 +166,7 @@ async function secretsList(flags) {
 }
 
 async function foldersList() {
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/folders`);
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/folders`));
   if (!res.ok) { console.error(fmt(res.body)); return 1; }
   for (const f of res.body.folders ?? []) {
     console.log(`${f.id}  ${f.name}`);
@@ -181,7 +182,7 @@ async function foldersCreate(args) {
     ...(args.flags.icon ? { icon: String(args.flags.icon) } : {}),
     ...(args.flags.color ? { color: String(args.flags.color) } : {}),
   };
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/folders`, { method: "POST", body: JSON.stringify(body) });
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/folders`), { method: "POST", body: JSON.stringify(body) });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
@@ -190,7 +191,7 @@ async function foldersRename(args) {
   const id = args._[2];
   const name = args.flags.name;
   if (!id || !name) { console.error("id and --name required"); return 1; }
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/folders/${encodeURIComponent(id)}`, {
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/folders/${encodeURIComponent(id)}`), {
     method: "PATCH",
     body: JSON.stringify({ name: String(name) }),
   });
@@ -201,7 +202,7 @@ async function foldersRename(args) {
 async function foldersTrash(args) {
   const id = args._[2];
   if (!id) { console.error("id required"); return 1; }
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/folders/${encodeURIComponent(id)}`, { method: "DELETE" });
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/folders/${encodeURIComponent(id)}`), { method: "DELETE" });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
@@ -209,7 +210,7 @@ async function foldersTrash(args) {
 async function secretsDescribe(args) {
   const name = args._[1];
   if (!name) { console.error("name required"); return 1; }
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}`);
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}`));
   if (!res.ok) { console.error(fmt(res.body)); return 1; }
   console.log(fmt(res.body.secret));
   return 0;
@@ -220,7 +221,7 @@ async function secretsCreate(args) {
   if (!file) { console.error("--file <draft.json> required"); return 1; }
   const fs = await import("node:fs");
   const draft = JSON.parse(fs.readFileSync(String(file), "utf8"));
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/secrets`, {
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/secrets`), {
     method: "POST", body: JSON.stringify({ draft }),
   });
   console.log(fmt(res.body));
@@ -231,7 +232,7 @@ async function secretsArchive(args) {
   const name = args._[1];
   if (!name) { console.error("name required"); return 1; }
   const archived = args.flags.off ? false : true;
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}/archive`, {
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}/archive`), {
     method: "POST", body: JSON.stringify({ archived }),
   });
   console.log(fmt(res.body));
@@ -241,7 +242,7 @@ async function secretsArchive(args) {
 async function secretsCompromise(args) {
   const name = args._[1];
   if (!name) { console.error("name required"); return 1; }
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}/compromise`, {
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}/compromise`), {
     method: "POST", body: JSON.stringify({ compromised: true, reason: args.flags.reason ?? null }),
   });
   console.log(fmt(res.body));
@@ -251,7 +252,7 @@ async function secretsCompromise(args) {
 async function secretsTrash(args) {
   const name = args._[1];
   if (!name) { console.error("name required"); return 1; }
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}`, { method: "DELETE" });
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}`), { method: "DELETE" });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
@@ -259,7 +260,7 @@ async function secretsTrash(args) {
 async function secretsRestore(args) {
   const name = args._[1];
   if (!name) { console.error("name required"); return 1; }
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}/restore`, { method: "POST" });
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}/restore`), { method: "POST" });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
@@ -282,7 +283,7 @@ async function secretsBrokerHttp(args) {
   }
   const body = args.flags.body ? fs.readFileSync(String(args.flags.body), "utf8") : undefined;
   const declaredFields = inferBrokerDeclaredFields({ url: String(url), headers, body });
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/broker/http`, {
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/broker/http`), {
     method: "POST",
     body: JSON.stringify({
       method: String(method),
@@ -302,7 +303,7 @@ async function secretsBrokerHttp(args) {
 }
 
 async function secretsTypes() {
-  const res = await fetchJson("/v1/secret-types");
+  const res = await fetchJson(clawApiPath("secret-types"));
   if (!res.ok) { console.error(fmt(res.body)); return 1; }
   for (const t of res.body.types ?? []) {
     console.log(`${t.typeId.padEnd(30)} ${t.label}`);
@@ -311,7 +312,7 @@ async function secretsTypes() {
 }
 
 async function secretsPlugins() {
-  const res = await fetchJson("/v1/plugins");
+  const res = await fetchJson(clawApiPath("plugins"));
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
@@ -325,13 +326,13 @@ async function grantsIssue(args) {
     reason: args.flags.reason ?? "issued via CLI",
     durationMinutes: args.flags.minutes ? Number(args.flags.minutes) : 10,
   };
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/grants`, { method: "POST", body: JSON.stringify(body) });
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/grants`), { method: "POST", body: JSON.stringify(body) });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
 
 async function grantsList() {
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/grants`);
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/grants`));
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
@@ -339,7 +340,7 @@ async function grantsList() {
 async function grantsRevoke(args) {
   const id = args._[2];
   if (!id) { console.error("id required"); return 1; }
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/grants/${encodeURIComponent(id)}`, { method: "DELETE" });
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/grants/${encodeURIComponent(id)}`), { method: "DELETE" });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
@@ -350,13 +351,13 @@ async function leasesIssue(args) {
     mode: args.flags.mode,
     durationMinutes: args.flags.minutes ? Number(args.flags.minutes) : 10,
   };
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/leases`, { method: "POST", body: JSON.stringify(body) });
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/leases`), { method: "POST", body: JSON.stringify(body) });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
 
 async function leasesList() {
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/leases`);
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/leases`));
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
@@ -364,13 +365,13 @@ async function leasesList() {
 async function leasesRevoke(args) {
   const id = args._[2];
   if (!id) { console.error("id required"); return 1; }
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/leases/${encodeURIComponent(id)}/revoke`, { method: "POST" });
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/leases/${encodeURIComponent(id)}/revoke`), { method: "POST" });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
 
 async function policiesList() {
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/policies`);
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/policies`));
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
@@ -383,7 +384,7 @@ async function policiesCreate(args) {
     capability: args.flags.capability,
     effect: args.flags.effect,
   };
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/policies`, { method: "POST", body: JSON.stringify(body) });
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/policies`), { method: "POST", body: JSON.stringify(body) });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
@@ -391,7 +392,7 @@ async function policiesCreate(args) {
 async function policiesDelete(args) {
   const id = args._[2];
   if (!id) { console.error("id required"); return 1; }
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/policies/${encodeURIComponent(id)}`, { method: "DELETE" });
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/policies/${encodeURIComponent(id)}`), { method: "DELETE" });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
@@ -401,13 +402,13 @@ async function auditQuery(args) {
   if (args.flags.kinds) q.set("kinds", String(args.flags.kinds));
   if (args.flags.since) q.set("since", String(args.flags.since));
   if (args.flags.limit) q.set("limit", String(args.flags.limit));
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/audit?${q.toString()}`);
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/audit?${q.toString()}`));
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
 
 async function auditVerify() {
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/audit/verify-integrity`, { method: "POST" });
+  const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/audit/verify-integrity`), { method: "POST" });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
