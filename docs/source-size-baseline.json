@@ -168,7 +168,7 @@
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     },
     "secrets/src/server/app.ts": {
-      "lines": 1217,
+      "lines": 1229,
       "reason": "Existing secrets server app after broker redirect handling; split routes, auth helpers, and response serializers before expanding."
     },
     "packages/clawjs/src/v1-data-core.ts": {

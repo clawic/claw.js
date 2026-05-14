@@ -46,7 +46,11 @@ for (const packageDir of fs.readdirSync(path.join(rootDir, "packages"))) {
 }
 
 for (const workspace of workspaces) {
-  const result = spawnSync("npm", ["run", "build", "--workspace", workspace], {
+  const args = ["run", "build", "--workspace", workspace];
+  if (!hasBuildTsconfig(workspace)) {
+    args.push("--", "--tsconfig", writePackageTsconfig(workspace));
+  }
+  const result = spawnSync("npm", args, {
     cwd: rootDir,
     stdio: "inherit",
   });
@@ -54,6 +58,35 @@ for (const workspace of workspaces) {
     process.exit(result.status ?? 1);
   }
   waitForWorkspaceTypes(workspace);
+}
+
+function hasBuildTsconfig(workspace) {
+  const entry = workspacePackages.get(workspace);
+  return typeof entry?.manifest?.scripts?.build === "string" && entry.manifest.scripts.build.includes("--tsconfig");
+}
+
+function writePackageTsconfig(workspace) {
+  const entry = workspacePackages.get(workspace);
+  if (!entry) {
+    throw new Error(`Unknown workspace ${workspace}`);
+  }
+  const configDir = path.join(rootDir, ".tmp", "package-build-tsconfig");
+  fs.mkdirSync(configDir, { recursive: true });
+  const configPath = path.join(configDir, `${workspace.replaceAll("/", "__").replaceAll("@", "")}.json`);
+  fs.writeFileSync(configPath, JSON.stringify({
+    extends: path.join(rootDir, "tsconfig.json"),
+    include: [
+      path.join(entry.packageDir, "src/**/*.ts"),
+    ],
+    exclude: [
+      path.join(entry.packageDir, "src/**/*.test.ts"),
+      path.join(entry.packageDir, "src/**/*.spec.ts"),
+      path.join(entry.packageDir, "src/**/__tests__/**"),
+      path.join(entry.packageDir, "template/**/*"),
+      path.join(entry.packageDir, "templates/**/*"),
+    ],
+  }, null, 2));
+  return path.relative(rootDir, configPath);
 }
 
 function waitForWorkspaceTypes(workspace) {
