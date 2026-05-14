@@ -91,6 +91,94 @@ function readCodebaseManifest(input: InspectCliInput): unknown {
   }
 }
 
+function readConnectorCatalog(input: InspectCliInput): unknown {
+  const configuredPath = input.flags["connector-catalog"] || input.flags.catalog || process.env.CLAW_CONNECTOR_CATALOG_PATH || "";
+  const candidates = configuredPath
+    ? [configuredPath]
+    : ["packages/clawjs-integrations/fixtures/started-provider-runtime-catalog.json"];
+  for (const catalogPath of candidates) {
+    const absolutePath = path.resolve(input.context.cwd, catalogPath);
+    if (!fs.existsSync(absolutePath)) continue;
+    try {
+      const parsed = JSON.parse(fs.readFileSync(absolutePath, "utf8")) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("catalog must be a JSON object");
+      }
+      return summarizeConnectorCatalog(parsed, catalogPath);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new InspectCliError("inspect_connector_catalog_error", `Could not read connector catalog ${catalogPath}: ${message}`, CLI_EXIT_USAGE);
+    }
+  }
+  return {
+    catalogPath: configuredPath || null,
+    support: {
+      state: "external_pending",
+      reason: "No connector catalog path was configured and the default local fixture is unavailable.",
+    },
+    apps: [],
+    summary: {
+      apps: 0,
+      operations: 0,
+      supportedOperations: 0,
+      completeExternalSchemas: 0,
+    },
+  };
+}
+
+function summarizeConnectorCatalog(input: unknown, catalogPath: string): unknown {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new Error("catalog must be a JSON object");
+  }
+  const catalog = input as { version?: unknown; apps?: unknown };
+  const apps = Array.isArray(catalog.apps) ? catalog.apps.filter(isRecord).map((app) => {
+    const operations = Array.isArray(app.operations) ? app.operations.filter(isRecord).map((operation) => ({
+      id: typeof operation.id === "string" ? operation.id : "",
+      kind: typeof operation.kind === "string" ? operation.kind : "",
+      name: typeof operation.name === "string" ? operation.name : "",
+      support: isRecord(operation.support) ? operation.support : null,
+      externalSchema: isRecord(operation.externalSchema) ? {
+        status: operation.externalSchema.status,
+        source: operation.externalSchema.source,
+        providerVersion: operation.externalSchema.providerVersion,
+        hasInputSchema: isJsonObject(operation.externalSchema.inputSchema),
+        hasOutputSchema: isJsonObject(operation.externalSchema.outputSchema),
+        evidence: Array.isArray(operation.externalSchema.evidence) ? operation.externalSchema.evidence.filter((item) => typeof item === "string") : [],
+      } : null,
+      executionPolicy: isRecord(operation.executionPolicy) ? operation.executionPolicy : null,
+    })) : [];
+    return {
+      id: typeof app.id === "string" ? app.id : "",
+      name: typeof app.name === "string" ? app.name : "",
+      support: isRecord(app.support) ? app.support : null,
+      operations,
+    };
+  }) : [];
+  const operations = apps.flatMap((app) => app.operations);
+  return {
+    catalogPath,
+    version: catalog.version,
+    apps,
+    summary: {
+      apps: apps.length,
+      operations: operations.length,
+      supportedOperations: operations.filter((operation) => operation.support && (operation.support as { state?: unknown }).state === "supported").length,
+      completeExternalSchemas: operations.filter((operation) => operation.externalSchema?.status === "complete").length,
+      authRequiredOperations: operations.filter((operation) => operation.executionPolicy && (operation.executionPolicy as { requiresAuth?: unknown }).requiresAuth === true).length,
+      hostRequiredOperations: operations.filter((operation) => operation.executionPolicy && (operation.executionPolicy as { requiresHostApproval?: unknown }).requiresHostApproval === true).length,
+      costRiskOperations: operations.filter((operation) => operation.executionPolicy && (operation.executionPolicy as { costRisk?: unknown }).costRisk === true).length,
+    },
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isJsonObject(value: unknown): boolean {
+  return Boolean(value) && typeof value === "object";
+}
+
 function inspectPathToId(value: string): string {
   const normalized = value.trim();
   if (!normalized || normalized === "/") return "";
@@ -296,6 +384,15 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     return CLI_EXIT_OK;
   }
+  if (command === "connectors") {
+    const catalog = readConnectorCatalog(input);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, catalog, inspectJsonMeta(command));
+    else {
+      const summary = (catalog as { summary?: { apps?: number; operations?: number; supportedOperations?: number; completeExternalSchemas?: number } }).summary ?? {};
+      input.context.stdout.write(`apps=${summary.apps ?? 0} operations=${summary.operations ?? 0} supported=${summary.supportedOperations ?? 0} completeExternalSchemas=${summary.completeExternalSchemas ?? 0}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
   if (command === "aliases") {
     const aliases = listClawCliAliases();
     if (input.wantsJson) writeJsonOk(input.context.stdout, {
@@ -373,7 +470,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|why|commands|codebase|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|why|commands|codebase|connectors|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {

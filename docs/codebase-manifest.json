@@ -65875,7 +65875,7 @@
     {
       "path": "packages/clawjs-integrations/src/catalog.test.ts",
       "language": "typescript",
-      "lines": 597,
+      "lines": 600,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -65885,6 +65885,7 @@
         "./source-runner.ts",
         "./types.ts",
         "node:assert/strict",
+        "node:path",
         "vitest"
       ],
       "exports": [],
@@ -98164,7 +98165,7 @@
     {
       "path": "packages/clawjs/src/inspect-cli.test.ts",
       "language": "typescript",
-      "lines": 215,
+      "lines": 272,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -98199,7 +98200,7 @@
     {
       "path": "packages/clawjs/src/inspect-cli.ts",
       "language": "typescript",
-      "lines": 389,
+      "lines": 486,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -98266,6 +98267,16 @@
         },
         {
           "kind": "function",
+          "name": "isJsonObject",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "isRecord",
+          "exported": false
+        },
+        {
+          "kind": "function",
           "name": "manifestPaths",
           "exported": false
         },
@@ -98277,6 +98288,11 @@
         {
           "kind": "function",
           "name": "readCodebaseManifest",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "readConnectorCatalog",
           "exported": false
         },
         {
@@ -98302,6 +98318,11 @@
         {
           "kind": "function",
           "name": "runInspectCliUnsafe",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "summarizeConnectorCatalog",
           "exported": false
         },
         {

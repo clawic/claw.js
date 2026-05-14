@@ -134,6 +134,63 @@ test("runCli exposes the generated codebase manifest through inspect", async () 
   assert.equal(payload.files.some((file) => file.path === "packages/clawjs/src/inspect-cli.ts" && file.declarations.some((entry) => entry.name === "runInspectCli")), true);
 });
 
+test("runCli exposes connector catalog support and external schema coverage through inspect", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-inspect-connectors-"));
+  const catalogPath = path.join(tempRoot, "connectors.json");
+  fs.writeFileSync(catalogPath, JSON.stringify({
+    version: 1,
+    apps: [{
+      id: "chat_service",
+      name: "Chat Service",
+      operations: [{
+        id: "chat_service.action.send-message",
+        kind: "action",
+        name: "Send Message",
+        support: {
+          state: "supported",
+          reason: "Covered by offline fixtures.",
+        },
+        externalSchema: {
+          status: "complete",
+          source: "https://api.example.invalid/openapi.json",
+          providerVersion: "2026-05-14",
+          evidence: ["packages/clawjs/src/inspect-cli.test.ts"],
+          inputSchema: { type: "object" },
+          outputSchema: { type: "object" },
+        },
+        executionPolicy: {
+          readOnly: false,
+          requiresAuth: true,
+          requiresHostApproval: false,
+          destructive: false,
+          costRisk: false,
+          dryRunSupported: true,
+          auditRequired: true,
+        },
+      }],
+    }],
+  }), "utf8");
+
+  const connectors = await runCliCapture(["inspect", "connectors", "--connector-catalog", catalogPath, "--json"], process.cwd());
+  assert.equal(connectors.code, CLI_EXIT_OK);
+  const payload = parseCliJson<{
+    summary: { apps: number; operations: number; supportedOperations: number; completeExternalSchemas: number; authRequiredOperations: number };
+    apps: Array<{ id: string; operations: Array<{ id: string; externalSchema: { status: string; hasInputSchema: boolean; hasOutputSchema: boolean } }> }>;
+  }>(connectors.stdout).data;
+  assert.deepEqual(payload.summary, {
+    apps: 1,
+    operations: 1,
+    supportedOperations: 1,
+    completeExternalSchemas: 1,
+    authRequiredOperations: 1,
+    hostRequiredOperations: 0,
+    costRiskOperations: 0,
+  });
+  assert.equal(payload.apps[0]?.operations[0]?.externalSchema.status, "complete");
+  assert.equal(payload.apps[0]?.operations[0]?.externalSchema.hasInputSchema, true);
+  assert.equal(payload.apps[0]?.operations[0]?.externalSchema.hasOutputSchema, true);
+});
+
 test("runCli fuses static inspect manifests from other language builders", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-inspect-manifest-"));
   const manifestPath = path.join(tempRoot, "clawix-persistent-surface.json");
