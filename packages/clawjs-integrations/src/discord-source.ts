@@ -18,6 +18,10 @@ export type DiscordSourceOperation =
   | "game-direct-message-create"
   | "game-direct-message-update"
   | "game-direct-message-delete"
+  | "channel-create"
+  | "channel-update"
+  | "channel-delete"
+  | "channel-pins-update"
   | "message-create"
   | "message-update"
   | "message-delete"
@@ -59,6 +63,10 @@ const DISCORD_SOURCE_OPERATIONS = new Set<DiscordSourceOperation>([
   "game-direct-message-create",
   "game-direct-message-update",
   "game-direct-message-delete",
+  "channel-create",
+  "channel-update",
+  "channel-delete",
+  "channel-pins-update",
   "message-create",
   "message-update",
   "message-delete",
