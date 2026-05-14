@@ -413,6 +413,62 @@ export const clawSessionEvents = {
   turnFinished: "turn.finished",
 } as const;
 
+export const clawChannelEvents = {
+  messageReceived: "channel.message.received",
+  targetDiscovered: "channel.target.discovered",
+  messageSent: "channel.message.sent",
+  listenerStarted: "channel.listener.started",
+  listenerError: "channel.listener.error",
+  listenerStopped: "channel.listener.stopped",
+  processorInvoked: "channel.processor.invoked",
+} as const;
+
+export const clawWorkspaceAuditEvents = {
+  workspaceCreated: "workspace.created",
+  filesSynced: "files.synced",
+  auditChild: "audit.child",
+  tasksCreated: "tasks.created",
+  notesCreated: "notes.created",
+  tasksUpdated: "tasks.updated",
+} as const;
+
+export const clawNotifyEventTypes = {
+  sdkAlert: "sdk.alert",
+  deploymentFailed: "deployment.failed",
+  deploymentRecovered: "deployment.recovered",
+  summaryReady: "summary.ready",
+  manualTriggered: "manual.triggered",
+} as const;
+
+export const clawExternalWebhookEventSamples = {
+  notionPageContentUpdated: "page.content_updated",
+  stripeCheckoutSessionCompleted: "checkout.session.completed",
+} as const;
+
+export const clawCodexExternalEventSamples = {
+  threadStarted: "thread.started",
+  itemCompleted: "item.completed",
+  turnCompleted: "turn.completed",
+} as const;
+
+export const clawBrowserStorageKeys = {
+  databaseTheme: "claw-db-theme",
+} as const;
+
+export const clawChatAppStorageKeys = {
+  selectedAppearance: "selectedAppearance",
+  appLanguage: "appLanguage",
+  notificationsEnabled: "notificationsEnabled",
+  soundEnabled: "soundEnabled",
+  hapticEnabled: "hapticEnabled",
+  relayBaseURL: "relayBaseURL",
+  relayTenantId: "relayTenantId",
+  relayEmail: "relayEmail",
+  relayPassword: "relayPassword",
+  mainWindowFrame: "NSWindow Frame main",
+  swiftUiWindowFrame: "NSWindow Frame SwiftUI",
+} as const;
+
 export const clawDriveApiRoutes = {
   realtime: "/v1/realtime",
   health: "/v1/health",
@@ -672,12 +728,20 @@ const stableJsonFields = [
 export const clawRegisteredDdlSources = [
   "packages/clawjs-database/src/store.ts",
   "packages/clawjs-audio/src/store.ts",
+  "packages/clawjs-channel-base/src/index.ts",
+  "packages/clawjs-profile/src/storage.ts",
   "packages/clawjs-mcp/src/store.ts",
   "packages/clawjs-runtime/src/store.ts",
   "packages/clawjs-sandbox/src/store.ts",
   "packages/clawjs-sessions/src/store.ts",
   "packages/clawjs-user-model/src/store.ts",
   "packages/clawjs-voice/src/store.ts",
+  "packages/mesh/src/audit-store.ts",
+  "packages/mesh/src/host-store.ts",
+  "packages/mesh/src/identity-store.ts",
+  "packages/mesh/src/ssh-secret-store.ts",
+  "packages/mesh/src/workspace-store.ts",
+  "packages/signals/src/store.ts",
   "drive/src/server/db.ts",
   "packages/clawjs-index/src/db/schema.sql",
 ] as const;
@@ -800,6 +864,52 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       surfaceClass: "event",
       direction: "generated",
       notes: "Sessions service event emitted over the registered session event stream.",
+    })),
+    ...Object.values(clawChannelEvents).map((event) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: `claw.event.channels.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
+      kind: "eventTopic",
+      name: event,
+      value: event,
+      parentId: "claw.contracts.events",
+      surfaceClass: "event",
+      direction: "generated",
+      notes: "Channel runtime event emitted by listener, transport, and processor surfaces.",
+    })),
+    ...Object.values(clawWorkspaceAuditEvents).map((event) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: `claw.event.workspaceAudit.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
+      kind: "eventTopic",
+      name: event,
+      value: event,
+      parentId: "claw.contracts.events",
+      surfaceClass: "event",
+      direction: "generated",
+      notes: "Workspace audit event persisted in the canonical workspace audit log.",
+    })),
+    ...Object.values(clawNotifyEventTypes).map((event) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: `claw.event.notify.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
+      kind: "eventTopic",
+      name: event,
+      value: event,
+      parentId: "claw.contracts.events",
+      surfaceClass: "event",
+      direction: "inbound",
+      notes: "Notify event type accepted by source apps and dashboard actions.",
+    })),
+    ...Object.entries({ ...clawExternalWebhookEventSamples, ...clawCodexExternalEventSamples }).map(([name, event]) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id: `claw.external.mapping.event.${name}`,
+      kind: "externalMapping",
+      owner: "external",
+      name: event,
+      value: event,
+      parentId: "claw.contracts.external",
+      surfaceClass: "external",
+      stability: "externalDependency",
+      direction: "inbound",
+      notes: "Sample external event value used by fixtures; Claw registers the dependency/mapping, not the provider schema.",
     })),
     ...stableJsonFields.map(([id, field, name]) => clawPersistentSurface.contract({
       ...contractDefaults,
@@ -1212,6 +1322,30 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       source: registrySource,
       warnings: ["Read, mirror, and index only. Writes require explicit AGENTS.md opt-in."],
     }),
+    ...Object.entries(clawBrowserStorageKeys).map(([name, key]) => clawPersistentSurface.preference({
+      id: `claw.browserStorage.${name}`,
+      kind: "browserStorageKey",
+      name,
+      key,
+      parentId: "claw.contracts.schemas",
+      storageClass: "nativeAppData",
+      canonicality: "hostOnly",
+      privacy: "public",
+      source: registrySource,
+      surfaceClass: "config",
+    })),
+    ...Object.entries(clawChatAppStorageKeys).map(([name, key]) => clawPersistentSurface.preference({
+      id: `claw.chat.appStorage.${name}`,
+      kind: "appStorageKey",
+      name,
+      key,
+      parentId: "claw.contracts.schemas",
+      storageClass: "nativeAppData",
+      canonicality: "hostOnly",
+      privacy: "userData",
+      source: registrySource,
+      surfaceClass: "config",
+    })),
     clawPersistentSurface.path({
       id: "claw.legacy.workspace.clawjs",
       kind: "legacyPath",

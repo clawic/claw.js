@@ -1865,7 +1865,11 @@ The docs check script validates that every current export from
     ClawStableSurfaceStability
     clawAppPorts
     clawApiPath
+    clawBrowserStorageKeys
+    clawChannelEvents
+    clawChatAppStorageKeys
     clawCommonJsonFields
+    clawCodexExternalEventSamples
     clawCorePorts
     clawDatabaseRecordEvents
     clawDatabaseApiRoutePatterns
@@ -1876,11 +1880,13 @@ The docs check script validates that every current export from
     clawDriveApiRoutePatterns
     clawDriveApiRoutes
     clawEventsPath
+    clawExternalWebhookEventSamples
     clawExportExtensions
     clawGlobalHomeLayout
     clawHostApiRoutes
     clawLocalHostnames
     clawNotifyApiRoutes
+    clawNotifyEventTypes
     clawPortRange
     clawPortSubranges
     clawRegisteredDdlSources
@@ -1899,6 +1905,7 @@ The docs check script validates that every current export from
     clawTemporalEvents
     clawTimeApiRoutes
     clawWorkspaceLayout
+    clawWorkspaceAuditEvents
     clawixBridgePort
     clawixDeepLinkRoutes
     clawixHomeLayout

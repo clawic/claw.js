@@ -118,6 +118,52 @@ flowchart TD
   claw_contracts_events --> claw_event_sessions_turn_started
   claw_event_sessions_turn_finished["turn.finished\neventTopic"]
   claw_contracts_events --> claw_event_sessions_turn_finished
+  claw_event_channels_channel_message_received["channel.message.received\neventTopic"]
+  claw_contracts_events --> claw_event_channels_channel_message_received
+  claw_event_channels_channel_target_discovered["channel.target.discovered\neventTopic"]
+  claw_contracts_events --> claw_event_channels_channel_target_discovered
+  claw_event_channels_channel_message_sent["channel.message.sent\neventTopic"]
+  claw_contracts_events --> claw_event_channels_channel_message_sent
+  claw_event_channels_channel_listener_started["channel.listener.started\neventTopic"]
+  claw_contracts_events --> claw_event_channels_channel_listener_started
+  claw_event_channels_channel_listener_error["channel.listener.error\neventTopic"]
+  claw_contracts_events --> claw_event_channels_channel_listener_error
+  claw_event_channels_channel_listener_stopped["channel.listener.stopped\neventTopic"]
+  claw_contracts_events --> claw_event_channels_channel_listener_stopped
+  claw_event_channels_channel_processor_invoked["channel.processor.invoked\neventTopic"]
+  claw_contracts_events --> claw_event_channels_channel_processor_invoked
+  claw_event_workspaceAudit_workspace_created["workspace.created\neventTopic"]
+  claw_contracts_events --> claw_event_workspaceAudit_workspace_created
+  claw_event_workspaceAudit_files_synced["files.synced\neventTopic"]
+  claw_contracts_events --> claw_event_workspaceAudit_files_synced
+  claw_event_workspaceAudit_audit_child["audit.child\neventTopic"]
+  claw_contracts_events --> claw_event_workspaceAudit_audit_child
+  claw_event_workspaceAudit_tasks_created["tasks.created\neventTopic"]
+  claw_contracts_events --> claw_event_workspaceAudit_tasks_created
+  claw_event_workspaceAudit_notes_created["notes.created\neventTopic"]
+  claw_contracts_events --> claw_event_workspaceAudit_notes_created
+  claw_event_workspaceAudit_tasks_updated["tasks.updated\neventTopic"]
+  claw_contracts_events --> claw_event_workspaceAudit_tasks_updated
+  claw_event_notify_sdk_alert["sdk.alert\neventTopic"]
+  claw_contracts_events --> claw_event_notify_sdk_alert
+  claw_event_notify_deployment_failed["deployment.failed\neventTopic"]
+  claw_contracts_events --> claw_event_notify_deployment_failed
+  claw_event_notify_deployment_recovered["deployment.recovered\neventTopic"]
+  claw_contracts_events --> claw_event_notify_deployment_recovered
+  claw_event_notify_summary_ready["summary.ready\neventTopic"]
+  claw_contracts_events --> claw_event_notify_summary_ready
+  claw_event_notify_manual_triggered["manual.triggered\neventTopic"]
+  claw_contracts_events --> claw_event_notify_manual_triggered
+  claw_external_mapping_event_notionPageContentUpdated["page.content_updated\nexternalMapping"]
+  claw_contracts_external --> claw_external_mapping_event_notionPageContentUpdated
+  claw_external_mapping_event_stripeCheckoutSessionCompleted["checkout.session.completed\nexternalMapping"]
+  claw_contracts_external --> claw_external_mapping_event_stripeCheckoutSessionCompleted
+  claw_external_mapping_event_threadStarted["thread.started\nexternalMapping"]
+  claw_contracts_external --> claw_external_mapping_event_threadStarted
+  claw_external_mapping_event_itemCompleted["item.completed\nexternalMapping"]
+  claw_contracts_external --> claw_external_mapping_event_itemCompleted
+  claw_external_mapping_event_turnCompleted["turn.completed\nexternalMapping"]
+  claw_contracts_external --> claw_external_mapping_event_turnCompleted
   claw_schema_common_field_schemaVersion["Persisted/exported data version field\njsonField"]
   claw_contracts_schemas --> claw_schema_common_field_schemaVersion
   claw_schema_common_field_protocolVersion["Wire protocol version field\njsonField"]
@@ -432,6 +478,30 @@ flowchart TD
   clawix_home_bridgeSocket["bridgeSocket\nsocket"]
   clawix_home --> clawix_home_bridgeSocket
   claw_external_codex["Codex home\nexternalReadOnlySource"]
+  claw_browserStorage_databaseTheme["databaseTheme\nbrowserStorageKey"]
+  claw_contracts_schemas --> claw_browserStorage_databaseTheme
+  claw_chat_appStorage_selectedAppearance["selectedAppearance\nappStorageKey"]
+  claw_contracts_schemas --> claw_chat_appStorage_selectedAppearance
+  claw_chat_appStorage_appLanguage["appLanguage\nappStorageKey"]
+  claw_contracts_schemas --> claw_chat_appStorage_appLanguage
+  claw_chat_appStorage_notificationsEnabled["notificationsEnabled\nappStorageKey"]
+  claw_contracts_schemas --> claw_chat_appStorage_notificationsEnabled
+  claw_chat_appStorage_soundEnabled["soundEnabled\nappStorageKey"]
+  claw_contracts_schemas --> claw_chat_appStorage_soundEnabled
+  claw_chat_appStorage_hapticEnabled["hapticEnabled\nappStorageKey"]
+  claw_contracts_schemas --> claw_chat_appStorage_hapticEnabled
+  claw_chat_appStorage_relayBaseURL["relayBaseURL\nappStorageKey"]
+  claw_contracts_schemas --> claw_chat_appStorage_relayBaseURL
+  claw_chat_appStorage_relayTenantId["relayTenantId\nappStorageKey"]
+  claw_contracts_schemas --> claw_chat_appStorage_relayTenantId
+  claw_chat_appStorage_relayEmail["relayEmail\nappStorageKey"]
+  claw_contracts_schemas --> claw_chat_appStorage_relayEmail
+  claw_chat_appStorage_relayPassword["relayPassword\nappStorageKey"]
+  claw_contracts_schemas --> claw_chat_appStorage_relayPassword
+  claw_chat_appStorage_mainWindowFrame["mainWindowFrame\nappStorageKey"]
+  claw_contracts_schemas --> claw_chat_appStorage_mainWindowFrame
+  claw_chat_appStorage_swiftUiWindowFrame["swiftUiWindowFrame\nappStorageKey"]
+  claw_contracts_schemas --> claw_chat_appStorage_swiftUiWindowFrame
   claw_legacy_workspace_clawjs["Legacy pre-public workspace root\nlegacyPath"]
   claw_database_core_table_data_registry["data_registry\ntable"]
   claw_database_core --> claw_database_core_table_data_registry
@@ -675,6 +745,29 @@ flowchart TD
 | `claw.event.sessions.message.updated` | eventTopic | event | claw | `message.updated` |
 | `claw.event.sessions.turn.started` | eventTopic | event | claw | `turn.started` |
 | `claw.event.sessions.turn.finished` | eventTopic | event | claw | `turn.finished` |
+| `claw.event.channels.channel.message.received` | eventTopic | event | claw | `channel.message.received` |
+| `claw.event.channels.channel.target.discovered` | eventTopic | event | claw | `channel.target.discovered` |
+| `claw.event.channels.channel.message.sent` | eventTopic | event | claw | `channel.message.sent` |
+| `claw.event.channels.channel.listener.started` | eventTopic | event | claw | `channel.listener.started` |
+| `claw.event.channels.channel.listener.error` | eventTopic | event | claw | `channel.listener.error` |
+| `claw.event.channels.channel.listener.stopped` | eventTopic | event | claw | `channel.listener.stopped` |
+| `claw.event.channels.channel.processor.invoked` | eventTopic | event | claw | `channel.processor.invoked` |
+| `claw.event.workspaceAudit.workspace.created` | eventTopic | event | claw | `workspace.created` |
+| `claw.event.workspaceAudit.files.synced` | eventTopic | event | claw | `files.synced` |
+| `claw.event.workspaceAudit.audit.child` | eventTopic | event | claw | `audit.child` |
+| `claw.event.workspaceAudit.tasks.created` | eventTopic | event | claw | `tasks.created` |
+| `claw.event.workspaceAudit.notes.created` | eventTopic | event | claw | `notes.created` |
+| `claw.event.workspaceAudit.tasks.updated` | eventTopic | event | claw | `tasks.updated` |
+| `claw.event.notify.sdk.alert` | eventTopic | event | claw | `sdk.alert` |
+| `claw.event.notify.deployment.failed` | eventTopic | event | claw | `deployment.failed` |
+| `claw.event.notify.deployment.recovered` | eventTopic | event | claw | `deployment.recovered` |
+| `claw.event.notify.summary.ready` | eventTopic | event | claw | `summary.ready` |
+| `claw.event.notify.manual.triggered` | eventTopic | event | claw | `manual.triggered` |
+| `claw.external.mapping.event.notionPageContentUpdated` | externalMapping | external | external | `page.content_updated` |
+| `claw.external.mapping.event.stripeCheckoutSessionCompleted` | externalMapping | external | external | `checkout.session.completed` |
+| `claw.external.mapping.event.threadStarted` | externalMapping | external | external | `thread.started` |
+| `claw.external.mapping.event.itemCompleted` | externalMapping | external | external | `item.completed` |
+| `claw.external.mapping.event.turnCompleted` | externalMapping | external | external | `turn.completed` |
 | `claw.schema.common.field.schemaVersion` | jsonField | schema | claw | `schemaVersion` |
 | `claw.schema.common.field.protocolVersion` | jsonField | schema | claw | `protocolVersion` |
 | `claw.schema.common.field.sessionId` | jsonField | schema | claw | `sessionId` |
@@ -834,6 +927,18 @@ flowchart TD
 | `clawix.home.tmp` | folder | persistent | clawix | `~/.clawix/tmp` |
 | `clawix.home.bridgeSocket` | socket | persistent | clawix | `~/.clawix/run/clawix-bridge.sock` |
 | `claw.external.codex` | externalReadOnlySource | persistent | external | `~/.codex` |
+| `claw.browserStorage.databaseTheme` | browserStorageKey | config | claw | `claw-db-theme` |
+| `claw.chat.appStorage.selectedAppearance` | appStorageKey | config | claw | `selectedAppearance` |
+| `claw.chat.appStorage.appLanguage` | appStorageKey | config | claw | `appLanguage` |
+| `claw.chat.appStorage.notificationsEnabled` | appStorageKey | config | claw | `notificationsEnabled` |
+| `claw.chat.appStorage.soundEnabled` | appStorageKey | config | claw | `soundEnabled` |
+| `claw.chat.appStorage.hapticEnabled` | appStorageKey | config | claw | `hapticEnabled` |
+| `claw.chat.appStorage.relayBaseURL` | appStorageKey | config | claw | `relayBaseURL` |
+| `claw.chat.appStorage.relayTenantId` | appStorageKey | config | claw | `relayTenantId` |
+| `claw.chat.appStorage.relayEmail` | appStorageKey | config | claw | `relayEmail` |
+| `claw.chat.appStorage.relayPassword` | appStorageKey | config | claw | `relayPassword` |
+| `claw.chat.appStorage.mainWindowFrame` | appStorageKey | config | claw | `NSWindow Frame main` |
+| `claw.chat.appStorage.swiftUiWindowFrame` | appStorageKey | config | claw | `NSWindow Frame SwiftUI` |
 | `claw.legacy.workspace.clawjs` | legacyPath | persistent | claw | `.clawjs` |
 | `claw.database.core.table.data_registry` | table | persistent | claw | `` |
 | `claw.database.core.table.app_state` | table | persistent | claw | `` |
