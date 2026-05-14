@@ -292,7 +292,15 @@ for (const group of surfaceContract.cli.groups) {
   }
 }
 
-const relayRaw = read(path.join(rootDir, "relay", "src", "server", "app.ts"));
+const relaySourceDir = path.join(rootDir, "relay", "src", "server");
+const relayRaw = [
+  "app.ts",
+  "workspace-routes.ts",
+  "monitor-routes.ts",
+].map((fileName) => {
+  const filePath = path.join(relaySourceDir, fileName);
+  return fs.existsSync(filePath) ? read(filePath) : "";
+}).join("\n");
 for (const route of surfaceContract.relay.routes) {
   const snippet = routeSnippet(route);
   if (!relayRaw.includes(snippet)) {
