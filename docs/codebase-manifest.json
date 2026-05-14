@@ -95060,7 +95060,7 @@
     {
       "path": "packages/clawjs/src/cli-discovery.test.ts",
       "language": "typescript",
-      "lines": 176,
+      "lines": 193,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -95773,7 +95773,7 @@
     {
       "path": "packages/clawjs/src/cli-media-generation-command.ts",
       "language": "typescript",
-      "lines": 875,
+      "lines": 889,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -95802,6 +95802,11 @@
         {
           "kind": "function",
           "name": "getTypedGenerationFacade",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "resolveMediaCanonicalCommand",
           "exported": false
         },
         {
@@ -97878,7 +97883,7 @@
     {
       "path": "packages/clawjs/src/index-test-utils.ts",
       "language": "typescript",
-      "lines": 635,
+      "lines": 641,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -97908,6 +97913,7 @@
         "extractTestPositionals",
         "listen",
         "packWorkspacePackage",
+        "parseCliData",
         "parseTestFlags",
         "runCliCapture",
         "runCommand",
@@ -97986,6 +97992,11 @@
         },
         {
           "kind": "function",
+          "name": "parseCliData",
+          "exported": true
+        },
+        {
+          "kind": "function",
           "name": "parseTestFlags",
           "exported": true
         },
@@ -98054,7 +98065,7 @@
     {
       "path": "packages/clawjs/src/index.test.ts",
       "language": "typescript",
-      "lines": 1580,
+      "lines": 1581,
       "test": true,
       "entrypoint": false,
       "imports": [

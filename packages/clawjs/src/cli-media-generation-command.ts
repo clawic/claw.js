@@ -6,7 +6,7 @@ import type { MediaDirection, MediaKind, MediaListInput, MediaOrigin, RuntimeAda
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { parseCsvFlag, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
-import { writeJson } from "./cli-json.ts";
+import { writeCommandJsonOk } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
 import { parseRuleHints } from "./cli-rule-utils.ts";
 import { parseImageOperation, parseImageProvenance, parseImageType } from "./cli-image-parsers.ts";
@@ -31,10 +31,24 @@ type CliMediaClaw = ClawInstance & {
   };
 };
 
+function resolveMediaCanonicalCommand(group: string | undefined, mediaGroup: GenerationCliMediaKind | null): string {
+  if (mediaGroup === "image") return "images";
+  if (mediaGroup === "audio" || mediaGroup === "video") return mediaGroup;
+  return group ?? "media";
+}
+
 export async function runMediaGenerationCli(input: {
   group: string | undefined; command: string | undefined; subcommand: string | undefined; flags: Record<string, string>; argv: string[]; context: CliContext; wantsJson: boolean; workspaceRoot: string; appId: string; workspaceId: string; agentId: string; runtimeAdapterId: RuntimeAdapterId; mediaGroup: GenerationCliMediaKind | null;
 }): Promise<number | null> {
   const { group, command, subcommand, flags, argv, context, wantsJson, workspaceRoot, appId, workspaceId, agentId, runtimeAdapterId, mediaGroup } = input;
+  const writeMediaJson = (payload: unknown) => {
+    const canonicalCommand = resolveMediaCanonicalCommand(group, mediaGroup);
+    writeCommandJsonOk(context.stdout, canonicalCommand, payload, {
+      invokedCommand: group ?? canonicalCommand,
+      subcommand: command ?? null,
+      ...(subcommand ? { operation: subcommand } : {}),
+    });
+  };
 async function getTypedGenerationFacade(kind: GenerationCliMediaKind) {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
   switch (kind) {
@@ -56,7 +70,7 @@ if (group === "media" && command === "list") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId) as CliMediaClaw;
   const media = claw.media.list(buildMediaListInput(flags));
   if (wantsJson) {
-    writeJson(context.stdout, media);
+    writeMediaJson(media);
   } else {
     context.stdout.write(`${media.map((entry) => `${entry.mediaId} ${entry.kind} ${entry.name}`).join("\n")}\n`);
   }
@@ -75,7 +89,7 @@ if (group === "media" && command === "search") {
     query: query.trim(),
   });
   if (wantsJson) {
-    writeJson(context.stdout, results);
+    writeMediaJson(results);
   } else {
     context.stdout.write(`${results.map((entry) => `${entry.mediaId} ${entry.kind} ${entry.name}`).join("\n")}\n`);
   }
@@ -91,7 +105,7 @@ if (group === "media" && command === "read") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId) as CliMediaClaw;
   const media = claw.media.get(mediaId);
   if (wantsJson) {
-    writeJson(context.stdout, media);
+    writeMediaJson(media);
   } else {
     context.stdout.write(`${media?.name ?? "missing"}\n`);
   }
@@ -107,7 +121,7 @@ if (group === "media" && command === "download") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId) as CliMediaClaw;
   const download = claw.media.download(mediaId);
   if (!download) {
-    if (wantsJson) writeJson(context.stdout, null);
+    if (wantsJson) writeMediaJson(null);
     else context.stdout.write("missing\n");
     return CLI_EXIT_FAILURE;
   }
@@ -115,7 +129,7 @@ if (group === "media" && command === "download") {
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, download.buffer);
   if (wantsJson) {
-    writeJson(context.stdout, {
+    writeMediaJson({
       media: download.media,
       outputPath,
       sizeBytes: download.buffer.length,
@@ -136,7 +150,7 @@ if (group === "media" && command === "share" && subcommand === "create") {
     ...(flags["ttl-ms"] ? { ttlMs: Number(flags["ttl-ms"]) } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, share);
+    writeMediaJson(share);
   } else {
     context.stdout.write(`${share.url}\n`);
   }
@@ -147,7 +161,7 @@ if (group === "media" && command === "share" && subcommand === "list") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId) as CliMediaClaw;
   const shares = claw.media.share.list();
   if (wantsJson) {
-    writeJson(context.stdout, shares);
+    writeMediaJson(shares);
   } else {
     context.stdout.write(`${shares.map((share) => `${share.id} ${share.url}`).join("\n")}\n`);
   }
@@ -163,7 +177,7 @@ if (group === "media" && command === "share" && subcommand === "revoke") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId) as CliMediaClaw;
   const revoked = await claw.media.share.revoke(id);
   if (wantsJson) {
-    writeJson(context.stdout, { revoked, id });
+    writeMediaJson({ revoked, id });
   } else {
     context.stdout.write(`${revoked}\n`);
   }
@@ -179,7 +193,7 @@ if (group === "media" && command === "share" && subcommand === "resolve") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId) as CliMediaClaw;
   const resolved = claw.media.share.resolveGallery(id);
   if (wantsJson) {
-    writeJson(context.stdout, resolved);
+    writeMediaJson(resolved);
   } else {
     context.stdout.write(`${resolved?.items.map((entry) => `${entry.mediaId} ${entry.name}`).join("\n") ?? "missing"}\n`);
   }
@@ -205,7 +219,7 @@ if (group === "inference" && command === "generate-text") {
     ...(flags["gateway-retries"] ? { gatewayRetries: Number(flags["gateway-retries"]) } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, result);
+    writeMediaJson(result);
   } else {
     context.stdout.write(`${result.text}\n`);
   }
@@ -216,7 +230,7 @@ if (group === "tts" && command === "providers") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const providers = claw.tts.providers();
   if (wantsJson) {
-    writeJson(context.stdout, providers);
+    writeMediaJson(providers);
   } else {
     context.stdout.write(`${providers.map((provider) => provider.id).join("\n")}\n`);
   }
@@ -227,7 +241,7 @@ if (group === "tts" && command === "catalog") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const catalog = claw.tts.catalog();
   if (wantsJson) {
-    writeJson(context.stdout, catalog);
+    writeMediaJson(catalog);
   } else {
     context.stdout.write(`${catalog.providers.map((provider) => provider.id).join("\n")}\n`);
   }
@@ -238,7 +252,7 @@ if (group === "tts" && command === "config") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const config = claw.tts.config();
   if (wantsJson) {
-    writeJson(context.stdout, config);
+    writeMediaJson(config);
   } else {
     context.stdout.write(`${config.provider ?? "local"}\n`);
   }
@@ -260,7 +274,7 @@ if (group === "tts" && command === "set-config") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const next = claw.tts.setConfig(config);
   if (wantsJson) {
-    writeJson(context.stdout, next);
+    writeMediaJson(next);
   } else {
     context.stdout.write(`${next.provider ?? "local"}\n`);
   }
@@ -292,7 +306,7 @@ if (group === "tts" && command === "synthesize") {
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, result.audio);
   if (wantsJson) {
-    writeJson(context.stdout, {
+    writeMediaJson({
       outputPath,
       mimeType: result.mimeType,
       sizeBytes: result.audio.length,
@@ -307,7 +321,7 @@ if (group === "stt" && command === "providers") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const providers = claw.stt.providers();
   if (wantsJson) {
-    writeJson(context.stdout, providers);
+    writeMediaJson(providers);
   } else {
     context.stdout.write(`${providers.map((provider) => provider.id).join("\n")}\n`);
   }
@@ -318,7 +332,7 @@ if (group === "stt" && command === "config") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const config = claw.stt.config();
   if (wantsJson) {
-    writeJson(context.stdout, config);
+    writeMediaJson(config);
   } else {
     context.stdout.write(`${config.provider ?? "local-whisper"}\n`);
   }
@@ -339,7 +353,7 @@ if (group === "stt" && command === "set-config") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const next = claw.stt.setConfig(config);
   if (wantsJson) {
-    writeJson(context.stdout, next);
+    writeMediaJson(next);
   } else {
     context.stdout.write(`${next.provider ?? "local-whisper"}\n`);
   }
@@ -364,7 +378,7 @@ if (group === "stt" && command === "transcribe") {
     ...(flags.threads ? { threads: Number(flags.threads) } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, result);
+    writeMediaJson(result);
   } else {
     context.stdout.write(`${result.text}\n`);
   }
@@ -397,7 +411,7 @@ if (group === "voice-notes" && (command === "add" || command === "create")) {
     tags: parseCsvFlag(flags.tags),
   });
   if (wantsJson) {
-    writeJson(context.stdout, note);
+    writeMediaJson(note);
   } else {
     context.stdout.write(`${note.id}\n`);
   }
@@ -417,7 +431,7 @@ if (group === "voice-notes" && command === "list") {
     limit: flags.limit ? Number(flags.limit) : undefined,
   });
   if (wantsJson) {
-    writeJson(context.stdout, notes);
+    writeMediaJson(notes);
   } else {
     context.stdout.write(`${notes.map((note) => `${note.id}\t${note.status}\t${note.source.origin}\t${note.transcript?.text ?? ""}`).join("\n")}\n`);
   }
@@ -437,7 +451,7 @@ if (group === "voice-notes" && (command === "get" || command === "read" || comma
     return CLI_EXIT_DEGRADED;
   }
   if (wantsJson) {
-    writeJson(context.stdout, note);
+    writeMediaJson(note);
   } else {
     context.stdout.write(`${note.transcript?.text ?? note.id}\n`);
   }
@@ -478,7 +492,7 @@ if (group === "voice-notes" && command === "transcribe") {
       });
     })();
   if (wantsJson) {
-    writeJson(context.stdout, note);
+    writeMediaJson(note);
   } else {
     context.stdout.write(`${note.transcript?.text ?? ""}\n`);
   }
@@ -489,7 +503,7 @@ if (group === "generations" && command === "backends") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const backends = claw.generations.backends();
   if (wantsJson) {
-    writeJson(context.stdout, backends);
+    writeMediaJson(backends);
   } else {
     context.stdout.write(`${backends.map((backend) => {
       const prefix = backend.available ? "*" : "-";
@@ -505,7 +519,7 @@ if (mediaGroup && command === "backends") {
   const { media } = await getTypedGenerationFacade(mediaGroup);
   const backends = media.backends();
   if (wantsJson) {
-    writeJson(context.stdout, backends);
+    writeMediaJson(backends);
   } else {
     context.stdout.write(`${backends.map((backend: { available: boolean; reason?: string; id: string; source: string }) => {
       const prefix = backend.available ? "*" : "-";
@@ -536,7 +550,7 @@ if (group === "image" && command === "create") {
     allowEnvCredentials: readBooleanFlag(argv, flags, "allow-env-credentials", false),
   });
   if (wantsJson) {
-    writeJson(context.stdout, record);
+    writeMediaJson(record);
   } else {
     context.stdout.write(`${record.id} ${record.output?.filePath ?? "missing-output"}\n`);
   }
@@ -566,7 +580,7 @@ if (group === "image" && command === "edit") {
     allowEnvCredentials: readBooleanFlag(argv, flags, "allow-env-credentials", false),
   });
   if (wantsJson) {
-    writeJson(context.stdout, record);
+    writeMediaJson(record);
   } else {
     context.stdout.write(`${record.id} ${record.output?.filePath ?? "missing-output"}\n`);
   }
@@ -594,7 +608,7 @@ if (group === "image" && command === "import") {
     backendLabel: flags["backend-label"],
   });
   if (wantsJson) {
-    writeJson(context.stdout, record);
+    writeMediaJson(record);
   } else {
     context.stdout.write(`${record.id} ${record.output?.filePath ?? "missing-output"}\n`);
   }
@@ -610,7 +624,7 @@ if (group === "image" && command === "show") {
   const { media } = await getImageGenerationFacade();
   const record = media.get(id);
   if (wantsJson) {
-    writeJson(context.stdout, record);
+    writeMediaJson(record);
   } else {
     context.stdout.write(`${record?.output?.filePath ?? "missing"}\n`);
   }
@@ -638,7 +652,7 @@ if (mediaGroup && command === "generate") {
       allowEnvCredentials: readBooleanFlag(argv, flags, "allow-env-credentials", false),
     });
     if (wantsJson) {
-      writeJson(context.stdout, record);
+      writeMediaJson(record);
     } else {
       context.stdout.write(`${record.id} ${record.output?.filePath ?? "missing-output"}\n`);
     }
@@ -664,7 +678,7 @@ if (mediaGroup && command === "generate") {
     mimeType: flags["mime-type"],
   });
   if (wantsJson) {
-    writeJson(context.stdout, record);
+    writeMediaJson(record);
   } else {
     context.stdout.write(`${record.id} ${record.output?.filePath ?? "missing-output"}\n`);
   }
@@ -688,7 +702,7 @@ if (mediaGroup && command === "list") {
       ...(parseImageOperation(flags.operation) ? { operation: parseImageOperation(flags.operation) } : {}),
     });
     if (wantsJson) {
-      writeJson(context.stdout, records);
+      writeMediaJson(records);
     } else {
       context.stdout.write(`${records.map((record: { id: string; status: string; title: string }) => `${record.id} ${record.status} ${record.title}`).join("\n")}\n`);
     }
@@ -701,7 +715,7 @@ if (mediaGroup && command === "list") {
     ...(flags.limit ? { limit: Number(flags.limit) } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, records);
+    writeMediaJson(records);
   } else {
     context.stdout.write(`${records.map((record: { id: string; status: string; title: string }) => `${record.id} ${record.status} ${record.title}`).join("\n")}\n`);
   }
@@ -717,7 +731,7 @@ if (mediaGroup && command === "read") {
   const { media } = await getTypedGenerationFacade(mediaGroup);
   const record = media.get(id);
   if (wantsJson) {
-    writeJson(context.stdout, record);
+    writeMediaJson(record);
   } else {
     context.stdout.write(`${record?.output?.filePath ?? "missing"}\n`);
   }
@@ -733,7 +747,7 @@ if (mediaGroup && command === "delete") {
   const { media } = await getTypedGenerationFacade(mediaGroup);
   const removed = media.remove(id);
   if (wantsJson) {
-    writeJson(context.stdout, { removed, id });
+    writeMediaJson({ removed, id });
   } else {
     context.stdout.write(`${removed}\n`);
   }
@@ -767,7 +781,7 @@ if (group === "generations" && command === "register-command") {
     mimeType: flags["mime-type"],
   });
   if (wantsJson) {
-    writeJson(context.stdout, backend);
+    writeMediaJson(backend);
   } else {
     context.stdout.write(`${backend.id}\n`);
   }
@@ -783,7 +797,7 @@ if (group === "generations" && command === "remove-backend") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const removed = claw.generations.removeBackend(id);
   if (wantsJson) {
-    writeJson(context.stdout, { removed, id });
+    writeMediaJson({ removed, id });
   } else {
     context.stdout.write(`${removed}\n`);
   }
@@ -816,7 +830,7 @@ if (group === "generations" && command === "create") {
     mimeType: flags["mime-type"],
   });
   if (wantsJson) {
-    writeJson(context.stdout, record);
+    writeMediaJson(record);
   } else {
     context.stdout.write(`${record.id} ${record.output?.filePath ?? "missing-output"}\n`);
   }
@@ -832,7 +846,7 @@ if (group === "generations" && command === "list") {
     ...(flags.limit ? { limit: Number(flags.limit) } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, records);
+    writeMediaJson(records);
   } else {
     context.stdout.write(`${records.map((record) => `${record.id} ${record.kind} ${record.status} ${record.title}`).join("\n")}\n`);
   }
@@ -848,7 +862,7 @@ if (group === "generations" && command === "read") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const record = claw.generations.get(id);
   if (wantsJson) {
-    writeJson(context.stdout, record);
+    writeMediaJson(record);
   } else {
     context.stdout.write(`${record?.output?.filePath ?? "missing"}\n`);
   }
@@ -864,7 +878,7 @@ if (group === "generations" && command === "delete") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const removed = claw.generations.remove(id);
   if (wantsJson) {
-    writeJson(context.stdout, { removed, id });
+    writeMediaJson({ removed, id });
   } else {
     context.stdout.write(`${removed}\n`);
   }

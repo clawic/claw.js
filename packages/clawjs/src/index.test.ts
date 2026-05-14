@@ -16,13 +16,13 @@ import {
   createFakeOpenClawImageSkillEnv,
   createFakeOpenClawToolchain,
   createFakeSecretsCliServer,
+  parseCliData,
   runCliCapture,
   useIsolatedMainData,
   withPatchedEnv,
 } from "./index-test-utils.ts";
 
 const OPENAI_API_PREFIX = "/v" + "1";
-
 test("runCli prints usage for unsupported commands", async () => {
   const stdout = captureStream();
   const stderr = captureStream();
@@ -176,7 +176,7 @@ test("runCli supports implicit db create, schema inspection, human output, and a
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  assert.equal((JSON.parse(recordsStdout.getOutput()) as { id: string }).id, taskId);
+  assert.equal(parseCliData<{ id: string }>(recordsStdout.getOutput()).id, taskId);
 
   const updateStdout = captureStream();
   assert.equal(await runCli(["db", "tasks", "update", taskId, "--set", "priority=urgent", "--set", "estimateMinutes=15", "--json"], {
@@ -184,7 +184,7 @@ test("runCli supports implicit db create, schema inspection, human output, and a
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const updatedTask = JSON.parse(updateStdout.getOutput()) as { priority?: string; estimateMinutes?: number };
+  const updatedTask = parseCliData<{ priority?: string; estimateMinutes?: number }>(updateStdout.getOutput());
   assert.equal(updatedTask.priority, "urgent");
   assert.equal(updatedTask.estimateMinutes, 15);
 
@@ -194,7 +194,7 @@ test("runCli supports implicit db create, schema inspection, human output, and a
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  assert.equal((JSON.parse(queryStdout.getOutput()) as Array<{ id: string }>).some((item) => item.id === taskId), true);
+  assert.equal(parseCliData<Array<{ id: string }>>(queryStdout.getOutput()).some((item) => item.id === taskId), true);
 
   const invalidFieldStdout = captureStream();
   assert.equal(await runCli(["db", "tasks", "update", taskId, "--set", "priority=never", "--json"], {
@@ -248,7 +248,7 @@ test("runCli supports implicit db create, schema inspection, human output, and a
     stderr: captureStream().stream,
     cwd: workspaceRoot,
   }), CLI_EXIT_OK);
-  const taskSchema = JSON.parse(taskSchemaStdout.getOutput()) as { collection: { fields: Array<{ name: string; type: string; options?: string[] }> } };
+  const taskSchema = parseCliData<{ collection: { fields: Array<{ name: string; type: string; options?: string[] }> } }>(taskSchemaStdout.getOutput());
   assert.equal(taskSchema.collection.fields.some((field) => field.name === "priority" && field.options?.includes("urgent")), true);
   assert.equal(taskSchema.collection.fields.some((field) => field.name === "estimateMinutes" && field.type === "number"), true);
 
@@ -315,7 +315,7 @@ test("runCli can manage command-backed generations end to end", async (t) => {
     stderr: captureStream().stream,
     cwd: workspaceDir,
   }), CLI_EXIT_OK);
-  const created = JSON.parse(createStdout.getOutput()) as { id: string; output?: { filePath?: string } };
+  const created = parseCliData<{ id: string; output?: { filePath?: string } }>(createStdout.getOutput());
   assert.match(created.id, /^gen-/);
   assert.equal(fs.existsSync(created.output?.filePath || ""), true);
 
@@ -399,7 +399,7 @@ test("runCli can create and list images through the image alias and an auto-dete
       cwd: workspaceDir,
     }), CLI_EXIT_OK);
 
-    const created = JSON.parse(createStdout.getOutput()) as { backendId: string; output?: { filePath?: string } };
+    const created = parseCliData<{ backendId: string; output?: { filePath?: string } }>(createStdout.getOutput());
     assert.equal(created.backendId, "openclaw-skill:openai-image-gen");
     assert.equal(fs.existsSync(created.output?.filePath || ""), true);
     assert.match(fs.readFileSync(created.output?.filePath || "", "utf8"), /cli-openclaw:gpt-image-1.5/);
@@ -446,7 +446,7 @@ test("runCli supports native image create, edit, import, list, and show", async 
         stderr: createStderr.stream,
         cwd: workspaceDir,
       }), CLI_EXIT_OK, `${createStdout.getOutput()}\n${createStderr.getOutput()}`);
-      const created = JSON.parse(createStdout.getOutput()) as { id: string; operation: string; imageType: string };
+      const created = parseCliData<{ id: string; operation: string; imageType: string }>(createStdout.getOutput());
       assert.equal(created.operation, "create");
       assert.equal(created.imageType, "logo");
 
@@ -466,7 +466,7 @@ test("runCli supports native image create, edit, import, list, and show", async 
         stderr: captureStream().stream,
         cwd: workspaceDir,
       }), CLI_EXIT_OK);
-      const edited = JSON.parse(editStdout.getOutput()) as { id: string; parentId: string; editDepth: number };
+      const edited = parseCliData<{ id: string; parentId: string; editDepth: number }>(editStdout.getOutput());
       assert.equal(edited.parentId, created.id);
       assert.equal(edited.editDepth, 1);
 
@@ -489,7 +489,7 @@ test("runCli supports native image create, edit, import, list, and show", async 
         stderr: captureStream().stream,
         cwd: workspaceDir,
       }), CLI_EXIT_OK);
-      const imported = JSON.parse(importStdout.getOutput()) as { id: string; provenance: string; parentId: string };
+      const imported = parseCliData<{ id: string; provenance: string; parentId: string }>(importStdout.getOutput());
       assert.equal(imported.provenance, "imported-codex");
       assert.equal(imported.parentId, edited.id);
 
@@ -745,7 +745,7 @@ test("runCli can upload, search, read, and download documents", async () => {
   });
 
   assert.equal(uploadExitCode, CLI_EXIT_OK);
-  const uploaded = JSON.parse(uploadStdout.getOutput()) as { documentId: string; name: string };
+  const uploaded = parseCliData<{ documentId: string; name: string }>(uploadStdout.getOutput());
   assert.match(uploaded.documentId, /^[0-9a-f-]{36}$/);
   assert.equal(uploaded.name, "brief.txt");
 
@@ -896,8 +896,9 @@ test("runCli can manage TTS config and synthesize audio", async () => {
   }
 });
 
-test("runCli stores and transcribes voice notes locally", async () => {
+test("runCli stores and transcribes voice notes locally", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-voice-notes-"));
+  useIsolatedMainData(t, workspaceRoot);
   const audioPath = path.join(workspaceRoot, "note.ogg");
   const whisperPath = path.join(workspaceRoot, "fake-whisper");
   const ffmpegPath = path.join(workspaceRoot, "fake-ffmpeg");
@@ -936,7 +937,7 @@ if (outIndex !== -1) fs.writeFileSync(args[outIndex + 1] + ".txt", "hola desde n
     cwd: process.cwd(),
   });
   assert.equal(addExitCode, CLI_EXIT_OK);
-  const note = JSON.parse(addStdout.getOutput()) as { id: string; status: string };
+  const note = parseCliData<{ id: string; status: string }>(addStdout.getOutput());
   assert.equal(note.status, "stored");
 
   const transcribeStdout = captureStream();
@@ -1125,7 +1126,7 @@ test("runCli supports temporal domain commands and hidden legacy aliases", async
     });
 
     assert.equal(calendarExitCode, CLI_EXIT_OK);
-    const calendarCreated = JSON.parse(calendarStdout.getOutput()) as { item: { id: string; kind: string; title: string } };
+    const calendarCreated = parseCliData<{ item: { id: string; kind: string; title: string } }>(calendarStdout.getOutput());
     assert.equal(calendarCreated.item.kind, "event");
 
     const calendarListStdout = captureStream();
@@ -1174,7 +1175,7 @@ test("runCli supports temporal domain commands and hidden legacy aliases", async
       cwd: process.cwd(),
     });
     assert.equal(everyExitCode, CLI_EXIT_OK);
-    const routineCreated = JSON.parse(everyStdout.getOutput()) as { item: { id: string; kind: string } };
+    const routineCreated = parseCliData<{ item: { id: string; kind: string } }>(everyStdout.getOutput());
     assert.equal(routineCreated.item.kind, "routine");
 
     const runStdout = captureStream();
@@ -1294,7 +1295,7 @@ test("runCli manages local styles, templates, and references", async () => {
     ...context,
     stdout: styleOut.stream,
   }), CLI_EXIT_OK);
-  const stylePayload = JSON.parse(styleOut.getOutput()) as { installed: string[]; skipped: string[] };
+  const stylePayload = parseCliData<{ installed: string[]; skipped: string[] }>(styleOut.getOutput());
   assert.equal(stylePayload.installed.includes("claw"), true);
   assert.equal(stylePayload.skipped.length, 0);
 
@@ -1303,7 +1304,7 @@ test("runCli manages local styles, templates, and references", async () => {
     ...context,
     stdout: templateOut.stream,
   }), CLI_EXIT_OK);
-  const templatePayload = JSON.parse(templateOut.getOutput()) as { template: { id: string; category: string; defaultStyleId: string } };
+  const templatePayload = parseCliData<{ template: { id: string; category: string; defaultStyleId: string } }>(templateOut.getOutput());
   assert.equal(templatePayload.template.category, "one-pager");
   assert.equal(templatePayload.template.defaultStyleId, "claw");
 
@@ -1314,7 +1315,7 @@ test("runCli manages local styles, templates, and references", async () => {
     ...context,
     stdout: refOut.stream,
   }), CLI_EXIT_OK);
-  const refPayload = JSON.parse(refOut.getOutput()) as { reference: { id: string; asset: string; tags: string[] } };
+  const refPayload = parseCliData<{ reference: { id: string; asset: string; tags: string[] } }>(refOut.getOutput());
   assert.equal(refPayload.reference.asset, "sample.txt");
   assert.deepEqual(refPayload.reference.tags, ["brand", "test"]);
 
@@ -1323,7 +1324,7 @@ test("runCli manages local styles, templates, and references", async () => {
     ...context,
     stdout: linkedOut.stream,
   }), CLI_EXIT_OK);
-  const linkedPayload = JSON.parse(linkedOut.getOutput()) as { styleIds: string[] };
+  const linkedPayload = parseCliData<{ styleIds: string[] }>(linkedOut.getOutput());
   assert.deepEqual(linkedPayload.styleIds, ["claw"]);
 
   const listOut = captureStream();
@@ -1331,7 +1332,7 @@ test("runCli manages local styles, templates, and references", async () => {
     ...context,
     stdout: listOut.stream,
   }), CLI_EXIT_OK);
-  const listPayload = JSON.parse(listOut.getOutput()) as { templates: Array<{ id: string }> };
+  const listPayload = parseCliData<{ templates: Array<{ id: string }> }>(listOut.getOutput());
   assert.deepEqual(listPayload.templates.map((entry) => entry.id), [templatePayload.template.id]);
 
   const renderOut = captureStream();
@@ -1339,7 +1340,7 @@ test("runCli manages local styles, templates, and references", async () => {
     ...context,
     stdout: renderOut.stream,
   }), CLI_EXIT_OK);
-  const renderPayload = JSON.parse(renderOut.getOutput()) as { results: Array<{ format: string; outputPath: string }> };
+  const renderPayload = parseCliData<{ results: Array<{ format: string; outputPath: string }> }>(renderOut.getOutput());
   assert.equal(renderPayload.results[0]?.format, "html");
   assert.equal(fs.existsSync(renderPayload.results[0]?.outputPath ?? ""), true);
 
@@ -1434,7 +1435,7 @@ test("runCli supports heartbeat routines with deterministic gates", async () => 
       cwd: process.cwd(),
     });
     assert.equal(skipExitCode, CLI_EXIT_OK);
-    const skipRoutine = JSON.parse(skipStdout.getOutput()) as { item: { id: string; heartbeat?: { when: string[] } } };
+    const skipRoutine = parseCliData<{ item: { id: string; heartbeat?: { when: string[] } } }>(skipStdout.getOutput());
     assert.deepEqual(skipRoutine.item.heartbeat?.when, ["workspace.tasks:new"]);
 
     const policyStdout = captureStream();
@@ -1460,7 +1461,7 @@ test("runCli supports heartbeat routines with deterministic gates", async () => 
       cwd: process.cwd(),
     });
     assert.equal(policyExitCode, CLI_EXIT_OK);
-    const policyRoutine = JSON.parse(policyStdout.getOutput()) as { item: { schedule?: { staggerMs?: number }; heartbeat?: { target?: string; cooldownMs?: number; maxWakesPerWindow?: { count?: number; windowMs?: number }; activeHours?: { timezone?: string }; staggerMs?: number } } };
+    const policyRoutine = parseCliData<{ item: { schedule?: { staggerMs?: number }; heartbeat?: { target?: string; cooldownMs?: number; maxWakesPerWindow?: { count?: number; windowMs?: number }; activeHours?: { timezone?: string }; staggerMs?: number } } }>(policyStdout.getOutput());
     assert.equal(policyRoutine.item.schedule?.staggerMs, 30_000);
     assert.equal(policyRoutine.item.heartbeat?.target, "main");
     assert.equal(policyRoutine.item.heartbeat?.cooldownMs, 30_000);
@@ -1486,7 +1487,7 @@ test("runCli supports heartbeat routines with deterministic gates", async () => 
       cwd: process.cwd(),
     });
     assert.equal(skipGetExitCode, CLI_EXIT_OK);
-    const skipped = JSON.parse(skipGetStdout.getOutput()) as { item: { heartbeat?: { state?: { skipCount?: number; lastSkipReason?: string } } } };
+    const skipped = parseCliData<{ item: { heartbeat?: { state?: { skipCount?: number; lastSkipReason?: string } } } }>(skipGetStdout.getOutput());
     assert.equal(skipped.item.heartbeat?.state?.skipCount, 1);
     assert.equal(skipped.item.heartbeat?.state?.lastSkipReason, "no heartbeat matches");
 
@@ -1532,7 +1533,7 @@ test("runCli supports heartbeat routines with deterministic gates", async () => 
       cwd: process.cwd(),
     });
     assert.equal(stopExitCode, CLI_EXIT_OK);
-    const stopRoutine = JSON.parse(stopStdout.getOutput()) as { item: { id: string } };
+    const stopRoutine = parseCliData<{ item: { id: string } }>(stopStdout.getOutput());
     forceDue(stopRoutine.item.id);
     assert.deepEqual(await built.engine.runSchedulerCycle(), []);
     const stopped = built.store.getItem(stopRoutine.item.id);
@@ -1557,7 +1558,7 @@ test("runCli supports heartbeat routines with deterministic gates", async () => 
       cwd: process.cwd(),
     });
     assert.equal(customExitCode, CLI_EXIT_OK);
-    const customRoutine = JSON.parse(customStdout.getOutput()) as { item: { id: string; heartbeat?: { allowedCustomChecks?: string[] } } };
+    const customRoutine = parseCliData<{ item: { id: string; heartbeat?: { allowedCustomChecks?: string[] } } }>(customStdout.getOutput());
     assert.deepEqual(customRoutine.item.heartbeat?.allowedCustomChecks, ["ready-check"]);
 
     const listStdout = captureStream();

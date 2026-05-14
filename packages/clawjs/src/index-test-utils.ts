@@ -26,6 +26,12 @@ export function captureStream() {
     },
   };
 }
+
+export function parseCliData<T>(text: string): T {
+  const payload = JSON.parse(text) as T | { data: T };
+  return typeof payload === "object" && payload !== null && "data" in payload ? payload.data : payload;
+}
+
 export function runCommand(command: string, args: string[], options: { cwd: string }): string {
   const executable = command === "npm" ? "/bin/zsh" : command;
   const shellQuote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
