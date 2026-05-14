@@ -10,7 +10,7 @@ import { CODEX_AGENT_ID, normalizeTelegramCodexAccount, registerCodexAgentProces
 import { LEGACY_TELEGRAM_CODEX_PROCESSOR_ID, TELEGRAM_CODEX_BOT_COMMANDS } from "./cli-telegram-codex-constants.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { extractPositionals, parseCsvFlag, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
-import { writeJson } from "./cli-json.ts";
+import { writeCommandJsonOk } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
 import { currentCliEntryPath } from "./cli-open-state.ts";
@@ -21,11 +21,20 @@ export async function runChannelTelegramCli(input: {
   group: string | undefined; command: string | undefined; subcommand: string | undefined; positionals: string[]; flags: Record<string, string>; argv: string[]; context: CliContext; wantsJson: boolean; binName: string; workspaceRoot: string; appId: string; workspaceId: string; agentId: string; runtimeAdapterId: RuntimeAdapterId;
 }): Promise<number | null> {
   const { group, command, subcommand, positionals, flags, argv, context, wantsJson, binName, workspaceRoot, appId, workspaceId, agentId, runtimeAdapterId } = input;
+  const writeChannelJson = (payload: unknown) => {
+    const canonicalCommand = group === "telegram" ? "telegram" : "channels";
+    const subcommandPath = [command, subcommand].filter(Boolean).join(".");
+    writeCommandJsonOk(context.stdout, canonicalCommand, payload, {
+      invokedCommand: group ?? canonicalCommand,
+      subcommand: subcommandPath || null,
+      ...(positionals[3] ? { operation: positionals.slice(3).join(".") } : {}),
+    });
+  };
 if (group === "channels" && (command === "list" || command === "status")) {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const channels = await claw.channels.list();
   if (wantsJson) {
-    writeJson(context.stdout, channels);
+    writeChannelJson(channels);
   } else {
     context.stdout.write(`${channels.map((entry) => `${entry.id}:${entry.status}`).join("\n")}\n`);
   }
@@ -43,7 +52,7 @@ if (group === "channels" && command === "telegram" && subcommand === "setup") {
       apiBaseUrl: flags["api-base-url"],
     });
     if (secret.status !== "configured") {
-      if (wantsJson) writeJson(context.stdout, secret);
+      if (wantsJson) writeChannelJson(secret);
       else context.stderr.write(`${secret.instructions.summary}\n`);
       return CLI_EXIT_DEGRADED;
     }
@@ -62,7 +71,7 @@ if (group === "channels" && command === "telegram" && subcommand === "setup") {
     context.stderr.write("Telegram account is not configured. Pass --secret-name to set it up.\n");
     return CLI_EXIT_DEGRADED;
   }
-  if (wantsJson) writeJson(context.stdout, accountRecord);
+  if (wantsJson) writeChannelJson(accountRecord);
   else context.stdout.write(`${accountRecord.id} ${accountRecord.status}\n`);
   return CLI_EXIT_OK;
 }
@@ -103,7 +112,7 @@ if (group === "channels" && (command === "assign" || command === "unassign")) {
       commands = await claw.channels.commands.set("telegram", TELEGRAM_CODEX_BOT_COMMANDS, { accountId: account });
     }
     const payload = { assignment: binding, commands };
-    if (wantsJson) writeJson(context.stdout, payload);
+    if (wantsJson) writeChannelJson(payload);
     else context.stdout.write(`assigned ${provider}:${account || "default"} -> ${assignedAgent}\n`);
     return CLI_EXIT_OK;
   }
@@ -112,7 +121,7 @@ if (group === "channels" && (command === "assign" || command === "unassign")) {
   for (const binding of matching) {
     claw.channels.bindings.revoke(binding.id);
   }
-  if (wantsJson) writeJson(context.stdout, { removed: matching.length });
+  if (wantsJson) writeChannelJson({ removed: matching.length });
   else context.stdout.write(`unassigned ${matching.length}\n`);
   return CLI_EXIT_OK;
 }
@@ -139,7 +148,7 @@ if (group === "channels" && command === "assignments") {
       };
     });
   if (assignmentsCommand === "list" || assignmentsCommand === "status") {
-    if (wantsJson) writeJson(context.stdout, assignments);
+    if (wantsJson) writeChannelJson(assignments);
     else context.stdout.write(`${assignments.map((entry) => `${entry.provider ?? "*"}:${entry.accountId ?? "*"} -> ${entry.agentId} ${assignmentsCommand === "status" ? entry.listenerStatus : ""}`.trim()).join("\n")}\n`);
     return assignments.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   }
@@ -340,7 +349,7 @@ if (group === "channels" && command === "telegram" && subcommand === "codex") {
         apiBaseUrl: flags["api-base-url"],
       });
       if (secret.status !== "configured") {
-        if (wantsJson) writeJson(context.stdout, secret);
+        if (wantsJson) writeChannelJson(secret);
         else context.stderr.write(`${secret.instructions.summary}\n`);
         return CLI_EXIT_DEGRADED;
       }
@@ -362,7 +371,7 @@ if (group === "channels" && command === "telegram" && subcommand === "codex") {
     const listener = shouldStart ? await startListener(claw, { restart: readBooleanFlag(argv, flags, "restart", false) }) : claw.channels.listeners.get(provider, account);
     const status = await readStatus(claw);
     const payload = { account: accountRecord, processor, assignment, commands, listener, status };
-    if (wantsJson) writeJson(context.stdout, payload);
+    if (wantsJson) writeChannelJson(payload);
     else context.stdout.write(`telegram codex setup ${status.listenerStatus} commands=${status.commandsSynced ? "synced" : "pending"}\n`);
     return CLI_EXIT_OK;
   }
@@ -370,7 +379,7 @@ if (group === "channels" && command === "telegram" && subcommand === "codex") {
   if (codexCommand === "start") {
     const claw = await createCliClaw(codexRuntimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
     const listener = await startListener(claw, { restart: readBooleanFlag(argv, flags, "restart", false) });
-    if (wantsJson) writeJson(context.stdout, listener);
+    if (wantsJson) writeChannelJson(listener);
     else context.stdout.write(`${listener.status} ${listener.pid ?? "unknown"}\n`);
     return listener.status === "running" ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   }
@@ -378,7 +387,7 @@ if (group === "channels" && command === "telegram" && subcommand === "codex") {
   if (codexCommand === "stop") {
     const claw = await createCliClaw(codexRuntimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
     const listener = await stopListener(claw);
-    if (wantsJson) writeJson(context.stdout, listener);
+    if (wantsJson) writeChannelJson(listener);
     else context.stdout.write("stopped\n");
     return CLI_EXIT_OK;
   }
@@ -386,7 +395,7 @@ if (group === "channels" && command === "telegram" && subcommand === "codex") {
   if (codexCommand === "status" || !codexCommand) {
     const claw = await createCliClaw(codexRuntimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
     const status = await readStatus(claw);
-    if (wantsJson) writeJson(context.stdout, status);
+    if (wantsJson) writeChannelJson(status);
     else context.stdout.write([
       `account=${status.accountId}`,
       `listener=${status.listenerStatus}`,
@@ -402,7 +411,7 @@ if (group === "channels" && command === "telegram" && subcommand === "codex") {
     const paths = channelListenerPaths(workspaceRoot, provider, account);
     const lines = flags.lines ? Number(flags.lines) : 80;
     const output = readTail(paths.logPath, lines);
-    if (wantsJson) writeJson(context.stdout, { log: output, logPath: paths.logPath });
+    if (wantsJson) writeChannelJson({ log: output, logPath: paths.logPath });
     else context.stdout.write(output ? `${output}\n` : "");
     return output ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   }
@@ -414,7 +423,7 @@ if (group === "channels" && command === "telegram" && subcommand === "codex") {
       context.stderr.write("Telegram account is not configured. Run setup with --secret-name first.\n");
       return CLI_EXIT_DEGRADED;
     }
-    if (wantsJson) writeJson(context.stdout, commands);
+    if (wantsJson) writeChannelJson(commands);
     else context.stdout.write(`synced ${commands.length} commands\n`);
     return CLI_EXIT_OK;
   }
@@ -436,7 +445,7 @@ if (group === "channels" && command === "telegram" && subcommand === "connect") 
   });
   if (secret.status !== "configured") {
     if (wantsJson) {
-      writeJson(context.stdout, secret);
+      writeChannelJson(secret);
     } else {
       context.stderr.write(`${secret.instructions.summary}\n`);
     }
@@ -453,7 +462,7 @@ if (group === "channels" && command === "telegram" && subcommand === "connect") 
     ...(flags["drop-pending-updates"] !== undefined ? { dropPendingUpdates: readBooleanFlag(argv, flags, "drop-pending-updates", false) } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, account);
+    writeChannelJson(account);
   } else {
     context.stdout.write(`${account.id} ${account.status}\n`);
   }
@@ -476,13 +485,13 @@ if (group === "channels" && command === "processors") {
       cwd: flags.cwd,
       agentId: flags.agent || flags["agent-id"],
     });
-    if (wantsJson) writeJson(context.stdout, processor);
+    if (wantsJson) writeChannelJson(processor);
     else context.stdout.write(`${processor.id}\n`);
     return CLI_EXIT_OK;
   }
   if (subcommand === "list" || !subcommand) {
     const processors = claw.channels.processors.list();
-    if (wantsJson) writeJson(context.stdout, processors);
+    if (wantsJson) writeChannelJson(processors);
     else context.stdout.write(`${processors.map((entry) => `${entry.id} ${entry.command}`).join("\n")}\n`);
     return processors.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   }
@@ -493,7 +502,7 @@ if (group === "channels" && command === "processors") {
       return CLI_EXIT_USAGE;
     }
     const removed = claw.channels.processors.remove(id);
-    if (wantsJson) writeJson(context.stdout, { removed });
+    if (wantsJson) writeChannelJson({ removed });
     else context.stdout.write(`${removed}\n`);
     return removed ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   }
@@ -519,7 +528,7 @@ if (group === "channels" && command === "listen") {
       logPath: paths.logPath,
       mode: readBooleanFlag(argv, flags, "background", false) ? "background" : "foreground",
     });
-    if (wantsJson) writeJson(context.stdout, listener);
+    if (wantsJson) writeChannelJson(listener);
     else context.stdout.write(`${listener.status}\n`);
     return CLI_EXIT_OK;
   }
@@ -542,7 +551,7 @@ if (group === "channels" && command === "listen") {
         logPath: paths.logPath,
         mode: "foreground",
       });
-      if (wantsJson) writeJson(context.stdout, listener);
+      if (wantsJson) writeChannelJson(listener);
       else context.stdout.write(`${listener.status}\n`);
       return CLI_EXIT_OK;
     }
@@ -592,7 +601,7 @@ if (group === "channels" && command === "listen") {
       startedAt: new Date().toISOString(),
       lastHeartbeatAt: new Date().toISOString(),
     });
-    if (wantsJson) writeJson(context.stdout, listener);
+    if (wantsJson) writeChannelJson(listener);
     else context.stdout.write(`${listener.status} ${listener.pid ?? "unknown"}\n`);
     return pid ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   }
@@ -612,7 +621,7 @@ if (group === "channels" && command === "listen") {
         pid,
       })
       : null;
-    if (wantsJson) writeJson(context.stdout, normalized ?? { provider, accountId: account ?? "default", status: running ? "running" : "stopped", pid });
+    if (wantsJson) writeChannelJson(normalized ?? { provider, accountId: account ?? "default", status: running ? "running" : "stopped", pid });
     else context.stdout.write(`${normalized?.status ?? (running ? "running" : "stopped")} ${pid ?? "unknown"}\n`);
     return running ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   }
@@ -645,7 +654,7 @@ if (group === "channels" && command === "listen") {
       logPath: paths.logPath,
       stoppedAt: new Date().toISOString(),
     });
-    if (wantsJson) writeJson(context.stdout, listener);
+    if (wantsJson) writeChannelJson(listener);
     else context.stdout.write("stopped\n");
     return CLI_EXIT_OK;
   }
@@ -653,7 +662,7 @@ if (group === "channels" && command === "listen") {
   if (subcommand === "logs") {
     const lines = flags.lines ? Number(flags.lines) : 80;
     const output = readTail(paths.logPath, lines);
-    if (wantsJson) writeJson(context.stdout, { log: output });
+    if (wantsJson) writeChannelJson({ log: output });
     else context.stdout.write(output ? `${output}\n` : "");
     return output ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   }
@@ -700,7 +709,7 @@ if (group === "channels" && command === "accounts" && subcommand === "add") {
     ...(flags["drop-pending-updates"] !== undefined ? { dropPendingUpdates: readBooleanFlag(argv, flags, "drop-pending-updates", false) } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, account);
+    writeChannelJson(account);
   } else {
     context.stdout.write(`${account.id} ${account.status}\n`);
   }
@@ -714,7 +723,7 @@ if (group === "channels" && command === "accounts" && (subcommand === "list" || 
     ? await claw.channels.accounts.status(provider)
     : claw.channels.accounts.list(provider);
   if (wantsJson) {
-    writeJson(context.stdout, accounts);
+    writeChannelJson(accounts);
   } else {
     context.stdout.write(`${accounts.map((entry) => `${entry.id}:${entry.status}`).join("\n")}\n`);
   }
@@ -730,7 +739,7 @@ if (group === "channels" && command === "accounts" && subcommand === "remove") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const accounts = await claw.channels.accounts.remove(provider, flags.account);
   if (wantsJson) {
-    writeJson(context.stdout, accounts);
+    writeChannelJson(accounts);
   } else {
     context.stdout.write(`${accounts.map((entry) => entry.id).join("\n")}\n`);
   }
@@ -757,7 +766,7 @@ if (group === "channels" && command === "targets" && subcommand === "register") 
     threadId: flags["thread-id"] || flags["message-thread-id"],
   });
   if (wantsJson) {
-    writeJson(context.stdout, target);
+    writeChannelJson(target);
   } else {
     context.stdout.write(`${target.id}\n`);
   }
@@ -772,7 +781,7 @@ if (group === "channels" && command === "targets" && subcommand === "list") {
     query: flags.query,
   });
   if (wantsJson) {
-    writeJson(context.stdout, targets);
+    writeChannelJson(targets);
   } else {
     context.stdout.write(`${targets.map((entry) => `${entry.id} ${entry.label ?? ""}`.trim()).join("\n")}\n`);
   }
@@ -789,7 +798,7 @@ if (group === "channels" && command === "targets" && (subcommand === "inspect" |
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const target = claw.channels.targets.get(provider, flags.account, targetId, flags["thread-id"] || flags["message-thread-id"]);
   if (wantsJson) {
-    writeJson(context.stdout, target ?? { targetId, found: false });
+    writeChannelJson(target ?? { targetId, found: false });
   } else if (target) {
     context.stdout.write(`${target.id} ${target.kind}${target.metadata?.instructions ? " instructions" : ""}\n`);
   }
@@ -824,7 +833,7 @@ if (group === "channels" && command === "targets" && (subcommand === "update" ||
     },
   });
   if (wantsJson) {
-    writeJson(context.stdout, target);
+    writeChannelJson(target);
   } else {
     context.stdout.write(`${target.id}\n`);
   }
@@ -851,7 +860,7 @@ if (group === "channels" && command === "permissions" && subcommand === "grant")
     ...(flags.priority ? { priority: Number(flags.priority) } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, binding);
+    writeChannelJson(binding);
   } else {
     context.stdout.write(`${binding.id}\n`);
   }
@@ -867,7 +876,7 @@ if (group === "channels" && command === "permissions" && subcommand === "list") 
     targetId: flags["target-id"] || flags.target || flags["chat-id"],
   });
   if (wantsJson) {
-    writeJson(context.stdout, bindings);
+    writeChannelJson(bindings);
   } else {
     context.stdout.write(`${bindings.map((entry) => `${entry.id} ${entry.permissions.join(",")}`).join("\n")}\n`);
   }
@@ -883,7 +892,7 @@ if (group === "channels" && command === "permissions" && subcommand === "revoke"
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const removed = claw.channels.bindings.revoke(id);
   if (wantsJson) {
-    writeJson(context.stdout, { removed });
+    writeChannelJson({ removed });
   } else {
     context.stdout.write(`${removed}\n`);
   }
@@ -913,7 +922,7 @@ if (group === "channels" && command === "messages" && subcommand === "send") {
     agentId: flags.agent,
   });
   if (wantsJson) {
-    writeJson(context.stdout, message);
+    writeChannelJson(message);
   } else {
     context.stdout.write(`${message.id}\n`);
   }
@@ -929,7 +938,7 @@ if (group === "channels" && command === "messages" && subcommand === "sync") {
     ...(flags.timeout ? { timeoutSeconds: Number(flags.timeout) } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, messages);
+    writeChannelJson(messages);
   } else {
     context.stdout.write(`${messages.map((entry) => entry.id).join("\n")}\n`);
   }
@@ -946,7 +955,7 @@ if (group === "channels" && command === "messages" && subcommand === "read") {
     ...(flags.limit ? { limit: Number(flags.limit) } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, messages);
+    writeChannelJson(messages);
   } else {
     context.stdout.write(`${messages.map((entry) => `${entry.id} ${entry.text ?? ""}`.trim()).join("\n")}\n`);
   }
@@ -960,7 +969,7 @@ if (group === "channels" && command === "commands" && (subcommand === "set" || s
     ? await claw.channels.commands.set(provider, parseJsonFlag<Array<{ command: string; description: string }>>(flags.commands, "--commands") ?? [], { accountId: flags.account })
     : await claw.channels.commands.get(provider, { accountId: flags.account });
   if (wantsJson) {
-    writeJson(context.stdout, result);
+    writeChannelJson(result);
   } else {
     context.stdout.write(`${result.map((entry) => `${entry.command}: ${entry.description}`).join("\n")}\n`);
   }
@@ -983,7 +992,7 @@ if (group === "telegram" && command === "connect") {
     ...(flags["drop-pending-updates"] !== undefined ? { dropPendingUpdates: readBooleanFlag(argv, flags, "drop-pending-updates", false) } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, status);
+    writeChannelJson(status);
   } else {
     context.stdout.write(`${status.channel.status} ${status.transport.mode}\n`);
   }
@@ -994,7 +1003,7 @@ if (group === "telegram" && command === "status") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const status = await claw.telegram.status();
   if (wantsJson) {
-    writeJson(context.stdout, status);
+    writeChannelJson(status);
   } else {
     context.stdout.write(`status: ${status.channel.status}\n`);
     context.stdout.write(`mode: ${status.transport.mode}\n`);
@@ -1019,7 +1028,7 @@ if (group === "telegram" && command === "webhook" && subcommand === "set") {
     ...(flags["ip-address"] ? { ipAddress: flags["ip-address"] } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, status);
+    writeChannelJson(status);
   } else {
     context.stdout.write(`${status.transport.webhook?.url ?? "configured"}\n`);
   }
@@ -1032,7 +1041,7 @@ if (group === "telegram" && command === "webhook" && subcommand === "clear") {
     ...(flags["drop-pending-updates"] !== undefined ? { dropPendingUpdates: readBooleanFlag(argv, flags, "drop-pending-updates", false) } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, status);
+    writeChannelJson(status);
   } else {
     context.stdout.write(`${status.transport.mode}\n`);
   }
@@ -1048,7 +1057,7 @@ if (group === "telegram" && command === "polling" && subcommand === "start") {
     ...(flags["drop-pending-updates"] !== undefined ? { dropPendingUpdates: readBooleanFlag(argv, flags, "drop-pending-updates", false) } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, status);
+    writeChannelJson(status);
   } else {
     context.stdout.write(`${status.transport.mode}\n`);
   }
@@ -1059,7 +1068,7 @@ if (group === "telegram" && command === "polling" && subcommand === "stop") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const status = await claw.telegram.stopPolling();
   if (wantsJson) {
-    writeJson(context.stdout, status);
+    writeChannelJson(status);
   } else {
     context.stdout.write(`${status.transport.active}\n`);
   }
@@ -1075,7 +1084,7 @@ if (group === "telegram" && command === "commands" && subcommand === "set") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const saved = await claw.telegram.setCommands(commands);
   if (wantsJson) {
-    writeJson(context.stdout, saved);
+    writeChannelJson(saved);
   } else {
     context.stdout.write(`${saved.map((entry) => entry.command).join("\n")}\n`);
   }
@@ -1086,7 +1095,7 @@ if (group === "telegram" && command === "commands" && subcommand === "get") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const commands = await claw.telegram.getCommands();
   if (wantsJson) {
-    writeJson(context.stdout, commands);
+    writeChannelJson(commands);
   } else {
     context.stdout.write(`${commands.map((entry) => `${entry.command}: ${entry.description}`).join("\n")}\n`);
   }
@@ -1097,7 +1106,7 @@ if (group === "telegram" && command === "chats" && subcommand === "list") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const chats = await claw.telegram.listChats(flags.query);
   if (wantsJson) {
-    writeJson(context.stdout, chats);
+    writeChannelJson(chats);
   } else {
     context.stdout.write(`${chats.map((entry) => `${entry.id} ${entry.title ?? entry.username ?? entry.firstName ?? ""}`.trim()).join("\n")}\n`);
   }
@@ -1113,7 +1122,7 @@ if (group === "telegram" && command === "chats" && subcommand === "inspect") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const chat = await claw.telegram.getChat(chatId);
   if (wantsJson) {
-    writeJson(context.stdout, chat);
+    writeChannelJson(chat);
   } else {
     context.stdout.write(`${chat.id} ${chat.type}\n`);
   }
@@ -1149,7 +1158,7 @@ if (group === "telegram" && command === "send") {
       ...(flags["message-thread-id"] ? { messageThreadId: Number(flags["message-thread-id"]) } : {}),
     });
   if (wantsJson) {
-    writeJson(context.stdout, response);
+    writeChannelJson(response);
   } else {
     context.stdout.write("ok\n");
   }

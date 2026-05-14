@@ -6,7 +6,6 @@ import os from "os";
 import path from "path";
 import { createClaw, saveAuthStore } from "@clawjs/claw";
 import { buildTimeApp } from "../../../time/src/server/app.ts";
-
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, CLI_USAGE, runCli } from "./index.ts";
 import {
   ONE_PIXEL_PNG,

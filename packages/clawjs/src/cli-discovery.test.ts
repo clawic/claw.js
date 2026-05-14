@@ -169,6 +169,19 @@ test("runCli returns media generation JSON in the common envelope", { concurrenc
   assert.deepEqual(payload.data, []);
 });
 
+test("runCli returns channel JSON in the common envelope", { concurrency: false }, async (t) => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-channels-json-"));
+  useIsolatedMainData(t, workspaceRoot);
+  const result = await runCliCapture(["channels", "list", "--workspace", workspaceRoot, "--runtime", "demo", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; data: unknown[]; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
+  assert.equal(payload.ok, true);
+  assert.equal(payload.meta.canonicalCommand, "channels");
+  assert.equal(payload.meta.invokedCommand, "channels");
+  assert.equal(payload.meta.subcommand, "list");
+  assert.equal(Array.isArray(payload.data), true);
+});
+
 test("runCli searches registered local docs and ADR contents", async () => {
   const result = await runCliCapture(["search", "Stable JSON output uses", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);

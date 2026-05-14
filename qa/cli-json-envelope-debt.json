@@ -2,7 +2,6 @@
   "schemaVersion": 1,
   "description": "Pre-V1 raw CLI JSON writers that still need migration to the common {ok,data,error,meta} envelope. Counts are maximums: new raw writers fail policy, and migrations must lower the relevant count.",
   "files": {
-    "packages/clawjs/src/cli-channel-telegram-command.ts": 49,
     "packages/clawjs/src/cli-productivity-extended-command.ts": 93,
     "packages/clawjs/src/index.ts": 49
   }

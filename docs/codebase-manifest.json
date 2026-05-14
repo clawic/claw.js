@@ -94825,7 +94825,7 @@
     {
       "path": "packages/clawjs/src/cli-channel-telegram-command.ts",
       "language": "typescript",
-      "lines": 1160,
+      "lines": 1169,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -95060,7 +95060,7 @@
     {
       "path": "packages/clawjs/src/cli-discovery.test.ts",
       "language": "typescript",
-      "lines": 193,
+      "lines": 206,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -98065,7 +98065,7 @@
     {
       "path": "packages/clawjs/src/index.test.ts",
       "language": "typescript",
-      "lines": 1581,
+      "lines": 1580,
       "test": true,
       "entrypoint": false,
       "imports": [
