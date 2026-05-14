@@ -83,8 +83,12 @@ binding product decisions are:
 - `npm run test:qa-scenarios`: PASS.
 - `npm run test:package-live`: PASS with live broker absent as
   `EXTERNAL PENDING`.
+- `TELEGRAM_BOT_TOKEN=dummy npm run test:package-live`: PASS as a negative
+  gate; the harness rejects the raw token and exits before live execution.
 - `CLAWJS_PACKAGE_LIVE_DOCKER=1 npm run test:package-live`: PARTIAL because
   the Docker daemon was unavailable; the harness reported `EXTERNAL PENDING`.
+- `npm run test:live-brokered` without `CLAW_TEST_LIVE=1`: PASS as a
+  negative gate; the lane exits with code 2 and requires explicit opt-in.
 - `CLAW_TEST_LIVE=1 npm run test:live-brokered`: PARTIAL because no approved
   broker command or disposable Telegram state was available; the harness
   reported `EXTERNAL PENDING`.
