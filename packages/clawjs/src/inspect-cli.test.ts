@@ -117,6 +117,23 @@ test("runCli exposes CLI aliases and decision sources through inspect", async ()
   assert.equal(whyPayload.source.file, "packages/clawjs/src/cli-host-command.ts");
 });
 
+test("runCli exposes the generated codebase manifest through inspect", async () => {
+  const codebase = await runCliCapture(["inspect", "codebase", "--json"], process.cwd());
+  assert.equal(codebase.code, CLI_EXIT_OK);
+  const payload = parseCliJson<{
+    schemaVersion: number;
+    astCoverage: { typescript: string; javascript: string; swift: string };
+    summary: { files: number; languages: { typescript: number; javascript: number; swift: number } };
+    files: Array<{ path: string; declarations: Array<{ name: string }> }>;
+  }>(codebase.stdout).data;
+  assert.equal(payload.schemaVersion, 1);
+  assert.equal(payload.astCoverage.typescript, "typescript-compiler-api");
+  assert.equal(payload.astCoverage.javascript, "typescript-compiler-api");
+  assert.equal(payload.summary.files > 0, true);
+  assert.equal(payload.summary.languages.typescript > 0, true);
+  assert.equal(payload.files.some((file) => file.path === "packages/clawjs/src/inspect-cli.ts" && file.declarations.some((entry) => entry.name === "runInspectCli")), true);
+});
+
 test("runCli fuses static inspect manifests from other language builders", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-inspect-manifest-"));
   const manifestPath = path.join(tempRoot, "clawix-persistent-surface.json");

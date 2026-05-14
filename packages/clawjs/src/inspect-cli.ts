@@ -76,6 +76,21 @@ function readManifest(manifestPath: string, cwd: string): ClawPersistentSurfaceR
   }
 }
 
+function readCodebaseManifest(input: InspectCliInput): unknown {
+  const manifestPath = input.flags["codebase-manifest"] || process.env.CLAW_CODEBASE_MANIFEST || "docs/codebase-manifest.json";
+  const absolutePath = path.resolve(input.context.cwd, manifestPath);
+  try {
+    const parsed = JSON.parse(fs.readFileSync(absolutePath, "utf8")) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("manifest must be a JSON object");
+    }
+    return parsed;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new InspectCliError("inspect_codebase_manifest_error", `Could not read codebase manifest ${manifestPath}: ${message}`, CLI_EXIT_USAGE);
+  }
+}
+
 function inspectPathToId(value: string): string {
   const normalized = value.trim();
   if (!normalized || normalized === "/") return "";
@@ -272,6 +287,15 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     return CLI_EXIT_OK;
   }
+  if (command === "codebase") {
+    const manifest = readCodebaseManifest(input);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, manifest, inspectJsonMeta(command));
+    else {
+      const summary = (manifest as { summary?: { files?: number; tests?: number; entrypoints?: number } }).summary ?? {};
+      input.context.stdout.write(`files\t${summary.files ?? 0}\ntests\t${summary.tests ?? 0}\nentrypoints\t${summary.entrypoints ?? 0}\n`);
+    }
+    return CLI_EXIT_OK;
+  }
   if (command === "aliases") {
     const aliases = listClawCliAliases();
     if (input.wantsJson) writeJsonOk(input.context.stdout, {
@@ -349,7 +373,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|why|commands|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|why|commands|codebase|aliases|database|storage|prefs|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {
