@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
@@ -96,14 +97,14 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
     store.close();
   });
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     service: "runtime",
     host: config.host,
     port: config.port,
   }));
 
-  app.get("/v1/runtime/status", async () => ({
+  app.get(clawApiPath("runtime/status"), async () => ({
     skillsOutputDir: context.skillsOutputDir,
     recent: {
       jobs: store.listJobs(undefined, 10),
@@ -113,7 +114,7 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
     },
   }));
 
-  app.post("/v1/runtime/distill", async (request, reply) => {
+  app.post(clawApiPath("runtime/distill"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     try {
       const body = readBody(request);
@@ -132,7 +133,7 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
     }
   });
 
-  app.post("/v1/runtime/nudge", async (request, reply) => {
+  app.post(clawApiPath("runtime/nudge"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     try {
       const body = readBody(request);
@@ -150,7 +151,7 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
     }
   });
 
-  app.post("/v1/runtime/refresh-user-model", async (request, reply) => {
+  app.post(clawApiPath("runtime/refresh-user-model"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     try {
       const body = readBody(request);
@@ -167,31 +168,31 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
     }
   });
 
-  app.get("/v1/runtime/distillations", async (request, reply) => {
+  app.get(clawApiPath("runtime/distillations"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     return { items: store.listDistillations(asString(query.session), asNumber(query.limit) ?? 100) };
   });
 
-  app.get("/v1/runtime/nudges", async (request, reply) => {
+  app.get(clawApiPath("runtime/nudges"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     return { items: store.listNudges(asString(query.session), asNumber(query.limit) ?? 100) };
   });
 
-  app.get("/v1/runtime/user-model-refreshes", async (request, reply) => {
+  app.get(clawApiPath("runtime/user-model-refreshes"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     return { items: store.listUserModelRefreshes(asNumber(query.limit) ?? 50) };
   });
 
-  app.get("/v1/runtime/jobs", async (request, reply) => {
+  app.get(clawApiPath("runtime/jobs"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     return { items: store.listJobs(asString(query.kind) as RuntimeJobKind | undefined, asNumber(query.limit) ?? 50) };
   });
 
-  app.post("/v1/kanban/tasks", async (request, reply) => {
+  app.post(clawApiPath("kanban/tasks"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     try {
       const body = readBody(request);
@@ -214,7 +215,7 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
     }
   });
 
-  app.get("/v1/kanban/tasks", async (request, reply) => {
+  app.get(clawApiPath("kanban/tasks"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     const filter: ListKanbanFilter = {
@@ -228,12 +229,12 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
     return { items: store.listKanbanTasks(filter) };
   });
 
-  app.get("/v1/kanban/board", async (request, reply) => {
+  app.get(clawApiPath("kanban/board"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     return store.getKanbanBoard();
   });
 
-  app.get("/v1/kanban/tasks/:id", async (request, reply) => {
+  app.get(clawApiPath("kanban/tasks/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const task = store.getKanbanTask(params.id);
@@ -241,7 +242,7 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
     return task;
   });
 
-  app.patch("/v1/kanban/tasks/:id", async (request, reply) => {
+  app.patch(clawApiPath("kanban/tasks/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const body = readBody(request);
@@ -260,13 +261,13 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
     return updated;
   });
 
-  app.delete("/v1/kanban/tasks/:id", async (request, reply) => {
+  app.delete(clawApiPath("kanban/tasks/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     return { deleted: store.deleteKanbanTask(params.id) };
   });
 
-  app.post("/v1/kanban/tasks/:id/claim", async (request, reply) => {
+  app.post(clawApiPath("kanban/tasks/:id/claim"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const body = readBody(request);
@@ -275,7 +276,7 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
     return store.claimKanbanTask(params.id, agent, { ttlMs: asNumber(body.ttlMs) });
   });
 
-  app.post("/v1/kanban/tasks/:id/complete", async (request, reply) => {
+  app.post(clawApiPath("kanban/tasks/:id/complete"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const body = readBody(request);
@@ -284,7 +285,7 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
     return result;
   });
 
-  app.post("/v1/kanban/tasks/:id/fail", async (request, reply) => {
+  app.post(clawApiPath("kanban/tasks/:id/fail"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const body = readBody(request);
@@ -294,7 +295,7 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
     return result;
   });
 
-  app.post("/v1/kanban/tasks/:id/block", async (request, reply) => {
+  app.post(clawApiPath("kanban/tasks/:id/block"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const body = readBody(request);
@@ -304,7 +305,7 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
     return result;
   });
 
-  app.post("/v1/kanban/tasks/:id/unblock", async (request, reply) => {
+  app.post(clawApiPath("kanban/tasks/:id/unblock"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const body = readBody(request);
@@ -313,7 +314,7 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
     return result;
   });
 
-  app.post("/v1/kanban/tasks/:id/comments", async (request, reply) => {
+  app.post(clawApiPath("kanban/tasks/:id/comments"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const body = readBody(request);
@@ -323,19 +324,19 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
     return store.addKanbanComment(params.id, author, text);
   });
 
-  app.get("/v1/kanban/tasks/:id/comments", async (request, reply) => {
+  app.get(clawApiPath("kanban/tasks/:id/comments"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     return { items: store.listKanbanComments(params.id) };
   });
 
-  app.get("/v1/kanban/tasks/:id/events", async (request, reply) => {
+  app.get(clawApiPath("kanban/tasks/:id/events"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     return { items: store.listKanbanEvents(params.id) };
   });
 
-  app.post("/v1/kanban/dispatcher/tick", async (request, reply) => {
+  app.post(clawApiPath("kanban/dispatcher/tick"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const body = readBody(request);
     return store.runKanbanDispatcher({

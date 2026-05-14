@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import type {
   ClaimResult,
   CreateKanbanTaskInput,
@@ -61,7 +62,7 @@ export class RuntimeApiClient {
   }
 
   health(): Promise<{ ok: boolean; service: string }> {
-    return this.call("GET", "/v1/health");
+    return this.call("GET", clawApiPath("health"));
   }
 
   status(): Promise<{
@@ -73,101 +74,101 @@ export class RuntimeApiClient {
       userModelRefreshes: UserModelRefreshRecord[];
     };
   }> {
-    return this.call("GET", "/v1/runtime/status");
+    return this.call("GET", clawApiPath("runtime/status"));
   }
 
   distill(input: DistillInput): Promise<DistillationRecord> {
-    return this.call("POST", "/v1/runtime/distill", input);
+    return this.call("POST", clawApiPath("runtime/distill"), input);
   }
 
   nudge(input: NudgeInput): Promise<{ items: NudgeRecord[] }> {
-    return this.call("POST", "/v1/runtime/nudge", input);
+    return this.call("POST", clawApiPath("runtime/nudge"), input);
   }
 
   refreshUserModel(input: UserModelRefreshInput = {}): Promise<UserModelRefreshRecord> {
-    return this.call("POST", "/v1/runtime/refresh-user-model", input);
+    return this.call("POST", clawApiPath("runtime/refresh-user-model"), input);
   }
 
   listDistillations(session?: string, limit?: number): Promise<{ items: DistillationRecord[] }> {
-    return this.call("GET", `/v1/runtime/distillations${buildQuery({ session, limit })}`);
+    return this.call("GET", clawApiPath(`runtime/distillations${buildQuery({ session, limit })}`));
   }
 
   listNudges(session?: string, limit?: number): Promise<{ items: NudgeRecord[] }> {
-    return this.call("GET", `/v1/runtime/nudges${buildQuery({ session, limit })}`);
+    return this.call("GET", clawApiPath(`runtime/nudges${buildQuery({ session, limit })}`));
   }
 
   listUserModelRefreshes(limit?: number): Promise<{ items: UserModelRefreshRecord[] }> {
-    return this.call("GET", `/v1/runtime/user-model-refreshes${buildQuery({ limit })}`);
+    return this.call("GET", clawApiPath(`runtime/user-model-refreshes${buildQuery({ limit })}`));
   }
 
   listJobs(kind?: RuntimeJobKind, limit?: number): Promise<{ items: RuntimeJobRecord[] }> {
-    return this.call("GET", `/v1/runtime/jobs${buildQuery({ kind, limit })}`);
+    return this.call("GET", clawApiPath(`runtime/jobs${buildQuery({ kind, limit })}`));
   }
 
   createKanbanTask(input: CreateKanbanTaskInput): Promise<KanbanTaskRecord> {
-    return this.call("POST", "/v1/kanban/tasks", input);
+    return this.call("POST", clawApiPath("kanban/tasks"), input);
   }
 
   listKanbanTasks(filter: ListKanbanFilter = {}): Promise<{ items: KanbanTaskRecord[] }> {
-    return this.call("GET", `/v1/kanban/tasks${buildQuery({
+    return this.call("GET", clawApiPath(`kanban/tasks${buildQuery({
       status: filter.status,
       agent: filter.agentAssigned,
       claimedBy: filter.claimedBy,
       projectPath: filter.projectPath,
       limit: filter.limit,
       offset: filter.offset,
-    })}`);
+    })}`));
   }
 
   getKanbanTask(id: string): Promise<KanbanTaskRecord> {
-    return this.call("GET", `/v1/kanban/tasks/${encodeURIComponent(id)}`);
+    return this.call("GET", clawApiPath(`kanban/tasks/${encodeURIComponent(id)}`));
   }
 
   updateKanbanTask(id: string, patch: UpdateKanbanTaskInput): Promise<KanbanTaskRecord> {
-    return this.call("PATCH", `/v1/kanban/tasks/${encodeURIComponent(id)}`, patch);
+    return this.call("PATCH", clawApiPath(`kanban/tasks/${encodeURIComponent(id)}`), patch);
   }
 
   deleteKanbanTask(id: string): Promise<{ deleted: boolean }> {
-    return this.call("DELETE", `/v1/kanban/tasks/${encodeURIComponent(id)}`);
+    return this.call("DELETE", clawApiPath(`kanban/tasks/${encodeURIComponent(id)}`));
   }
 
   claimKanbanTask(id: string, agent: string, ttlMs?: number): Promise<ClaimResult> {
-    return this.call("POST", `/v1/kanban/tasks/${encodeURIComponent(id)}/claim`, { agent, ttlMs });
+    return this.call("POST", clawApiPath(`kanban/tasks/${encodeURIComponent(id)}/claim`), { agent, ttlMs });
   }
 
   completeKanbanTask(id: string, actor?: string): Promise<KanbanTaskRecord> {
-    return this.call("POST", `/v1/kanban/tasks/${encodeURIComponent(id)}/complete`, { actor });
+    return this.call("POST", clawApiPath(`kanban/tasks/${encodeURIComponent(id)}/complete`), { actor });
   }
 
   failKanbanTask(id: string, reason: string, actor?: string): Promise<KanbanTaskRecord> {
-    return this.call("POST", `/v1/kanban/tasks/${encodeURIComponent(id)}/fail`, { reason, actor });
+    return this.call("POST", clawApiPath(`kanban/tasks/${encodeURIComponent(id)}/fail`), { reason, actor });
   }
 
   blockKanbanTask(id: string, reason: string, actor?: string): Promise<KanbanTaskRecord> {
-    return this.call("POST", `/v1/kanban/tasks/${encodeURIComponent(id)}/block`, { reason, actor });
+    return this.call("POST", clawApiPath(`kanban/tasks/${encodeURIComponent(id)}/block`), { reason, actor });
   }
 
   unblockKanbanTask(id: string, actor?: string): Promise<KanbanTaskRecord> {
-    return this.call("POST", `/v1/kanban/tasks/${encodeURIComponent(id)}/unblock`, { actor });
+    return this.call("POST", clawApiPath(`kanban/tasks/${encodeURIComponent(id)}/unblock`), { actor });
   }
 
   addKanbanComment(taskId: string, author: string, body: string): Promise<KanbanCommentRecord> {
-    return this.call("POST", `/v1/kanban/tasks/${encodeURIComponent(taskId)}/comments`, { author, body });
+    return this.call("POST", clawApiPath(`kanban/tasks/${encodeURIComponent(taskId)}/comments`), { author, body });
   }
 
   listKanbanComments(taskId: string): Promise<{ items: KanbanCommentRecord[] }> {
-    return this.call("GET", `/v1/kanban/tasks/${encodeURIComponent(taskId)}/comments`);
+    return this.call("GET", clawApiPath(`kanban/tasks/${encodeURIComponent(taskId)}/comments`));
   }
 
   listKanbanEvents(taskId: string): Promise<{ items: KanbanEventRecord[] }> {
-    return this.call("GET", `/v1/kanban/tasks/${encodeURIComponent(taskId)}/events`);
+    return this.call("GET", clawApiPath(`kanban/tasks/${encodeURIComponent(taskId)}/events`));
   }
 
   getKanbanBoard(): Promise<KanbanBoard> {
-    return this.call("GET", "/v1/kanban/board");
+    return this.call("GET", clawApiPath("kanban/board"));
   }
 
   runKanbanDispatcher(options: { claimTtlMs?: number; autoBlockThreshold?: number } = {}): Promise<DispatcherTickResult> {
-    return this.call("POST", "/v1/kanban/dispatcher/tick", options);
+    return this.call("POST", clawApiPath("kanban/dispatcher/tick"), options);
   }
 }
