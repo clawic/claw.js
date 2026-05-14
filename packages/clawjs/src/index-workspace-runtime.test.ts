@@ -220,8 +220,13 @@ test("runCli manages agent-native plans, policies, reviews, and delegation runs"
       stderr: captureStream().stream,
       cwd: process.cwd(),
     });
-    const created = JSON.parse(createStdout.getOutput()) as { plan: { id: string; status: string; delegationGraphId?: string } };
+    const createdEnvelope = JSON.parse(createStdout.getOutput()) as { ok: boolean; data: { plan: { id: string; status: string; delegationGraphId?: string } }; meta: { canonicalCommand: string; jsonSchemaId: string; subcommand: string } };
+    const created = createdEnvelope.data;
     assert.equal(createExit, CLI_EXIT_OK);
+    assert.equal(createdEnvelope.ok, true);
+    assert.equal(createdEnvelope.meta.canonicalCommand, "plan");
+    assert.equal(createdEnvelope.meta.jsonSchemaId, "claw.cli.plan.v1");
+    assert.equal(createdEnvelope.meta.subcommand, "create");
     assert.equal(created.plan.status, "running");
     assert.ok(created.plan.delegationGraphId);
 
@@ -258,8 +263,12 @@ test("runCli manages agent-native plans, policies, reviews, and delegation runs"
       stderr: captureStream().stream,
       cwd: process.cwd(),
     });
-    const publishCreated = JSON.parse(publishStdout.getOutput()) as { plan: { id: string; status: string; policyDecision: string } };
+    const publishCreatedEnvelope = JSON.parse(publishStdout.getOutput()) as { ok: boolean; data: { plan: { id: string; status: string; policyDecision: string } }; meta: { canonicalCommand: string; subcommand: string } };
+    const publishCreated = publishCreatedEnvelope.data;
     assert.equal(publishExit, CLI_EXIT_OK);
+    assert.equal(publishCreatedEnvelope.ok, true);
+    assert.equal(publishCreatedEnvelope.meta.canonicalCommand, "plan");
+    assert.equal(publishCreatedEnvelope.meta.subcommand, "create");
     assert.equal(publishCreated.plan.status, "pending");
     assert.equal(publishCreated.plan.policyDecision, "require_approval");
 

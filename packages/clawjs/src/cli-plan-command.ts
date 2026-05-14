@@ -4,7 +4,7 @@ import { semanticPlanSchema } from "@clawjs/core";
 
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { joinedPositionals, parseCsvFlag, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
-import { writeJson } from "./cli-json.ts";
+import { writeCommandJsonOk } from "./cli-json.ts";
 import { readJsonFile } from "./cli-runtime-utils.ts";
 import {
   buildFallbackSemanticPlan,
@@ -94,7 +94,7 @@ export async function runPlanCli(input: {
         save();
       }
     }
-    if (wantsJson) writeJson(context.stdout, { plan });
+    if (wantsJson) writePlanJson(context.stdout, { plan }, command);
     else context.stdout.write(`${plan.id} ${plan.status}\n`);
     return CLI_EXIT_OK;
   }
@@ -104,14 +104,14 @@ export async function runPlanCli(input: {
       .filter((plan) => !flags.status || plan.status === flags.status)
       .filter((plan) => !flags.agent || plan.creatorAgentId === flags.agent || plan.executorAgentId === flags.agent || plan.reviewerAgentId === flags.agent)
       .filter((plan) => !flags.tags || parseCsvFlag(flags.tags).every((tag) => plan.tags.includes(tag)));
-    if (wantsJson) writeJson(context.stdout, { plans: filtered });
+    if (wantsJson) writePlanJson(context.stdout, { plans: filtered }, command);
     else context.stdout.write(`${filtered.map((plan) => `${plan.id}\t${plan.status}\t${plan.objective}`).join("\n")}${filtered.length ? "\n" : ""}`);
     return CLI_EXIT_OK;
   }
 
   if (command === "show") {
     const plan = findPlan(subcommand ?? flags.id);
-    if (wantsJson) writeJson(context.stdout, { plan });
+    if (wantsJson) writePlanJson(context.stdout, { plan }, command);
     else context.stdout.write(`${formatPlan(plan)}\n`);
     return CLI_EXIT_OK;
   }
@@ -123,7 +123,7 @@ export async function runPlanCli(input: {
     plan.decisionReason = flags.reason ?? (command === "approve" ? "Approved manually." : "Rejected manually.");
     plan.updatedAt = nowIso();
     save();
-    if (wantsJson) writeJson(context.stdout, { plan });
+    if (wantsJson) writePlanJson(context.stdout, { plan }, command);
     else context.stdout.write(`${plan.id} ${plan.status}\n`);
     return CLI_EXIT_OK;
   }
@@ -142,7 +142,7 @@ export async function runPlanCli(input: {
     plan.policyDecision = decision === "approve" ? "auto_run" : "block";
     plan.updatedAt = nowIso();
     save();
-    if (wantsJson) writeJson(context.stdout, { plan, review: { decision, reason: plan.reviewReason } });
+    if (wantsJson) writePlanJson(context.stdout, { plan, review: { decision, reason: plan.reviewReason } }, command);
     else context.stdout.write(`${plan.id} ${plan.status}\n`);
     return CLI_EXIT_OK;
   }
@@ -158,7 +158,7 @@ export async function runPlanCli(input: {
     plan.status = "running";
     plan.updatedAt = nowIso();
     save();
-    if (wantsJson) writeJson(context.stdout, { plan });
+    if (wantsJson) writePlanJson(context.stdout, { plan }, command);
     else context.stdout.write(`${plan.id} running ${plan.delegationGraphId}\n`);
     return CLI_EXIT_OK;
   }
@@ -170,13 +170,13 @@ export async function runPlanCli(input: {
     plan.updatedAt = plan.completedAt;
     plan.decisionReason = flags.reason ?? plan.decisionReason;
     save();
-    if (wantsJson) writeJson(context.stdout, { plan });
+    if (wantsJson) writePlanJson(context.stdout, { plan }, command);
     else context.stdout.write(`${plan.id} ${plan.status}\n`);
     return CLI_EXIT_OK;
   }
 
   if (command === "policy" && subcommand === "list") {
-    if (wantsJson) writeJson(context.stdout, { policies: state.policies });
+    if (wantsJson) writePlanJson(context.stdout, { policies: state.policies }, "policy.list");
     else context.stdout.write(`${state.policies.map((policy) => `${policy.id}\t${policy.then.decision}`).join("\n")}${state.policies.length ? "\n" : ""}`);
     return CLI_EXIT_OK;
   }
@@ -195,7 +195,7 @@ export async function runPlanCli(input: {
     }
     state.policies = [rule, ...state.policies.filter((policy) => policy.id !== rule.id)];
     save();
-    if (wantsJson) writeJson(context.stdout, { policy: rule });
+    if (wantsJson) writePlanJson(context.stdout, { policy: rule }, "policy.add");
     else context.stdout.write(`${rule.id}\n`);
     return CLI_EXIT_OK;
   }
@@ -204,7 +204,7 @@ export async function runPlanCli(input: {
     const id = positionals[3] ?? flags.id;
     state.policies = state.policies.filter((policy) => policy.id !== id);
     save();
-    if (wantsJson) writeJson(context.stdout, { ok: true, id });
+    if (wantsJson) writePlanJson(context.stdout, { removed: true, id }, "policy.remove");
     else context.stdout.write(`${id}\n`);
     return CLI_EXIT_OK;
   }
@@ -212,11 +212,15 @@ export async function runPlanCli(input: {
   if (command === "policy" && subcommand === "test") {
     const plan = findPlan(positionals[3] ?? flags.id);
     const decision = evaluatePlanPolicy(state.policies, plan.semanticPlan, { creatorAgentId: plan.creatorAgentId, tags: plan.tags });
-    if (wantsJson) writeJson(context.stdout, decision);
+    if (wantsJson) writePlanJson(context.stdout, decision, "policy.test");
     else context.stdout.write(`${decision.decision}: ${decision.reason}\n`);
     return CLI_EXIT_OK;
   }
 
   context.stderr.write(`Usage: ${binName} plan create|list|show|run|approve|reject|review|complete|fail|cancel|policy\n`);
   return CLI_EXIT_USAGE;
+}
+
+function writePlanJson(stream: NodeJS.WritableStream, data: unknown, subcommand: string | undefined): void {
+  writeCommandJsonOk(stream, "plan", data, subcommand ? { subcommand } : {});
 }

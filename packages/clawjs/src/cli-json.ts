@@ -1,4 +1,5 @@
 import { redactSecrets } from "@clawjs/claw";
+import { resolveClawCliCommand } from "@clawjs/core";
 
 import { CliHandledError } from "./cli-errors.ts";
 
@@ -20,6 +21,16 @@ export function writeJsonOk(stream: NodeJS.WritableStream, data: unknown, meta: 
     ok: true,
     data,
     meta,
+  });
+}
+
+export function writeCommandJsonOk(stream: NodeJS.WritableStream, canonicalCommand: string, data: unknown, meta: CliJsonMeta = {}): void {
+  const command = resolveClawCliCommand(canonicalCommand);
+  writeJsonOk(stream, data, {
+    schemaVersion: command?.schemaVersion ?? 1,
+    canonicalCommand,
+    ...(command?.jsonSchemaId ? { jsonSchemaId: command.jsonSchemaId } : {}),
+    ...meta,
   });
 }
 

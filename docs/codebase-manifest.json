@@ -95548,17 +95548,19 @@
     {
       "path": "packages/clawjs/src/cli-json.ts",
       "language": "typescript",
-      "lines": 60,
+      "lines": 71,
       "test": false,
       "entrypoint": false,
       "imports": [
         "./cli-errors.ts",
-        "@clawjs/claw"
+        "@clawjs/claw",
+        "@clawjs/core"
       ],
       "exports": [
         "CliJsonMeta",
         "cliErrorFromUnknown",
         "writeCliError",
+        "writeCommandJsonOk",
         "writeJson",
         "writeJsonError",
         "writeJsonLine",
@@ -95578,6 +95580,11 @@
         {
           "kind": "function",
           "name": "writeCliError",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "writeCommandJsonOk",
           "exported": true
         },
         {
@@ -96050,7 +96057,7 @@
     {
       "path": "packages/clawjs/src/cli-plan-command.ts",
       "language": "typescript",
-      "lines": 223,
+      "lines": 227,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -96070,6 +96077,11 @@
           "kind": "function",
           "name": "runPlanCli",
           "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "writePlanJson",
+          "exported": false
         },
         {
           "kind": "type",
@@ -97946,7 +97958,7 @@
     {
       "path": "packages/clawjs/src/index-workspace-runtime.test.ts",
       "language": "typescript",
-      "lines": 930,
+      "lines": 939,
       "test": true,
       "entrypoint": false,
       "imports": [
