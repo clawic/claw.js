@@ -427,7 +427,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       source: registrySource,
     }),
     ...Object.entries(clawWorkspaceLayout)
-      .filter(([name]) => name !== "root" && name !== "manifest")
+      .filter(([name]) => name !== "root" && name !== "manifest" && name !== "observedState")
       .map(([name, surfacePath]) => clawPersistentSurface.path({
         id: `claw.workspace.${name}`,
         kind: "folder",
