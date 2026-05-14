@@ -79,7 +79,7 @@ import { portIsOpen, processIsAlive, waitForUrl, writeProgress } from "./cli-pro
 import { parseRuleHints, parseRuleReferences } from "./cli-rule-utils.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { collectFlagValues, joinedPositionals, parseCsvFlag, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
-import { inferAudioExtension, inferMimeTypeFromPath, parseInferenceMessages, pathSafeBasename, readJsonFile, resolveRuntimeAdapterId, timelineRange, type GenerationCliMediaKind } from "./cli-runtime-utils.ts";
+import { inferAudioExtension, inferMimeTypeFromPath, parseContextBlock, parseInferenceMessages, pathSafeBasename, readJsonFile, resolveRuntimeAdapterId, timelineRange, type GenerationCliMediaKind } from "./cli-runtime-utils.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
 import {
   buildFallbackSemanticPlan,
@@ -615,19 +615,6 @@ function cliErrorFromUnknown(error: unknown): CliHandledError {
   return error instanceof CliHandledError
     ? error
     : new CliHandledError("internal_error", error instanceof Error ? error.message : String(error));
-}
-
-function parseContextBlock(value?: string): { title: string; content: string }[] | undefined {
-  const trimmed = value?.trim();
-  if (!trimmed) return undefined;
-  const separatorIndex = trimmed.indexOf("::");
-  if (separatorIndex === -1) {
-    return [{ title: "Context", content: trimmed }];
-  }
-  return [{
-    title: trimmed.slice(0, separatorIndex).trim() || "Context",
-    content: trimmed.slice(separatorIndex + 2).trim(),
-  }];
 }
 
 function buildOpenUsage(binName: string): string {

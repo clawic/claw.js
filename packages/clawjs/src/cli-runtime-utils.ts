@@ -92,3 +92,16 @@ export function parseInferenceMessages(
   }
   return [{ role: "user", content: prompt.trim() }];
 }
+
+export function parseContextBlock(value?: string): { title: string; content: string }[] | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+  const separatorIndex = trimmed.indexOf("::");
+  if (separatorIndex === -1) {
+    return [{ title: "Context", content: trimmed }];
+  }
+  return [{
+    title: trimmed.slice(0, separatorIndex).trim() || "Context",
+    content: trimmed.slice(separatorIndex + 2).trim(),
+  }];
+}
