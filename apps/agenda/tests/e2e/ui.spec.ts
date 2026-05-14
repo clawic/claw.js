@@ -8,72 +8,83 @@ async function submitModal(page: Page) {
 }
 
 test("day dashboard creates a daily task flow and progress log", async ({ page }) => {
+  const runId = Date.now().toString(36);
+  const projectName = `Cliente Atlas ${runId}`;
+  const goalTitle = `Cerrar entregable ${runId}`;
+  const listTitle = `Today Board ${runId}`;
+  const sectionTitle = `Deep Work ${runId}`;
+  const cycleName = `Sprint 19 ${runId}`;
+  const epicTitle = `UI productivity core ${runId}`;
+  const milestoneTitle = `Beta marker ${runId}`;
+  const taskTitle = `Preparar demo diaria ${runId}`;
+  const dependentTaskTitle = `Publicar demo dependiente ${runId}`;
+
   await page.goto("/");
   await expect(page.getByTestId("day-dashboard")).toBeVisible();
 
   await page.getByTestId("new-project-button").click();
-  await page.locator("#f-name").fill("Cliente Atlas");
+  await page.locator("#f-name").fill(projectName);
   await page.locator("#f-project-start").fill("2026-04-21");
   await page.locator("#f-target-date").fill("2026-04-24");
   await page.locator("#f-project-deadline").fill("2026-04-25");
   await submitModal(page);
-  await expect(page.locator("#sec-projects").getByTestId("project-row").filter({ hasText: "Cliente Atlas" })).toBeVisible();
+  await expect(page.locator("#sec-projects").getByTestId("project-row").filter({ hasText: projectName })).toBeVisible();
 
   await page.getByTestId("new-goal-button").click();
-  await page.locator("#f-title").fill("Cerrar entregable");
-  await page.locator("#f-project").selectOption({ label: "Cliente Atlas" });
+  await page.locator("#f-title").fill(goalTitle);
+  await page.locator("#f-project").selectOption({ label: projectName });
   await page.locator("#f-target").fill("1");
   await page.locator("#f-unit").fill("entrega");
   await submitModal(page);
-  await expect(page.locator("#sec-goals").getByTestId("goal-row").filter({ hasText: "Cerrar entregable" })).toBeVisible();
+  await expect(page.locator("#sec-goals").getByTestId("goal-row").filter({ hasText: goalTitle })).toBeVisible();
 
   await page.getByTestId("new-list-button").click();
-  await page.locator("#f-title").fill("Today Board");
-  await page.locator("#f-kind").selectOption("today");
+  await page.locator("#f-title").fill(listTitle);
+  await page.locator("#f-kind").selectOption("custom");
   await submitModal(page);
   await expect(page.locator("#sec-system-map")).toContainText("Lists");
 
   await page.getByTestId("new-section-button").click();
-  await page.locator("#f-title").fill("Deep Work");
-  await page.locator("#f-list").selectOption({ label: "Today Board" });
-  await page.locator("#f-project").selectOption({ label: "Cliente Atlas" });
+  await page.locator("#f-title").fill(sectionTitle);
+  await page.locator("#f-list").selectOption({ label: listTitle });
+  await page.locator("#f-project").selectOption({ label: projectName });
   await submitModal(page);
 
   await page.getByTestId("new-cycle-button").click();
-  await page.locator("#f-name").fill("Sprint 19");
+  await page.locator("#f-name").fill(cycleName);
   await page.locator("#f-status").selectOption("active");
   await page.locator("#f-capacity").fill("8");
   await page.locator("#f-start").fill("2026-04-21");
   await page.locator("#f-end").fill("2026-04-25");
-  await page.locator("#f-project").selectOption({ label: "Cliente Atlas" });
+  await page.locator("#f-project").selectOption({ label: projectName });
   await submitModal(page);
 
   await page.getByTestId("new-epic-button").click();
-  await page.locator("#f-title").fill("UI productivity core");
+  await page.locator("#f-title").fill(epicTitle);
   await page.locator("#f-kind").selectOption("initiative");
   await page.locator("#f-status").selectOption("active");
-  await page.locator("#f-project").selectOption({ label: "Cliente Atlas" });
-  await page.locator("#f-goal").selectOption({ label: "Cerrar entregable" });
+  await page.locator("#f-project").selectOption({ label: projectName });
+  await page.locator("#f-goal").selectOption({ label: goalTitle });
   await submitModal(page);
 
   await page.getByTestId("new-milestone-button").click();
-  await page.locator("#f-title").fill("Beta marker");
-  await page.locator("#f-project").selectOption({ label: "Cliente Atlas" });
-  await page.locator("#f-goal").selectOption({ label: "Cerrar entregable" });
+  await page.locator("#f-title").fill(milestoneTitle);
+  await page.locator("#f-project").selectOption({ label: projectName });
+  await page.locator("#f-goal").selectOption({ label: goalTitle });
   await page.locator("#f-target-date").fill("2026-04-23");
   await submitModal(page);
 
   await page.getByTestId("new-task-button").click();
-  await page.locator("#f-title").fill("Preparar demo diaria");
+  await page.locator("#f-title").fill(taskTitle);
   await page.locator("#f-type").selectOption("task");
   await page.locator("#f-priority").selectOption("high");
   await page.locator("#f-rank").fill("10");
-  await page.locator("#f-project").selectOption({ label: "Cliente Atlas" });
-  await page.locator("#f-goal").selectOption({ label: "Cerrar entregable" });
-  await page.locator("#f-list").selectOption({ label: "Today Board" });
-  await page.locator("#f-section").selectOption({ label: "Deep Work" });
-  await page.locator("#f-cycle").selectOption({ label: "Sprint 19" });
-  await page.locator("#f-epic").selectOption({ label: "UI productivity core" });
+  await page.locator("#f-project").selectOption({ label: projectName });
+  await page.locator("#f-goal").selectOption({ label: goalTitle });
+  await page.locator("#f-list").selectOption({ label: listTitle });
+  await page.locator("#f-section").selectOption({ label: sectionTitle });
+  await page.locator("#f-cycle").selectOption({ label: cycleName });
+  await page.locator("#f-epic").selectOption({ label: epicTitle });
   await page.locator("#f-start").fill("2026-04-21");
   await page.locator("#f-due").fill("2026-04-22");
   await page.locator("#f-deadline").fill("2026-04-22");
@@ -82,31 +93,31 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.locator("#f-today").check();
   await submitModal(page);
 
-  const task = page.locator("#sec-focus").getByTestId("task-row").filter({ hasText: "Preparar demo diaria" });
+  const task = page.locator("#sec-focus").getByTestId("task-row").filter({ hasText: taskTitle });
   await expect(task).toBeVisible();
-  await expect(task).toContainText("Today Board");
-  await expect(task).toContainText("Deep Work");
-  await expect(task).toContainText("Sprint 19");
-  await expect(task).toContainText("UI productivity core");
+  await expect(task).toContainText(listTitle);
+  await expect(task).toContainText(sectionTitle);
+  await expect(task).toContainText(cycleName);
+  await expect(task).toContainText(epicTitle);
   await expect(task).toContainText("3 pts");
 
   await page.getByTestId("new-task-button").click();
-  await page.locator("#f-title").fill("Publicar demo dependiente");
+  await page.locator("#f-title").fill(dependentTaskTitle);
   await page.locator("#f-priority").selectOption("high");
-  await page.locator("#f-project").selectOption({ label: "Cliente Atlas" });
-  await page.locator("#f-goal").selectOption({ label: "Cerrar entregable" });
-  await page.locator("#f-cycle").selectOption({ label: "Sprint 19" });
-  await page.locator("#f-epic").selectOption({ label: "UI productivity core" });
+  await page.locator("#f-project").selectOption({ label: projectName });
+  await page.locator("#f-goal").selectOption({ label: goalTitle });
+  await page.locator("#f-cycle").selectOption({ label: cycleName });
+  await page.locator("#f-epic").selectOption({ label: epicTitle });
   await page.locator("#f-start").fill("2026-04-22");
   await page.locator("#f-due").fill("2026-04-24");
   await page.locator("#f-deadline").fill("2026-04-24");
-  await page.locator("#f-depends").selectOption({ label: "Preparar demo diaria" });
+  await page.locator("#f-depends").selectOption({ label: taskTitle });
   await submitModal(page);
 
   const dataResponse = await page.request.get("/api/data");
   const data = await dataResponse.json();
-  const createdTask = data.tasks.find((item: { title?: string }) => item.title === "Preparar demo diaria");
-  const createdProject = data.projects.find((item: { name?: string }) => item.name === "Cliente Atlas");
+  const createdTask = data.tasks.find((item: { title?: string }) => item.title === taskTitle);
+  const createdProject = data.projects.find((item: { name?: string }) => item.name === projectName);
   expect(createdTask?.id).toBeTruthy();
   expect(createdProject?.id).toBeTruthy();
   await page.request.post("/api/comments", {
@@ -137,11 +148,11 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await expect(page.locator("#sec-focus").getByTestId("task-row").filter({ hasText: "1 files" })).toBeVisible();
 
   await page.getByTestId("tab-planning").click();
-  await expect(page.getByTestId("list-row").filter({ hasText: "Today Board" })).toBeVisible();
-  await expect(page.getByTestId("section-row").filter({ hasText: "Deep Work" })).toBeVisible();
-  await expect(page.getByTestId("cycle-row").filter({ hasText: "Sprint 19" })).toBeVisible();
-  await expect(page.getByTestId("epic-row").filter({ hasText: "UI productivity core" })).toBeVisible();
-  await expect(page.getByTestId("milestone-row").filter({ hasText: "Beta marker" })).toBeVisible();
+  await expect(page.getByTestId("list-row").filter({ hasText: listTitle })).toBeVisible();
+  await expect(page.getByTestId("section-row").filter({ hasText: sectionTitle })).toBeVisible();
+  await expect(page.getByTestId("cycle-row").filter({ hasText: cycleName })).toBeVisible();
+  await expect(page.getByTestId("epic-row").filter({ hasText: epicTitle })).toBeVisible();
+  await expect(page.getByTestId("milestone-row").filter({ hasText: milestoneTitle })).toBeVisible();
   await expect(page.getByTestId("saved-view-row").filter({ hasText: "Today Focus" })).toBeVisible();
   await expect(page.getByTestId("recurrence-row").filter({ hasText: "Review semanal" })).toBeVisible();
   await expect(page.getByTestId("template-row").filter({ hasText: "Launch checklist" })).toBeVisible();
@@ -150,18 +161,18 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
   await page.getByTestId("tab-timeline").click();
   await page.getByTestId("timeline-start").fill("2026-04-21");
   await page.getByTestId("timeline-start").dispatchEvent("change");
-  await expect(page.getByTestId("timeline-project").filter({ hasText: "Cliente Atlas" })).toBeVisible();
-  await expect(page.getByTestId("timeline-task-bar").filter({ hasText: "Preparar demo diaria" })).toBeVisible();
-  await expect(page.getByTestId("timeline-task-bar").filter({ hasText: "Publicar demo dependiente" })).toBeVisible();
-  await expect(page.locator('[data-testid="timeline-task-bar"][data-readiness="blocked"]').filter({ hasText: "Publicar demo dependiente" })).toBeVisible();
-  await expect(page.locator('[data-testid="timeline-milestone-marker"][title="Beta marker"]')).toBeVisible();
-  await expect(page.locator('[data-testid="timeline-cycle-band"][title="Sprint 19"]')).toBeVisible();
-  await expect(page.locator('[data-testid="timeline-deadline-marker"][title="Publicar demo dependiente due"]')).toBeVisible();
-  await expect(page.getByTestId("timeline-now-blocked").filter({ hasText: "Publicar demo dependiente" })).toBeVisible();
-  await page.getByTestId("timeline-project-filter").selectOption({ label: "Cliente Atlas" });
+  await expect(page.getByTestId("timeline-project").filter({ hasText: projectName })).toBeVisible();
+  await expect(page.getByTestId("timeline-task-bar").filter({ hasText: taskTitle })).toBeVisible();
+  await expect(page.getByTestId("timeline-task-bar").filter({ hasText: dependentTaskTitle })).toBeVisible();
+  await expect(page.locator('[data-testid="timeline-task-bar"][data-readiness="blocked"]').filter({ hasText: dependentTaskTitle })).toBeVisible();
+  await expect(page.locator(`[data-testid="timeline-milestone-marker"][title="${milestoneTitle}"]`)).toBeVisible();
+  await expect(page.locator(`[data-testid="timeline-cycle-band"][title="${cycleName}"]`)).toBeVisible();
+  await expect(page.locator(`[data-testid="timeline-deadline-marker"][title="${dependentTaskTitle} due"]`)).toBeVisible();
+  await expect(page.getByTestId("timeline-now-blocked").filter({ hasText: dependentTaskTitle })).toBeVisible();
+  await page.getByTestId("timeline-project-filter").selectOption({ label: projectName });
   await expect(page.getByTestId("timeline-project")).toHaveCount(1);
   await page.getByTestId("timeline-readiness-filter").selectOption("blocked");
-  await expect(page.locator('[data-testid="timeline-task-bar"][data-readiness="blocked"]').filter({ hasText: "Publicar demo dependiente" })).toBeVisible();
+  await expect(page.locator('[data-testid="timeline-task-bar"][data-readiness="blocked"]').filter({ hasText: dependentTaskTitle })).toBeVisible();
   await saveBrowserScreenshot(page, "day-dashboard-timeline-blocked.png");
 
   await page.getByTestId("tab-collaboration").click();
@@ -183,12 +194,12 @@ test("day dashboard creates a daily task flow and progress log", async ({ page }
 
   await task.hover();
   await task.getByTestId("task-done-button").click();
-  await expect(page.locator("#sec-done")).toContainText("Preparar demo diaria");
+  await expect(page.locator("#sec-done")).toContainText(taskTitle);
 
   await page.getByTestId("tab-timeline").click();
   await page.getByTestId("timeline-readiness-filter").selectOption("ready");
-  await expect(page.locator('[data-testid="timeline-task-bar"][data-readiness="ready"]').filter({ hasText: "Publicar demo dependiente" })).toBeVisible();
-  await expect(page.getByTestId("timeline-now-ready").filter({ hasText: "Publicar demo dependiente" })).toBeVisible();
+  await expect(page.locator('[data-testid="timeline-task-bar"][data-readiness="ready"]').filter({ hasText: dependentTaskTitle })).toBeVisible();
+  await expect(page.getByTestId("timeline-now-ready").filter({ hasText: dependentTaskTitle })).toBeVisible();
   await saveBrowserScreenshot(page, "day-dashboard-timeline.png");
 
   await page.getByTestId("tab-today").click();
