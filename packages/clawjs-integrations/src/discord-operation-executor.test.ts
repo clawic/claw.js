@@ -2470,7 +2470,7 @@ describe("discord operation runtime", () => {
         source_guild_id: "456",
       },
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
