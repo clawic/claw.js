@@ -592,7 +592,7 @@ export function buildDiscordOperationRequest(
     case "modify-current-user-nick":
       return bodyPlan("PATCH", `guilds/${guildId(values)}/members/@me/nick`, auth, auditHeaders(headers, values), currentUserNickBody(values), { type: "object", requiredPaths: ["nick"] });
     case "remove-guild-member":
-      return deletePlan(`guilds/${guildId(values)}/members/${userId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+      return deletePlan(`guilds/${guildId(values)}/members/${userId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "list-guild-roles":
       return getPlan(`guilds/${guildId(values)}/roles`, auth, headers, { type: "array" });
     case "get-guild-role":
@@ -614,11 +614,11 @@ export function buildDiscordOperationRequest(
     case "update-guild-role":
       return bodyPlan("PATCH", `guilds/${guildId(values)}/roles/${roleId(values)}`, auth, auditHeaders(headers, values), roleBody(values, true), { type: "object", requiredPaths: ["id", "name"] });
     case "delete-guild-role":
-      return deletePlan(`guilds/${guildId(values)}/roles/${roleId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+      return deletePlan(`guilds/${guildId(values)}/roles/${roleId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "add-guild-member-role":
-      return putPlan(`guilds/${guildId(values)}/members/${userId(values)}/roles/${roleId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+      return putPlan(`guilds/${guildId(values)}/members/${userId(values)}/roles/${roleId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "remove-guild-member-role":
-      return deletePlan(`guilds/${guildId(values)}/members/${userId(values)}/roles/${roleId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+      return deletePlan(`guilds/${guildId(values)}/members/${userId(values)}/roles/${roleId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "list-guild-bans":
       return getPlan(`guilds/${guildId(values)}/bans`, auth, headers, { type: "array" }, removeEmptyValues({
         before: optionalString(values.before),
@@ -628,11 +628,11 @@ export function buildDiscordOperationRequest(
     case "get-guild-ban":
       return getPlan(`guilds/${guildId(values)}/bans/${userId(values)}`, auth, headers, { type: "object", requiredPaths: ["user"] });
     case "create-guild-ban":
-      return putPlan(`guilds/${guildId(values)}/bans/${userId(values)}`, auth, headers, { type: "object" }, removeEmptyValues({
+      return putPlan(`guilds/${guildId(values)}/bans/${userId(values)}`, auth, headers, { type: "null" }, removeEmptyValues({
         delete_message_seconds: optionalNumber(values.deleteMessageSeconds),
       }));
     case "remove-guild-ban":
-      return deletePlan(`guilds/${guildId(values)}/bans/${userId(values)}`, auth, headers, { type: "object" });
+      return deletePlan(`guilds/${guildId(values)}/bans/${userId(values)}`, auth, headers, { type: "null" });
     case "bulk-ban-guild-users":
       return bodyPlan("POST", `guilds/${guildId(values)}/bulk-ban`, auth, auditHeaders(headers, values), bulkGuildBanBody(values), { type: "object", requiredPaths: ["banned_users", "failed_users"] });
     case "get-guild-prune-count":
@@ -642,7 +642,7 @@ export function buildDiscordOperationRequest(
     case "get-guild-integrations":
       return getPlan(`guilds/${guildId(values)}/integrations`, auth, headers, { type: "array" });
     case "delete-guild-integration":
-      return deletePlan(`guilds/${guildId(values)}/integrations/${integrationId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+      return deletePlan(`guilds/${guildId(values)}/integrations/${integrationId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "get-guild-widget-settings":
       return getPlan(`guilds/${guildId(values)}/widget`, auth, headers, { type: "object", requiredPaths: ["enabled", "channel_id"] });
     case "modify-guild-widget":
@@ -677,7 +677,7 @@ export function buildDiscordOperationRequest(
     case "update-auto-moderation-rule":
       return bodyPlan("PATCH", `guilds/${guildId(values)}/auto-moderation/rules/${autoModerationRuleId(values)}`, auth, auditHeaders(headers, values), autoModerationRuleBody(values, false), { type: "object", requiredPaths: ["id", "guild_id", "name"] });
     case "delete-auto-moderation-rule":
-      return deletePlan(`guilds/${guildId(values)}/auto-moderation/rules/${autoModerationRuleId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+      return deletePlan(`guilds/${guildId(values)}/auto-moderation/rules/${autoModerationRuleId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "list-guild-invites":
       return getPlan(`guilds/${guildId(values)}/invites`, auth, headers, { type: "array" });
     case "list-channel-invites":
