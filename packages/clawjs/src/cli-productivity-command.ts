@@ -18,11 +18,44 @@ import type {
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { collectFlagValues, joinedPositionals, parseCsvFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
-import { cliErrorFromUnknown, writeCliError, writeJson } from "./cli-json.ts";
+import { cliErrorFromUnknown, writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { COMMITMENT_KINDS, COMMITMENT_STATUSES, CONTEXT_PURPOSES, CONTEXT_STATUSES, JUDGMENT_IMPACTS, JUDGMENT_STATUSES, LEARNING_KINDS, LEARNING_PROMOTION_TARGETS, LEARNING_SENTIMENTS, LEARNING_STATUSES, LEARNING_TARGETS, OUTCOME_RESULTS, OUTCOME_STATUSES } from "./cli-knowledge-constants.ts";
 import { createCliClaw, createCliWorkspaceClaw } from "./cli-claw-factory.ts";
 import { coreProductivityCollection, getCoreProductivitySchema, mergeCoreDbInput, pickCoreTitle, singularCoreCollection, validateCoreDbPayload } from "./cli-productivity-utils.ts";
 import { resolveRuntimeAdapterId } from "./cli-runtime-utils.ts";
+
+function writeProductivityDbJson(
+  stdout: NodeJS.WritableStream,
+  canonicalCommand: string,
+  positionals: string[],
+  collection: string,
+  action: string,
+  payload: unknown,
+): void {
+  writeCommandJsonOk(stdout, canonicalCommand, payload, {
+    invokedCommand: positionals[0] ?? canonicalCommand,
+    collection,
+    subcommand: action,
+  });
+}
+
+function writeProductivityCommandJson(context: CliContext, canonicalCommand: string, positionals: string[], payload: unknown): void {
+  const [, command, subcommand] = positionals;
+  writeCommandJsonOk(context.stdout, canonicalCommand, payload, {
+    invokedCommand: positionals[0] ?? canonicalCommand,
+    subcommand: command ?? null,
+    ...(subcommand ? { operation: subcommand } : {}),
+  });
+}
+
+function writeProductivityCommandJsonError(context: CliContext, canonicalCommand: string, positionals: string[], error: unknown): void {
+  const [, command, subcommand] = positionals;
+  writeCommandJsonError(context.stdout, canonicalCommand, error, {
+    invokedCommand: positionals[0] ?? canonicalCommand,
+    subcommand: command ?? null,
+    ...(subcommand ? { operation: subcommand } : {}),
+  });
+}
 
 export async function runCoreProductivityDbCli(input: {
   argv: string[];
@@ -43,6 +76,7 @@ export async function runCoreProductivityDbCli(input: {
   if (!collectionName) {
     throw new CliHandledError("usage_error", "Unknown productivity collection.", CLI_EXIT_USAGE);
   }
+  const canonicalCommand = positionals[0] === "db" ? "database" : positionals[0] ?? "database";
   const rawAction = positionals[2];
   const dbActions = new Set(["list", "get", "create", "update", "delete", "schema", "query"]);
   const action = dbActions.has(rawAction || "") ? rawAction! : "create";
@@ -52,7 +86,7 @@ export async function runCoreProductivityDbCli(input: {
 
   if (action === "schema") {
     const schema = getCoreProductivitySchema(collectionName);
-    writeJson(stdout, {
+    writeProductivityDbJson(stdout, canonicalCommand, positionals, collectionName, action, {
       exists: true,
       collection: {
         ...(schema ?? { name: collectionName, displayName: collectionName, fields: [], indexes: [], coreFieldNames: [] }),
@@ -88,7 +122,7 @@ export async function runCoreProductivityDbCli(input: {
       ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
     });
-    if (wantsJson) writeJson(stdout, items);
+    if (wantsJson) writeProductivityDbJson(stdout, canonicalCommand, positionals, collectionName, action, items);
     else stdout.write(`${items.map((item: any) => `${item.status ?? ""} ${item.id} ${item.title ?? item.name ?? item.displayName ?? ""}`.trim()).join("\n")}\n`);
     return CLI_EXIT_OK;
   }
@@ -101,7 +135,7 @@ export async function runCoreProductivityDbCli(input: {
       includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
     });
     const items = allItems.filter((item: Record<string, unknown>) => JSON.stringify(item).toLowerCase().includes(query));
-    if (wantsJson) writeJson(stdout, items);
+    if (wantsJson) writeProductivityDbJson(stdout, canonicalCommand, positionals, collectionName, action, items);
     else stdout.write(`${items.map((item: any) => `${item.status ?? ""} ${item.id} ${item.title ?? item.name ?? item.displayName ?? ""}`.trim()).join("\n")}\n`);
     return items.length > 0 ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
   }
@@ -111,7 +145,7 @@ export async function runCoreProductivityDbCli(input: {
     if (!id) throw new CliHandledError("usage_error", "Usage: claw db <collection> get <id>", CLI_EXIT_USAGE);
     const item = collectionName === "people" ? await claw.people.get(id) : await api.get(id);
     if (!item) throw new CliHandledError("not_found", `${collectionName} record not found: ${id}`);
-    if (wantsJson) writeJson(stdout, item);
+    if (wantsJson) writeProductivityDbJson(stdout, canonicalCommand, positionals, collectionName, action, item);
     else stdout.write(`${Object.entries(item).map(([key, value]) => `${key}: ${typeof value === "object" ? JSON.stringify(value) : String(value)}`).join("\n")}\n`);
     return CLI_EXIT_OK;
   }
@@ -126,12 +160,12 @@ export async function runCoreProductivityDbCli(input: {
     if (force) {
       const removed = await api.remove(id);
       if (!removed) throw new CliHandledError("not_found", `${collectionName} record not found: ${id}`);
-      if (wantsJson) writeJson(stdout, { ok: true, deleted: true, archived: false });
+      if (wantsJson) writeProductivityDbJson(stdout, canonicalCommand, positionals, collectionName, action, { ok: true, deleted: true, archived: false });
       else stdout.write("ok\n");
       return CLI_EXIT_OK;
     }
     const archived = await api.archive(id);
-    if (wantsJson) writeJson(stdout, { ok: true, deleted: false, archived: true, record: archived });
+    if (wantsJson) writeProductivityDbJson(stdout, canonicalCommand, positionals, collectionName, action, { ok: true, deleted: false, archived: true, record: archived });
     else stdout.write(`${archived.id}\n`);
     return CLI_EXIT_OK;
   }
@@ -166,7 +200,7 @@ export async function runCoreProductivityDbCli(input: {
     result = await api.update(recordId, payload);
   }
 
-  if (wantsJson) writeJson(stdout, result);
+  if (wantsJson) writeProductivityDbJson(stdout, canonicalCommand, positionals, collectionName, action, result);
   else {
     const record = result as { id?: string; title?: string; name?: string; displayName?: string };
     stdout.write(`${action === "create" ? "Created" : "Updated"} ${singularCoreCollection(collectionName)} ${record.id ?? ""} "${record.title ?? record.name ?? record.displayName ?? ""}"\n`);
@@ -235,7 +269,7 @@ export async function runOutcomesCli(input: {
         task: flags.task || flags["task-id"],
         artifact: flags.artifact || flags["artifact-id"],
       });
-      if (wantsJson) writeJson(context.stdout, outcome);
+      if (wantsJson) writeProductivityCommandJson(context, "outcomes", positionals, outcome);
       else context.stdout.write(`${outcome.id} ${outcome.result} score=${outcome.score.toFixed(2)} gap=${outcome.confidenceGap?.toFixed(2) ?? "n/a"}\n`);
       return CLI_EXIT_OK;
     }
@@ -247,7 +281,7 @@ export async function runOutcomesCli(input: {
         return CLI_EXIT_USAGE;
       }
       const result = claw.outcomes.capture({ sessionId });
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeProductivityCommandJson(context, "outcomes", positionals, result);
       else context.stdout.write(result.ignored ? `ignored ${sessionId}: ${result.reason ?? "no outcome"}\n` : `${result.outcomes.map((outcome) => `${outcome.id} ${outcome.result} ${outcome.subject}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -258,7 +292,7 @@ export async function runOutcomesCli(input: {
         ...(flags.status ? { status: requireOneOf<OutcomeStatus>(flags.status, OUTCOME_STATUSES, "status") } : {}),
         ...(flags.judgment ? { judgment: flags.judgment } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, { outcomes });
+      if (wantsJson) writeProductivityCommandJson(context, "outcomes", positionals, { outcomes });
       else context.stdout.write(`${outcomes.map((outcome) => `${outcome.status} ${outcome.result} ${outcome.score.toFixed(2)} ${outcome.id} ${outcome.subject}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -271,7 +305,7 @@ export async function runOutcomesCli(input: {
       }
       const outcome = claw.outcomes.show(id);
       if (!outcome) throw new CliHandledError("not_found", `Outcome not found: ${id}`, CLI_EXIT_FAILURE);
-      if (wantsJson) writeJson(context.stdout, outcome);
+      if (wantsJson) writeProductivityCommandJson(context, "outcomes", positionals, outcome);
       else context.stdout.write(`${outcome.status} ${outcome.result} ${outcome.id}\n${outcome.subject}\nscore=${outcome.score.toFixed(2)} expected=${outcome.expectedConfidence?.toFixed(2) ?? "n/a"} gap=${outcome.confidenceGap?.toFixed(2) ?? "n/a"}\n`);
       return CLI_EXIT_OK;
     }
@@ -289,7 +323,7 @@ export async function runOutcomesCli(input: {
         task: flags.task || flags["task-id"],
         artifact: flags.artifact || flags["artifact-id"],
       });
-      if (wantsJson) writeJson(context.stdout, outcome);
+      if (wantsJson) writeProductivityCommandJson(context, "outcomes", positionals, outcome);
       else context.stdout.write(`${outcome.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -301,13 +335,13 @@ export async function runOutcomesCli(input: {
         return CLI_EXIT_USAGE;
       }
       const outcome = claw.outcomes.archive(id, flags.reason);
-      if (wantsJson) writeJson(context.stdout, outcome);
+      if (wantsJson) writeProductivityCommandJson(context, "outcomes", positionals, outcome);
       else context.stdout.write(`archived ${outcome.id}\n`);
       return CLI_EXIT_OK;
     }
   } catch (error) {
     const handled = cliErrorFromUnknown(error);
-    if (wantsJson) writeCliError(context.stdout, handled);
+    if (wantsJson) writeProductivityCommandJsonError(context, "outcomes", positionals, handled);
     else context.stderr.write(`${handled.message}\n`);
     return handled.exitCode;
   }
@@ -348,7 +382,7 @@ export async function runContextCli(input: {
         ...(flags["max-items"] ? { maxItems: Number(flags["max-items"]) } : {}),
         ...(flags["max-chars"] ? { maxChars: Number(flags["max-chars"]) } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, pack);
+      if (wantsJson) writeProductivityCommandJson(context, "context", positionals, pack);
       else context.stdout.write(`${pack.id} ${pack.purpose} items=${pack.items.length} chars=${pack.budget.charCount}\n`);
       return CLI_EXIT_OK;
     }
@@ -358,7 +392,7 @@ export async function runContextCli(input: {
         ...(flags.purpose ? { purpose: requireOneOf<ContextPackPurpose>(flags.purpose, CONTEXT_PURPOSES, "purpose") } : {}),
         ...(flags.status ? { status: requireOneOf<ContextPackStatus>(flags.status, CONTEXT_STATUSES, "status") } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, { contexts: packs });
+      if (wantsJson) writeProductivityCommandJson(context, "context", positionals, { contexts: packs });
       else context.stdout.write(`${packs.map((pack) => `${pack.status} ${pack.purpose} ${pack.id} items=${pack.items.length} ${pack.query}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -371,7 +405,7 @@ export async function runContextCli(input: {
       }
       const pack = claw.context.show(id);
       if (!pack) throw new CliHandledError("not_found", `Context pack not found: ${id}`, CLI_EXIT_FAILURE);
-      if (wantsJson) writeJson(context.stdout, pack);
+      if (wantsJson) writeProductivityCommandJson(context, "context", positionals, pack);
       else context.stdout.write(`${pack.status} ${pack.purpose} ${pack.id}\n${pack.summary}\n`);
       return CLI_EXIT_OK;
     }
@@ -383,13 +417,13 @@ export async function runContextCli(input: {
         return CLI_EXIT_USAGE;
       }
       const pack = claw.context.archive(id, flags.reason);
-      if (wantsJson) writeJson(context.stdout, pack);
+      if (wantsJson) writeProductivityCommandJson(context, "context", positionals, pack);
       else context.stdout.write(`archived ${pack.id}\n`);
       return CLI_EXIT_OK;
     }
   } catch (error) {
     const handled = cliErrorFromUnknown(error);
-    if (wantsJson) writeCliError(context.stdout, handled);
+    if (wantsJson) writeProductivityCommandJsonError(context, "context", positionals, handled);
     else context.stderr.write(`${handled.message}\n`);
     return handled.exitCode;
   }
@@ -427,7 +461,7 @@ export async function runCommitmentsCli(input: {
         ownerAgentId: flags["owner-agent"] || flags["owner-agent-id"],
         beneficiaryUserId: flags["beneficiary-user"] || flags["beneficiary-user-id"],
       });
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeProductivityCommandJson(context, "commitments", positionals, result);
       else context.stdout.write(result.ignored ? `${result.reason ?? "No commitments captured."}\n` : `${result.commitments.map((commitment) => commitment.id).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -451,7 +485,7 @@ export async function runCommitmentsCli(input: {
         dueAt: flags["due-at"],
         taskId: flags.task || flags["task-id"],
       });
-      if (wantsJson) writeJson(context.stdout, commitment);
+      if (wantsJson) writeProductivityCommandJson(context, "commitments", positionals, commitment);
       else context.stdout.write(`${commitment.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -462,7 +496,7 @@ export async function runCommitmentsCli(input: {
         ...(flags.kind ? { kind: requireOneOf<CommitmentKind>(flags.kind, COMMITMENT_KINDS, "kind") } : {}),
         ...(flags["owner-agent"] || flags["owner-agent-id"] ? { ownerAgentId: flags["owner-agent"] || flags["owner-agent-id"] } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, { commitments });
+      if (wantsJson) writeProductivityCommandJson(context, "commitments", positionals, { commitments });
       else context.stdout.write(`${commitments.map((commitment) => `${commitment.status} ${commitment.kind} ${commitment.id} ${commitment.claim}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -475,7 +509,7 @@ export async function runCommitmentsCli(input: {
       }
       const commitment = claw.commitments.show(id);
       if (!commitment) throw new CliHandledError("not_found", `Commitment not found: ${id}`, CLI_EXIT_FAILURE);
-      if (wantsJson) writeJson(context.stdout, commitment);
+      if (wantsJson) writeProductivityCommandJson(context, "commitments", positionals, commitment);
       else context.stdout.write(`${commitment.status} ${commitment.kind} ${commitment.id}\n${commitment.claim}\n`);
       return CLI_EXIT_OK;
     }
@@ -494,7 +528,7 @@ export async function runCommitmentsCli(input: {
         artifactId: flags.artifact || flags["artifact-id"],
       };
       const commitment = command === "fulfill" ? claw.commitments.fulfill(id, payload) : claw.commitments.miss(id, payload);
-      if (wantsJson) writeJson(context.stdout, commitment);
+      if (wantsJson) writeProductivityCommandJson(context, "commitments", positionals, commitment);
       else context.stdout.write(`${commitment.status} ${commitment.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -506,7 +540,7 @@ export async function runCommitmentsCli(input: {
         return CLI_EXIT_USAGE;
       }
       const commitment = claw.commitments.cancel(id, flags.reason);
-      if (wantsJson) writeJson(context.stdout, commitment);
+      if (wantsJson) writeProductivityCommandJson(context, "commitments", positionals, commitment);
       else context.stdout.write(`${commitment.status} ${commitment.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -527,13 +561,13 @@ export async function runCommitmentsCli(input: {
         deadline: flags.deadline || flags["deadline-id"],
         artifact: flags.artifact || flags["artifact-id"],
       });
-      if (wantsJson) writeJson(context.stdout, commitment);
+      if (wantsJson) writeProductivityCommandJson(context, "commitments", positionals, commitment);
       else context.stdout.write(`${commitment.id}\n`);
       return CLI_EXIT_OK;
     }
   } catch (error) {
     const handled = cliErrorFromUnknown(error);
-    if (wantsJson) writeCliError(context.stdout, handled);
+    if (wantsJson) writeProductivityCommandJsonError(context, "commitments", positionals, handled);
     else context.stderr.write(`${handled.message}\n`);
     return handled.exitCode;
   }
@@ -574,7 +608,7 @@ export async function runJudgmentCli(input: {
         options: collectFlagValues(argv, "option"),
         sessionId: flags.session || flags["session-id"],
       });
-      if (wantsJson) writeJson(context.stdout, judgment);
+      if (wantsJson) writeProductivityCommandJson(context, "judgment", positionals, judgment);
       else context.stdout.write(`${judgment.id} ${judgment.recommendation} ${judgment.recommendedOption ?? ""} confidence=${judgment.confidence.toFixed(2)}\n`);
       return CLI_EXIT_OK;
     }
@@ -593,7 +627,7 @@ export async function runJudgmentCli(input: {
         ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
         outcome: flags.outcome,
       });
-      if (wantsJson) writeJson(context.stdout, judgment);
+      if (wantsJson) writeProductivityCommandJson(context, "judgment", positionals, judgment);
       else context.stdout.write(`${judgment.id} ${judgment.status} ${judgment.chosenOption ?? ""}\n`);
       return CLI_EXIT_OK;
     }
@@ -603,7 +637,7 @@ export async function runJudgmentCli(input: {
         ...(flags.status ? { status: requireOneOf<JudgmentStatus>(flags.status, JUDGMENT_STATUSES, "status") } : {}),
         ...(flags.domain ? { domain: flags.domain } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, { judgments });
+      if (wantsJson) writeProductivityCommandJson(context, "judgment", positionals, { judgments });
       else context.stdout.write(`${judgments.map((judgment) => `${judgment.status} ${judgment.confidence.toFixed(2)} ${judgment.id} ${judgment.question}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -616,7 +650,7 @@ export async function runJudgmentCli(input: {
       }
       const judgment = claw.judgment.show(id);
       if (!judgment) throw new CliHandledError("not_found", `Judgment not found: ${id}`, CLI_EXIT_FAILURE);
-      if (wantsJson) writeJson(context.stdout, judgment);
+      if (wantsJson) writeProductivityCommandJson(context, "judgment", positionals, judgment);
       else context.stdout.write(`${judgment.status} ${judgment.recommendation} ${judgment.id}\n${judgment.question}\n`);
       return CLI_EXIT_OK;
     }
@@ -636,7 +670,7 @@ export async function runJudgmentCli(input: {
         plan: flags.plan || flags["plan-id"],
         task: flags.task || flags["task-id"],
       });
-      if (wantsJson) writeJson(context.stdout, judgment);
+      if (wantsJson) writeProductivityCommandJson(context, "judgment", positionals, judgment);
       else context.stdout.write(`${judgment.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -648,13 +682,13 @@ export async function runJudgmentCli(input: {
         return CLI_EXIT_USAGE;
       }
       const judgment = claw.judgment.archive(id, flags.reason);
-      if (wantsJson) writeJson(context.stdout, judgment);
+      if (wantsJson) writeProductivityCommandJson(context, "judgment", positionals, judgment);
       else context.stdout.write(`archived ${judgment.id}\n`);
       return CLI_EXIT_OK;
     }
   } catch (error) {
     const handled = cliErrorFromUnknown(error);
-    if (wantsJson) writeCliError(context.stdout, handled);
+    if (wantsJson) writeProductivityCommandJsonError(context, "judgment", positionals, handled);
     else context.stderr.write(`${handled.message}\n`);
     return handled.exitCode;
   }
@@ -688,7 +722,7 @@ export async function runLearningCli(input: {
         return CLI_EXIT_USAGE;
       }
       const result = claw.learning.capture({ sessionId });
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeProductivityCommandJson(context, "learning", positionals, result);
       else context.stdout.write(result.ignored ? `ignored ${sessionId}: ${result.reason ?? "no learning"}\n` : `${result.learnings.map((learning) => `${learning.id} ${learning.claim}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -709,7 +743,7 @@ export async function runLearningCli(input: {
         note: flags.note,
         quote: flags.quote,
       });
-      if (wantsJson) writeJson(context.stdout, learning);
+      if (wantsJson) writeProductivityCommandJson(context, "learning", positionals, learning);
       else context.stdout.write(`${learning.id}\n`);
       return CLI_EXIT_OK;
     }
@@ -720,7 +754,7 @@ export async function runLearningCli(input: {
         ...(flags.kind ? { kind: requireOneOf<LearningKind>(flags.kind, LEARNING_KINDS, "kind") } : {}),
         ...(flags.status ? { status: requireOneOf<LearningStatus>(flags.status, LEARNING_STATUSES, "status") } : {}),
       });
-      if (wantsJson) writeJson(context.stdout, { learnings });
+      if (wantsJson) writeProductivityCommandJson(context, "learning", positionals, { learnings });
       else context.stdout.write(`${learnings.map((learning) => `${learning.status} ${learning.confidence.toFixed(2)} ${learning.id} ${learning.claim}`).join("\n")}\n`);
       return CLI_EXIT_OK;
     }
@@ -733,7 +767,7 @@ export async function runLearningCli(input: {
       }
       const learning = claw.learning.show(id);
       if (!learning) throw new CliHandledError("not_found", `Learning not found: ${id}`, CLI_EXIT_FAILURE);
-      if (wantsJson) writeJson(context.stdout, learning);
+      if (wantsJson) writeProductivityCommandJson(context, "learning", positionals, learning);
       else context.stdout.write(`${learning.status} ${learning.confidence.toFixed(2)} ${learning.id}\n${learning.claim}\n`);
       return CLI_EXIT_OK;
     }
@@ -752,7 +786,7 @@ export async function runLearningCli(input: {
         note,
         quote: flags.quote,
       });
-      if (wantsJson) writeJson(context.stdout, learning);
+      if (wantsJson) writeProductivityCommandJson(context, "learning", positionals, learning);
       else context.stdout.write(`${learning.id} confidence=${learning.confidence.toFixed(2)} evidence=${learning.evidence.length}\n`);
       return CLI_EXIT_OK;
     }
@@ -767,7 +801,7 @@ export async function runLearningCli(input: {
       const apply = readBooleanFlag(argv, flags, "apply", false);
       const dryRun = readBooleanFlag(argv, flags, "dry-run", !apply);
       const result = claw.learning.promote(id, { to, dryRun, apply });
-      if (wantsJson) writeJson(context.stdout, result);
+      if (wantsJson) writeProductivityCommandJson(context, "learning", positionals, result);
       else context.stdout.write(`${result.applied ? "applied" : "dry-run"} ${to} ${id}\n`);
       return CLI_EXIT_OK;
     }
@@ -779,13 +813,13 @@ export async function runLearningCli(input: {
         return CLI_EXIT_USAGE;
       }
       const learning = claw.learning.archive(id, flags.reason);
-      if (wantsJson) writeJson(context.stdout, learning);
+      if (wantsJson) writeProductivityCommandJson(context, "learning", positionals, learning);
       else context.stdout.write(`archived ${learning.id}\n`);
       return CLI_EXIT_OK;
     }
   } catch (error) {
     const handled = cliErrorFromUnknown(error);
-    if (wantsJson) writeCliError(context.stdout, handled);
+    if (wantsJson) writeProductivityCommandJsonError(context, "learning", positionals, handled);
     else context.stderr.write(`${handled.message}\n`);
     return handled.exitCode;
   }

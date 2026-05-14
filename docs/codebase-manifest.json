@@ -95060,7 +95060,7 @@
     {
       "path": "packages/clawjs/src/cli-discovery.test.ts",
       "language": "typescript",
-      "lines": 152,
+      "lines": 176,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -96279,7 +96279,7 @@
     {
       "path": "packages/clawjs/src/cli-productivity-command.ts",
       "language": "typescript",
-      "lines": 796,
+      "lines": 830,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -96342,6 +96342,21 @@
           "kind": "function",
           "name": "runOutcomesCli",
           "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "writeProductivityCommandJson",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "writeProductivityCommandJsonError",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "writeProductivityDbJson",
+          "exported": false
         }
       ]
     },
