@@ -483,9 +483,9 @@ export function buildDiscordOperationRequest(
     case "trigger-typing-indicator":
       return bodyPlan("POST", `channels/${channelId(values)}/typing`, auth, headers, {}, { type: "null" });
     case "group-dm-add-recipient":
-      return bodyPlan("PUT", `channels/${channelId(values)}/recipients/${userId(values)}`, auth, headers, groupDmRecipientBody(values), { type: "object" });
+      return bodyPlan("PUT", `channels/${channelId(values)}/recipients/${userId(values)}`, auth, headers, groupDmRecipientBody(values), { type: "null" });
     case "group-dm-remove-recipient":
-      return deletePlan(`channels/${channelId(values)}/recipients/${userId(values)}`, auth, headers, { type: "object" });
+      return deletePlan(`channels/${channelId(values)}/recipients/${userId(values)}`, auth, headers, { type: "null" });
     case "list-messages":
       return getPlan(`channels/${channelId(values)}/messages`, auth, headers, { type: "array" }, removeEmptyValues({
         around: optionalString(values.around),
