@@ -10,6 +10,7 @@
     "test": "tsx --test tests/e2e/backend.e2e.test.ts"
   },
   "dependencies": {
+    "@clawjs/core": "0.1.2",
     "@fastify/cors": "^11.1.0",
     "@fastify/static": "^9.1.0",
     "better-sqlite3": "^12.4.1",

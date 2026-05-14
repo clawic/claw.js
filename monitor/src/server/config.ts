@@ -1,6 +1,8 @@
 import path from "node:path";
 import os from "node:os";
 
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+
 export type MonitorMode = "local" | "relay" | "hybrid";
 
 export interface MonitorConfig {
@@ -51,7 +53,8 @@ export function loadMonitorConfig(overrides: Partial<MonitorConfig> = {}): Monit
 function defaultClawjsDataRoot(): string {
   const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
   if (explicit) return expandHome(explicit);
-  return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
+  if (process.env.CLAW_HOME) return path.join(expandHome(process.env.CLAW_HOME), "data");
+  return expandHome(resolveClawPersistentSurfacePath("claw.global.data"));
 }
 
 function expandHome(value: string): string {

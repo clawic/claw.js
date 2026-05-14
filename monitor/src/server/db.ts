@@ -1,4 +1,5 @@
 import Database from "better-sqlite3";
+import { MONITOR_STORE_SCHEMA_SQL } from "./surface.ts";
 
 import type {
   Heartbeat,
@@ -31,52 +32,7 @@ export class MonitorDatabase {
   }
 
   private init(): void {
-    this.sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS monitors (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        group_name TEXT NOT NULL,
-        type TEXT NOT NULL,
-        config TEXT NOT NULL DEFAULT '{}',
-        enabled INTEGER NOT NULL DEFAULT 1,
-        created_at INTEGER NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS heartbeats (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        monitor_id TEXT NOT NULL REFERENCES monitors(id) ON DELETE CASCADE,
-        status TEXT NOT NULL,
-        response_time_ms INTEGER,
-        detail TEXT,
-        created_at INTEGER NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS idx_heartbeats_monitor
-        ON heartbeats(monitor_id, created_at DESC);
-
-      CREATE TABLE IF NOT EXISTS incidents (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        monitor_id TEXT NOT NULL REFERENCES monitors(id) ON DELETE CASCADE,
-        status TEXT NOT NULL,
-        started_at INTEGER NOT NULL,
-        resolved_at INTEGER,
-        duration_ms INTEGER
-      );
-      CREATE INDEX IF NOT EXISTS idx_incidents_monitor
-        ON incidents(monitor_id, started_at DESC);
-
-      CREATE TABLE IF NOT EXISTS instances (
-        id TEXT PRIMARY KEY,
-        adapter TEXT NOT NULL,
-        runtime_name TEXT NOT NULL,
-        gateway_url TEXT NOT NULL,
-        version TEXT,
-        status TEXT NOT NULL DEFAULT 'stopped',
-        config_path TEXT,
-        capabilities TEXT NOT NULL DEFAULT '{}',
-        discovered_at INTEGER NOT NULL,
-        last_seen_at INTEGER NOT NULL
-      );
-    `);
+    this.sqlite.exec(MONITOR_STORE_SCHEMA_SQL);
   }
 
   /* -------------------------------------------------------
