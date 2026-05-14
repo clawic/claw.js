@@ -502,11 +502,11 @@ export function buildDiscordOperationRequest(
     case "edit-message":
       return messagePlan("PATCH", `channels/${channelId(values)}/messages/${messageId(values)}`, auth, headers, values, false, false, { type: "object", requiredPaths: ["id", "channel_id"] });
     case "delete-message":
-      return deletePlan(`channels/${channelId(values)}/messages/${messageId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+      return deletePlan(`channels/${channelId(values)}/messages/${messageId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "bulk-delete-messages":
       return bodyPlan("POST", `channels/${channelId(values)}/messages/bulk-delete`, auth, auditHeaders(headers, values), {
         messages: requiredJsonArray(values.messages, "messages"),
-      }, { type: "object" });
+      }, { type: "null" });
     case "crosspost-message":
       return bodyPlan("POST", `channels/${channelId(values)}/messages/${messageId(values)}/crosspost`, auth, headers, {}, { type: "object", requiredPaths: ["id", "channel_id"] });
     case "list-pinned-messages":
@@ -517,13 +517,13 @@ export function buildDiscordOperationRequest(
     case "pin-message":
       return putPlan(`channels/${channelId(values)}/messages/pins/${messageId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
     case "unpin-message":
-      return deletePlan(`channels/${channelId(values)}/messages/pins/${messageId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+      return deletePlan(`channels/${channelId(values)}/messages/pins/${messageId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "create-reaction":
       return putPlan(`channels/${channelId(values)}/messages/${messageId(values)}/reactions/${pathSegment(requiredString(values.emoji, "emoji"))}/@me`, auth, headers, { type: "object" });
     case "delete-own-reaction":
-      return deletePlan(`channels/${channelId(values)}/messages/${messageId(values)}/reactions/${pathSegment(requiredString(values.emoji, "emoji"))}/@me`, auth, headers, { type: "object" });
+      return deletePlan(`channels/${channelId(values)}/messages/${messageId(values)}/reactions/${pathSegment(requiredString(values.emoji, "emoji"))}/@me`, auth, headers, { type: "null" });
     case "delete-user-reaction":
-      return deletePlan(`channels/${channelId(values)}/messages/${messageId(values)}/reactions/${pathSegment(requiredString(values.emoji, "emoji"))}/${userId(values)}`, auth, headers, { type: "object" });
+      return deletePlan(`channels/${channelId(values)}/messages/${messageId(values)}/reactions/${pathSegment(requiredString(values.emoji, "emoji"))}/${userId(values)}`, auth, headers, { type: "null" });
     case "list-reactions":
       return getPlan(`channels/${channelId(values)}/messages/${messageId(values)}/reactions/${pathSegment(requiredString(values.emoji, "emoji"))}`, auth, headers, { type: "array" }, removeEmptyValues({
         after: optionalString(values.after),
@@ -531,9 +531,9 @@ export function buildDiscordOperationRequest(
         type: optionalNumber(values.type),
       }));
     case "delete-all-reactions":
-      return deletePlan(`channels/${channelId(values)}/messages/${messageId(values)}/reactions`, auth, headers, { type: "object" });
+      return deletePlan(`channels/${channelId(values)}/messages/${messageId(values)}/reactions`, auth, headers, { type: "null" });
     case "delete-all-reactions-for-emoji":
-      return deletePlan(`channels/${channelId(values)}/messages/${messageId(values)}/reactions/${pathSegment(requiredString(values.emoji, "emoji"))}`, auth, headers, { type: "object" });
+      return deletePlan(`channels/${channelId(values)}/messages/${messageId(values)}/reactions/${pathSegment(requiredString(values.emoji, "emoji"))}`, auth, headers, { type: "null" });
     case "get-answer-voters":
       return getPlan(`channels/${channelId(values)}/polls/${messageId(values)}/answers/${answerId(values)}`, auth, headers, { type: "object", requiredPaths: ["users"] }, removeEmptyValues({
         after: optionalString(values.after),
