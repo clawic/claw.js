@@ -1,3 +1,4 @@
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { homedir, networkInterfaces } from "node:os";
 import path from "node:path";
 
@@ -62,7 +63,7 @@ export function loadRelayConfig(overrides: Partial<RelayConfig> = {}): RelayConf
 function defaultClawjsDataRoot(): string {
   if (process.env.CLAW_DATA_DIR) return expandHome(process.env.CLAW_DATA_DIR);
   if (process.env.CLAWIX_CLAW_DATA_DIR) return expandHome(process.env.CLAWIX_CLAW_DATA_DIR);
-  if (process.platform === "darwin") return path.join(homedir(), ".claw", "data");
+  if (process.platform === "darwin") return expandHome(resolveClawPersistentSurfacePath("claw.global.data"));
   if (process.platform === "win32") return path.join(process.env.APPDATA ?? path.join(homedir(), "AppData", "Roaming"), "Clawix", "clawjs");
   return path.join(process.env.XDG_DATA_HOME ?? path.join(homedir(), ".local", "share"), "Clawix", "clawjs");
 }
