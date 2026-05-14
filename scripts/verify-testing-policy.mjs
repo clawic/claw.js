@@ -6,6 +6,8 @@ const root = process.cwd();
 const requiredFiles = [
   "docs/adr/0002-testing-architecture.md",
   "docs/adr/0006-integration-qa-lab.md",
+  "docs/adr/0009-dual-human-programmatic-surfaces.md",
+  "docs/adr/TEMPLATE.md",
   "docs/integration-qa-lab.md",
   "docs/integration-qa-reference-research.md",
   "docs/testing.md",
