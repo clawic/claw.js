@@ -4,12 +4,12 @@
   "maxNewFileLines": 1200,
   "files": {
     "packages/clawjs/src/index.ts": {
-      "lines": 4977,
-      "reason": "Existing public CLI router after command extraction; keep routing thin and split new domains into modules."
+      "lines": 1998,
+      "reason": "Public CLI routing after delegated domain, temporal, productivity, and knowledge-tail command extraction; keep under 2000 by splitting new domains into modules."
     },
     "packages/clawjs-node/src/create-claw.ts": {
-      "lines": 4943,
-      "reason": "Existing Claw runtime assembly after contract and facade extraction; keep new runtime domains in focused modules."
+      "lines": 3304,
+      "reason": "Claw runtime assembly after media, generation, channel runtime, and skill/provider helper extraction; keep new runtime domains in focused modules."
     },
     "packages/clawjs/src/index.test.ts": {
       "lines": 1535,
@@ -20,24 +20,24 @@
       "reason": "English locale, locale registry, and brand override assembly after locale table extraction; add new translations in locale-specific modules."
     },
     "packages/clawjs-workspace/src/index.ts": {
-      "lines": 4993,
-      "reason": "Existing workspace runtime assembly after productivity and UI/session facade extraction; split new app/state domains before expanding."
+      "lines": 2062,
+      "reason": "Workspace runtime assembly after indexing, human activity, context, work session, and productivity facade extraction; split new app/state domains before expanding."
     },
     "examples/showcase/src/app/settings/page.tsx": {
       "lines": 4735,
       "reason": "Existing settings UI surface after shared control extraction; extract tabs, interactions, and adapters before expanding."
     },
     "relay/src/server/app.ts": {
-      "lines": 4139,
-      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+      "lines": 1653,
+      "reason": "Relay application assembly and remaining auth/service/admin/browser routes after helper, monitor, and workspace route extraction."
     },
     "packages/clawjs/src/v1-data.ts": {
-      "lines": 3921,
-      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+      "lines": 1738,
+      "reason": "V1 data CLI routing and command handlers after data helper extraction; keep persistence helpers in v1-data-core before expanding."
     },
     "packages/clawjs-core/src/types.ts": {
-      "lines": 3753,
-      "reason": "Existing canonical contract/schema surface; split codecs, fixtures, and docs before expanding."
+      "lines": 1348,
+      "reason": "Canonical type surface after workspace, human, and library/rules type extraction; split new contract domains into focused type modules before expanding."
     },
     "packages/clawjs-node/src/create-claw.test.ts": {
       "lines": 1994,
@@ -52,8 +52,8 @@
       "reason": "Relay E2E scenarios after fake connector utility extraction; split new scenario groups into separate tests before expanding."
     },
     "packages/clawjs-core/src/schemas.ts": {
-      "lines": 2379,
-      "reason": "Existing canonical contract/schema surface; split codecs, fixtures, and docs before expanding."
+      "lines": 1500,
+      "reason": "Canonical schema surface after workspace schema extraction; split new contract domains into focused schema modules before expanding."
     },
     "examples/showcase/src/app/page.tsx": {
       "lines": 2299,
@@ -166,6 +166,22 @@
     "secrets/src/server/app.ts": {
       "lines": 1208,
       "reason": "Existing secrets server app after broker redirect handling; split routes, auth helpers, and response serializers before expanding."
+    },
+    "packages/clawjs/src/v1-data-core.ts": {
+      "lines": 1587,
+      "reason": "V1 data maintenance, sidecar, page, search, MCP, and formatting helpers extracted from CLI routing; split by helper domain before expanding."
+    },
+    "relay/src/server/workspace-routes.ts": {
+      "lines": 1814,
+      "reason": "Workspace, chat, document, content, image, and skill route registration extracted from relay app; split by route domain before expanding."
+    },
+    "packages/clawjs/src/cli-productivity-extended-command.ts": {
+      "lines": 1583,
+      "reason": "Extended productivity CLI groups extracted from the public CLI router; split by capability family before expanding."
+    },
+    "packages/clawjs-workspace/src/workspace-core-productivity-facades.ts": {
+      "lines": 1389,
+      "reason": "Core productivity facade extracted from workspace index; grouped by tightly coupled task/project/list APIs pending further domain splits."
     }
   }
 }
