@@ -3414,7 +3414,7 @@ describe("discord operation runtime", () => {
       },
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -3547,7 +3547,7 @@ describe("discord operation runtime", () => {
       headers,
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
@@ -3633,7 +3633,7 @@ describe("discord operation runtime", () => {
       headers,
       body: {},
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 

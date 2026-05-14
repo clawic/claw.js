@@ -1,6 +1,7 @@
 {
-  "id": "delete-webhook-message-sample",
-  "channel_id": "sample",
-  "name": "sample",
-  "token": "offline-token"
+  "runtimeResponse": {
+    "status": 204,
+    "body": "",
+    "bodyEncoding": "text"
+  }
 }
