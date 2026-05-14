@@ -54,16 +54,18 @@ import { runConnectorOperation } from "@clawjs/integrations";
 await runConnectorOperation({
   catalog,
   operationId: "telegram_bot_api.action.send-text-message-or-reply-send-text-message-or-reply",
-  dryRun: false,
+  dryRun: true,
   input: {
     values: { chatId: "123", text: "hello" },
     secretRefs: { telegramBotApi: "secrets://connections/telegram/bot" },
   },
-  resolveSecret: async (ref) => secretStore.resolve(ref),
 });
 ```
 
-Registered source executors follow the same rule and can be validated offline with an injected fetch implementation:
+Authenticated connector execution must run through a capability broker. The
+runner validates required secret references in dry runs but does not resolve
+plaintext secret values. Registered source executors follow the same rule and
+can be validated offline only for operations that do not require auth fields:
 
 ```ts
 import { runConnectorSource } from "@clawjs/integrations";
@@ -71,12 +73,10 @@ import { runConnectorSource } from "@clawjs/integrations";
 await runConnectorSource({
   catalog,
   operationId: "telegram_bot_api.source.new-bot-command-received-new-bot-command-received",
-  dryRun: false,
+  dryRun: true,
   input: {
     values: { commands: "[\"/start\"]" },
-    secretRefs: { telegramBotApi: "secrets://connections/telegram/bot" },
   },
-  resolveSecret: async (ref) => secretStore.resolve(ref),
   runtimeExecutorOptions: {
     fetchImpl: async () => new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 }),
   },

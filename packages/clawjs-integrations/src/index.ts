@@ -72,7 +72,6 @@ export type {
   ConnectorExecutor,
   ConnectorOperationDryRun,
   ConnectorOperationRunResult,
-  ConnectorSecretResolver,
   RunConnectorOperationOptions,
 } from "./operation-runner.js";
 export type {

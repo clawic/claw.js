@@ -10,6 +10,11 @@ Fastify service designed for the case where agents should work with
 secret references and brokered actions instead of reading plaintext
 credentials into the model context.
 
+The canonical security policy is [Secrets Security Model](./secrets-security.md).
+If this page or the current implementation suggests a broader plaintext reveal,
+connector resolver, sidecar, CLI, audit, backup, or approval behavior, the
+security model wins and the broader behavior is transitional.
+
 Secrets v1 focuses on three paths:
 
 - brokered HTTP execution on the server
@@ -126,7 +131,12 @@ node secrets/dist/sidecar.js spawn-process \
 ## Current limits
 
 - Secrets does not expose a generic “read secret” endpoint.
+- The public CLI must not print or return plaintext secret values; it can list
+  safe metadata, request brokered actions, open the signed host UI, and run
+  diagnostics.
 - Host-bound `process` and `browser` flows require the local sidecar.
+- Host-bound sidecar flows are compatibility surfaces, not a bypass around
+  broker policy, signed-host approval, host allowlists, or risk tiers.
 - Secret deletion is not part of the current public API.
 - The current dev build seeds plaintext local users for operator login; the
   production boundary is the per-version secret encryption and the lack of

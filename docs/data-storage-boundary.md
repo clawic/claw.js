@@ -82,6 +82,10 @@ Secrets are separate from the main database. Plaintext secrets never live in
 field values stay in the secrets/vault sidecar or host-owned secret storage.
 Other records refer to secrets by opaque ids such as `secret_ref`.
 
+The full security contract for vault storage, human reveal, brokered execution,
+connectors, plugins, CLI, audit, backups, rotation, and fail-closed policy lives
+in [Secrets Security Model](./secrets-security.md).
+
 Approvals, grants, and audit records that are specific to a signed host live in
 the active host root. Framework policy records may reference them, but the host
 owns the native permission identity and approval UI.

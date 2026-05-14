@@ -248,9 +248,6 @@ describe("connector catalog", () => {
         secretRefs: { bot: "secret://bot", license: "secret://license" },
       },
       runtimeRegistry: registry,
-      resolveSecret: () => {
-        throw new Error("dry-run must not resolve secrets");
-      },
     });
 
     assert.equal(dryRun.status, "dry_run");
@@ -319,30 +316,24 @@ describe("connector catalog", () => {
     assert.deepEqual(plan.invalidFields, ["limit"]);
   });
 
-  it("resolves secrets only when execution is explicitly enabled", async () => {
-    const result = await runConnectorOperation({
-      catalog: fixtureCatalog(),
-      operationId: "chat_service.action.send-message",
-      dryRun: false,
-      input: {
-        values: { channel: "general", text: "hello" },
-        secretRefs: { bot: "secret://bot", license: "secret://license" },
-      },
-      resolveSecret: async (ref) => ref === "secret://bot" ? "resolved-token" : ref === "secret://license" ? "resolved-license" : null,
-      executor: {
-        async execute(ctx) {
-          assert.equal(ctx.secrets.bot, "resolved-token");
-          assert.equal(ctx.secrets.license, "resolved-license");
-          return { ok: true, channel: ctx.values.channel };
+  it("fails closed when action execution would require plaintext secrets", async () => {
+    await assert.rejects(
+      runConnectorOperation({
+        catalog: fixtureCatalog(),
+        operationId: "chat_service.action.send-message",
+        dryRun: false,
+        input: {
+          values: { channel: "general", text: "hello" },
+          secretRefs: { bot: "secret://bot", license: "secret://license" },
         },
-      },
-    });
-    assert.deepEqual(result, {
-      status: "executed",
-      operationId: "chat_service.action.send-message",
-      appId: "chat_service",
-      output: { ok: true, channel: "general" },
-    });
+        executor: {
+          async execute() {
+            throw new Error("executor must not receive plaintext secrets");
+          },
+        },
+      }),
+      /requires a capability broker/,
+    );
   });
 
   it("plans source managed interfaces without resolving secrets", async () => {
@@ -406,9 +397,6 @@ describe("connector catalog", () => {
         secretRefs: { bot: "secret://bot" },
       },
       runtimeRegistry: registry,
-      resolveSecret: () => {
-        throw new Error("dry-run must not resolve secrets");
-      },
     });
 
     assert.equal(plan.status, "source_plan");
@@ -428,30 +416,24 @@ describe("connector catalog", () => {
     });
   });
 
-  it("starts sources only with an explicit executor", async () => {
-    const result = await runConnectorSource({
-      catalog: fixtureCatalog(),
-      operationId: "chat_service.source.new-message",
-      dryRun: false,
-      input: {
-        values: { channel: "general" },
-        secretRefs: { bot: "secret://bot" },
-      },
-      resolveSecret: async (ref) => ref === "secret://bot" ? "resolved-token" : null,
-      executor: {
-        async start(ctx) {
-          assert.equal(ctx.secrets.bot, "resolved-token");
-          assert.equal(ctx.plan.delivery, "webhook");
-          return { subscribed: true, channel: ctx.values.channel };
+  it("fails closed when source execution would require plaintext secrets", async () => {
+    await assert.rejects(
+      runConnectorSource({
+        catalog: fixtureCatalog(),
+        operationId: "chat_service.source.new-message",
+        dryRun: false,
+        input: {
+          values: { channel: "general" },
+          secretRefs: { bot: "secret://bot" },
         },
-      },
-    });
-    assert.deepEqual(result, {
-      status: "source_started",
-      operationId: "chat_service.source.new-message",
-      appId: "chat_service",
-      output: { subscribed: true, channel: "general" },
-    });
+        executor: {
+          async start() {
+            throw new Error("source executor must not receive plaintext secrets");
+          },
+        },
+      }),
+      /requires a capability broker/,
+    );
   });
 
   it("builds blocked and ready source subscriptions from plans", async () => {

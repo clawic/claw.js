@@ -24,8 +24,6 @@ import type {
   IntegrationJson,
 } from "./types.js";
 
-export type ConnectorSecretResolver = (secretRef: string) => Promise<string | null> | string | null;
-
 export interface ConnectorExecutionContext {
   operation: ConnectorOperationDefinition;
   values: Record<string, IntegrationJson>;
@@ -41,7 +39,6 @@ export interface RunConnectorOperationOptions {
   operationId: string;
   input?: ConnectorOperationInput;
   dryRun?: boolean;
-  resolveSecret?: ConnectorSecretResolver;
   executor?: ConnectorExecutor;
   runtimeExecutorOptions?: ConnectorRuntimeExecutorOptions;
   runtimeRegistry?: readonly ConnectorRuntimeImplementation[];
@@ -102,26 +99,18 @@ export async function runConnectorOperation(
   if (missingFields.length > 0 || missingSecrets.length > 0 || invalidFields.length > 0) {
     throw new Error(`Connector operation is missing or invalid input: ${[...missingFields, ...missingSecrets, ...invalidFields].join(", ")}`);
   }
+  if (found.operation.authFieldNames.length > 0) {
+    throw new Error("Connector operation execution with secrets requires a capability broker; plaintext secret resolution is disabled.");
+  }
   const executor = options.executor ?? createConnectorOperationExecutor(found.operation, options.runtimeExecutorOptions, options.runtimeRegistry);
   if (!executor) {
     throw new Error("Connector operation execution requires an explicit executor or registered runtime executor.");
   }
 
-  const secrets: Record<string, string> = {};
-  for (const fieldName of found.operation.authFieldNames) {
-    const ref = secretRefs[fieldName];
-    if (!ref) continue;
-    const value = await options.resolveSecret?.(ref);
-    if (!value) {
-      throw new Error(`Unable to resolve secret: ${fieldName}`);
-    }
-    secrets[fieldName] = value;
-  }
-
   const output = await executor.execute({
     operation: found.operation,
     values,
-    secrets,
+    secrets: {},
   });
   return {
     status: "executed",

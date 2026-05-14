@@ -381,49 +381,28 @@ describe("telegram operation executor", () => {
       }],
     });
 
-    const result = await runConnectorOperation({
-      catalog,
-      operationId: "telegram_bot_api.action.send-text-message-or-reply-send-text-message-or-reply",
-      dryRun: false,
-      input: {
-        values: { chatId: "123", text: "hello" },
-        secretRefs: { telegramBotApi: "secret://telegram" },
-      },
-      resolveSecret: async (ref) => ref === "secret://telegram" ? "runtime-token" : null,
-      runtimeExecutorOptions: {
-        fetchImpl: async (input, init) => {
-          calls.push({
-            url: String(input),
-            body: JSON.parse(String(init?.body ?? "{}")),
-          });
-          return fixtureFetch(input, init);
+    await assert.rejects(
+      runConnectorOperation({
+        catalog,
+        operationId: "telegram_bot_api.action.send-text-message-or-reply-send-text-message-or-reply",
+        dryRun: false,
+        input: {
+          values: { chatId: "123", text: "hello" },
+          secretRefs: { telegramBotApi: "secret://telegram" },
         },
-      },
-    });
-
-    assert.deepEqual(result, {
-      status: "executed",
-      operationId: "telegram_bot_api.action.send-text-message-or-reply-send-text-message-or-reply",
-      appId: "telegram_bot_api",
-      output: {
-        ok: true,
-        result: {
-          message_id: 42,
-          chat: {
-            id: 123,
-            type: "private",
+        runtimeExecutorOptions: {
+          fetchImpl: async (input, init) => {
+            calls.push({
+              url: String(input),
+              body: JSON.parse(String(init?.body ?? "{}")),
+            });
+            return fixtureFetch(input, init);
           },
-          text: "hello",
         },
-      },
-    });
-    assert.deepEqual(calls, [{
-      url: "https://api.telegram.org/botruntime-token/sendMessage",
-      body: {
-        chat_id: "123",
-        text: "hello",
-      },
-    }]);
+      }),
+      /requires a capability broker/,
+    );
+    assert.deepEqual(calls, []);
   });
 });
 

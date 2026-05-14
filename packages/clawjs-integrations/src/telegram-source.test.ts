@@ -190,29 +190,24 @@ describe("telegram source events", () => {
       }],
     });
 
-    const result = await runConnectorSource({
-      catalog,
-      operationId: "telegram_bot_api.source.new-bot-command-received-new-bot-command-received",
-      dryRun: false,
-      input: {
-        values: { commands: "[\"/start\"]" },
-        secretRefs: { telegramBotApi: "secret://telegram" },
-      },
-      resolveSecret: async (ref) => ref === "secret://telegram" ? "runtime-token" : null,
-      runtimeExecutorOptions: {
-        fetchImpl: async (input) => {
-          calls.push(String(input));
-          return fixtureFetch(input);
+    await assert.rejects(
+      runConnectorSource({
+        catalog,
+        operationId: "telegram_bot_api.source.new-bot-command-received-new-bot-command-received",
+        dryRun: false,
+        input: {
+          values: { commands: "[\"/start\"]" },
+          secretRefs: { telegramBotApi: "secret://telegram" },
         },
-      },
-    });
-
-    assert.equal(result.status, "source_started");
-    assert.equal(result.output.nextOffset, 1001);
-    assert.equal((result.output.events as unknown[]).length, 1);
-    const url = new URL(calls[0] ?? "");
-    assert.equal(url.pathname, "/botruntime-token/getUpdates");
-    assert.equal(url.searchParams.get("timeout"), "0");
-    assert.equal(url.searchParams.get("allowed_updates"), "[\"message\",\"edited_message\",\"channel_post\",\"edited_channel_post\"]");
+        runtimeExecutorOptions: {
+          fetchImpl: async (input) => {
+            calls.push(String(input));
+            return fixtureFetch(input);
+          },
+        },
+      }),
+      /requires a capability broker/,
+    );
+    assert.deepEqual(calls, []);
   });
 });
