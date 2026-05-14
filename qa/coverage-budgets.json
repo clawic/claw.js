@@ -56,6 +56,13 @@
       "metric": "scenario_coverage",
       "minimum": 1,
       "ratchet": false
+    },
+    {
+      "boundary": "connector-official-api-coverage",
+      "lane": "fast",
+      "metric": "matrix_coverage",
+      "minimum": 1,
+      "ratchet": true
     }
   ]
 }
