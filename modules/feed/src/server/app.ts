@@ -1,3 +1,20 @@
+const STABLE_EVENT_TYPES = {
+  sourceCreated: "source.created",
+  sourceUpdated: "source.updated",
+  sourceDeleted: "source.deleted",
+  itemCreated: "item.created",
+  itemUpdated: "item.updated",
+  itemDeleted: "item.deleted",
+  itemRead: "item.read",
+  itemStarred: "item.starred",
+  itemArchived: "item.archived",
+  annotationCreated: "annotation.created",
+  annotationDeleted: "annotation.deleted",
+  collectionCreated: "collection.created",
+  collectionUpdated: "collection.updated",
+  collectionDeleted: "collection.deleted",
+} as const;
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -164,7 +181,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
       },
     });
 
-    wsApp.get("/v1/realtime", { websocket: true }, async (socket, request) => {
+    wsApp.get(clawApiPath("realtime"), { websocket: true }, async (socket, request) => {
       const principal = await resolvePrincipal(request as FastifyRequest, auth, store);
       if (!principal) {
         socket.close();
@@ -176,7 +193,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
 
   // ── Health ─────────────────────────────────────────────────────────────
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     service: "feed",
     host: config.host,
@@ -185,7 +202,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
 
   // ── Auth ───────────────────────────────────────────────────────────────
 
-  app.post("/v1/auth/admin/login", async (request, reply) => {
+  app.post(clawApiPath("auth/admin/login"), async (request, reply) => {
     const body = readBody(request);
     const email = typeof body.email === "string" ? body.email : "";
     const password = typeof body.password === "string" ? body.password : "";
@@ -197,7 +214,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
     return { accessToken, admin: { id: admin.id, email: admin.email } };
   });
 
-  app.get("/v1/auth/me", async (request, reply) => {
+  app.get(clawApiPath("auth/me"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store);
     if (!principal) return null;
     return { principal };
@@ -205,7 +222,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
 
   // ── Sources ────────────────────────────────────────────────────────────
 
-  app.get("/v1/sources", async (request, reply) => {
+  app.get(clawApiPath("sources"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "sources:list" });
     if (!principal) return null;
     return {
@@ -216,7 +233,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
     };
   });
 
-  app.post("/v1/sources", async (request, reply) => {
+  app.post(clawApiPath("sources"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "sources:create" });
     if (!principal) return null;
     try {
@@ -232,14 +249,14 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
         tags: Array.isArray(body.tags) ? body.tags as string[] : undefined,
         createdByAgentId: typeof body.createdByAgentId === "string" ? body.createdByAgentId : undefined,
       });
-      emitChange({ type: "source.created", sourceId: source.id, payload: source, at: new Date().toISOString() });
+      emitChange({ type: STABLE_EVENT_TYPES.sourceCreated, sourceId: source.id, payload: source, at: new Date().toISOString() });
       return await reply.code(201).send(source);
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
-  app.get("/v1/sources/:sourceId", async (request, reply) => {
+  app.get(clawApiPath("sources/:sourceId"), async (request, reply) => {
     const { sourceId } = request.params as { sourceId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "sources:read" });
     if (!principal) return null;
@@ -248,7 +265,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
     return store.getSource(resolved);
   });
 
-  app.patch("/v1/sources/:sourceId", async (request, reply) => {
+  app.patch(clawApiPath("sources/:sourceId"), async (request, reply) => {
     const { sourceId } = request.params as { sourceId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "sources:update" });
     if (!principal) return null;
@@ -264,25 +281,25 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
         pollIntervalMinutes: typeof body.pollIntervalMinutes === "number" ? body.pollIntervalMinutes : undefined,
         tags: Array.isArray(body.tags) ? body.tags as string[] : undefined,
       });
-      emitChange({ type: "source.updated", sourceId: resolved, payload: source, at: new Date().toISOString() });
+      emitChange({ type: STABLE_EVENT_TYPES.sourceUpdated, sourceId: resolved, payload: source, at: new Date().toISOString() });
       return source;
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
-  app.delete("/v1/sources/:sourceId", async (request, reply) => {
+  app.delete(clawApiPath("sources/:sourceId"), async (request, reply) => {
     const { sourceId } = request.params as { sourceId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "sources:delete" });
     if (!principal) return null;
     const resolved = store.resolveSourceId(sourceId);
     if (!resolved) return await reply.code(404).send({ error: "source_not_found" });
     const ok = store.deleteSource(resolved);
-    if (ok) emitChange({ type: "source.deleted", sourceId: resolved, at: new Date().toISOString() });
+    if (ok) emitChange({ type: STABLE_EVENT_TYPES.sourceDeleted, sourceId: resolved, at: new Date().toISOString() });
     return { ok };
   });
 
-  app.post("/v1/sources/:sourceId/poll", async (request, reply) => {
+  app.post(clawApiPath("sources/:sourceId/poll"), async (request, reply) => {
     const { sourceId } = request.params as { sourceId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "ingest:trigger" });
     if (!principal) return null;
@@ -292,7 +309,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
     return result;
   });
 
-  app.get("/v1/sources/:sourceId/items", async (request, reply) => {
+  app.get(clawApiPath("sources/:sourceId/items"), async (request, reply) => {
     const { sourceId } = request.params as { sourceId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:list" });
     if (!principal) return null;
@@ -308,7 +325,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
 
   // ── Items ──────────────────────────────────────────────────────────────
 
-  app.get("/v1/items", async (request, reply) => {
+  app.get(clawApiPath("items"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:list" });
     if (!principal) return null;
     return store.listItems({
@@ -326,7 +343,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
     });
   });
 
-  app.post("/v1/items", async (request, reply) => {
+  app.post(clawApiPath("items"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:create" });
     if (!principal) return null;
     try {
@@ -349,14 +366,14 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
         savedByAgentId: typeof body.savedByAgentId === "string" ? body.savedByAgentId : undefined,
         saveReason: typeof body.saveReason === "string" ? body.saveReason : undefined,
       });
-      emitChange({ type: "item.created", itemId: item.id, payload: item, at: new Date().toISOString() });
+      emitChange({ type: STABLE_EVENT_TYPES.itemCreated, itemId: item.id, payload: item, at: new Date().toISOString() });
       return await reply.code(201).send(item);
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
-  app.get("/v1/items/:itemId", async (request, reply) => {
+  app.get(clawApiPath("items/:itemId"), async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:read" });
     if (!principal) return null;
@@ -366,7 +383,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
     return { ...item, annotations };
   });
 
-  app.patch("/v1/items/:itemId", async (request, reply) => {
+  app.patch(clawApiPath("items/:itemId"), async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:update" });
     if (!principal) return null;
@@ -380,62 +397,62 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
         importance: typeof body.importance === "string" ? body.importance as Importance : undefined,
         tags: Array.isArray(body.tags) ? body.tags as string[] : undefined,
       });
-      emitChange({ type: "item.updated", itemId, payload: item, at: new Date().toISOString() });
+      emitChange({ type: STABLE_EVENT_TYPES.itemUpdated, itemId, payload: item, at: new Date().toISOString() });
       return item;
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
-  app.delete("/v1/items/:itemId", async (request, reply) => {
+  app.delete(clawApiPath("items/:itemId"), async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:delete" });
     if (!principal) return null;
     const ok = store.deleteItem(itemId);
-    if (ok) emitChange({ type: "item.deleted", itemId, at: new Date().toISOString() });
+    if (ok) emitChange({ type: STABLE_EVENT_TYPES.itemDeleted, itemId, at: new Date().toISOString() });
     return { ok };
   });
 
-  app.post("/v1/items/:itemId/read", async (request, reply) => {
+  app.post(clawApiPath("items/:itemId/read"), async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:update" });
     if (!principal) return null;
     try {
       const item = store.markRead(itemId);
-      emitChange({ type: "item.read", itemId, at: new Date().toISOString() });
+      emitChange({ type: STABLE_EVENT_TYPES.itemRead, itemId, at: new Date().toISOString() });
       return item;
     } catch (error) {
       return await reply.code(404).send({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
-  app.post("/v1/items/:itemId/star", async (request, reply) => {
+  app.post(clawApiPath("items/:itemId/star"), async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:update" });
     if (!principal) return null;
     try {
       const item = store.toggleStar(itemId);
-      emitChange({ type: "item.starred", itemId, at: new Date().toISOString() });
+      emitChange({ type: STABLE_EVENT_TYPES.itemStarred, itemId, at: new Date().toISOString() });
       return item;
     } catch (error) {
       return await reply.code(404).send({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
-  app.post("/v1/items/:itemId/archive", async (request, reply) => {
+  app.post(clawApiPath("items/:itemId/archive"), async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:update" });
     if (!principal) return null;
     try {
       const item = store.archiveItem(itemId);
-      emitChange({ type: "item.archived", itemId, at: new Date().toISOString() });
+      emitChange({ type: STABLE_EVENT_TYPES.itemArchived, itemId, at: new Date().toISOString() });
       return item;
     } catch (error) {
       return await reply.code(404).send({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
-  app.post("/v1/items/bulk", async (request, reply) => {
+  app.post(clawApiPath("items/bulk"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:update" });
     if (!principal) return null;
     const body = readBody(request);
@@ -451,14 +468,14 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
 
   // ── Annotations ────────────────────────────────────────────────────────
 
-  app.get("/v1/items/:itemId/annotations", async (request, reply) => {
+  app.get(clawApiPath("items/:itemId/annotations"), async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "annotations:list" });
     if (!principal) return null;
     return { items: store.listAnnotations(itemId) };
   });
 
-  app.post("/v1/items/:itemId/annotations", async (request, reply) => {
+  app.post(clawApiPath("items/:itemId/annotations"), async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "annotations:create" });
     if (!principal) return null;
@@ -472,14 +489,14 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
         data: typeof body.data === "object" && body.data ? body.data as Record<string, unknown> : undefined,
         agentId: typeof body.agentId === "string" ? body.agentId : undefined,
       });
-      emitChange({ type: "annotation.created", itemId, annotationId: annotation.id, payload: annotation, at: new Date().toISOString() });
+      emitChange({ type: STABLE_EVENT_TYPES.annotationCreated, itemId, annotationId: annotation.id, payload: annotation, at: new Date().toISOString() });
       return await reply.code(201).send(annotation);
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
-  app.patch("/v1/annotations/:annotationId", async (request, reply) => {
+  app.patch(clawApiPath("annotations/:annotationId"), async (request, reply) => {
     const { annotationId } = request.params as { annotationId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "annotations:update" });
     if (!principal) return null;
@@ -494,21 +511,21 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
     }
   });
 
-  app.delete("/v1/annotations/:annotationId", async (request, reply) => {
+  app.delete(clawApiPath("annotations/:annotationId"), async (request, reply) => {
     const { annotationId } = request.params as { annotationId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "annotations:delete" });
     if (!principal) return null;
     const annotation = store.getAnnotation(annotationId);
     const ok = store.deleteAnnotation(annotationId);
     if (ok && annotation) {
-      emitChange({ type: "annotation.deleted", itemId: annotation.itemId, annotationId, at: new Date().toISOString() });
+      emitChange({ type: STABLE_EVENT_TYPES.annotationDeleted, itemId: annotation.itemId, annotationId, at: new Date().toISOString() });
     }
     return { ok };
   });
 
   // ── Collections ────────────────────────────────────────────────────────
 
-  app.get("/v1/collections", async (request, reply) => {
+  app.get(clawApiPath("collections"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "collections:list" });
     if (!principal) return null;
     const collections = store.listCollections();
@@ -520,7 +537,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
     };
   });
 
-  app.post("/v1/collections", async (request, reply) => {
+  app.post(clawApiPath("collections"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "collections:create" });
     if (!principal) return null;
     try {
@@ -535,14 +552,14 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
         sortOrder: typeof body.sortOrder === "string" ? body.sortOrder : undefined,
         createdByAgentId: typeof body.createdByAgentId === "string" ? body.createdByAgentId : undefined,
       });
-      emitChange({ type: "collection.created", collectionId: collection.id, payload: collection, at: new Date().toISOString() });
+      emitChange({ type: STABLE_EVENT_TYPES.collectionCreated, collectionId: collection.id, payload: collection, at: new Date().toISOString() });
       return await reply.code(201).send(collection);
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
-  app.get("/v1/collections/:collectionId", async (request, reply) => {
+  app.get(clawApiPath("collections/:collectionId"), async (request, reply) => {
     const { collectionId } = request.params as { collectionId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "collections:read" });
     if (!principal) return null;
@@ -552,7 +569,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
     return { ...collection, itemCount: store.getCollectionItemCount(resolved) };
   });
 
-  app.patch("/v1/collections/:collectionId", async (request, reply) => {
+  app.patch(clawApiPath("collections/:collectionId"), async (request, reply) => {
     const { collectionId } = request.params as { collectionId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "collections:update" });
     if (!principal) return null;
@@ -567,25 +584,25 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
         filter: typeof body.filter === "object" && body.filter ? body.filter as Record<string, unknown> : undefined,
         sortOrder: typeof body.sortOrder === "string" ? body.sortOrder : undefined,
       });
-      emitChange({ type: "collection.updated", collectionId: resolved, payload: collection, at: new Date().toISOString() });
+      emitChange({ type: STABLE_EVENT_TYPES.collectionUpdated, collectionId: resolved, payload: collection, at: new Date().toISOString() });
       return collection;
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
-  app.delete("/v1/collections/:collectionId", async (request, reply) => {
+  app.delete(clawApiPath("collections/:collectionId"), async (request, reply) => {
     const { collectionId } = request.params as { collectionId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "collections:delete" });
     if (!principal) return null;
     const resolved = store.resolveCollectionId(collectionId);
     if (!resolved) return await reply.code(404).send({ error: "collection_not_found" });
     const ok = store.deleteCollection(resolved);
-    if (ok) emitChange({ type: "collection.deleted", collectionId: resolved, at: new Date().toISOString() });
+    if (ok) emitChange({ type: STABLE_EVENT_TYPES.collectionDeleted, collectionId: resolved, at: new Date().toISOString() });
     return { ok };
   });
 
-  app.get("/v1/collections/:collectionId/items", async (request, reply) => {
+  app.get(clawApiPath("collections/:collectionId/items"), async (request, reply) => {
     const { collectionId } = request.params as { collectionId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "collections:read" });
     if (!principal) return null;
@@ -597,7 +614,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
     });
   });
 
-  app.post("/v1/collections/:collectionId/items", async (request, reply) => {
+  app.post(clawApiPath("collections/:collectionId/items"), async (request, reply) => {
     const { collectionId } = request.params as { collectionId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "collections:update" });
     if (!principal) return null;
@@ -609,7 +626,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
     return { added };
   });
 
-  app.delete("/v1/collections/:collectionId/items/:itemId", async (request, reply) => {
+  app.delete(clawApiPath("collections/:collectionId/items/:itemId"), async (request, reply) => {
     const { collectionId, itemId } = request.params as { collectionId: string; itemId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "collections:update" });
     if (!principal) return null;
@@ -620,7 +637,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
 
   // ── Search ─────────────────────────────────────────────────────────────
 
-  app.get("/v1/search", async (request, reply) => {
+  app.get(clawApiPath("search"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "search:query" });
     if (!principal) return null;
     const q = queryString(request, "q");
@@ -638,7 +655,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
 
   // ── Stats ──────────────────────────────────────────────────────────────
 
-  app.get("/v1/stats", async (request, reply) => {
+  app.get(clawApiPath("stats"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store);
     if (!principal) return null;
     return store.getStats();
@@ -646,7 +663,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
 
   // ── Ingest ─────────────────────────────────────────────────────────────
 
-  app.post("/v1/ingest/poll-all", async (request, reply) => {
+  app.post(clawApiPath("ingest/poll-all"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "ingest:trigger", adminOnly: true });
     if (!principal) return null;
     const results = await ingester.pollAll();
@@ -655,13 +672,13 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
 
   // ── Tokens ─────────────────────────────────────────────────────────────
 
-  app.get("/v1/tokens", async (request, reply) => {
+  app.get(clawApiPath("tokens"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "tokens:issue" });
     if (!principal) return null;
     return { items: store.listScopedTokens() };
   });
 
-  app.post("/v1/tokens", async (request, reply) => {
+  app.post(clawApiPath("tokens"), async (request, reply) => {
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "tokens:issue" });
     if (!principal) return null;
     try {
@@ -676,7 +693,7 @@ export function buildFeedApp(options: BuildFeedAppOptions = {}) {
     }
   });
 
-  app.post("/v1/tokens/:tokenId/revoke", async (request, reply) => {
+  app.post(clawApiPath("tokens/:tokenId/revoke"), async (request, reply) => {
     const { tokenId } = request.params as { tokenId: string };
     const principal = await requirePrincipal(request, reply, auth, store, { operation: "tokens:revoke" });
     if (!principal) return null;

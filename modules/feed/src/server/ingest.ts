@@ -1,3 +1,7 @@
+const STABLE_EVENT_TYPES = {
+  itemCreated: "item.created",
+  sourcePolled: "source.polled",
+} as const;
 import { XMLParser } from "fast-xml-parser";
 
 import type { FeedStore } from "./db.ts";
@@ -112,7 +116,7 @@ export class FeedIngester {
         if (item) {
           added++;
           this.emitChange({
-            type: "item.created",
+            type: STABLE_EVENT_TYPES.itemCreated,
             itemId: item.id,
             sourceId: source.id,
             payload: item,
@@ -128,7 +132,7 @@ export class FeedIngester {
     }
 
     this.emitChange({
-      type: "source.polled",
+      type: STABLE_EVENT_TYPES.sourcePolled,
       sourceId,
       payload: { added, errors },
       at: new Date().toISOString(),
