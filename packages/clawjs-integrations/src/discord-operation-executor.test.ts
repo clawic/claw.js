@@ -912,7 +912,7 @@ describe("discord operation runtime", () => {
       body: {},
       bodyValue: [{ id: "123", position: 2, lock_permissions: false, parent_id: "789" }],
       responseSchema: {
-        type: "object",
+        type: "null",
       },
     });
 
