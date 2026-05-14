@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import {
   type ChangeEvent,
   type FormEvent,
@@ -161,7 +162,10 @@ export function App() {
   async function refreshList(nextSelectedId?: string | null) {
     if (!token) return;
     const query = deferredSearch.trim();
-    const response = await request<ListResponse>(token, `/v1/items?view=${encodeURIComponent(query ? "my-drive" : view)}${currentFolderId ? `&parentId=${encodeURIComponent(currentFolderId)}` : ""}${query ? `&q=${encodeURIComponent(query)}` : ""}`);
+    const response = await request<ListResponse>(
+      token,
+      clawApiPath(`items?view=${encodeURIComponent(query ? "my-drive" : view)}${currentFolderId ? `&parentId=${encodeURIComponent(currentFolderId)}` : ""}${query ? `&q=${encodeURIComponent(query)}` : ""}`),
+    );
     setItems(response.items);
     setCounts(response.counts);
     setBreadcrumbs(response.breadcrumbs);
@@ -175,12 +179,12 @@ export function App() {
 
   async function loadDetail(itemId: string) {
     if (!token) return;
-    await request(token, `/v1/items/${itemId}/view`, { method: "POST" });
+    await request(token, clawApiPath(`items/${itemId}/view`), { method: "POST" });
     const [detail, commentRes, revisionRes, shareRes] = await Promise.all([
-      request<DriveItemDetail>(token, `/v1/items/${itemId}`),
-      request<{ items: DriveComment[] }>(token, `/v1/items/${itemId}/comments`),
-      request<{ items: DriveRevision[] }>(token, `/v1/items/${itemId}/revisions`),
-      request<{ items: DriveShareRecord[] }>(token, `/v1/items/${itemId}/shares`).catch(() => ({ items: [] })),
+      request<DriveItemDetail>(token, clawApiPath(`items/${itemId}`)),
+      request<{ items: DriveComment[] }>(token, clawApiPath(`items/${itemId}/comments`)),
+      request<{ items: DriveRevision[] }>(token, clawApiPath(`items/${itemId}/revisions`)),
+      request<{ items: DriveShareRecord[] }>(token, clawApiPath(`items/${itemId}/shares`)).catch(() => ({ items: [] })),
     ]);
     setSelectedItem(detail);
     setComments(commentRes.items);
@@ -206,7 +210,7 @@ export function App() {
   async function login(event: FormEvent) {
     event.preventDefault();
     try {
-      const response = await request<{ accessToken: string; email: string }>(null, "/v1/auth/admin/login", {
+      const response = await request<{ accessToken: string; email: string }>(null, clawApiPath("auth/admin/login"), {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
@@ -235,7 +239,7 @@ export function App() {
 
   async function createItem(kind: "folder" | "doc" | "sheet" | "slide") {
     if (!token) return;
-    const response = await request<DriveItemDetail>(token, "/v1/items", {
+    const response = await request<DriveItemDetail>(token, clawApiPath("items"), {
       method: "POST",
       body: JSON.stringify({
         kind,
@@ -250,7 +254,7 @@ export function App() {
 
   async function toggleStar(item: DriveItem) {
     if (!token) return;
-    const response = await request<DriveItemDetail>(token, `/v1/items/${item.id}`, {
+    const response = await request<DriveItemDetail>(token, clawApiPath(`items/${item.id}`), {
       method: "PATCH",
       body: JSON.stringify({ starred: !item.starred }),
     });
@@ -261,7 +265,7 @@ export function App() {
 
   async function renameSelected(name: string) {
     if (!token || !selectedItem) return;
-    const response = await request<DriveItemDetail>(token, `/v1/items/${selectedItem.id}`, {
+    const response = await request<DriveItemDetail>(token, clawApiPath(`items/${selectedItem.id}`), {
       method: "PATCH",
       body: JSON.stringify({ name }),
     });
@@ -272,7 +276,7 @@ export function App() {
 
   async function trashSelected() {
     if (!token || !selectedItem) return;
-    const response = await request<DriveItemDetail>(token, `/v1/items/${selectedItem.id}/trash`, { method: "POST" });
+    const response = await request<DriveItemDetail>(token, clawApiPath(`items/${selectedItem.id}/trash`), { method: "POST" });
     setStatus(`Moved ${response.name} to trash`);
     setSelectedItem(null);
     await refreshList();
@@ -280,7 +284,7 @@ export function App() {
 
   async function restoreSelected() {
     if (!token || !selectedItem) return;
-    const response = await request<DriveItemDetail>(token, `/v1/items/${selectedItem.id}/restore`, { method: "POST" });
+    const response = await request<DriveItemDetail>(token, clawApiPath(`items/${selectedItem.id}/restore`), { method: "POST" });
     setSelectedItem(response);
     setStatus(`Restored ${response.name}`);
     await refreshList(response.id);
@@ -288,7 +292,7 @@ export function App() {
 
   async function deleteSelectedForever() {
     if (!token || !selectedItem) return;
-    await request(token, `/v1/items/${selectedItem.id}`, { method: "DELETE" });
+    await request(token, clawApiPath(`items/${selectedItem.id}`), { method: "DELETE" });
     setSelectedItem(null);
     setStatus("Deleted permanently");
     await refreshList();
@@ -296,14 +300,14 @@ export function App() {
 
   async function copySelected() {
     if (!token || !selectedItem) return;
-    const response = await request<DriveItemDetail>(token, `/v1/items/${selectedItem.id}/copy`, { method: "POST", body: JSON.stringify({ parentId: currentFolderId }) });
+    const response = await request<DriveItemDetail>(token, clawApiPath(`items/${selectedItem.id}/copy`), { method: "POST", body: JSON.stringify({ parentId: currentFolderId }) });
     setStatus(`Copied to ${response.name}`);
     await refreshList(response.id);
   }
 
   async function addComment() {
     if (!token || !selectedItem || !commentBody.trim()) return;
-    await request<DriveComment>(token, `/v1/items/${selectedItem.id}/comments`, {
+    await request<DriveComment>(token, clawApiPath(`items/${selectedItem.id}/comments`), {
       method: "POST",
       body: JSON.stringify({ body: commentBody }),
     });
@@ -313,7 +317,7 @@ export function App() {
 
   async function createShare() {
     if (!token || !selectedItem) return;
-    const response = await request<{ share: DriveShareRecord; token: string; url: string }>(token, `/v1/items/${selectedItem.id}/shares`, {
+    const response = await request<{ share: DriveShareRecord; token: string; url: string }>(token, clawApiPath(`items/${selectedItem.id}/shares`), {
       method: "POST",
       body: JSON.stringify({ label: shareLabel }),
     });
@@ -324,7 +328,7 @@ export function App() {
 
   async function restoreRevision(revisionId: string) {
     if (!token || !selectedItem) return;
-    const response = await request<DriveItemDetail>(token, `/v1/items/${selectedItem.id}/revisions/${revisionId}/restore`, { method: "POST" });
+    const response = await request<DriveItemDetail>(token, clawApiPath(`items/${selectedItem.id}/revisions/${revisionId}/restore`), { method: "POST" });
     setStatus(`Restored revision for ${response.name}`);
     await loadDetail(response.id);
   }
@@ -340,7 +344,7 @@ export function App() {
           : null;
     if (!content) return;
     try {
-      const response = await request<DriveItemDetail>(token, `/v1/items/${selectedItem.id}/content`, {
+      const response = await request<DriveItemDetail>(token, clawApiPath(`items/${selectedItem.id}/content`), {
         method: "POST",
         body: JSON.stringify({
           baseRevisionId: selectedItem.currentRevisionId,
@@ -365,7 +369,7 @@ export function App() {
 
   async function saveAsDuplicate() {
     if (!token || !selectedItem) return;
-    const duplicated = await request<DriveItemDetail>(token, `/v1/items/${selectedItem.id}/copy`, {
+    const duplicated = await request<DriveItemDetail>(token, clawApiPath(`items/${selectedItem.id}/copy`), {
       method: "POST",
       body: JSON.stringify({ parentId: selectedItem.parentId }),
     });
@@ -376,7 +380,7 @@ export function App() {
         ? sheetDraft
         : slideDraft;
     if (content) {
-      await request<DriveItemDetail>(token, `/v1/items/${duplicated.id}/content`, {
+      await request<DriveItemDetail>(token, clawApiPath(`items/${duplicated.id}/content`), {
         method: "POST",
         body: JSON.stringify({ baseRevisionId: duplicated.currentRevisionId, content, summary: "Saved as duplicate after conflict" }),
       });
@@ -389,7 +393,7 @@ export function App() {
     const form = new FormData();
     form.set("file", event.target.files[0]);
     if (currentFolderId) form.set("parentId", currentFolderId);
-    const response = await request<DriveItemDetail>(token, "/v1/uploads", {
+    const response = await request<DriveItemDetail>(token, clawApiPath("uploads"), {
       method: "POST",
       body: form,
     });
@@ -401,7 +405,7 @@ export function App() {
 
   async function exportSelected(format: string) {
     if (!selectedItem) return;
-    window.open(`/v1/items/${selectedItem.id}/export?format=${encodeURIComponent(format)}`, "_blank", "noopener,noreferrer");
+    window.open(clawApiPath(`items/${selectedItem.id}/export?format=${encodeURIComponent(format)}`), "_blank", "noopener,noreferrer");
   }
 
   async function openItem(item: DriveItem) {
@@ -611,7 +615,7 @@ export function App() {
                       className="btn-ghost"
                       onClick={() =>
                         selectedItem.kind === "upload"
-                          ? window.open(`/v1/items/${selectedItem.id}/download`, "_blank", "noopener,noreferrer")
+                          ? window.open(clawApiPath(`items/${selectedItem.id}/download`), "_blank", "noopener,noreferrer")
                           : exportSelected(selectedItem.kind === "doc" ? "md" : selectedItem.kind === "sheet" ? "csv" : "json")
                       }
                       title="Export"

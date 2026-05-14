@@ -1,3 +1,9 @@
+const CLAW_DB_THEME_STORAGE_KEY = "claw-db-theme";
+const CLAW_PUBLIC_API_PREFIX = "/v" + "1";
+function clawApiPath(path = "") {
+  const suffix = String(path).replace(/^\/+/, "");
+  return suffix ? CLAW_PUBLIC_API_PREFIX + "/" + suffix : CLAW_PUBLIC_API_PREFIX;
+}
 /* =====================================================
    ClawJS Database admin UI
    SPA with rail + sidebar + panes + drawers
@@ -631,7 +637,7 @@ $("option-delete")?.addEventListener("click", async () => {
   });
   if (!ok) return;
   try {
-    await request(`/v1/namespaces/${state.currentNamespace.id}/collections/${name}`, { method: "DELETE" });
+    await request(clawApiPath(`namespaces/${state.currentNamespace.id}/collections/${name}`), { method: "DELETE" });
     closeSchemaDrawer();
     toastSuccess(`Collection "${name}" deleted`);
     state.currentCollection = null;
@@ -971,7 +977,7 @@ function renderTokens(items = []) {
       });
       if (!ok) return;
       try {
-        await request(`/v1/namespaces/${state.currentNamespace.id}/tokens/${tok.id}/revoke`, { method: "POST" });
+        await request(clawApiPath(`namespaces/${state.currentNamespace.id}/tokens/${tok.id}/revoke`), { method: "POST" });
         toastSuccess(`Token "${tok.label}" revoked`);
         await refreshTokens();
       } catch (error) {
@@ -1025,7 +1031,7 @@ function renderFiles(items = []) {
       });
       if (!ok) return;
       try {
-        await request(`/v1/files/${file.id}`, { method: "DELETE" });
+        await request(clawApiPath(`files/${file.id}`), { method: "DELETE" });
         toastSuccess("File deleted");
         await refreshFiles();
       } catch (error) {
@@ -1114,7 +1120,7 @@ function setLiveStatus(state, label) {
 function connectRealtime() {
   if (state.websocket) state.websocket.close();
   if (!state.token) return;
-  const url = new URL("/v1/realtime", window.location.href);
+  const url = new URL(clawApiPath("realtime"), window.location.href);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   url.searchParams.set("token", state.token);
   state.websocket = new WebSocket(url);
@@ -1149,7 +1155,7 @@ function subscribeRealtime() {
 /* ---------- Data refresh ---------- */
 
 async function refreshNamespaces() {
-  const payload = await request("/v1/namespaces");
+  const payload = await request(clawApiPath("namespaces"));
   state.namespaces = payload.items;
   if (!state.currentNamespace) state.currentNamespace = state.namespaces[0] || null;
   renderNamespaces();
@@ -1159,7 +1165,7 @@ async function refreshNamespace() {
   renderNamespaces();
   els.activeNamespaceName.textContent = state.currentNamespace?.displayName || "No database";
   if (!state.currentNamespace) return;
-  const payload = await request(`/v1/namespaces/${state.currentNamespace.id}/collections`);
+  const payload = await request(clawApiPath(`namespaces/${state.currentNamespace.id}/collections`));
   state.collections = payload.items;
   if (!state.currentCollection) {
     state.currentCollection = state.collections[0] || null;
@@ -1179,7 +1185,7 @@ async function refreshCollection() {
     renderRecords([]);
     return;
   }
-  const payload = await request(`/v1/namespaces/${state.currentNamespace.id}/collections/${collection.name}`);
+  const payload = await request(clawApiPath(`namespaces/${state.currentNamespace.id}/collections/${collection.name}`));
   state.currentCollection = payload;
   els.schemaTitle.textContent = payload.name;
   renderCollections();
@@ -1194,27 +1200,27 @@ async function refreshRecords() {
   if (els.recordsSort.value.trim()) params.set("sort", els.recordsSort.value.trim());
   const qs = params.toString();
   const payload = await request(
-    `/v1/namespaces/${state.currentNamespace.id}/collections/${state.currentCollection.name}/records${qs ? `?${qs}` : ""}`
+    clawApiPath(`namespaces/${state.currentNamespace.id}/collections/${state.currentCollection.name}/records${qs ? `?${qs}` : ""}`)
   );
   renderRecords(payload.items);
 }
 
 async function refreshTokens() {
   if (!state.currentNamespace) return;
-  const payload = await request(`/v1/namespaces/${state.currentNamespace.id}/tokens`);
+  const payload = await request(clawApiPath(`namespaces/${state.currentNamespace.id}/tokens`));
   renderTokens(payload.items);
 }
 
 async function refreshFiles() {
   if (!state.currentNamespace) return;
-  const payload = await request(`/v1/namespaces/${state.currentNamespace.id}/files`);
+  const payload = await request(clawApiPath(`namespaces/${state.currentNamespace.id}/files`));
   renderFiles(payload.items);
 }
 
 async function refreshSettings() {
   const [health, settings] = await Promise.all([
-    request("/v1/health"),
-    request("/v1/settings"),
+    request(clawApiPath("health")),
+    request(clawApiPath("settings")),
   ]);
 
   if (els.settingsOutput) els.settingsOutput.textContent = pretty({ health, settings });
@@ -1278,7 +1284,7 @@ els.loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
     els.loginError.textContent = "";
-    const payload = await request("/v1/auth/admin/login", {
+    const payload = await request(clawApiPath("auth/admin/login"), {
       method: "POST",
       body: JSON.stringify({
         email: els.loginEmail.value,
@@ -1308,11 +1314,11 @@ els.logoutBtn.addEventListener("click", () => {
 
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
-  localStorage.setItem("claw-db-theme", theme);
+  localStorage.setItem(CLAW_DB_THEME_STORAGE_KEY, theme);
 }
 
 (function initTheme() {
-  const stored = localStorage.getItem("claw-db-theme");
+  const stored = localStorage.getItem(CLAW_DB_THEME_STORAGE_KEY);
   if (stored) {
     applyTheme(stored);
   } else if (window.matchMedia("(prefers-color-scheme: light)").matches) {
@@ -1343,7 +1349,7 @@ $("theme-toggle").addEventListener("click", () => {
 els.namespaceForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
-    await request("/v1/namespaces", {
+    await request(clawApiPath("namespaces"), {
       method: "POST",
       body: JSON.stringify({
         id: els.namespaceId.value,
@@ -1383,7 +1389,7 @@ els.schemaSave.addEventListener("click", async () => {
       return;
     }
     try {
-      await request(`/v1/namespaces/${state.currentNamespace.id}/collections`, {
+      await request(clawApiPath(`namespaces/${state.currentNamespace.id}/collections`), {
         method: "POST",
         body: JSON.stringify({
           name: collName,
@@ -1395,7 +1401,7 @@ els.schemaSave.addEventListener("click", async () => {
       });
       toastSuccess(`Collection "${collName}" created`);
       closeSchemaDrawer();
-      const payload = await request(`/v1/namespaces/${state.currentNamespace.id}/collections`);
+      const payload = await request(clawApiPath(`namespaces/${state.currentNamespace.id}/collections`));
       state.collections = payload.items;
       state.currentCollection = state.collections.find((c) => c.name === collName) || state.collections[0];
       await refreshCollection();
@@ -1405,7 +1411,7 @@ els.schemaSave.addEventListener("click", async () => {
   } else {
     if (!state.currentCollection) return;
     try {
-      await request(`/v1/namespaces/${state.currentNamespace.id}/collections/${state.currentCollection.name}`, {
+      await request(clawApiPath(`namespaces/${state.currentNamespace.id}/collections/${state.currentCollection.name}`), {
         method: "PATCH",
         body: JSON.stringify({ fields, rules }),
       });
@@ -1446,13 +1452,13 @@ els.recordForm.addEventListener("submit", async (event) => {
   }
   try {
     if (els.recordId.value) {
-      await request(`/v1/namespaces/${state.currentNamespace.id}/collections/${state.currentCollection.name}/records/${els.recordId.value}`, {
+      await request(clawApiPath(`namespaces/${state.currentNamespace.id}/collections/${state.currentCollection.name}/records/${els.recordId.value}`), {
         method: "PATCH",
         body: JSON.stringify(payload),
       });
       toastSuccess("Record updated");
     } else {
-      await request(`/v1/namespaces/${state.currentNamespace.id}/collections/${state.currentCollection.name}/records`, {
+      await request(clawApiPath(`namespaces/${state.currentNamespace.id}/collections/${state.currentCollection.name}/records`), {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -1498,7 +1504,7 @@ els.tokenForm.addEventListener("submit", async (event) => {
       operations,
     };
     if (expirySeconds) body.expiresInSeconds = expirySeconds;
-    const payload = await request(`/v1/namespaces/${state.currentNamespace.id}/tokens`, {
+    const payload = await request(clawApiPath(`namespaces/${state.currentNamespace.id}/tokens`), {
       method: "POST",
       body: JSON.stringify(body),
     });
@@ -1531,7 +1537,7 @@ els.fileForm.addEventListener("submit", async (event) => {
     if (state.currentCollection) form.set("collectionName", state.currentCollection.name);
     if (els.fileRecordId.value) form.set("recordId", els.fileRecordId.value);
     form.set("file", file);
-    await request("/v1/files", { method: "POST", body: form });
+    await request(clawApiPath("files"), { method: "POST", body: form });
     toastSuccess(`Uploaded ${file.name}`);
     els.fileInput.value = "";
     els.fileRecordId.value = "";
