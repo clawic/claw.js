@@ -1,6 +1,6 @@
 {
   "method": "DELETE",
-  "url": "https://discord.com/api/v10/webhooks/sample/sample/messages/sample",
+  "url": "https://discord.com/api/v10/webhooks/sample/sample/messages/sample?thread_id=sample",
   "headers": {
     "accept": "application/json"
   }

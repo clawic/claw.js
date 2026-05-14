@@ -419,9 +419,9 @@ const DISCORD_ACTIONS = [
   action("execute-webhook", "Execute Webhook", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, ...WEBHOOK_CREATE_MESSAGE_FIELDS, field("wait", "boolean", true), field("threadId", "string", true, { default: null }), field("withComponents", "boolean", true)], []),
   action("execute-slack-compatible-webhook", "Execute Slack-Compatible Webhook", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, field("payload", "object", false, { default: { text: "sample" } }), field("wait", "boolean", true), field("threadId", "string", true)], []),
   action("execute-github-compatible-webhook", "Execute GitHub-Compatible Webhook", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, field("payload", "object", false, { default: { ref: "refs/heads/main" } }), field("wait", "boolean", true), field("threadId", "string", true)], []),
-  action("get-webhook-message", "Get Webhook Message", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, MESSAGE_FIELD], []),
+  action("get-webhook-message", "Get Webhook Message", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, MESSAGE_FIELD, field("threadId", "string", true)], []),
   action("edit-webhook-message", "Edit Webhook Message", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, MESSAGE_FIELD, ...WEBHOOK_EDIT_MESSAGE_FIELDS, field("threadId", "string", true, { default: null }), field("withComponents", "boolean", true)], []),
-  action("delete-webhook-message", "Delete Webhook Message", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, MESSAGE_FIELD], []),
+  action("delete-webhook-message", "Delete Webhook Message", [WEBHOOK_FIELD, WEBHOOK_TOKEN_FIELD, MESSAGE_FIELD, field("threadId", "string", true)], []),
   action("create-interaction-response", "Create Interaction Response", [INTERACTION_FIELD, INTERACTION_TOKEN_FIELD, field("responseType", "integer", false, { default: 4 }), field("responseData", "object", true, { default: { content: "sample" } }), field("withResponse", "boolean", true)], []),
   action("get-original-interaction-response", "Get Original Interaction Response", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD], []),
   action("edit-original-interaction-response", "Edit Original Interaction Response", [APPLICATION_FIELD, INTERACTION_TOKEN_FIELD, ...WEBHOOK_EDIT_MESSAGE_FIELDS], []),
@@ -3322,6 +3322,26 @@ describe("discord operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.get-webhook-message"), {
+      webhookId: "999",
+      webhookToken: "offline-token",
+      messageId: "message-123",
+      threadId: "thread-123",
+    }), {
+      method: "GET",
+      endpoint: "webhooks/999/offline-token/messages/message-123",
+      auth: [],
+      headers,
+      query: {
+        thread_id: "thread-123",
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["id"],
+      },
+    });
+
     assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.edit-webhook-message"), {
       webhookId: "999",
       webhookToken: "offline-token",
@@ -3376,6 +3396,25 @@ describe("discord operation runtime", () => {
       responseSchema: {
         type: "object",
         requiredPaths: ["id"],
+      },
+    });
+
+    assert.deepEqual(buildDiscordOperationRequest(operation("discord.action.delete-webhook-message"), {
+      webhookId: "999",
+      webhookToken: "offline-token",
+      messageId: "message-123",
+      threadId: "thread-123",
+    }), {
+      method: "DELETE",
+      endpoint: "webhooks/999/offline-token/messages/message-123",
+      auth: [],
+      headers,
+      query: {
+        thread_id: "thread-123",
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
       },
     });
 
