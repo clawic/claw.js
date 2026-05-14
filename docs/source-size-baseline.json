@@ -8,7 +8,7 @@
       "reason": "Public CLI routing after delegated domain, temporal, productivity, and knowledge-tail command extraction; keep under 2000 by splitting new domains into modules."
     },
     "packages/clawjs-node/src/create-claw.ts": {
-      "lines": 3304,
+      "lines": 3310,
       "reason": "Existing Claw runtime assembly after media/session, generation/image, skill/provider, channel runtime, content, and IoT extraction; keep shrinking via focused facades before expanding."
     },
     "packages/clawjs/src/index.test.ts": {
@@ -24,8 +24,8 @@
       "reason": "Workspace runtime assembly after indexing, human activity, context, work session, and productivity facade extraction; split new app/state domains before expanding."
     },
     "examples/showcase/src/app/settings/page.tsx": {
-      "lines": 4735,
-      "reason": "Existing settings UI surface after shared control extraction; extract tabs, interactions, and adapters before expanding."
+      "lines": 1994,
+      "reason": "Settings page shell after extracting persona, profile, advanced, OpenClaw, integrations, and tools tabs; route-level state/wiring only, split new tabs before expanding."
     },
     "relay/src/server/app.ts": {
       "lines": 1653,
@@ -164,7 +164,7 @@
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     },
     "secrets/src/server/app.ts": {
-      "lines": 1208,
+      "lines": 1216,
       "reason": "Existing secrets server app after broker redirect handling; split routes, auth helpers, and response serializers before expanding."
     },
     "packages/clawjs/src/v1-data-core.ts": {
@@ -182,6 +182,10 @@
     "packages/clawjs-workspace/src/workspace-core-productivity-facades.ts": {
       "lines": 1389,
       "reason": "Core productivity facade extracted from workspace index; grouped by tightly coupled task/project/list APIs pending further domain splits."
+    },
+    "examples/showcase/src/app/settings/settings-integrations-tab.tsx": {
+      "lines": 1308,
+      "reason": "Integrations settings tab extracted from settings page; keep provider-specific modal flows split out before expanding further."
     }
   }
 }
