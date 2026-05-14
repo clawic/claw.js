@@ -640,9 +640,10 @@ export async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     const { tenantId, name } = req.params as { tenantId: string; name: string };
     const row = resolver.secrets.getByInternalName(tenantId, name);
     if (!row) return reply.code(404).send({ error: "Not found" });
-    const body = (req.body ?? {}) as { title?: string; governance?: unknown };
+    const body = (req.body ?? {}) as { title?: string; governance?: unknown; metadata?: { title?: string; lastUsedAt?: string | null; values?: Record<string, string | null | undefined> } };
     let updated = row;
-    if (body.title) updated = resolver.secrets.updateTitle(row.id, body.title) ?? updated;
+    if (body.metadata) updated = resolver.secrets.updatePlainMetadata(row.id, body.metadata) ?? updated;
+    else if (body.title) updated = resolver.secrets.updateTitle(row.id, body.title) ?? updated;
     if (body.governance) updated = resolver.secrets.updateGovernance(row.id, body.governance as never) ?? updated;
     audit.append({
       tenantId,

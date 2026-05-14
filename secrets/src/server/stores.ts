@@ -546,6 +546,48 @@ export class SecretStore {
     return this.get(id);
   }
 
+  updatePlainMetadata(
+    id: string,
+    input: { title?: string; lastUsedAt?: string | null; values?: Record<string, string | null | undefined> },
+  ): SecretRow | undefined {
+    const current = this.get(id);
+    if (!current) return undefined;
+    const ts = nowIso();
+    const title = input.title ?? current.title;
+    const lastUsedAt = input.lastUsedAt === undefined ? current.last_used_at : input.lastUsedAt;
+    this.db
+      .prepare("UPDATE secrets SET title = ?, last_used_at = ?, updated_at = ? WHERE id = ?")
+      .run(title, lastUsedAt, ts, id);
+
+    const fields = this.listFields(current.current_version_id ?? "");
+    const byName = new Map(fields.map((field) => [field.field_name, field]));
+    let nextSortOrder = fields.reduce((max, field) => Math.max(max, field.sort_order), -1) + 1;
+    for (const [name, value] of Object.entries(input.values ?? {})) {
+      const existing = byName.get(name);
+      if (value !== undefined && value !== null && value !== "") {
+        if (existing) {
+          if (existing.is_secret === 1) continue;
+          this.db
+            .prepare("UPDATE secret_fields SET public_value = ?, is_concealed = 0 WHERE id = ?")
+            .run(value, existing.id);
+        } else if (current.current_version_id) {
+          this.db
+            .prepare(
+              `INSERT INTO secret_fields (
+                 id, secret_id, version_id, field_name, field_kind, placement,
+                 is_secret, is_concealed, public_value, value_ciphertext,
+                 otp_period, otp_digits, otp_algorithm, sort_order
+               ) VALUES (?, ?, ?, ?, ?, 'none', 0, 0, ?, NULL, NULL, NULL, NULL, ?)`,
+            )
+            .run(newId(), current.id, current.current_version_id, name, "text", value, nextSortOrder++);
+        }
+      } else if (existing && existing.is_secret !== 1) {
+        this.db.prepare("DELETE FROM secret_fields WHERE id = ?").run(existing.id);
+      }
+    }
+    return this.get(id);
+  }
+
   updateGovernance(id: string, governance: Partial<GovernanceFields>): SecretRow | undefined {
     const current = this.get(id);
     if (!current) return undefined;
