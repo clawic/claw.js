@@ -95328,7 +95328,7 @@
     {
       "path": "packages/clawjs/src/cli-file-session-document-command.ts",
       "language": "typescript",
-      "lines": 402,
+      "lines": 410,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -98013,7 +98013,7 @@
     {
       "path": "packages/clawjs/src/index-workspace-runtime.test.ts",
       "language": "typescript",
-      "lines": 939,
+      "lines": 950,
       "test": true,
       "entrypoint": false,
       "imports": [

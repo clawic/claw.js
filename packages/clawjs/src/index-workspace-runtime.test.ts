@@ -355,7 +355,11 @@ test("runCli redacts inline secrets from streamed error payloads in json mode", 
     stderr: captureStream().stream,
     cwd: process.cwd(),
   });
-  const created = JSON.parse(sessionStdout.getOutput()) as { sessionId: string };
+  const createdEnvelope = JSON.parse(sessionStdout.getOutput()) as { ok: boolean; data: { sessionId: string }; meta: { canonicalCommand: string; subcommand: string } };
+  assert.equal(createdEnvelope.ok, true);
+  assert.equal(createdEnvelope.meta.canonicalCommand, "sessions");
+  assert.equal(createdEnvelope.meta.subcommand, "create");
+  const created = createdEnvelope.data;
   const claw = await createClaw({
     runtime: { adapter: "openclaw" },
     workspace: {
@@ -538,7 +542,10 @@ test("runCli can create and list sessions", async () => {
   });
 
   assert.equal(createExitCode, CLI_EXIT_OK);
-  assert.match(createStdout.getOutput(), /sessionId/);
+  const createEnvelope = JSON.parse(createStdout.getOutput()) as { ok: boolean; data: { sessionId: string }; meta: { canonicalCommand: string; subcommand: string } };
+  assert.equal(createEnvelope.ok, true);
+  assert.equal(createEnvelope.meta.canonicalCommand, "sessions");
+  assert.equal(createEnvelope.meta.subcommand, "create");
 
   const listStdout = captureStream();
   const listStderr = captureStream();
@@ -561,7 +568,11 @@ test("runCli can read a created session and sync a file block", async () => {
     stderr: captureStream().stream,
     cwd: process.cwd(),
   });
-  const created = JSON.parse(createStdout.getOutput()) as { sessionId: string };
+  const createdEnvelope = JSON.parse(createStdout.getOutput()) as { ok: boolean; data: { sessionId: string }; meta: { canonicalCommand: string; subcommand: string } };
+  assert.equal(createdEnvelope.ok, true);
+  assert.equal(createdEnvelope.meta.canonicalCommand, "sessions");
+  assert.equal(createdEnvelope.meta.subcommand, "create");
+  const created = createdEnvelope.data;
 
   const syncStdout = captureStream();
   const syncExitCode = await runCli([

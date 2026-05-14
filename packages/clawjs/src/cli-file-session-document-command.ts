@@ -5,7 +5,7 @@ import type { RuntimeAdapterId } from "@clawjs/core";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { readBooleanFlag } from "./cli-flag-parsers.ts";
-import { writeJson, writeJsonLine } from "./cli-json.ts";
+import { writeCommandJsonOk, writeJsonLine } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
 import { parseRuleHints } from "./cli-rule-utils.ts";
 import { inferMimeTypeFromPath, parseContextBlock } from "./cli-runtime-utils.ts";
@@ -16,6 +16,14 @@ export async function runFileSessionDocumentCli(input: {
   group: string | undefined; command: string | undefined; subcommand: string | undefined; flags: Record<string, string>; argv: string[]; context: CliContext; wantsJson: boolean; workspaceRoot: string; appId: string; workspaceId: string; agentId: string; runtimeAdapterId: RuntimeAdapterId;
 }): Promise<number | null> {
   const { group, command, subcommand, flags, argv, context, wantsJson, workspaceRoot, appId, workspaceId, agentId, runtimeAdapterId } = input;
+  const writeSurfaceJson = (data: unknown) => {
+    const canonicalCommand = group === "files" || group === "sessions" || group === "documents" ? group : "open";
+    writeCommandJsonOk(context.stdout, canonicalCommand, data, {
+      invokedCommand: group ?? canonicalCommand,
+      subcommand: command ?? null,
+      ...(subcommand ? { operation: subcommand } : {}),
+    });
+  };
 if (group === "files" && command === "diff") {
   const targetFile = flags.file;
   const blockId = flags["block-id"];
@@ -34,7 +42,7 @@ if (group === "files" && command === "diff") {
     settingsPath: settingsKey,
   }, { [settingsKey]: value }, (settings) => `${settingsKey}=${String((settings as Record<string, unknown>)[settingsKey] ?? "")}`);
   if (wantsJson) {
-    writeJson(context.stdout, diff);
+    writeSurfaceJson(diff);
   } else {
     context.stdout.write(`${diff.changed}\n`);
   }
@@ -50,7 +58,7 @@ if (group === "files" && command === "apply-template-pack") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const result = await claw.files.applyTemplatePack(templatePackPath);
   if (wantsJson) {
-    writeJson(context.stdout, result);
+    writeSurfaceJson(result);
   } else {
     context.stdout.write(`${result.filter((entry) => entry.changed).length}\n`);
   }
@@ -66,7 +74,7 @@ if (group === "files" && command === "read") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const content = claw.files.readWorkspaceFile(targetFile);
   if (wantsJson) {
-    writeJson(context.stdout, { file: targetFile, content });
+    writeSurfaceJson({ file: targetFile, content });
   } else {
     context.stdout.write(`${content ?? ""}`);
   }
@@ -83,7 +91,7 @@ if (group === "files" && command === "write") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const result = claw.files.writeWorkspaceFile(targetFile, value);
   if (wantsJson) {
-    writeJson(context.stdout, result);
+    writeSurfaceJson(result);
   } else {
     context.stdout.write(`${result.filePath}\n`);
   }
@@ -99,7 +107,7 @@ if (group === "files" && command === "inspect") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const inspection = claw.files.inspectWorkspaceFile(targetFile);
   if (wantsJson) {
-    writeJson(context.stdout, inspection);
+    writeSurfaceJson(inspection);
   } else {
     context.stdout.write(`${inspection.filePath}\n`);
   }
@@ -124,7 +132,7 @@ if (group === "files" && command === "sync") {
     settingsPath: settingsKey,
   }, { [settingsKey]: value }, (settings) => `${settingsKey}=${String((settings as Record<string, unknown>)[settingsKey] ?? "")}`);
   if (wantsJson) {
-    writeJson(context.stdout, syncResult);
+    writeSurfaceJson(syncResult);
   } else {
     context.stdout.write(`${syncResult.filePath}\n`);
   }
@@ -136,7 +144,7 @@ if (group === "sessions" && command === "create") {
   const title = flags.title;
   const session = claw.sessions.createSession(title);
   if (wantsJson) {
-    writeJson(context.stdout, session);
+    writeSurfaceJson(session);
   } else {
     context.stdout.write(`${session.sessionId}\n`);
   }
@@ -152,7 +160,7 @@ if (group === "sessions" && command === "read") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const session = claw.sessions.getSession(sessionId);
   if (wantsJson) {
-    writeJson(context.stdout, session);
+    writeSurfaceJson(session);
   } else {
     context.stdout.write(`${session?.title ?? "missing"}\n`);
   }
@@ -171,7 +179,7 @@ if (group === "sessions" && command === "generate-title") {
     transport: (flags.transport as "auto" | "gateway" | "cli" | undefined) ?? "auto",
   });
   if (wantsJson) {
-    writeJson(context.stdout, { sessionId, title });
+    writeSurfaceJson({ sessionId, title });
   } else {
     context.stdout.write(`${title}\n`);
   }
@@ -182,7 +190,7 @@ if (group === "sessions" && command === "list") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const sessions = claw.sessions.listSessions();
   if (wantsJson) {
-    writeJson(context.stdout, sessions);
+    writeSurfaceJson(sessions);
   } else {
     context.stdout.write(`${sessions.map((session) => `${session.sessionId} ${session.title}`).join("\n")}\n`);
   }
@@ -205,7 +213,7 @@ if (group === "sessions" && command === "search") {
     fallbackToLocal: argv.includes("--no-local-fallback") ? false : readBooleanFlag(argv, flags, "fallback-to-local", true),
   });
   if (wantsJson) {
-    writeJson(context.stdout, results);
+    writeSurfaceJson(results);
   } else {
     context.stdout.write(`${results.map((result) => `${result.sessionId} ${result.title}`).join("\n")}\n`);
   }
@@ -248,7 +256,7 @@ if (group === "sessions" && command === "stream") {
       writeJsonLine(context.stdout, event.type === "error" ? { ...event, error: event.error.message } : event);
     }
     if (wantsJson) {
-      writeJson(context.stdout, events);
+      writeSurfaceJson(events);
     }
     return exitCode;
   }
@@ -263,7 +271,7 @@ if (group === "sessions" && command === "stream") {
   }
 
   if (wantsJson) {
-    writeJson(context.stdout, {
+    writeSurfaceJson({
       sessionId,
       text: chunks.join(""),
       chunks,
@@ -276,7 +284,7 @@ if (group === "documents" && command === "list") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const documents = await claw.documents.list(flags["session-id"] ? { sessionId: flags["session-id"] } : undefined);
   if (wantsJson) {
-    writeJson(context.stdout, documents);
+    writeSurfaceJson(documents);
   } else {
     context.stdout.write(`${documents.map((document) => `${document.documentId} ${document.name}`).join("\n")}\n`);
   }
@@ -292,7 +300,7 @@ if (group === "documents" && command === "read") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const document = await claw.documents.get(documentId);
   if (wantsJson) {
-    writeJson(context.stdout, document);
+    writeSurfaceJson(document);
   } else {
     context.stdout.write(`${document?.name ?? "missing"}\n`);
   }
@@ -312,7 +320,7 @@ if (group === "documents" && command === "search") {
     ...(flags["session-id"] ? { sessionId: flags["session-id"] } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, results);
+    writeSurfaceJson(results);
   } else {
     context.stdout.write(`${results.map((document) => `${document.documentId} ${document.name}`).join("\n")}\n`);
   }
@@ -335,7 +343,7 @@ if (group === "documents" && command === "upload") {
     ...(flags["session-id"] ? { sessionId: flags["session-id"] } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, document);
+    writeSurfaceJson(document);
   } else {
     context.stdout.write(`${document.documentId}\n`);
   }
@@ -357,7 +365,7 @@ if (group === "documents" && command === "register") {
     ...(flags["session-id"] ? { sessionId: flags["session-id"] } : {}),
   });
   if (wantsJson) {
-    writeJson(context.stdout, document);
+    writeSurfaceJson(document);
   } else {
     context.stdout.write(`${document.documentId}\n`);
   }
@@ -374,7 +382,7 @@ if (group === "documents" && command === "download") {
   const download = await claw.documents.download(documentId);
   if (!download) {
     if (wantsJson) {
-      writeJson(context.stdout, null);
+      writeSurfaceJson(null);
     } else {
       context.stdout.write("missing\n");
     }
@@ -387,7 +395,7 @@ if (group === "documents" && command === "download") {
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, download.buffer);
   if (wantsJson) {
-    writeJson(context.stdout, {
+    writeSurfaceJson({
       document: download.document,
       outputPath,
       sizeBytes: download.buffer.length,
