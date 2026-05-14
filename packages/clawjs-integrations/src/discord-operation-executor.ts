@@ -797,7 +797,7 @@ export function buildDiscordOperationRequest(
     case "update-global-application-command":
       return bodyPlan("PATCH", `applications/${applicationId(values)}/commands/${commandId(values)}`, auth, headers, applicationCommandBody(values), { type: "object", requiredPaths: ["id", "name"] });
     case "delete-global-application-command":
-      return deletePlan(`applications/${applicationId(values)}/commands/${commandId(values)}`, auth, headers, { type: "object" });
+      return deletePlan(`applications/${applicationId(values)}/commands/${commandId(values)}`, auth, headers, { type: "null" });
     case "bulk-overwrite-global-application-commands":
       return {
         method: "PUT",
@@ -827,7 +827,7 @@ export function buildDiscordOperationRequest(
     case "update-guild-application-command":
       return bodyPlan("PATCH", `applications/${applicationId(values)}/guilds/${guildId(values)}/commands/${commandId(values)}`, auth, headers, applicationCommandBody(values), { type: "object", requiredPaths: ["id", "name"] });
     case "delete-guild-application-command":
-      return deletePlan(`applications/${applicationId(values)}/guilds/${guildId(values)}/commands/${commandId(values)}`, auth, headers, { type: "object" });
+      return deletePlan(`applications/${applicationId(values)}/guilds/${guildId(values)}/commands/${commandId(values)}`, auth, headers, { type: "null" });
     case "bulk-overwrite-guild-application-commands":
       return {
         method: "PUT",
