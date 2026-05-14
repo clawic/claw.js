@@ -73,9 +73,20 @@ approval windows decide whether plaintext is ever produced for the wrong
 caller.
 
 Master password support is required as the portable root of trust. Platform
-features such as Keychain, Secure Enclave, and biometrics may speed local unlock
-or reauthentication, but they must wrap or release access to the vault root
-without replacing the portable password/recovery model.
+features such as Keychain, Secure Enclave, and biometrics may strengthen local
+unlock or reauthentication, but they must not replace the portable
+password/recovery model.
+
+Clawix on macOS provides the current local platform layer. It stores a
+32-byte device-local Secrets platform KEK in the macOS Keychain with
+`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, sends that KEK to the
+ClawJS Secrets sidecar only through anonymous bootstrap stdin, and never exposes
+it through process environment variables, disk token files, CLI prompts, or
+agent APIs. ClawJS persists `platformKeyWrap`, an AEAD wrap of the vault master
+key under that host KEK. A vault that has `platformKeyWrap` requires both the
+master password and the matching host KEK for password unlock. The recovery
+phrase remains the portable emergency path and rebinds the vault to the current
+host KEK after successful recovery.
 
 ## Human Reveal
 
@@ -239,6 +250,12 @@ state. Export files must not contain plaintext secret values, master keys,
 unwrapped item keys, active bearer tokens, active grant tokens, or reusable
 session material.
 
+Device-local master-key wraps are not backup material. Encrypted backups omit
+`platformKeyWrap` from `secrets_meta` so backup restore is portable across
+machines. After restore, the first successful password unlock or recovery on a
+host that provides a platform KEK rebinds the vault by writing a fresh
+host-local `platformKeyWrap`.
+
 Recovery material is secret material. It follows the same rules as vault
 passwords and private keys: never log it, never store it in non-vault records,
 and never expose it to agents or connectors.
@@ -274,6 +291,10 @@ The current ClawJS baseline implements the required safe public path:
 - Clawix bootstraps Secrets admin and signed-host tokens over an anonymous
   stdin channel instead of environment variables, so process environment
   inspection does not expose bearer material;
+- Clawix stores a device-local Secrets platform KEK in macOS Keychain and
+  bootstraps it over the same anonymous stdin channel; ClawJS uses it to write
+  `platformKeyWrap`, so password unlock for a wrapped vault also requires the
+  active host KEK while recovery remains portable;
 - loopback callers without bearer credentials cannot list secrets, and callers
   with only signed-host evidence but no bearer principal cannot reveal or
   export backups;
@@ -292,7 +313,10 @@ The current ClawJS baseline implements the required safe public path:
 - audit events use minimal payloads and broker results are redacted;
 - backup export/import is encrypted-only, requires a separate backup
   passphrase, and requires signed-host fresh reauthentication before the
-  backend will export or restore.
+  backend will export or restore;
+- encrypted backups omit host-bound `platformKeyWrap` and rebind to the current
+  host KEK after password unlock or recovery, preventing a backup made on one
+  machine from becoming unusable on another because of a stale Keychain wrap.
 
 The following patterns remain transitional and must not be expanded:
 
@@ -304,8 +328,12 @@ The following patterns remain transitional and must not be expanded:
   proof;
 - signed-host authorization currently uses a configured host token in ClawJS
   tests and an in-memory host token in Clawix local server flows; native
-  Claw.app/Clawix identity, XPC/signature, Keychain/Secure Enclave, and
-  biometric validation remain host integration obligations;
+  Claw.app/Clawix identity and XPC/signature proof remain host integration
+  obligations;
+- Clawix macOS has Keychain-backed platform KEK storage and LAContext
+  reauthentication for reveal/copy/backup, but Secure Enclave-backed key
+  material, iOS/remotes, and native XPC identity proof remain `EXTERNAL
+  PENDING`;
 - dev-only seeded credentials or local defaults must never be mistaken for
   production authentication.
 
@@ -352,7 +380,7 @@ agents can verify changes without re-deriving the policy.
 | `plaintext_rule` | Plaintext exists only in human reveal UI or internal broker path. | Implemented for public surfaces; host-native reveal validation remains pending. |
 | `human_reveal_policy` | Sensitive reveal/copy requires fresh reauthentication. | ClawJS reveal API requires signed host and `reauthSatisfied`; native biometric/password proof is host-owned. |
 | `automation_secret_use` | Automation executes brokered actions without seeing values. | Implemented through `broker.http` with redacted result contract. |
-| `master_key_protection` | Portable password root plus Keychain/Secure Enclave/biometrics locally. | Password/recovery crypto exists; platform protection is host integration `EXTERNAL PENDING`. |
+| `master_key_protection` | Portable password root plus Keychain/Secure Enclave/biometrics locally. | Implemented for macOS Keychain platform KEK + password/recovery crypto + LAContext reauth; Secure Enclave-backed key material, XPC identity proof, and future iOS/remotes remain `EXTERNAL PENDING`. |
 | `secret_sync_model` | Future sync must be end-to-end encrypted. | Policy documented; no plaintext sync surface exists in V1. |
 | `plugin_trust_model` | Plugins/connectors are untrusted, declarative, scoped, and not all-fields plaintext. | Public execution and external plugin loading are disabled by default; legacy `resolvedFields` interfaces are deprecated compatibility declarations. |
 | `host_allowlist_policy` | Exact hosts by default; limited safe wildcards only. | Implemented in strict governance and tests. |
@@ -361,6 +389,6 @@ agents can verify changes without re-deriving the policy.
 | `canonical_storage` | Canonical vault belongs to framework global `~/.claw`; hosts keep only host state. | Implemented for Clawix Secrets service data; connection credentials migrate into the encrypted Secrets vault and legacy readers no longer return plaintext. |
 | `audit_visibility` | Minimal audit; no fields, bodies, headers, public values, arbitrary payloads. | Implemented for current ClawJS audit events and smoke tests. |
 | `migration_priority` | V1 may break unsafe legacy compatibility. | Applied by disabling generic action execution and direct public CLI flows. |
-| `export_backup_policy` | Encrypted backup/export only with separate passphrase and strong reauth. | Implemented and tested: backend requires signed-host fresh reauth, Clawix export/import calls native reauth first, public CLI backup fails closed, and smoke tests verify encrypted-only backup behavior. |
+| `export_backup_policy` | Encrypted backup/export only with separate passphrase and strong reauth. | Implemented and tested: backend requires signed-host fresh reauth, Clawix export/import calls native reauth first, public CLI backup fails closed, smoke tests verify encrypted-only backup behavior, and backups omit host-bound `platformKeyWrap` for portability. |
 | `cli_secret_surface` | No CLI reveal or print-secret surface. | Implemented and tested. |
 | `failure_policy` | Missing host, placement, risk, agent, capability, or policy fails closed. | Implemented in strict broker/governance tests. |
