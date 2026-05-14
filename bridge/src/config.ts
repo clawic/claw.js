@@ -78,7 +78,7 @@ export function loadConfig(
       env.CLAW_REMOTE_DB ?? join(resolveClawjsDataRoot(env, home), "core.sqlite"),
     statusPath:
       env.CLAW_REMOTE_STATUS ??
-      expandHome(resolveClawPersistentSurfacePath("clawix.home.state", "", "bridge-status.json")),
+      expandHome(resolveClawPersistentSurfacePath("clawix.home.state", "", "bridge-status.json"), home),
     displayName: env.CLAW_REMOTE_NAME ?? hostname(),
     bonjourEnabled: env.CLAW_REMOTE_DISABLE_BONJOUR !== "1",
     version: env.CLAW_REMOTE_VERSION ?? "0.1.0",
@@ -96,7 +96,7 @@ export function loadConfig(
 function resolveClawjsDataRoot(env: BridgeConfigEnv, home: string): string {
   if (env.CLAW_DATA_DIR) return expandHome(env.CLAW_DATA_DIR, home);
   if (env.CLAWIX_CLAW_DATA_DIR) return expandHome(env.CLAWIX_CLAW_DATA_DIR, home);
-  return expandHome(resolveClawPersistentSurfacePath("claw.global.data"));
+  return expandHome(resolveClawPersistentSurfacePath("claw.global.data"), home);
 }
 
 function expandHome(value: string, home: string): string {
