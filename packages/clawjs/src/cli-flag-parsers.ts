@@ -96,4 +96,3 @@ export function formatCliTable(rows: Array<Record<string, string>>): string {
     ...rows.map((row) => columns.map((column) => (row[column] ?? "").padEnd(widths[column])).join("  ")),
   ].join("\n");
 }
-
