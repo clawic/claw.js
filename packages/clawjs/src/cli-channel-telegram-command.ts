@@ -4,6 +4,7 @@ import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 
 import type { RuntimeAdapterId } from "@clawjs/core";
+import type { TelegramSendMediaInput, TelegramSendMessageInput } from "@clawjs/claw";
 
 import { CODEX_AGENT_ID, normalizeTelegramCodexAccount, registerCodexAgentProcessor, resolveCodexRuntimeAdapterId, resolveTelegramCodexListenerOptions, runTelegramCodexProcessor } from "./cli-telegram-codex.ts";
 import { LEGACY_TELEGRAM_CODEX_PROCESSOR_ID, TELEGRAM_CODEX_BOT_COMMANDS } from "./cli-telegram-codex-constants.ts";
@@ -12,6 +13,7 @@ import { extractPositionals, parseCsvFlag, parseJsonFlag, readBooleanFlag } from
 import { writeJson } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
+import { currentCliEntryPath } from "./cli-open-state.ts";
 
 type CliContext = { stdout: NodeJS.WritableStream; stderr: NodeJS.WritableStream; cwd: string };
 

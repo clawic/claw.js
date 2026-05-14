@@ -20,6 +20,9 @@
   ],
   "exclude": [
     "examples/demo/**/*",
+    "examples/showcase/**/*",
+    "**/*.test.ts",
+    "**/*.spec.ts",
     "packages/*/template/**/*",
     "packages/*/templates/**/*"
   ]

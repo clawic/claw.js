@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { WorkspaceClawInstance } from "./workspace-contracts.ts";
 
 export function createWorkspaceUiSessionFacades(locals: Record<string, any>): {

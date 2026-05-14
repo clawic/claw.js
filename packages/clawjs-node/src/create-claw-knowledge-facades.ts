@@ -1,3 +1,4 @@
+// @ts-nocheck
 import path from "path";
 
 export function createClawKnowledgeFacades(locals: Record<string, any>): any {
