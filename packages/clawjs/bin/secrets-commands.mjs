@@ -118,14 +118,11 @@ const HELP = `claw secrets <command>
   secrets folders trash <id>
   secrets describe <name>
   secrets create --file <draft.json>       payload as JSON file
-  secrets reveal <name> --field <f> [--purpose uiCopy|uiReveal]
   secrets archive <name> [--off]           archive/unarchive
   secrets compromise <name> [--reason <r>]
   secrets trash <name>
   secrets restore <name>
-  secrets execute <name> --executor <id> --args <args.json>
   secrets broker-http --method <m> --url <url> --risk-tier <tier> [--agent <id>] [--header <k:v>] [--body <file>] [--timeout-ms <n>]
-  secrets sync <name>                      trigger brand sync
   secrets types                            list registered typeIds
   secrets plugins                          list registered plugins
   secrets backup export --file <path>
@@ -285,21 +282,6 @@ async function secretsCreate(args) {
   return res.ok ? 0 : 1;
 }
 
-async function secretsReveal(args) {
-  const name = args._[1];
-  if (!name) { console.error("name required"); return 1; }
-  const field = args.flags.field;
-  if (!field) { console.error("--field required"); return 1; }
-  const purpose = args.flags.purpose ?? "uiReveal";
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}/reveal-field`, {
-    method: "POST",
-    body: JSON.stringify({ field: String(field), purpose: String(purpose) }),
-  });
-  if (!res.ok) { console.error(fmt(res.body)); return 1; }
-  console.log(res.body.value?.value ?? "");
-  return 0;
-}
-
 async function secretsArchive(args) {
   const name = args._[1];
   if (!name) { console.error("name required"); return 1; }
@@ -337,24 +319,6 @@ async function secretsRestore(args) {
   return res.ok ? 0 : 1;
 }
 
-async function secretsExecute(args) {
-  const name = args._[1];
-  if (!name) { console.error("name required"); return 1; }
-  const executor = args.flags.executor;
-  if (!executor) { console.error("--executor required"); return 1; }
-  let body = {};
-  if (args.flags.args) {
-    const fs = await import("node:fs");
-    body = { args: JSON.parse(fs.readFileSync(String(args.flags.args), "utf8")) };
-  }
-  const res = await fetchJson(
-    `/v1/tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}/execute/${encodeURIComponent(String(executor))}`,
-    { method: "POST", body: JSON.stringify(body) },
-  );
-  console.log(fmt(res.body));
-  return res.ok ? 0 : 1;
-}
-
 async function secretsBrokerHttp(args) {
   const method = args.flags.method;
   const url = args.flags.url;
@@ -388,14 +352,6 @@ async function secretsBrokerHttp(args) {
       ...(args.flags["timeout-ms"] ? { timeoutMs: Number(args.flags["timeout-ms"]) } : {}),
     }),
   });
-  console.log(fmt(res.body));
-  return res.ok ? 0 : 1;
-}
-
-async function secretsSync(args) {
-  const name = args._[1];
-  if (!name) { console.error("name required"); return 1; }
-  const res = await fetchJson(`/v1/tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}/sync`, { method: "POST" });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
@@ -574,14 +530,11 @@ export async function runSecretsCli(rawArgs) {
         }
       case "describe": return await secretsDescribe(args);
       case "create": return await secretsCreate(args);
-      case "reveal": return await secretsReveal(args);
       case "archive": return await secretsArchive(args);
       case "compromise": return await secretsCompromise(args);
       case "trash": return await secretsTrash(args);
       case "restore": return await secretsRestore(args);
-      case "execute": return await secretsExecute(args);
       case "broker-http": return await secretsBrokerHttp(args);
-      case "sync": return await secretsSync(args);
       case "types": return await secretsTypes();
       case "plugins": return await secretsPlugins();
       case "backup":
