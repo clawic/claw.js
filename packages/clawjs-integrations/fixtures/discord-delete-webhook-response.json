@@ -1,5 +1,7 @@
 {
-  "id": "delete-webhook-sample",
-  "name": "sample",
-  "token": "offline-token"
+  "runtimeResponse": {
+    "status": 204,
+    "body": "",
+    "bodyEncoding": "text"
+  }
 }
