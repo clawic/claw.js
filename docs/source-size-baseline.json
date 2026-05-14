@@ -48,8 +48,8 @@
       "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
     },
     "relay/tests/e2e/relay.e2e.test.ts": {
-      "lines": 2424,
-      "reason": "Existing broad test coverage; split by scenario before expanding."
+      "lines": 1396,
+      "reason": "Remaining relay E2E coverage after fake connector extraction; split additional scenario groups before expanding."
     },
     "packages/clawjs-core/src/schemas.ts": {
       "lines": 2379,
