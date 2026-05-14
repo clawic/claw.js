@@ -285,6 +285,15 @@ test("runCli handles Telegram /new session reset without model latency", () => {
   });
 
   assert.equal(result.status, CLI_EXIT_OK, `${result.stderr}\n${result.stdout}`);
-  const output = JSON.parse(result.stdout) as { actions: Array<{ type: string; text?: string }> };
-  assert.equal(output.actions.some((action) => action.type === "send_message" && action.text === "New session is ready. What do you want to do next?"), true);
+  const output = JSON.parse(result.stdout) as {
+    ok: boolean;
+    data: { actions: Array<{ type: string; text?: string }> };
+    meta: { canonicalCommand?: string; invokedCommand?: string; subcommand?: string; operation?: string };
+  };
+  assert.equal(output.ok, true);
+  assert.equal(output.meta.canonicalCommand, "channels");
+  assert.equal(output.meta.invokedCommand, "channels");
+  assert.equal(output.meta.subcommand, "codex-processor");
+  assert.equal(output.meta.operation, "run");
+  assert.equal(output.data.actions.some((action) => action.type === "send_message" && action.text === "New session is ready. What do you want to do next?"), true);
 });

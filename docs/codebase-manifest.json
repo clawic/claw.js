@@ -96830,7 +96830,7 @@
     {
       "path": "packages/clawjs/src/cli-telegram-codex.ts",
       "language": "typescript",
-      "lines": 989,
+      "lines": 997,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -97019,6 +97019,11 @@
         {
           "kind": "function",
           "name": "writeTelegramCodexBridgeState",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "writeTelegramCodexProcessorJson",
           "exported": false
         },
         {
@@ -97833,7 +97838,7 @@
     {
       "path": "packages/clawjs/src/index-telegram.test.ts",
       "language": "typescript",
-      "lines": 291,
+      "lines": 300,
       "test": true,
       "entrypoint": false,
       "imports": [

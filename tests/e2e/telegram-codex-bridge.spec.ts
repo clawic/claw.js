@@ -605,7 +605,7 @@ async function runProcessor(rootDir: string, input: {
   if (exitCode !== 0) {
     throw new Error(`processor exited ${exitCode}: ${Buffer.concat(stderr).toString("utf8")}`);
   }
-  return JSON.parse(Buffer.concat(stdout).toString("utf8")) as { actions: ProcessorAction[] };
+  return (JSON.parse(Buffer.concat(stdout).toString("utf8")) as { data: { actions: ProcessorAction[] } }).data;
 }
 
 test("telegram codex bridge owns, authorizes topics, applies reply policy, and splits replies", async () => {

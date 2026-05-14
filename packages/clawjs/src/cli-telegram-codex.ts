@@ -8,7 +8,7 @@ import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import type { RuntimeAdapterId } from "@clawjs/core";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
-import { writeJson } from "./cli-json.ts";
+import { writeCommandJsonOk } from "./cli-json.ts";
 import { currentCliEntryPath } from "./cli-open-state.ts";
 import { resolveOpenSurface, type OpenSurface } from "./cli-open-surfaces.ts";
 import { parseSimpleDurationMs } from "./cli-temporal-utils.ts";
@@ -106,6 +106,14 @@ function normalizeTelegramCodexReplyPolicy(value?: string): TelegramCodexReplyPo
 
 function telegramCodexStatePath(workspaceRoot: string, flags: Record<string, string>): string {
   return path.resolve(flags["bridge-state"] || resolveClawPersistentSurfacePath("claw.workspace.telegram_codex_bridge_state", workspaceRoot));
+}
+
+function writeTelegramCodexProcessorJson(stream: NodeJS.WritableStream, data: unknown): void {
+  writeCommandJsonOk(stream, "channels", data, {
+    invokedCommand: "channels",
+    subcommand: "codex-processor",
+    operation: "run",
+  });
 }
 
 export const CODEX_AGENT_ID = "codex";
@@ -556,7 +564,7 @@ export async function runTelegramCodexProcessor(input: {
   const senderId = event.message?.senderId;
   const rawText = event.message?.text?.trim();
   if (!targetId || !senderId || !rawText) {
-    writeJson(input.context.stdout, { actions: [{ type: "ignore", reason: "missing target, sender, or text" }] });
+    writeTelegramCodexProcessorJson(input.context.stdout, { actions: [{ type: "ignore", reason: "missing target, sender, or text" }] });
     return CLI_EXIT_OK;
   }
 
@@ -593,12 +601,12 @@ export async function runTelegramCodexProcessor(input: {
   const nowAuthorized = authorized || isPrivate || isOwner;
   if (!isOwner && !nowAuthorized) {
     if (changed) writeTelegramCodexBridgeState(statePath, state);
-    writeJson(input.context.stdout, { actions: [{ type: "ignore", reason: "target not authorized by owner" }] });
+    writeTelegramCodexProcessorJson(input.context.stdout, { actions: [{ type: "ignore", reason: "target not authorized by owner" }] });
     return CLI_EXIT_OK;
   }
   if (!shouldReplyToTelegramCodexMessage(event, state.replyPolicy, botUsername)) {
     if (changed) writeTelegramCodexBridgeState(statePath, state);
-    writeJson(input.context.stdout, { actions: [{ type: "ignore", reason: "reply policy did not match" }] });
+    writeTelegramCodexProcessorJson(input.context.stdout, { actions: [{ type: "ignore", reason: "reply policy did not match" }] });
     return CLI_EXIT_OK;
   }
 
@@ -607,7 +615,7 @@ export async function runTelegramCodexProcessor(input: {
   const requestedClawSurface = resolveTelegramClawDomainRequest(rawText);
   if (requestedClawSurface) {
     const text = buildTelegramClawDomainReply(requestedClawSurface, input.flags);
-    writeJson(input.context.stdout, {
+    writeTelegramCodexProcessorJson(input.context.stdout, {
       actions: [
         {
           type: "grant_permission",
@@ -722,28 +730,28 @@ export async function runTelegramCodexProcessor(input: {
 
   const command = sessionCommand?.command;
   if (command === "status") {
-    writeJson(input.context.stdout, { actions: [sendTextAction(formatTelegramCodexStatus(run, sessionId))] });
+    writeTelegramCodexProcessorJson(input.context.stdout, { actions: [sendTextAction(formatTelegramCodexStatus(run, sessionId))] });
     return CLI_EXIT_OK;
   }
   if (command === "queue") {
     const current = claw.channelRuns.getChannelRunStatus(run.runKey);
     const queued = current?.queue ?? [];
-    writeJson(input.context.stdout, { actions: [sendTextAction(queued.length ? `Queued messages: ${queued.length}` : "Queue is empty.")] });
+    writeTelegramCodexProcessorJson(input.context.stdout, { actions: [sendTextAction(queued.length ? `Queued messages: ${queued.length}` : "Queue is empty.")] });
     return CLI_EXIT_OK;
   }
   if (command === "stop") {
     const stopped = claw.channelRuns.requestChannelRunStop(run.runKey);
-    writeJson(input.context.stdout, { actions: [sendTextAction(stopped?.activeRunId ? "Stop requested." : "No active run.")] });
+    writeTelegramCodexProcessorJson(input.context.stdout, { actions: [sendTextAction(stopped?.activeRunId ? "Stop requested." : "No active run.")] });
     return CLI_EXIT_OK;
   }
   if (command === "summary") {
     const current = claw.channelRuns.getChannelRunStatus(run.runKey);
-    writeJson(input.context.stdout, { actions: [sendTextAction(current?.summary || "No summary yet.")] });
+    writeTelegramCodexProcessorJson(input.context.stdout, { actions: [sendTextAction(current?.summary || "No summary yet.")] });
     return CLI_EXIT_OK;
   }
   if (command === "debug") {
     const current = claw.channelRuns.getChannelRunStatus(run.runKey);
-    writeJson(input.context.stdout, {
+    writeTelegramCodexProcessorJson(input.context.stdout, {
       actions: [sendTextAction([
         `runKey=${run.runKey}`,
         `status=${current?.status ?? "idle"}`,
@@ -756,7 +764,7 @@ export async function runTelegramCodexProcessor(input: {
   }
   if (command === "compact") {
     const compacted = claw.channelRuns.compactChannelSession({ runKey: run.runKey, sessionId, force: true });
-    writeJson(input.context.stdout, { actions: [sendTextAction(compacted.summary || "Nothing to compact.")] });
+    writeTelegramCodexProcessorJson(input.context.stdout, { actions: [sendTextAction(compacted.summary || "Nothing to compact.")] });
     return CLI_EXIT_OK;
   }
 
@@ -773,7 +781,7 @@ export async function runTelegramCodexProcessor(input: {
         ...(event.message?.metadata ?? {}),
       },
     });
-    writeJson(input.context.stdout, { actions: [{ type: "ignore", reason: "queued while run is active" }] });
+    writeTelegramCodexProcessorJson(input.context.stdout, { actions: [{ type: "ignore", reason: "queued while run is active" }] });
     return CLI_EXIT_OK;
   }
 
@@ -922,7 +930,7 @@ export async function runTelegramCodexProcessor(input: {
       ...(event.message?.metadata ?? {}),
     }, userMessageId);
     if (processed === "duplicate") {
-      writeJson(input.context.stdout, { actions: [{ type: "ignore", reason: "duplicate message" }] });
+      writeTelegramCodexProcessorJson(input.context.stdout, { actions: [{ type: "ignore", reason: "duplicate message" }] });
       return CLI_EXIT_OK;
     }
   }
@@ -934,7 +942,7 @@ export async function runTelegramCodexProcessor(input: {
       queuedCount: queued.length,
     }, `telegram-codex-${hashStableId([run.runKey, "queued", queued.map((message) => message.id).join(":")].join(":"))}`);
   } else if (command === "continue" && !persistUserMessage) {
-    writeJson(input.context.stdout, { actions: [sendTextAction("Queue is empty.")] });
+    writeTelegramCodexProcessorJson(input.context.stdout, { actions: [sendTextAction("Queue is empty.")] });
     return CLI_EXIT_OK;
   }
 
@@ -981,7 +989,7 @@ export async function runTelegramCodexProcessor(input: {
   if (actions.length === 0) {
     actions.push({ type: "ignore", reason: "codex returned empty response" });
   }
-  writeJson(input.context.stdout, {
+  writeTelegramCodexProcessorJson(input.context.stdout, {
     actions,
   });
   return CLI_EXIT_OK;
