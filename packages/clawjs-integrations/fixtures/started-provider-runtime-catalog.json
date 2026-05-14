@@ -1020,12 +1020,29 @@
             {
               "name": "installParams",
               "type": "object",
-              "optional": true
+              "optional": true,
+              "default": {
+                "scopes": [
+                  "bot",
+                  "applications.commands"
+                ],
+                "permissions": "0"
+              }
             },
             {
               "name": "integrationTypesConfig",
               "type": "object",
-              "optional": true
+              "optional": true,
+              "default": {
+                "0": {
+                  "oauth2_install_params": {
+                    "scopes": [
+                      "bot"
+                    ],
+                    "permissions": "0"
+                  }
+                }
+              }
             },
             {
               "name": "flags",

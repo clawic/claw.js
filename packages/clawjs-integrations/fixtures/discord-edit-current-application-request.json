@@ -10,6 +10,23 @@
     "custom_install_url": "sample",
     "description": "sample",
     "role_connections_verification_url": "sample",
+    "install_params": {
+      "scopes": [
+        "bot",
+        "applications.commands"
+      ],
+      "permissions": "0"
+    },
+    "integration_types_config": {
+      "0": {
+        "oauth2_install_params": {
+          "scopes": [
+            "bot"
+          ],
+          "permissions": "0"
+        }
+      }
+    },
     "flags": 1,
     "icon": "sample",
     "cover_image": "sample",
