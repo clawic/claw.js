@@ -1,8 +1,10 @@
+import fs from "fs";
+import os from "os";
 import path from "path";
 
 import { CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { parseCsvFlag } from "./cli-flag-parsers.ts";
-import { allOpenSurfaceHostnames, resolveOpenSurface, type OpenSurface } from "./cli-open-surfaces.ts";
+import { OPEN_SURFACES, allOpenSurfaceHostnames, resolveOpenSurface, type OpenSurface } from "./cli-open-surfaces.ts";
 
 export const CLAW_DOMAINS_BEGIN = "# BEGIN CLAWJS DOMAINS";
 export const CLAW_DOMAINS_END = "# END CLAWJS DOMAINS";
@@ -230,4 +232,72 @@ export function parseSurfacePortOverrides(value: string | undefined): Record<str
 
 export function surfaceTargetPort(surface: OpenSurface, flags: Record<string, string>): number {
   return parseSurfacePortOverrides(flags["surface-port"])[surface.id] ?? surface.port;
+}
+
+export interface ClawDomainsStatus {
+  installed: boolean;
+  hostsConfigured: boolean;
+  proxyConfigured: boolean;
+  proxyReachable: boolean;
+  hosts: string[];
+  hostsFile: string;
+  plistFile: string;
+  proxyUrl: string;
+}
+
+export function domainsInstallPlan(flags: Record<string, string>) {
+  const hostsFile = domainsHostsFile(flags);
+  const plistFile = domainsPlistPath(flags);
+  return {
+    hostsFile,
+    plistFile,
+    hosts: allOpenSurfaceHostnames(),
+    proxyUrl: `http://${flags.host || "127.0.0.1"}:${flags.port || "80"}`,
+    serviceLabel: CLAW_DOMAINS_LABEL,
+  };
+}
+
+export function buildDomainsServiceConfig(flags: Record<string, string>, cwd: string, runtime: { repoRoot: string; cliEntryPath: string; nodePath: string; uid?: number }): string {
+  const user = os.userInfo();
+  return `${JSON.stringify({
+    host: flags.host || "127.0.0.1",
+    port: Number(flags.port || "80"),
+    workspace: path.resolve(cwd, flags.workspace ?? "."),
+    repoRoot: runtime.repoRoot,
+    cliEntryPath: runtime.cliEntryPath,
+    nodePath: runtime.nodePath,
+    username: user.username,
+    uid: runtime.uid ?? user.uid,
+    homeDir: user.homedir,
+    surfacePorts: parseSurfacePortOverrides(flags["surface-port"]),
+    surfaces: OPEN_SURFACES.map((surface) => ({
+      id: surface.id,
+      label: surface.label,
+      port: surface.port,
+      aliases: surface.aliases ?? [],
+    })),
+  }, null, 2)}\n`;
+}
+
+export async function readDomainsStatus(flags: Record<string, string>, portIsOpen: (host: string, port: number) => Promise<boolean>): Promise<ClawDomainsStatus> {
+  const plan = domainsInstallPlan(flags);
+  let hostsConfigured = false;
+  try {
+    const content = fs.readFileSync(plan.hostsFile, "utf8");
+    hostsConfigured = content.includes(CLAW_DOMAINS_BEGIN) && content.includes(CLAW_DOMAINS_END);
+  } catch {
+    hostsConfigured = false;
+  }
+  const proxyConfigured = fs.existsSync(plan.plistFile);
+  const proxyReachable = await portIsOpen(flags.host || "127.0.0.1", Number(flags.port || "80"));
+  return {
+    installed: hostsConfigured && proxyConfigured,
+    hostsConfigured,
+    proxyConfigured,
+    proxyReachable,
+    hosts: plan.hosts,
+    hostsFile: plan.hostsFile,
+    plistFile: plan.plistFile,
+    proxyUrl: plan.proxyUrl,
+  };
 }
