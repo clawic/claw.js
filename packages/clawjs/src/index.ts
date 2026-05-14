@@ -63,7 +63,7 @@ import { createCliClaw, createCliWorkspaceClaw } from "./cli-claw-factory.ts";
 import { parseRuleHints, parseRuleReferences } from "./cli-rule-utils.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 export { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
-import { cliErrorFromUnknown, writeCliError, writeCommandJsonOk, writeJson, writeJsonLine } from "./cli-json.ts";
+import { cliErrorFromUnknown, writeCommandJsonError, writeCommandJsonOk, writeJsonLine } from "./cli-json.ts";
 import { runOpenServerCommand } from "./cli-open-server.ts";
 import { collectFlagValues, extractPositionals, formatCliTable, joinedPositionals, parseCsvFlag, parseFlags, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { inferAudioExtension, inferMimeTypeFromPath, parseContextBlock, parseInferenceMessages, pathSafeBasename, readJsonFile, resolveRuntimeAdapterId, timelineRange, type GenerationCliMediaKind } from "./cli-runtime-utils.ts";
@@ -101,7 +101,6 @@ export interface CliContext {
   binName?: string;
   runCommand?: (command: string, args: string[], options: { cwd: string }) => Promise<void>;
 }
-
 type CliMediaShare = { id: string; url: string };
 type CliMediaClaw = ClawInstance & {
   media: {
@@ -129,7 +128,6 @@ function isClawDomainConfigured(flags: Record<string, string>): boolean {
     return false;
   }
 }
-
 async function ensureDomainSurfaceRunning(surface: OpenSurface, flags: Record<string, string>, workspace: string): Promise<URL> {
   const port = surfaceTargetPort(surface, flags);
   const targetUrl = new URL(`http://127.0.0.1:${port}`);
@@ -311,7 +309,6 @@ function runForegroundProcess(
     child.on("close", (exitCode) => resolve(exitCode ?? CLI_EXIT_FAILURE));
   });
 }
-
 function resolveCliPackageVersion(): string | null {
   try {
     const packageJsonPath = fileURLToPath(new URL("../package.json", import.meta.url));
@@ -500,6 +497,8 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const flags = parseFlags(argv);
   const usage = buildCliUsage(binName, { all: argv.includes("--all") });
   const wantsHelp = argv.includes("--help") || argv.includes("-h");
+  const writeRootJson = (payload: unknown, canonicalCommand = group === "db" ? "database" : group === "provider" ? "providers" : group === "style" ? "styles" : group === "template" ? "templates" : group === "ref" ? "references" : group === "image" ? "images" : group ?? "claw") => writeCommandJsonOk(context.stdout, canonicalCommand, payload, { invokedCommand: group ?? canonicalCommand, subcommand: command ?? null, ...(subcommand ? { operation: subcommand } : {}) });
+  const writeRootJsonError = (error: unknown, canonicalCommand = group === "db" ? "database" : group === "provider" ? "providers" : group === "style" ? "styles" : group === "template" ? "templates" : group === "ref" ? "references" : group === "image" ? "images" : group ?? "claw") => writeCommandJsonError(context.stdout, canonicalCommand, error, { invokedCommand: group ?? canonicalCommand, subcommand: command ?? null, ...(subcommand ? { operation: subcommand } : {}) });
 
   const removedMessage = group ? removedPublicCommandMessage(group, binName) : null;
   if (removedMessage) {
@@ -605,7 +604,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       return await runDelegatedDatabaseCli(argv, flags, context);
     } catch (error) {
       const handled = cliErrorFromUnknown(error);
-      if (wantsJson) writeCliError(context.stdout, handled);
+      if (wantsJson) writeRootJsonError(handled);
       else context.stderr.write(`${handled.message}\n`);
       return handled.exitCode;
     }
@@ -681,7 +680,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       ...(flags.limit ? { limit: Number(flags.limit) } : {}),
       includeArchived: readBooleanFlag(argv, flags, "include-archived", false),
     });
-    if (wantsJson) writeJson(context.stdout, results);
+    if (wantsJson) writeRootJson(results);
     else context.stdout.write(`${results.map((result) => `${result.domain} ${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
     return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   }
@@ -697,7 +696,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       context.cwd,
     );
     const result = await claw.workspaceIndex.rebuild();
-    if (wantsJson) writeJson(context.stdout, result);
+    if (wantsJson) writeRootJson(result);
     else context.stdout.write(`reindexed=${result.reindexed} embeddings=${result.embeddings}\n`);
     return CLI_EXIT_OK;
   }
@@ -781,7 +780,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       return await runDelegatedDatabaseCli(argv, flags, context);
     } catch (error) {
       const handled = cliErrorFromUnknown(error);
-      if (wantsJson) writeCliError(context.stdout, handled);
+      if (wantsJson) writeRootJsonError(handled);
       else context.stderr.write(`${handled.message}\n`);
       return handled.exitCode;
     }
@@ -873,7 +872,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       } as unknown as Parameters<typeof claw.notify.send>[0];
       const payload = await claw.notify.send(input);
       if (wantsJson) {
-        writeJson(context.stdout, payload);
+        writeRootJson(payload);
       } else {
         context.stdout.write(`${payload.notification.id}\n`);
       }
@@ -894,7 +893,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       const claw = await createCliClaw(resolveRuntimeAdapterId(flags), flags, context.cwd, "notify-cli", "notify-cli", "notify-cli");
       const payload = await claw.notify.cancel(notificationId);
       if (wantsJson) {
-        writeJson(context.stdout, payload);
+        writeRootJson(payload);
       } else {
         context.stdout.write(`${payload.notification.status}\n`);
       }
@@ -922,7 +921,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         ...(readBooleanFlag(argv, flags, "installation-scoped", false) ? { installationScoped: true } : {}),
       });
       if (wantsJson) {
-        writeJson(context.stdout, payload);
+        writeRootJson(payload);
       } else {
         context.stdout.write(`${payload.subscription.id}\n`);
       }
@@ -943,7 +942,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       const claw = await createCliClaw(resolveRuntimeAdapterId(flags), flags, context.cwd, "notify-cli", "notify-cli", "notify-cli");
       const payload = await claw.notify.subscriptions.remove(id);
       if (wantsJson) {
-        writeJson(context.stdout, payload);
+        writeRootJson(payload);
       } else {
         context.stdout.write(`${payload.ok}\n`);
       }
@@ -1000,7 +999,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       });
     } catch (error) {
       const handled = cliErrorFromUnknown(error);
-      if (wantsJson) writeCliError(context.stdout, handled);
+      if (wantsJson) writeRootJsonError(handled);
       else context.stderr.write(`${handled.message}\n`);
       return handled.exitCode;
     }
@@ -1023,7 +1022,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       });
     } catch (error) {
       const handled = cliErrorFromUnknown(error);
-      if (wantsJson) writeCliError(context.stdout, handled);
+      if (wantsJson) writeRootJsonError(handled);
       else context.stderr.write(`${handled.message}\n`);
       return handled.exitCode;
     }
@@ -1046,7 +1045,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       });
     } catch (error) {
       const handled = cliErrorFromUnknown(error);
-      if (wantsJson) writeCliError(context.stdout, handled);
+      if (wantsJson) writeRootJsonError(handled);
       else context.stderr.write(`${handled.message}\n`);
       return handled.exitCode;
     }
@@ -1069,7 +1068,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       });
     } catch (error) {
       const handled = cliErrorFromUnknown(error);
-      if (wantsJson) writeCliError(context.stdout, handled);
+      if (wantsJson) writeRootJsonError(handled);
       else context.stderr.write(`${handled.message}\n`);
       return handled.exitCode;
     }
@@ -1128,7 +1127,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         libraryAsset = { id: slug, path: targetPath };
       }
       if (wantsJson) {
-        writeJson(context.stdout, {
+        writeRootJson({
           ok: true,
           type,
           name: slug,
@@ -1143,7 +1142,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       return CLI_EXIT_OK;
     } catch (error) {
       const handled = cliErrorFromUnknown(error);
-      if (wantsJson) writeCliError(context.stdout, handled);
+      if (wantsJson) writeRootJsonError(handled);
       else context.stderr.write(`${handled.message}\n`);
       return handled.exitCode;
     }
@@ -1176,7 +1175,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         libraryAsset = { id: created.id, path: path.join(projectRoot, created.path) };
       }
       if (wantsJson) {
-        writeJson(context.stdout, {
+        writeRootJson({
           ok: true,
           projectRoot,
           resource,
@@ -1216,7 +1215,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         runCommand: context.runCommand,
       });
       if (wantsJson) {
-        writeJson(context.stdout, {
+        writeRootJson({
           ok: true,
           projectRoot,
           integration,
@@ -1266,7 +1265,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         ...info,
       };
       if (wantsJson) {
-        writeJson(context.stdout, payload);
+        writeRootJson(payload);
       } else {
         context.stdout.write(`cli: ${payload.cli.version ?? "unknown"}\n`);
         const project = (payload.project as { type?: string; name?: string; runtime?: { adapter?: string } } | null) ?? null;
@@ -1290,7 +1289,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const status = await claw.runtime.status();
     if (wantsJson) {
-      writeJson(context.stdout, status);
+      writeRootJson(status);
     } else {
       context.stdout.write(`runtime: ${status.runtimeName}\n`);
       context.stdout.write(`adapter: ${status.adapter}\n`);
@@ -1306,7 +1305,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const installCommand = claw.runtime.installCommand(installer);
     if (argv.includes("--dry-run")) {
       if (wantsJson) {
-        writeJson(context.stdout, { ...installCommand, plan: claw.runtime.installPlan(installer), adapter: runtimeAdapterId });
+        writeRootJson({ ...installCommand, plan: claw.runtime.installPlan(installer), adapter: runtimeAdapterId });
       } else {
         context.stdout.write(`${installCommand.command} ${installCommand.args.join(" ")}\n`);
       }
@@ -1315,7 +1314,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     await claw.runtime.install(installer, (event) => {
       if (!wantsJson) writeProgress(context.stdout, event);
     });
-    if (wantsJson) writeJson(context.stdout, { ok: true, adapter: runtimeAdapterId });
+    if (wantsJson) writeRootJson({ ok: true, adapter: runtimeAdapterId });
     return CLI_EXIT_OK;
   }
 
@@ -1325,7 +1324,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const uninstallCommand = claw.runtime.uninstallCommand(installer);
     if (argv.includes("--dry-run")) {
       if (wantsJson) {
-        writeJson(context.stdout, { ...uninstallCommand, plan: claw.runtime.uninstallPlan(installer), adapter: runtimeAdapterId });
+        writeRootJson({ ...uninstallCommand, plan: claw.runtime.uninstallPlan(installer), adapter: runtimeAdapterId });
       } else {
         context.stdout.write(`${uninstallCommand.command} ${uninstallCommand.args.join(" ")}\n`);
       }
@@ -1334,7 +1333,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     await claw.runtime.uninstall(installer, (event) => {
       if (!wantsJson) writeProgress(context.stdout, event);
     });
-    if (wantsJson) writeJson(context.stdout, { ok: true, adapter: runtimeAdapterId });
+    if (wantsJson) writeRootJson({ ok: true, adapter: runtimeAdapterId });
     return CLI_EXIT_OK;
   }
 
@@ -1342,7 +1341,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     if (argv.includes("--dry-run")) {
       if (wantsJson) {
-        writeJson(context.stdout, { ...claw.runtime.repairCommand(), plan: claw.runtime.repairPlan(), adapter: runtimeAdapterId });
+        writeRootJson({ ...claw.runtime.repairCommand(), plan: claw.runtime.repairPlan(), adapter: runtimeAdapterId });
       } else {
         const commandSpec = claw.runtime.repairCommand();
         context.stdout.write(`${commandSpec.command} ${commandSpec.args.join(" ")}\n`);
@@ -1352,7 +1351,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     await claw.runtime.repair((event) => {
       if (!wantsJson) writeProgress(context.stdout, event);
     });
-    if (wantsJson) writeJson(context.stdout, { ok: true, adapter: runtimeAdapterId });
+    if (wantsJson) writeRootJson({ ok: true, adapter: runtimeAdapterId });
     return CLI_EXIT_OK;
   }
 
@@ -1361,7 +1360,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const setupCommand = claw.runtime.setupWorkspaceCommand();
     if (argv.includes("--dry-run")) {
       if (wantsJson) {
-        writeJson(context.stdout, { ...setupCommand, plan: claw.runtime.setupWorkspacePlan(), adapter: runtimeAdapterId });
+        writeRootJson({ ...setupCommand, plan: claw.runtime.setupWorkspacePlan(), adapter: runtimeAdapterId });
       } else {
         context.stdout.write(`${setupCommand.command} ${setupCommand.args.join(" ")}\n`);
       }
@@ -1371,7 +1370,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       if (!wantsJson) writeProgress(context.stdout, event);
     });
     if (wantsJson) {
-      writeJson(context.stdout, { ok: true, ...setupCommand, adapter: runtimeAdapterId });
+      writeRootJson({ ok: true, ...setupCommand, adapter: runtimeAdapterId });
     } else {
       context.stdout.write("ok\n");
     }
@@ -1385,7 +1384,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       const status = await claw.runtime.status();
       const compat = runtimeAdapter.buildCompatReport(status);
       if (wantsJson) {
-        writeJson(context.stdout, { compat, snapshot, adapter: runtimeAdapterId });
+        writeRootJson({ compat, snapshot, adapter: runtimeAdapterId });
       } else {
         context.stdout.write(`degraded: ${compat.degraded}\n`);
         context.stdout.write(`snapshot: ${snapshot.runtimeVersion ?? "unknown"}\n`);
@@ -1395,7 +1394,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const status = await claw.runtime.status();
     const compat = runtimeAdapter.buildCompatReport(status);
     if (wantsJson) {
-      writeJson(context.stdout, { compat, snapshot: claw.compat.read(), adapter: runtimeAdapterId });
+      writeRootJson({ compat, snapshot: claw.compat.read(), adapter: runtimeAdapterId });
     } else {
       context.stdout.write(`degraded: ${compat.degraded}\n`);
       if (compat.issues.length > 0) {
@@ -1423,7 +1422,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       return CLI_EXIT_USAGE;
     } catch (error) {
       const handled = cliErrorFromUnknown(error);
-      if (wantsJson) writeCliError(context.stdout, handled);
+      if (wantsJson) writeRootJsonError(handled);
       else context.stderr.write(`${handled.message}\n`);
       return handled.exitCode;
     }
@@ -1452,7 +1451,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
             ...(flags.url?.trim() ? { body: { initialUrl: flags.url.trim() } } : {}),
           });
       if (wantsJson) {
-        writeJson(context.stdout, payload);
+        writeRootJson(payload);
       } else if (command === "share") {
         context.stdout.write(`${payload.shareUrl}\n`);
       } else if (command === "status") {
@@ -1483,7 +1482,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       },
     };
     if (wantsJson) {
-      writeJson(context.stdout, payload);
+      writeRootJson(payload);
     } else {
       context.stdout.write(`ok: ${doctor.ok}\n`);
       if (project) {
@@ -1501,7 +1500,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     await claw.workspace.init();
     const inspected = await claw.workspace.inspect();
     if (wantsJson) {
-      writeJson(context.stdout, {
+      writeRootJson({
         manifestPath: inspected.manifestPath,
         runtimeAdapter: runtimeAdapterId,
         canonicalPaths: claw.workspace.canonicalPaths(),
@@ -1516,7 +1515,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const manifest = await claw.workspace.attach();
     if (wantsJson) {
-      writeJson(context.stdout, manifest);
+      writeRootJson(manifest);
     } else {
       context.stdout.write(`${manifest?.workspaceId ?? "missing"}\n`);
     }
@@ -1530,7 +1529,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const productivity = await workspaceClaw.productivity.inspect();
     const hasLocalProductivityState = fs.existsSync(productivity.dataPath);
     if (wantsJson) {
-      writeJson(context.stdout, { ...inspected, productivity });
+      writeRootJson({ ...inspected, productivity });
     } else {
       context.stdout.write(`manifest: ${inspected.manifest ? "present" : "missing"}\n`);
       context.stdout.write(`compatSnapshot: ${inspected.compatSnapshot ? "present" : "missing"}\n`);
@@ -1547,7 +1546,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       ...(flags["max-depth"] ? { maxDepth: Number(flags["max-depth"]) } : {}),
     });
     if (wantsJson) {
-      writeJson(context.stdout, discovered);
+      writeRootJson(discovered);
     } else {
       context.stdout.write(`${discovered.map((entry) => entry.rootDir).join("\n")}\n`);
     }
@@ -1558,7 +1557,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const validation = await claw.workspace.validate();
     if (wantsJson) {
-      writeJson(context.stdout, validation);
+      writeRootJson(validation);
     } else {
       context.stdout.write(`ok: ${validation.ok}\n`);
       if (validation.missingFiles.length > 0) {
@@ -1585,7 +1584,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     if (argv.includes("--dry-run")) {
       const plan = await claw.workspace.previewReset(resetOptions);
       if (wantsJson) {
-        writeJson(context.stdout, plan);
+        writeRootJson(plan);
       } else {
         context.stdout.write(`${plan.targets.map((target) => `${target.exists ? "remove" : "skip"} ${target.path}`).join("\n")}\n`);
       }
@@ -1593,7 +1592,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     }
     const result = await claw.workspace.reset(resetOptions);
     if (wantsJson) {
-      writeJson(context.stdout, result);
+      writeRootJson(result);
     } else {
       context.stdout.write(`removed=${result.removedPaths.length} preserved=${result.preservedPaths.length}\n`);
     }
@@ -1606,7 +1605,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const repaired = await claw.workspace.repair();
     const productivity = await workspaceClaw.productivity.repair();
     if (wantsJson) {
-      writeJson(context.stdout, { ...repaired, productivity });
+      writeRootJson({ ...repaired, productivity });
     } else {
       context.stdout.write(`createdDirectories=${repaired.createdDirectories.length} createdRuntimeFiles=${repaired.createdRuntimeFiles.length}\n`);
       context.stdout.write(`repairedRecords=${productivity.repairedRecords} reindexed=${productivity.reindexed}\n`);
@@ -1618,7 +1617,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const models = await claw.models.list();
     if (wantsJson) {
-      writeJson(context.stdout, models);
+      writeRootJson(models);
     } else {
       context.stdout.write(`${models.map((model) => `${model.isDefault ? "*" : "-"} ${model.id}`).join("\n")}\n`);
     }
@@ -1629,7 +1628,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const model = await claw.models.getDefault();
     if (wantsJson) {
-      writeJson(context.stdout, model);
+      writeRootJson(model);
     } else {
       context.stdout.write(`${model?.modelId ?? "none"}\n`);
     }
@@ -1648,7 +1647,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
           ? { command: "write-config", args: [`default_model=${target}`] }
           : { command: "picoclaw", args: ["model", target] };
         if (wantsJson) {
-          writeJson(context.stdout, { ...commandSpec, modelId: target, adapter: runtimeAdapterId });
+          writeRootJson({ ...commandSpec, modelId: target, adapter: runtimeAdapterId });
         } else {
           context.stdout.write(`${commandSpec.command} ${commandSpec.args.join(" ")}\n`);
         }
@@ -1656,7 +1655,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       }
       const commandSpec = buildSetDefaultModelCommand(target, agentId);
       if (wantsJson) {
-        writeJson(context.stdout, {
+        writeRootJson({
           command: "openclaw",
           args: commandSpec.args,
           modelId: commandSpec.modelId,
@@ -1670,7 +1669,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const modelId = await claw.models.setDefault(target);
     if (wantsJson) {
-      writeJson(context.stdout, { modelId, adapter: runtimeAdapterId });
+      writeRootJson({ modelId, adapter: runtimeAdapterId });
     } else {
       context.stdout.write(`${modelId}\n`);
     }
@@ -1681,7 +1680,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const providers = await claw.providers.list();
     if (wantsJson) {
-      writeJson(context.stdout, providers);
+      writeRootJson(providers);
     } else {
       context.stdout.write(`${providers.map((provider) => `${provider.id}:${provider.local ? "local" : "remote"}`).join("\n")}\n`);
     }
@@ -1692,7 +1691,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const catalog = await claw.providers.catalog();
     if (wantsJson) {
-      writeJson(context.stdout, catalog);
+      writeRootJson(catalog);
     } else {
       context.stdout.write(`${catalog.providers.map((provider) => provider.id).join("\n")}\n`);
     }
@@ -1703,7 +1702,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const state = await claw.providers.authState();
     if (wantsJson) {
-      writeJson(context.stdout, state);
+      writeRootJson(state);
     } else {
       context.stdout.write(`${Object.entries(state.providers).map(([provider, summary]) => `${provider}:${summary.hasAuth ? "ready" : "missing"}`).join("\n")}\n`);
     }
@@ -1714,7 +1713,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const secrets = await claw.secrets.list(flags.search);
     if (wantsJson) {
-      writeJson(context.stdout, secrets);
+      writeRootJson(secrets);
     } else {
       context.stdout.write(`${secrets.map((secret) => `${secret.name}${secret.typeId ? ` [${secret.typeId}]` : ""}`).join("\n")}\n`);
     }
@@ -1730,7 +1729,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const secret = await claw.secrets.describe(name);
     if (wantsJson) {
-      writeJson(context.stdout, secret);
+      writeRootJson(secret);
     } else {
       context.stdout.write(`${secret ? `${secret.name}${secret.typeId ? ` [${secret.typeId}]` : ""}` : "missing"}\n`);
     }
@@ -1741,7 +1740,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const types = await claw.secrets.types(flags.search);
     if (wantsJson) {
-      writeJson(context.stdout, types);
+      writeRootJson(types);
     } else {
       context.stdout.write(`${types.map((type) => `${type.typeId} ${type.label}`).join("\n")}\n`);
     }
@@ -1757,7 +1756,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const payload = await claw.secrets.capabilities(name);
     if (wantsJson) {
-      writeJson(context.stdout, payload);
+      writeRootJson(payload);
     } else {
       context.stdout.write(`${payload.capabilities.map((entry) => `${entry.capability}:${entry.allowed ? "allow" : "deny"}`).join("\n")}\n`);
     }
@@ -1792,7 +1791,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       ...(body ? { body } : {}),
     });
     if (wantsJson) {
-      writeJson(context.stdout, payload);
+      writeRootJson(payload);
     } else {
       context.stdout.write(`${payload.status}\n${payload.bodyText}\n`);
     }
@@ -1803,7 +1802,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const leases = await claw.secrets.leases();
     if (wantsJson) {
-      writeJson(context.stdout, leases);
+      writeRootJson(leases);
     } else {
       context.stdout.write(`${leases.map((lease) => `${lease.secretName} ${lease.mode} ${lease.revokedAt ? "revoked" : lease.consumedAt ? "consumed" : "active"}`).join("\n")}\n`);
     }
@@ -1814,7 +1813,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const auth = await claw.auth.status();
     if (wantsJson) {
-      writeJson(context.stdout, auth);
+      writeRootJson(auth);
     } else {
       context.stdout.write(`${Object.values(auth).map((summary) => `${summary.provider}:${summary.authType ?? "none"}`).join("\n")}\n`);
     }
@@ -1853,7 +1852,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         setDefault: flags["set-default"] !== "false",
       } as never);
       if (wantsJson) {
-        writeJson(context.stdout, launched);
+        writeRootJson(launched);
       } else {
         context.stdout.write(`${launched.command ?? ""} ${(launched.args ?? []).join(" ")}\n`);
       }
@@ -1864,7 +1863,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       setDefault: flags["set-default"] !== "false",
     });
     if (wantsJson) {
-      writeJson(context.stdout, launched);
+      writeRootJson(launched);
     } else {
       context.stdout.write(
         launched.status === "reused"
@@ -1896,7 +1895,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const removed = claw.auth.removeProvider(provider);
     if (wantsJson) {
-      writeJson(context.stdout, { removed });
+      writeRootJson({ removed });
     } else {
       context.stdout.write(`${removed}\n`);
     }
@@ -1988,7 +1987,8 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
   } catch (error) {
     const handled = cliErrorFromUnknown(error);
     if (wantsJson) {
-      writeCliError(context.stdout, handled);
+      const [group, command, subcommand] = extractPositionals(argv); const canonicalCommand = group === "db" ? "database" : group === "provider" ? "providers" : group === "style" ? "styles" : group === "template" ? "templates" : group === "ref" ? "references" : group === "image" ? "images" : group ?? "claw";
+      writeCommandJsonError(context.stdout, canonicalCommand, handled, { invokedCommand: group ?? canonicalCommand, subcommand: command ?? null, ...(subcommand ? { operation: subcommand } : {}) });
     } else {
       context.stderr.write(`${handled.message}\n`);
     }

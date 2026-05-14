@@ -195,6 +195,17 @@ test("runCli returns extended productivity JSON in the common envelope", { concu
   assert.deepEqual(payload.data, []);
 });
 
+test("runCli returns root router JSON in the common envelope", async () => {
+  const result = await runCliCapture(["runtime", "status", "--runtime", "demo", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; data: { adapter: string }; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
+  assert.equal(payload.ok, true);
+  assert.equal(payload.meta.canonicalCommand, "runtime");
+  assert.equal(payload.meta.invokedCommand, "runtime");
+  assert.equal(payload.meta.subcommand, "status");
+  assert.equal(payload.data.adapter, "demo");
+});
+
 test("runCli searches registered local docs and ADR contents", async () => {
   const result = await runCliCapture(["search", "Stable JSON output uses", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
