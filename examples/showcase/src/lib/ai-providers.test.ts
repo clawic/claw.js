@@ -117,10 +117,23 @@ test("i18n label values are non-empty strings for all providers", () => {
 /* ── Runtime adapter tests ── */
 
 const VISIBLE_ADAPTERS = listRuntimeAdapters().filter((a) => a.supportLevel !== "demo");
-const EXPECTED_ADAPTER_IDS = ["openclaw", "codex", "zeroclaw", "picoclaw", "nanobot", "nanoclaw", "nullclaw", "ironclaw", "nemoclaw", "hermes"];
+const EXPECTED_ADAPTER_IDS = [
+  "openclaw",
+  "claw",
+  "openclaude",
+  "codex",
+  "zeroclaw",
+  "picoclaw",
+  "nanobot",
+  "nanoclaw",
+  "nullclaw",
+  "ironclaw",
+  "nemoclaw",
+  "hermes",
+];
 
-test("SDK exposes 10 visible runtime adapters (excluding demo)", () => {
-  assert.equal(VISIBLE_ADAPTERS.length, 10, `Expected 10 visible adapters, got ${VISIBLE_ADAPTERS.length}`);
+test("SDK exposes 12 visible runtime adapters (excluding demo)", () => {
+  assert.equal(VISIBLE_ADAPTERS.length, 12, `Expected 12 visible adapters, got ${VISIBLE_ADAPTERS.length}`);
   const ids = VISIBLE_ADAPTERS.map((a) => a.id).sort();
   const expected = [...EXPECTED_ADAPTER_IDS].sort();
   assert.deepEqual(ids, expected);
@@ -157,8 +170,8 @@ test("each adapter has required runtime metadata", () => {
   }
 });
 
-test("only openclaw is marked as recommended", () => {
-  const recommended = VISIBLE_ADAPTERS.filter((a) => a.recommended);
-  assert.equal(recommended.length, 1, "Expected exactly 1 recommended adapter");
-  assert.equal(recommended[0]!.id, "openclaw");
+test("only openclaw is the recommended production adapter", () => {
+  const recommendedProduction = VISIBLE_ADAPTERS.filter((a) => a.recommended && a.supportLevel === "production");
+  assert.equal(recommendedProduction.length, 1, "Expected exactly 1 recommended production adapter");
+  assert.equal(recommendedProduction[0]!.id, "openclaw");
 });
