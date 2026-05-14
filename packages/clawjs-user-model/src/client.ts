@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import type {
   CommitSnapshotInput,
   ForgetInput,
@@ -54,46 +55,46 @@ export class UserModelApiClient {
   }
 
   health(): Promise<{ ok: boolean; service: string }> {
-    return this.call("GET", "/v1/health");
+    return this.call("GET", clawApiPath("health"));
   }
 
   snapshot(): Promise<UserProfileSnapshot> {
-    return this.call("GET", "/v1/user-model");
+    return this.call("GET", clawApiPath("user-model"));
   }
 
   bySection(): Promise<UserProfileBySection> {
-    return this.call("GET", `/v1/user-model${buildQuery({ bySection: true })}`);
+    return this.call("GET", clawApiPath(`user-model${buildQuery({ bySection: true })}`));
   }
 
   counts(): Promise<{ counts: Record<UserModelSection, number> }> {
-    return this.call("GET", "/v1/user-model/counts");
+    return this.call("GET", clawApiPath("user-model/counts"));
   }
 
   upsertItem(input: UpsertItemInput): Promise<UserProfileItem> {
-    return this.call("POST", "/v1/user-model/items", input);
+    return this.call("POST", clawApiPath("user-model/items"), input);
   }
 
   updateItem(id: string, patch: UpdateItemInput): Promise<UserProfileItem> {
-    return this.call("PATCH", `/v1/user-model/items/${encodeURIComponent(id)}`, patch);
+    return this.call("PATCH", clawApiPath(`user-model/items/${encodeURIComponent(id)}`), patch);
   }
 
   deleteItem(id: string): Promise<{ deleted: boolean }> {
-    return this.call("DELETE", `/v1/user-model/items/${encodeURIComponent(id)}`);
+    return this.call("DELETE", clawApiPath(`user-model/items/${encodeURIComponent(id)}`));
   }
 
   forget(input: ForgetInput): Promise<ForgetResult> {
-    return this.call("POST", "/v1/user-model/forget", input);
+    return this.call("POST", clawApiPath("user-model/forget"), input);
   }
 
   refresh(reason?: string): Promise<{ ok: boolean; message: string; snapshot: UserProfileHistoryRecord }> {
-    return this.call("POST", "/v1/user-model/refresh", reason ? { reason } : {});
+    return this.call("POST", clawApiPath("user-model/refresh"), reason ? { reason } : {});
   }
 
   commitSnapshot(input: CommitSnapshotInput = {}): Promise<UserProfileHistoryRecord> {
-    return this.call("POST", "/v1/user-model/snapshot", input);
+    return this.call("POST", clawApiPath("user-model/snapshot"), input);
   }
 
   history(limit?: number): Promise<{ items: UserProfileHistoryRecord[] }> {
-    return this.call("GET", `/v1/user-model/history${buildQuery({ limit })}`);
+    return this.call("GET", clawApiPath(`user-model/history${buildQuery({ limit })}`));
   }
 }

@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import fs from "node:fs";
 
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
@@ -66,14 +67,14 @@ export function buildUserModelApp(options: BuildUserModelAppOptions = {}) {
     store.close();
   });
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     service: "user-model",
     host: config.host,
     port: config.port,
   }));
 
-  app.get("/v1/user-model", async (request, reply) => {
+  app.get(clawApiPath("user-model"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     if (query.bySection === "true") {
@@ -82,12 +83,12 @@ export function buildUserModelApp(options: BuildUserModelAppOptions = {}) {
     return store.snapshot();
   });
 
-  app.get("/v1/user-model/counts", async (request, reply) => {
+  app.get(clawApiPath("user-model/counts"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     return { counts: store.countBySection() };
   });
 
-  app.post("/v1/user-model/items", async (request, reply) => {
+  app.post(clawApiPath("user-model/items"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     try {
       const body = readBody(request);
@@ -113,7 +114,7 @@ export function buildUserModelApp(options: BuildUserModelAppOptions = {}) {
     }
   });
 
-  app.patch("/v1/user-model/items/:id", async (request, reply) => {
+  app.patch(clawApiPath("user-model/items/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const body = readBody(request);
@@ -127,13 +128,13 @@ export function buildUserModelApp(options: BuildUserModelAppOptions = {}) {
     return updated;
   });
 
-  app.delete("/v1/user-model/items/:id", async (request, reply) => {
+  app.delete(clawApiPath("user-model/items/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     return { deleted: store.deleteItem(params.id) };
   });
 
-  app.post("/v1/user-model/forget", async (request, reply) => {
+  app.post(clawApiPath("user-model/forget"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     try {
       const body = readBody(request);
@@ -149,7 +150,7 @@ export function buildUserModelApp(options: BuildUserModelAppOptions = {}) {
     }
   });
 
-  app.post("/v1/user-model/refresh", async (request, reply) => {
+  app.post(clawApiPath("user-model/refresh"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const body = readBody(request);
     const reason = asString(body.reason) ?? "manual_refresh";
@@ -162,14 +163,14 @@ export function buildUserModelApp(options: BuildUserModelAppOptions = {}) {
     };
   });
 
-  app.post("/v1/user-model/snapshot", async (request, reply) => {
+  app.post(clawApiPath("user-model/snapshot"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const body = readBody(request);
     const input: CommitSnapshotInput = { reason: asString(body.reason) ?? null };
     return store.commitSnapshot(input);
   });
 
-  app.get("/v1/user-model/history", async (request, reply) => {
+  app.get(clawApiPath("user-model/history"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     return { items: store.listHistory(asNumber(query.limit) ?? 50) };
