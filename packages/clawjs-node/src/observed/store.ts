@@ -9,6 +9,7 @@ import type {
 } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 
 export type ObservedStateByDomain = {
   runtime: RuntimeObservedState;
@@ -55,7 +56,7 @@ function readJsonFile<T>(filePath: string, filesystem = new NodeFileSystemHost()
 }
 
 export function resolveObservedDir(workspaceDir: string): string {
-  return path.join(workspaceDir, ".claw", "observed");
+  return resolveClawWorkspaceSurfacePath("claw.workspace.observedState", workspaceDir);
 }
 
 export function resolveObservedDomainPath(workspaceDir: string, domain: ObservedDomain): string {

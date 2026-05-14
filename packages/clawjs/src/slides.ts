@@ -3,6 +3,7 @@ import os from "os";
 import path from "path";
 import { randomBytes } from "crypto";
 import { pathToFileURL } from "url";
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 export const SLIDE_LAYOUTS = [
   "title",
@@ -1198,11 +1199,11 @@ function writeOutput(options: SlidesCliOptions, payload: unknown, text: string):
 }
 
 function deckManifestPath(workspaceRoot: string, deckId: string): string {
-  return path.join(workspaceRoot, ".claw", "slides", "decks", `${deckId}.json`);
+  return resolveClawPersistentSurfacePath("claw.workspace.slides", workspaceRoot, "decks", `${deckId}.json`);
 }
 
 function deckOutputDir(workspaceRoot: string, deckId: string): string {
-  return path.join(workspaceRoot, ".claw", "slides", "outputs", deckId);
+  return resolveClawPersistentSurfacePath("claw.workspace.slides", workspaceRoot, "outputs", deckId);
 }
 
 function writeDeck(filePath: string, deck: SlideDeckManifest): void {

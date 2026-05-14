@@ -1,7 +1,7 @@
-import path from "path";
 import type { BindingDefinition } from "@clawjs/core";
 
 import { NodeFileSystemHost } from "../host/filesystem.ts";
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 import { syncBinding, type BindingSyncResult } from "./sync.ts";
 import {
   type SettingsValidationIssue,
@@ -42,7 +42,7 @@ export function updateBindingSettings(options: UpdateBindingSettingsOptions): Up
     };
   }
 
-  const backupDir = path.join(options.workspaceDir, ".claw", "backups");
+  const backupDir = resolveClawWorkspaceSurfacePath("claw.workspace.backups", options.workspaceDir);
   const syncResults = options.bindings.flatMap((binding) => {
     const render = options.renderers[binding.id];
     if (!render) return [];

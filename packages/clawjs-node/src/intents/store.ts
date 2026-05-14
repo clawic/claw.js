@@ -14,6 +14,7 @@ import type {
 } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 
 export type IntentStateByDomain = {
   runtime: RuntimeIntentState;
@@ -58,7 +59,7 @@ function readJsonFile<T>(filePath: string, filesystem = new NodeFileSystemHost()
 }
 
 export function resolveIntentsDir(workspaceDir: string): string {
-  return path.join(workspaceDir, ".claw", "intents");
+  return resolveClawWorkspaceSurfacePath("claw.workspace.intents", workspaceDir);
 }
 
 export function resolveIntentDomainPath(workspaceDir: string, domain: IntentDomain): string {

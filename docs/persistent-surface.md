@@ -90,6 +90,8 @@ flowchart TD
   claw_workspace --> claw_workspace_documents
   claw_workspace_data["data\nfolder"]
   claw_workspace --> claw_workspace_data
+  claw_workspace_generations_tmp["generation temp assets\npersistentTemp"]
+  claw_workspace --> claw_workspace_generations_tmp
   claw_global_config["config\nfolder"]
   claw_global --> claw_global_config
   claw_global_data["data\nfolder"]
@@ -106,6 +108,16 @@ flowchart TD
   claw_global --> claw_global_tmp
   claw_global_skills["skills\nfolder"]
   claw_global --> claw_global_skills
+  claw_global_library["library\nfolder"]
+  claw_global --> claw_global_library
+  claw_global_rules["rules\nfolder"]
+  claw_global --> claw_global_rules
+  claw_global_image_library["image_library\nfolder"]
+  claw_global --> claw_global_image_library
+  claw_global_runtime_home["runtime_home\nfolder"]
+  claw_global --> claw_global_runtime_home
+  claw_global_demo_home["demo_home\nfolder"]
+  claw_global --> claw_global_demo_home
   clawix_home_data["data\nfolder"]
   clawix_home --> clawix_home_data
   clawix_home_state["state\nfolder"]
@@ -351,6 +363,7 @@ flowchart TD
 | `claw.workspace.compat` | folder | claw | `.claw/compat` |
 | `claw.workspace.documents` | folder | claw | `.claw/documents` |
 | `claw.workspace.data` | folder | claw | `.claw/data` |
+| `claw.workspace.generations_tmp` | persistentTemp | claw | `.claw/tmp/generations` |
 | `claw.global.config` | folder | claw | `~/.claw/config.yaml` |
 | `claw.global.data` | folder | claw | `~/.claw/data` |
 | `claw.global.state` | folder | claw | `~/.claw/state` |
@@ -359,6 +372,11 @@ flowchart TD
 | `claw.global.run` | folder | claw | `~/.claw/run` |
 | `claw.global.tmp` | folder | claw | `~/.claw/tmp` |
 | `claw.global.skills` | folder | claw | `~/.claw/skills` |
+| `claw.global.library` | folder | claw | `~/.claw/library` |
+| `claw.global.rules` | folder | claw | `~/.claw/rules` |
+| `claw.global.image_library` | folder | claw | `~/.claw/image-library` |
+| `claw.global.runtime_home` | folder | claw | `~/.claw-runtime` |
+| `claw.global.demo_home` | folder | claw | `~/.claw-demo` |
 | `clawix.home.data` | folder | clawix | `~/.clawix/data` |
 | `clawix.home.state` | folder | clawix | `~/.clawix/state` |
 | `clawix.home.cache` | folder | clawix | `~/.clawix/cache` |

@@ -1,10 +1,10 @@
-import path from "path";
 import { createHash, randomUUID } from "crypto";
 
 import type { Message } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
 import type { SessionStore } from "../sessions/store.ts";
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 
 export type ChannelRunStatus = "idle" | "running" | "queued" | "stopping" | "failed";
 export type ChannelRunQueuePolicy = "coalesce";
@@ -126,7 +126,7 @@ export class ChannelRunStore {
   }
 
   private statePath(): string {
-    return path.join(this.workspaceDir, ".claw", "channel-runs.json");
+    return resolveClawWorkspaceSurfacePath("claw.workspace.channel_runs_state", this.workspaceDir);
   }
 
   private readState(): ChannelRunState {

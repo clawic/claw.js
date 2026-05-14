@@ -164,6 +164,7 @@ import {
 import { WorkspaceAuditLog } from "./host/audit.ts";
 import { NodeFileSystemHost } from "./host/filesystem.ts";
 import { NodeProcessHost } from "./host/process.ts";
+import { expandHome, resolveClawGlobalDataRoot, resolveClawWorkspaceSurfacePath } from "./surface-paths.ts";
 import { applyTemplatePack, type ApplyTemplatePackOptions } from "./files/template-pack.ts";
 import { listManagedBlockProblems } from "./files/managed-blocks.ts";
 import { syncBinding } from "./bindings/sync.ts";
@@ -471,13 +472,7 @@ function defaultClawjsMainDbPath(): string {
 }
 
 function defaultClawjsDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
-  if (explicit) return expandHome(explicit);
-  return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
-}
-
-function expandHome(value: string): string {
-  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
+  return resolveClawGlobalDataRoot();
 }
 
 const TELEGRAM_CODEX_BRIDGE_COMMANDS: TelegramCommand[] = [
@@ -5234,7 +5229,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
         if (!templatePackPath) {
           throw new Error("templatePackPath is required");
         }
-        const backupDir = path.join(workspaceDir, ".claw", "backups");
+        const backupDir = resolveClawWorkspaceSurfacePath("claw.workspace.backups", workspaceDir);
         const result = applyTemplatePack(templatePackPath, {
           workspaceDir,
           backupDir,
@@ -5263,7 +5258,7 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
           settings,
           render,
           filesystem,
-          backupDir: path.join(workspaceDir, ".claw", "backups"),
+          backupDir: resolveClawWorkspaceSurfacePath("claw.workspace.backups", workspaceDir),
         });
         appendAuditEvent("files.binding_synced", "file_sync", {
           bindingId: binding.id,

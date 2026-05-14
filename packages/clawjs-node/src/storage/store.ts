@@ -1,11 +1,12 @@
 import crypto from "crypto";
 import fs from "fs";
-import os from "os";
 import path from "path";
+import { STORAGE_STORE_SCHEMA_SQL } from "./surface.ts";
 
 import Database from "better-sqlite3";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
+import { resolveClawGlobalDataRoot } from "../surface-paths.ts";
 
 export type StorageOperation =
   | "objects:list"
@@ -246,9 +247,7 @@ function toBuffer(data: string | Uint8Array): Buffer {
 }
 
 function dataRoot(workspaceDir: string): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
-  if (explicit) return expandHome(explicit);
-  return path.join(expandHome(process.env.CLAW_HOME || path.join(os.homedir(), ".claw")), "data");
+  return resolveClawGlobalDataRoot();
 }
 
 function storageDbPath(workspaceDir: string): string {
@@ -257,10 +256,6 @@ function storageDbPath(workspaceDir: string): string {
 
 function blobsDir(workspaceDir: string): string {
   return path.join(dataRoot(workspaceDir), "blobs");
-}
-
-function expandHome(value: string): string {
-  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
 }
 
 function serializeObject(row: ObjectRow, rootBlobsDir: string): StorageObject {
@@ -373,54 +368,7 @@ export class LocalStorageStore {
   }
 
   private init(): void {
-    this.sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS storage_objects (
-        bucket TEXT NOT NULL,
-        object_key TEXT NOT NULL,
-        size_bytes INTEGER NOT NULL,
-        content_type TEXT NOT NULL,
-        sha256 TEXT NOT NULL,
-        blob_path TEXT NOT NULL,
-        metadata_json TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        created_by_agent_id TEXT NOT NULL,
-        visibility TEXT NOT NULL DEFAULT 'internal',
-        PRIMARY KEY (bucket, object_key)
-      );
-
-      CREATE INDEX IF NOT EXISTS storage_objects_bucket_key_idx
-      ON storage_objects (bucket, object_key);
-
-      CREATE TABLE IF NOT EXISTS storage_tokens (
-        id TEXT PRIMARY KEY,
-        label TEXT NOT NULL,
-        token_hash TEXT NOT NULL,
-        grants_json TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        last_used_at TEXT,
-        revoked_at TEXT,
-        is_owner INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE IF NOT EXISTS storage_shares (
-        id TEXT PRIMARY KEY,
-        bucket TEXT NOT NULL,
-        object_key TEXT NOT NULL,
-        label TEXT NOT NULL,
-        mode TEXT NOT NULL,
-        url TEXT NOT NULL,
-        external_item_id TEXT,
-        external_share_id TEXT,
-        snapshot_blob_path TEXT NOT NULL DEFAULT '',
-        snapshot_size_bytes INTEGER NOT NULL DEFAULT 0,
-        snapshot_content_type TEXT NOT NULL DEFAULT 'application/octet-stream',
-        snapshot_sha256 TEXT NOT NULL DEFAULT '',
-        created_at TEXT NOT NULL,
-        expires_at TEXT,
-        revoked_at TEXT
-      );
-    `);
+    this.sqlite.exec(STORAGE_STORE_SCHEMA_SQL);
     this.ensureColumn("storage_objects", "visibility", "TEXT NOT NULL DEFAULT 'internal'");
     this.ensureColumn("storage_tokens", "is_owner", "INTEGER NOT NULL DEFAULT 0");
     this.ensureColumn("storage_shares", "snapshot_blob_path", "TEXT NOT NULL DEFAULT ''");

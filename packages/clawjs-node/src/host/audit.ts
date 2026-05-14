@@ -1,5 +1,6 @@
 import path from "path";
 import { NodeFileSystemHost, resolveFileLockPath } from "./filesystem.ts";
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 
 export interface AuditRecord {
   timestamp: string;
@@ -26,7 +27,7 @@ export class WorkspaceAuditLog {
   }
 
   append(workspaceDir: string, record: AuditRecord): string {
-    const auditDir = path.join(workspaceDir, ".claw", "audit");
+    const auditDir = resolveClawWorkspaceSurfacePath("claw.workspace.audit", workspaceDir);
     const auditPath = path.join(auditDir, "audit.jsonl");
     this.filesystem.ensureDir(auditDir);
     const line = JSON.stringify(record);
@@ -37,7 +38,7 @@ export class WorkspaceAuditLog {
   }
 
   list(workspaceDir: string): AuditRecord[] {
-    const auditPath = path.join(workspaceDir, ".claw", "audit", "audit.jsonl");
+    const auditPath = resolveClawWorkspaceSurfacePath("claw.workspace.audit", workspaceDir, "audit.jsonl");
     if (!this.filesystem.exists(auditPath)) return [];
     return this.filesystem.readText(auditPath)
       .split("\n")

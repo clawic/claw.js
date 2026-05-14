@@ -4,8 +4,11 @@ import os from "os";
 import path from "path";
 import { randomBytes } from "crypto";
 import { spawnSync } from "child_process";
+import { CODE_LEDGER_SCHEMA_SQL, CODE_GLOBAL_INDEX_SCHEMA_SQL } from "./surface.ts";
 
 import Database from "better-sqlite3";
+
+import { resolveClawGlobalDataRoot } from "../surface-paths.ts";
 
 export type CodeChangeKind = "fix" | "feat" | "refactor" | "docs" | "test" | "chore";
 export type CodeRisk = "low" | "medium" | "high";
@@ -588,13 +591,7 @@ function resolveGlobalDatabasePath(rootDir?: string): string {
 }
 
 function resolveClawjsDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
-  if (explicit) return expandHome(explicit);
-  return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
-}
-
-function expandHome(value: string): string {
-  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
+  return resolveClawGlobalDataRoot();
 }
 
 function normalizePathList(paths?: string[]): string[] {
@@ -934,116 +931,7 @@ export class CodeLedger {
     fs.mkdirSync(path.dirname(this.databasePath), { recursive: true });
     this.db = new Database(this.databasePath);
     this.db.pragma("journal_mode = WAL");
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS code_repositories (
-        id TEXT PRIMARY KEY,
-        root_dir TEXT NOT NULL UNIQUE,
-        origin_url TEXT,
-        default_branch TEXT NOT NULL,
-        current_head TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS code_intents (
-        id TEXT PRIMARY KEY,
-        repo_id TEXT NOT NULL,
-        kind TEXT NOT NULL,
-        scope TEXT NOT NULL,
-        title TEXT NOT NULL,
-        summary TEXT,
-        status TEXT NOT NULL,
-        risk TEXT NOT NULL,
-        agent_id TEXT NOT NULL,
-        branch TEXT NOT NULL UNIQUE,
-        base_branch TEXT NOT NULL,
-        base_sha TEXT NOT NULL,
-        worktree_path TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        queued_at TEXT,
-        integrated_at TEXT,
-        commit_sha TEXT,
-        integration_sha TEXT,
-        host_url TEXT
-      );
-      CREATE INDEX IF NOT EXISTS code_intents_repo_status_idx ON code_intents(repo_id, status, updated_at DESC);
-      CREATE TABLE IF NOT EXISTS code_reservations (
-        id TEXT PRIMARY KEY,
-        intent_id TEXT NOT NULL,
-        repo_id TEXT NOT NULL,
-        kind TEXT NOT NULL,
-        value TEXT NOT NULL,
-        status TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        released_at TEXT
-      );
-      CREATE INDEX IF NOT EXISTS code_reservations_active_idx ON code_reservations(repo_id, status, kind, value);
-      CREATE TABLE IF NOT EXISTS code_evidence (
-        id TEXT PRIMARY KEY,
-        intent_id TEXT NOT NULL,
-        kind TEXT NOT NULL,
-        label TEXT NOT NULL,
-        path TEXT,
-        url TEXT,
-        metadata_json TEXT NOT NULL,
-        created_at TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS code_checks (
-        id TEXT PRIMARY KEY,
-        intent_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        status TEXT NOT NULL,
-        command TEXT,
-        exit_code INTEGER,
-        output TEXT,
-        created_at TEXT NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS code_checks_intent_name_idx ON code_checks(intent_id, name, created_at DESC);
-      CREATE TABLE IF NOT EXISTS code_reviews (
-        id TEXT PRIMARY KEY,
-        intent_id TEXT NOT NULL,
-        reviewer TEXT NOT NULL,
-        decision TEXT NOT NULL,
-        reason TEXT,
-        created_at TEXT NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS code_reviews_intent_idx ON code_reviews(intent_id, created_at DESC);
-      CREATE TABLE IF NOT EXISTS code_queue (
-        id TEXT PRIMARY KEY,
-        intent_id TEXT NOT NULL UNIQUE,
-        status TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        error TEXT
-      );
-      CREATE TABLE IF NOT EXISTS code_host_syncs (
-        id TEXT PRIMARY KEY,
-        intent_id TEXT NOT NULL,
-        provider TEXT NOT NULL,
-        status TEXT NOT NULL,
-        remote_url TEXT,
-        payload_json TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS code_policies (
-        id TEXT PRIMARY KEY,
-        path TEXT NOT NULL,
-        policy_json TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS code_gate_runs (
-        id TEXT PRIMARY KEY,
-        intent_id TEXT NOT NULL,
-        status TEXT NOT NULL,
-        effective_risk TEXT NOT NULL,
-        reasons_json TEXT NOT NULL,
-        diff_summary_json TEXT NOT NULL,
-        policy_json TEXT NOT NULL,
-        created_at TEXT NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS code_gate_runs_intent_idx ON code_gate_runs(intent_id, created_at DESC);
-    `);
+    this.db.exec(CODE_LEDGER_SCHEMA_SQL);
   }
 
   init(): CodeRepositoryRecord {
@@ -1713,33 +1601,7 @@ export class CodeGlobalIndex {
     fs.mkdirSync(path.dirname(this.databasePath), { recursive: true });
     this.db = new Database(this.databasePath);
     this.db.pragma("journal_mode = WAL");
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS code_projects (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        root_dir TEXT NOT NULL UNIQUE,
-        status TEXT NOT NULL,
-        origin_url TEXT,
-        default_branch TEXT,
-        current_head TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        last_sync_at TEXT
-      );
-      CREATE INDEX IF NOT EXISTS code_projects_status_idx ON code_projects(status, updated_at DESC);
-      CREATE TABLE IF NOT EXISTS code_agents (
-        id TEXT PRIMARY KEY,
-        label TEXT NOT NULL,
-        status TEXT NOT NULL,
-        project_id TEXT,
-        intent_id TEXT,
-        worktree_path TEXT,
-        heartbeat_at TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS code_agents_project_idx ON code_agents(project_id, status);
-    `);
+    this.db.exec(CODE_GLOBAL_INDEX_SCHEMA_SQL);
   }
 
   addProject(input: AddCodeProjectInput): CodeProjectRecord {

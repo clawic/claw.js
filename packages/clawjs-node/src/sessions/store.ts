@@ -10,6 +10,7 @@ import type {
 } from "@clawjs/core";
 
 import { NodeFileSystemHost } from "../host/filesystem.ts";
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 import {
   DEFAULT_SESSION_TITLE,
   normalizeTranscriptEvents,
@@ -35,7 +36,7 @@ export interface SessionStoreSearchOptions {
 }
 
 export function resolveSessionsDir(workspaceDir: string): string {
-  return path.join(workspaceDir, ".claw", "sessions");
+  return resolveClawWorkspaceSurfacePath("claw.workspace.sessions", workspaceDir);
 }
 
 export function resolveSessionPath(workspaceDir: string, sessionId: string): string {

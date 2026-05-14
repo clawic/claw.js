@@ -24,6 +24,7 @@ import {
 } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 
 export const CAPABILITY_REPORT_FILE = "capability-report.json";
 export const WORKSPACE_STATE_FILE = "workspace.json";
@@ -35,31 +36,31 @@ export const CHANNELS_STATE_FILE = "channels.json";
 export const TELEGRAM_STATE_FILE = CHANNELS_STATE_FILE;
 
 export function resolveCapabilityReportPath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".claw", "compat", CAPABILITY_REPORT_FILE);
+  return resolveClawWorkspaceSurfacePath("claw.workspace.compat", workspaceDir, CAPABILITY_REPORT_FILE);
 }
 
 export function resolveWorkspaceStatePath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".claw", "observed", WORKSPACE_STATE_FILE);
+  return resolveClawWorkspaceSurfacePath("claw.workspace.observedState", workspaceDir, WORKSPACE_STATE_FILE);
 }
 
 export function resolveProviderStatePath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".claw", "observed", PROVIDER_STATE_FILE);
+  return resolveClawWorkspaceSurfacePath("claw.workspace.observedState", workspaceDir, PROVIDER_STATE_FILE);
 }
 
 export function resolveSchedulerStatePath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".claw", "observed", SCHEDULER_STATE_FILE);
+  return resolveClawWorkspaceSurfacePath("claw.workspace.observedState", workspaceDir, SCHEDULER_STATE_FILE);
 }
 
 export function resolveMemoryStatePath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".claw", "observed", MEMORY_STATE_FILE);
+  return resolveClawWorkspaceSurfacePath("claw.workspace.observedState", workspaceDir, MEMORY_STATE_FILE);
 }
 
 export function resolveSkillsStatePath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".claw", "observed", SKILLS_STATE_FILE);
+  return resolveClawWorkspaceSurfacePath("claw.workspace.observedState", workspaceDir, SKILLS_STATE_FILE);
 }
 
 export function resolveChannelsStatePath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".claw", "observed", CHANNELS_STATE_FILE);
+  return resolveClawWorkspaceSurfacePath("claw.workspace.observedState", workspaceDir, CHANNELS_STATE_FILE);
 }
 
 export function resolveTelegramStatePath(workspaceDir: string): string {

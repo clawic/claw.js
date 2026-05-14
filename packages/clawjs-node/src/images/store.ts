@@ -1,10 +1,10 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { createHash, randomUUID } from "crypto";
 
 import { createWorkspaceDataStore, type WorkspaceDataStore } from "../data/store.ts";
 import { NodeFileSystemHost } from "../host/filesystem.ts";
+import { resolveClawGlobalSurfacePath } from "../surface-paths.ts";
 import type { SecretBrokerHttpInput, SecretBrokerHttpResult } from "../secrets/index.ts";
 import type { LocalStorageStore } from "../storage/store.ts";
 
@@ -224,7 +224,7 @@ const OPENAI_BACKEND_ID = "openai:image";
 function defaultImageLibraryRoot(env?: NodeJS.ProcessEnv): string {
   return env?.CLAW_IMAGE_LIBRARY_DIR?.trim()
     || process.env.CLAW_IMAGE_LIBRARY_DIR?.trim()
-    || path.join(os.homedir(), ".claw", "image-library");
+    || resolveClawGlobalSurfacePath("claw.global.image_library", env);
 }
 
 function normalizeText(value: string | undefined, fallback = ""): string {

@@ -5,6 +5,8 @@ import { createHash, randomUUID } from "crypto";
 
 import Database from "better-sqlite3";
 
+import { resolveClawGlobalDataRoot } from "../surface-paths.ts";
+
 import {
   contextPackRecordSchema,
   contextPackStateSchema,
@@ -507,9 +509,7 @@ function resolveMainDbPath(): string {
 }
 
 function resolveDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
-  if (explicit) return expandHome(explicit);
-  return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
+  return resolveClawGlobalDataRoot();
 }
 
 function expandHome(value: string): string {

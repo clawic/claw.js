@@ -7,6 +7,7 @@ import { randomUUID, createHash } from "crypto";
 import type { DocumentIndexStatus, DocumentOrigin, DocumentRecord, DocumentRef, DocumentSearchResult } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 import type { LocalStorageStore } from "../storage/store.ts";
 
 interface DocumentManifest extends DocumentRecord {}
@@ -95,7 +96,7 @@ function normalizeWorkspacePath(filePath: string): string {
 }
 
 function documentsRoot(workspaceDir: string): string {
-  return path.join(workspaceDir, ".claw", "documents");
+  return resolveClawWorkspaceSurfacePath("claw.workspace.documents", workspaceDir);
 }
 
 function manifestsDir(workspaceDir: string): string {

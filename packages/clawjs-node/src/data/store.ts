@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 
 type Decoder<T> = (value: unknown) => T;
 
@@ -80,7 +81,7 @@ function writeJsonFile(filesystem: NodeFileSystemHost, filePath: string, value: 
 }
 
 function resolveDataRoot(workspaceDir: string): string {
-  return path.join(workspaceDir, ".claw", "data");
+  return resolveClawWorkspaceSurfacePath("claw.workspace.data", workspaceDir);
 }
 
 function resolveDocumentsDir(workspaceDir: string): string {

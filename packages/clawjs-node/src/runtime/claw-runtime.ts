@@ -1,5 +1,4 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { randomUUID } from "crypto";
 import { spawn } from "child_process";
@@ -13,6 +12,7 @@ import type {
 } from "@clawjs/core";
 import { maskCredential } from "@clawjs/core";
 
+import { resolveClawGlobalSurfacePath } from "../surface-paths.ts";
 import type { CommandRunner, RuntimeAdapterOptions, SessionGatewayDescriptor } from "./contracts.ts";
 import type { StreamSessionDependencies, StreamSessionInput } from "../sessions/stream.ts";
 import {
@@ -152,7 +152,7 @@ export function resolveClawRuntimeLocations(options: RuntimeAdapterOptions): Res
   const homeDir = options.homeDir?.trim()
     || options.env?.CLAW_RUNTIME_HOME?.trim()
     || process.env.CLAW_RUNTIME_HOME?.trim()
-    || path.join(os.homedir(), ".claw-runtime");
+    || resolveClawGlobalSurfacePath("claw.global.runtime_home", options.env);
   return {
     homeDir,
     configPath: options.configPath?.trim() || path.join(homeDir, "config.json"),

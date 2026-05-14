@@ -7,6 +7,7 @@ import type { RuntimeAdapterId } from "@clawjs/core";
 import { createWorkspaceDataStore, type WorkspaceDataStore } from "../data/store.ts";
 import { NodeFileSystemHost } from "../host/filesystem.ts";
 import { NodeProcessHost } from "../host/process.ts";
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 import type { LocalStorageStore } from "../storage/store.ts";
 
 export type GenerationKind = "image" | "video" | "audio" | "document";
@@ -854,7 +855,7 @@ export function createGenerationStore(options: {
       const mimeType = resolveMimeType(kind, extension, input.mimeType || backend.mimeType);
       const outputRelativePath = buildAssetRelativePath(kind, id, extension);
       const outputPath = storage
-        ? path.join(options.workspaceDir, ".claw", "tmp", "generations", kind, `${id}.${extension}`)
+        ? resolveClawWorkspaceSurfacePath("claw.workspace.generations_tmp", options.workspaceDir, kind, `${id}.${extension}`)
         : dataStore.asset(outputRelativePath).path();
       filesystem.ensureDir(path.dirname(outputPath));
 

@@ -4,6 +4,7 @@ import { compatSnapshotSchema, type CompatSnapshot } from "@clawjs/core";
 
 import type { RuntimeCompatReport, RuntimeProbeStatus } from "../runtime/contracts.ts";
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 
 export const COMPAT_SNAPSHOT_FILE = "runtime-snapshot.json";
 const LEGACY_SNAPSHOT_WRAPPER_KEYS = ["snapshot", "compat", "compatSnapshot", "payload", "data"] as const;
@@ -176,7 +177,7 @@ function normalizeCompatSnapshotRecord(value: Record<string, unknown>): CompatSn
 }
 
 export function resolveCompatSnapshotPath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".claw", "compat", COMPAT_SNAPSHOT_FILE);
+  return resolveClawWorkspaceSurfacePath("claw.workspace.compat", workspaceDir, COMPAT_SNAPSHOT_FILE);
 }
 
 function serializeCompatSnapshot(snapshot: CompatSnapshot): string {

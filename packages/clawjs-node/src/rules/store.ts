@@ -14,6 +14,8 @@ import {
   type RulesState,
 } from "@clawjs/core";
 
+import { resolveClawGlobalSurfacePath } from "../surface-paths.ts";
+
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
 import { BUILTIN_CLAW_RULE_SCOPES, BUILTIN_CLAW_RULES, isBuiltinClawJSRule } from "./builtin.ts";
 
@@ -40,7 +42,7 @@ export function resolveRulesRoot(options: RulesStoreOptions = {}): string {
     || options.env?.CLAW_RULES_DIR?.trim()
     || process.env.CLAW_RULES_DIR?.trim();
   if (configured) return resolveHomePath(configured);
-  return path.join(os.homedir(), ".claw", "rules");
+  return resolveClawGlobalSurfacePath("claw.global.rules", options.env);
 }
 
 export function normalizeRuleId(value: string, fallback = "rule"): string {

@@ -1,8 +1,8 @@
-import path from "path";
 import { z } from "zod";
 import type { BindingDefinition } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 
 const bindingRecordSchema = z.object({
   schemaVersion: z.number().int().positive(),
@@ -53,15 +53,15 @@ export interface SettingsValidationIssue {
 }
 
 export function resolveBindingsPath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".claw", "projections", "file-bindings.json");
+  return resolveClawWorkspaceSurfacePath("claw.workspace.projections", workspaceDir, "file-bindings.json");
 }
 
 export function resolveSettingsSchemaPath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".claw", "projections", "settings-schema.json");
+  return resolveClawWorkspaceSurfacePath("claw.workspace.projections", workspaceDir, "settings-schema.json");
 }
 
 export function resolveSettingsValuesPath(workspaceDir: string): string {
-  return path.join(workspaceDir, ".claw", "intents", "files.json");
+  return resolveClawWorkspaceSurfacePath("claw.workspace.intents", workspaceDir, "files.json");
 }
 
 export function readBindingStore(workspaceDir: string, filesystem = new NodeFileSystemHost()): BindingStoreRecord {

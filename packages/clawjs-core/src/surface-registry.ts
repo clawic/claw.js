@@ -519,6 +519,15 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       storageClass: "workspace",
       source: registrySource,
     })),
+    clawPersistentSurface.path({
+      id: "claw.workspace.generations_tmp",
+      kind: "persistentTemp",
+      name: "generation temp assets",
+      path: `${clawWorkspaceLayout.root}/tmp/generations`,
+      parentId: "claw.workspace",
+      storageClass: "workspace",
+      source: registrySource,
+    }),
     ...Object.entries(clawGlobalHomeLayout)
       .filter(([name]) => name !== "root")
       .map(([name, surfacePath]) => clawPersistentSurface.path({
@@ -530,6 +539,21 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
         storageClass: "frameworkGlobal",
         source: registrySource,
       })),
+    ...[
+      ["library", "~/.claw/library"],
+      ["rules", "~/.claw/rules"],
+      ["image_library", "~/.claw/image-library"],
+      ["runtime_home", "~/.claw-runtime"],
+      ["demo_home", "~/.claw-demo"],
+    ].map(([name, surfacePath]) => clawPersistentSurface.path({
+      id: `claw.global.${name}`,
+      kind: "folder",
+      name,
+      path: surfacePath,
+      parentId: "claw.global",
+      storageClass: "frameworkGlobal",
+      source: registrySource,
+    })),
     ...Object.entries(clawixHomeLayout)
       .filter(([name]) => name !== "root" && name !== "windowsBridgePipe")
       .map(([name, surfacePath]) => clawPersistentSurface.path({

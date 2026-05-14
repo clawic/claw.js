@@ -10,10 +10,12 @@
  */
 
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { randomUUID } from "crypto";
 import Database from "better-sqlite3";
+import { APPS_STORE_SCHEMA_SQL } from "./surface.ts";
+
+import { resolveClawGlobalDataRoot } from "../surface-paths.ts";
 
 export interface AppPermissions {
   internet: boolean;
@@ -318,13 +320,7 @@ export function defaultRootDir(): string {
 }
 
 function defaultDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR ?? process.env.CLAWIX_CLAW_DATA_DIR;
-  if (explicit) return expandHome(explicit);
-  return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
-}
-
-function expandHome(value: string): string {
-  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
+  return resolveClawGlobalDataRoot();
 }
 
 function ensureDir(dir: string): void {
@@ -398,22 +394,7 @@ function parseJson(raw: string, fallback: any): any {
 }
 
 function ensureAppsSchema(sqlite: Database.Database): void {
-  sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS apps (
-      id TEXT PRIMARY KEY,
-      slug TEXT NOT NULL UNIQUE,
-      name TEXT NOT NULL,
-      description TEXT,
-      root_path TEXT NOT NULL,
-      manifest_json TEXT NOT NULL DEFAULT '{}',
-      permissions_json TEXT NOT NULL DEFAULT '{}',
-      pinned INTEGER NOT NULL DEFAULT 0,
-      last_opened_at TEXT,
-      created_by_chat_id TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-  `);
+  sqlite.exec(APPS_STORE_SCHEMA_SQL);
 }
 
 export function normalizeSlug(raw: string): string {

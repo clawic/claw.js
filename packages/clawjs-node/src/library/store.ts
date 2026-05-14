@@ -18,6 +18,8 @@ import {
   type LibraryState,
 } from "@clawjs/core";
 
+import { resolveClawGlobalSurfacePath } from "../surface-paths.ts";
+
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
 
 export const LIBRARY_STATE_FILE = "library.json";
@@ -89,7 +91,7 @@ export function resolveLibraryRoot(options: LibraryStoreOptions = {}): string {
     || options.env?.CLAW_LIBRARY_DIR?.trim()
     || process.env.CLAW_LIBRARY_DIR?.trim();
   if (configured) return resolveHomePath(configured);
-  return path.join(os.homedir(), ".claw", "library");
+  return resolveClawGlobalSurfacePath("claw.global.library", options.env);
 }
 
 export function normalizeLibraryId(value: string, fallback = "asset"): string {
