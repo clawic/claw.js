@@ -34,6 +34,13 @@ async function boot() {
   return server;
 }
 
+function parseClawJsonData<T>(stdout: string): T {
+  const payload = JSON.parse(stdout) as { ok?: boolean; data?: T };
+  assert.equal(payload.ok, true);
+  assert.ok(payload.data);
+  return payload.data;
+}
+
 test("dedicated CLI and claw bridge hit the same database service", async () => {
   const server = await boot();
 
@@ -157,7 +164,7 @@ test("claw db uses the same remote database service for built-ins and magic cust
   ], {
     cwd: path.resolve(process.cwd(), ".."),
   });
-  const createdTaskPayload = JSON.parse(createdTask.stdout) as { id: string; title: string; status: string };
+  const createdTaskPayload = parseClawJsonData<{ id: string; title: string; status: string }>(createdTask.stdout);
   assert.equal(createdTaskPayload.title, "Ship CLI");
   assert.equal(createdTaskPayload.status, "todo");
 
@@ -178,7 +185,7 @@ test("claw db uses the same remote database service for built-ins and magic cust
   ], {
     cwd: path.resolve(process.cwd(), ".."),
   });
-  const createdProspectPayload = JSON.parse(createdLead.stdout) as { title: string; metadata?: { website?: string } };
+  const createdProspectPayload = parseClawJsonData<{ title: string; metadata?: { website?: string } }>(createdLead.stdout);
   assert.equal(createdProspectPayload.title, "Ada");
   assert.equal(createdProspectPayload.metadata?.website, "https://ada.dev");
 
@@ -195,7 +202,7 @@ test("claw db uses the same remote database service for built-ins and magic cust
   ], {
     cwd: path.resolve(process.cwd(), ".."),
   });
-  const listedTasksPayload = JSON.parse(listedTasks.stdout) as Array<{ id: string }>;
+  const listedTasksPayload = parseClawJsonData<Array<{ id: string }>>(listedTasks.stdout);
   assert.equal(listedTasksPayload.some((item) => item.id === createdTaskPayload.id), true);
 
   const listedLeads = await execFileAsync("node", [
@@ -283,7 +290,7 @@ test("claw db remote human mode shows local-first style guidance, implicit creat
   ], {
     cwd: path.resolve(process.cwd(), ".."),
   });
-  const schemaPayload = JSON.parse(schema.stdout) as { exists: boolean; collection: { name: string; fields: Array<{ name: string }> } };
+  const schemaPayload = parseClawJsonData<{ exists: boolean; collection: { name: string; fields: Array<{ name: string }> } }>(schema.stdout);
   assert.equal(schemaPayload.exists, true);
   assert.equal(schemaPayload.collection.name, "prospects");
   assert.equal(schemaPayload.collection.fields.some((field) => field.name === "title"), true);
