@@ -13,6 +13,8 @@ import {
   BUILTIN_COLLECTIONS_BY_NAME,
   resolveClawPersistentSurfacePath,
 } from "@clawjs/core";
+import { CliHandledError } from "./cli-errors.ts";
+import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { openMainDataStore } from "./v1-data.ts";
 
 export const DB_EXIT_OK = 0;
@@ -191,15 +193,33 @@ class RemoteDbRuntime implements DbRuntime {
   }
 }
 
-function writeJson(stream: Writable, payload: unknown): void {
-  stream.write(`${JSON.stringify(payload, null, 2)}\n`);
+function dbJsonMeta(input: {
+  positionals: string[];
+}, collectionName?: string, action?: string): Record<string, unknown> {
+  const invokedCommand = input.positionals[0] ?? "db";
+  const subcommand = [collectionName ?? input.positionals[1], action ?? input.positionals[2]].filter(Boolean).join(" ");
+  return {
+    invokedCommand,
+    ...(subcommand ? { subcommand } : {}),
+    ...(collectionName ? { collection: collectionName } : {}),
+    ...(action ? { action } : {}),
+  };
 }
 
-function writeDbError(stdout: Writable, stderr: Writable, wantsJson: boolean, code: string, message: string): void {
-  if (wantsJson) {
-    writeJson(stdout, { ok: false, error: { code, message } });
+function writeDbJson(stdout: Writable, data: unknown, meta: Record<string, unknown>): void {
+  writeCommandJsonOk(stdout, "database", data, meta);
+}
+
+function writeDbError(input: {
+  positionals: string[];
+  stdout: Writable;
+  stderr: Writable;
+  wantsJson: boolean;
+}, code: string, message: string, exitCode: number, meta: Record<string, unknown> = dbJsonMeta(input)): void {
+  if (input.wantsJson) {
+    writeCommandJsonError(input.stdout, "database", new CliHandledError(code, message, exitCode), meta);
   } else {
-    stderr.write(`${message}\n`);
+    input.stderr.write(`${message}\n`);
   }
 }
 
@@ -798,7 +818,7 @@ export async function runMagicDbCli(input: {
   }
 
   if (rawCollection === "memory" && rawAction === "search") {
-    writeDbError(stdout, stderr, wantsJson, "usage_error", "Use `claw memory search <query>` for memory search.");
+    writeDbError(input, "usage_error", "Use `claw memory search <query>` for memory search.", DB_EXIT_USAGE, dbJsonMeta(input, rawCollection, rawAction));
     return DB_EXIT_USAGE;
   }
 
@@ -824,11 +844,11 @@ export async function runMagicDbCli(input: {
   if (action === "schema") {
     const schema = collection ?? buildCustomCollectionPreview(namespaceId, collectionName);
     if (wantsJson) {
-      writeJson(stdout, {
+      writeDbJson(stdout, {
         exists: Boolean(collection),
         collection: schema,
         autoCreateOnWrite: !schema.builtin,
-      });
+      }, dbJsonMeta(input, collectionName, action));
     } else {
       stdout.write(`${renderSchemaDetail(schema, Boolean(collection))}\n`);
     }
@@ -836,13 +856,13 @@ export async function runMagicDbCli(input: {
   }
 
   if (!collection && action === "list") {
-    if (wantsJson) writeJson(stdout, []);
+    if (wantsJson) writeDbJson(stdout, [], dbJsonMeta(input, collectionName, action));
     else stdout.write(`No ${collectionName} yet\n${buildCreateHint(collectionName, binName)}\n`);
     return DB_EXIT_OK;
   }
 
   if (!collection) {
-    writeDbError(stdout, stderr, wantsJson, "not_found", `Collection ${collectionName} does not exist.`);
+    writeDbError(input, "not_found", `Collection ${collectionName} does not exist.`, DB_EXIT_FAILURE, dbJsonMeta(input, collectionName, action));
     return DB_EXIT_FAILURE;
   }
 
@@ -851,7 +871,7 @@ export async function runMagicDbCli(input: {
     const items = readBooleanFlag(argv, flags, "include-archived", false)
       ? records.items
       : records.items.filter((record) => !record.archivedAt);
-    if (wantsJson) writeJson(stdout, items);
+    if (wantsJson) writeDbJson(stdout, items, dbJsonMeta(input, collectionName, action));
     else if (items.length === 0) stdout.write(`No ${collectionName} yet\n${buildCreateHint(collectionName, binName)}\n`);
     else stdout.write(`${renderRecordTable(items, collectionName)}\n`);
     return DB_EXIT_OK;
@@ -860,14 +880,14 @@ export async function runMagicDbCli(input: {
   if (action === "query") {
     const query = (flags.query || positionals.slice(3).join(" ")).trim().toLowerCase();
     if (!query) {
-      writeDbError(stdout, stderr, wantsJson, "usage_error", "Usage: claw db <collection> query <text>");
+      writeDbError(input, "usage_error", "Usage: claw db <collection> query <text>", DB_EXIT_USAGE, dbJsonMeta(input, collectionName, action));
       return DB_EXIT_USAGE;
     }
     const records = await runtime.listRecords(namespaceId, collectionName);
     const items = records.items
       .filter((record) => readBooleanFlag(argv, flags, "include-archived", false) || !record.archivedAt)
       .filter((record) => JSON.stringify(record).toLowerCase().includes(query));
-    if (wantsJson) writeJson(stdout, items);
+    if (wantsJson) writeDbJson(stdout, items, dbJsonMeta(input, collectionName, action));
     else if (items.length === 0) stdout.write(`No ${collectionName} match "${query}"\n`);
     else stdout.write(`${renderRecordTable(items, collectionName)}\n`);
     return items.length > 0 ? DB_EXIT_OK : DB_EXIT_DEGRADED;
@@ -876,15 +896,15 @@ export async function runMagicDbCli(input: {
   if (action === "get") {
     const recordId = positionals[3] || flags.id;
     if (!recordId) {
-      writeDbError(stdout, stderr, wantsJson, "usage_error", "Usage: claw db <collection> get <id>");
+      writeDbError(input, "usage_error", "Usage: claw db <collection> get <id>", DB_EXIT_USAGE, dbJsonMeta(input, collectionName, action));
       return DB_EXIT_USAGE;
     }
     const record = await runtime.getRecord(namespaceId, collectionName, recordId);
     if (!record) {
-      writeDbError(stdout, stderr, wantsJson, "not_found", `${collectionName} record not found: ${recordId}`);
+      writeDbError(input, "not_found", `${collectionName} record not found: ${recordId}`, DB_EXIT_FAILURE, dbJsonMeta(input, collectionName, action));
       return DB_EXIT_FAILURE;
     }
-    if (wantsJson) writeJson(stdout, record);
+    if (wantsJson) writeDbJson(stdout, record, dbJsonMeta(input, collectionName, action));
     else stdout.write(`${renderRecordDetail(record)}\n`);
     return DB_EXIT_OK;
   }
@@ -892,15 +912,15 @@ export async function runMagicDbCli(input: {
   if (action === "delete") {
     const recordId = positionals[3] || flags.id;
     if (!recordId) {
-      writeDbError(stdout, stderr, wantsJson, "usage_error", "Usage: claw db <collection> delete <id>");
+      writeDbError(input, "usage_error", "Usage: claw db <collection> delete <id>", DB_EXIT_USAGE, dbJsonMeta(input, collectionName, action));
       return DB_EXIT_USAGE;
     }
     const removed = await runtime.deleteRecord(namespaceId, collectionName, recordId);
     if (!removed) {
-      writeDbError(stdout, stderr, wantsJson, "not_found", `${collectionName} record not found: ${recordId}`);
+      writeDbError(input, "not_found", `${collectionName} record not found: ${recordId}`, DB_EXIT_FAILURE, dbJsonMeta(input, collectionName, action));
       return DB_EXIT_FAILURE;
     }
-    if (wantsJson) writeJson(stdout, { ok: true });
+    if (wantsJson) writeDbJson(stdout, { deleted: true, id: recordId }, dbJsonMeta(input, collectionName, action));
     else stdout.write(`Deleted ${singularCollectionLabel(collectionName)} ${recordId}\n`);
     return DB_EXIT_OK;
   }
@@ -912,7 +932,7 @@ export async function runMagicDbCli(input: {
     const record = action === "create"
       ? await runtime.createRecord(namespaceId, collectionName, payload)
       : await runtime.updateRecord(namespaceId, collectionName, recordId!, payload);
-    if (wantsJson) writeJson(stdout, record);
+    if (wantsJson) writeDbJson(stdout, record, dbJsonMeta(input, collectionName, action));
     else {
       if (collectionCreated) {
         writeHumanAdvisory(stderr, wantsJson, `Created collection "${collectionName}"`);
@@ -924,7 +944,7 @@ export async function runMagicDbCli(input: {
     return DB_EXIT_OK;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    writeDbError(stdout, stderr, wantsJson, message.includes("JSON") ? "invalid_json" : "internal_error", message);
+    writeDbError(input, message.includes("JSON") ? "invalid_json" : "internal_error", message, DB_EXIT_FAILURE, dbJsonMeta(input, collectionName, action));
     return DB_EXIT_FAILURE;
   }
 }

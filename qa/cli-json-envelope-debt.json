@@ -14,7 +14,6 @@
     "packages/clawjs/src/cli-telegram-codex.ts": 14,
     "packages/clawjs/src/cli-temporal-command.ts": 32,
     "packages/clawjs/src/cli-user-knowledge-command.ts": 40,
-    "packages/clawjs/src/database-magic.ts": 8,
     "packages/clawjs/src/index.ts": 49
   }
 }

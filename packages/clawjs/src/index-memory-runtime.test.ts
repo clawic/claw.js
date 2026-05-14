@@ -370,7 +370,19 @@ test("runCli memory JSON errors are parseable and db memory search is not a crea
     stderr: captureStream().stream,
     cwd: process.cwd(),
   }), CLI_EXIT_OK);
-  assert.deepEqual(JSON.parse(dbListStdout.getOutput()), []);
+  assert.deepEqual(JSON.parse(dbListStdout.getOutput()), {
+    ok: true,
+    data: [],
+    meta: {
+      schemaVersion: 1,
+      canonicalCommand: "database",
+      jsonSchemaId: "claw.cli.database.v1",
+      invokedCommand: "db",
+      subcommand: "memory_blocks list",
+      collection: "memory_blocks",
+      action: "list",
+    },
+  });
 });
 
 test("runCli runtime memory search returns ok for empty results when explicitly requested", async (t) => {

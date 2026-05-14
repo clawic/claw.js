@@ -97327,10 +97327,12 @@
     {
       "path": "packages/clawjs/src/database-magic.ts",
       "language": "typescript",
-      "lines": 1025,
+      "lines": 1045,
       "test": false,
       "entrypoint": false,
       "imports": [
+        "./cli-errors.ts",
+        "./cli-json.ts",
         "./v1-data.ts",
         "@clawjs/core",
         "@clawjs/database",
@@ -97411,6 +97413,11 @@
         {
           "kind": "function",
           "name": "createRuntime",
+          "exported": false
+        },
+        {
+          "kind": "function",
+          "name": "dbJsonMeta",
           "exported": false
         },
         {
@@ -97560,12 +97567,12 @@
         },
         {
           "kind": "function",
-          "name": "writeHumanAdvisory",
+          "name": "writeDbJson",
           "exported": false
         },
         {
           "kind": "function",
-          "name": "writeJson",
+          "name": "writeHumanAdvisory",
           "exported": false
         },
         {
@@ -97777,7 +97784,7 @@
     {
       "path": "packages/clawjs/src/index-memory-runtime.test.ts",
       "language": "typescript",
-      "lines": 936,
+      "lines": 948,
       "test": true,
       "entrypoint": false,
       "imports": [
