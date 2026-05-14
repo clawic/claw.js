@@ -121,6 +121,8 @@ test("runCli keeps public help short and gates the advanced surface behind --all
   assert.match(hostHelp.stdout, /Usage: claw host/);
   assert.match(hostHelp.stdout, /services/);
   assert.match(hostHelp.stdout, /capabilities/);
+  assert.match(hostHelp.stdout, /Support: host_required/);
+  assert.match(hostHelp.stdout, /Security: signed_host_broker/);
 
   const systemCapabilitiesHelp = await runCliCapture(["system", "capabilities", "--help"], process.cwd());
   assert.equal(systemCapabilitiesHelp.code, CLI_EXIT_OK);

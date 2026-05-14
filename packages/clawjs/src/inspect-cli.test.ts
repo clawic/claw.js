@@ -95,7 +95,9 @@ test("runCli exposes CLI aliases and decision sources through inspect", async ()
   const commands = await runCliCapture(["inspect", "commands", "--json"], process.cwd());
   assert.equal(commands.code, CLI_EXIT_OK);
   const commandPayload = parseCliJson<{ commands: Array<{ name: string; support: { state: string }; securityPolicy: string }> }>(commands.stdout).data;
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "host" && entry.support.state === "supported" && entry.securityPolicy === "signed_host_broker"), true);
+  assert.equal(commandPayload.commands.some((entry) => entry.name === "host" && entry.support.state === "host_required" && entry.securityPolicy === "signed_host_broker"), true);
+  assert.equal(commandPayload.commands.some((entry) => entry.name === "providers" && entry.support.state === "auth_required"), true);
+  assert.equal(commandPayload.commands.some((entry) => entry.name === "images" && entry.support.state === "cost_risk"), true);
 
   const aliases = await runCliCapture(["inspect", "aliases", "--json"], process.cwd());
   assert.equal(aliases.code, CLI_EXIT_OK);

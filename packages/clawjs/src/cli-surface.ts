@@ -100,6 +100,8 @@ export function buildCommandHelp(binName: string, group: string): string | null 
     "",
     `${entry.kind}: ${entry.summary}`,
     ...(entry.target ? [`Routes to: ${entry.target}`] : []),
+    `Support: ${entry.support.state} - ${entry.support.reason}`,
+    `Security: ${entry.securityPolicy}`,
     "",
     `Run \`${binName} --help --all\` to see the full public surface.`,
   ].join("\n");

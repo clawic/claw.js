@@ -69,16 +69,49 @@ const DEFAULT_SOURCE: ClawCliCommandSource = {
   symbol: "runCli",
 };
 
+function defaultSupportForPolicy(name: string, securityPolicy: ClawCliSecurityPolicy): ClawCliSupportDeclaration {
+  if (securityPolicy === "signed_host_broker") {
+    return {
+      state: "host_required",
+      reason: "Sensitive permissions or host-owned capabilities require the active signed host broker.",
+      scenario: `claw ${name} --help`,
+    };
+  }
+  if (securityPolicy === "auth_required") {
+    return {
+      state: "auth_required",
+      reason: "The command can inspect local declarations, but live execution requires configured provider or connector authentication.",
+      scenario: `claw ${name} --help`,
+    };
+  }
+  if (securityPolicy === "external_cost_risk") {
+    return {
+      state: "cost_risk",
+      reason: "Live execution may call external providers or consume paid resources and must be policy-gated.",
+      scenario: `claw ${name} --help`,
+    };
+  }
+  if (securityPolicy === "unsupported") {
+    return {
+      state: "unsupported",
+      reason: "The command is registered for discovery but has no supported runtime path.",
+      scenario: `claw ${name} --help`,
+    };
+  }
+  return {
+    state: "supported",
+    reason: "Registered public CLI surface.",
+    scenario: `claw ${name} --help`,
+  };
+}
+
 function command(input: Omit<ClawCliCommandRegistryEntry, "schemaVersion" | "jsonSchemaId" | "support" | "securityPolicy" | "docs" | "adrs" | "tests" | "source"> & Partial<Pick<ClawCliCommandRegistryEntry, "support" | "securityPolicy" | "docs" | "adrs" | "tests" | "source">>): ClawCliCommandRegistryEntry {
+  const securityPolicy = input.securityPolicy ?? "local_read";
   return {
     schemaVersion: 1,
     jsonSchemaId: `claw.cli.${input.name}.v1`,
-    support: input.support ?? {
-      state: "supported",
-      reason: "Registered public CLI surface.",
-      scenario: `claw ${input.name} --help`,
-    },
-    securityPolicy: input.securityPolicy ?? "local_read",
+    support: input.support ?? defaultSupportForPolicy(input.name, securityPolicy),
+    securityPolicy,
     docs: input.docs ?? DEFAULT_DOCS,
     adrs: input.adrs ?? CLI_ADRS,
     tests: input.tests ?? DEFAULT_TESTS,
