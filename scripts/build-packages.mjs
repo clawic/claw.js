@@ -50,14 +50,27 @@ for (const workspace of workspaces) {
   if (usesTsup(workspace) && !hasBuildTsconfig(workspace)) {
     args.push("--", "--tsconfig", writePackageTsconfig(workspace));
   }
-  const result = spawnSync("npm", args, {
-    cwd: rootDir,
-    stdio: "inherit",
-  });
+  const result = runWorkspaceBuild(args, workspace);
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
   }
   waitForWorkspaceTypes(workspace);
+}
+
+function runWorkspaceBuild(args, workspace) {
+  let result = spawnSync("npm", args, {
+    cwd: rootDir,
+    stdio: "inherit",
+  });
+  if (result.status === 0) return result;
+
+  console.error(`Workspace ${workspace} build failed; retrying once after dependency type outputs settle.`);
+  sleep(1000);
+  result = spawnSync("npm", args, {
+    cwd: rootDir,
+    stdio: "inherit",
+  });
+  return result;
 }
 
 function hasBuildTsconfig(workspace) {
@@ -96,21 +109,47 @@ function writePackageTsconfig(workspace) {
 
 function waitForWorkspaceTypes(workspace) {
   const entry = workspacePackages.get(workspace);
-  if (!entry || typeof entry.manifest.types !== "string") return;
+  if (!entry) return;
 
-  const typesPath = path.join(entry.packageDir, entry.manifest.types);
-  let previousSize = -1;
+  const typePaths = exportedTypePaths(entry);
+  if (typePaths.length === 0) return;
+
+  const previousSizes = new Map();
   for (let attempt = 0; attempt < 20; attempt += 1) {
-    if (fs.existsSync(typesPath)) {
+    let stable = true;
+    for (const typesPath of typePaths) {
+      if (!fs.existsSync(typesPath)) {
+        stable = false;
+        continue;
+      }
       const { size } = fs.statSync(typesPath);
-      if (size > 0 && size === previousSize) return;
-      previousSize = size;
+      const previous = previousSizes.get(typesPath) ?? -1;
+      if (size <= 0 || size !== previous) stable = false;
+      previousSizes.set(typesPath, size);
     }
+    if (stable) return;
     sleep(100);
   }
 
-  if (!fs.existsSync(typesPath)) {
-    throw new Error(`Workspace ${workspace} did not produce ${path.relative(rootDir, typesPath)}`);
+  for (const typesPath of typePaths) {
+    if (!fs.existsSync(typesPath)) {
+      throw new Error(`Workspace ${workspace} did not produce ${path.relative(rootDir, typesPath)}`);
+    }
+  }
+}
+
+function exportedTypePaths(entry) {
+  const rawPaths = new Set();
+  if (typeof entry.manifest.types === "string") rawPaths.add(entry.manifest.types);
+  collectExportTypes(entry.manifest.exports, rawPaths);
+  return [...rawPaths].map((typesPath) => path.join(entry.packageDir, typesPath));
+}
+
+function collectExportTypes(value, rawPaths) {
+  if (!value || typeof value !== "object") return;
+  if (typeof value.types === "string") rawPaths.add(value.types);
+  for (const nested of Object.values(value)) {
+    collectExportTypes(nested, rawPaths);
   }
 }
 
