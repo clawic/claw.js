@@ -75,6 +75,7 @@ import {
 import { parseImageOperation, parseImageProvenance, parseImageType } from "./cli-image-parsers.ts";
 import { buildImageCommonInput, buildMediaListInput, buildMediaMetadata } from "./cli-media-utils.ts";
 import { OPEN_SURFACES, allOpenSurfaceHostnames, parseClawHostSurface, resolveOpenSurface, surfacePrimaryClawUrl, type OpenSurface, type OpenSurfaceState } from "./cli-open-surfaces.ts";
+import { openBrowser, openStateDir, openStatePath, readOpenState, repoRootFromCliPackage, writeOpenState } from "./cli-open-state.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { collectFlagValues, parseCsvFlag, parseJsonFlag } from "./cli-flag-parsers.ts";
 import { inferAudioExtension, inferMimeTypeFromPath, parseInferenceMessages, pathSafeBasename, readJsonFile, resolveRuntimeAdapterId, timelineRange, type GenerationCliMediaKind } from "./cli-runtime-utils.ts";
@@ -664,31 +665,6 @@ function writeProgress(stream: NodeJS.WritableStream, event: { phase: string; st
   const suffix = typeof event.percent === "number" ? ` ${event.percent}%` : "";
   const message = event.message ? ` ${event.message}` : "";
   stream.write(`${event.phase} ${event.status}${suffix}${message}\n`);
-}
-
-function openStateDir(): string {
-  return path.join(os.tmpdir(), "clawjs-open");
-}
-
-function openStatePath(surface: string, host: string, port: number): string {
-  return path.join(openStateDir(), `${surface}-${host.replace(/[^a-z0-9.-]/gi, "_")}-${port}.json`);
-}
-
-function repoRootFromCliPackage(): string {
-  return path.resolve(fileURLToPath(new URL("../../..", import.meta.url)));
-}
-
-function readOpenState(filePath: string): OpenSurfaceState | null {
-  try {
-    return JSON.parse(fs.readFileSync(filePath, "utf8")) as OpenSurfaceState;
-  } catch {
-    return null;
-  }
-}
-
-function writeOpenState(filePath: string, state: OpenSurfaceState): void {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(state, null, 2)}\n`);
 }
 
 function processIsAlive(pid: number): boolean {
