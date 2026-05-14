@@ -21,6 +21,8 @@
   "exclude": [
     "examples/demo/**/*",
     "examples/showcase/**/*",
+    ".tmp/**/*",
+    "**/dist/**/*",
     "**/*.test.ts",
     "**/*.spec.ts",
     "packages/*/template/**/*",
