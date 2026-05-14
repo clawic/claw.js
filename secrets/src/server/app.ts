@@ -80,6 +80,9 @@ export function resolveUiRoot(config: SecretsConfig, moduleUrl = import.meta.url
 
 function resolveBrandRoot(): string | null {
   const candidates = [
+    path.resolve(process.cwd(), "assets"),
+    path.resolve(process.cwd(), "..", "assets"),
+    path.resolve(process.cwd(), "../..", "assets"),
     path.resolve(process.cwd(), "public"),
     path.resolve(process.cwd(), "..", "public"),
     path.resolve(process.cwd(), "../..", "public"),

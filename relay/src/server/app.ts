@@ -74,8 +74,12 @@ interface RelayAppOptions {
 
 function resolveBrandRoot(): string {
   const candidates = [
+    fileURLToPath(new URL("../../../assets", import.meta.url)),
+    fileURLToPath(new URL("../../assets", import.meta.url)),
     fileURLToPath(new URL("../../../public", import.meta.url)),
     fileURLToPath(new URL("../../public", import.meta.url)),
+    path.join(process.cwd(), "../assets"),
+    path.join(process.cwd(), "assets"),
     path.join(process.cwd(), "../public"),
     path.join(process.cwd(), "public"),
   ];

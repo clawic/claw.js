@@ -80,27 +80,27 @@ async function login(email: string, password: string) {
 
 describe("relay e2e", () => {
   test("shared brand assets and fonts are served from repo public", async () => {
-    const sharedPublicDir = path.resolve(process.cwd(), "..", "public");
+    const sharedAssetsDir = path.resolve(process.cwd(), "..", "assets");
 
     const logoResponse = await fetch(`${baseUrl}/brand/logo.png`);
     assert.equal(logoResponse.status, 200);
     assert.deepEqual(
       Buffer.from(await logoResponse.arrayBuffer()),
-      fs.readFileSync(path.join(sharedPublicDir, "logo.png")),
+      fs.readFileSync(path.join(sharedAssetsDir, "logo.png")),
     );
 
     const faviconResponse = await fetch(`${baseUrl}/brand/favicon.ico`);
     assert.equal(faviconResponse.status, 200);
     assert.deepEqual(
       Buffer.from(await faviconResponse.arrayBuffer()),
-      fs.readFileSync(path.join(sharedPublicDir, "favicon.ico")),
+      fs.readFileSync(path.join(sharedAssetsDir, "favicon.ico")),
     );
 
     const fontResponse = await fetch(`${baseUrl}/brand/fonts/source-sans-3/source-sans-3-v18-cyrillic_latin_latin-ext-regular.woff2`);
     assert.equal(fontResponse.status, 200);
     assert.deepEqual(
       Buffer.from(await fontResponse.arrayBuffer()),
-      fs.readFileSync(path.join(sharedPublicDir, "fonts", "source-sans-3", "source-sans-3-v18-cyrillic_latin_latin-ext-regular.woff2")),
+      fs.readFileSync(path.join(sharedAssetsDir, "fonts", "source-sans-3", "source-sans-3-v18-cyrillic_latin_latin-ext-regular.woff2")),
     );
   });
 
