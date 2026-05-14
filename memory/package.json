@@ -4,8 +4,8 @@
   "description": "Typed local memory CLI for agents",
   "scripts": {
     "build": "tsc -p tsconfig.json && cp src/ui.html dist/ui.html",
-    "test:e2e": "npm run build && node --test dist/test/e2e.spec.js",
-    "test": "npm run build && node --test dist/test/*.spec.js"
+    "test:e2e": "npm run build && vitest run --config vitest.e2e.config.ts",
+    "test": "npm run build && vitest run --config vitest.config.ts"
   },
   "keywords": [
     "cli",
