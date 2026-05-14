@@ -52,8 +52,6 @@ flowchart TD
   claw_workspace --> claw_workspace_manifest
   claw_workspace_desiredState["desiredState\nfolder"]
   claw_workspace --> claw_workspace_desiredState
-  claw_workspace_observedState["observedState\nfolder"]
-  claw_workspace --> claw_workspace_observedState
   claw_workspace_projections["projections\nfolder"]
   claw_workspace --> claw_workspace_projections
   claw_workspace_sessions["sessions\nfolder"]
@@ -82,6 +80,18 @@ flowchart TD
   claw_workspace --> claw_workspace_telegram_codex_bridge_state
   claw_workspace_channel_runs_state["channel-runs state\nfile"]
   claw_workspace --> claw_workspace_channel_runs_state
+  claw_workspace_observedState["observed state\nfolder"]
+  claw_workspace --> claw_workspace_observedState
+  claw_workspace_projections["projections\nfolder"]
+  claw_workspace --> claw_workspace_projections
+  claw_workspace_sessions["sessions\nfolder"]
+  claw_workspace --> claw_workspace_sessions
+  claw_workspace_audit["audit\nfolder"]
+  claw_workspace --> claw_workspace_audit
+  claw_workspace_backups["backups\nfolder"]
+  claw_workspace --> claw_workspace_backups
+  claw_workspace_locks["locks\nfolder"]
+  claw_workspace --> claw_workspace_locks
   claw_workspace_intents["intents\nfolder"]
   claw_workspace --> claw_workspace_intents
   claw_workspace_compat["compat\nfolder"]
@@ -344,7 +354,6 @@ flowchart TD
 | `claw.database.monitor` | sidecar | claw | `~/.claw/data/monitor.sqlite` |
 | `claw.workspace.manifest` | file | claw | `.claw/manifest.json` |
 | `claw.workspace.desiredState` | folder | claw | `.claw/state/desired` |
-| `claw.workspace.observedState` | folder | claw | `.claw/state/observed` |
 | `claw.workspace.projections` | folder | claw | `.claw/projections` |
 | `claw.workspace.sessions` | folder | claw | `.claw/sessions` |
 | `claw.workspace.audit` | folder | claw | `.claw/audit` |
@@ -359,6 +368,12 @@ flowchart TD
 | `claw.workspace.channel_run` | folder | claw | `.claw/run/channels` |
 | `claw.workspace.telegram_codex_bridge_state` | file | claw | `.claw/telegram-codex-bridge.json` |
 | `claw.workspace.channel_runs_state` | file | claw | `.claw/channel-runs.json` |
+| `claw.workspace.observedState` | folder | claw | `.claw/observed` |
+| `claw.workspace.projections` | folder | claw | `.claw/projections` |
+| `claw.workspace.sessions` | folder | claw | `.claw/sessions` |
+| `claw.workspace.audit` | folder | claw | `.claw/audit` |
+| `claw.workspace.backups` | folder | claw | `.claw/backups` |
+| `claw.workspace.locks` | folder | claw | `.claw/locks` |
 | `claw.workspace.intents` | folder | claw | `.claw/intents` |
 | `claw.workspace.compat` | folder | claw | `.claw/compat` |
 | `claw.workspace.documents` | folder | claw | `.claw/documents` |
