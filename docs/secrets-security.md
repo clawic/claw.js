@@ -122,6 +122,12 @@ plaintext execution outside the broker. Legacy plugin interfaces that still
 mention `resolvedFields` are compatibility declarations only; they must not be
 exposed as a public production execution path.
 
+Connection credentials follow the same rule. Framework connection records may
+store opaque `secretRef` values, but they must not store reversible local auth
+files. Legacy `auth.encrypted` files are treated as unsafe compatibility
+artifacts: readers ignore/remove them, and writers fail closed instead of
+creating new plaintext-equivalent storage.
+
 ## Broker Request Contract
 
 Brokered secret use must be explicit. A request needs at least:
@@ -246,6 +252,8 @@ The current ClawJS baseline implements the required safe public path:
 - broker HTTP calls require capability, risk tier, agent identity, declared
   fields, host, placement, approval/VPN context, and strict governance;
 - connector runners reject `secretRefs` execution outside brokered flows;
+- the agents connection store keeps only opaque `secretRef` values and disables
+  legacy `auth.encrypted` plaintext-equivalent helpers;
 - broker and lease issuance increment usage, enforce max uses, and block
   compromised, locked, trashed, expired, or policy-denied secrets;
 - audit events use minimal payloads and broker results are redacted.

@@ -16,7 +16,11 @@ const manager = new IntegrationManager({
 await manager.startAll();
 ```
 
-Auth tokens never leave `~/.claw/connections/<id>/auth.encrypted`; the manager reads them through `AgentStoreFS.readConnectionAuth` so they stay encapsulated in one place.
+Connection credentials are not stored in this package. Connection records may
+hold an opaque `secretRef`, and authenticated connector execution must ask the
+Secrets broker to inject that reference into a declared action. Legacy
+`auth.encrypted` files are ignored and removed by the agents store instead of
+being decoded into plaintext.
 
 ## Connector catalogs
 
