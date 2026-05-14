@@ -102,7 +102,7 @@ ClawJS writes new canonical workspace state under `.claw/` even when runtimes di
 - [Database](/database) for local-first CRUD, the standalone service, scoped tokens, files, and realtime.
 - [Audio Service](/audio) for app-scoped audio blobs, transcripts, and local service APIs.
 - [Time Service](/time) for calendar, routines, deadlines, follow-ups, executions, and timeline views.
-- [Content Service](/content), [Notify](/notify), [IoT](/iot), [Secrets](/secrets), [Drive](/drive), and [Execution](/execution) for standalone service surfaces.
+- [Content Service](/content), [Notify](/notify), [IoT](/iot), [Secrets](/secrets), [Secrets Security Model](/secrets-security), [Drive](/drive), and [Execution](/execution) for standalone service surfaces.
 
 ### Integrate remotely
 
