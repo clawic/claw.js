@@ -26,7 +26,7 @@ import type { ClawInstance, TelegramSendMediaInput, TelegramSendMessageInput, Vo
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
 import { clawCommandRequestSchema, clawContractVersionV1, resolveClawPersistentSurfacePath, semanticPlanSchema } from "@clawjs/core";
-import type { ClawCommandResponse, ClawDomain, CommitmentKind, CommitmentStatus, ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, SemanticPlan, SoulModule, SoulModuleKey, TemporalItem, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserFactValue, UserPackId, UserRecordType } from "@clawjs/core";
+import type { ClawCommandResponse, ClawDomain, CommitmentKind, CommitmentStatus, ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, SemanticPlan, TemporalItem, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserPackId, UserRecordType } from "@clawjs/core";
 import { runEmbeddedDatabaseCli } from "./database-advanced.ts";
 import { runMagicDbCli } from "./database-magic.ts";
 import { runMemoryCli } from "./memory-local.ts";
@@ -82,6 +82,8 @@ import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHa
 export { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { collectFlagValues, extractPositionals, formatCliTable, joinedPositionals, parseCsvFlag, parseFlags, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { inferAudioExtension, inferMimeTypeFromPath, parseContextBlock, parseInferenceMessages, pathSafeBasename, readJsonFile, resolveRuntimeAdapterId, timelineRange, type GenerationCliMediaKind } from "./cli-runtime-utils.ts";
+import { buildRoutineHeartbeat, parseRoutineStaggerMs, parseSimpleDurationMs, parseWatchTarget, writeTemporalExecutions, writeTemporalItems } from "./cli-temporal-utils.ts";
+import { parseLooseCliValue, parseObjectFlag, parseSetFlags, parseSkillParamsFlag, parseSkillScopeFlag, parseSoulModulesFromSetFlags, parseUserFactValue, parseUserFieldsFromSetFlags, parseUserMetadataFlags, readAllStdin } from "./cli-value-utils.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
 import {
   buildFallbackSemanticPlan,
@@ -106,12 +108,6 @@ export interface CliContext {
 }
 
 type CliMediaShare = { id: string; url: string };
-type CliTemporalExecution = {
-  itemId: string;
-  status: string;
-  scheduledFor: string;
-  output?: string;
-};
 type CliMediaClaw = ClawInstance & {
   media: {
     register(input: { name?: string; mimeType?: string; kind?: MediaKind; filePath?: string; sourceText?: string; origin?: MediaOrigin; direction?: MediaDirection; agentId?: string; workspaceId?: string; projectId?: string; metadata?: Record<string, unknown> }): { mediaId: string; kind: string; name: string };
@@ -1273,197 +1269,6 @@ function writeHostResponse(context: CliContext, response: ClawCommandResponse, w
   }
 }
 
-function temporalNext(item: TemporalItem): string {
-  return item.nextRunAt ?? item.startsAt ?? item.dueAt ?? "";
-}
-
-function writeTemporalItems(
-  stream: NodeJS.WritableStream,
-  items: TemporalItem[],
-  options: { empty?: string } = {},
-): void {
-  if (items.length === 0) {
-    stream.write(`${options.empty ?? "No items"}\n`);
-    return;
-  }
-  stream.write(`${formatCliTable(items.map((item) => ({
-    id: item.id,
-    status: item.status,
-    next: temporalNext(item),
-    title: item.title,
-  })))}\n`);
-}
-
-function writeTemporalExecutions(stream: NodeJS.WritableStream, executions: CliTemporalExecution[]): void {
-  if (executions.length === 0) {
-    stream.write("No runs\n");
-    return;
-  }
-  stream.write(`${formatCliTable(executions.map((execution) => ({
-    id: execution.itemId,
-    status: execution.status,
-    next: execution.scheduledFor,
-    title: execution.output ?? "",
-  })))}\n`);
-}
-
-function parseWatchTarget(value: string): { anchorType: NonNullable<TemporalItem["anchorType"]>; anchorId: string } {
-  const separatorIndex = value.indexOf(":");
-  const anchorType = separatorIndex === -1 ? "standalone" : value.slice(0, separatorIndex);
-  const anchorId = separatorIndex === -1 ? value : value.slice(separatorIndex + 1);
-  if (!["thread", "task", "project", "goal", "event", "execution", "standalone"].includes(anchorType) || !anchorId.trim()) {
-    throw new CliHandledError("usage_error", `Invalid watch target "${value}". Use values like thread:123.`, CLI_EXIT_USAGE);
-  }
-  return {
-    anchorType: anchorType as NonNullable<TemporalItem["anchorType"]>,
-    anchorId: anchorId.trim(),
-  };
-}
-
-function parseLooseCliValue(rawValue: string): unknown {
-  if (!rawValue.length) return "";
-  if ((rawValue.startsWith("{") && rawValue.endsWith("}")) || (rawValue.startsWith("[") && rawValue.endsWith("]"))) {
-    try {
-      return JSON.parse(rawValue) as unknown;
-    } catch {
-      return rawValue;
-    }
-  }
-  if (rawValue === "true") return true;
-  if (rawValue === "false") return false;
-  if (rawValue === "null") return null;
-  if (/^-?\d+(\.\d+)?$/.test(rawValue)) return Number(rawValue);
-  return rawValue;
-}
-
-function parseSetFlags(argv: string[]): Record<string, unknown> {
-  const values: Record<string, unknown> = {};
-  for (let index = 0; index < argv.length; index += 1) {
-    if (argv[index] !== "--set") continue;
-    const pair = argv[index + 1];
-    if (!pair || pair.startsWith("--")) {
-      throw new CliHandledError("usage_error", "--set requires key=value", CLI_EXIT_USAGE);
-    }
-    const equalsIndex = pair.indexOf("=");
-    if (equalsIndex <= 0) {
-      throw new CliHandledError("usage_error", "--set requires key=value", CLI_EXIT_USAGE);
-    }
-    values[pair.slice(0, equalsIndex)] = parseLooseCliValue(pair.slice(equalsIndex + 1));
-    index += 1;
-  }
-  return values;
-}
-
-const SOUL_CLI_MODULES = new Set<SoulModuleKey>([
-  "identity",
-  "mission",
-  "values",
-  "temperament",
-  "communication",
-  "cognition",
-  "autonomy",
-  "memory",
-  "boundaries",
-  "tools",
-  "social",
-  "domain",
-  "operations",
-  "vibe",
-]);
-
-function parseSoulModulesFromSetFlags(argv: string[]): Partial<Record<SoulModuleKey, SoulModule>> {
-  const values = parseSetFlags(argv);
-  const modules: Partial<Record<SoulModuleKey, SoulModule>> = {};
-  for (const [pathKey, value] of Object.entries(values)) {
-    const [moduleKey, settingKey] = pathKey.split(".", 2);
-    if (!moduleKey || !settingKey || !SOUL_CLI_MODULES.has(moduleKey as SoulModuleKey)) {
-      throw new CliHandledError("usage_error", `Soul --set keys must use module.setting, received ${pathKey}`, CLI_EXIT_USAGE);
-    }
-    const key = moduleKey as SoulModuleKey;
-    modules[key] = {
-      ...(modules[key] ?? {}),
-      [settingKey]: value,
-    } as SoulModule;
-  }
-  return modules;
-}
-
-function parseSkillScopeFlag(value: string): { kind: "global" | "project" | "tag" | "chat"; projectIds?: string[]; chatId?: string; tagFilters?: string[] } {
-  if (!value || value === "global") return { kind: "global" };
-  const [kindRaw, ref] = value.split(":", 2);
-  const kind = kindRaw as "global" | "project" | "tag" | "chat";
-  if (kind === "project") return { kind, projectIds: ref ? ref.split(",").map((s) => s.trim()).filter(Boolean) : [] };
-  if (kind === "chat") return { kind, chatId: ref ?? "" };
-  if (kind === "tag") return { kind, tagFilters: ref ? ref.split(",").map((s) => s.trim()).filter(Boolean) : [] };
-  return { kind: "global" };
-}
-
-function parseSkillParamsFlag(value: string | undefined): Record<string, unknown> {
-  if (!value) return {};
-  const out: Record<string, unknown> = {};
-  for (const pair of value.split(",")) {
-    const [k, v] = pair.split("=", 2);
-    if (!k) continue;
-    out[k.trim()] = v ?? "";
-  }
-  return out;
-}
-
-async function readAllStdin(stdin: NodeJS.ReadableStream): Promise<string> {
-  return await new Promise<string>((resolve, reject) => {
-    let acc = "";
-    stdin.setEncoding?.("utf8");
-    stdin.on("data", (chunk: string | Buffer) => {
-      acc += typeof chunk === "string" ? chunk : chunk.toString("utf8");
-    });
-    stdin.on("end", () => resolve(acc));
-    stdin.on("error", (err) => reject(err));
-  });
-}
-
-function parseUserFactValue(raw: string | undefined, label: string): UserFactValue {
-  if (raw === undefined) throw new CliHandledError("usage_error", `${label} is required`, CLI_EXIT_USAGE);
-  const parsed = parseLooseCliValue(raw);
-  if (
-    typeof parsed === "string"
-    || typeof parsed === "number"
-    || typeof parsed === "boolean"
-    || parsed === null
-    || Array.isArray(parsed)
-    || (typeof parsed === "object" && parsed !== null)
-  ) {
-    return parsed as UserFactValue;
-  }
-  return String(parsed);
-}
-
-function parseUserFieldsFromSetFlags(argv: string[]): Record<string, UserFactValue> {
-  return parseSetFlags(argv) as Record<string, UserFactValue>;
-}
-
-function parseUserMetadataFlags(flags: Record<string, string>) {
-  return {
-    ...(flags.domain ? { domain: flags.domain as UserDomainId } : {}),
-    ...(flags.supersedes ? { supersedes: flags.supersedes } : {}),
-    ...(flags.source ? { source: flags.source } : {}),
-    ...(flags.sensitivity ? { sensitivity: flags.sensitivity as UserFactSensitivity } : {}),
-    ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
-    ...(flags["valid-from"] ? { validFrom: flags["valid-from"] } : {}),
-    ...(flags["valid-to"] ? { validTo: flags["valid-to"] } : {}),
-    ...(flags.notes ? { notes: flags.notes } : {}),
-    ...(flags.visibility ? { visibility: flags.visibility as "agent" | "public" | "private" } : {}),
-  };
-}
-
-function parseObjectFlag(value: string | undefined, label: string): Record<string, unknown> {
-  if (!value?.trim()) return {};
-  const parsed = parseJsonFlag<unknown>(value, label);
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new CliHandledError("invalid_json", `${label} must be a JSON object.`);
-  }
-  return parsed as Record<string, unknown>;
-}
-
 function coreProductivityCollection(rawCollection: string | undefined): string | null {
   if (!rawCollection) return null;
   return CORE_PRODUCTIVITY_DB_COLLECTIONS[rawCollection.trim().toLowerCase()] ?? null;
@@ -1479,104 +1284,6 @@ function pickCoreTitle(collectionName: string, payload: Record<string, unknown>,
   const primary = collectionName === "people" ? "displayName" : ["projects", "cycles", "saved_views", "custom_fields", "templates"].includes(collectionName) ? "name" : collectionName === "field_values" ? "fieldId" : collectionName === "comments" ? "body" : "title";
   const value = payload[primary] ?? payload.title ?? payload.name ?? payload.displayName ?? fallback;
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
-
-function parseSimpleDurationMs(value: string | undefined): number | null {
-  const match = value?.trim().match(/^(\d+)(ms|s|m|h|d)$/);
-  if (!match) return null;
-  const amount = Number(match[1]);
-  if (!Number.isSafeInteger(amount) || amount <= 0) return null;
-  const unit = match[2];
-  if (unit === "ms") return amount;
-  if (unit === "s") return amount * 1000;
-  if (unit === "m") return amount * 60 * 1000;
-  if (unit === "h") return amount * 60 * 60 * 1000;
-  return amount * 24 * 60 * 60 * 1000;
-}
-
-function parseRoutineStaggerMs(flags: Record<string, string>, argv: string[]): number | undefined {
-  const hasExact = argv.includes("--exact");
-  const raw = flags.stagger;
-  if (hasExact && raw) {
-    throw new CliHandledError("usage_error", "Choose --stagger or --exact, not both.", CLI_EXIT_USAGE);
-  }
-  if (hasExact) return 0;
-  if (!raw) return undefined;
-  const parsed = parseSimpleDurationMs(raw);
-  if (parsed === null) {
-    throw new CliHandledError("invalid_duration", `Unsupported stagger "${raw}". Use durations like 30s, 5m, or 1h.`, CLI_EXIT_USAGE);
-  }
-  return parsed;
-}
-
-function parseActiveHours(raw: string | undefined, timezone: string | undefined): NonNullable<NonNullable<TemporalItem["heartbeat"]>["activeHours"]> | undefined {
-  if (!raw) return undefined;
-  const match = raw.trim().match(/^(\d{2}:\d{2})-(\d{2}:\d{2})$/);
-  if (!match) {
-    throw new CliHandledError("usage_error", 'Invalid --active-hours. Use "09:00-18:00".', CLI_EXIT_USAGE);
-  }
-  return {
-    start: match[1]!,
-    end: match[2]!,
-    timezone: timezone || "UTC",
-  };
-}
-
-function parseHeartbeatGate(pathValue: string | undefined): NonNullable<TemporalItem["heartbeat"]>["gate"] | undefined {
-  if (!pathValue) return undefined;
-  const gatePath = path.resolve(pathValue);
-  const policy = JSON.parse(fs.readFileSync(gatePath, "utf8")) as Record<string, unknown>;
-  return { path: gatePath, policy };
-}
-
-function buildRoutineHeartbeat(argv: string[], flags: Record<string, string>): Partial<NonNullable<TemporalItem["heartbeat"]>> | undefined {
-  const when = collectFlagValues(argv, "when");
-  const stopWhen = collectFlagValues(argv, "stop-when");
-  const allowedCustomChecks = collectFlagValues(argv, "allow-custom-check");
-  const gate = parseHeartbeatGate(flags.gate);
-  const cooldownMs = flags.cooldown ? parseSimpleDurationMs(flags.cooldown) : undefined;
-  if (flags.cooldown && cooldownMs === null) {
-    throw new CliHandledError("invalid_duration", `Unsupported cooldown "${flags.cooldown}". Use durations like 30s, 5m, or 1h.`, CLI_EXIT_USAGE);
-  }
-  const maxWakes = flags["max-wakes"] ? Number(flags["max-wakes"]) : undefined;
-  const maxWakesWindowMs = flags["max-wakes-window"] ? parseSimpleDurationMs(flags["max-wakes-window"]) : undefined;
-  if (flags["max-wakes"] && (!Number.isSafeInteger(maxWakes) || Number(maxWakes) <= 0)) {
-    throw new CliHandledError("usage_error", "--max-wakes must be a positive integer.", CLI_EXIT_USAGE);
-  }
-  if (flags["max-wakes-window"] && maxWakesWindowMs === null) {
-    throw new CliHandledError("invalid_duration", `Unsupported max wake window "${flags["max-wakes-window"]}".`, CLI_EXIT_USAGE);
-  }
-  if ((maxWakes && !maxWakesWindowMs) || (!maxWakes && maxWakesWindowMs)) {
-    throw new CliHandledError("usage_error", "Use --max-wakes and --max-wakes-window together.", CLI_EXIT_USAGE);
-  }
-  const activeHours = parseActiveHours(flags["active-hours"], flags["active-timezone"]);
-  const target = flags.target as "main" | "isolated" | undefined;
-  if (target && target !== "main" && target !== "isolated") {
-    throw new CliHandledError("usage_error", "--target must be main or isolated.", CLI_EXIT_USAGE);
-  }
-  const deliver = flags.deliver ? { target: flags.deliver, mode: "summary" as const } : undefined;
-  if (when.length === 0 && stopWhen.length === 0 && !gate && !flags.prompt && !activeHours && cooldownMs === undefined && !maxWakes && !target && !deliver) return undefined;
-  const missingCustomChecks = [...when, ...stopWhen]
-    .filter((condition) => condition.startsWith("custom:"))
-    .map((condition) => condition.slice("custom:".length).trim())
-    .filter((id) => id && !allowedCustomChecks.includes(id));
-  if (missingCustomChecks.length > 0) {
-    throw new CliHandledError("usage_error", `Custom heartbeat checks require --allow-custom-check: ${[...new Set(missingCustomChecks)].join(", ")}`, CLI_EXIT_USAGE);
-  }
-  return {
-    when,
-    ...(stopWhen.length > 0 ? { stopWhen } : {}),
-    context: "diff",
-    limit: flags.limit ? Number(flags.limit) : 20,
-    ...(target ? { target } : {}),
-    ...(deliver ? { deliver } : {}),
-    ...(activeHours ? { activeHours } : {}),
-    ...(cooldownMs !== undefined && cooldownMs !== null ? { cooldownMs } : {}),
-    ...(maxWakes && maxWakesWindowMs ? { maxWakesPerWindow: { count: maxWakes, windowMs: maxWakesWindowMs } } : {}),
-    ...(flags.prompt ? { prompt: flags.prompt } : {}),
-    ...(gate ? { gate } : {}),
-    ...(allowedCustomChecks.length > 0 ? { allowedCustomChecks } : {}),
-  };
 }
 
 const LOCAL_CLI_ALLOWED_FLAGS = new Set([
