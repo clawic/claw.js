@@ -59,7 +59,7 @@ import { HostClientError, sendHostCommand } from "./host-client.ts";
 import { CLI_USAGE, DEFAULT_CLI_BIN, PUBLIC_PORTAL_HELP_ONLY, REMOVED_RUNTIME_COMMANDS, REMOVED_V1_CRUD_COMMANDS, buildCliUsage, buildCommandHelp, normalizePublicCliArgv, removedPublicCommandMessage } from "./cli-surface.ts";
 import { inferBrokerDeclaredFields } from "./broker-http.ts";
 import { runInspectCli } from "./inspect-cli.ts";
-import { CLI_TEMPLATE_ROOT, CORE_PRODUCTIVITY_DB_COLLECTIONS, LOCAL_FIRST_PRODUCTIVITY_GROUPS } from "./cli-constants.ts";
+import { CLI_TEMPLATE_ROOT, LOCAL_FIRST_PRODUCTIVITY_GROUPS } from "./cli-constants.ts";
 import { COMMITMENT_KINDS, COMMITMENT_STATUSES, CONTEXT_PURPOSES, CONTEXT_STATUSES, JUDGMENT_IMPACTS, JUDGMENT_STATUSES, LEARNING_KINDS, LEARNING_PROMOTION_TARGETS, LEARNING_SENTIMENTS, LEARNING_STATUSES, LEARNING_TARGETS, OUTCOME_RESULTS, OUTCOME_STATUSES } from "./cli-knowledge-constants.ts";
 import {
   LEGACY_TELEGRAM_CODEX_PROCESSOR_ID,
@@ -84,6 +84,7 @@ import { collectFlagValues, extractPositionals, formatCliTable, joinedPositional
 import { inferAudioExtension, inferMimeTypeFromPath, parseContextBlock, parseInferenceMessages, pathSafeBasename, readJsonFile, resolveRuntimeAdapterId, timelineRange, type GenerationCliMediaKind } from "./cli-runtime-utils.ts";
 import { buildRoutineHeartbeat, parseRoutineStaggerMs, parseSimpleDurationMs, parseWatchTarget, writeTemporalExecutions, writeTemporalItems } from "./cli-temporal-utils.ts";
 import { parseLooseCliValue, parseObjectFlag, parseSetFlags, parseSkillParamsFlag, parseSkillScopeFlag, parseSoulModulesFromSetFlags, parseUserFactValue, parseUserFieldsFromSetFlags, parseUserMetadataFlags, readAllStdin } from "./cli-value-utils.ts";
+import { coreProductivityCollection, pickCoreTitle, singularCoreCollection } from "./cli-productivity-utils.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
 import {
   buildFallbackSemanticPlan,
@@ -1267,23 +1268,6 @@ function writeHostResponse(context: CliContext, response: ClawCommandResponse, w
   } else {
     writeJson(context.stdout, response.data);
   }
-}
-
-function coreProductivityCollection(rawCollection: string | undefined): string | null {
-  if (!rawCollection) return null;
-  return CORE_PRODUCTIVITY_DB_COLLECTIONS[rawCollection.trim().toLowerCase()] ?? null;
-}
-
-function singularCoreCollection(collectionName: string): string {
-  if (collectionName === "people") return "person";
-  if (collectionName.endsWith("s")) return collectionName.slice(0, -1);
-  return collectionName;
-}
-
-function pickCoreTitle(collectionName: string, payload: Record<string, unknown>, fallback?: string): string | undefined {
-  const primary = collectionName === "people" ? "displayName" : ["projects", "cycles", "saved_views", "custom_fields", "templates"].includes(collectionName) ? "name" : collectionName === "field_values" ? "fieldId" : collectionName === "comments" ? "body" : "title";
-  const value = payload[primary] ?? payload.title ?? payload.name ?? payload.displayName ?? fallback;
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 const LOCAL_CLI_ALLOWED_FLAGS = new Set([
