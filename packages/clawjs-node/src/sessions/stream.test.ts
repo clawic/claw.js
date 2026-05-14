@@ -1,3 +1,4 @@
+import { clawCodexExternalEventSamples } from "@clawjs/core";
 import { test } from "vitest";
 import assert from "node:assert/strict";
 import fs from "fs";
@@ -50,10 +51,10 @@ test("extractCodexJsonlText normalizes Codex exec JSONL events", () => {
 
 test("extractCodexJsonlText returns the final completed Codex agent message", () => {
   const text = extractCodexJsonlText([
-    JSON.stringify({ type: "thread.started", thread_id: "thread-1" }),
-    JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: "I am checking the workspace." } }),
-    JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: "Done. The file is attached." } }),
-    JSON.stringify({ type: "turn.completed" }),
+    JSON.stringify({ type: clawCodexExternalEventSamples.threadStarted, thread_id: "thread-1" }),
+    JSON.stringify({ type: clawCodexExternalEventSamples.itemCompleted, item: { type: "agent_message", text: "I am checking the workspace." } }),
+    JSON.stringify({ type: clawCodexExternalEventSamples.itemCompleted, item: { type: "agent_message", text: "Done. The file is attached." } }),
+    JSON.stringify({ type: clawCodexExternalEventSamples.turnCompleted }),
   ].join("\n"));
 
   assert.equal(text, "Done. The file is attached.");

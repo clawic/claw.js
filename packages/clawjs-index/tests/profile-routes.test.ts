@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 // Integration test for the Profile / Feed / Chat / Marketplace routes against
 // a real Fastify app, with stub deps that simulate a daemon-side ProfileStore.
 
@@ -113,13 +114,13 @@ test("profile routes: init + create block + list blocks", async () => {
   });
   await app.ready();
 
-  const init = await app.inject({ method: "POST", url: "/v1/profile/init", payload: { alias: "alice" } });
+  const init = await app.inject({ method: "POST", url: clawApiPath("profile/init"), payload: { alias: "alice" } });
   assert.equal(init.statusCode, 200);
   const body = init.json() as { profile: { handle: { alias: string } } };
   assert.equal(body.profile.handle.alias, "alice");
 
   const create = await app.inject({
-    method: "POST", url: "/v1/profile/blocks",
+    method: "POST", url: clawApiPath("profile/blocks"),
     payload: {
       vertical: "post/v1", archetype: "standalone",
       audience: { groups: ["public"] }, fieldsPerLevel: { body: ["public"] },
@@ -127,7 +128,7 @@ test("profile routes: init + create block + list blocks", async () => {
     },
   });
   assert.equal(create.statusCode, 200);
-  const list = await app.inject({ method: "GET", url: "/v1/profile/blocks" });
+  const list = await app.inject({ method: "GET", url: clawApiPath("profile/blocks") });
   assert.equal(list.statusCode, 200);
   const blocks = (list.json() as { blocks: unknown[] }).blocks;
   assert.equal(blocks.length, 1);
@@ -141,7 +142,7 @@ test("chat routes: list / send round-trips through the daemon", async () => {
     enabled: true, profile: profileDeps, feed: feedDeps, chats: chatDeps, marketplace: marketplaceDeps,
   });
   await app.ready();
-  const sent = await app.inject({ method: "POST", url: "/v1/chats/alice/messages", payload: { body: "hi" } });
+  const sent = await app.inject({ method: "POST", url: clawApiPath("chats/alice/messages"), payload: { body: "hi" } });
   assert.equal(sent.statusCode, 200);
   const msg = (sent.json() as { message: { body: string } }).message;
   assert.equal(msg.body, "hi");
@@ -156,10 +157,10 @@ test("marketplace routes: discovered-intents + express-interest", async () => {
   });
   await app.ready();
 
-  const list = await app.inject({ method: "GET", url: "/v1/marketplace/discovered-intents" });
+  const list = await app.inject({ method: "GET", url: clawApiPath("marketplace/discovered-intents") });
   assert.equal(list.statusCode, 200);
   const interest = await app.inject({
-    method: "POST", url: "/v1/marketplace/express-interest",
+    method: "POST", url: clawApiPath("marketplace/express-interest"),
     payload: { intentId: "deadbeef" },
   });
   assert.equal(interest.statusCode, 200);
@@ -173,7 +174,7 @@ test("feature flag off: routes are not registered", async () => {
     enabled: false, profile: profileDeps, feed: feedDeps, chats: chatDeps, marketplace: marketplaceDeps,
   });
   await app.ready();
-  const init = await app.inject({ method: "POST", url: "/v1/profile/init", payload: { alias: "alice" } });
+  const init = await app.inject({ method: "POST", url: clawApiPath("profile/init"), payload: { alias: "alice" } });
   assert.equal(init.statusCode, 404);
   await app.close();
 });

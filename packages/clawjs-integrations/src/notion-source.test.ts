@@ -1,3 +1,4 @@
+import { clawExternalWebhookEventSamples } from "@clawjs/core";
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
 
@@ -44,7 +45,7 @@ describe("notion webhook sources", () => {
       operation: operation("notion.source.page-event"),
       payload: {
         id: "evt_page_sample",
-        type: "page.content_updated",
+        type: clawExternalWebhookEventSamples.notionPageContentUpdated,
         entity: {
           id: "page_sample",
           type: "page",
@@ -53,7 +54,7 @@ describe("notion webhook sources", () => {
     });
     assert.deepEqual(result.events, [{
       id: "evt_page_sample",
-      type: "page.content_updated",
+      type: clawExternalWebhookEventSamples.notionPageContentUpdated,
       entity: {
         id: "page_sample",
         type: "page",

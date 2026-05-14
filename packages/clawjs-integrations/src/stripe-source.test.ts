@@ -1,3 +1,4 @@
+import { clawExternalWebhookEventSamples } from "@clawjs/core";
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
 
@@ -59,7 +60,7 @@ describe("stripe webhook sources", () => {
       payload: {
         id: "evt_sample",
         object: "event",
-        type: "checkout.session.completed",
+        type: clawExternalWebhookEventSamples.stripeCheckoutSessionCompleted,
         data: {
           object: {
             id: "cs_sample",
@@ -71,7 +72,7 @@ describe("stripe webhook sources", () => {
     assert.deepEqual(result.events, [{
       id: "evt_sample",
       object: "event",
-      type: "checkout.session.completed",
+      type: clawExternalWebhookEventSamples.stripeCheckoutSessionCompleted,
       data: {
         object: {
           id: "cs_sample",

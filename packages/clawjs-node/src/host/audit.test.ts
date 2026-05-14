@@ -1,3 +1,4 @@
+import { clawWorkspaceAuditEvents } from "@clawjs/core";
 import { test } from "vitest";
 import assert from "node:assert/strict";
 import fs from "fs";
@@ -13,19 +14,19 @@ test("audit log appends records inside the workspace", () => {
 
   const auditPath = audit.append(workspaceDir, {
     timestamp: "2026-03-20T10:00:00.000Z",
-    event: "workspace.created",
+    event: clawWorkspaceAuditEvents.workspaceCreated,
     detail: { workspaceId: "demo" },
   });
 
   audit.append(workspaceDir, {
     timestamp: "2026-03-20T10:01:00.000Z",
-    event: "files.synced",
+    event: clawWorkspaceAuditEvents.filesSynced,
   });
 
   const lines = fs.readFileSync(auditPath, "utf8").trim().split("\n");
   assert.equal(lines.length, 2);
-  assert.equal(JSON.parse(lines[0]).event, "workspace.created");
-  assert.equal(JSON.parse(lines[1]).event, "files.synced");
+  assert.equal(JSON.parse(lines[0]).event, clawWorkspaceAuditEvents.workspaceCreated);
+  assert.equal(JSON.parse(lines[1]).event, clawWorkspaceAuditEvents.filesSynced);
 });
 
 test("audit log keeps every line under cross-process contention", async () => {
@@ -44,7 +45,7 @@ test("audit log keeps every line under cross-process contention", async () => {
           const index = Number(process.argv[3]);
           new WorkspaceAuditLog().append(workspaceDir, {
             timestamp: new Date(1_700_000_000_000 + index).toISOString(),
-            event: "audit.child",
+            event: "${clawWorkspaceAuditEvents.auditChild}",
             detail: { index },
           });
         `,
@@ -77,19 +78,19 @@ test("audit log can query records by capability and entity id", () => {
 
   audit.append(workspaceDir, {
     timestamp: "2026-03-22T10:00:00.000Z",
-    event: "tasks.created",
+    event: clawWorkspaceAuditEvents.tasksCreated,
     capability: "tasks",
     detail: { taskId: "task-1" },
   });
   audit.append(workspaceDir, {
     timestamp: "2026-03-22T10:05:00.000Z",
-    event: "notes.created",
+    event: clawWorkspaceAuditEvents.notesCreated,
     capability: "notes",
     detail: { noteId: "note-1" },
   });
   audit.append(workspaceDir, {
     timestamp: "2026-03-22T10:10:00.000Z",
-    event: "tasks.updated",
+    event: clawWorkspaceAuditEvents.tasksUpdated,
     capability: "tasks",
     detail: { taskId: "task-1" },
   });
@@ -99,8 +100,8 @@ test("audit log can query records by capability and entity id", () => {
     entityId: "task-1",
   });
   assert.equal(taskRecords.length, 2);
-  assert.deepEqual(taskRecords.map((record) => record.event), ["tasks.created", "tasks.updated"]);
+  assert.deepEqual(taskRecords.map((record) => record.event), [clawWorkspaceAuditEvents.tasksCreated, clawWorkspaceAuditEvents.tasksUpdated]);
 
   const created = audit.query(workspaceDir, { action: "created" });
-  assert.deepEqual(created.map((record) => record.event), ["tasks.created", "notes.created"]);
+  assert.deepEqual(created.map((record) => record.event), [clawWorkspaceAuditEvents.tasksCreated, clawWorkspaceAuditEvents.notesCreated]);
 });
