@@ -8,6 +8,7 @@
     "test": "npm run build && vitest run --config vitest.config.ts --passWithNoTests"
   },
   "dependencies": {
+    "@clawjs/core": "0.1.2",
     "better-sqlite3": "^12.4.1"
   },
   "devDependencies": {

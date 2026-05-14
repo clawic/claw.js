@@ -10,6 +10,7 @@
     "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
+    "@clawjs/core": "0.1.2",
     "@clawjs/claw": "file:../packages/clawjs-node",
     "@clawjs/mesh": "file:../packages/mesh",
     "@clawjs/ssh-client": "file:../packages/ssh-client",

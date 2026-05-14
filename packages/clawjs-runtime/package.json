@@ -39,6 +39,7 @@
     "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20"
   },
   "dependencies": {
+    "@clawjs/core": "0.1.2",
     "@clawjs/sessions": "file:../clawjs-sessions",
     "@clawjs/user-model": "file:../clawjs-user-model",
     "better-sqlite3": "^12.9.0",
