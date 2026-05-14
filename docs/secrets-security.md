@@ -128,6 +128,12 @@ files. Legacy `auth.encrypted` files are treated as unsafe compatibility
 artifacts: readers ignore/remove them, and writers fail closed instead of
 creating new plaintext-equivalent storage.
 
+Hosts that previously owned legacy connection auth must migrate it one way
+into the encrypted Secrets vault. A compatibility reader may decrypt
+`auth.encrypted` only inside that migration path and must remove the legacy
+file after a successful write. It must not return the plaintext token to UI,
+agents, connectors, logs, or general runtime code.
+
 ## Broker Request Contract
 
 Brokered secret use must be explicit. A request needs at least:
@@ -252,6 +258,9 @@ The current ClawJS baseline implements the required safe public path:
 - Clawix keeps Secrets admin and signed-host tokens in memory only, removes
   stale Secrets `.admin-token` files before launch, and does not adopt an
   existing Secrets sidecar through a disk bearer token;
+- Clawix migrates legacy connection `auth.encrypted` files into the encrypted
+  Secrets vault during unlock/mount and treats the old plaintext-equivalent
+  reader as migration-only;
 - broker HTTP calls require capability, risk tier, agent identity, declared
   fields, host, placement, approval/VPN context, and strict governance;
 - connector runners reject `secretRefs` execution outside brokered flows;
@@ -324,7 +333,7 @@ agents can verify changes without re-deriving the policy.
 | `host_allowlist_policy` | Exact hosts by default; limited safe wildcards only. | Implemented in strict governance and tests. |
 | `risk_approval_policy` | Mandatory `read`, `write`, `destructive`, `cost`, `system` risk tiers. | Broker request requires `riskTier`; non-read tiers require approval. |
 | `rotation_policy` | Rotation/compromise revokes grants and leases and blocks new use. | Implemented for archive/compromise and governance blocks. |
-| `canonical_storage` | Canonical vault belongs to framework global `~/.claw`; hosts keep only host state. | Implemented for Clawix Secrets service data; connection credentials migrate into the encrypted Secrets vault. |
+| `canonical_storage` | Canonical vault belongs to framework global `~/.claw`; hosts keep only host state. | Implemented for Clawix Secrets service data; connection credentials migrate into the encrypted Secrets vault and legacy readers no longer return plaintext. |
 | `audit_visibility` | Minimal audit; no fields, bodies, headers, public values, arbitrary payloads. | Implemented for current ClawJS audit events and smoke tests. |
 | `migration_priority` | V1 may break unsafe legacy compatibility. | Applied by disabling generic action execution and direct public CLI flows. |
 | `export_backup_policy` | Encrypted backup/export only with separate passphrase and strong reauth. | Encrypted backup is implemented and tested; native reauth proof is host-owned. |
