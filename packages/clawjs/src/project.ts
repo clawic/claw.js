@@ -345,7 +345,7 @@ export async function addProjectIntegration(
     dependencies["@clawjs/workspace"] = dependencies["@clawjs/workspace"]
       ?? ((packageJson.dependencies as Record<string, string> | undefined)?.["@clawjs/claw"] ?? "^0.1.0");
     packageJson.dependencies = dependencies;
-    scripts["claw:workspace:reindex"] = `claw workspace-index rebuild --workspace .`;
+    scripts["claw:workspace:reindex"] = `claw search rebuild --workspace .`;
     await savePackageJson(projectRoot, packageJson);
     await maybeInstallDependencies(projectRoot, options.packageManager, ["@clawjs/workspace"], options.runCommand);
     return {

@@ -22,7 +22,7 @@ Work:
 claw tasks create --title "..."
 claw tasks list --json
 claw notes create --title "..." --content "..."
-claw workspace-search query "..." --json
+claw search query "..." --json
 ```
 
 Prompt context:

@@ -283,8 +283,8 @@ These methods come from the `@clawjs/workspace` extension, not from the base
 | Events remove | `workspace.events.remove()` | `-` | `DELETE WS/events` |
 | Events search | `workspace.events.search()` | `claw events search` | `-` |
 | Events temporal projection | `workspace.events.*` via configured `claw.time` | same commands | same routes, backed by `TemporalItem(kind=event)` when available |
-| Workspace search | `workspace.search.query()` | `claw workspace-search query` | `-` |
-| Workspace index rebuild | `workspace.workspaceIndex.rebuild()` | `claw workspace-index rebuild` | `-` |
+| Workspace search | `workspace.search.query()` | `claw search query` | `-` |
+| Workspace index rebuild | `workspace.workspaceIndex.rebuild()` | `claw search rebuild` | `-` |
 
 ### Media and Generations
 

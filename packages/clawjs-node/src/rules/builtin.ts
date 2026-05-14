@@ -97,7 +97,7 @@ export const BUILTIN_CLAW_RULES: RuleRecord[] = [
     title: "Workspace productivity",
     key: "clawjs-workspace-productivity",
     priority: 20,
-    content: "For work planning, use areas/lists/tasks/goals/projects, blockers/decisions/artifacts, my-work/team-work, reminders/deadlines/events, and workspace-search instead of unmanaged notes.",
+    content: "For work planning, use areas/lists/tasks/goals/projects, blockers/decisions/artifacts, my-work/team-work, reminders/deadlines/events, and claw search instead of unmanaged notes.",
     applyWhen: { domains: ["workspace", "productivity", "tasks", "notes", "inbox", "events"] },
     references: [reference("docs/agent-rules/workspace-loop.md", "Workspace loop")],
   }),

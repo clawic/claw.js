@@ -197,11 +197,11 @@ claw agenda
 claw review daily
 claw export snapshot.json
 claw backup backups/
-claw workspace-search query "release"
-claw workspace-index rebuild
+claw search query "release"
+claw search rebuild
 ```
 
-Use `workspace-search query` for keyword, semantic, or hybrid search
+Use `search query` for keyword, semantic, or hybrid search
 over areas, lists, sections, tasks, goals, projects, comments,
 attachments, saved views, recurrences, cycles, epics, custom fields,
 field values, templates, milestones, blockers, artifacts, decisions, work sessions,
@@ -210,5 +210,5 @@ notes, people, inbox, events, activity, agents, releases, incidents,
 feedback, and checks. Use `my-work` for the single-agent loop summary,
 `team-work` for the coordination view, `productivity.operationsCockpit()`
 for the organizational risk and operations summary, and
-`workspace-index rebuild` after large imports or when you change the
+`search rebuild` after large imports or when you change the
 embedding strategy.

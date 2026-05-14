@@ -10,7 +10,6 @@
     "packages/clawjs/src/cli-file-session-document-command.ts": 20,
     "packages/clawjs/src/cli-host-command.ts": 4,
     "packages/clawjs/src/cli-host-forward.ts": 2,
-    "packages/clawjs/src/cli-knowledge-tail-command.ts": 2,
     "packages/clawjs/src/cli-media-generation-command.ts": 41,
     "packages/clawjs/src/cli-preview-share.ts": 3,
     "packages/clawjs/src/cli-productivity-command.ts": 37,
@@ -21,7 +20,7 @@
     "packages/clawjs/src/cli-temporal-command.ts": 32,
     "packages/clawjs/src/cli-unknown-command.ts": 1,
     "packages/clawjs/src/cli-user-knowledge-command.ts": 40,
-    "packages/clawjs/src/database-magic.ts": 9,
+    "packages/clawjs/src/database-magic.ts": 8,
     "packages/clawjs/src/index.ts": 49,
     "packages/clawjs/src/memory-local.ts": 3
   }

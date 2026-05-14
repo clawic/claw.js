@@ -95707,17 +95707,13 @@
     {
       "path": "packages/clawjs/src/cli-knowledge-tail-command.ts",
       "language": "typescript",
-      "lines": 163,
+      "lines": 132,
       "test": false,
       "entrypoint": false,
       "imports": [
         "./cli-channel-telegram-command.ts",
-        "./cli-claw-factory.ts",
         "./cli-codex-agent-command.ts",
-        "./cli-errors.ts",
         "./cli-file-session-document-command.ts",
-        "./cli-flag-parsers.ts",
-        "./cli-json.ts",
         "./cli-media-generation-command.ts",
         "./cli-productivity-command.ts",
         "./cli-rules-library-skills-command.ts",
@@ -97287,7 +97283,7 @@
     {
       "path": "packages/clawjs/src/database-magic.ts",
       "language": "typescript",
-      "lines": 1093,
+      "lines": 1025,
       "test": false,
       "entrypoint": false,
       "imports": [
@@ -97305,7 +97301,6 @@
         "isProductivityDbAliasGroup",
         "productivityDbAliasSupports",
         "runMagicDbCli",
-        "runMagicWorkspaceSearch",
         "runProductivityDbAlias"
       ],
       "declarations": [
@@ -97487,11 +97482,6 @@
         {
           "kind": "function",
           "name": "runMagicDbCli",
-          "exported": true
-        },
-        {
-          "kind": "function",
-          "name": "runMagicWorkspaceSearch",
           "exported": true
         },
         {
