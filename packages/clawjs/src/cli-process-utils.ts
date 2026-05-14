@@ -44,3 +44,16 @@ export async function waitForUrl(url: string, timeoutMs = 15_000): Promise<boole
   }
   return false;
 }
+
+export async function probeHttpServer(url: URL): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2_000);
+  try {
+    const response = await fetch(url, { method: "GET", signal: controller.signal });
+    return response.status < 500;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
