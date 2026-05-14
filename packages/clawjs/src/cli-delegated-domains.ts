@@ -6,7 +6,8 @@ import { fileURLToPath } from "url";
 
 import type { CliContext } from "./index.ts";
 import { runEmbeddedDatabaseCli } from "./database-advanced.ts";
-import { CLI_EXIT_FAILURE } from "./cli-errors.ts";
+import { CLI_EXIT_FAILURE, CliHandledError } from "./cli-errors.ts";
+import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 
 function resolveDatabaseDirectory(flags: Record<string, string>, contextCwd: string): string {
   if (flags["database-dir"]) {
@@ -162,6 +163,51 @@ export async function runDelegatedContentCli(
   const args = fs.existsSync(distCliPath)
     ? [distCliPath, ...argv.slice(1)]
     : ["--prefix", contentDir, "run", "cli", "--silent", "--", ...argv.slice(1)];
+  const wantsJson = argv.includes("--json");
+
+  if (wantsJson) {
+    return await new Promise<number>((resolve, reject) => {
+      const child = spawn(command, args, {
+        cwd: context.cwd,
+        stdio: ["ignore", "pipe", "pipe"],
+        env: process.env,
+      });
+      let stdout = "";
+      let stderr = "";
+      child.stdout?.setEncoding("utf8");
+      child.stderr?.setEncoding("utf8");
+      child.stdout?.on("data", (chunk) => { stdout += chunk; });
+      child.stderr?.on("data", (chunk) => { stderr += chunk; });
+      child.on("error", reject);
+      child.on("exit", (code) => {
+        const exitCode = code ?? CLI_EXIT_FAILURE;
+        const [, delegatedGroup, delegatedCommand] = argv;
+        if (exitCode === 0) {
+          const trimmed = stdout.trim();
+          let data: unknown = {};
+          try {
+            data = trimmed ? JSON.parse(trimmed) as unknown : {};
+          } catch {
+            data = { output: trimmed };
+          }
+          writeCommandJsonOk(context.stdout, "content", data, {
+            invokedCommand: argv[0] ?? "content",
+            subcommand: delegatedGroup ?? null,
+            ...(delegatedCommand ? { operation: delegatedCommand } : {}),
+          });
+          resolve(exitCode);
+          return;
+        }
+        const message = (stderr || stdout || "Content service command failed.").trim();
+        writeCommandJsonError(context.stdout, "content", new CliHandledError("content_service_unavailable", message, exitCode), {
+          invokedCommand: argv[0] ?? "content",
+          subcommand: delegatedGroup ?? null,
+          ...(delegatedCommand ? { operation: delegatedCommand } : {}),
+        });
+        resolve(exitCode);
+      });
+    });
+  }
 
   return await new Promise<number>((resolve, reject) => {
     const child = spawn(command, args, {

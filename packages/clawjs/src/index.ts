@@ -37,7 +37,7 @@ import { runStyleCli } from "./styles/index.ts";
 import { runTemplateCli } from "./templates/index.ts";
 import { runReferenceCli } from "./references/index.ts";
 import { runV1DataCli } from "./v1-data.ts";
-import { CLI_USAGE, DEFAULT_CLI_BIN, PUBLIC_PORTAL_HELP_ONLY, REMOVED_RUNTIME_COMMANDS, REMOVED_V1_CRUD_COMMANDS, buildCliUsage, buildCommandHelp, normalizePublicCliArgv, relatedCliMatches, removedPublicCommandMessage } from "./cli-surface.ts";
+import { CLI_USAGE, DEFAULT_CLI_BIN, REMOVED_RUNTIME_COMMANDS, REMOVED_V1_CRUD_COMMANDS, buildCliUsage, buildCommandHelp, normalizePublicCliArgv, relatedCliMatches, removedPublicCommandMessage } from "./cli-surface.ts";
 import { inferBrokerDeclaredFields } from "./broker-http.ts";
 import { runInspectCli } from "./inspect-cli.ts";
 import { CLI_TEMPLATE_ROOT } from "./cli-constants.ts";
@@ -78,6 +78,7 @@ import { runCodeCli } from "./cli-code-command.ts";
 import { runPlanCli } from "./cli-plan-command.ts";
 import { runKnowledgeTailCli } from "./cli-knowledge-tail-command.ts";
 import { runCliDiscoverySearch } from "./cli-search-command.ts";
+import { runPublicPortalShortcut, writePublicPortalHelpOnly } from "./cli-public-portal-routes.ts";
 import { handleUnknownCliCommand } from "./cli-unknown-command.ts";
 import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, waitForListenerPid } from "./cli-channel-listener.ts";
 import {
@@ -573,22 +574,15 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runCliUnsafe(["db", ...argv.slice(1)], context);
   }
 
-  if (group === "content" && (command === "posts" || command === "campaigns" || command === "publications")) {
-    const contentGroup = command === "posts" ? "entry" : command === "campaigns" ? "campaign" : "publish";
-    const contentCommand = command === "publications" ? (!subcommand || subcommand === "list" ? "runs" : subcommand) : (subcommand ?? "list");
-    const passthrough = subcommand ? argv.slice(3) : argv.slice(2);
-    return await runDelegatedContentCli(["content", contentGroup, contentCommand, ...passthrough], flags, context);
-  }
+  const portalShortcutExit = await runPublicPortalShortcut({ group, command, subcommand, argv, flags, context, runCli: runCliUnsafe });
+  if (portalShortcutExit !== null) return portalShortcutExit;
 
   if (group === "diagnostics") {
     return await runCliUnsafe(["doctor", ...argv.slice(1)], context);
   }
 
-  if (group && PUBLIC_PORTAL_HELP_ONLY.has(group)) {
-    const commandHelp = buildCommandHelp(binName, group);
-    context.stderr.write(`${commandHelp ?? usage}\n`);
-    return CLI_EXIT_USAGE;
-  }
+  const portalHelpOnlyExit = writePublicPortalHelpOnly({ group, command, subcommand, wantsJson, context, binName, usage });
+  if (portalHelpOnlyExit !== null) return portalHelpOnlyExit;
 
   if (group === "chat") {
     return await runChatCli({ argv, positionals, flags, wantsJson, context: { stdout: context.stdout, stderr: context.stderr, cwd: context.cwd, binName } });

@@ -36,11 +36,11 @@
     ]
   },
   "summary": {
-    "files": 2825,
+    "files": 2826,
     "tests": 389,
     "entrypoints": 160,
     "languages": {
-      "typescript": 2627,
+      "typescript": 2628,
       "javascript": 108,
       "swift": 90
     }
@@ -94995,11 +94995,12 @@
     {
       "path": "packages/clawjs/src/cli-delegated-domains.ts",
       "language": "typescript",
-      "lines": 178,
+      "lines": 224,
       "test": false,
       "entrypoint": false,
       "imports": [
         "./cli-errors.ts",
+        "./cli-json.ts",
         "./database-advanced.ts",
         "./index.ts",
         "child_process",
@@ -95059,7 +95060,7 @@
     {
       "path": "packages/clawjs/src/cli-discovery.test.ts",
       "language": "typescript",
-      "lines": 279,
+      "lines": 318,
       "test": true,
       "entrypoint": false,
       "imports": [
@@ -96501,6 +96502,45 @@
         {
           "kind": "function",
           "name": "validateCoreDbSystemField",
+          "exported": false
+        }
+      ]
+    },
+    {
+      "path": "packages/clawjs/src/cli-public-portal-routes.ts",
+      "language": "typescript",
+      "lines": 73,
+      "test": false,
+      "entrypoint": false,
+      "imports": [
+        "./cli-delegated-domains.ts",
+        "./cli-errors.ts",
+        "./cli-json.ts",
+        "./cli-surface.ts"
+      ],
+      "exports": [
+        "runPublicPortalShortcut",
+        "writePublicPortalHelpOnly"
+      ],
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "runPublicPortalShortcut",
+          "exported": true
+        },
+        {
+          "kind": "function",
+          "name": "writePublicPortalHelpOnly",
+          "exported": true
+        },
+        {
+          "kind": "type",
+          "name": "CliContext",
+          "exported": false
+        },
+        {
+          "kind": "type",
+          "name": "RunCli",
           "exported": false
         }
       ]
@@ -98091,7 +98131,7 @@
     {
       "path": "packages/clawjs/src/index.ts",
       "language": "typescript",
-      "lines": 1997,
+      "lines": 1991,
       "test": false,
       "entrypoint": true,
       "imports": [
@@ -98125,6 +98165,7 @@
         "./cli-productivity-extended-command.ts",
         "./cli-productivity-primary-command.ts",
         "./cli-productivity-utils.ts",
+        "./cli-public-portal-routes.ts",
         "./cli-rule-utils.ts",
         "./cli-runtime-utils.ts",
         "./cli-search-command.ts",

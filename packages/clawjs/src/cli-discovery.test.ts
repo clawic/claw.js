@@ -4,7 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 import { runCliCapture, useIsolatedMainData } from "./index-test-utils.ts";
 
 test("runCli returns structured related matches for unknown JSON commands", async () => {
@@ -218,6 +218,19 @@ test("runCli returns media generation JSON in the common envelope", { concurrenc
   assert.deepEqual(payload.data, []);
 });
 
+test("runCli routes media portal children to canonical media commands", { concurrency: false }, async (t) => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-media-portal-json-"));
+  useIsolatedMainData(t, workspaceRoot);
+  const result = await runCliCapture(["media", "images", "list", "--workspace", workspaceRoot, "--runtime", "demo", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_DEGRADED);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; data: unknown[]; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
+  assert.equal(payload.ok, true);
+  assert.equal(payload.meta.canonicalCommand, "images");
+  assert.equal(payload.meta.invokedCommand, "image");
+  assert.equal(payload.meta.subcommand, "list");
+  assert.deepEqual(payload.data, []);
+});
+
 test("runCli returns channel JSON in the common envelope", { concurrency: false }, async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-channels-json-"));
   useIsolatedMainData(t, workspaceRoot);
@@ -242,6 +255,32 @@ test("runCli returns extended productivity JSON in the common envelope", { concu
   assert.equal(payload.meta.invokedCommand, "blockers");
   assert.equal(payload.meta.subcommand, "list");
   assert.deepEqual(payload.data, []);
+});
+
+test("runCli exposes help-only portals through JSON", async () => {
+  for (const command of ["logs", "monitor"]) {
+    const result = await runCliCapture([command, "--json"], process.cwd());
+    assert.equal(result.code, CLI_EXIT_OK);
+    const payload = JSON.parse(result.stdout) as { ok: boolean; data: { command: string; help: string }; meta: { canonicalCommand: string; invokedCommand: string; subcommand: null } };
+    assert.equal(payload.ok, true);
+    assert.equal(payload.data.command, command);
+    assert.match(payload.data.help, new RegExp(`Usage: claw ${command}`));
+    assert.equal(payload.meta.canonicalCommand, command);
+    assert.equal(payload.meta.invokedCommand, command);
+    assert.equal(payload.meta.subcommand, null);
+  }
+});
+
+test("runCli routes content portals and envelopes unavailable services", async () => {
+  const result = await runCliCapture(["posts", "list", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_FAILURE);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string }; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string; operation: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "content_service_unavailable");
+  assert.equal(payload.meta.canonicalCommand, "content");
+  assert.equal(payload.meta.invokedCommand, "content");
+  assert.equal(payload.meta.subcommand, "entry");
+  assert.equal(payload.meta.operation, "list");
 });
 
 test("runCli returns root router JSON in the common envelope", async () => {
