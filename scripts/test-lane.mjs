@@ -38,10 +38,15 @@ function vitest(args = []) {
   run("npx", ["vitest", "run", "--config", "vitest.config.ts", ...args]);
 }
 
+function buildPackages() {
+  npmRun("build:packages");
+}
+
 function fast(args = []) {
   npmRun("privacy:check");
   npmRun("privacy:test");
   npmRun("test:policy");
+  buildPackages();
   vitest(args);
   npmRun("test:types");
 }
@@ -71,6 +76,7 @@ function changed() {
       }
     }
     if (rootVitestFiles.length > 0) {
+      buildPackages();
       vitest(rootVitestFiles);
     }
     for (const script of packageScripts) {
