@@ -149,9 +149,13 @@ export async function GET(request: Request) {
       try {
         const claw = await getClaw();
         const status = await claw.telegram.status();
+        const statusSnapshot = status as { connected?: boolean; botProfile?: unknown };
+        const botConnected = typeof statusSnapshot.connected === "boolean"
+          ? statusSnapshot.connected
+          : Boolean(statusSnapshot.botProfile);
         return {
           enabled: true,
-          botConnected: status.connected,
+          botConnected,
           botUsername: status.botProfile?.username ?? config.telegram?.botUsername,
           webhookUrl: status.transport.webhook?.url,
           lastError: status.recentErrors[0] ?? null,
