@@ -130,6 +130,7 @@ const requiredScenarioIds = [
   "telegram.poll-updates",
   "telegram.send-edit-delete-text",
   "telegram.synthetic-photo",
+  "telegram.rate-error-handling",
   "telegram.webhook-loopback",
   "telegram.group-admin-authorization",
   "telegram.payments-passport-managed-bot",

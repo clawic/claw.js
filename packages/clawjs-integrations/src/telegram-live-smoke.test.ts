@@ -31,6 +31,7 @@ describe("Telegram brokered live smoke harness", () => {
     assert.deepEqual(endpoints, ["getMe", "getUpdates"]);
     assert.equal(resultStatus(report, "telegram.get-me"), "PASS");
     assert.equal(resultStatus(report, "telegram.poll-updates"), "PASS");
+    assert.equal(resultStatus(report, "telegram.rate-error-handling"), "PASS");
     assert.equal(resultStatus(report, "telegram.send-edit-delete-text"), "EXTERNAL PENDING");
     assert.equal(resultStatus(report, "telegram.webhook-loopback"), "EXTERNAL PENDING");
   });
@@ -66,6 +67,7 @@ describe("Telegram brokered live smoke harness", () => {
     ]);
     assert.equal(resultStatus(report, "telegram.send-edit-delete-text"), "PASS");
     assert.equal(resultStatus(report, "telegram.synthetic-photo"), "PASS");
+    assert.equal(resultStatus(report, "telegram.rate-error-handling"), "PASS");
   });
 
   it("keeps sensitive Telegram categories gated outside automated live smoke", () => {

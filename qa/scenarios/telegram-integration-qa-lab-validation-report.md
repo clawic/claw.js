@@ -67,7 +67,7 @@ binding product decisions are:
 | Produce `PASS`, `FAIL`, `PARTIAL`, `EXTERNAL PENDING`, and `QUARANTINED` reports. | `telegram-live-smoke.ts`, `docs/integration-qa-lab.md`, `docs/testing.md`, and the scenario checker enforce the vocabulary. | PASS |
 | Audit and correct `send-voice-message`. | `telegram-send-voice-message-request.json` now calls `sendVoice` and sends `voice`; runtime coverage replay passes. | PASS |
 | Provide fixtures for implemented rows and fixture-only snapshot evidence. | `scripts/verify-integration-qa-scenarios.mjs` checks implemented request/source fixture files and `telegram-official-api-10.0-surface.json`. | PASS |
-| Include safe live smoke for `getMe`, polling, send/edit/delete, synthetic media, webhook, rate/error handling, and group authorization. | `TELEGRAM_LIVE_SMOKE_SCENARIOS`, `telegram-live-smoke.ts`, `TelegramBotApiError`, and source/operation tests cover automated or manual rows. | PARTIAL |
+| Include safe live smoke for `getMe`, polling, send/edit/delete, synthetic media, webhook, rate/error handling, and group authorization. | `TELEGRAM_LIVE_SMOKE_SCENARIOS`, `telegram-live-smoke.ts`, `TelegramBotApiError`, and source/operation tests cover automated, synthetic, or manual rows. | PARTIAL |
 | Gate admin, payment, Passport, destructive, uploaded-asset, game, and managed-bot flows. | Manual/policy sets in `telegram-official-api-matrix.ts` and smoke scenarios classify these as `manual_only` or `unsupported_by_policy`. | PASS |
 | Keep manual/external rows separate from bugs. | This report and `qa/scenarios/telegram-integration-qa-lab.md` list `EXTERNAL PENDING` prerequisites separately from failures. | PASS |
 | Pass integrations, policy, package/live, privacy/redaction, docs, and QA scenario checks. | Validation Runs below list the executed gates. | PASS |
@@ -78,6 +78,8 @@ binding product decisions are:
 ## Validation Runs
 
 - `npm --workspace @clawjs/integrations test`: PASS.
+- Focused Telegram smoke/error tests for live harness, operation errors, and
+  source polling errors: PASS.
 - Connector runtime coverage replay for the provider catalog: PASS after
   correcting the Telegram voice fixture.
 - `npm run test:qa-scenarios`: PASS.
