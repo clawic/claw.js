@@ -403,7 +403,7 @@ export function buildDiscordOperationRequest(
     case "update-guild-emoji":
       return bodyPlan("PATCH", `guilds/${guildId(values)}/emojis/${emojiId(values)}`, auth, auditHeaders(headers, values), emojiBody(values, false, true), { type: "object", requiredPaths: ["id", "name"] });
     case "delete-guild-emoji":
-      return deletePlan(`guilds/${guildId(values)}/emojis/${emojiId(values)}`, auth, auditHeaders(headers, values), { type: "object" });
+      return deletePlan(`guilds/${guildId(values)}/emojis/${emojiId(values)}`, auth, auditHeaders(headers, values), { type: "null" });
     case "get-sticker":
       return getPlan(`stickers/${stickerId(values)}`, auth, headers, { type: "object", requiredPaths: ["id", "name"] });
     case "list-sticker-packs":
@@ -817,7 +817,7 @@ export function buildDiscordOperationRequest(
     case "update-application-emoji":
       return bodyPlan("PATCH", `applications/${applicationId(values)}/emojis/${emojiId(values)}`, auth, headers, emojiBody(values, false, false), { type: "object", requiredPaths: ["id", "name"] });
     case "delete-application-emoji":
-      return deletePlan(`applications/${applicationId(values)}/emojis/${emojiId(values)}`, auth, headers, { type: "object" });
+      return deletePlan(`applications/${applicationId(values)}/emojis/${emojiId(values)}`, auth, headers, { type: "null" });
     case "list-guild-application-commands":
       return getPlan(`applications/${applicationId(values)}/guilds/${guildId(values)}/commands`, auth, headers, { type: "array" }, removeEmptyValues({ with_localizations: values.withLocalizations }));
     case "create-guild-application-command":
