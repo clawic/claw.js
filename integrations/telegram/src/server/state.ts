@@ -1,3 +1,4 @@
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -50,7 +51,7 @@ function safeReadJson<T>(filePath: string): T | null {
 }
 
 export function readTelegramBotsForWorkspace(workspaceDir: string): TelegramBotSummary[] {
-  const channelsFile = path.join(workspaceDir, ".claw", "observed", "channels.json");
+  const channelsFile = resolveClawPersistentSurfacePath("claw.workspace.root", workspaceDir, "observed", "channels.json");
   const data = safeReadJson<ChannelsStateFile>(channelsFile);
   if (!data || !Array.isArray(data.accounts)) return [];
 

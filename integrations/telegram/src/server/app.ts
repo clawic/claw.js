@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
@@ -38,7 +39,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
 
   await app.register(cors, { origin: true });
 
-  app.get("/v1/health", async () => ({
+  app.get(clawApiPath("health"), async () => ({
     ok: true,
     surface: "telegram",
     workspace: config.workspace,
@@ -46,7 +47,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
     now: new Date().toISOString(),
   }));
 
-  app.get("/v1/bots", async () => {
+  app.get(clawApiPath("bots"), async () => {
     const bots = readTelegramBotsForWorkspace(config.workspace);
     return { workspace: config.workspace, bots };
   });
@@ -55,7 +56,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
   // The bot token must already live in the Secrets vault under
   // `secretName`; the CLI looks it up there and registers the channel
   // account in `<workspace>/.claw/observed/channels.json`.
-  app.post("/v1/bots", async (request, reply) => {
+  app.post(clawApiPath("bots"), async (request, reply) => {
     const body = (request.body ?? {}) as RouteBody & {
       secretName?: string;
       accountId?: string;
@@ -75,7 +76,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
     return reply.code(result.ok ? 200 : 502).send(result);
   });
 
-  app.get("/v1/bots/:id", async (request, reply) => {
+  app.get(clawApiPath("bots/:id"), async (request, reply) => {
     const params = request.params as { id?: string };
     const bots = readTelegramBotsForWorkspace(config.workspace);
     const bot = bots.find((b) => b.id === params.id || b.accountId === params.id);
@@ -89,7 +90,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
   // env var that `claw open telegram` forwards to us.
   // ------------------------------------------------------------------
 
-  app.get("/v1/bots/:id/status", async (request, reply) => {
+  app.get(clawApiPath("bots/:id/status"), async (request, reply) => {
     const params = request.params as { id: string };
     const bots = readTelegramBotsForWorkspace(config.workspace);
     const bot = bots.find((b) => b.id === params.id || b.accountId === params.id);
@@ -102,7 +103,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
     return reply.code(result.ok ? 200 : 502).send(result);
   });
 
-  app.post("/v1/bots/:id/polling/start", async (request, reply) => {
+  app.post(clawApiPath("bots/:id/polling/start"), async (request, reply) => {
     const params = request.params as { id: string };
     const body = (request.body ?? {}) as RouteBody & { limit?: number; timeoutSeconds?: number; dropPendingUpdates?: boolean };
     const bots = readTelegramBotsForWorkspace(config.workspace);
@@ -116,7 +117,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
     return reply.code(result.ok ? 200 : 502).send(result);
   });
 
-  app.post("/v1/bots/:id/polling/stop", async (request, reply) => {
+  app.post(clawApiPath("bots/:id/polling/stop"), async (request, reply) => {
     const params = request.params as { id: string };
     const body = (request.body ?? {}) as RouteBody;
     const bots = readTelegramBotsForWorkspace(config.workspace);
@@ -127,7 +128,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
     return reply.code(result.ok ? 200 : 502).send(result);
   });
 
-  app.post("/v1/bots/:id/webhook", async (request, reply) => {
+  app.post(clawApiPath("bots/:id/webhook"), async (request, reply) => {
     const params = request.params as { id: string };
     const body = (request.body ?? {}) as RouteBody & {
       url?: string;
@@ -153,7 +154,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
     return reply.code(result.ok ? 200 : 502).send(result);
   });
 
-  app.delete("/v1/bots/:id/webhook", async (request, reply) => {
+  app.delete(clawApiPath("bots/:id/webhook"), async (request, reply) => {
     const params = request.params as { id: string };
     const body = (request.body ?? {}) as RouteBody & { dropPendingUpdates?: boolean };
     const bots = readTelegramBotsForWorkspace(config.workspace);
@@ -165,7 +166,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
     return reply.code(result.ok ? 200 : 502).send(result);
   });
 
-  app.get("/v1/bots/:id/commands", async (request, reply) => {
+  app.get(clawApiPath("bots/:id/commands"), async (request, reply) => {
     const params = request.params as { id: string };
     const bots = readTelegramBotsForWorkspace(config.workspace);
     const bot = bots.find((b) => b.id === params.id || b.accountId === params.id);
@@ -178,7 +179,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
     return reply.code(result.ok || Array.isArray(result.json) ? 200 : 502).send(result);
   });
 
-  app.post("/v1/bots/:id/commands", async (request, reply) => {
+  app.post(clawApiPath("bots/:id/commands"), async (request, reply) => {
     const params = request.params as { id: string };
     const body = (request.body ?? {}) as RouteBody & { commands?: Array<{ command: string; description: string }> };
     if (!Array.isArray(body.commands)) return reply.code(400).send({ error: "commands array required" });
@@ -194,7 +195,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
     return reply.code(result.ok ? 200 : 502).send(result);
   });
 
-  app.get("/v1/bots/:id/chats", async (request, reply) => {
+  app.get(clawApiPath("bots/:id/chats"), async (request, reply) => {
     const params = request.params as { id: string };
     const query = (request.query ?? {}) as { q?: string };
     const bots = readTelegramBotsForWorkspace(config.workspace);
@@ -206,7 +207,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
     return reply.code(result.ok || Array.isArray(result.json) ? 200 : 502).send(result);
   });
 
-  app.get("/v1/bots/:id/chats/:chatId", async (request, reply) => {
+  app.get(clawApiPath("bots/:id/chats/:chatId"), async (request, reply) => {
     const params = request.params as { id: string; chatId: string };
     const bots = readTelegramBotsForWorkspace(config.workspace);
     const bot = bots.find((b) => b.id === params.id || b.accountId === params.id);
@@ -216,7 +217,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
     return reply.code(result.ok ? 200 : 502).send(result);
   });
 
-  app.post("/v1/bots/:id/messages", async (request, reply) => {
+  app.post(clawApiPath("bots/:id/messages"), async (request, reply) => {
     const params = request.params as { id: string };
     const body = (request.body ?? {}) as RouteBody & {
       chatId?: string;
@@ -248,7 +249,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
     return reply.code(result.ok ? 200 : 502).send(result);
   });
 
-  app.get("/v1/bots/:id/codex/status", async (request, reply) => {
+  app.get(clawApiPath("bots/:id/codex/status"), async (request, reply) => {
     const params = request.params as { id: string };
     const bots = readTelegramBotsForWorkspace(config.workspace);
     const bot = bots.find((b) => b.id === params.id || b.accountId === params.id);
@@ -262,7 +263,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
   });
 
   for (const codexCommand of ["start", "stop", "repair"] as const) {
-    app.post(`/v1/bots/:id/codex/${codexCommand}`, async (request, reply) => {
+    app.post(clawApiPath(`bots/:id/codex/${codexCommand}`), async (request, reply) => {
       const params = request.params as { id: string };
       const bots = readTelegramBotsForWorkspace(config.workspace);
       const bot = bots.find((b) => b.id === params.id || b.accountId === params.id);
@@ -276,7 +277,7 @@ export async function buildTelegramApp(options: BuildTelegramAppOptions = {}) {
     });
   }
 
-  app.post("/v1/bots/:id/codex/commands-sync", async (request, reply) => {
+  app.post(clawApiPath("bots/:id/codex/commands-sync"), async (request, reply) => {
     const params = request.params as { id: string };
     const bots = readTelegramBotsForWorkspace(config.workspace);
     const bot = bots.find((b) => b.id === params.id || b.accountId === params.id);

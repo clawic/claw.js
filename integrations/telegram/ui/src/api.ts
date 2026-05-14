@@ -1,3 +1,4 @@
+import { clawApiPath } from "@clawjs/core";
 export interface BotSummary {
   id: string;
   accountId: string;
@@ -40,15 +41,15 @@ async function jsonOrThrow<T>(response: Response): Promise<T> {
 }
 
 export async function fetchBots(): Promise<BotsResponse> {
-  return jsonOrThrow(await fetch("/v1/bots", { headers: { accept: "application/json" } }));
+  return jsonOrThrow(await fetch(clawApiPath("bots"), { headers: { accept: "application/json" } }));
 }
 
 export async function fetchBotStatus(id: string): Promise<CliResult> {
-  return jsonOrThrow(await fetch(`/v1/bots/${encodeURIComponent(id)}/status`));
+  return jsonOrThrow(await fetch(clawApiPath(`bots/${encodeURIComponent(id)}/status`)));
 }
 
 export async function startPolling(id: string, payload: { limit?: number; timeoutSeconds?: number; dropPendingUpdates?: boolean } = {}): Promise<CliResult> {
-  return jsonOrThrow(await fetch(`/v1/bots/${encodeURIComponent(id)}/polling/start`, {
+  return jsonOrThrow(await fetch(clawApiPath(`bots/${encodeURIComponent(id)}/polling/start`), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
@@ -56,7 +57,7 @@ export async function startPolling(id: string, payload: { limit?: number; timeou
 }
 
 export async function stopPolling(id: string): Promise<CliResult> {
-  return jsonOrThrow(await fetch(`/v1/bots/${encodeURIComponent(id)}/polling/stop`, {
+  return jsonOrThrow(await fetch(clawApiPath(`bots/${encodeURIComponent(id)}/polling/stop`), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: "{}",
@@ -64,7 +65,7 @@ export async function stopPolling(id: string): Promise<CliResult> {
 }
 
 export async function setWebhook(id: string, payload: { url: string; secretToken?: string; allowedUpdates?: string[]; maxConnections?: number; ipAddress?: string; dropPendingUpdates?: boolean }): Promise<CliResult> {
-  return jsonOrThrow(await fetch(`/v1/bots/${encodeURIComponent(id)}/webhook`, {
+  return jsonOrThrow(await fetch(clawApiPath(`bots/${encodeURIComponent(id)}/webhook`), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
@@ -72,7 +73,7 @@ export async function setWebhook(id: string, payload: { url: string; secretToken
 }
 
 export async function clearWebhook(id: string, dropPendingUpdates = false): Promise<CliResult> {
-  return jsonOrThrow(await fetch(`/v1/bots/${encodeURIComponent(id)}/webhook`, {
+  return jsonOrThrow(await fetch(clawApiPath(`bots/${encodeURIComponent(id)}/webhook`), {
     method: "DELETE",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ dropPendingUpdates }),
@@ -80,11 +81,11 @@ export async function clearWebhook(id: string, dropPendingUpdates = false): Prom
 }
 
 export async function fetchCommands(id: string): Promise<CliResult<Array<{ command: string; description: string }>>> {
-  return jsonOrThrow(await fetch(`/v1/bots/${encodeURIComponent(id)}/commands`));
+  return jsonOrThrow(await fetch(clawApiPath(`bots/${encodeURIComponent(id)}/commands`)));
 }
 
 export async function setCommands(id: string, commands: Array<{ command: string; description: string }>): Promise<CliResult> {
-  return jsonOrThrow(await fetch(`/v1/bots/${encodeURIComponent(id)}/commands`, {
+  return jsonOrThrow(await fetch(clawApiPath(`bots/${encodeURIComponent(id)}/commands`), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ commands }),
@@ -92,7 +93,7 @@ export async function setCommands(id: string, commands: Array<{ command: string;
 }
 
 export async function fetchChats(id: string, query?: string): Promise<CliResult<Array<{ id: string; type?: string; title?: string; username?: string; firstName?: string }>>> {
-  const url = `/v1/bots/${encodeURIComponent(id)}/chats${query ? `?q=${encodeURIComponent(query)}` : ""}`;
+  const url = clawApiPath(`bots/${encodeURIComponent(id)}/chats${query ? `?q=${encodeURIComponent(query)}` : ""}`);
   return jsonOrThrow(await fetch(url));
 }
 
@@ -106,7 +107,7 @@ export async function sendMessage(id: string, payload: {
   replyToMessageId?: number;
   messageThreadId?: number;
 }): Promise<CliResult> {
-  return jsonOrThrow(await fetch(`/v1/bots/${encodeURIComponent(id)}/messages`, {
+  return jsonOrThrow(await fetch(clawApiPath(`bots/${encodeURIComponent(id)}/messages`), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
@@ -114,12 +115,12 @@ export async function sendMessage(id: string, payload: {
 }
 
 export async function fetchCodexStatus(id: string): Promise<CliResult> {
-  return jsonOrThrow(await fetch(`/v1/bots/${encodeURIComponent(id)}/codex/status`));
+  return jsonOrThrow(await fetch(clawApiPath(`bots/${encodeURIComponent(id)}/codex/status`)));
 }
 
 export async function codexAction(id: string, action: "start" | "stop" | "repair" | "commands-sync"): Promise<CliResult> {
   const path = action === "commands-sync" ? "commands-sync" : action;
-  return jsonOrThrow(await fetch(`/v1/bots/${encodeURIComponent(id)}/codex/${path}`, {
+  return jsonOrThrow(await fetch(clawApiPath(`bots/${encodeURIComponent(id)}/codex/${path}`), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: "{}",
