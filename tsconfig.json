@@ -12,7 +12,73 @@
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "allowImportingTsExtensions": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@clawjs/agents": [
+        "packages/clawjs-agents/src/index.ts"
+      ],
+      "@clawjs/audio": [
+        "packages/clawjs-audio/src/index.ts"
+      ],
+      "@clawjs/channel-base": [
+        "packages/clawjs-channel-base/src/index.ts"
+      ],
+      "@clawjs/claw": [
+        "packages/clawjs-node/src/index.ts"
+      ],
+      "@clawjs/cli": [
+        "packages/clawjs/src/index.ts"
+      ],
+      "@clawjs/core": [
+        "packages/clawjs-core/src/index.ts"
+      ],
+      "@clawjs/database": [
+        "packages/clawjs-database/src/index.ts"
+      ],
+      "@clawjs/index": [
+        "packages/clawjs-index/src/index.ts"
+      ],
+      "@clawjs/integrations": [
+        "packages/clawjs-integrations/src/index.ts"
+      ],
+      "@clawjs/marketplace": [
+        "packages/marketplace/src/index.ts"
+      ],
+      "@clawjs/mcp": [
+        "packages/clawjs-mcp/src/index.ts"
+      ],
+      "@clawjs/mesh": [
+        "packages/mesh/src/index.ts"
+      ],
+      "@clawjs/node": [
+        "packages/clawjs-node-compat/src/index.ts"
+      ],
+      "@clawjs/profile": [
+        "packages/clawjs-profile/src/index.ts"
+      ],
+      "@clawjs/runtime": [
+        "packages/clawjs-runtime/src/index.ts"
+      ],
+      "@clawjs/sandbox": [
+        "packages/clawjs-sandbox/src/index.ts"
+      ],
+      "@clawjs/sessions": [
+        "packages/clawjs-sessions/src/index.ts"
+      ],
+      "@clawjs/ssh-client": [
+        "packages/ssh-client/src/index.ts"
+      ],
+      "@clawjs/user-model": [
+        "packages/clawjs-user-model/src/index.ts"
+      ],
+      "@clawjs/voice": [
+        "packages/clawjs-voice/src/index.ts"
+      ],
+      "@clawjs/workspace": [
+        "packages/clawjs-workspace/src/index.ts"
+      ]
+    }
   },
   "include": [
     "packages/**/*.ts",

@@ -6,7 +6,6 @@
 // runtime imports.
 
 import type { Agent, AgentStoreFS, Connection } from "@clawjs/agents";
-import { telegramAdapter } from "./telegram.js";
 import type {
   IntegrationAdapter,
   IntegrationInboundMessage,
@@ -29,25 +28,20 @@ export interface IntegrationManagerOptions {
   adapters?: Partial<Record<Connection["service"], IntegrationAdapter>>;
 }
 
-const DEFAULT_ADAPTERS: Partial<Record<Connection["service"], IntegrationAdapter>> = {
-  telegram: telegramAdapter,
-};
-
 export class IntegrationManager {
   private readonly store: AgentStoreFS;
   private readonly deliver: IntegrationManagerOptions["deliver"];
-  private readonly adapters: Partial<Record<Connection["service"], IntegrationAdapter>>;
   private stops: Map<string, () => void> = new Map();
 
   constructor(opts: IntegrationManagerOptions) {
     this.store = opts.store;
     this.deliver = opts.deliver;
-    this.adapters = { ...DEFAULT_ADAPTERS, ...(opts.adapters ?? {}) };
+    void opts.adapters;
   }
 
-  /** Start watchers for every connection that already has a stored
-   *  auth secret. Connections without auth are skipped silently —
-   *  they'll come online the moment the user pastes a token. */
+  /** Legacy plaintext watcher startup is intentionally disabled.
+   *  Connections may carry opaque `secretRef` handles, but integrations
+   *  must execute through the Secrets broker instead of resolving auth here. */
   async startAll(): Promise<void> {
     for (const conn of this.store.listConnections()) {
       await this.startOne(conn.id);
@@ -57,18 +51,7 @@ export class IntegrationManager {
   async startOne(connectionId: string): Promise<boolean> {
     const conn = this.store.readConnection(connectionId);
     if (!conn) return false;
-    const auth = this.store.readConnectionAuth(connectionId);
-    if (!auth) return false;
-    const adapter = this.adapters[conn.service];
-    if (!adapter) return false;
-    if (this.stops.has(connectionId)) return true;
-    const stop = await adapter.start({
-      connection: conn,
-      auth,
-      onMessage: (msg) => this.routeMessage(msg),
-    });
-    this.stops.set(connectionId, stop);
-    return true;
+    return false;
   }
 
   stopOne(connectionId: string): void {
@@ -85,22 +68,14 @@ export class IntegrationManager {
     }
   }
 
-  /** Push an outbound message through the matching adapter. Returns
-   *  false when the connection has no auth on disk yet or the service
-   *  isn't supported. */
+  /** Legacy plaintext outbound sends are intentionally disabled. Outbound
+   *  connector execution must go through the Secrets broker. */
   async send(connectionId: string, channelRef: string, text: string): Promise<boolean> {
     const conn = this.store.readConnection(connectionId);
     if (!conn) return false;
-    const auth = this.store.readConnectionAuth(connectionId);
-    if (!auth) return false;
-    const adapter = this.adapters[conn.service];
-    if (!adapter) return false;
-    await adapter.send({
-      connection: conn,
-      auth,
-      message: { connectionId, channelRef, text },
-    });
-    return true;
+    void channelRef;
+    void text;
+    return false;
   }
 
   /** Resolve a routing target. Picks the first agent whose
